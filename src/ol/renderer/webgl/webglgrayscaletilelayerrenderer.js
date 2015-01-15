@@ -1,8 +1,7 @@
-// FIXME large resolutions lead to too large framebuffers :-(
-// FIXME animated shaders! check in redraw
+goog.provide('ol.renderer.webgl.GrayscaleTileLayer');
 
-goog.provide('ol.renderer.webgl.TileLayer');
-
+goog.require('ol.renderer.webgl.grayscaletilelayer.shader');
+goog.require('ol.renderer.webgl.TileLayer');
 goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.object');
@@ -15,98 +14,60 @@ goog.require('ol.extent');
 goog.require('ol.layer.Tile');
 goog.require('ol.math');
 goog.require('ol.renderer.webgl.Layer');
-goog.require('ol.renderer.webgl.tilelayer.shader');
 goog.require('ol.tilecoord');
 goog.require('ol.webgl.Buffer');
 
 
 
+// This class is basically the same as the TileLayer renderer (the super class).
+// The main differences are that there is a small change in the associated
+// shader file to multiply grayscale colors.
+// Instead of hacking the changes directly into the code of the TileLayer renderer,
+// this class copies the method prepareFrame almost 1:1 and adds small changes to it.
 /**
  * @constructor
- * @extends {ol.renderer.webgl.Layer}
+ * @extends {ol.renderer.webgl.TileLayer}
  * @param {ol.renderer.Map} mapRenderer Map renderer.
- * @param {ol.layer.Tile} tileLayer Tile layer.
+ * @param {ol.layer.GrayscaleTile} tileLayer GrayscaleTile layer.
  */
-ol.renderer.webgl.TileLayer = function(mapRenderer, tileLayer) {
+ol.renderer.webgl.GrayscaleTileLayer = function(mapRenderer, tileLayer) {
 
   goog.base(this, mapRenderer, tileLayer);
 
+  // This property is overridden from the TileLayer renderer class
+  // since we need to change its type accordingly.
+  // The class of this property is generated automatically by build.by when
+  // it processes the shader .glsl files.
   /**
    * @protected
-   * @type {ol.webgl.shader.Fragment}
+   * @type {ol.renderer.webgl.grayscaletilelayer.shader.Locations}
    */
+  this.locations_ = null;
+
+  // This property was added to the parent so it can be overridden here.
+  // It specifies how the bytes in the image are to be interpreted.
+  // In the parent it is defined as RGBA (the standard value that is otherwise
+  // hardcoded in vanila openlayers). The TileLayer renderer uses the standard RGBA value.
+  this.colorType = goog.webgl.LUMINANCE;
+
+  // The shaders need to be protected rather than private in the super class.
+  // In general, all private properties in the super class were made protected.
   this.fragmentShader_ =
-      ol.renderer.webgl.tilelayer.shader.Fragment.getInstance();
+      ol.renderer.webgl.grayscaletilelayer.shader.Fragment.getInstance();
+      // ol.renderer.webgl.tilelayer.shader.Fragment.getInstance();
 
-  /**
-   * @protected
-   * @type {ol.webgl.shader.Vertex}
-   */
-  this.vertexShader_ = ol.renderer.webgl.tilelayer.shader.Vertex.getInstance();
-
-  /**
-   * @protected
-   * @type {ol.renderer.webgl.tilelayer.shader.Locations}
-   */
-  this.locations_ = null;
-
-  /**
-   * @protected
-   * @type {ol.webgl.Buffer}
-   */
-  this.renderArrayBuffer_ = new ol.webgl.Buffer([
-    0, 0, 0, 1,
-    1, 0, 1, 1,
-    0, 1, 0, 0,
-    1, 1, 1, 0
-  ]);
-
-  /**
-   * @protected
-   * @type {ol.TileRange}
-   */
-  this.renderedTileRange_ = null;
-
-  /**
-   * @protected
-   * @type {ol.Extent}
-   */
-  this.renderedFramebufferExtent_ = null;
-
-  /**
-   * @protected
-   * @type {number}
-   */
-  this.renderedRevision_ = -1;
-
+  // The vertex shader is actually the same as in the super class, but since the
+  // build tool generated a class for it automatically, we override it here.
+  this.vertexShader_ = ol.renderer.webgl.grayscaletilelayer.shader.Vertex.getInstance();
 };
-goog.inherits(ol.renderer.webgl.TileLayer, ol.renderer.webgl.Layer);
+goog.inherits(ol.renderer.webgl.GrayscaleTileLayer, ol.renderer.webgl.TileLayer);
 
 
+// Modified sections are flagged with an appended '// MODIFIED'
 /**
  * @inheritDoc
  */
-ol.renderer.webgl.TileLayer.prototype.disposeInternal = function() {
-  var mapRenderer = this.getWebGLMapRenderer();
-  var context = mapRenderer.getContext();
-  context.deleteBuffer(this.renderArrayBuffer_);
-  goog.base(this, 'disposeInternal');
-};
-
-
-/**
- * @inheritDoc
- */
-ol.renderer.webgl.TileLayer.prototype.handleWebGLContextLost = function() {
-  goog.base(this, 'handleWebGLContextLost');
-  this.locations_ = null;
-};
-
-
-/**
- * @inheritDoc
- */
-ol.renderer.webgl.TileLayer.prototype.prepareFrame =
+ol.renderer.webgl.GrayscaleTileLayer.prototype.prepareFrame =
     function(frameState, layerState, context) {
 
   var mapRenderer = this.getWebGLMapRenderer();
@@ -116,7 +77,7 @@ ol.renderer.webgl.TileLayer.prototype.prepareFrame =
   var projection = viewState.projection;
 
   var tileLayer = this.getLayer();
-  goog.asserts.assertInstanceof(tileLayer, ol.layer.Tile);
+  goog.asserts.assertInstanceof(tileLayer, ol.layer.GrayscaleTile); // MODIFIED
   var tileSource = tileLayer.getSource();
   var tileGrid = tileSource.getTileGridForProjection(projection);
   var z = tileGrid.getZForResolution(viewState.resolution);
@@ -172,7 +133,7 @@ ol.renderer.webgl.TileLayer.prototype.prepareFrame =
     context.useProgram(program);
     if (goog.isNull(this.locations_)) {
       this.locations_ =
-          new ol.renderer.webgl.tilelayer.shader.Locations(gl, program);
+          new ol.renderer.webgl.grayscaletilelayer.shader.Locations(gl, program);
     }
 
     context.bindBuffer(goog.webgl.ARRAY_BUFFER, this.renderArrayBuffer_);
@@ -183,6 +144,13 @@ ol.renderer.webgl.TileLayer.prototype.prepareFrame =
     gl.vertexAttribPointer(
         this.locations_.a_texCoord, 2, goog.webgl.FLOAT, false, 16, 8);
     gl.uniform1i(this.locations_.u_texture, 0);
+
+    // BEGIN MODIFIED
+      // read color that was specified when layer was created
+      var col = tileLayer.getColor();
+      // push color as 4vec to GPU
+      gl.uniform4f(this.locations_.u_color, col[0], col[1], col[2], 1.0);
+    // END MODIFIED
 
     /**
      * @type {Object.<number, Object.<string, ol.Tile>>}

@@ -24,6 +24,15 @@ ol.renderer.webgl.Layer = function(mapRenderer, layer) {
 
   goog.base(this, mapRenderer, layer);
 
+  // This property is used when binding the textures (tile images).
+  // By default RGBA will be used since all other OP layer renderers use it,
+  // but the GrayscaleTile renderer will set it go LUMINANCE.
+  /**
+   * @protected
+   * @type {number}
+   */
+  this.colorType = goog.webgl.RGBA;
+
   /**
    * @private
    * @type {ol.webgl.Buffer}
