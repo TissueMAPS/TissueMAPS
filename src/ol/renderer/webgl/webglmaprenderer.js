@@ -191,7 +191,7 @@ ol.renderer.webgl.Map.prototype.bindTileTexture =
     function(tile, tileSize, tileGutter, magFilter, minFilter, colorType) { // MODIFIED
 
   // BEGIN MODIFIED
-    if (!colorType) {
+    if (!goog.isDefAndNotNull(colorType)) {
       colorType = goog.webgl.RGBA;
     }
   // END MODIFIED
