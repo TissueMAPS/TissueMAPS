@@ -49,12 +49,20 @@ goog.exportProperty(
 
 
 /**
- * @param {goog.color.Rgb} color The color with which to dye the layer.
+ * @param {goog.color.Rgb|null} color The color with which to dye the layer.
+ *  If the argument is null, the image won't be colored.
  * @observable
  * @api
  */
 ol.layer.GrayscaleTile.prototype.setColor = function(color) {
-  this.set(ol.layer.GrayscaleTileProperty.COLOR, color);
+  if (!goog.isNull(color)) {
+    this.set(ol.layer.GrayscaleTileProperty.COLOR, color);
+  } else {
+    // Setting [1.0, 1.0, 1.0] will result in the grayscale image
+    // being rendered as an RGB image with equal amounts of equal color
+    // (thus just creating a gray RGB image).
+    this.set(ol.layer.GrayscaleTileProperty.COLOR, [1.0, 1.0, 1.0]);
+  }
 };
 goog.exportProperty(
     ol.layer.GrayscaleTile.prototype,
