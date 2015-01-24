@@ -8,6 +8,7 @@ goog.require('goog.object');
 goog.require('ol.Object');
 goog.require('ol.source.State');
 
+goog.require('goog.color.Rgb');
 
 /**
  * @enum {string}
@@ -22,7 +23,10 @@ ol.layer.LayerProperty = {
   EXTENT: 'extent',
   MAX_RESOLUTION: 'maxResolution',
   MIN_RESOLUTION: 'minResolution',
-  SOURCE: 'source'
+  SOURCE: 'source',
+  COLOR: 'color',
+  MAX: 'max',
+  MIN: 'min'
 };
 
 
@@ -36,11 +40,13 @@ ol.layer.LayerProperty = {
  *            sourceState: ol.source.State,
  *            visible: boolean,
  *            extent: (ol.Extent|undefined),
+ *            color: goog.color.Rgb,
+ *            min: number,
+ *            max: number,
  *            maxResolution: number,
  *            minResolution: number}}
  */
 ol.layer.LayerState;
-
 
 
 /**
@@ -80,6 +86,13 @@ ol.layer.Base = function(options) {
       goog.isDef(options.maxResolution) ? options.maxResolution : Infinity;
   properties[ol.layer.LayerProperty.MIN_RESOLUTION] =
       goog.isDef(options.minResolution) ? options.minResolution : 0;
+
+  properties[ol.layer.LayerProperty.COLOR] =
+      goog.isDef(options.color) ? options.color : [1, 1, 1];
+  properties[ol.layer.LayerProperty.MAX] =
+      goog.isDef(options.max) ? options.max : 1;
+  properties[ol.layer.LayerProperty.MIN] =
+      goog.isDef(options.min) ? options.min : 0;
 
   this.setProperties(properties);
 };
@@ -144,6 +157,12 @@ ol.layer.Base.prototype.getLayerState = function() {
   var extent = this.getExtent();
   var maxResolution = this.getMaxResolution();
   var minResolution = this.getMinResolution();
+
+  // ADDED
+  var min = this.getMin();
+  var max = this.getMax();
+  var color = this.getColor();
+
   return {
     layer: /** @type {ol.layer.Layer} */ (this),
     brightness: goog.isDef(brightness) ? goog.math.clamp(brightness, -1, 1) : 0,
@@ -156,6 +175,10 @@ ol.layer.Base.prototype.getLayerState = function() {
     extent: extent,
     maxResolution: goog.isDef(maxResolution) ? maxResolution : Infinity,
     minResolution: goog.isDef(minResolution) ? Math.max(minResolution, 0) : 0
+    ,
+    color: goog.isDef(color) ? color : [1, 1, 1],
+    min: goog.isDef(min) ? min : 0,
+    max: goog.isDef(max) ? max : 1
   };
 };
 
@@ -413,7 +436,6 @@ goog.exportProperty(
     'setSaturation',
     ol.layer.Base.prototype.setSaturation);
 
-
 /**
  * @param {boolean|undefined} visible The visiblity of the layer.
  * @observable
@@ -426,3 +448,104 @@ goog.exportProperty(
     ol.layer.Base.prototype,
     'setVisible',
     ol.layer.Base.prototype.setVisible);
+
+
+
+/**
+ * @return {goog.color.Rgb|undefined} The color with which this layer should be dyed.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getColor = function() {
+  return /** @type {goog.color.Rgb|undefined} */ (this.get(
+    ol.layer.LayerProperty.COLOR));
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'getColor',
+    ol.layer.Base.prototype.getColor);
+
+/**
+ * @param {goog.color.Rgb|null} color The color with which to dye the layer.
+ *  If the argument is null, the image won't be colored.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setColor = function(color) {
+  if (!goog.isNull(color)) {
+    this.set(ol.layer.LayerProperty.COLOR, color);
+  } else {
+    // Setting [1.0, 1.0, 1.0] will result in the grayscale image
+    // being rendered as an RGB image with equal amounts of equal color
+    // (thus just creating a gray RGB image).
+    this.set(ol.layer.LayerProperty.COLOR, [1.0, 1.0, 1.0]);
+  }
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'setColor',
+    ol.layer.Base.prototype.setColor);
+
+
+
+/**
+ * @return {number|undefined} Min.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getMin = function() {
+  return /** @type {number|undefined} */ (this.get(
+    ol.layer.LayerProperty.MIN));
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'getMin',
+    ol.layer.Base.prototype.getMin);
+
+/**
+ * @param {number} min Min.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setMin = function(min) {
+  if (min > this.getMax()) {
+      this.setMax(min);
+  }
+  this.set(ol.layer.LayerProperty.MIN, min);
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'setMin',
+    ol.layer.Base.prototype.setMin);
+
+
+
+/**
+ * @return {number|undefined} Max.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getMax = function() {
+  return /** @type {number|undefined} */ (this.get(
+    ol.layer.LayerProperty.MAX));
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'getMax',
+    ol.layer.Base.prototype.getMax);
+
+/**
+ * @param {number} max Max.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setMax = function(max) {
+  if (max < this.getMin()) {
+      this.setMin(max);
+  }
+  this.set(ol.layer.LayerProperty.MAX, max);
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'setMax',
+    ol.layer.Base.prototype.setMax);

@@ -24,15 +24,6 @@ ol.renderer.webgl.Layer = function(mapRenderer, layer) {
 
   goog.base(this, mapRenderer, layer);
 
-  // This property is used when binding the textures (tile images).
-  // By default RGBA will be used since all other OP layer renderers use it,
-  // but the GrayscaleTile renderer will set it go LUMINANCE.
-  /**
-   * @protected
-   * @type {number}
-   */
-  this.colorType = goog.webgl.RGBA;
-
   /**
    * @private
    * @type {ol.webgl.Buffer}
@@ -169,7 +160,12 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
       layerState.brightness ||
       layerState.contrast != 1 ||
       layerState.hue ||
-      layerState.saturation != 1;
+      layerState.saturation != 1 ||
+      layerState.min != 0 ||
+      layerState.max != 1 ||
+      layerState.color[0] != 1 ||
+      layerState.color[1] != 1 ||
+      layerState.color[2] != 1;
 
   var fragmentShader, vertexShader;
   if (useColor) {
@@ -225,7 +221,18 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
             layerState.hue,
             layerState.saturation
         ));
+
+        // BEGIN MODIFIED
+          // read color that was specified when layer was created
+          // push color as 4vec to GPU
+          var col = layerState.color;
+          gl.uniform3f(locations.u_color, col[0], col[1], col[2]);
+          gl.uniform1f(locations.u_min, layerState.min);
+          gl.uniform1f(locations.u_max, layerState.max);
+        // END MODIFIED
   }
+
+
   gl.uniform1f(locations.u_opacity, layerState.opacity);
   gl.bindTexture(goog.webgl.TEXTURE_2D, this.getTexture());
   gl.drawArrays(goog.webgl.TRIANGLE_STRIP, 0, 4);

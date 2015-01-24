@@ -261,7 +261,7 @@ ol.renderer.webgl.TileLayer.prototype.prepareFrame =
         goog.vec.Vec4.setFromValues(u_tileOffset, sx, sy, tx, ty);
         gl.uniform4fv(this.locations_.u_tileOffset, u_tileOffset);
         mapRenderer.bindTileTexture(tile, tilePixelSize,
-            tileGutter * pixelRatio, goog.webgl.LINEAR, goog.webgl.LINEAR, this.colorType);
+            tileGutter * pixelRatio, goog.webgl.LINEAR, goog.webgl.LINEAR);
         gl.drawArrays(goog.webgl.TRIANGLE_STRIP, 0, 4);
       }
     }

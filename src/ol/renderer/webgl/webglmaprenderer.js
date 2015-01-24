@@ -20,7 +20,6 @@ goog.require('ol.dom');
 goog.require('ol.layer.Image');
 goog.require('ol.layer.Layer');
 goog.require('ol.layer.Tile');
-goog.require('ol.layer.GrayscaleTile'); // ADDED
 goog.require('ol.layer.Vector');
 goog.require('ol.render.Event');
 goog.require('ol.render.EventType');
@@ -31,7 +30,6 @@ goog.require('ol.renderer.vector');
 goog.require('ol.renderer.webgl.ImageLayer');
 goog.require('ol.renderer.webgl.Layer');
 goog.require('ol.renderer.webgl.TileLayer');
-goog.require('ol.renderer.webgl.GrayscaleTileLayer'); // ADDED
 goog.require('ol.renderer.webgl.VectorLayer');
 goog.require('ol.source.State');
 goog.require('ol.structs.LRUCache');
@@ -185,16 +183,9 @@ goog.inherits(ol.renderer.webgl.Map, ol.renderer.Map);
  * @param {number} tileGutter Tile gutter.
  * @param {number} magFilter Mag filter.
  * @param {number} minFilter Min filter.
- * @param {number=} colorType The color type of the texture image (goog.webgl.RGBA or goog.webgl.LUMINANCE).
  */
 ol.renderer.webgl.Map.prototype.bindTileTexture =
-    function(tile, tileSize, tileGutter, magFilter, minFilter, colorType) { // MODIFIED
-
-  // BEGIN MODIFIED
-    if (!goog.isDefAndNotNull(colorType)) {
-      colorType = goog.webgl.RGBA;
-    }
-  // END MODIFIED
+    function(tile, tileSize, tileGutter, magFilter, minFilter) {
 
   var gl = this.getGL();
   var tileKey = tile.getKey();
@@ -232,7 +223,7 @@ ol.renderer.webgl.Map.prototype.bindTileTexture =
           goog.webgl.UNSIGNED_BYTE, clipTileCanvas);
     } else {
       gl.texImage2D(goog.webgl.TEXTURE_2D, 0,
-          colorType, colorType, // MODIFIED
+          goog.webgl.RGBA, goog.webgl.RGBA,
           goog.webgl.UNSIGNED_BYTE, tile.getImage());
     }
     gl.texParameteri(
@@ -258,8 +249,6 @@ ol.renderer.webgl.Map.prototype.bindTileTexture =
 ol.renderer.webgl.Map.prototype.createLayerRenderer = function(layer) {
   if (ol.ENABLE_IMAGE && layer instanceof ol.layer.Image) {
     return new ol.renderer.webgl.ImageLayer(this, layer);
-  } else if (layer instanceof ol.layer.GrayscaleTile) { // ADDED
-    return new ol.renderer.webgl.GrayscaleTileLayer(this, layer); // ADDED
   } else if (ol.ENABLE_TILE && layer instanceof ol.layer.Tile) {
     return new ol.renderer.webgl.TileLayer(this, layer);
   } else if (ol.ENABLE_VECTOR && layer instanceof ol.layer.Vector) {
