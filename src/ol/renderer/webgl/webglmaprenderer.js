@@ -481,6 +481,7 @@ ol.renderer.webgl.Map.prototype.renderFrame = function(frameState) {
   var layerStatesArray = frameState.layerStatesArray;
   var viewResolution = frameState.viewState.resolution;
   var i, ii, layerRenderer, layerState;
+
   for (i = 0, ii = layerStatesArray.length; i < ii; ++i) {
     layerState = layerStatesArray[i];
     if (ol.layer.Layer.visibleAtResolution(layerState, viewResolution) &&
@@ -509,11 +510,29 @@ ol.renderer.webgl.Map.prototype.renderFrame = function(frameState) {
 
   this.dispatchComposeEvent_(ol.render.EventType.PRECOMPOSE, frameState);
 
+  // Set the blend function so the layers are blended additively
+  gl.blendFunc(gl.ONE, gl.ONE);
   for (i = 0, ii = layerStatesToDraw.length; i < ii; ++i) {
     layerState = layerStatesToDraw[i];
-    layerRenderer = this.getLayerRenderer(layerState.layer);
-    goog.asserts.assertInstanceof(layerRenderer, ol.renderer.webgl.Layer);
-    layerRenderer.composeFrame(frameState, layerState, context);
+    if (layerState.additiveBlend) {
+        layerRenderer = this.getLayerRenderer(layerState.layer);
+        goog.asserts.assertInstanceof(layerRenderer, ol.renderer.webgl.Layer);
+        layerRenderer.composeFrame(frameState, layerState, context);
+    }
+  }
+
+  // Render all layers that shouldn't ble blended additively
+  // gl.enable(gl.DEPTH_TEST);
+  gl.blendFuncSeparate(
+      goog.webgl.SRC_ALPHA, goog.webgl.ONE_MINUS_SRC_ALPHA,
+      goog.webgl.ONE, goog.webgl.ONE_MINUS_SRC_ALPHA);
+  for (i = 0, ii = layerStatesToDraw.length; i < ii; ++i) {
+    layerState = layerStatesToDraw[i];
+    if (!layerState.additiveBlend) {
+        layerRenderer = this.getLayerRenderer(layerState.layer);
+        goog.asserts.assertInstanceof(layerRenderer, ol.renderer.webgl.Layer);
+        layerRenderer.composeFrame(frameState, layerState, context);
+    }
   }
 
   if (!this.renderedVisible_) {

@@ -23,6 +23,7 @@ ol.layer.LayerProperty = {
   EXTENT: 'extent',
   MAX_RESOLUTION: 'maxResolution',
   MIN_RESOLUTION: 'minResolution',
+  ADDITIVE_BLEND: 'additiveBlend',
   SOURCE: 'source',
   COLOR: 'color',
   MAX: 'max',
@@ -43,6 +44,7 @@ ol.layer.LayerProperty = {
  *            color: goog.color.Rgb,
  *            min: number,
  *            max: number,
+ *            additiveBlend: boolean,
  *            maxResolution: number,
  *            minResolution: number}}
  */
@@ -93,6 +95,8 @@ ol.layer.Base = function(options) {
       goog.isDef(options.max) ? options.max : 1;
   properties[ol.layer.LayerProperty.MIN] =
       goog.isDef(options.min) ? options.min : 0;
+  properties[ol.layer.LayerProperty.ADDITIVE_BLEND] =
+      goog.isDef(options.additiveBlend) ? options.additiveBlend : false;
 
   this.setProperties(properties);
 };
@@ -162,6 +166,7 @@ ol.layer.Base.prototype.getLayerState = function() {
   var min = this.getMin();
   var max = this.getMax();
   var color = this.getColor();
+  var additiveBlend = this.getAdditiveBlend();
 
   return {
     layer: /** @type {ol.layer.Layer} */ (this),
@@ -174,11 +179,12 @@ ol.layer.Base.prototype.getLayerState = function() {
     visible: goog.isDef(visible) ? !!visible : true,
     extent: extent,
     maxResolution: goog.isDef(maxResolution) ? maxResolution : Infinity,
-    minResolution: goog.isDef(minResolution) ? Math.max(minResolution, 0) : 0
-    ,
+    minResolution: goog.isDef(minResolution) ? Math.max(minResolution, 0) : 0,
+
     color: goog.isDef(color) ? color : [1, 1, 1],
     min: goog.isDef(min) ? min : 0,
-    max: goog.isDef(max) ? max : 1
+    max: goog.isDef(max) ? max : 1,
+    additiveBlend: goog.isDef(additiveBlend) ? additiveBlend : false
   };
 };
 
@@ -549,3 +555,30 @@ goog.exportProperty(
     ol.layer.Base.prototype,
     'setMax',
     ol.layer.Base.prototype.setMax);
+
+/**
+ * @return {boolean|undefined} If the layer should be blended additively.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getAdditiveBlend = function() {
+  return /** @type {boolean|undefined} */ (this.get(
+    ol.layer.LayerProperty.ADDITIVE_BLEND));
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'getAdditiveBlend',
+    ol.layer.Base.prototype.getAdditiveBlend);
+
+/**
+ * @param {boolean} doBlend If the layer should be blended additively.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setAdditiveBlend = function(doBlend) {
+  this.set(ol.layer.LayerProperty.ADDITIVE_BLEND, doBlend);
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'setAdditiveBlend',
+    ol.layer.Base.prototype.setAdditiveBlend);

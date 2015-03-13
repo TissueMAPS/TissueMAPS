@@ -161,7 +161,7 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
       layerState.contrast != 1 ||
       layerState.hue ||
       layerState.saturation != 1 ||
-      layerState.min != 0 ||
+      layerState.min !== 0 ||
       layerState.max != 1 ||
       layerState.color[0] != 1 ||
       layerState.color[1] != 1 ||
@@ -224,7 +224,7 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
 
         // BEGIN MODIFIED
           // read color that was specified when layer was created
-          // push color as 4vec to GPU
+          // push color as 3vec to GPU
           var col = layerState.color;
           gl.uniform3f(locations.u_color, col[0], col[1], col[2]);
           gl.uniform1f(locations.u_min, layerState.min);
