@@ -2575,7 +2575,11 @@ olx.layer;
  *     visible: (boolean|undefined),
  *     extent: (ol.Extent|undefined),
  *     minResolution: (number|undefined),
- *     maxResolution: (number|undefined)}}
+ *     maxResolution: (number|undefined),
+ *     color: (goog.color.Rgb|undefined),
+ *     min: (number|undefined),
+ *     max: (number|undefined),
+ *     additiveBlend: (boolean|undefined)}}
  * @api
  */
 olx.layer.BaseOptions;
@@ -2664,6 +2668,10 @@ olx.layer.BaseOptions.prototype.maxResolution;
  *     visible: (boolean|undefined),
  *     extent: (ol.Extent|undefined),
  *     minResolution: (number|undefined),
+ *     color: (goog.color.Rgb|undefined),
+ *     min: (number|undefined),
+ *     max: (number|undefined),
+ *     additiveBlend: (boolean|undefined),
  *     maxResolution: (number|undefined)}}
  * @api
  */
@@ -2763,6 +2771,10 @@ olx.layer.LayerOptions.prototype.maxResolution;
  *     extent: (ol.Extent|undefined),
  *     minResolution: (number|undefined),
  *     maxResolution: (number|undefined),
+ *     color: (goog.color.Rgb|undefined),
+ *     min: (number|undefined),
+ *     max: (number|undefined),
+ *     additiveBlend: (boolean|undefined),
  *     layers: (Array.<ol.layer.Base>|ol.Collection.<ol.layer.Base>|undefined)}}
  * @api
  */
