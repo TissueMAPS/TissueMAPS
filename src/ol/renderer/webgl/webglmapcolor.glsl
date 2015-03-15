@@ -32,12 +32,10 @@ uniform vec3 u_color;
 
 void main(void) {
   vec4 texColor = texture2D(u_texture, v_texCoord);
-  // Apply OL transformations (contrast, saturation, hue, brightness)
+
   vec3 newColRGB = (u_colorMatrix * vec4(texColor.rgb, 1.)).rgb;
-  // Rescale min and max
-  newColRGB = clamp((newColRGB - u_min) / (u_max - u_min),
-                    vec3(0.0, 0.0, 0.0),
-                    vec3(1.0, 1.0, 1.0));
+
+  newColRGB = (newColRGB - u_min) / (u_max - u_min);
   gl_FragColor.rgb =  newColRGB * u_color;
   gl_FragColor.a = texColor.a * u_opacity;
 }

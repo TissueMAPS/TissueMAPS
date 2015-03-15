@@ -233,16 +233,12 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
             layerState.saturation
         ));
 
-        // BEGIN MODIFIED
-          // read color that was specified when layer was created
-          // push color as 3vec to GPU
-          var col = layerState.color;
-          gl.uniform3f(locations.u_color, col[0], col[1], col[2]);
-          gl.uniform1f(locations.u_min, layerState.min);
-          gl.uniform1f(locations.u_max, layerState.max);
-        // END MODIFIED
+    // Push new properties to to GPU
+    var col = layerState.color;
+    gl.uniform3f(locations.u_color, col[0], col[1], col[2]);
+    gl.uniform1f(locations.u_min, layerState.min);
+    gl.uniform1f(locations.u_max, layerState.max);
   }
-
 
   gl.uniform1f(locations.u_opacity, layerState.opacity);
   gl.bindTexture(goog.webgl.TEXTURE_2D, this.getTexture());
