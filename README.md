@@ -14,7 +14,6 @@ This version of openlayers adds the following properties to layers:
   The default for this property is `false`. The accessors for this property:
     1. `getAdditiveBlend(): boolean`, `setAdditiveBlend(doBlend: boolean): number`, `setMax(number)`
 
-TODO: Why doesn't this work correctly? Currently these properties have to be set after the layer is created => fix that.
 All of the above properties can be passed to the layer's constructor like standard TissueMAPS layer properties, i.e.:
 
     var layer = ol.layer.TileLayer({
@@ -24,9 +23,40 @@ All of the above properties can be passed to the layer's constructor like standa
         additiveBlend: true
     });
 
-The properties are added like normal OpenLayers properties to the base class of all layers in the file: `ol/layer/layerbase.js`.
+The properties are added like normal OpenLayers properties to the base class of all layers in the file: `ol/layer/layerbase.js` and to the type of the options that are passed to the constructors (`ol/externs/olx.js`).
 
-## Some notes
+## TODO
+
+### 1 - Artifacts
+
+When drawing maps with `drawBlackPixels` set to `false` a new fragment shader called ColorFragmentNoBlack is used. This leads to some strange black artifacts which consist of black pixels around drawn edges. This seems to be related to texture filtering.
+
+Changing the following lines in `ol/renderer/webgl/webgllayerrenderer.js` `bindFramebuffer`-method:
+
+    gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MAG_FILTER,
+        goog.webgl.LINEAR);
+    gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MIN_FILTER,
+        goog.webgl.LINEAR);
+
+to:
+
+    gl.texParameteri(goog.webgl.TEXTURE_2D,
+        goog.webgl.TEXTURE_MAG_FILTER, goog.webgl.NEAREST);
+    gl.texParameteri(goog.webgl.TEXTURE_2D,
+        goog.webgl.TEXTURE_MIN_FILTER, goog.webgl.NEAREST);
+
+removes some of them, but not all.
+
+For the moment just use additive blending for the segmentation layer.
+
+### 2 - Direct loading of 8 bit grayscale images
+
+It would be nice if we loaded 8bit grayscale images as textures directly instead of loading them as RGB.
+
+Location where the textures for each layer are loaded:
+`bindFramebuffer`-method in file `ol/renderer/webgl/webgllayerrenderer.js`
+
+### Some further notes
 
 Colorization of the pixels is done in the fragment shader that is used when nonstandard image properties are used (e.g. an opacity unequal 1 or a color different from `[1, 1, 1]`).
 These changes were made directly in shader language in the file `ol/renderer/webgl/webglmapcolor.glsl`.
