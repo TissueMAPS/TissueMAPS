@@ -49,12 +49,6 @@ removes some of them, but not all.
 
 For the moment just use additive blending for the segmentation layer.
 
-### 2 - Direct loading of 8 bit grayscale images
-
-It would be nice if we loaded 8bit grayscale images as textures directly instead of loading them as RGB.
-
-Location where the textures for each layer are loaded:
-`bindFramebuffer`-method in file `ol/renderer/webgl/webgllayerrenderer.js`
 
 ### Some further notes
 
