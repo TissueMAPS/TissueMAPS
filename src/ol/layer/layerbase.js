@@ -24,6 +24,7 @@ ol.layer.LayerProperty = {
   MAX_RESOLUTION: 'maxResolution',
   MIN_RESOLUTION: 'minResolution',
   ADDITIVE_BLEND: 'additiveBlend',
+  DRAW_BLACK_PIXELS: 'drawBlackPixels',
   SOURCE: 'source',
   COLOR: 'color',
   MAX: 'max',
@@ -45,6 +46,7 @@ ol.layer.LayerProperty = {
  *            min: number,
  *            max: number,
  *            additiveBlend: boolean,
+ *            drawBlackPixels: boolean,
  *            maxResolution: number,
  *            minResolution: number}}
  */
@@ -97,6 +99,8 @@ ol.layer.Base = function(options) {
       goog.isDef(options.min) ? options.min : 0;
   properties[ol.layer.LayerProperty.ADDITIVE_BLEND] =
       goog.isDef(options.additiveBlend) ? options.additiveBlend : false;
+  properties[ol.layer.LayerProperty.DRAW_BLACK_PIXELS] =
+      goog.isDef(options.drawBlackPixels) ? options.drawBlackPixels : true;
 
   this.setProperties(properties);
 };
@@ -167,6 +171,7 @@ ol.layer.Base.prototype.getLayerState = function() {
   var max = this.getMax();
   var color = this.getColor();
   var additiveBlend = this.getAdditiveBlend();
+  var drawBlackPixels = this.getDrawBlackPixels();
 
   return {
     layer: /** @type {ol.layer.Layer} */ (this),
@@ -184,7 +189,8 @@ ol.layer.Base.prototype.getLayerState = function() {
     color: goog.isDef(color) ? color : [1, 1, 1],
     min: goog.isDef(min) ? min : 0,
     max: goog.isDef(max) ? max : 1,
-    additiveBlend: goog.isDef(additiveBlend) ? additiveBlend : false
+    additiveBlend: goog.isDef(additiveBlend) ? additiveBlend : false,
+    drawBlackPixels: goog.isDef(drawBlackPixels) ? drawBlackPixels : true
   };
 };
 
@@ -582,3 +588,31 @@ goog.exportProperty(
     ol.layer.Base.prototype,
     'setAdditiveBlend',
     ol.layer.Base.prototype.setAdditiveBlend);
+
+
+/**
+ * @return {boolean|undefined} If black pixels should be drawn.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getDrawBlackPixels = function() {
+  return /** @type {boolean|undefined} */ (this.get(
+    ol.layer.LayerProperty.DRAW_BLACK_PIXELS));
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'getDrawBlackPixels',
+    ol.layer.Base.prototype.getDrawBlackPixels);
+
+/**
+ * @param {boolean} doDraw If black pxiels should be drawn.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setDrawBlackPixels = function(doDraw) {
+  this.set(ol.layer.LayerProperty.DRAW_BLACK_PIXELS, doDraw);
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'setDrawBlackPixels',
+    ol.layer.Base.prototype.setDrawBlackPixels);
