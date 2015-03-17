@@ -117,10 +117,13 @@ ol.renderer.webgl.Layer.prototype.bindFramebuffer =
             }, gl, this.framebuffer, this.texture));
 
     var texture = gl.createTexture();
+
+    // TODO: Here shoul
     gl.bindTexture(goog.webgl.TEXTURE_2D, texture);
     gl.texImage2D(goog.webgl.TEXTURE_2D, 0, goog.webgl.RGBA,
         framebufferDimension, framebufferDimension, 0, goog.webgl.RGBA,
         goog.webgl.UNSIGNED_BYTE, null);
+
     gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MAG_FILTER,
         goog.webgl.LINEAR);
     gl.texParameteri(goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_MIN_FILTER,
@@ -166,7 +169,8 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
       layerState.max != 1 ||
       layerState.color[0] != 1 ||
       layerState.color[1] != 1 ||
-      layerState.color[2] != 1;
+      layerState.color[2] != 1 ||
+      !layerState.drawBlackPixels;
 
   var fragmentShader, vertexShader;
 
@@ -179,12 +183,8 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
     }
     vertexShader = ol.renderer.webgl.map.shader.ColorVertex.getInstance();
   } else {
-    if (!layerState.drawBlackPixels) {
-        fragmentShader = ol.renderer.webgl.map.shader.ColorNoBlackFragment.getInstance();
-    } else {
-        fragmentShader =
-            ol.renderer.webgl.map.shader.DefaultFragment.getInstance();
-    }
+    fragmentShader =
+        ol.renderer.webgl.map.shader.DefaultFragment.getInstance();
     vertexShader = ol.renderer.webgl.map.shader.DefaultVertex.getInstance();
   }
 
@@ -238,7 +238,7 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
     gl.uniform3f(locations.u_color, col[0], col[1], col[2]);
     gl.uniform1f(locations.u_min, layerState.min);
     gl.uniform1f(locations.u_max, layerState.max);
-  }
+   }
 
   gl.uniform1f(locations.u_opacity, layerState.opacity);
   gl.bindTexture(goog.webgl.TEXTURE_2D, this.getTexture());
