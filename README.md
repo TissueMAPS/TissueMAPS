@@ -25,6 +25,22 @@ All of the above properties can be passed to the layer's constructor like standa
 
 The properties are added like normal OpenLayers properties to the base class of all layers in the file: `ol/layer/layerbase.js` and to the type of the options that are passed to the constructors (`ol/externs/olx.js`).
 
+## Development requirements
+
+Some of the build steps require Java 8. Also, make sure to
+If you are on OSX and encounter some problems during the build step, make sure that you are actually running java 8.
+
+    java -version
+
+Should be something like:
+
+    λ ~/ java -version
+    java version "1.8.0_31"
+    Java(TM) SE Runtime Environment (build 1.8.0_31-b13)
+    Java HotSpot(TM) 64-Bit Server VM (build 25.31-b07, mixed mode)
+
+Otherwise install Java 8 and if the output of `java -version` doesn't change check that `/usr/bin/java` points to `/Library/Internet\ Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin/java`, rather than  `/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java`.
+
 ## TODO
 
 ### 1 - Artifacts
