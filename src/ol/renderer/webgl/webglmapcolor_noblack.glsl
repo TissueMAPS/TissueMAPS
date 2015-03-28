@@ -34,7 +34,7 @@ void main(void) {
   vec4 texColor = texture2D(u_texture, v_texCoord);
 
   // If the tile is black at this position dont render it
-  if (texColor.rgb == vec3(0.0, 0.0, 0.0)) {
+  if (texColor.r < 0.5) {
     discard;
   }
 

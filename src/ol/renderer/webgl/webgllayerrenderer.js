@@ -118,7 +118,6 @@ ol.renderer.webgl.Layer.prototype.bindFramebuffer =
 
     var texture = gl.createTexture();
 
-    // TODO: Here shoul
     gl.bindTexture(goog.webgl.TEXTURE_2D, texture);
     gl.texImage2D(goog.webgl.TEXTURE_2D, 0, goog.webgl.RGBA,
         framebufferDimension, framebufferDimension, 0, goog.webgl.RGBA,
