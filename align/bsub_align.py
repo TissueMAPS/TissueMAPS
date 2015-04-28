@@ -90,13 +90,12 @@ if __name__ == '__main__':
         if u > number_of_jobs:
                 u = number_of_jobs
         batch = range(l, u)
-        print batch
 
         # Write joblist file
         print '.. create joblist'
         registration_filenames = dict()
         for i, files in enumerate(image_filenames):
-            registration_filenames['cycle%d' % i+1] = files[l:u]
+            registration_filenames['cycle%d' % (i+1)] = files[l:u]
         reference_filenames = image_filenames[ref_cycle][l:u]
         output_filename = join(registration_dir,
                                'align_%.4d-%.4d.output' % (l+1, u))
