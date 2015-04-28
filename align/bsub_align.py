@@ -2,7 +2,6 @@
 import os
 from os.path import (join, exists)
 import re
-import h5py
 from time import time
 from datetime import datetime
 import socket
@@ -109,10 +108,6 @@ if __name__ == '__main__':
         print '.. write joblist to file: %s' % joblist_filename
         with open(joblist_filename, 'w') as outfile:
             outfile.write(joblist)
-
-        # Create output file
-        print '.. create output file: %s' % output_filename
-        h5py.File(output_filename, 'w')
 
         # Make timestamp
         ts = time()

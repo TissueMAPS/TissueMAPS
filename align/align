@@ -32,7 +32,7 @@ if __name__ == '__main__':
         output[cycle]['y_shift'] = []
         output[cycle]['reg_file'] = []
         for site in xrange(len(files)):
-            print '.. process site # %d' % site+1
+            print '.. process site # %d' % (site+1)
             # Get filenames of images that should be aligned between cycles
             im_filename = files[site]
             print im_filename
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     # Write output to hdf5 file
     print '. store output in file: %s' % out_file
-    f = h5py.File(out_file, 'r+')  # file has to exist already!
+    f = h5py.File(out_file, 'w')
     for cycle, data in output.iteritems():
         for feature, values in data.iteritems():
             # The calculated features will be stored in separate datasets,
