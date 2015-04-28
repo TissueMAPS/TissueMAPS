@@ -12,7 +12,7 @@ def get_cycle_dirs(project_dir):
     '''
     Get directories of image acquisition cycles.
 
-    Input: 
+    Input:
         :project_dir:       absolute path to project folder
 
     Output:
@@ -71,7 +71,7 @@ def get_image_filenames(cycle_dirs, ref_channel):
     image_filenames = list()
     for subproject in cycle_dirs:
         # Only list image filenames that match the reference channel number
-        files = glob(join(subproject, 'TIFF', '*%.2d.png$' % ref_channel))
+        files = glob(join(subproject, 'TIFF', '*%.2d.png' % ref_channel))
         files = natsorted(files)
         image_filenames.append(files)
     # Make sure each subproject has the same number of filenames

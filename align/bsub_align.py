@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('--ref_channel', dest='ref_channel', default=1,
                         type=int, help='reference channel number')
 
-    parser.add_argument('-b', '--batch_size', dest='batch_size', default=10,
+    parser.add_argument('-b', '--batch_size', dest='batch_size', default=5,
                         type=int, help='number of jobs submitted per batch')
 
     args = parser.parse_args()
@@ -90,22 +90,23 @@ if __name__ == '__main__':
         if u > number_of_jobs:
                 u = number_of_jobs
         batch = range(l, u)
+        print batch
 
         # Write joblist file
         print '.. create joblist'
         registration_filenames = dict()
         for i, files in enumerate(image_filenames):
-            registration_filenames['cycle%d' % i] = files[l:u]
+            registration_filenames['cycle%d' % i+1] = files[l:u]
         reference_filenames = image_filenames[ref_cycle][l:u]
         output_filename = join(registration_dir,
-                               'aligncycles_%.4d-%.4d.output' % (l+1, u+1))
+                               'align_%.4d-%.4d.output' % (l+1, u))
         joblist = yaml.dump({
                     'registration': registration_filenames,
                     'reference': reference_filenames,
                     'output': output_filename
                   }, default_flow_style=False)
         joblist_filename = join(joblists_dir,
-                                'aligncycles_%.4d-%.4d.joblist' % (l+1, u+1))
+                                'align_%.4d-%.4d.joblist' % (l+1, u))
         print '.. write joblist to file: %s' % joblist_filename
         with open(joblist_filename, 'w') as outfile:
             outfile.write(joblist)
@@ -117,7 +118,7 @@ if __name__ == '__main__':
         # Make timestamp
         ts = time()
         st = datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
-        lsf = os.path.join(project_dir, 'lsf', 'visi_%.5d_%d-%d_%s.lsf' %
+        lsf = os.path.join(project_dir, 'lsf', 'align_%.5d_%d-%d_%s.lsf' %
                            (b, l, u, st))
 
         # Submit job

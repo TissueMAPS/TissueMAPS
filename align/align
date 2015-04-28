@@ -17,6 +17,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Get information from 'joblist' file
+    print '. read joblist file: %s' % args.joblist_file
     joblist = yaml.load(open(args.joblist_file).read())
     reg_files = joblist['registration']
     ref_files = joblist['reference']
@@ -25,24 +26,29 @@ if __name__ == '__main__':
     # Loop over cycles
     output = dict()
     for cycle, files in reg_files.iteritems():
+        print '. process %s' % cycle
         output[cycle] = dict()
         output[cycle]['x_shift'] = []
         output[cycle]['y_shift'] = []
         output[cycle]['reg_file'] = []
         for site in xrange(len(files)):
+            print '.. process site # %d' % site+1
             # Get filenames of images that should be aligned between cycles
             im_filename = files[site]
+            print im_filename
             ref_im_filename = ref_files[site]
+            print ref_im_filename
 
             # Calculate shift between images of different cycles
             [x, y] = reg.calculate_shift(im_filename, ref_im_filename)
 
             # Store calculated shift and name of registered image
-            output[cycle]['x_shift'].append(x)
-            output[cycle]['y_shift'].append(y)
+            output[cycle]['x_shift'].append(int(x))
+            output[cycle]['y_shift'].append(int(y))
             output[cycle]['reg_file'].append(basename(im_filename))
 
     # Write output to hdf5 file
+    print '. store output in file: %s' % out_file
     f = h5py.File(out_file, 'r+')  # file has to exist already!
     for cycle, data in output.iteritems():
         for feature, values in data.iteritems():
