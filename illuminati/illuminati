@@ -22,6 +22,9 @@ See all available options with:
 
 """
 
+__version__ = '0.1.0'
+
+
 import os
 import sys
 import copy
@@ -29,13 +32,13 @@ import random
 import yaml
 from gi.repository import Vips
 from scipy.misc import imread
-from illuminati import util
-from illuminati import pyramidize
-from illuminati import illumcorrect
-from illuminati import stitch
-from illuminati import segment
-from illuminati import imageutil
-from illuminati import __version__
+
+import util
+import pyramidize
+import illumcorrect
+import stitch
+import segment
+import imageutil
 
 
 logo = u'''
@@ -76,6 +79,10 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--thresh', dest='thresh',
                         action='store_true', default=False,
                         help="threshold (rescale) stitched image")
+    parser.add_argument('--no-rescale', dest='no_rescale',
+                        action='store_true', default=False,
+                        help="don't perform any 16bit -> 8bit rescaling."
+                             "The resulting pyramid will have 16bit PNG tiles.")
     parser.add_argument('-m', '--mask', dest='mask',
                         action='store_true', default=False,
                         help="create mask from segmentation image")
@@ -211,13 +218,23 @@ if __name__ == '__main__':
 
     # The image will be rescaled s.t. the pixel values fill the whole range
     # of possible values (0 to 2^16) and then converted to 8 bit
-    stitched_img = stitched_img.scale()
+    if not args.no_rescale:
+        stitched_img = stitched_img.scale()
 
     #######################################################################
     #                            PYRAMIDIZING                             #
     #######################################################################
 
     print 'ᐄ  CREATING ZOOMIFY PYRAMID FROM STITCHED IMAGE'
-    pyramidize.create_pyramid(stitched_img, args.output_dir)
+    if not args.no_rescale:
+        pyramidize.create_pyramid(stitched_img, args.output_dir)
+    else:
+        # The stitched image wasn't rescaled and is still 16 bit.
+        # In order to have the resulting pyramid be 16 bit as well, we have
+        # do change the file format from JPEG to PNG.
+        # Note that pyramids created in this manner shouldn't be visualized directly
+        # in the browser since they will be coerced to 8 bit, thus losing information.
+        pyramidize.create_pyramid(stitched_img, args.output_dir,
+                                  tile_file_extension='.png')
 
     print '🍺  Done!'

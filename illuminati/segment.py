@@ -16,7 +16,7 @@ from skimage.measure import find_contours, approximate_polygon
 import sys
 import scipy
 from os.path import basename, exists, realpath, join
-from illuminati import util
+import util
 
 
 class tm_segment:

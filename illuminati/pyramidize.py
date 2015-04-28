@@ -3,7 +3,7 @@
 
 import os
 from gi.repository import Vips
-from illuminati import util
+import util
 
 """
 TissueMAPS tool for creating a pyramid of a stitched image.
