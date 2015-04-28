@@ -61,11 +61,12 @@ if __name__ == '__main__':
     # Shall we kill previous 'joblist' files?
 
     print '. creating joblist files'
-    command = ['visi', '-o', lsf_dir, '--joblist']
+    joblists_dir = osp.join(lsf_dir, 'joblists')
+    command = ['visi', '-o', joblists_dir, '--joblist']
     files = glob.glob(osp.join(input_dir, '*'))
     check_call(command + files)
 
-    joblist_files = glob.glob(osp.join(lsf_dir, '*.joblist'))
+    joblist_files = glob.glob(osp.join(joblists_dir, '*.joblist'))
 
     if not joblist_files:
         raise Exception('Could not find any .joblist files.')
