@@ -5,7 +5,7 @@
 TissueMAPS tool for stitching individual images together to one large image.
 Images can optionally be shifted if required.
 
-    $ tm_stitch.py --help
+    $ stitch.py --help
 
 """
 
@@ -20,8 +20,8 @@ from os.path import join, isdir
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
 from gi.repository import Vips
-from illuminati import util
-from illuminati import imageutil
+import util
+import imageutil
 
 
 class stitch:

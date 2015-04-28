@@ -22,6 +22,9 @@ See all available options with:
 
 """
 
+__version__ = '0.1.0'
+
+
 import os
 import sys
 import copy
@@ -29,13 +32,13 @@ import random
 import yaml
 from gi.repository import Vips
 from scipy.misc import imread
-from illuminati import util
-from illuminati import pyramidize
-from illuminati import illumcorrect
-from illuminati import stitch
-from illuminati import segment
-from illuminati import imageutil
-from illuminati import __version__
+
+import util
+import pyramidize
+import illumcorrect
+import stitch
+import segment
+import imageutil
 
 
 logo = u'''

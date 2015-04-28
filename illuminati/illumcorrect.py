@@ -18,7 +18,7 @@ import re
 from os.path import join, realpath, basename, splitext, exists, isdir
 import sys
 from gi.repository import Vips
-from illuminati import util
+import util
 
 
 class illumcorrect:
