@@ -1,0 +1,223 @@
+#! /usr/bin/env python
+# encoding: utf-8
+
+"""
+Illuminati is a command line tool for pre-processing images for TissueMAPS.
+It combines the following routines:
+* shifting (-s)
+* illumination correcting (-i)
+* thresholding (-t)
+Each of these routines comes with a separate command line interface that provides
+additional functionality and can be used independently. For more details on the
+individual steps see the respective files.
+
+A potential call (from BASH) to this tool could look something like this:
+
+    $ illuminati \\
+        -sit TIFF/15*_r0[1-4]*_c0[1-4]*DAPI*.png -o out.png \\
+
+See all available options with:
+
+    $ illuminati --help
+
+"""
+
+import os
+import sys
+import copy
+import random
+import yaml
+from gi.repository import Vips
+from scipy.misc import imread
+from illuminati import util
+from illuminati import pyramidize
+from illuminati import illumcorrect
+from illuminati import stitch
+from illuminati import segment
+from illuminati import imageutil
+from illuminati import __version__
+
+
+logo = u'''
+   .
+   I        Illuminati (%(version)s)
+  LLU       Creates pyramid images for tissueMAPS.
+ MINATI
+'''
+
+
+if __name__ == '__main__':
+    import argparse
+
+    print logo % {'version': __version__}
+
+    parser = argparse.ArgumentParser(
+        description='Create pyramid images for TissueMAPS.')
+
+    parser.add_argument('files', nargs='*',
+                        help='image files to process (pattern),\
+                        e.g. TIFF/*.png')
+
+    parser.add_argument('-o', '--output', dest='output_dir', required=True,
+                        help="directory where the pyramid should be saved")
+
+    parser.add_argument('-c', '--config', dest='config',
+                        default=os.path.join(os.path.dirname(__file__),
+                                             'config.yaml'),
+                        help='use custom yaml configuration file')
+
+    parser.add_argument('-s', '--shift', dest='shift',
+                        action='store_true', default=False,
+                        help="shift stitched image according to descriptor file")
+    parser.add_argument('-i', '--illum_correct', dest='illum_correct',
+                        action='store_true', default=False,
+                        help="correct images for illumination\
+                        according to stats file")
+    parser.add_argument('-t', '--thresh', dest='thresh',
+                        action='store_true', default=False,
+                        help="threshold (rescale) stitched image")
+    parser.add_argument('-m', '--mask', dest='mask',
+                        action='store_true', default=False,
+                        help="create mask from segmentation image")
+    parser.add_argument('--thresh-value', dest='thresh_value',
+                        type=float, default=False,
+                        help="pixel value for threshold")
+    parser.add_argument('--thresh-percent', dest='thresh_percentage',
+                        type=float, default=0.01,
+                        help="percentage of pixel values above threshold")
+    parser.add_argument('--thresh-sample', dest='tresh_sample_size',
+                        type=int, default=10,
+                        help="number of files to use for threshold estimation")
+
+    args = parser.parse_args()
+
+    if not args.files or not all(map(util.is_image, args.files)):
+        parser.print_help()
+        sys.exit(1)
+
+    if not args.output_dir:
+        print 'You need to specify an output directory'
+        sys.exit(1)
+
+    if not os.path.exists(args.output_dir):
+        print '.. Creating pyramid output directory'
+        os.makedirs(args.output_dir)
+
+    if args.thresh_value and not args.thresh:
+        print '\'--thresh-value\' command only works together with \'-t\' command'
+
+    print '.. Creating layer "%s"' % os.path.basename(args.output_dir)
+
+    files = args.files
+
+    # TODO: documentation!!!
+    config_filename = args.config
+    if not os.path.exists(config_filename):
+        print('Error: configuration file %s does not exist!' % config_filename)
+        sys.exit(1)
+    print '.. Using configuration file %s' % config_filename
+    config_settings = yaml.load(open(config_filename).read())
+    util.check_config(config_settings)
+
+    util_obj = util.util(config_settings)
+    cycle_nr = util_obj.get_cycle_nr_from_filename(files[0])
+    exp_name = util_obj.get_expname_from_filename(files[0])
+    root_dir = util_obj.get_rootdir_from_image_file(files[0])
+
+    stitch_obj = stitch.stitch(config_settings)
+    file_grid = stitch_obj.build_file_grid(files)
+    vips_image_grid = copy.deepcopy(file_grid)
+
+    # Create a vips image for each file
+    print '.. Loading images'
+    if args.mask:
+        print('ᐄ  CREATING OUTLINE MASKS')
+    for i in range(len(file_grid)):
+        for j in range(len(file_grid[0])):
+            if args.mask:
+                # Load images and get object outlines
+                mat = imread(file_grid[i][j])
+                mat = segment.remove_border_cells(mat)
+                outline_mat = segment.outlines(mat)
+                im = Vips.Image.new_from_array(outline_mat.tolist())
+                vips_image_grid[i][j] = im
+            else:
+                # Create vips image from file
+                im = Vips.Image.new_from_file(file_grid[i][j])
+                vips_image_grid[i][j] = im
+
+    #######################################################################
+    #                       ILLUMINATION CORRECTING                       #
+    #######################################################################
+
+    if args.illum_correct:
+        print 'ᐄ  CORRECTING IMAGES FOR ILLUMINATION'
+        illumcorr_obj = illumcorrect.illumcorrect(config_settings)
+        stats_file = illumcorr_obj.get_stats_file_name(files)
+        mean, std = illumcorrect.load_statistics_from_mat_file_vips(stats_file)
+        for i in range(len(vips_image_grid)):
+            for j in range(len(vips_image_grid[0])):
+                img = vips_image_grid[i][j]
+                vips_image_grid[i][j] = \
+                    illumcorrect.illum_correction_vips(img, mean, std)
+
+    print 'ᐄ  STITCHING IMAGES' + (' & SHIFTING' if args.shift else '')
+
+    #######################################################################
+    #                             STITCHING                               #
+    #######################################################################
+
+    stitched_img = stitch.stitch_all_images(vips_image_grid)
+
+    #######################################################################
+    #                              SHIFTING                               #
+    #######################################################################
+
+    if args.shift:
+        descrs = stitch_obj.load_shift_descrs(root_dir)
+        cycle_dirs = util_obj.get_cycle_directories(root_dir)
+        cycle_nrs = sorted([c.cycle_number for c in cycle_dirs])
+        shift_desc_idx = cycle_nrs.index(cycle_nr)
+        stitched_img = stitch.global_shift(stitched_img, shift_desc_idx, descrs)
+
+    #######################################################################
+    #                            THRESHOLDING                             #
+    #######################################################################
+
+    # If 'thresh' has been set then a certain percentage of the pixels
+    # with the largest value will be thresholded (i.e., set to the lowest of their values).
+    # A sample of size `args.tresh_sample_size` is used to determine the cut off value
+    # above which the `args.thresh_percentage`% of all pixels with the largest values lie.
+    if args.thresh:
+        print 'ᐄ  THRESHOLDING'
+        if args.thresh_value:
+            val = args.thresh_value
+            print '   ... Using provided threshold value'
+        else:
+            sample_size = args.tresh_sample_size
+            # Adjust sample size if set too large
+            if args.tresh_sample_size > len(files):
+                sample_size = len(files)
+            # The files from which to sample threshold
+            sample_files = random.sample(files, sample_size)
+            sample_images = map(Vips.Image.new_from_file, sample_files)
+            print '   ... Computing threshold value'
+            val = imageutil.get_threshold(sample_images,
+                                          args.thresh_percentage)
+        lut = imageutil.create_thresholding_LUT(val)
+        # Map image through lookup table
+        print '   ... Applying threshold'
+        stitched_img = stitched_img.maplut(lut)
+
+    # The image will be rescaled s.t. the pixel values fill the whole range
+    # of possible values (0 to 2^16) and then converted to 8 bit
+    stitched_img = stitched_img.scale()
+
+    #######################################################################
+    #                            PYRAMIDIZING                             #
+    #######################################################################
+
+    print 'ᐄ  CREATING ZOOMIFY PYRAMID FROM STITCHED IMAGE'
+    pyramidize.create_pyramid(stitched_img, args.output_dir)
+
+    print '🍺  Done!'

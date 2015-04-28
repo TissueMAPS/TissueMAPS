@@ -1,0 +1,4 @@
+TODO:
+
+- check regular expressions `r`
+- create `cfg` module that imports from yaml and creates python dictionary
