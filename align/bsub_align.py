@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-from os.path import join
+from os.path import (join, exists)
 import re
 import h5py
 from time import time
@@ -63,6 +63,11 @@ if __name__ == '__main__':
     number_of_batches = number_of_jobs / batch_size
     print '. batch-size: %d' % batch_size
     print '. number of batches: %d' % number_of_batches
+
+    output_dir = join(project_dir, 'lsf')
+    if not exists(output_dir):
+        print '. create output directory: %s' % output_dir
+        os.mkdir(output_dir)
 
     for b in xrange(number_of_batches + 2):
         if b == 0:
