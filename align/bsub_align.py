@@ -69,6 +69,16 @@ if __name__ == '__main__':
         print '. create output directory: %s' % output_dir
         os.mkdir(output_dir)
 
+    registration_dir = join(output_dir, 'registration')
+    if not exists(registration_dir):
+        print '. create output subdirectory for registration: %s' % registration_dir
+        os.mkdir(registration_dir)
+
+    joblists_dir = join(output_dir, 'joblists')
+    if not exists(joblists_dir):
+        print '. create output subdirectory for joblists: %s' % joblists_dir
+        os.mkdir(joblists_dir)
+
     for b in xrange(number_of_batches + 2):
         if b == 0:
                 continue
@@ -87,16 +97,15 @@ if __name__ == '__main__':
         for i, files in enumerate(image_filenames):
             registration_filenames['cycle%d' % i] = files[l:u]
         reference_filenames = image_filenames[ref_cycle][l:u]
-        output_filename = join(project_dir, 'lsf', 'registration',
+        output_filename = join(registration_dir,
                                'aligncycles_%.4d-%.4d.output' % (l+1, u+1))
         joblist = yaml.dump({
                     'registration': registration_filenames,
                     'reference': reference_filenames,
                     'output': output_filename
                   }, default_flow_style=False)
-        joblist_filename = 'aligncycles_%.4d-%.4d.joblist' % (l+1, u+1)
-        joblist_filename = join(project_dir, 'lsf', 'joblists',
-                                joblist_filename)
+        joblist_filename = join(joblists_dir,
+                                'aligncycles_%.4d-%.4d.joblist' % (l+1, u+1))
         print '.. write joblist to file: %s' % joblist_filename
         with open(joblist_filename, 'w') as outfile:
             outfile.write(joblist)
