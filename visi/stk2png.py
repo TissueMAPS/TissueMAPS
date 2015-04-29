@@ -5,6 +5,8 @@ import numpy as np
 from copy import copy
 import re
 
+import ipdb as db
+
 # TODO: handle exceptions
 # - single site acquisitions with no row/column info
 # - no z-stacks
@@ -153,7 +155,7 @@ class Stk2png(object):
         self.nd_file = os.path.basename(nd_file)
         if config:
             self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
-            self.filter_pattern = '.*?([^m]+[0-9]?)(?=xm?)'
+            self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
             self.tokens = ['filter', 'site']
             self.nomenclature = copy(config['nomenclature_string'])
             self.format = copy(config['nomenclature_format'])
@@ -240,9 +242,13 @@ class Stk2png(object):
             for i, t in enumerate(self.tokens):
                 # Handle special cases that are more complex
                 if t == 'filter':
+                    print stk_file
+                    print matched[i]
                     if re.search(r'xm', matched[i]):
                         r = re.compile(self.filter_pattern)
                         match = re.search(r, matched[i]).group(1)
+                        print match
+                    # TODO: handles dual sdc mode!
                     else:
                         match = matched[i]
                 else:
