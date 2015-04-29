@@ -1,6 +1,8 @@
 # image_toolbox #
 
-A collection of tools for image processing written in Python. These tools should become Python packages installable via *pip*.
+A collection of tools for image processing written in Python.
+
+At some point these tools should become official Python packages installable via [pip](https://pypi.python.org/pypi/pip).
 
 
 ## align ##
