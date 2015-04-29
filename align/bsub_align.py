@@ -29,13 +29,16 @@ if __name__ == '__main__':
                         help='project directory')
 
     parser.add_argument('--ref_cycle', dest='ref_cycle', type=int,
-                        help='reference cycle number')
+                        help='reference cycle number \
+                        (defaults to number of last cycle)')
 
     parser.add_argument('--ref_channel', dest='ref_channel', default=1,
-                        type=int, help='reference channel number')
+                        type=int, help='reference channel number \
+                        (defaults to 1)')
 
     parser.add_argument('-b', '--batch_size', dest='batch_size', default=5,
-                        type=int, help='number of jobs submitted per batch')
+                        type=int, help='number of jobs submitted per batch \
+                        (defaults to 5)')
 
     args = parser.parse_args()
 
