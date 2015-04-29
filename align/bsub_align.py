@@ -7,8 +7,9 @@ from datetime import datetime
 import socket
 import argparse
 import yaml
-from align import registration as reg
+from natsort import natsorted
 from subprocess32 import call
+from illuminati import util
 
 
 def on_brutus():
@@ -21,9 +22,8 @@ def on_brutus():
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser('Submit jobs for the calculation of \
-                                     shift between images \
-                                     of different acquisition cycles.')
+    parser = argparse.ArgumentParser('Submit jobs for calculating the shift ' 
+                                     'between images of different acquisition cycles.')
 
     parser.add_argument('project_dir', default=os.getcwd(),
                         help='project directory')
@@ -40,26 +40,50 @@ if __name__ == '__main__':
                         type=int, help='number of jobs submitted per batch \
                         (defaults to 5)')
 
+    parser.add_argument('-c', '--config', dest='config',
+                        default=os.path.join(os.path.dirname(__file__), '..',
+                                             'config.yaml'),
+                        help='use custom yaml configuration file \
+                        (defaults to config.yaml form "image_toolbox")')
+
     args = parser.parse_args()
 
     project_dir = args.project_dir
     batch_size = args.batch_size
-    ref_channel = args.ref_channel
+
+    config_filename = args.config
+    print '. get configuration from config file: %s' % config_filename
+    config = util.load_config(config_filename)
+    util.check_config(config)
+
+    # Initialize utility object with configuration settings
+    project = util.Util(config)
 
     print '. get cycle directories'
-    cycle_dirs = reg.get_cycle_dirs(project_dir)
+    cycle_dirs = project.get_cycle_directories(project_dir)
 
-    print '. get image filenames'
-    image_filenames = reg.get_image_filenames(cycle_dirs, ref_channel)
+    ref_channel = args.ref_channel
+    print '. reference channel: %d' % ref_channel
+
+    print '. get image filenames of reference channel'
+    image_filenames = []
+    for cycle in cycle_dirs:
+        files = project.get_image_files(project_dir, cycle)
+        # only use files of reference channel
+        r = config['CHANNEL_NR_FROM_FILENAME'].replace('\d+',
+                                                       '%.2d' % ref_channel)
+        r = re.compile(r)
+        files = [f for f in files if re.search(r, f)]
+        files = natsorted(files)  # ensure correct order
+        image_filenames.append(files)
 
     if args.ref_cycle:
-        ref_cycle = args.ref_cycle - 1
+        ref_cycle = args.ref_cycle - 1  # for zero-based indexing!
     else:
         # By default use last cycle as reference
-        ref_cycle = len(cycle_dirs) - 1
+        ref_cycle = len(cycle_dirs) - 1  # for zero-based indexing!
 
-    print '. reference channel: %d' % ref_channel
-    print '. reference cycle: %d' % ref_cycle
+    print '. reference cycle: %d' % (ref_cycle + 1)
 
     # Divide list of image files into batches
     number_of_jobs = len(image_filenames[0])

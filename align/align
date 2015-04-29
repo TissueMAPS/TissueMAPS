@@ -35,9 +35,9 @@ if __name__ == '__main__':
             print '.. process site # %d' % (site+1)
             # Get filenames of images that should be aligned between cycles
             reg_im_filename = files[site]
-            print '... reg: ' % reg_im_filename
+            print '... reg: %s' % reg_im_filename
             ref_im_filename = ref_files[site]
-            print '... ref: ' % ref_im_filename
+            print '... ref: %s' % ref_im_filename
 
             # Calculate shift between images of different cycles
             [x, y] = reg.calculate_shift(reg_im_filename, ref_im_filename)
