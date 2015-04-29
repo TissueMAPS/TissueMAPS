@@ -19,7 +19,7 @@ from os.path import basename, exists, realpath, join
 import util
 
 
-class tm_segment:
+class segment:
 
     def __init__(self, config_settings):
         """
