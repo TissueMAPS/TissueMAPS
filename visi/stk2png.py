@@ -152,7 +152,7 @@ class Stk2png(object):
         self.input_dir = os.path.dirname(input_files[0])
         self.nd_file = os.path.basename(nd_file)
         if config:
-            self.filename_pattern = '(?:sdc|hxp|tirf|led)(.*)_s(\d+).stk'
+            self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
             self.filter_pattern = '.*?([^m]+[0-9]?)(?=xm?)'
             self.tokens = ['filter', 'site']
             self.nomenclature = copy(config['nomenclature_string'])
