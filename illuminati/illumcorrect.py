@@ -21,7 +21,7 @@ from gi.repository import Vips
 import util
 
 
-class illumcorrect:
+class Illumcorrect:
 
     def __init__(self, config_settings):
         """
@@ -36,7 +36,7 @@ class illumcorrect:
         Variables can be set in the configuration file!
         """
         image_file = image_filenames[0]
-        util_obj = util.util(self.cfg)
+        util_obj = util.Util(self.cfg)
         channel_nr = util_obj.get_channel_nr_from_filename(image_file)
         stats_file = self.cfg['STATS_FILE_FORMAT'].format(channel_number=channel_nr)
 
@@ -216,7 +216,7 @@ if __name__ == '__main__':
                         help='directory where corrected images should be saved')
 
     parser.add_argument('-c', '--config', dest='config',
-                        default=os.path.join(os.path.dirname(__file__),
+                        default=os.path.join(os.path.dirname(__file__), '..',
                                              'config.yaml'),
                         help='use custom yaml configuration file')
 
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     config_settings = yaml.load(open(config_filename).read())
     util.check_config(config_settings)
 
-    tm_obj = tm_illumcorrect(config_settings)
+    tm_obj = Illumcorrect(config_settings)
     stats_file = tm_obj.get_stats_file_name(args.files)
 
     if args.no_vips:

@@ -19,7 +19,7 @@ from os.path import basename, exists, realpath, join
 import util
 
 
-class segment:
+class Segment:
 
     def __init__(self, config_settings):
         """
@@ -208,7 +208,7 @@ These outline images need to be stitched together using tm_stitch.py
                         help='where to put the outline images')
 
     parser.add_argument('-c', '--config', dest='config',
-                        default=os.path.join(os.path.dirname(__file__),
+                        default=os.path.join(os.path.dirname(__file__), '..',
                                              'config.yaml'),
                         help='use custom yaml configuration file')
 

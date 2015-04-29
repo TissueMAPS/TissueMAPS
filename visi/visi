@@ -37,9 +37,9 @@ if __name__ == '__main__':
                         help='place output files for different .nd files \
                         into separate folders')
 
-    parser.add_argument('--output_dir_name', dest='output_dir_name',
-                        type=str, default='TIFF',
-                        help='name of the output folder (default: \'TIFF\')')
+    parser.add_argument('--output_dir_name', dest='output_dir_name', type=str,
+                        help='name of the output folder (defaults to location \
+                             specified in config file)')
 
     parser.add_argument('-r', '--rename', dest='rename',
                         action='store_true', default=False,
@@ -68,27 +68,28 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.rename:
-        # Load additional arguments form YAML configuration file
-        config_filename = args.config
-        if not os.path.exists(config_filename):
-            raise Exception('Configuration file "%s" does not exist!' %
-                            config_filename)
-        print '. Using configuration file "%s"' % config_filename
-        config = yaml.load(open(config_filename).read())
-        print '. Checking configuration file'
-        check_yaml_configuration(config)
-    else:
-        config = dict()
+    # Load additional arguments form YAML configuration file
+    config_filename = args.config
+    if not os.path.exists(config_filename):
+        raise Exception('Configuration file "%s" does not exist!' %
+                        config_filename)
+    print '. Using configuration file "%s"' % config_filename
+    config = yaml.load(open(config_filename).read())
+    print '. Checking configuration file'
+    check_yaml_configuration(config)
 
     files = args.files
     input_dir = os.path.dirname(files[0])
 
     # Create name of output directory
-    if args.output_dir:
-        output_dir = os.path.join(args.output_dir, args.output_dir_name)
+    if args.output_dir_name:
+        output_dir_name = args.output_dir_name
     else:
-        output_dir = os.path.join(input_dir, '..', args.output_dir_name)
+        output_dir_name = config['output_dir_name']
+    if args.output_dir:
+        output_dir = os.path.join(args.output_dir, output_dir_name)
+    else:
+        output_dir = os.path.join(input_dir, '..', output_dir_name)
 
     # Find .nd files in the list of files.
     r = re.compile('.*\.nd$')
@@ -183,9 +184,8 @@ if __name__ == '__main__':
             else:
                 retry = False
 
-        process = Stk2png(stk_files, nd_file, config)
-
         if args.rename:
+            process = Stk2png(stk_files, nd_file, config)
             print '... Get information from .nd file'
             process.get_info_from_nd_files()
             print '... Get information from image filename'
@@ -195,6 +195,8 @@ if __name__ == '__main__':
                 process.get_image_position()
             print '... Rename images'
             process.rename_files()
+        else:
+            process = Stk2png(stk_files, nd_file)
 
         print '... Load and unpack .stk files and save them as .png images'
         process.unpack_images(output_dir=output_dir, keep_z=args.zstacks,

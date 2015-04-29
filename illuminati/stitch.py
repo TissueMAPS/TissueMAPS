@@ -24,7 +24,7 @@ import util
 import imageutil
 
 
-class stitch:
+class Stitch:
 
     def __init__(self, config_settings):
         """
@@ -168,7 +168,7 @@ if __name__ == '__main__':
                         help='directory where stitched image should be saved')
 
     parser.add_argument('-c', '--config', dest='config',
-                        default=os.path.join(os.path.dirname(__file__),
+                        default=os.path.join(os.path.dirname(__file__), '..',
                                              'config.yaml'),
                         help='use custom yaml configuration file')
 
@@ -196,7 +196,7 @@ if __name__ == '__main__':
 
     files = args.files
 
-    config_obj = stitch(config_settings)
+    config_obj = Stitch(config_settings)
     file_grid = config_obj.build_file_grid(files)
     vips_image_grid = copy.deepcopy(file_grid)
 
@@ -215,7 +215,7 @@ if __name__ == '__main__':
         cycle_dirs = util.get_cycle_directories(root_dir)
         cycle_nrs = sorted([c.cycle_number for c in cycle_dirs])
         shift_desc_idx = cycle_nrs.index(cycle_nr)
-        tm_obj = stitch(config_settings)
+        tm_obj = Stitch(config_settings)
         descrs = tm_obj.load_shift_descrs(root_dir)
         stitched_img = global_shift(stitched_img, shift_desc_idx, descrs)
 

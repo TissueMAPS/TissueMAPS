@@ -58,10 +58,10 @@ def format_nd(nd):
     '''
     Format .nd file content, i.e. translate it into python syntax.
     Important keys:
-    - DoStage       -> 'well'
-    - DoTimelapse   -> 'time'
-    - DoWave        -> 'channel'
-    - DoZSeries     -> 'zstack'
+        - DoStage       -> 'well'
+        - DoTimelapse   -> 'time'
+        - DoWave        -> 'channel'
+        - DoZSeries     -> 'zstack'
     '''
     for k, v in nd.iteritems():
         string_match = re.search(r'"(.+)"', v)
@@ -146,8 +146,8 @@ class Stk2png(object):
          * nomenclature_format  dictionary defining the format of filenames
          * acquisition_mode     string specifying the order in which images
                                 were acquired (snake)
-         * acquisition_layout   'rows' (more rows than columns) or
-                                'columns' (vice versa)
+         * acquisition_layout   'rows>columns' (more rows than columns) or
+                                'columns>rows' (vice versa)
         '''
         self.input_files = map(os.path.basename, input_files)
         self.output_files = copy(self.input_files)

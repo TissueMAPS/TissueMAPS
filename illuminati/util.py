@@ -4,6 +4,8 @@ Utility functions for filename and path routines.
 
 import re
 import os
+import yaml
+from natsort import natsorted
 from os.path import join, dirname, realpath
 from scipy.misc import imread
 
@@ -89,7 +91,7 @@ def is_image(filename):
     return _image_regex.match(filename) is not None
 
 
-class util:
+class Util:
 
     def __init__(self, config_settings):
         """
@@ -120,6 +122,7 @@ class util:
 
     def get_cycle_directories(self, root_dir):
         dir_content = os.listdir(root_dir)
+        dir_content = natsorted(dir_content)
         cycle_dirs = []
         for f in dir_content:
             if os.path.isdir(os.path.join(root_dir, f)) \
@@ -128,12 +131,28 @@ class util:
                 cycle_dirs.append(cdir)
         return cycle_dirs
 
-    def get_image_files(self, root_dir, cycle_dir):
+    def get_image_files(self, root_dir, cycle_dir_object):
         image_folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'].format(
-            cycle_subdirectory=cycle_dir.filename))
+            cycle_subdirectory=cycle_dir_object.filename))
         files = [join(image_folder, f) for f in os.listdir(image_folder)
                  if is_image(f)]
+        files = natsorted(files)
         return files
+
+    def get_image_dir(self, root_dir, cycle_dir_object):
+        folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'].format(
+            cycle_subdirectory=cycle_dir_object.filename))
+        return folder
+
+    def get_segmentation_dir(self, root_dir, cycle_dir_object):
+        folder = join(root_dir, self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
+            cycle_subdirectory=cycle_dir_object.filename))
+        return folder
+
+    def get_shift_dir(self, root_dir, cycle_dir_object):
+        folder = join(root_dir, self.cfg['SHIFT_FOLDER_LOCATION'].format(
+            cycle_subdirectory=cycle_dir_object.filename))
+        return folder
 
     def get_rootdir_from_image_file(self, imagefile):
         levels = len(self.cfg['IMAGE_FOLDER_LOCATION'].split('/'))
@@ -187,6 +206,14 @@ def regex_from_format_string(format_string):
     return regex
 
 
+def load_config(config_filename):
+    '''Load project configuration from yaml file.'''
+    if not os.path.exists(config_filename):
+        raise Exception('Error: configuration file %s does not exist!'
+                        % config_filename)
+    return yaml.load(open(config_filename).read())
+
+
 def check_config(config):
     yaml_keys = [
         'COORDINATE_FROM_FILENAME',
@@ -205,5 +232,3 @@ def check_config(config):
     for key in yaml_keys:
         if key not in config:
             print('Error: configuration file must contain the key "%s"' % key)
-
-
