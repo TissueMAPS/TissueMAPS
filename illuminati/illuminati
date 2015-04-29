@@ -20,6 +20,16 @@ See all available options with:
 
     $ illuminati --help
 
+Some example use cases:
+
+    - Create a pyramid out of segmentation files, retaining their 16 bit depth:
+
+        $ illuminati --no-rescale path/to/*.png -o my_cell_id_pyramid
+
+    - Create a pyramid of cell outlines, also retaining their 16 bit depth:
+
+        $ illuminati --no-rescale --mask --mask-keep-ids path/to/*.png -o my_outline_pyramid
+
 """
 
 __version__ = '0.1.0'
@@ -86,6 +96,10 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--mask', dest='mask',
                         action='store_true', default=False,
                         help="create mask from segmentation image")
+    parser.add_argument('--mask-keep-ids', dest='mask_keep_ids',
+                        action='store_true', default=False,
+                        help="if the masks should retain the original cell ids "
+                             "or just be white.")
     parser.add_argument('--thresh-value', dest='thresh_value',
                         type=float, default=False,
                         help="pixel value for threshold")
@@ -145,7 +159,8 @@ if __name__ == '__main__':
                 # Load images and get object outlines
                 mat = imread(file_grid[i][j])
                 mat = segment.remove_border_cells(mat)
-                outline_mat = segment.outlines(mat)
+                outline_mat = segment.outlines(mat,
+                                               keep_ids=args.mask_keep_ids)
                 im = Vips.Image.new_from_array(outline_mat.tolist())
                 vips_image_grid[i][j] = im
             else:
