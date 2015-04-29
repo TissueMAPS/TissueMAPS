@@ -21,7 +21,9 @@ def on_brutus():
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser('Image registration between cycles.')
+    parser = argparse.ArgumentParser('Submit jobs for the calculation of \
+                                     shift between images \
+                                     of different acquisition cycles.')
 
     parser.add_argument('project_dir', default=os.getcwd(),
                         help='project directory')

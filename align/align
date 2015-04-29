@@ -34,18 +34,18 @@ if __name__ == '__main__':
         for site in xrange(len(files)):
             print '.. process site # %d' % (site+1)
             # Get filenames of images that should be aligned between cycles
-            im_filename = files[site]
-            print im_filename
+            reg_im_filename = files[site]
+            print '... reg: ' % reg_im_filename
             ref_im_filename = ref_files[site]
-            print ref_im_filename
+            print '... ref: ' % ref_im_filename
 
             # Calculate shift between images of different cycles
-            [x, y] = reg.calculate_shift(im_filename, ref_im_filename)
+            [x, y] = reg.calculate_shift(reg_im_filename, ref_im_filename)
 
             # Store calculated shift and name of registered image
             output[cycle]['x_shift'].append(int(x))
             output[cycle]['y_shift'].append(int(y))
-            output[cycle]['reg_file'].append(basename(im_filename))
+            output[cycle]['reg_file'].append(basename(reg_im_filename))
 
     # Write output to hdf5 file
     print '. store output in file: %s' % out_file

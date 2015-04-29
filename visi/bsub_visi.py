@@ -62,6 +62,8 @@ if __name__ == '__main__':
 
     print '. creating joblist files'
     joblists_dir = osp.join(lsf_dir, 'joblists')
+    if not osp.exists(joblists_dir):
+        os.mkdir(joblists_dir)
     command = ['visi', '-o', joblists_dir, '--joblist']
     files = glob.glob(osp.join(input_dir, '*'))
     check_call(command + files)
