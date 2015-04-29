@@ -154,9 +154,12 @@ def plot_outline_polygons(sitemat, outlines):
     plt.show()
 
 
-def outlines(labels):
+def outlines(labels, keep_ids=False):
     """
-    Given a label matrix, return a matrix of the outlines of the labeled objects
+    Given a label matrix, return a matrix of the outlines of the labeled objects.
+    If `keep_ids` is True, the outlines will still consist of their cell's id, otherwise
+    all outlines will be 255.
+    Note that in the case of keeping the ids, the output matrix will have the original bit depth!
 
     If a pixel is not zero and has at least one neighbor with a different
     value, then it is part of the outline.
@@ -185,9 +188,13 @@ def outlines(labels):
     different[-1, :] = False
     different[:, -1] = False
 
-    output = np.zeros(labels.shape, np.uint8)
-    output[different] = 255
-    return output
+    if keep_ids:
+        return different * labels
+    else:
+        output = np.zeros(labels.shape, np.uint8)
+        output[different] = 255
+
+        return output
 
 
 if __name__ == '__main__':
