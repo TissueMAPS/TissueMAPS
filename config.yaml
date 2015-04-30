@@ -14,10 +14,9 @@ SHIFT_DESCRIPTOR_FILE_LOCATION: '{cycle_subdirectory}/ALIGNCYCLES/shiftDescripto
 
 # How the names of the cycle subdirectories are formatted
 CYCLE_SUBDIRECTORY_NAME_FORMAT: '{experiment_name}_{cycle_number:0>2}'
-CYCLE_NR_FROM_FILENAME: '_(\d+)_'
-
-# How to extract the experiment name from a filename
+# How to extract the experiment name and cycle number from a filename
 EXPERIMENT_NAME_FROM_FILENAME: '^([^_]+)'
+CYCLE_NR_FROM_FILENAME: '_(\d+)_'
 
 # Where the image folder is located
 IMAGE_FOLDER_LOCATION: '{cycle_subdirectory}/TIFF'
@@ -30,7 +29,7 @@ STATS_FOLDER_LOCATION: '{cycle_subdirectory}/BATCH'
 
 # How do determine the name of the illumination statistics filename
 STATS_FILE_FORMAT: 'Measurements_batch_illcor_channel{channel_number:0>3}_zstack000.mat'
-CHANNEL_NR_FROM_FILENAME: '_C(\d+)\.png$'
+CHANNEL_NR_FROM_FILENAME: 'C(\d+)\.png$'
 
 # Where the measurement folder is located
 MEASUREMENT_FOLDER_LOCATION: '{cycle_subdirectory}/data'
