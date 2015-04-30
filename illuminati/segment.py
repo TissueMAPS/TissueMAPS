@@ -7,6 +7,7 @@ TissueMAPS tool for creating a segmentation outlines.
     $ tm_segment.py --help
 """
 
+import operator as op
 import numpy as np
 # from matplotlib import pyplot as plt
 import h5py
@@ -211,6 +212,76 @@ def plot_outline_polygons(sitemat, outlines):
     for cell_id, c in outlines.items():
         ax.plot(c[:, 1], c[:, 0], '-' + 'r')
     plt.show()
+
+
+def outlines_vips(im):
+    """
+    Given a label matrix, return a matrix of the outlines of the labeled objects.
+
+    If a pixel is not zero and has at least one neighbor with a different
+    value, then it is part of the outline.
+
+    For more info about how this works, see here:
+    http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/libvips-morphology.html
+
+    """
+    # Since the images are sometimes not square, they can't be rotated at all times.
+    # Normally you would define one mask and apply it repeatedly to the image while rotating it.
+    # Since this isn't possible, I just define all the masks right here.
+    # 0 means: 'match a non-background pixel' (i.e. nonzero in the original image)
+    # 255 means: 'match a background pixel (i.e. 0 in the original image)
+    # 128 means: 'match any pixel'
+    # Note that VIPS uses 255 for TRUE and 0 for FALSE.
+
+    masks = [
+        [[255 , 128 , 128] ,
+         [128 , 0   , 128] ,
+         [128 , 0   , 128]],
+        [[128 , 255 , 128] ,
+         [128 , 0   , 128] ,
+         [128 , 0   , 128]],
+        [[128 , 128 , 255] ,
+         [255 , 0   , 128] ,
+         [128 , 0   , 128]],
+        [[255 , 128 , 128] ,
+         [128 , 0   , 0]   ,
+         [128 , 128 , 128]],
+        [[128 , 128 , 128] ,
+         [255 , 0   , 0]   ,
+         [128 , 128 , 128]],
+        [[128 , 128 , 128] ,
+         [128 , 0   , 0]   ,
+         [255 , 128 , 128]],
+        [[128 , 0   , 128] ,
+         [128 , 0   , 128] ,
+         [255 , 128 , 128]],
+        [[128 , 0   , 128] ,
+         [128 , 0   , 128] ,
+         [128 , 255 , 128]],
+        [[128 , 0   , 128] ,
+         [128 , 0   , 128] ,
+         [128 , 128 , 255]],
+        [[128 , 128 , 128] ,
+         [0   , 0   , 128] ,
+         [128 , 128 , 255]],
+        [[128 , 128 , 128] ,
+         [0   , 0   , 255] ,
+         [128 , 128 , 128]],
+        [[128 , 128 , 255] ,
+         [0   , 0   , 128] ,
+         [128 , 128 , 128]]
+    ]
+
+    results = []
+    nonbg = im > 0
+    # Apply all the masks and save each result
+    for i, mask in enumerate(masks):
+        img = nonbg.morph(mask, 'erode')
+        results.append(img)
+
+    # OR all the images
+    images_disj = reduce(op.or_, results)
+    return images_disj
 
 
 def outlines(labels, keep_ids=False):
