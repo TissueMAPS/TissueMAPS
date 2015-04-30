@@ -162,25 +162,18 @@ if __name__ == '__main__':
     max_id_upto_now = 0
     for i in range(len(file_grid)):
         for j in range(len(file_grid[0])):
-            # In case that an area mask should be computed we can use VIPS to remove border
-            # cells and optionally create PNGs that encode the cell ids as RGB.
-            if args.area_mask:
-                im = Vips.Image.new_from_file(file_grid[i][j])
+            im = Vips.Image.new_from_file(file_grid[i][j])
+
+            # If masks should be created we have to do some further processing
+            if args.area_mask or args.outline_mask:
                 im = segment.remove_border_cells_vips(im)
-                if args.make_global_ids:
-                    im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                    max_id_upto_now += 1
+            if args.area_mask and args.make_global_ids:
+                im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
+                max_id_upto_now += 1
             if args.outline_mask:
-                # In case outlines should be computed, we have to use numpy.
-                mat = imread(file_grid[i][j])
-                mat = segment.remove_border_cells(mat)
-                mat = segment.outlines(mat)
-                im = Vips.Image.new_from_array(mat.tolist())
-                vips_image_grid[i][j] = im
-            else:
-                # Create vips image from file
-                im = Vips.Image.new_from_file(file_grid[i][j])
-                vips_image_grid[i][j] = im
+                im = segment.outlines_vips(im)
+
+            vips_image_grid[i][j] = im
 
     #######################################################################
     #                       ILLUMINATION CORRECTING                       #
