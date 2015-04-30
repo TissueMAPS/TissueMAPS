@@ -61,6 +61,7 @@ if __name__ == '__main__':
 
     print '. get cycle directories'
     cycle_dirs = project.get_cycle_directories(project_dir)
+    print '. found %d cycles' % len(cycle_dirs)
 
     ref_channel = args.ref_channel
     print '. reference channel: %d' % ref_channel
@@ -77,6 +78,9 @@ if __name__ == '__main__':
         files = natsorted(files)  # ensure correct order
         image_filenames.append(files)
 
+    number_of_sites = len(image_filenames[0])
+    print '. number of sites: %d' % number_of_sites
+
     if args.ref_cycle:
         ref_cycle = args.ref_cycle - 1  # for zero-based indexing!
     else:
@@ -86,9 +90,7 @@ if __name__ == '__main__':
     print '. reference cycle: %d' % (ref_cycle + 1)
 
     # Divide list of image files into batches
-    number_of_jobs = len(image_filenames[0])
-    print '. number of jobs: %d' % number_of_jobs
-    number_of_batches = number_of_jobs / batch_size
+    number_of_batches = number_of_sites / batch_size
     print '. batch-size: %d' % batch_size
     print '. number of batches: %d' % number_of_batches
 
@@ -115,8 +117,8 @@ if __name__ == '__main__':
 
         l = b * batch_size - batch_size
         u = b * batch_size
-        if u > number_of_jobs:
-                u = number_of_jobs
+        if u > number_of_sites:
+                u = number_of_sites
         batch = range(l, u)
 
         # Write joblist file
