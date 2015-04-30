@@ -201,7 +201,10 @@ def regex_from_format_string(format_string):
 
     regex = format_string
     for pl_name, pl_regex in zip(placeholder_names, placeholder_regexes):
-        regex = re.sub(pl_regex, '(?P<%s>.*)' % pl_name, regex)
+        if re.search(r'number', pl_name):
+            regex = re.sub(pl_regex, '(?P<%s>\d+)' % pl_name, regex)
+        else:
+            regex = re.sub(pl_regex, '(?P<%s>.*)' % pl_name, regex)
 
     return regex
 
