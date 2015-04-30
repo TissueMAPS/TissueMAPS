@@ -80,6 +80,37 @@ def remove_border_cells_vips(im, is_source_uint16=True):
 
     return im
 
+def local_to_global_ids_vips(im, offset_id):
+    """
+    Add an offset to site-local cell labels and then encode
+    that number as a (R, G, B) triple.
+    So if at one pixel there was a value of x this would mean
+    that that pixel belongs to the xth cell in the image `im`.
+    The function would now add `offset_id` to x and encode the resulting value in terms of RGB s.t.
+    R * 256^2 + G * 256 + B == x + offset_id
+
+    :im: a vips image where each pixel indicates to which cell this pixel belongs.
+    :offset_id: a integer value to add to all labels.
+    :returns: a RGB image with band format UCHAR.
+
+    """
+    # Convert the image to integer and add an offset to all ids.
+    nonzero = im > 0
+    im = im.cast('uint')
+    im = nonzero.ifthenelse(im + offset_id, 0)
+    # import pdb; pdb.set_trace()
+    max_val = int(im.max())
+
+    # Divide the ids in `im` into their R-G-B representation.
+    red = (im / 256**2).cast('uchar')
+    # import ipdb; ipdb.set_trace()
+    r_rem = (im % 256**2)
+    green = (r_rem / 256).cast('uchar')
+    g_rem = (green % 256)
+    blue = g_rem.cast('uchar')
+    rgb = red.bandjoin(green).bandjoin(blue)
+    return rgb, max_val
+
 def remove_border_cells(site_matrix):
     """
     Given a matrix of a site image, set all pixels with
