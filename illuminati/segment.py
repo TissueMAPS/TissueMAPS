@@ -18,6 +18,7 @@ import scipy
 from os.path import basename, exists, realpath, join
 import util
 
+from gi.repository import Vips
 
 class Segment:
 
@@ -51,6 +52,33 @@ class Segment:
 
         return outlines
 
+
+def remove_border_cells_vips(im, is_source_uint16=True):
+    """
+    Given a site image, set all pixels with
+    ids belonging to border cells to zero.
+
+    :im: a VIPS image that represents the site.
+    :is_source_uint16: a boolean flag indicating if the source band format
+                       is uin16, otherwise its taken as uint8.
+    :returns: a new VIPS image with border cell entries set to 0.
+
+    """
+    # Extract the edges on each side of the image
+    left = im.extract_area(0, 0, 1, im.height)
+    right = im.extract_area(im.width-1, 0, 1, im.height)
+    top = im.extract_area(0, 0, im.width, 1)
+    bottom = im.extract_area(0, im.height-1, im.width, 1)
+
+    for border in [left, right, top, bottom]:
+        # Create a histogram, i.e. a 1 x 2^16
+        hist = border.hist_find()
+        id_lut = Vips.Image.identity(ushort=is_source_uint16)
+        is_nonzero = hist > 0
+        lut = Vips.Image.ifthenelse(is_nonzero, 0, id_lut)
+        im = im.maplut(lut)
+
+    return im
 
 def remove_border_cells(site_matrix):
     """
