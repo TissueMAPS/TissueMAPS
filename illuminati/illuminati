@@ -37,11 +37,11 @@ Some example use cases:
 
     - Create a pyramid out of segmentation files, retaining their 16 bit depth:
 
-        $ illuminati --no-rescale --area-mask --mask-keep-ids path/to/*.png -o my_cell_id_pyramid
+        $ illuminati --area-mask --png --make-global-ids path/to/*.png -o my_cell_id_pyramid
 
     - Create a pyramid of cell outlines, also retaining their 16 bit depth:
 
-        $ illuminati --no-rescale --outline-mask --mask-keep-ids path/to/*.png -o my_outline_pyramid
+        $ illuminati --outline-mask --png path/to/*.png -o my_outline_pyramid
 
 """
 
@@ -86,21 +86,25 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--thresh', dest='thresh',
                         action='store_true', default=False,
                         help="threshold (rescale) stitched image")
+
     parser.add_argument('--no-rescale', dest='no_rescale',
                         action='store_true', default=False,
                         help="don't perform any 16bit -> 8bit rescaling."
                              "The resulting pyramid will have 16bit PNG tiles.")
 
-    parser.add_argument('--mask-keep-ids', dest='mask_keep_ids',
+    parser.add_argument('--make-global-ids', dest='make_global_ids',
                         action='store_true', default=False,
-                        help="if the masks should retain the original cell ids "
-                             "or just be white.")
+                        help="if all the cell labels should be made into "
+                             "globally unique labels.")
     parser.add_argument('--area-mask', dest='area_mask',
                         action='store_true', default=False,
                         help="if the masks should consist of the whole cell areas")
     parser.add_argument('--outline-mask', dest='outline_mask',
                         action='store_true', default=False,
                         help="if the masks should consist of the cell outlines")
+    parser.add_argument('--png', dest='png',
+                        action='store_true', default=False,
+                        help="Save the pyramid tiles as png, default is jpg.")
 
     parser.add_argument('--thresh-value', dest='thresh_value',
                         type=float, default=False,
@@ -154,24 +158,23 @@ if __name__ == '__main__':
         print('ᐄ  CREATING AREA MASKS')
     else:
         pass
+
+    max_id_upto_now = 0
     for i in range(len(file_grid)):
         for j in range(len(file_grid[0])):
-            if args.outline_mask or args.area_mask:
-                # Load images and get object outlines
+            # In case that an area mask should be computed we can use VIPS to remove border
+            # cells and optionally create PNGs that encode the cell ids as RGB.
+            if args.area_mask:
+                im = Vips.Image.new_from_file(file_grid[i][j])
+                im = segment.remove_border_cells_vips(im)
+                if args.make_global_ids:
+                    im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
+                    max_id_upto_now += 1
+            if args.outline_mask:
+                # In case outlines should be computed, we have to use numpy.
                 mat = imread(file_grid[i][j])
                 mat = segment.remove_border_cells(mat)
-                # In case outlines should be computed, call the outlines function
-                # and pass it the arg whether outlines should be all-white or retain
-                # the cell labels.
-                if args.outline_mask:
-                    mat = segment.outlines(mat, keep_ids=args.mask_keep_ids)
-                # In case an area mask is to be computed, we need to check if the labels
-                # should be kept. If not, convert every pixel that is not black
-                # (i.e. it belongs to a cell) to white.
-                elif args.area_mask and not args.keep_ids:
-                    mat[mat != 0] = 255
-                else:
-                    pass
+                mat = segment.outlines(mat)
                 im = Vips.Image.new_from_array(mat.tolist())
                 vips_image_grid[i][j] = im
             else:
@@ -252,7 +255,7 @@ if __name__ == '__main__':
     #######################################################################
 
     print 'ᐄ  CREATING ZOOMIFY PYRAMID FROM STITCHED IMAGE'
-    if not args.no_rescale:
+    if not args.no_rescale and not args.png:
         pyramidize.create_pyramid(stitched_img, args.output_dir)
     else:
         # The stitched image wasn't rescaled and is still 16 bit.
