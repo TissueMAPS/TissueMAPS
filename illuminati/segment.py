@@ -99,17 +99,15 @@ def local_to_global_ids_vips(im, offset_id):
     nonzero = im > 0
     im = im.cast('uint')
     im = nonzero.ifthenelse(im + offset_id, 0)
-    # import pdb; pdb.set_trace()
     max_val = int(im.max())
 
     # Divide the ids in `im` into their R-G-B representation.
-    red = (im / 256**2).cast('uchar')
-    # import ipdb; ipdb.set_trace()
+    red = (im / 256**2)
     r_rem = (im % 256**2)
-    green = (r_rem / 256).cast('uchar')
-    g_rem = (green % 256)
-    blue = g_rem.cast('uchar')
-    rgb = red.bandjoin(green).bandjoin(blue)
+    green = (r_rem / 256)
+    g_rem = (r_rem % 256)
+    blue = g_rem
+    rgb = red.bandjoin(green).bandjoin(blue).cast('uchar')
     return rgb, max_val
 
 def remove_border_cells(site_matrix):
