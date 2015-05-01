@@ -23,11 +23,12 @@ import util
 
 class Illumcorrect:
 
-    def __init__(self, config_settings):
+    def __init__(self, config_settings, shift=False):
         """
         Configuration settings provided by YAML file.
         """
         self.cfg = config_settings
+        self.shift = shift
 
     def get_stats_file_name(self, image_filenames):
         """
@@ -36,23 +37,28 @@ class Illumcorrect:
         Variables can be set in the configuration file!
         """
         image_file = image_filenames[0]
-        util_obj = util.Util(self.cfg)
-        channel_nr = util_obj.get_channel_nr_from_filename(image_file)
+        project = util.Project(self.cfg)
+        project_dir = project.get_rootdir_from_image_file(image_file)
+        channel_nr = project.get_channel_nr_from_filename(image_file)
         stats_file = self.cfg['STATS_FILE_FORMAT'].format(channel_number=channel_nr)
 
-        root_dir = util_obj.get_rootdir_from_image_file(image_file)
-        cycle_nr = util_obj.get_cycle_nr_from_filename(image_file)
-        cycle_dirs = util_obj.get_cycle_directories(root_dir)
-        cycle_index = [i for i, x in enumerate(cycle_dirs)
-                        if re.search('%d$' % cycle_nr, x.filename)]
-        if not len(cycle_index) == 1:
-            raise Exception('Cycle subdirectory could not be determined')
-        cycle_index = cycle_index[0]
-        cycle_subdir = cycle_dirs[cycle_index].filename
+        if self.shift:
+            cycles = util.Cycles(self.cfg)
+            cycle_nr = cycles.get_cycle_nr_from_filename(image_file)
+            cycle_dirs = cycles.get_cycle_directories(project_dir)
+            cycle_index = [i for i, x in enumerate(cycle_dirs)
+                            if re.search('%d$' % cycle_nr, x.filename)]
+            if not len(cycle_index) == 1:
+                raise Exception('Cycle subdirectory could not be determined')
+            cycle_index = cycle_index[0]
+            cycle_subdir = cycle_dirs[cycle_index].filename
 
-        stats_folder = \
-            self.cfg['STATS_FOLDER_LOCATION'].format(cycle_subdirectory=cycle_subdir)
-        stats_path = os.path.join(root_dir, stats_folder, stats_file)
+            stats_folder = \
+                self.cfg['STATS_FOLDER_LOCATION'].format(cycle_subdirectory=cycle_subdir)
+        else:
+            stats_folder = self.cfg['STATS_FOLDER_LOCATION']
+
+        stats_path = os.path.join(project_dir, stats_folder, stats_file)
         if not os.path.exists(stats_path):
             raise Exception('Illumination correction statistics \
                             filename could not be determined')

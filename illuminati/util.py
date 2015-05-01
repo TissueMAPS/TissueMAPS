@@ -4,9 +4,10 @@ Utility functions for filename and path routines.
 
 import re
 import os
+import json
 import yaml
 from natsort import natsorted
-from os.path import join, dirname, realpath
+from os.path import join, dirname, realpath, isdir
 from scipy.misc import imread
 
 
@@ -15,6 +16,11 @@ SUPPORTED_IMAGE_FILES = ['png', 'jpg', 'tiff', 'jpeg']
 # A regexp to detect supported files. Used to filter images in a directory.
 _image_regex = re.compile('.*(' + '|'.join(
     ['\\.' + ext for ext in SUPPORTED_IMAGE_FILES]) + ')$', re.IGNORECASE)
+
+
+def is_image(filename):
+    "Check if filename ends with a supported file extension"
+    return _image_regex.match(filename) is not None
 
 
 class SiteImage:
@@ -86,18 +92,41 @@ class CycleDirectory:
         return self.__str__()
 
 
-def is_image(filename):
-    "Check if filename ends with a supported file extension"
-    return _image_regex.match(filename) is not None
-
-
-class Util:
-
+class Cycles:
     def __init__(self, config_settings):
         """
         Configuration settings provided by YAML file.
         """
         self.cfg = config_settings
+
+    def specify(self, root_dir):
+        self.descriptors = self.load_shift_descrs(root_dir)
+        self.directories = self.get_cycle_directories(root_dir)
+
+    def load_shift_descrs(self, root_dir):
+        """
+        Load the shift descriptor json files according to the path
+        given in the config file.
+        """
+        # Try to find all cycle subdirectories
+        dir_content = os.listdir(root_dir)
+        regexp = regex_from_format_string(self.cfg['CYCLE_SUBDIRECTORY_NAME_FORMAT'])
+
+        def is_cycle_dir(dirname):
+            return re.match(regexp, dirname) and isdir(join(root_dir, dirname))
+
+        cycle_dirs = filter(is_cycle_dir, dir_content)
+        shift_desc_location = self.cfg['SHIFT_DESCRIPTOR_FILE_LOCATION']
+        descr_files = [shift_desc_location.format(cycle_subdirectory=cycle_dir)
+                       for cycle_dir in cycle_dirs]
+        descr_files = [join(root_dir, p) for p in descr_files]
+
+        descrs = []
+        for path in descr_files:
+            with open(path, 'r') as f:
+                descrs.append(json.load(f))
+        self.descriptors = descrs
+        return descrs
 
     def get_cycle_nr_from_filename(self, filename):
         try:
@@ -105,6 +134,38 @@ class Util:
         except Exception as error:
             raise Exception('Can\'t get cycle number from filename %s\n%s'
                             % (filename, error))
+
+    def get_cycle_directories(self, root_dir):
+        dir_content = os.listdir(root_dir)
+        dir_content = natsorted(dir_content)
+        cycle_dirs = []
+        for f in dir_content:
+            if os.path.isdir(os.path.join(root_dir, f)) \
+                    and CycleDirectory.is_correct_filename(f, self.cfg):
+                cdir = CycleDirectory.from_filename(f, self.cfg)
+                cycle_dirs.append(cdir)
+        return cycle_dirs
+
+    def get_shift_dir(self, root_dir, cycle_dir_object):
+        return join(root_dir, self.cfg['SHIFT_FOLDER_LOCATION'].format(
+            cycle_subdirectory=cycle_dir_object.filename))
+
+
+class Project:
+
+    def __init__(self, config_settings):
+        """
+        Configuration settings provided by YAML file.
+        """
+        self.cfg = config_settings
+
+    def specify(self, root_dir, cycle_dir_object=None):
+        self.images = dict()
+        self.images['files'] = self.get_image_files(root_dir, cycle_dir_object)
+        self.images['directory'] = self.get_image_dir(root_dir, cycle_dir_object)
+        self.segmentations = dict()
+        self.segmentations['files'] = self.get_segmentation_files(root_dir, cycle_dir_object)
+        self.segmentations['directory'] = self.get_segmentation_dir(root_dir, cycle_dir_object)
 
     def get_channel_nr_from_filename(self, filename):
         try:
@@ -120,43 +181,48 @@ class Util:
             raise Exception('Can\'t get experiment name from filename %s'
                             % (filename, error))
 
-    def get_cycle_directories(self, root_dir):
-        dir_content = os.listdir(root_dir)
-        dir_content = natsorted(dir_content)
-        cycle_dirs = []
-        for f in dir_content:
-            if os.path.isdir(os.path.join(root_dir, f)) \
-                    and CycleDirectory.is_correct_filename(f, self.cfg):
-                cdir = CycleDirectory.from_filename(f, self.cfg)
-                cycle_dirs.append(cdir)
-        return cycle_dirs
-
-    def get_image_files(self, root_dir, cycle_dir_object):
-        image_folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'].format(
-            cycle_subdirectory=cycle_dir_object.filename))
+    def get_image_files(self, root_dir, cycle_dir_object=None):
+        if cycle_dir_object:
+            image_folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'].format(
+                cycle_subdirectory=cycle_dir_object.filename))
+        else:
+            image_folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'])
         files = [join(image_folder, f) for f in os.listdir(image_folder)
                  if is_image(f)]
         files = natsorted(files)
         return files
 
-    def get_image_dir(self, root_dir, cycle_dir_object):
-        folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'].format(
-            cycle_subdirectory=cycle_dir_object.filename))
+    def get_image_dir(self, root_dir, cycle_dir_object=None):
+        if cycle_dir_object:
+            folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'].format(
+                cycle_subdirectory=cycle_dir_object.filename))
+        else:
+            folder = join(root_dir, self.cfg['IMAGE_FOLDER_LOCATION'])
         return folder
 
-    def get_segmentation_dir(self, root_dir, cycle_dir_object):
-        folder = join(root_dir, self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
-            cycle_subdirectory=cycle_dir_object.filename))
-        return folder
+    def get_segmentation_files(self, root_dir, cycle_dir_object=None):
+        if cycle_dir_object:
+            image_folder = join(root_dir, self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
+                cycle_subdirectory=cycle_dir_object.filename))
+        else:
+            image_folder = join(root_dir, self.cfg['SEGMENTATION_FOLDER_LOCATION'])
+        files = [join(image_folder, f) for f in os.listdir(image_folder)
+                 if is_image(f)]
+        files = natsorted(files)
+        return files
 
-    def get_shift_dir(self, root_dir, cycle_dir_object):
-        folder = join(root_dir, self.cfg['SHIFT_FOLDER_LOCATION'].format(
-            cycle_subdirectory=cycle_dir_object.filename))
+    def get_segmentation_dir(self, root_dir, cycle_dir_object=None):
+        if cycle_dir_object:
+            folder = join(root_dir, self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
+                cycle_subdirectory=cycle_dir_object.filename))
+        else:
+            folder = join(root_dir, self.cfg['SEGMENTATION_FOLDER_LOCATION'])
         return folder
 
     def get_rootdir_from_image_file(self, imagefile):
         levels = len(self.cfg['IMAGE_FOLDER_LOCATION'].split('/'))
-        return realpath(join(dirname(imagefile), *['..'] * levels))
+        root_dir = realpath(join(dirname(imagefile), * ['..'] * levels))
+        return root_dir
 
 
 def get_coord_by_regex(filename, pattern, one_based):

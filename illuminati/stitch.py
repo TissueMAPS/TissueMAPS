@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
+import os
+import sys
+import copy
+import yaml
+import numpy as np
+from shapely.geometry import box
+from shapely.geometry.polygon import Polygon
+from gi.repository import Vips
+import util
+import imageutil
 
 """
 TissueMAPS tool for stitching individual images together to one large image.
@@ -9,92 +19,46 @@ Images can optionally be shifted if required.
 
 """
 
-import re
-import os
-import sys
-import json
-import copy
-import yaml
-import numpy as np
-from os.path import join, isdir
-from shapely.geometry import box
-from shapely.geometry.polygon import Polygon
-from gi.repository import Vips
-import util
-import imageutil
 
+def build_file_grid(config, image_paths):
+    """
+    Build a 2D list of file names that indicates how images should be stitched.
+    The function `get_coord_for_image` is called for each file name and
+    its return value indicates the 0-based coordinates
+    of where the image file should reside in the resulting stitched image.
 
-class Stitch:
+    :image_paths: the image paths : [string]
+    :returns: row and column of the image : (int, int)
 
-    def __init__(self, config_settings):
-        """
-        Configuration settings provided by YAML file.
-        """
-        self.cfg = config_settings
-
-    def load_shift_descrs(self, root_dir):
-        """
-        Load the shift descriptor json files according to the path
-        given in the config file.
-        """
-        # Try to find all cycle subdirectories
-        dir_content = os.listdir(root_dir)
-        regexp = util.regex_from_format_string(self.cfg['CYCLE_SUBDIRECTORY_NAME_FORMAT'])
-
-        def is_cycle_dir(dirname):
-            return re.match(regexp, dirname) and isdir(join(root_dir, dirname))
-
-        cycle_dirs = filter(is_cycle_dir, dir_content)
-        shift_desc_location = self.cfg['SHIFT_DESCRIPTOR_FILE_LOCATION']
-        descr_files = [shift_desc_location.format(cycle_subdirectory=cycle_dir)
-                       for cycle_dir in cycle_dirs]
-        descr_files = [join(root_dir, p) for p in descr_files]
-
-        descrs = []
-        for path in descr_files:
-            with open(path, 'r') as f:
-                descrs.append(json.load(f))
-        return descrs
-
-    def build_file_grid(self, image_paths):
-        """
-        Build a 2-d list of file names that indicates how images should be stitched.
-        The function `get_coord_for_image` is called for each file name and
-        its return value indicates the 0-based coordinates
-        of where the image file should reside in the resulting stitched image.
-
-        :image_paths: the image paths : [string]
-        :returns: row and column of the image : (int, int)
-
-        """
-        pattern = np.repeat(self.cfg['COORDINATE_FROM_FILENAME'],
-                            len(image_paths), axis=0)
-        one_based = np.repeat(self.cfg['COORDINATES_IN_FILENAME_ONE_BASED'],
-                              len(image_paths), axis=0)
-        image_coords = map(util.get_coord_by_regex, image_paths,
-                           pattern, one_based)
-        height = max([c[0] for c in image_coords]) + 1
-        width = max([c[1] for c in image_coords]) + 1
-        grid = [[None for j in range(width)] for i in range(height)]
-        for img, coord in zip(image_paths, image_coords):
-            if util.is_image(img):
-                i, j = coord
-                grid[i][j] = img
-            else:
-                raise Exception(
-                    'Can\'t build file grid for stitching'
-                    ' with non-image file: ' + img)
-        return grid
+    """
+    pattern = np.repeat(config['COORDINATE_FROM_FILENAME'],
+                        len(image_paths), axis=0)
+    one_based = np.repeat(config['COORDINATES_IN_FILENAME_ONE_BASED'],
+                          len(image_paths), axis=0)
+    image_coords = map(util.get_coord_by_regex, image_paths,
+                       pattern, one_based)
+    height = max([c[0] for c in image_coords]) + 1
+    width = max([c[1] for c in image_coords]) + 1
+    grid = [[None for j in range(width)] for i in range(height)]
+    for img, coord in zip(image_paths, image_coords):
+        if util.is_image(img):
+            i, j = coord
+            grid[i][j] = img
+        else:
+            raise Exception(
+                'Can\'t build file grid for stitching'
+                ' with non-image file: ' + img)
+    return grid
 
 
 def stitch_all_images(vips_image_grid):
     """
-    Stitch all images according to the format given in the 2d-list of
+    Stitch all images according to the format given in the 2D-list of
     file paths `file_grid`.
     The VIPS image object that is returned can be saved with
     `save_image_to_file` or processed further.
 
-    :vips_image_grid: a 2-d list holding all vips images : list[list[Vips.Image]].
+    :vips_image_grid: a 2D list holding all vips images : list[list[Vips.Image]].
     :returns: the VIPS image object.
 
     """
@@ -196,8 +160,7 @@ if __name__ == '__main__':
 
     files = args.files
 
-    config_obj = Stitch(config_settings)
-    file_grid = config_obj.build_file_grid(files)
+    file_grid = build_file_grid(config_settings, files)
     vips_image_grid = copy.deepcopy(file_grid)
 
     print '* LOADING IMAGES'
@@ -215,8 +178,7 @@ if __name__ == '__main__':
         cycle_dirs = util.get_cycle_directories(root_dir)
         cycle_nrs = sorted([c.cycle_number for c in cycle_dirs])
         shift_desc_idx = cycle_nrs.index(cycle_nr)
-        tm_obj = Stitch(config_settings)
-        descrs = tm_obj.load_shift_descrs(root_dir)
+        descrs = util.load_shift_descrs(root_dir)
         stitched_img = global_shift(stitched_img, shift_desc_idx, descrs)
 
     print '* STITCHING IMAGES'

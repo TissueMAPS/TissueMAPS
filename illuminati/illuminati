@@ -72,7 +72,7 @@ if __name__ == '__main__':
                         help="directory where the pyramid should be saved")
 
     parser.add_argument('-c', '--config', dest='config',
-                        default=os.path.join(os.path.dirname(__file__),
+                        default=os.path.join(os.path.dirname(__file__), '..',
                                              'config.yaml'),
                         help='use custom yaml configuration file')
 
@@ -137,17 +137,15 @@ if __name__ == '__main__':
 
     files = args.files
 
-    # TODO: documentation!!!
+    # Get configuration settings
     config_settings = util.load_config(args.config)
     util.check_config(config_settings)
 
-    project = util.Util(config_settings)
-    cycle_nr = project.get_cycle_nr_from_filename(files[0])
-    exp_name = project.get_expname_from_filename(files[0])
-    root_dir = project.get_rootdir_from_image_file(files[0])
+    # Get project specifications
+    project = util.Project(config_settings)
 
-    stitch_obj = stitch.Stitch(config_settings)
-    file_grid = stitch_obj.build_file_grid(files)
+    # Prepare file grid for stitching
+    file_grid = stitch.build_file_grid(config_settings, files)
     vips_image_grid = copy.deepcopy(file_grid)
 
     # Create a vips image for each file
@@ -181,7 +179,8 @@ if __name__ == '__main__':
 
     if args.illum_correct:
         print 'ᐄ  CORRECTING IMAGES FOR ILLUMINATION'
-        illumcorr_obj = illumcorrect.Illumcorrect(config_settings)
+        illumcorr_obj = illumcorrect.Illumcorrect(config_settings,
+                                                  shift=args.shift)
         stats_file = illumcorr_obj.get_stats_file_name(files)
         mean, std = illumcorrect.load_statistics_from_mat_file_vips(stats_file)
         for i in range(len(vips_image_grid)):
@@ -203,11 +202,14 @@ if __name__ == '__main__':
     #######################################################################
 
     if args.shift:
-        descrs = stitch_obj.load_shift_descrs(root_dir)
-        cycle_dirs = project.get_cycle_directories(root_dir)
-        cycle_nrs = sorted([c.cycle_number for c in cycle_dirs])
+        project_dir = project.get_rootdir_from_image_file(files[0])
+        cycles = util.Cycles(config_settings)
+        cycles.specify(project_dir)
+        cycle_nr = cycles.get_cycle_nr_from_filename(files[0])
+        cycle_nrs = sorted([c.cycle_number for c in cycles.directories])
         shift_desc_idx = cycle_nrs.index(cycle_nr)
-        stitched_img = stitch.global_shift(stitched_img, shift_desc_idx, descrs)
+        stitched_img = stitch.global_shift(stitched_img, shift_desc_idx,
+                                           cycles.descriptors)
 
     #######################################################################
     #                            THRESHOLDING                             #
