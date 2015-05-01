@@ -9,7 +9,6 @@ TissueMAPS tool for creating a segmentation outlines.
 
 import operator as op
 import numpy as np
-# from matplotlib import pyplot as plt
 import h5py
 import os
 import yaml
@@ -21,37 +20,45 @@ import util
 
 from gi.repository import Vips
 
-class Segment:
 
-    def __init__(self, config_settings):
-        """
-        Configuration settings provided by YAML file.
-        """
-        self.cfg = config_settings
+# class Segment:
 
-    def batch_compute_outline_polygons(self, site_images):
-        """
-        Compute outline polygons for all SiteImage objects in `site_images`
-        """
-        outlines = {}
-        for i, site_image in enumerate(site_images):
-            mat = site_image.as_numpy_array()
-            mat = remove_border_cells(mat)
-            polys = compute_outline_polygons(mat)
+#     def __init__(self, config_settings):
+#         """
+#         Configuration settings provided by YAML file.
+#         """
+#         self.cfg = config_settings
 
-            # Add polygons to outlines dict with updated cell_ids
-            for cell_id in polys:
-                global_cell_id = self.cfg['CELL_ID_FORMAT'].format(
-                    site_row_nr=site_image.row_nr,
-                    site_col_nr=site_image.col_nr,
-                    cell_id=cell_id)
-                height, width = site_image.get_size()
-                row_offset = site_image.row_nr * height
-                col_offset = site_image.col_nr * width
-                poly = polys[cell_id] + (row_offset, col_offset)
-                outlines[global_cell_id] = poly
+#     def batch_compute_outline_polygons(self, site_images):
+#         """
+#         Compute outline polygons for all SiteImage objects in `site_images`
+#         """
+#         outlines = {}
+#         for i, site_image in enumerate(site_images):
+#             mat = site_image.as_numpy_array()
+#             mat = remove_border_cells(mat)
+#             polys = compute_outline_polygons(mat)
 
-        return outlines
+#             # Add polygons to outlines dict with updated cell_ids
+#             for cell_id in polys:
+#                 global_cell_id = self.cfg['CELL_ID_FORMAT'].format(
+#                     site_row_nr=site_image.row_nr,
+#                     site_col_nr=site_image.col_nr,
+#                     cell_id=cell_id)
+#                 height, width = site_image.get_size()
+#                 row_offset = site_image.row_nr * height
+#                 col_offset = site_image.col_nr * width
+#                 poly = polys[cell_id] + (row_offset, col_offset)
+#                 outlines[global_cell_id] = poly
+
+#         return outlines
+
+#     def plot_outline_polygons(sitemat, outlines):
+#         fig, ax = plt.subplots()
+#         ax.imshow(sitemat, interpolation='nearest', cmap=plt.cm.gray)
+#         for cell_id, c in outlines.items():
+#             ax.plot(c[:, 1], c[:, 0], '-' + 'r')
+#         plt.show()
 
 
 def remove_border_cells_vips(im, is_source_uint16=True):
@@ -81,6 +88,7 @@ def remove_border_cells_vips(im, is_source_uint16=True):
 
     return im
 
+
 def local_to_global_ids_vips(im, offset_id):
     """
     Add an offset to site-local cell labels and then encode
@@ -109,6 +117,7 @@ def local_to_global_ids_vips(im, offset_id):
     blue = g_rem
     rgb = red.bandjoin(green).bandjoin(blue).cast('uchar')
     return rgb, max_val
+
 
 def remove_border_cells(site_matrix):
     """
@@ -202,14 +211,6 @@ def save_outline_polygons(outlines, filename):
             f[global_cell_id] = poly
     finally:
         f.close()
-
-
-def plot_outline_polygons(sitemat, outlines):
-    fig, ax = plt.subplots()
-    ax.imshow(sitemat, interpolation='nearest', cmap=plt.cm.gray)
-    for cell_id, c in outlines.items():
-        ax.plot(c[:, 1], c[:, 0], '-' + 'r')
-    plt.show()
 
 
 def outlines_vips(im):
