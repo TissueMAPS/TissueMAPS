@@ -14,6 +14,8 @@ SHIFT_DESCRIPTOR_FILE_LOCATION: '{cycle_subdirectory}/ALIGNCYCLES/shiftDescripto
 
 # How the names of the cycle subdirectories are formatted
 CYCLE_SUBDIRECTORY_NAME_FORMAT: '{experiment_name}_{cycle_number:0>2}'
+FILENAME_FORMAT: '{experiment_name}_{cycle_number}'
+
 # How to extract the experiment name and cycle number from a filename
 EXPERIMENT_NAME_FROM_FILENAME: '^([^_]+)'
 CYCLE_NR_FROM_FILENAME: '_(\d+)_'
