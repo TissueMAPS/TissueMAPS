@@ -58,22 +58,77 @@ logo = u'''
 # TODO: define functions that can be called via the command line interface and
 # and the user interface (server)
 
-# def load_images():
+def load_images(config_settings, files):
+    # Prepare file grid
+    file_grid = stitch.build_file_grid(config_settings, files)
+    vips_image_grid = copy.deepcopy(file_grid)
+
+    max_id_upto_now = 0
+    for i in range(len(file_grid)):
+        for j in range(len(file_grid[0])):
+            im = Vips.Image.new_from_file(file_grid[i][j])
+
+            # If masks should be created we have to do some further processing
+            if args.area_mask or args.outline_mask:
+                im = segment.remove_border_cells_vips(im)
+            if args.area_mask and args.make_global_ids:
+                im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
+                max_id_upto_now += 1
+            if args.outline_mask:
+                im = segment.outlines_vips(im)
+
+            vips_image_grid[i][j] = im
+
+    return vips_image_grid
 
 
-# def correct_illumination():
+def apply_illumination_correction(config_settings, vips_image_grid, files):
+    illcorr = illumcorrect.Illumcorrect(config_settings, shift=args.shift)
+    stats_file = illcorr.get_stats_file_name(files)
+    mean, std = illumcorrect.load_statistics_from_mat_file_vips(stats_file)
+    for i in range(len(vips_image_grid)):
+        for j in range(len(vips_image_grid[0])):
+            img = vips_image_grid[i][j]
+            vips_image_grid[i][j] = \
+                illumcorrect.illum_correction_vips(img, mean, std)
+
+    return vips_image_grid
 
 
-# def stitch_images():
+def apply_shift(config_settings, stitched_img, files):
+    project = util.Project(config_settings)
+    project_dir = project.get_rootdir_from_image_file(files[0])
+    cycles = util.Cycles(config_settings)
+    cycles.specify(project_dir)
+    cycle_nr = cycles.get_cycle_nr_from_filename(files[0])
+    cycle_nrs = sorted([c.cycle_number for c in cycles.directories])
+    shift_desc_idx = cycle_nrs.index(cycle_nr)
+    stitched_img = stitch.global_shift(stitched_img, shift_desc_idx,
+                                       cycles.descriptors)
+
+    return stitched_img
 
 
-# def apply_shift():
+def apply_threshold(stitched_img, files,
+                    thresh_value=None, thresh_sample_size=None,
+                    thresh_percentage=None):
+    # TODO: make some checks for thresh type
+    if thresh_value:
+        val = args.thresh_value
+    else:
+        sample_size = thresh_sample_size
+        # Adjust sample size if set too large
+        if thresh_sample_size > len(files):
+            sample_size = len(files)
+        # The files from which to sample threshold
+        sample_files = random.sample(files, sample_size)
+        sample_images = map(Vips.Image.new_from_file, sample_files)
+        val = imageutil.get_threshold(sample_images, thresh_percentage)
+    lut = imageutil.create_thresholding_LUT(val)
+    # Map image through lookup table
+    stitched_img = stitched_img.maplut(lut)
 
-
-# def apply_threshold():
-
-
-# def pyramidize():
+    return stitched_img
 
 
 if __name__ == '__main__':
@@ -132,7 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--thresh-percent', dest='thresh_percentage',
                         type=float, default=0.01,
                         help="percentage of pixel values above threshold")
-    parser.add_argument('--thresh-sample', dest='tresh_sample_size',
+    parser.add_argument('--thresh-sample', dest='thresh_sample_size',
                         type=int, default=10,
                         help="number of files to use for threshold estimation")
 
@@ -165,10 +220,6 @@ if __name__ == '__main__':
     #                           LOADING IMAGES                            #
     #######################################################################
 
-    # Prepare file grid
-    file_grid = stitch.build_file_grid(config_settings, files)
-    vips_image_grid = copy.deepcopy(file_grid)
-
     # Create a vips image for each file
     print '.. Loading images'
     if args.outline_mask:
@@ -178,21 +229,7 @@ if __name__ == '__main__':
     else:
         pass
 
-    max_id_upto_now = 0
-    for i in range(len(file_grid)):
-        for j in range(len(file_grid[0])):
-            im = Vips.Image.new_from_file(file_grid[i][j])
-
-            # If masks should be created we have to do some further processing
-            if args.area_mask or args.outline_mask:
-                im = segment.remove_border_cells_vips(im)
-            if args.area_mask and args.make_global_ids:
-                im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                max_id_upto_now += 1
-            if args.outline_mask:
-                im = segment.outlines_vips(im)
-
-            vips_image_grid[i][j] = im
+    vips_image_grid = load_images(config_settings, files)
 
     #######################################################################
     #                       ILLUMINATION CORRECTING                       #
@@ -200,15 +237,10 @@ if __name__ == '__main__':
 
     if args.illum_correct:
         print 'ᐄ  CORRECTING IMAGES FOR ILLUMINATION'
-        illumcorr_obj = illumcorrect.Illumcorrect(config_settings,
-                                                  shift=args.shift)
-        stats_file = illumcorr_obj.get_stats_file_name(files)
-        mean, std = illumcorrect.load_statistics_from_mat_file_vips(stats_file)
-        for i in range(len(vips_image_grid)):
-            for j in range(len(vips_image_grid[0])):
-                img = vips_image_grid[i][j]
-                vips_image_grid[i][j] = \
-                    illumcorrect.illum_correction_vips(img, mean, std)
+
+        vips_image_grid = apply_illumination_correction(config_settings,
+                                                        vips_image_grid,
+                                                        files)
 
     print 'ᐄ  STITCHING IMAGES' + (' & SHIFTING' if args.shift else '')
 
@@ -223,15 +255,7 @@ if __name__ == '__main__':
     #######################################################################
 
     if args.shift:
-        project = util.Project(config_settings)
-        project_dir = project.get_rootdir_from_image_file(files[0])
-        cycles = util.Cycles(config_settings)
-        cycles.specify(project_dir)
-        cycle_nr = cycles.get_cycle_nr_from_filename(files[0])
-        cycle_nrs = sorted([c.cycle_number for c in cycles.directories])
-        shift_desc_idx = cycle_nrs.index(cycle_nr)
-        stitched_img = stitch.global_shift(stitched_img, shift_desc_idx,
-                                           cycles.descriptors)
+        stitched_img = apply_shift(config_settings, stitched_img, files)
 
     #######################################################################
     #                            THRESHOLDING                             #
@@ -239,28 +263,19 @@ if __name__ == '__main__':
 
     # If 'thresh' has been set then a certain percentage of the pixels
     # with the largest value will be thresholded (i.e., set to the lowest of their values).
-    # A sample of size `args.tresh_sample_size` is used to determine the cut off value
+    # A sample of size `args.thresh_sample_size` is used to determine the cut off value
     # above which the `args.thresh_percentage`% of all pixels with the largest values lie.
     if args.thresh:
         print 'ᐄ  THRESHOLDING'
         if args.thresh_value:
-            val = args.thresh_value
             print '   ... Using provided threshold value'
         else:
-            sample_size = args.tresh_sample_size
-            # Adjust sample size if set too large
-            if args.tresh_sample_size > len(files):
-                sample_size = len(files)
-            # The files from which to sample threshold
-            sample_files = random.sample(files, sample_size)
-            sample_images = map(Vips.Image.new_from_file, sample_files)
             print '   ... Computing threshold value'
-            val = imageutil.get_threshold(sample_images,
-                                          args.thresh_percentage)
-        lut = imageutil.create_thresholding_LUT(val)
-        # Map image through lookup table
-        print '   ... Applying threshold'
-        stitched_img = stitched_img.maplut(lut)
+
+        stitched_img = apply_threshold(stitched_img, files,
+                                       thresh_value=args.thresh_value,
+                                       thresh_sample_size=args.thresh_sample_size,
+                                       thresh_percentage=args.thresh_percentage)
 
     # The image will be rescaled s.t. the pixel values fill the whole range
     # of possible values (0 to 2^16) and then converted to 8 bit
