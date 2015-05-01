@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-from os.path import (join, exists, basename)
+from os.path import join, exists
 import re
 import json
 import h5py
@@ -53,10 +53,11 @@ if __name__ == '__main__':
     util.check_config(config)
 
     # Initialize utility object with configuration settings
-    project = util.Util(config)
+    project = util.Project(config)
+    cycles = util.Cycles(config)
 
     print '. get cycle directories'
-    cycle_dirs = project.get_cycle_directories(project_dir)
+    cycle_dirs = cycles.get_cycle_directories(project_dir)
 
     if args.ref_cycle:
         ref_cycle = args.ref_cycle
@@ -80,8 +81,11 @@ if __name__ == '__main__':
     else:
         example_filename = project.get_image_files(project_dir,
                                                    reference_cycle)[0]
-        segm_trunk = project.get_expname_from_filename(example_filename)
-        segm_trunk = '%s_%.2d' % (segm_trunk, ref_cycle)
+        exp_name = project.get_expname_from_filename(example_filename)
+        # This can be done nicer
+        segm_trunk = re.sub(r'{experiment_name}', exp_name,
+                            config['FILENAME_FORMAT'])
+        segm_trunk = re.sub(r'{cycle_number}', str(ref_cycle), segm_trunk)
 
     print '. define segmentation trunk: %s' % segm_trunk
 
@@ -92,9 +96,9 @@ if __name__ == '__main__':
     descriptor = dict()
     # Preallocate final output
     f = h5py.File(output_files[0], 'r')
-    cycles = f.keys()
+    cycles_names = f.keys()
     f.close()
-    for cycle in cycles:
+    for cycle in cycles_names:
         descriptor[cycle] = dict()
         descriptor[cycle]['xShift'] = []
         descriptor[cycle]['yShift'] = []
@@ -102,7 +106,7 @@ if __name__ == '__main__':
     # Combine output from different output files
     for output in output_files:
         f = h5py.File(output, 'r')
-        for cycle in cycles:
+        for cycle in cycles_names:
             descriptor[cycle]['fileName'].extend(f[cycle]['reg_file'][()])
             descriptor[cycle]['xShift'].extend(f[cycle]['x_shift'][()])
             descriptor[cycle]['yShift'].extend(f[cycle]['y_shift'][()])
@@ -144,7 +148,7 @@ if __name__ == '__main__':
     # Get indices of sites where shift exceeds maximally tolerated shift
     # in either direction
     index = []
-    for cycle in cycles:
+    for cycle in cycles_names:
         index.extend([descriptor[cycle]['xShift'].index(s)
                      for s in descriptor[cycle]['xShift']
                      if s > max_shift])
@@ -158,14 +162,14 @@ if __name__ == '__main__':
     no_shift_count = len(index)
 
     # Write shiftDescriptor.json files
-    for cd in cycle_dirs:
-        aligncycles_dir = project.get_shift_dir(project_dir, cd)
+    for cycle_object in cycle_dirs:
+        aligncycles_dir = project.get_shift_dir(project_dir, cycle_object)
         if not exists(aligncycles_dir):
             os.mkdir(aligncycles_dir)
         descriptor_filename = join(aligncycles_dir, 'shiftDescriptor.json')
         print '. create shift descriptor file: %s' % descriptor_filename
 
-        cycle_num = cd.cycle_number
+        cycle_num = cycle_object.cycle_number
         cycle = 'cycle%d' % cycle_num
         descriptor[cycle]['lowerOverlap'] = total_bottom_overlap
         descriptor[cycle]['upperOverlap'] = total_top_overlap

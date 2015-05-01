@@ -56,11 +56,12 @@ if __name__ == '__main__':
     config = util.load_config(config_filename)
     util.check_config(config)
 
-    # Initialize utility object with configuration settings
-    project = util.Util(config)
+    # Initialize utility objects with configuration settings
+    project = util.Project(config)
+    cycles = util.Cycles(config)
 
     print '. get cycle directories'
-    cycle_dirs = project.get_cycle_directories(project_dir)
+    cycle_dirs = cycles.get_cycle_directories(project_dir)
     print '. found %d cycles' % len(cycle_dirs)
 
     ref_channel = args.ref_channel
