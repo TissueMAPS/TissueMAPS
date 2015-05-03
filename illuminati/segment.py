@@ -226,47 +226,47 @@ def outlines_vips(im):
     # Since the images are sometimes not square, they can't be rotated at all times.
     # Normally you would define one mask and apply it repeatedly to the image while rotating it.
     # Since this isn't possible, I just define all the masks right here.
-    # 0 means: 'match a non-background pixel' (i.e. nonzero in the original image)
-    # 255 means: 'match a background pixel (i.e. 0 in the original image)
+    # 0 means: 'match a background pixel'
+    # 255 means: 'match an object pixel (nonzero pixel)
     # 128 means: 'match any pixel'
     # Note that VIPS uses 255 for TRUE and 0 for FALSE.
 
     masks = [
-        [[255 , 128 , 128] ,
-         [128 , 0   , 128] ,
-         [128 , 0   , 128]],
-        [[128 , 255 , 128] ,
-         [128 , 0   , 128] ,
-         [128 , 0   , 128]],
-        [[128 , 128 , 255] ,
-         [255 , 0   , 128] ,
-         [128 , 0   , 128]],
-        [[255 , 128 , 128] ,
-         [128 , 0   , 0]   ,
-         [128 , 128 , 128]],
-        [[128 , 128 , 128] ,
-         [255 , 0   , 0]   ,
-         [128 , 128 , 128]],
-        [[128 , 128 , 128] ,
-         [128 , 0   , 0]   ,
-         [255 , 128 , 128]],
-        [[128 , 0   , 128] ,
-         [128 , 0   , 128] ,
-         [255 , 128 , 128]],
-        [[128 , 0   , 128] ,
-         [128 , 0   , 128] ,
-         [128 , 255 , 128]],
-        [[128 , 0   , 128] ,
-         [128 , 0   , 128] ,
-         [128 , 128 , 255]],
-        [[128 , 128 , 128] ,
-         [0   , 0   , 128] ,
-         [128 , 128 , 255]],
-        [[128 , 128 , 128] ,
-         [0   , 0   , 255] ,
-         [128 , 128 , 128]],
-        [[128 , 128 , 255] ,
-         [0   , 0   , 128] ,
+        [[0   , 128 , 128]  ,
+         [128 , 255 , 128]  ,
+         [128 , 255 , 128]] ,
+        [[128 , 0   , 128]  ,
+         [128 , 255 , 128]  ,
+         [128 , 255 , 128]] ,
+        [[128 , 128 , 0]    ,
+         [0   , 255 , 128]  ,
+         [128 , 255 , 128]] ,
+        [[0   , 128 , 128]  ,
+         [128 , 255 , 255]  ,
+         [128 , 128 , 128]] ,
+        [[128 , 128 , 128]  ,
+         [0   , 255 , 255]  ,
+         [128 , 128 , 128]] ,
+        [[128 , 128 , 128]  ,
+         [128 , 255 , 255]  ,
+         [0   , 128 , 128]] ,
+        [[128 , 255 , 128]  ,
+         [128 , 255 , 128]  ,
+         [0   , 128 , 128]] ,
+        [[128 , 255 , 128]  ,
+         [128 , 255 , 128]  ,
+         [128 , 0   , 128]] ,
+        [[128 , 255 , 128]  ,
+         [128 , 255 , 128]  ,
+         [128 , 128 , 0]]   ,
+        [[128 , 128 , 128]  ,
+         [255 , 255 , 128]  ,
+         [128 , 128 , 0]]   ,
+        [[128 , 128 , 128]  ,
+         [255 , 255 , 0]    ,
+         [128 , 128 , 128]] ,
+        [[128 , 128 , 0]    ,
+         [255 , 255 , 128]  ,
          [128 , 128 , 128]]
     ]
 
@@ -274,8 +274,8 @@ def outlines_vips(im):
     nonbg = im > 0
     # Apply all the masks and save each result
     for i, mask in enumerate(masks):
-        img = nonbg.morph(mask, 'erode')
-        results.append(img)
+       img = nonbg.morph(mask, 'erode')
+       results.append(img)
 
     # OR all the images
     images_disj = reduce(op.or_, results)
