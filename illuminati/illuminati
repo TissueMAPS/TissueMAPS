@@ -170,7 +170,12 @@ if __name__ == '__main__':
             if args.area_mask and args.make_global_ids:
                 im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
                 max_id_upto_now += 1
-            if args.outline_mask:
+            if args.outline_mask and args.make_global_ids:
+                ids, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
+                max_id_upto_now += 1
+                outline = segment.outlines_vips(im)
+                im = outline.ifthenelse(ids, 0)
+            if args.outline_mask and not args.make_global_ids:
                 im = segment.outlines_vips(im)
 
             vips_image_grid[i][j] = im
