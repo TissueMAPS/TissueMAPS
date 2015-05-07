@@ -61,9 +61,9 @@ class SiteImage:
 
 
 class CycleDirectory:
-    """Utility class for cycle directories"""
 
     def __init__(self, filename, experiment_name, cycle_number):
+        """Utility class for cycle directories"""
         self.filename = filename
         self.experiment_name = experiment_name
         self.cycle_number = cycle_number
@@ -93,6 +93,7 @@ class CycleDirectory:
 
 
 class Cycles:
+
     def __init__(self, config_settings):
         """
         Configuration settings provided by YAML file.
@@ -151,6 +152,20 @@ class Cycles:
             cycle_subdirectory=cycle_dir_object.filename))
 
 
+class Image:
+
+    def __init__(self, image_dir, image_files):
+        self.directory = image_dir
+        self.files = image_files
+
+
+class Segmentation:
+
+    def __init__(self, segmentation_dir, segmentation_files):
+        self.directory = segmentation_dir
+        self.files = segmentation_files
+
+
 class Project:
 
     def __init__(self, config_settings):
@@ -160,12 +175,14 @@ class Project:
         self.cfg = config_settings
 
     def specify(self, root_dir, cycle_dir_object=None):
-        self.images = dict()
-        self.images['files'] = self.get_image_files(root_dir, cycle_dir_object)
-        self.images['directory'] = self.get_image_dir(root_dir, cycle_dir_object)
-        self.segmentations = dict()
-        self.segmentations['files'] = self.get_segmentation_files(root_dir, cycle_dir_object)
-        self.segmentations['directory'] = self.get_segmentation_dir(root_dir, cycle_dir_object)
+        image_dir = self.get_image_dir(root_dir, cycle_dir_object)
+        image_files = self.get_image_files(root_dir, cycle_dir_object)
+        segmentation_dir = self.get_segmentation_dir(root_dir,
+                                                     cycle_dir_object)
+        segmentation_files = self.get_segmentation_files(root_dir,
+                                                         cycle_dir_object)
+        self.image = Image(image_dir, image_files)
+        self.segmentation = Segmentation(segmentation_dir, segmentation_files)
 
     def get_channel_nr_from_filename(self, filename):
         try:
