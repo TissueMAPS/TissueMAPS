@@ -6,6 +6,7 @@ import copy
 import random
 from gi.repository import Vips
 from scipy.misc import imread
+import numpy as np
 
 import util
 import pyramidize
@@ -42,6 +43,10 @@ Some example use cases:
     - Create a pyramid of cell outlines, also retaining their 16 bit depth:
 
         $ illuminati --outline-mask --png path/to/*.png -o my_outline_pyramid
+
+    - Create a serialized numpy array that holds all cell centroids (border cells removed):
+
+        $ illuminati --cell-centroids --png path/to/label_matrices/*.png -o my_array.npy
 
 """
 
@@ -96,6 +101,12 @@ if __name__ == '__main__':
                         action='store_true', default=False,
                         help="if all the cell labels should be made into "
                              "globally unique labels.")
+
+    parser.add_argument('--cell-centroids', dest='cell_centroids',
+                        action='store_true', default=False,
+                        help="if the centroid for each cell should be computed and be saved"
+                             " as a numpy array.")
+
     parser.add_argument('--area-mask', dest='area_mask',
                         action='store_true', default=False,
                         help="if the masks should consist of the whole cell areas")
@@ -149,6 +160,25 @@ if __name__ == '__main__':
     stitch_obj = stitch.Stitch(config_settings)
     file_grid = stitch_obj.build_file_grid(files)
     vips_image_grid = copy.deepcopy(file_grid)
+
+    if args.cell_centroids:
+        print('ᐄ  COMPUTING CELL CENTROIDS')
+        max_id_upto_now = 0
+        centroids = []
+        for i in range(len(file_grid)):
+            print '   row: %d' % i
+            for j in range(len(file_grid[0])):
+                print '    col: %d' % j
+                mat = imread(file_grid[i][j])
+                mat = segment.remove_border_cells(mat)
+                site_centroids, max_id_upto_now = segment.compute_cell_centroids(mat, i, j, max_id_upto_now)
+                centroids.append(site_centroids)
+
+        centroids = np.vstack(centroids)
+        fname = os.path.splitext(args.output_dir)[0] + '.npy'
+        with open(fname, 'w') as f:
+            np.save(f, centroids)
+        sys.exit(0)
 
     # Create a vips image for each file
     print '.. Loading images'
