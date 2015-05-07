@@ -9,6 +9,7 @@ goog.require('ol.render.EventType');
 goog.require('ol.render.webgl.Immediate');
 goog.require('ol.renderer.Layer');
 goog.require('ol.renderer.webgl.map.shader.Color');
+goog.require('ol.renderer.webgl.map.shader.ColorNoWhite');
 goog.require('ol.renderer.webgl.map.shader.ColorNoBlack');
 goog.require('ol.renderer.webgl.map.shader.Default');
 goog.require('ol.webgl.Buffer');
@@ -169,6 +170,7 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
       layerState.color[0] != 1 ||
       layerState.color[1] != 1 ||
       layerState.color[2] != 1 ||
+      !layerState.drawWhitePixels ||
       !layerState.drawBlackPixels;
 
   var fragmentShader, vertexShader;
@@ -177,6 +179,8 @@ ol.renderer.webgl.Layer.prototype.composeFrame =
     // If pixels should not be drawn a special fragment shader should be used
     if (!layerState.drawBlackPixels) {
         fragmentShader = ol.renderer.webgl.map.shader.ColorNoBlackFragment.getInstance();
+    } else if (!layerState.drawWhitePixels) {
+        fragmentShader = ol.renderer.webgl.map.shader.ColorNoWhiteFragment.getInstance();
     } else {
         fragmentShader = ol.renderer.webgl.map.shader.ColorFragment.getInstance();
     }

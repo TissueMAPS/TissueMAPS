@@ -24,7 +24,7 @@ ol.layer.LayerProperty = {
   MAX_RESOLUTION: 'maxResolution',
   MIN_RESOLUTION: 'minResolution',
   ADDITIVE_BLEND: 'additiveBlend',
-  DRAW_BLACK_PIXELS: 'drawBlackPixels',
+  DRAW_WHITE_PIXELS: 'drawWhitePixels',
   SOURCE: 'source',
   COLOR: 'color',
   MAX: 'max',
@@ -47,6 +47,7 @@ ol.layer.LayerProperty = {
  *            max: number,
  *            additiveBlend: boolean,
  *            drawBlackPixels: boolean,
+ *            drawWhitePixels: boolean,
  *            maxResolution: number,
  *            minResolution: number}}
  */
@@ -101,6 +102,8 @@ ol.layer.Base = function(options) {
       goog.isDef(options.additiveBlend) ? options.additiveBlend : false;
   properties[ol.layer.LayerProperty.DRAW_BLACK_PIXELS] =
       goog.isDef(options.drawBlackPixels) ? options.drawBlackPixels : true;
+  properties[ol.layer.LayerProperty.DRAW_WHITE_PIXELS] =
+      goog.isDef(options.drawWhitePixels) ? options.drawWhitePixels : true;
 
   this.setProperties(properties);
 };
@@ -172,6 +175,7 @@ ol.layer.Base.prototype.getLayerState = function() {
   var color = this.getColor();
   var additiveBlend = this.getAdditiveBlend();
   var drawBlackPixels = this.getDrawBlackPixels();
+  var drawWhitePixels = this.getDrawWhitePixels();
 
   return {
     layer: /** @type {ol.layer.Layer} */ (this),
@@ -190,7 +194,8 @@ ol.layer.Base.prototype.getLayerState = function() {
     min: goog.isDef(min) ? min : 0,
     max: goog.isDef(max) ? max : 1,
     additiveBlend: goog.isDef(additiveBlend) ? additiveBlend : false,
-    drawBlackPixels: goog.isDef(drawBlackPixels) ? drawBlackPixels : true
+    drawBlackPixels: goog.isDef(drawBlackPixels) ? drawBlackPixels : true,
+    drawWhitePixels: goog.isDef(drawWhitePixels) ? drawWhitePixels : true
   };
 };
 
@@ -616,3 +621,31 @@ goog.exportProperty(
     ol.layer.Base.prototype,
     'setDrawBlackPixels',
     ol.layer.Base.prototype.setDrawBlackPixels);
+
+
+/**
+ * @return {boolean|undefined} If white pixels should be drawn.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.getDrawWhitePixels = function() {
+  return /** @type {boolean|undefined} */ (this.get(
+    ol.layer.LayerProperty.DRAW_WHITE_PIXELS));
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'getDrawWhitePixels',
+    ol.layer.Base.prototype.getDrawWhitePixels);
+
+/**
+ * @param {boolean} doDraw If white pixels should be drawn.
+ * @observable
+ * @api
+ */
+ol.layer.Base.prototype.setDrawWhitePixels = function(doDraw) {
+  this.set(ol.layer.LayerProperty.DRAW_WHITE_PIXELS, doDraw);
+};
+goog.exportProperty(
+    ol.layer.Base.prototype,
+    'setDrawWhitePixels',
+    ol.layer.Base.prototype.setDrawWhitePixels);
