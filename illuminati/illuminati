@@ -46,7 +46,7 @@ Some example use cases:
 
     - Create a serialized numpy array that holds all cell centroids (border cells removed):
 
-        $ illuminati --cell-centroids --png path/to/label_matrices/*.png -o my_array.npy
+        $ illuminati --cell-centroids path/to/label_matrices/*.png -o my_array.npy
 
 """
 
