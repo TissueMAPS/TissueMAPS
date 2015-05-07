@@ -132,6 +132,45 @@ def remove_border_cells(site_matrix):
     return mat
 
 
+def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
+    """Return a dictionary from cell ids to centroids.
+    Centroids are given as (x, y) tuples where the origin of the coordinate
+    system is assumed to be in the topleft corner (like in openlayers).
+
+    :sitemat: A numpy matrix containg the cell labels.
+    :site_row_nr: The row number of the site.
+    :site_col_nr: The col number of the site.
+    :offset: An integer that is added to all ids in sitemat.
+             This should correspond to the maximum id in the previously
+             processed site.
+    :returns: A (ncells x 3) numpy array of type double.
+              Cell ids are located in the first column,
+              the x coordinates of the centroids in the second column.
+              The y coordinates in the last one.
+
+    """
+    height, width = sitemat.shape
+    local_ids = np.array(
+        sorted(set(np.unique(sitemat)).difference({0})),
+        dtype='int32'
+    )
+    global_ids = local_ids + offset
+    ncells = len(local_ids)
+
+    centroids = np.empty((ncells, 3), np.double)
+    centroids[:, 0] = global_ids
+
+    for idx, id in enumerate(local_ids):
+        i, j = (sitemat == id).nonzero()
+        xmean = np.mean(j)
+        ymean = -1 * np.mean(i)
+        centroids[idx, 1] = xmean
+        centroids[idx, 2] = ymean
+
+    return centroids, np.max(global_ids)
+
+
+
 def compute_outline_polygons(site_matrix, contour_level=0.5, poly_tol=0.95):
     """
     Given a matrix of a site image with border cells removed,
