@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--ref_cycle', dest='ref_cycle',
                         type=int, help='reference cycle number \
-                        (refers to cycle with segmentation files)')
+                        (defaults to number of last cycle)')
 
     parser.add_argument('--segm_dir', dest='segm_dir',
                         type=str, help='relative path to segmentation directory \
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     bottom_overlap = []
     right_overlap = []
     left_overlap = []
-    number_of_sites = len(descriptor[cycles[0]]['xShift'])
+    number_of_sites = len(descriptor[cycles_names[0]]['xShift'])
     print '. number of sites: %d' % number_of_sites
     for site in xrange(number_of_sites):
         x_shift = [c['xShift'][site] for c in descriptor.values()]
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
     # Write shiftDescriptor.json files
     for cycle_object in cycle_dirs:
-        aligncycles_dir = project.get_shift_dir(project_dir, cycle_object)
+        aligncycles_dir = cycles.get_shift_dir(project_dir, cycle_object)
         if not exists(aligncycles_dir):
             os.mkdir(aligncycles_dir)
         descriptor_filename = join(aligncycles_dir, 'shiftDescriptor.json')
