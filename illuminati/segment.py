@@ -132,6 +132,13 @@ def remove_border_cells(site_matrix):
     return mat
 
 
+def create_id_lookup_matrices(sitemat, offset):
+    nonzero = sitemat != 0
+    mat = sitemat.astype('uint32')
+    mat[nonzero] = mat[nonzero] + offset
+    return mat, np.max(mat)
+
+
 def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
     """Return a dictionary from cell ids to centroids.
     Centroids are given as (x, y) tuples where the origin of the coordinate
@@ -140,6 +147,8 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
     :sitemat: A numpy matrix containg the cell labels.
     :site_row_nr: The row number of the site.
     :site_col_nr: The col number of the site.
+    :site_width: The width of each site as an int.
+    :site_height: The height of each site as an int.
     :offset: An integer that is added to all ids in sitemat.
              This should correspond to the maximum id in the previously
              processed site.
@@ -162,8 +171,10 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
 
     for idx, id in enumerate(local_ids):
         i, j = (sitemat == id).nonzero()
-        xmean = np.mean(j)
-        ymean = -1 * np.mean(i)
+        ycoords = i + sitemat.shape[0] * site_row_nr
+        xcoords = j + sitemat.shape[1] * site_col_nr
+        xmean = np.mean(xcoords)
+        ymean = -1 * np.mean(ycoords)
         centroids[idx, 1] = xmean
         centroids[idx, 2] = ymean
 

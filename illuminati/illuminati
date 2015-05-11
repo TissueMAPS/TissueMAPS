@@ -48,6 +48,10 @@ Some example use cases:
 
         $ illuminati --cell-centroids path/to/label_matrices/*.png -o my_array.npy
 
+    - Create id tables:
+
+        $ illuminati --id-luts path/to/label_matrices/*.png -o id_tables
+
 """
 
 __version__ = '0.1.0'
@@ -106,6 +110,11 @@ if __name__ == '__main__':
                         action='store_true', default=False,
                         help="if the centroid for each cell should be computed and be saved"
                              " as a numpy array.")
+    parser.add_argument('--id-luts', dest='id_luts',
+                        action='store_true', default=False,
+                        help="if lookup tables for the cell ids should be created. "
+                             " These tables are just int32 numpy arrays with the same name"
+                             " as the original segmentation images.")
 
     parser.add_argument('--area-mask', dest='area_mask',
                         action='store_true', default=False,
@@ -161,6 +170,28 @@ if __name__ == '__main__':
     stitch_obj = stitch.Stitch(config_settings)
     file_grid = stitch_obj.build_file_grid(files)
     vips_image_grid = copy.deepcopy(file_grid)
+
+    if args.id_luts:
+        max_id_upto_now = 0
+        print('ᐄ  CREATING ID LOOKUP TABLES ')
+        for i in range(len(file_grid)):
+            print '   row: %d' % i
+            for j in range(len(file_grid[0])):
+                print '    col: %d' % j
+                site_fname = file_grid[i][j]
+                mat = imread(site_fname)
+                mat = segment.remove_border_cells(mat)
+                mat, max_id_upto_now = segment.create_id_lookup_matrices(
+                    mat, max_id_upto_now)
+
+                fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
+                    rownr=(i+1), colnr=(j+1))
+                fname_abs = os.path.join(args.output_dir, fname)
+                print '    Saving file: ' + fname_abs
+                with open(fname_abs, 'w') as f:
+                    np.save(f, mat)
+        sys.exit(0)
+
 
     if args.cell_centroids:
         print('ᐄ  COMPUTING CELL CENTROIDS')
