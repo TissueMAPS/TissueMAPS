@@ -137,7 +137,8 @@ if __name__ == '__main__':
         print 'You need to specify an output directory'
         sys.exit(1)
 
-    if not os.path.exists(args.output_dir):
+    if not os.path.exists(args.output_dir) \
+            and not (args.cell_centroids or args.id_luts):
         print '.. Creating pyramid output directory'
         os.makedirs(args.output_dir)
 
@@ -168,10 +169,12 @@ if __name__ == '__main__':
         for i in range(len(file_grid)):
             print '   row: %d' % i
             for j in range(len(file_grid[0])):
-                print '    col: %d' % j
+                print '   col: %d' % j
+                print '   ' + file_grid[i][j]
                 mat = imread(file_grid[i][j])
                 mat = segment.remove_border_cells(mat)
-                site_centroids, max_id_upto_now = segment.compute_cell_centroids(mat, i, j, max_id_upto_now)
+                site_centroids, max_id_upto_now = \
+                    segment.compute_cell_centroids(mat, i, j, max_id_upto_now)
                 centroids.append(site_centroids)
 
         centroids = np.vstack(centroids)
