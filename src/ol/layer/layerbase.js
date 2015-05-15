@@ -24,6 +24,7 @@ ol.layer.LayerProperty = {
   MAX_RESOLUTION: 'maxResolution',
   MIN_RESOLUTION: 'minResolution',
   ADDITIVE_BLEND: 'additiveBlend',
+  DRAW_BLACK_PIXELS: 'drawBlackPixels',
   DRAW_WHITE_PIXELS: 'drawWhitePixels',
   SOURCE: 'source',
   COLOR: 'color',

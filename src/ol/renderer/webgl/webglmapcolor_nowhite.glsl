@@ -34,7 +34,7 @@ void main(void) {
   vec4 texColor = texture2D(u_texture, v_texCoord);
 
   // If the tile is white at this position dont render it
-  if (texColor.r > 0.95 && texColor.g > 0.95 && texColor.b > 0.95) {
+  if (texColor.r > 0.20 && texColor.g > 0.20 && texColor.b > 0.20) {
     discard;
   }
 

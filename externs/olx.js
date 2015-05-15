@@ -2580,6 +2580,7 @@ olx.layer;
  *     min: (number|undefined),
  *     max: (number|undefined),
  *     drawBlackPixels: (boolean|undefined),
+ *     drawWhitePixels: (boolean|undefined),
  *     additiveBlend: (boolean|undefined)}}
  * @api
  */
@@ -2673,6 +2674,7 @@ olx.layer.BaseOptions.prototype.maxResolution;
  *     min: (number|undefined),
  *     max: (number|undefined),
  *     drawBlackPixels: (boolean|undefined),
+ *     drawWhitePixels: (boolean|undefined),
  *     additiveBlend: (boolean|undefined),
  *     maxResolution: (number|undefined)}}
  * @api
@@ -2777,6 +2779,7 @@ olx.layer.LayerOptions.prototype.maxResolution;
  *     min: (number|undefined),
  *     max: (number|undefined),
  *     drawBlackPixels: (boolean|undefined),
+ *     drawWhitePixels: (boolean|undefined),
  *     additiveBlend: (boolean|undefined),
  *     layers: (Array.<ol.layer.Base>|ol.Collection.<ol.layer.Base>|undefined)}}
  * @api
