@@ -18,6 +18,7 @@ import sys
 import scipy
 from os.path import basename, exists, realpath, join
 import util
+import re
 
 from gi.repository import Vips
 
@@ -375,6 +376,34 @@ def outlines(labels, keep_ids=False):
         return output
 
 
+def gather_siteinfo(file_grid):
+
+    height = len(file_grid)
+    width = len(file_grid[0])
+    nsites = height * width
+    infomat = np.zeros((nsites, 4), dtype='uint32')
+
+    max_id_up_to_now = 0
+    idx = 0
+    for i in range(height):
+        print 'row: %d' % i
+        for j in range(width):
+            print 'col: %d' % j
+            filename = file_grid[i][j]
+
+            site_re = '_s(\d+)_'
+            sitenr = int(re.search(site_re, filename).group(1))
+            (rownr, colnr) = map(int, re.search('_r(\d+)_c(\d+)_', filename).groups())
+            infomat[idx, :] = (sitenr, rownr, colnr, max_id_up_to_now)
+
+            max_local_id = np.max(scipy.misc.imread(filename))
+            max_id_up_to_now += max_local_id
+
+            idx += 1
+
+    return infomat
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -426,3 +455,4 @@ These outline images need to be stitched together using tm_stitch.py
             print 'Error: the path %s exists already. Aborting.' % fpath
             sys.exit(1)
         scipy.misc.imsave(fpath, outline_mat)
+

@@ -52,6 +52,10 @@ Some example use cases:
 
         $ illuminati --id-luts path/to/label_matrices/*.png -o id_tables
 
+    - Create a numpy array that holds information about sites:
+
+        $ illuminati --gather-siteinfo path/to/label_matrices/*.png -o siteinfo.npy
+
 """
 
 __version__ = '0.1.0'
@@ -115,6 +119,18 @@ if __name__ == '__main__':
                         help="if lookup tables for the cell ids should be created. "
                              " These tables are just int32 numpy arrays with the same name"
                              " as the original segmentation images.")
+    parser.add_argument('--gather-siteinfo', dest='gather_siteinfo',
+                        action='store_true', default=False,
+                        help="""
+if a siteinfo matrix should be created that holds information "
+about sites. The matrix has dimension (n x 4) where n is the number"
+of sites and the columns corresond to: absolute site number (sXXXX),"
+row number (rXX), column number (cXX), integer offset thas has to"
+be added to the local ids in that site in order to make those ids global."
+This offset is computed in the fashion: for i in rows { for j in cols }"
+These tables are just int32 numpy arrays with the same name"
+as the original segmentation images.""")
+
 
     parser.add_argument('--area-mask', dest='area_mask',
                         action='store_true', default=False,
@@ -147,7 +163,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     if not os.path.exists(args.output_dir) \
-            and not (args.cell_centroids or args.id_luts):
+            and not (args.cell_centroids or args.id_luts or args.gather_siteinfo):
         print '.. Creating pyramid output directory'
         os.makedirs(args.output_dir)
 
@@ -190,6 +206,14 @@ if __name__ == '__main__':
                 print '    Saving file: ' + fname_abs
                 with open(fname_abs, 'w') as f:
                     np.save(f, mat)
+        sys.exit(0)
+
+    if args.gather_siteinfo:
+        mat = segment.gather_siteinfo(file_grid)
+        out = os.path.splitext(args.output_dir)[0] + '.npy'
+        print 'Saving: ' + out
+        with open(out, 'w') as f:
+            np.save(f, mat)
         sys.exit(0)
 
 
