@@ -51,20 +51,20 @@ def calculate_overlap(x_shift, y_shift):
     y_positive = [i > 0 for i in y_shift]
     y_negetive = [i < 0 for i in y_shift]
     if any(y_positive):  # down
-        top = []
-        for i in y_positive:
-            top.append(y_shift[i])
-        top = max(top)
-    else:
-        top = 0
-
-    if any(y_negetive):  # up
         bottom = []
-        for i in y_negetive:
+        for i in y_positive:
             bottom.append(y_shift[i])
-        bottom = abs(min(bottom))
+        bottom = max(bottom)
     else:
         bottom = 0
+
+    if any(y_negetive):  # up
+        top = []
+        for i in y_negetive:
+            top.append(y_shift[i])
+        top = abs(min(top))
+    else:
+        top = 0
 
     # in x direction
     x_positive = [i > 0 for i in x_shift]
