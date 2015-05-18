@@ -157,11 +157,11 @@ if __name__ == '__main__':
                                           int(sub_parts.group(2)))
             if args.output_dir:
                 output_dir = os.path.join(args.output_dir, output_sub_dir,
-                                          args.output_dir_name)
+                                          output_dir_name)
             else:
                 output_dir = os.path.join(input_dir, '..',
                                           output_sub_dir,
-                                          args.output_dir_name)
+                                          output_dir_name)
 
         retry = True
         ii = 0
