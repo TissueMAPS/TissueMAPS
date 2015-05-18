@@ -15,7 +15,7 @@ A package for aligning images between different acquisition cycles.
 A package for creating pyramid images for [tissueMAPS](https://github.com/pelkmanslab/TissueMAPS).
 
 
-## [visi](visi) ## 
+## [visi](visi) ##
 
 A package for converting Visitron's STK files to PNG images with optional renaming.
 
