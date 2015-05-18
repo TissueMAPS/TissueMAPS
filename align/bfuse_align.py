@@ -133,7 +133,7 @@ if __name__ == '__main__':
     total_top_overlap = max(top_overlap)
     total_bottom_overlap = max(bottom_overlap)
     total_right_overlap = max(right_overlap)
-    total_left_overlap = max(bottom_overlap)
+    total_left_overlap = max(left_overlap)
 
     # Limit total overlap by maximally tolerated shift
     if total_top_overlap > max_shift:
