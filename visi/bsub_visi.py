@@ -26,7 +26,8 @@ config = {
         'channel': '%.2d',
     },
     'acquisition_mode': 'ZigZagHorizontal',
-    'acquisition_layout': 'columns>rows'
+    'acquisition_layout': 'columns>rows',
+    'output_dir_name': 'TIFF'
 }
 
 if __name__ == '__main__':
@@ -38,7 +39,8 @@ if __name__ == '__main__':
 
     parser.add_argument('-b', '--batch_size', dest='batch_size',
                         type=int, default=20,
-                        help='number of "jobs" that are submitted per batch')
+                        help='number of "jobs" that are submitted per batch \
+                              default: 20')
 
     args = parser.parse_args()
 
