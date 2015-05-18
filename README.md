@@ -20,4 +20,4 @@ A package for creating pyramid images for [tissueMAPS](https://github.com/pelkma
 A package for converting Visitron's STK files to PNG images with optional renaming.
 
 
-*For more details, please refer to the respective subfolders.*
+*For more details, please refer to the individual tools.*
