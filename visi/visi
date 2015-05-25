@@ -29,6 +29,10 @@ if __name__ == '__main__':
     parser.add_argument('folder', type=str,
                         help='folder containing input images')
 
+    parser.add_argument('-w', '--wildcards', dest='wildcards', default='*',
+                        help='wildcards (globbing patterns) \
+                        to select subset of files in folder')
+
     parser.add_argument('-o', '--output_dir', dest='output_dir',
                         help='alternative output directory')
 
@@ -78,10 +82,9 @@ if __name__ == '__main__':
     print '. Checking configuration file'
     check_yaml_configuration(config)
 
-    # List image and metadata files in input directory
+    # List files in input directory matching wildcards
     input_dir = args.folder
-    files = [x for x in os.listdir(input_dir)
-             if re.search(r'\.(stk|nd)$', x)]
+    files = glob.glob(input_dir, args.wildcards)
 
     # Create name of output directory
     if args.output_dir_name:

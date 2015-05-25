@@ -66,8 +66,8 @@ if __name__ == '__main__':
     joblists_dir = osp.join(lsf_dir, 'joblists')
     if not osp.exists(joblists_dir):
         os.mkdir(joblists_dir)
-    command = ['visi', '-o', joblists_dir, '--joblist']
-    check_call(command + input_dir)
+    command = ['visi', '-o', joblists_dir, '--joblist', input_dir]
+    check_call(command)
 
     joblist_files = glob.glob(osp.join(joblists_dir, '*.joblist'))
 
@@ -79,8 +79,7 @@ if __name__ == '__main__':
         print '. processing joblist from file "%s"' % joblist_file
 
         subproject_name = osp.splitext(osp.basename(joblist_file))[0]
-
-        batch_files = glob.glob(osp.join(input_dir, '%s*' % subproject_name))
+        wildcards = '%s*' % subproject_name
 
         joblist_content = yaml.load(open(joblist_file).read())
 
@@ -100,12 +99,13 @@ if __name__ == '__main__':
 
             ts = time.time()
             st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
-            lsf = osp.join(project_dir, 'lsf', 'visi_%s_%.5d_%s_%s.lsf' %
-                           (subproject_name, batch, batch_range, st))
+            lsf = osp.join(project_dir, 'lsf', 'visi_%s_%.5d_%s_%s.lsf'
+                           % (subproject_name, batch, batch_range, st))
 
             print '. submitting job %d' % batch
             call(['bsub', '-W', '8:00', '-o', lsf,
                  '-R', 'rusage[mem=4000,scratch=4000]',
                  'visi', '--rename', '--split_output',
                  '--batch', '%s' % batch_range,
-                 '--config', config_file] + batch_files)
+                 '--config', config_file,
+                 input_dir, '--wildcards', wildcards])
