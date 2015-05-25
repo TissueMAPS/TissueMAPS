@@ -67,8 +67,7 @@ if __name__ == '__main__':
     if not osp.exists(joblists_dir):
         os.mkdir(joblists_dir)
     command = ['visi', '-o', joblists_dir, '--joblist']
-    files = glob.glob(osp.join(input_dir, '*'))
-    check_call(command + files)
+    check_call(command + input_dir)
 
     joblist_files = glob.glob(osp.join(joblists_dir, '*.joblist'))
 

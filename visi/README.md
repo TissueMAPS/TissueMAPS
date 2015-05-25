@@ -1,6 +1,6 @@
 # visi #
 
-[Visi](visi) is a command line tool for converting **.stk** files from Visitron microscopes into **.png** images with optional file renaming.
+Visi is a command line tool for converting **.stk** files from Visitron microscopes into **.png** images with optional file renaming.
 
 For help, do
 ```{bash}
