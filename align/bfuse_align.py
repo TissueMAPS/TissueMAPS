@@ -130,10 +130,10 @@ if __name__ == '__main__':
         left_overlap.append(left)
 
     # Get total overlap across all sites
-    total_top_overlap = max(top_overlap)
-    total_bottom_overlap = max(bottom_overlap)
-    total_right_overlap = max(right_overlap)
-    total_left_overlap = max(left_overlap)
+    total_top_overlap = max(map(abs, top_overlap))
+    total_bottom_overlap = max(map(abs, bottom_overlap))
+    total_right_overlap = max(map(abs, right_overlap))
+    total_left_overlap = max(map(abs, left_overlap))
 
     # Limit total overlap by maximally tolerated shift
     if total_top_overlap > max_shift:
@@ -151,10 +151,10 @@ if __name__ == '__main__':
     for cycle in cycles_names:
         index.extend([descriptor[cycle]['xShift'].index(s)
                      for s in descriptor[cycle]['xShift']
-                     if s > max_shift])
+                     if abs(s) > max_shift])
         index.extend([descriptor[cycle]['yShift'].index(s)
                      for s in descriptor[cycle]['yShift']
-                     if s > max_shift])
+                     if abs(s) > max_shift])
 
     no_shift_index = number_of_sites * [0]
     for i in index:
