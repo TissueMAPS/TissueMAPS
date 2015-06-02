@@ -85,7 +85,7 @@ if __name__ == '__main__':
         # This can be done nicer
         segm_trunk = re.sub(r'{experiment_name}', exp_name,
                             config['FILENAME_FORMAT'])
-        segm_trunk = re.sub(r'{cycle_number}', str('%.2d', ref_cycle),
+        segm_trunk = re.sub(r'{cycle_number}', '%.2d' % ref_cycle,
                             segm_trunk)
 
     print '. define segmentation trunk: %s' % segm_trunk
