@@ -10,7 +10,7 @@ import yaml
 from natsort import natsorted
 from subprocess32 import call
 import illuminati
-from image_toolbox.util import load_config, check_config
+import image_toolbox
 
 
 def on_brutus():
@@ -54,8 +54,8 @@ if __name__ == '__main__':
 
     config_filename = args.config
     print '. get configuration from config file: %s' % config_filename
-    config = load_config(config_filename)
-    check_config(config)
+    config = image_toolbox.util.load_config(config_filename)
+    image_toolbox.util.check_config(config)
 
     # Initialize utility objects with configuration settings
     project = illuminati.util.Project(config)

@@ -9,7 +9,7 @@ from glob import glob
 from align import registration as reg
 import illuminati
 from image_toolbox import config
-from image_toolbox.util import load_config, check_config
+import image_toolbox
 
 
 if __name__ == '__main__':
@@ -51,8 +51,8 @@ if __name__ == '__main__':
         # Overwrite default "image_toolbox" configuration
         config_filename = args.config
         print '. get configuration from config file: %s' % config_filename
-        config = load_config(config_filename)
-        check_config(config)
+        config = image_toolbox.util.load_config(config_filename)
+        image_toolbox.util.check_config(config)
 
     # Initialize utility object with configuration settings
     project = illuminati.util.Project(config)
