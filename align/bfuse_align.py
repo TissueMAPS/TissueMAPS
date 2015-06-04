@@ -9,7 +9,8 @@ from glob import glob
 from align import registration as reg
 import illuminati
 from image_toolbox import config
-import image_toolbox
+from image_toolbox.util import load_config, check_config
+from illuminati.util import Project, Cycles
 
 
 if __name__ == '__main__':
@@ -51,12 +52,12 @@ if __name__ == '__main__':
         # Overwrite default "image_toolbox" configuration
         config_filename = args.config
         print '. get configuration from config file: %s' % config_filename
-        config = image_toolbox.util.load_config(config_filename)
-        image_toolbox.util.check_config(config)
+        config = load_config(config_filename)
+        check_config(config)
 
     # Initialize utility object with configuration settings
-    project = illuminati.util.Project(config)
-    cycles = illuminati.util.Cycles(config)
+    project = Project(config)
+    cycles = Cycles(config)
 
     print '. get cycle directories'
     cycle_dirs = cycles.get_cycle_directories(project_dir)
