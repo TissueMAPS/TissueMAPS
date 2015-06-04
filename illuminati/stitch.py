@@ -133,8 +133,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--config', dest='config',
                         default=os.path.join(os.path.dirname(__file__), '..',
-                                             'config.yaml'),
-                        help='use custom yaml configuration file')
+                                             'image_toolbox.config'),
+                        help='use custom yaml configuration file \
+                        (defaults to "image_toolbox" config file)')
 
     parser.add_argument('-s', '--shift', dest='shift',
                         action='store_true', default=False,

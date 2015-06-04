@@ -12,6 +12,8 @@ import illumcorrect
 import stitch
 import segment
 import imageutil
+from image_toolbox import config
+from image_toolbox.util import load_config, check_config
 
 """
 Illuminati is a command line tool for pre-processing images for TissueMAPS.
@@ -152,9 +154,8 @@ if __name__ == '__main__':
                         help="directory where the pyramid should be saved")
 
     parser.add_argument('-c', '--config', dest='config',
-                        default=os.path.join(os.path.dirname(__file__), '..',
-                                             'config.yaml'),
-                        help='use custom yaml configuration file')
+                        help='path to custom yaml configuration file \
+                        (defaults to "image_toolbox" configuration)')
 
     parser.add_argument('-s', '--shift', dest='shift',
                         action='store_true', default=False,
@@ -217,9 +218,10 @@ if __name__ == '__main__':
 
     files = args.files
 
-    # Get configuration settings
-    config_settings = util.load_config(args.config)
-    util.check_config(config_settings)
+    if args.config:
+        # Overwrite default "image_toolbox" configuration
+        config_settings = load_config(args.config)
+        check_config(config_settings)
 
     #######################################################################
     #                           LOADING IMAGES                            #

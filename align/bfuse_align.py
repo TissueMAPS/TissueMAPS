@@ -8,6 +8,7 @@ import argparse
 from glob import glob
 from align import registration as reg
 from illuminati import util
+from image_toolbox import config
 
 
 if __name__ == '__main__':
@@ -37,20 +38,20 @@ if __name__ == '__main__':
                         (defaults to 100)')
 
     parser.add_argument('-c', '--config', dest='config',
-                        default=os.path.join(os.path.dirname(__file__), '..',
-                                             'config.yaml'),
                         help='use custom yaml configuration file \
-                        (defaults to config.yaml form "image_toolbox")')
+                        (defaults to "image_toolbox" configuration)')
 
     args = parser.parse_args()
 
     project_dir = args.project_dir
     max_shift = args.max_shift
 
-    config_filename = args.config
-    print '. get configuration from config file: %s' % config_filename
-    config = util.load_config(config_filename)
-    util.check_config(config)
+    if args.config:
+        # Overwrite default "image_toolbox" configuration
+        config_filename = args.config
+        print '. get configuration from config file: %s' % config_filename
+        config = util.load_config(config_filename)
+        util.check_config(config)
 
     # Initialize utility object with configuration settings
     project = util.Project(config)
@@ -82,11 +83,8 @@ if __name__ == '__main__':
         example_filename = project.get_image_files(project_dir,
                                                    reference_cycle)[0]
         exp_name = project.get_expname_from_filename(example_filename)
-        # This can be done nicer
-        segm_trunk = re.sub(r'{experiment_name}', exp_name,
-                            config['FILENAME_FORMAT'])
-        segm_trunk = re.sub(r'{cycle_number}', '%.2d' % ref_cycle,
-                            segm_trunk)
+        segm_trunk = config['FILENAME_FORMAT'].format(experiment_name=exp_name,
+                                                      cycle_number=ref_cycle)
 
     print '. define segmentation trunk: %s' % segm_trunk
 
