@@ -9,7 +9,8 @@ import argparse
 import yaml
 from natsort import natsorted
 from subprocess32 import call
-from illuminati import util
+import illuminati
+from image_toolbox.util import load_config, check_config
 
 
 def on_brutus():
@@ -53,12 +54,12 @@ if __name__ == '__main__':
 
     config_filename = args.config
     print '. get configuration from config file: %s' % config_filename
-    config = util.load_config(config_filename)
-    util.check_config(config)
+    config = load_config(config_filename)
+    check_config(config)
 
     # Initialize utility objects with configuration settings
-    project = util.Project(config)
-    cycles = util.Cycles(config)
+    project = illuminati.util.Project(config)
+    cycles = illuminati.util.Cycles(config)
 
     print '. get cycle directories'
     cycle_dirs = cycles.get_cycle_directories(project_dir)

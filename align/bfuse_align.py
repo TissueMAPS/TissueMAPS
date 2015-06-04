@@ -7,8 +7,9 @@ import h5py
 import argparse
 from glob import glob
 from align import registration as reg
-from illuminati import util
+import illuminati
 from image_toolbox import config
+from image_toolbox.util import load_config, check_config
 
 
 if __name__ == '__main__':
@@ -50,12 +51,12 @@ if __name__ == '__main__':
         # Overwrite default "image_toolbox" configuration
         config_filename = args.config
         print '. get configuration from config file: %s' % config_filename
-        config = util.load_config(config_filename)
-        util.check_config(config)
+        config = load_config(config_filename)
+        check_config(config)
 
     # Initialize utility object with configuration settings
-    project = util.Project(config)
-    cycles = util.Cycles(config)
+    project = illuminati.util.Project(config)
+    cycles = illuminati.util.Cycles(config)
 
     print '. get cycle directories'
     cycle_dirs = cycles.get_cycle_directories(project_dir)
