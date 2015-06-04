@@ -157,10 +157,10 @@ class Stk2png(object):
             self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
             self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
             self.tokens = ['filter', 'site']
-            self.nomenclature = copy(config['nomenclature_string'])
-            self.format = copy(config['nomenclature_format'])
-            self.acquistion_mode = copy(config['acquisition_mode'])
-            self.acquisition_layout = copy(config['acquisition_layout'])
+            self.nomenclature = copy(config['NOMENCLATURE_STRING'])
+            self.format = copy(config['NOMENCLATURE_FORMAT'])
+            self.acquistion_mode = copy(config['ACQUISITION_MODE'])
+            self.acquisition_layout = copy(config['ACQUISITION_LAYOUT'])
         else:
             self.filename_pattern = None
             self.filter_pattern = None
@@ -242,12 +242,9 @@ class Stk2png(object):
             for i, t in enumerate(self.tokens):
                 # Handle special cases that are more complex
                 if t == 'filter':
-                    print stk_file
-                    print matched[i]
                     if re.search(r'xm', matched[i]):
                         r = re.compile(self.filter_pattern)
                         match = re.search(r, matched[i]).group(1)
-                        print match
                     # TODO: handles dual sdc mode!
                     else:
                         match = matched[i]

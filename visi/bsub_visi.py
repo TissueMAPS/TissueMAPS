@@ -15,19 +15,23 @@ Automatically generates a custom config file and joblist files.
 
 '''
 
+# This could be written directly in YAML
 config = {
-    'nomenclature_string': '{project}_s{site}_r{row}_c{column}_{filter}_C{channel}.png',
-    'nomenclature_format': {
+    'NOMENCLATURE_STRING': '{project}_s{site}_r{row}_c{column}_{filter}_C{channel}.png',
+    'NOMENCLATURE_FORMAT': {
         'project': '%s',
+        'well': '%s',
         'site': '%.4d',
         'row': '%.2d',
         'column': '%.2d',
+        'zstack': '%.2d',
+        'time': '%.4d',
         'filter': '%s',
-        'channel': '%.2d',
+        'channel': '%.2d'
     },
-    'acquisition_mode': 'ZigZagHorizontal',
-    'acquisition_layout': 'columns>rows',
-    'output_dir_name': 'TIFF'
+    'ACQUISITION_MODE': 'ZigZagHorizontal',
+    'ACQUISITION_LAYOUT': 'columns>rows',
+    'OUTPUT_DIRECTORY_NAME': 'TIFF'
 }
 
 if __name__ == '__main__':
