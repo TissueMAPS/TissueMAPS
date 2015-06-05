@@ -4,8 +4,12 @@ goog.provide('ol.renderer.Map');
 goog.require('goog.Disposable');
 goog.require('goog.asserts');
 goog.require('goog.dispose');
+goog.require('goog.events');
+goog.require('goog.events.EventType');
+goog.require('goog.functions');
 goog.require('goog.object');
 goog.require('goog.vec.Mat4');
+goog.require('ol.extent');
 goog.require('ol.layer.Layer');
 goog.require('ol.renderer.Layer');
 goog.require('ol.style.IconImageCache');
@@ -37,6 +41,7 @@ ol.renderer.Map = function(container, map) {
 
   goog.base(this);
 
+
   /**
    * @private
    * @type {ol.Map}
@@ -55,6 +60,12 @@ ol.renderer.Map = function(container, map) {
    */
   this.layerRenderers_ = {};
 
+  /**
+   * @private
+   * @type {Object.<string, goog.events.Key>}
+   */
+  this.layerRendererListeners_ = {};
+
 };
 goog.inherits(ol.renderer.Map, goog.Disposable);
 
@@ -66,7 +77,8 @@ goog.inherits(ol.renderer.Map, goog.Disposable);
 ol.renderer.Map.prototype.calculateMatrices2D = function(frameState) {
   var viewState = frameState.viewState;
   var coordinateToPixelMatrix = frameState.coordinateToPixelMatrix;
-  goog.asserts.assert(!goog.isNull(coordinateToPixelMatrix));
+  goog.asserts.assert(!goog.isNull(coordinateToPixelMatrix),
+      'frameState has non-null coordinateToPixelMatrix');
   ol.vec.Mat4.makeTransform2D(coordinateToPixelMatrix,
       frameState.size[0] / 2, frameState.size[1] / 2,
       1 / viewState.resolution, -1 / viewState.resolution,
@@ -74,7 +86,7 @@ ol.renderer.Map.prototype.calculateMatrices2D = function(frameState) {
       -viewState.center[0], -viewState.center[1]);
   var inverted = goog.vec.Mat4.invert(
       coordinateToPixelMatrix, frameState.pixelToCoordinateMatrix);
-  goog.asserts.assert(inverted);
+  goog.asserts.assert(inverted, 'matrix could be inverted');
 };
 
 
@@ -83,9 +95,7 @@ ol.renderer.Map.prototype.calculateMatrices2D = function(frameState) {
  * @protected
  * @return {ol.renderer.Layer} layerRenderer Layer renderer.
  */
-ol.renderer.Map.prototype.createLayerRenderer = function(layer) {
-  return new ol.renderer.Layer(this, layer);
-};
+ol.renderer.Map.prototype.createLayerRenderer = goog.abstractMethod;
 
 
 /**
@@ -121,35 +131,51 @@ ol.renderer.Map.expireIconCache_ = function(map, frameState) {
  * @return {T|undefined} Callback result.
  * @template S,T,U
  */
-ol.renderer.Map.prototype.forEachFeatureAtPixel =
+ol.renderer.Map.prototype.forEachFeatureAtCoordinate =
     function(coordinate, frameState, callback, thisArg,
         layerFilter, thisArg2) {
   var result;
   var viewState = frameState.viewState;
   var viewResolution = viewState.resolution;
   var viewRotation = viewState.rotation;
+
+  /** @type {Object.<string, boolean>} */
+  var features = {};
+
+  /**
+   * @param {ol.Feature} feature Feature.
+   * @return {?} Callback result.
+   */
+  function forEachFeatureAtCoordinate(feature) {
+    goog.asserts.assert(goog.isDef(feature), 'received a feature');
+    var key = goog.getUid(feature).toString();
+    if (!(key in features)) {
+      features[key] = true;
+      return callback.call(thisArg, feature, null);
+    }
+  }
+
+  var projection = viewState.projection;
+
+  var translatedCoordinate = coordinate;
+  if (projection.canWrapX()) {
+    var projectionExtent = projection.getExtent();
+    var worldWidth = ol.extent.getWidth(projectionExtent);
+    var x = coordinate[0];
+    if (x < projectionExtent[0] || x > projectionExtent[2]) {
+      var worldsAway = Math.ceil((projectionExtent[0] - x) / worldWidth);
+      translatedCoordinate = [x + worldWidth * worldsAway, coordinate[1]];
+    }
+  }
+
   if (!goog.isNull(this.replayGroup)) {
-    /** @type {Object.<string, boolean>} */
-    var features = {};
-    result = this.replayGroup.forEachGeometryAtPixel(viewResolution,
-        viewRotation, coordinate, {},
-        /**
-         * @param {ol.Feature} feature Feature.
-         * @return {?} Callback result.
-         */
-        function(feature) {
-          goog.asserts.assert(goog.isDef(feature));
-          var key = goog.getUid(feature).toString();
-          if (!(key in features)) {
-            features[key] = true;
-            return callback.call(thisArg, feature, null);
-          }
-        });
+    result = this.replayGroup.forEachFeatureAtCoordinate(translatedCoordinate,
+        viewResolution, viewRotation, {}, forEachFeatureAtCoordinate);
     if (result) {
       return result;
     }
   }
-  var layerStates = this.map_.getLayerGroup().getLayerStatesArray();
+  var layerStates = frameState.layerStatesArray;
   var numLayers = layerStates.length;
   var i;
   for (i = numLayers - 1; i >= 0; --i) {
@@ -158,14 +184,89 @@ ol.renderer.Map.prototype.forEachFeatureAtPixel =
     if (ol.layer.Layer.visibleAtResolution(layerState, viewResolution) &&
         layerFilter.call(thisArg2, layer)) {
       var layerRenderer = this.getLayerRenderer(layer);
-      result = layerRenderer.forEachFeatureAtPixel(
-          coordinate, frameState, callback, thisArg);
+      result = layerRenderer.forEachFeatureAtCoordinate(
+          layer.getSource().getWrapX() ? translatedCoordinate : coordinate,
+          frameState, callback, thisArg);
       if (result) {
         return result;
       }
     }
   }
   return undefined;
+};
+
+
+/**
+ * @param {ol.Pixel} pixel Pixel.
+ * @param {olx.FrameState} frameState FrameState.
+ * @param {function(this: S, ol.layer.Layer): T} callback Layer
+ *     callback.
+ * @param {S} thisArg Value to use as `this` when executing `callback`.
+ * @param {function(this: U, ol.layer.Layer): boolean} layerFilter Layer filter
+ *     function, only layers which are visible and for which this function
+ *     returns `true` will be tested for features.  By default, all visible
+ *     layers will be tested.
+ * @param {U} thisArg2 Value to use as `this` when executing `layerFilter`.
+ * @return {T|undefined} Callback result.
+ * @template S,T,U
+ */
+ol.renderer.Map.prototype.forEachLayerAtPixel =
+    function(pixel, frameState, callback, thisArg,
+        layerFilter, thisArg2) {
+  var result;
+  var viewState = frameState.viewState;
+  var viewResolution = viewState.resolution;
+  var viewRotation = viewState.rotation;
+
+  if (!goog.isNull(this.replayGroup)) {
+    var coordinate = this.getMap().getCoordinateFromPixel(pixel);
+    var hasFeature = this.replayGroup.forEachFeatureAtCoordinate(coordinate,
+        viewResolution, viewRotation, {}, goog.functions.TRUE);
+
+    if (hasFeature) {
+      result = callback.call(thisArg, null);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  var layerStates = frameState.layerStatesArray;
+  var numLayers = layerStates.length;
+  var i;
+  for (i = numLayers - 1; i >= 0; --i) {
+    var layerState = layerStates[i];
+    var layer = layerState.layer;
+    if (ol.layer.Layer.visibleAtResolution(layerState, viewResolution) &&
+        layerFilter.call(thisArg2, layer)) {
+      var layerRenderer = this.getLayerRenderer(layer);
+      result = layerRenderer.forEachLayerAtPixel(
+          pixel, frameState, callback, thisArg);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return undefined;
+};
+
+
+/**
+ * @param {ol.Coordinate} coordinate Coordinate.
+ * @param {olx.FrameState} frameState FrameState.
+ * @param {function(this: U, ol.layer.Layer): boolean} layerFilter Layer filter
+ *     function, only layers which are visible and for which this function
+ *     returns `true` will be tested for features.  By default, all visible
+ *     layers will be tested.
+ * @param {U} thisArg Value to use as `this` when executing `layerFilter`.
+ * @return {boolean} Is there a feature at the given coordinate?
+ * @template U
+ */
+ol.renderer.Map.prototype.hasFeatureAtCoordinate =
+    function(coordinate, frameState, layerFilter, thisArg) {
+  var hasFeature = this.forEachFeatureAtCoordinate(
+      coordinate, frameState, goog.functions.TRUE, this, layerFilter, thisArg);
+
+  return goog.isDef(hasFeature);
 };
 
 
@@ -181,6 +282,10 @@ ol.renderer.Map.prototype.getLayerRenderer = function(layer) {
   } else {
     var layerRenderer = this.createLayerRenderer(layer);
     this.layerRenderers_[layerKey] = layerRenderer;
+    this.layerRendererListeners_[layerKey] = goog.events.listen(layerRenderer,
+        goog.events.EventType.CHANGE, this.handleLayerRendererChange_,
+        false, this);
+
     return layerRenderer;
   }
 };
@@ -192,7 +297,8 @@ ol.renderer.Map.prototype.getLayerRenderer = function(layer) {
  * @return {ol.renderer.Layer} Layer renderer.
  */
 ol.renderer.Map.prototype.getLayerRendererByKey = function(layerKey) {
-  goog.asserts.assert(layerKey in this.layerRenderers_);
+  goog.asserts.assert(layerKey in this.layerRenderers_,
+      'given layerKey (%s) exists in layerRenderers', layerKey);
   return this.layerRenderers_[layerKey];
 };
 
@@ -221,14 +327,30 @@ ol.renderer.Map.prototype.getType = goog.abstractMethod;
 
 
 /**
+ * Handle changes in a layer renderer.
+ * @private
+ */
+ol.renderer.Map.prototype.handleLayerRendererChange_ = function() {
+  this.map_.render();
+};
+
+
+/**
  * @param {string} layerKey Layer key.
  * @return {ol.renderer.Layer} Layer renderer.
  * @private
  */
 ol.renderer.Map.prototype.removeLayerRendererByKey_ = function(layerKey) {
-  goog.asserts.assert(layerKey in this.layerRenderers_);
+  goog.asserts.assert(layerKey in this.layerRenderers_,
+      'given layerKey (%s) exists in layerRenderers', layerKey);
   var layerRenderer = this.layerRenderers_[layerKey];
   delete this.layerRenderers_[layerKey];
+
+  goog.asserts.assert(layerKey in this.layerRendererListeners_,
+      'given layerKey (%s) exists in layerRendererListeners', layerKey);
+  goog.events.unlistenByKey(this.layerRendererListeners_[layerKey]);
+  delete this.layerRendererListeners_[layerKey];
+
   return layerRenderer;
 };
 

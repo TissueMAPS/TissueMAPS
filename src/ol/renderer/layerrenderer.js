@@ -1,8 +1,11 @@
 goog.provide('ol.renderer.Layer');
 
-goog.require('goog.Disposable');
 goog.require('goog.asserts');
+goog.require('goog.events');
+goog.require('goog.events.EventType');
+goog.require('goog.functions');
 goog.require('ol.ImageState');
+goog.require('ol.Observable');
 goog.require('ol.TileRange');
 goog.require('ol.TileState');
 goog.require('ol.layer.Layer');
@@ -10,26 +13,20 @@ goog.require('ol.source.Source');
 goog.require('ol.source.State');
 goog.require('ol.source.Tile');
 goog.require('ol.tilecoord');
+goog.require('ol.vec.Mat4');
 
 
 
 /**
  * @constructor
- * @extends {goog.Disposable}
- * @param {ol.renderer.Map} mapRenderer Map renderer.
+ * @extends {ol.Observable}
  * @param {ol.layer.Layer} layer Layer.
  * @suppress {checkStructDictInheritance}
  * @struct
  */
-ol.renderer.Layer = function(mapRenderer, layer) {
+ol.renderer.Layer = function(layer) {
 
   goog.base(this);
-
-  /**
-   * @private
-   * @type {ol.renderer.Map}
-   */
-  this.mapRenderer_ = mapRenderer;
 
   /**
    * @private
@@ -39,7 +36,7 @@ ol.renderer.Layer = function(mapRenderer, layer) {
 
 
 };
-goog.inherits(ol.renderer.Layer, goog.Disposable);
+goog.inherits(ol.renderer.Layer, ol.Observable);
 
 
 /**
@@ -51,7 +48,68 @@ goog.inherits(ol.renderer.Layer, goog.Disposable);
  * @return {T|undefined} Callback result.
  * @template S,T
  */
-ol.renderer.Layer.prototype.forEachFeatureAtPixel = goog.nullFunction;
+ol.renderer.Layer.prototype.forEachFeatureAtCoordinate = goog.nullFunction;
+
+
+/**
+ * @param {ol.Pixel} pixel Pixel.
+ * @param {olx.FrameState} frameState Frame state.
+ * @param {function(this: S, ol.layer.Layer): T} callback Layer callback.
+ * @param {S} thisArg Value to use as `this` when executing `callback`.
+ * @return {T|undefined} Callback result.
+ * @template S,T
+ */
+ol.renderer.Layer.prototype.forEachLayerAtPixel =
+    function(pixel, frameState, callback, thisArg) {
+  var coordinate = pixel.slice();
+  ol.vec.Mat4.multVec2(
+      frameState.pixelToCoordinateMatrix, coordinate, coordinate);
+
+  var hasFeature = this.forEachFeatureAtCoordinate(
+      coordinate, frameState, goog.functions.TRUE, this);
+
+  if (hasFeature) {
+    return callback.call(thisArg, this.layer_);
+  } else {
+    return undefined;
+  }
+};
+
+
+/**
+ * @param {ol.Coordinate} coordinate Coordinate.
+ * @param {olx.FrameState} frameState Frame state.
+ * @return {boolean} Is there a feature at the given coordinate?
+ */
+ol.renderer.Layer.prototype.hasFeatureAtCoordinate = goog.functions.FALSE;
+
+
+/**
+ * Create a function that adds loaded tiles to the tile lookup.
+ * @param {ol.source.Tile} source Tile source.
+ * @param {Object.<number, Object.<string, ol.Tile>>} tiles Lookup of loaded
+ *     tiles by zoom level.
+ * @return {function(number, ol.TileRange):boolean} A function that can be
+ *     called with a zoom level and a tile range to add loaded tiles to the
+ *     lookup.
+ * @protected
+ */
+ol.renderer.Layer.prototype.createLoadedTileFinder = function(source, tiles) {
+  return (
+      /**
+       * @param {number} zoom Zoom level.
+       * @param {ol.TileRange} tileRange Tile range.
+       * @return {boolean} The tile range is fully loaded.
+       */
+      function(zoom, tileRange) {
+        return source.forEachLoadedTile(zoom, tileRange, function(tile) {
+          if (!tiles[zoom]) {
+            tiles[zoom] = {};
+          }
+          tiles[zoom][tile.tileCoord.toString()] = tile;
+        });
+      });
+};
 
 
 /**
@@ -64,33 +122,45 @@ ol.renderer.Layer.prototype.getLayer = function() {
 
 
 /**
- * @protected
- * @return {ol.Map} Map.
- */
-ol.renderer.Layer.prototype.getMap = function() {
-  return this.mapRenderer_.getMap();
-};
-
-
-/**
- * @protected
- * @return {ol.renderer.Map} Map renderer.
- */
-ol.renderer.Layer.prototype.getMapRenderer = function() {
-  return this.mapRenderer_;
-};
-
-
-/**
  * Handle changes in image state.
  * @param {goog.events.Event} event Image change event.
- * @protected
+ * @private
  */
-ol.renderer.Layer.prototype.handleImageChange = function(event) {
+ol.renderer.Layer.prototype.handleImageChange_ = function(event) {
   var image = /** @type {ol.Image} */ (event.target);
   if (image.getState() === ol.ImageState.LOADED) {
     this.renderIfReadyAndVisible();
   }
+};
+
+
+/**
+ * Load the image if not already loaded, and register the image change
+ * listener if needed.
+ * @param {ol.ImageBase} image Image.
+ * @return {boolean} `true` if the image is already loaded, `false`
+ *     otherwise.
+ * @protected
+ */
+ol.renderer.Layer.prototype.loadImage = function(image) {
+  var imageState = image.getState();
+  if (imageState != ol.ImageState.LOADED &&
+      imageState != ol.ImageState.ERROR) {
+    // the image is either "idle" or "loading", register the change
+    // listener (a noop if the listener was already registered)
+    goog.asserts.assert(imageState == ol.ImageState.IDLE ||
+        imageState == ol.ImageState.LOADING,
+        'imageState is "idle" or "loading"');
+    goog.events.listen(image, goog.events.EventType.CHANGE,
+        this.handleImageChange_, false, this);
+  }
+  if (imageState == ol.ImageState.IDLE) {
+    image.load();
+    imageState = image.getState();
+    goog.asserts.assert(imageState == ol.ImageState.LOADING,
+        'imageState is "loading"');
+  }
+  return imageState == ol.ImageState.LOADED;
 };
 
 
@@ -100,7 +170,7 @@ ol.renderer.Layer.prototype.handleImageChange = function(event) {
 ol.renderer.Layer.prototype.renderIfReadyAndVisible = function() {
   var layer = this.getLayer();
   if (layer.getVisible() && layer.getSourceState() == ol.source.State.READY) {
-    this.getMap().render();
+    this.changed();
   }
 };
 
@@ -157,8 +227,8 @@ ol.renderer.Layer.prototype.updateLogos = function(frameState, source) {
     if (goog.isString(logo)) {
       frameState.logos[logo] = '';
     } else if (goog.isObject(logo)) {
-      goog.asserts.assertString(logo.href);
-      goog.asserts.assertString(logo.src);
+      goog.asserts.assertString(logo.href, 'logo.href is a string');
+      goog.asserts.assertString(logo.src, 'logo.src is a string');
       frameState.logos[logo.src] = logo.href;
     }
   }
@@ -187,32 +257,6 @@ ol.renderer.Layer.prototype.updateUsedTiles =
     usedTiles[tileSourceKey] = {};
     usedTiles[tileSourceKey][zKey] = tileRange;
   }
-};
-
-
-/**
- * @param {function(ol.Tile): boolean} isLoadedFunction Function to
- *     determine if the tile is loaded.
- * @param {ol.source.Tile} tileSource Tile source.
- * @param {number} pixelRatio Pixel ratio.
- * @param {ol.proj.Projection} projection Projection.
- * @protected
- * @return {function(number, number, number): ol.Tile} Returns a tile if it is
- *     loaded.
- */
-ol.renderer.Layer.prototype.createGetTileIfLoadedFunction =
-    function(isLoadedFunction, tileSource, pixelRatio, projection) {
-  return (
-      /**
-       * @param {number} z Z.
-       * @param {number} x X.
-       * @param {number} y Y.
-       * @return {ol.Tile} Tile.
-       */
-      function(z, x, y) {
-        var tile = tileSource.getTile(z, x, y, pixelRatio, projection);
-        return isLoadedFunction(tile) ? tile : null;
-      });
 };
 
 

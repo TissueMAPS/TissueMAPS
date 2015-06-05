@@ -4,6 +4,13 @@ describe('ol.format.WKT', function() {
 
   var format = new ol.format.WKT();
 
+  describe('#readProjectionFromText', function() {
+    it('returns the default projection', function() {
+      var projection = format.readProjectionFromText('POINT(1 2)');
+      expect(projection).to.be(null);
+    });
+  });
+
   describe('#readGeometry()', function() {
 
     it('transforms with dataProjection and featureProjection', function() {
@@ -360,6 +367,63 @@ describe('ol.format.WKT', function() {
     expect(point1.getCoordinates()).to.eql([1, 2]);
     expect(point2.getCoordinates()).to.eql([3, 4]);
     expect(format.writeFeatures(features)).to.eql(wkt);
+  });
+
+  describe('scientific notation supported', function() {
+
+    it('handles scientific notation correctly', function() {
+      var wkt = 'POINT(3e1 1e1)';
+      var geom = format.readGeometry(wkt);
+      expect(geom.getCoordinates()).to.eql([30, 10]);
+      expect(format.writeGeometry(geom)).to.eql('POINT(30 10)');
+    });
+
+    it('works with with negative exponent', function() {
+      var wkt = 'POINT(3e-1 1e-1)';
+      var geom = format.readGeometry(wkt);
+      expect(geom.getCoordinates()).to.eql([0.3, 0.1]);
+      expect(format.writeGeometry(geom)).to.eql('POINT(0.3 0.1)');
+    });
+
+    it('works with with explicitly positive exponent', function() {
+      var wkt = 'POINT(3e+1 1e+1)';
+      var geom = format.readGeometry(wkt);
+      expect(geom.getCoordinates()).to.eql([30, 10]);
+      expect(format.writeGeometry(geom)).to.eql('POINT(30 10)');
+    });
+
+    it('handles very small numbers in scientific notation', function() {
+      // very small numbers keep the scientific notation, both when reading and
+      // writing
+      var wkt = 'POINT(3e-9 1e-9)';
+      var geom = format.readGeometry(wkt);
+      expect(geom.getCoordinates()).to.eql([3e-9, 1e-9]);
+      expect(format.writeGeometry(geom)).to.eql('POINT(3e-9 1e-9)');
+    });
+
+    it('handles very big numbers in scientific notation', function() {
+      // very big numbers keep the scientific notation, both when reading and
+      // writing
+      var wkt = 'POINT(3e25 1e25)';
+      var geom = format.readGeometry(wkt);
+      expect(geom.getCoordinates()).to.eql([3e25, 1e25]);
+      expect(format.writeGeometry(geom)).to.eql('POINT(3e+25 1e+25)');
+    });
+
+    it('works case insensitively (e / E)', function() {
+      var wkt = 'POINT(3E1 1E1)';
+      var geom = format.readGeometry(wkt);
+      expect(geom.getCoordinates()).to.eql([30, 10]);
+      expect(format.writeGeometry(geom)).to.eql('POINT(30 10)');
+    });
+
+    it('detects invalid scientific notation', function() {
+      expect(function() {
+        // note the double 'e'
+        format.readGeometry('POINT(3ee1 10)');
+      }).to.throwException();
+    });
+
   });
 
 });

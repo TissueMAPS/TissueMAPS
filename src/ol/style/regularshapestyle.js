@@ -6,6 +6,8 @@ goog.require('goog.dom.TagName');
 goog.require('ol.color');
 goog.require('ol.has');
 goog.require('ol.render.canvas');
+goog.require('ol.structs.IHasChecksum');
+goog.require('ol.style.AtlasManager');
 goog.require('ol.style.Fill');
 goog.require('ol.style.Image');
 goog.require('ol.style.ImageState');
@@ -27,8 +29,9 @@ goog.require('ol.style.Stroke');
  */
 ol.style.RegularShape = function(options) {
 
-  goog.asserts.assert(goog.isDef(options.radius) ||
-      goog.isDef(options.radius1));
+  goog.asserts.assert(
+      goog.isDef(options.radius) || goog.isDef(options.radius1),
+      'must provide either "radius" or "radius1"');
 
   /**
    * @private
@@ -59,12 +62,6 @@ ol.style.RegularShape = function(options) {
    * @type {Array.<number>}
    */
   this.origin_ = [0, 0];
-
-  /**
-   * @private
-   * @type {Array.<number>}
-   */
-  this.hitDetectionOrigin_ = [0, 0];
 
   /**
    * @private
@@ -152,6 +149,7 @@ ol.style.RegularShape.prototype.getAnchor = function() {
 
 
 /**
+ * Get the angle used in generating the shape.
  * @return {number} Shape's rotation in radians.
  * @api
  */
@@ -161,6 +159,7 @@ ol.style.RegularShape.prototype.getAngle = function() {
 
 
 /**
+ * Get the fill style for the shape.
  * @return {ol.style.Fill} Fill style.
  * @api
  */
@@ -220,14 +219,7 @@ ol.style.RegularShape.prototype.getOrigin = function() {
 
 
 /**
- * @inheritDoc
- */
-ol.style.RegularShape.prototype.getHitDetectionOrigin = function() {
-  return this.hitDetectionOrigin_;
-};
-
-
-/**
+ * Get the number of points for generating the shape.
  * @return {number} Number of points for stars and regular polygons.
  * @api
  */
@@ -237,6 +229,7 @@ ol.style.RegularShape.prototype.getPoints = function() {
 
 
 /**
+ * Get the (primary) radius for the shape.
  * @return {number} Radius.
  * @api
  */
@@ -246,6 +239,7 @@ ol.style.RegularShape.prototype.getRadius = function() {
 
 
 /**
+ * Get the secondary radius for the shape.
  * @return {number} Radius2.
  * @api
  */
@@ -264,6 +258,7 @@ ol.style.RegularShape.prototype.getSize = function() {
 
 
 /**
+ * Get the stroke style for the shape.
  * @return {ol.style.Stroke} Stroke style.
  * @api
  */
@@ -291,8 +286,15 @@ ol.style.RegularShape.prototype.unlistenImageChange = goog.nullFunction;
 
 
 /**
- * @typedef {{strokeStyle: (string|undefined), strokeWidth: number,
- *   size: number, lineDash: Array.<number>}}
+ * @typedef {{
+ *   strokeStyle: (string|undefined),
+ *   strokeWidth: number,
+ *   size: number,
+ *   lineCap: string,
+ *   lineDash: Array.<number>,
+ *   lineJoin: string,
+ *   miterLimit: number
+ * }}
  */
 ol.style.RegularShape.RenderOptions;
 
@@ -303,6 +305,9 @@ ol.style.RegularShape.RenderOptions;
  */
 ol.style.RegularShape.prototype.render_ = function(atlasManager) {
   var imageSize;
+  var lineCap = '';
+  var lineJoin = '';
+  var miterLimit = 0;
   var lineDash = null;
   var strokeStyle;
   var strokeWidth = 0;
@@ -317,6 +322,18 @@ ol.style.RegularShape.prototype.render_ = function(atlasManager) {
     if (!ol.has.CANVAS_LINE_DASH) {
       lineDash = null;
     }
+    lineJoin = this.stroke_.getLineJoin();
+    if (!goog.isDef(lineJoin)) {
+      lineJoin = ol.render.canvas.defaultLineJoin;
+    }
+    lineCap = this.stroke_.getLineCap();
+    if (!goog.isDef(lineCap)) {
+      lineCap = ol.render.canvas.defaultLineCap;
+    }
+    miterLimit = this.stroke_.getMiterLimit();
+    if (!goog.isDef(miterLimit)) {
+      miterLimit = ol.render.canvas.defaultMiterLimit;
+    }
   }
 
   var size = 2 * (this.radius_ + strokeWidth) + 1;
@@ -326,7 +343,10 @@ ol.style.RegularShape.prototype.render_ = function(atlasManager) {
     strokeStyle: strokeStyle,
     strokeWidth: strokeWidth,
     size: size,
-    lineDash: lineDash
+    lineCap: lineCap,
+    lineDash: lineDash,
+    lineJoin: lineJoin,
+    miterLimit: miterLimit
   };
 
   if (!goog.isDef(atlasManager)) {
@@ -370,12 +390,10 @@ ol.style.RegularShape.prototype.render_ = function(atlasManager) {
 
     if (hasCustomHitDetectionImage) {
       this.hitDetectionCanvas_ = info.hitImage;
-      this.hitDetectionOrigin_ = [info.hitOffsetX, info.hitOffsetY];
       this.hitDetectionImageSize_ =
           [info.hitImage.width, info.hitImage.height];
     } else {
       this.hitDetectionCanvas_ = this.canvas_;
-      this.hitDetectionOrigin_ = this.origin_;
       this.hitDetectionImageSize_ = [imageSize, imageSize];
     }
   }
@@ -388,7 +406,7 @@ ol.style.RegularShape.prototype.render_ = function(atlasManager) {
 
 /**
  * @private
- * @param {ol.style.Circle.RenderOptions} renderOptions
+ * @param {ol.style.RegularShape.RenderOptions} renderOptions
  * @param {CanvasRenderingContext2D} context
  * @param {number} x The origin for the symbol (x).
  * @param {number} y The origin for the symbol (y).
@@ -422,6 +440,9 @@ ol.style.RegularShape.prototype.draw_ = function(renderOptions, context, x, y) {
     if (!goog.isNull(renderOptions.lineDash)) {
       context.setLineDash(renderOptions.lineDash);
     }
+    context.lineCap = renderOptions.lineCap;
+    context.lineJoin = renderOptions.lineJoin;
+    context.miterLimit = renderOptions.miterLimit;
     context.stroke();
   }
   context.closePath();

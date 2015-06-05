@@ -71,7 +71,13 @@ ol.renderer.webgl.Map = function(container, map) {
    * @private
    * @type {number}
    */
-  this.clipTileCanvasSize_ = 0;
+  this.clipTileCanvasWidth_ = 0;
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.clipTileCanvasHeight_ = 0;
 
   /**
    * @private
@@ -96,7 +102,7 @@ ol.renderer.webgl.Map = function(container, map) {
     preserveDrawingBuffer: false,
     stencil: true
   });
-  goog.asserts.assert(!goog.isNull(this.gl_));
+  goog.asserts.assert(!goog.isNull(this.gl_), 'got a WebGLRenderingContext');
 
   /**
    * @private
@@ -158,7 +164,7 @@ ol.renderer.webgl.Map = function(container, map) {
           this.tileTextureQueue_.reprioritize();
           var element = this.tileTextureQueue_.dequeue();
           var tile = /** @type {ol.Tile} */ (element[0]);
-          var tileSize = /** @type {number} */ (element[3]);
+          var tileSize = /** @type {ol.Size} */ (element[3]);
           var tileGutter = /** @type {number} */ (element[4]);
           this.bindTileTexture(
               tile, tileSize, tileGutter, goog.webgl.LINEAR, goog.webgl.LINEAR);
@@ -179,7 +185,7 @@ goog.inherits(ol.renderer.webgl.Map, ol.renderer.Map);
 
 /**
  * @param {ol.Tile} tile Tile.
- * @param {number} tileSize Tile size.
+ * @param {ol.Size} tileSize Tile size.
  * @param {number} tileGutter Tile gutter.
  * @param {number} magFilter Mag filter.
  * @param {number} minFilter Min filter.
@@ -191,7 +197,8 @@ ol.renderer.webgl.Map.prototype.bindTileTexture =
   var tileKey = tile.getKey();
   if (this.textureCache_.containsKey(tileKey)) {
     var textureCacheEntry = this.textureCache_.get(tileKey);
-    goog.asserts.assert(!goog.isNull(textureCacheEntry));
+    goog.asserts.assert(!goog.isNull(textureCacheEntry),
+        'a texture cache entry exists for key %s', tileKey);
     gl.bindTexture(goog.webgl.TEXTURE_2D, textureCacheEntry.texture);
     if (textureCacheEntry.magFilter != magFilter) {
       gl.texParameteri(
@@ -209,15 +216,17 @@ ol.renderer.webgl.Map.prototype.bindTileTexture =
     if (tileGutter > 0) {
       var clipTileCanvas = this.clipTileContext_.canvas;
       var clipTileContext = this.clipTileContext_;
-      if (this.clipTileCanvasSize_ != tileSize) {
-        clipTileCanvas.width = tileSize;
-        clipTileCanvas.height = tileSize;
-        this.clipTileCanvasSize_ = tileSize;
+      if (this.clipTileCanvasWidth_ !== tileSize[0] ||
+          this.clipTileCanvasHeight_ !== tileSize[1]) {
+        clipTileCanvas.width = tileSize[0];
+        clipTileCanvas.height = tileSize[1];
+        this.clipTileCanvasWidth_ = tileSize[0];
+        this.clipTileCanvasHeight_ = tileSize[1];
       } else {
-        clipTileContext.clearRect(0, 0, tileSize, tileSize);
+        clipTileContext.clearRect(0, 0, tileSize[0], tileSize[1]);
       }
       clipTileContext.drawImage(tile.getImage(), tileGutter, tileGutter,
-          tileSize, tileSize, 0, 0, tileSize, tileSize);
+          tileSize[0], tileSize[1], 0, 0, tileSize[0], tileSize[1]);
       gl.texImage2D(goog.webgl.TEXTURE_2D, 0,
           goog.webgl.RGBA, goog.webgl.RGBA,
           goog.webgl.UNSIGNED_BYTE, clipTileCanvas);
@@ -254,7 +263,7 @@ ol.renderer.webgl.Map.prototype.createLayerRenderer = function(layer) {
   } else if (ol.ENABLE_VECTOR && layer instanceof ol.layer.Vector) {
     return new ol.renderer.webgl.VectorLayer(this, layer);
   } else {
-    goog.asserts.fail();
+    goog.asserts.fail('unexpected layer configuration');
     return null;
   }
 };
@@ -291,13 +300,10 @@ ol.renderer.webgl.Map.prototype.dispatchComposeEvent_ =
     replayGroup.finish(context);
     if (!replayGroup.isEmpty()) {
       // use default color values
-      var opacity = 1;
-      var brightness = 0;
-      var contrast = 1;
-      var hue = 0;
-      var saturation = 1;
+      var d = ol.renderer.webgl.Map.DEFAULT_COLOR_VALUES_;
       replayGroup.replay(context, center, resolution, rotation, size,
-          pixelRatio, opacity, brightness, contrast, hue, saturation, {});
+          pixelRatio, d.opacity, d.brightness, d.contrast,
+          d.hue, d.saturation, {});
     }
     replayGroup.getDeleteResourcesFunction(context)();
 
@@ -401,7 +407,8 @@ ol.renderer.webgl.Map.prototype.handleWebGLContextLost = function(event) {
        * @param {Object.<string, ol.renderer.Layer>} object Object.
        */
       function(layerRenderer, key, object) {
-        goog.asserts.assertInstanceof(layerRenderer, ol.renderer.webgl.Layer);
+        goog.asserts.assertInstanceof(layerRenderer, ol.renderer.webgl.Layer,
+            'renderer is an instance of ol.renderer.webgl.Layer');
         var webGLLayerRenderer = /** @type {ol.renderer.webgl.Layer} */
             (layerRenderer);
         webGLLayerRenderer.handleWebGLContextLost();
@@ -487,7 +494,8 @@ ol.renderer.webgl.Map.prototype.renderFrame = function(frameState) {
     if (ol.layer.Layer.visibleAtResolution(layerState, viewResolution) &&
         layerState.sourceState == ol.source.State.READY) {
       layerRenderer = this.getLayerRenderer(layerState.layer);
-      goog.asserts.assertInstanceof(layerRenderer, ol.renderer.webgl.Layer);
+      goog.asserts.assertInstanceof(layerRenderer, ol.renderer.webgl.Layer,
+          'renderer is an instance of ol.renderer.webgl.Layer');
       if (layerRenderer.prepareFrame(frameState, layerState, context)) {
         layerStatesToDraw.push(layerState);
       }
@@ -557,4 +565,178 @@ ol.renderer.webgl.Map.prototype.renderFrame = function(frameState) {
   this.scheduleRemoveUnusedLayerRenderers(frameState);
   this.scheduleExpireIconCache(frameState);
 
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.Map.prototype.forEachFeatureAtCoordinate =
+    function(coordinate, frameState, callback, thisArg,
+        layerFilter, thisArg2) {
+  var result;
+
+  if (this.getGL().isContextLost()) {
+    return false;
+  }
+
+  var context = this.getContext();
+  var viewState = frameState.viewState;
+
+  // do the hit-detection for the overlays first
+  if (!goog.isNull(this.replayGroup)) {
+    /** @type {Object.<string, boolean>} */
+    var features = {};
+
+    // use default color values
+    var d = ol.renderer.webgl.Map.DEFAULT_COLOR_VALUES_;
+
+    result = this.replayGroup.forEachFeatureAtCoordinate(coordinate,
+        context, viewState.center, viewState.resolution, viewState.rotation,
+        frameState.size, frameState.pixelRatio,
+        d.opacity, d.brightness, d.contrast, d.hue, d.saturation, {},
+        /**
+         * @param {ol.Feature} feature Feature.
+         * @return {?} Callback result.
+         */
+        function(feature) {
+          goog.asserts.assert(goog.isDef(feature), 'received a feature');
+          var key = goog.getUid(feature).toString();
+          if (!(key in features)) {
+            features[key] = true;
+            return callback.call(thisArg, feature, null);
+          }
+        });
+    if (result) {
+      return result;
+    }
+  }
+  var layerStates = frameState.layerStatesArray;
+  var numLayers = layerStates.length;
+  var i;
+  for (i = numLayers - 1; i >= 0; --i) {
+    var layerState = layerStates[i];
+    var layer = layerState.layer;
+    if (ol.layer.Layer.visibleAtResolution(layerState, viewState.resolution) &&
+        layerFilter.call(thisArg2, layer)) {
+      var layerRenderer = this.getLayerRenderer(layer);
+      result = layerRenderer.forEachFeatureAtCoordinate(
+          coordinate, frameState, callback, thisArg);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return undefined;
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.Map.prototype.hasFeatureAtCoordinate =
+    function(coordinate, frameState, layerFilter, thisArg) {
+  var hasFeature = false;
+
+  if (this.getGL().isContextLost()) {
+    return false;
+  }
+
+  var context = this.getContext();
+  var viewState = frameState.viewState;
+
+  // do the hit-detection for the overlays first
+  if (!goog.isNull(this.replayGroup)) {
+    // use default color values
+    var d = ol.renderer.webgl.Map.DEFAULT_COLOR_VALUES_;
+
+    hasFeature = this.replayGroup.hasFeatureAtCoordinate(coordinate,
+        context, viewState.center, viewState.resolution, viewState.rotation,
+        frameState.size, frameState.pixelRatio,
+        d.opacity, d.brightness, d.contrast, d.hue, d.saturation, {});
+    if (hasFeature) {
+      return true;
+    }
+  }
+  var layerStates = frameState.layerStatesArray;
+  var numLayers = layerStates.length;
+  var i;
+  for (i = numLayers - 1; i >= 0; --i) {
+    var layerState = layerStates[i];
+    var layer = layerState.layer;
+    if (ol.layer.Layer.visibleAtResolution(layerState, viewState.resolution) &&
+        layerFilter.call(thisArg, layer)) {
+      var layerRenderer = this.getLayerRenderer(layer);
+      hasFeature =
+          layerRenderer.hasFeatureAtCoordinate(coordinate, frameState);
+      if (hasFeature) {
+        return true;
+      }
+    }
+  }
+  return hasFeature;
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.Map.prototype.forEachLayerAtPixel =
+    function(pixel, frameState, callback, thisArg,
+        layerFilter, thisArg2) {
+  if (this.getGL().isContextLost()) {
+    return false;
+  }
+
+  var context = this.getContext();
+  var viewState = frameState.viewState;
+  var result;
+
+  // do the hit-detection for the overlays first
+  if (!goog.isNull(this.replayGroup)) {
+    // use default color values
+    var d = ol.renderer.webgl.Map.DEFAULT_COLOR_VALUES_;
+    var coordinate = this.getMap().getCoordinateFromPixel(pixel);
+
+    var hasFeature = this.replayGroup.hasFeatureAtCoordinate(coordinate,
+        context, viewState.center, viewState.resolution, viewState.rotation,
+        frameState.size, frameState.pixelRatio,
+        d.opacity, d.brightness, d.contrast, d.hue, d.saturation, {});
+    if (hasFeature) {
+      result = callback.call(thisArg, null);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  var layerStates = frameState.layerStatesArray;
+  var numLayers = layerStates.length;
+  var i;
+  for (i = numLayers - 1; i >= 0; --i) {
+    var layerState = layerStates[i];
+    var layer = layerState.layer;
+    if (ol.layer.Layer.visibleAtResolution(layerState, viewState.resolution) &&
+        layerFilter.call(thisArg, layer)) {
+      var layerRenderer = this.getLayerRenderer(layer);
+      result = layerRenderer.forEachLayerAtPixel(
+          pixel, frameState, callback, thisArg);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return undefined;
+};
+
+
+/**
+ * @private
+ * @const
+ */
+ol.renderer.webgl.Map.DEFAULT_COLOR_VALUES_ = {
+  opacity: 1,
+  brightness: 0,
+  contrast: 1,
+  hue: 0,
+  saturation: 1
 };

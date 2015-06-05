@@ -3,6 +3,7 @@ goog.provide('ol.control.Control');
 goog.require('goog.array');
 goog.require('goog.dom');
 goog.require('goog.events');
+goog.require('goog.events.EventType');
 goog.require('ol.MapEventType');
 goog.require('ol.Object');
 
@@ -51,8 +52,7 @@ ol.control.Control = function(options) {
    * @private
    * @type {Element}
    */
-  this.target_ = goog.isDef(options.target) ?
-      goog.dom.getElement(options.target) : null;
+  this.target_ = null;
 
   /**
    * @private
@@ -71,8 +71,30 @@ ol.control.Control = function(options) {
    */
   this.render = goog.isDef(options.render) ? options.render : goog.nullFunction;
 
+  if (goog.isDef(options.target)) {
+    this.setTarget(options.target);
+  }
+
 };
 goog.inherits(ol.control.Control, ol.Object);
+
+
+/**
+ * Bind a listener that blurs the passed element on any mouseout- or
+ * focusout-event.
+ *
+ * @param {!Element} button The button which shall blur on mouseout- or
+ *     focusout-event.
+ * @protected
+ */
+ol.control.Control.bindMouseOutFocusOutBlur = function(button) {
+  goog.events.listen(button, [
+    goog.events.EventType.MOUSEOUT,
+    goog.events.EventType.FOCUSOUT
+  ], /** @this {Element} */ function() {
+    this.blur();
+  }, false);
+};
 
 
 /**
@@ -120,4 +142,18 @@ ol.control.Control.prototype.setMap = function(map) {
     }
     map.render();
   }
+};
+
+
+/**
+ * This function is used to set a target element for the control. It has no
+ * effect if it is called after the control has been added to the map (i.e.
+ * after `setMap` is called on the control). If no `target` is set in the
+ * options passed to the control constructor and if `setTarget` is not called
+ * then the control is added to the map's overlay container.
+ * @param {Element|string} target Target.
+ * @api
+ */
+ol.control.Control.prototype.setTarget = function(target) {
+  this.target_ = goog.dom.getElement(target);
 };

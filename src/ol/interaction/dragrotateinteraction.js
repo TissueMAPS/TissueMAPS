@@ -1,7 +1,5 @@
 goog.provide('ol.interaction.DragRotate');
 
-goog.require('goog.asserts');
-goog.require('ol');
 goog.require('ol.ViewHint');
 goog.require('ol.events.ConditionType');
 goog.require('ol.events.condition');
@@ -46,6 +44,11 @@ ol.interaction.DragRotate = function(opt_options) {
    */
   this.lastAngle_ = undefined;
 
+  /**
+   * @private
+   * @type {number}
+   */
+  this.duration_ = goog.isDef(options.duration) ? options.duration : 250;
 };
 goog.inherits(ol.interaction.DragRotate, ol.interaction.Pointer);
 
@@ -68,10 +71,10 @@ ol.interaction.DragRotate.handleDragEvent_ = function(mapBrowserEvent) {
   if (goog.isDef(this.lastAngle_)) {
     var delta = theta - this.lastAngle_;
     var view = map.getView();
-    var viewState = view.getState();
+    var rotation = view.getRotation();
     map.render();
     ol.interaction.Interaction.rotateWithoutConstraints(
-        map, view, viewState.rotation - delta);
+        map, view, rotation - delta);
   }
   this.lastAngle_ = theta;
 };
@@ -91,9 +94,9 @@ ol.interaction.DragRotate.handleUpEvent_ = function(mapBrowserEvent) {
   var map = mapBrowserEvent.map;
   var view = map.getView();
   view.setHint(ol.ViewHint.INTERACTING, -1);
-  var viewState = view.getState();
-  ol.interaction.Interaction.rotate(map, view, viewState.rotation,
-      undefined, ol.DRAGROTATE_ANIMATION_DURATION);
+  var rotation = view.getRotation();
+  ol.interaction.Interaction.rotate(map, view, rotation,
+      undefined, this.duration_);
   return false;
 };
 

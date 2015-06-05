@@ -14,6 +14,7 @@ goog.require('ol.RendererType');
 goog.require('ol.css');
 goog.require('ol.dom');
 goog.require('ol.layer.Image');
+goog.require('ol.layer.Layer');
 goog.require('ol.layer.Tile');
 goog.require('ol.layer.Vector');
 goog.require('ol.render.Event');
@@ -112,14 +113,14 @@ ol.renderer.dom.Map.prototype.disposeInternal = function() {
 ol.renderer.dom.Map.prototype.createLayerRenderer = function(layer) {
   var layerRenderer;
   if (ol.ENABLE_IMAGE && layer instanceof ol.layer.Image) {
-    layerRenderer = new ol.renderer.dom.ImageLayer(this, layer);
+    layerRenderer = new ol.renderer.dom.ImageLayer(layer);
   } else if (ol.ENABLE_TILE && layer instanceof ol.layer.Tile) {
-    layerRenderer = new ol.renderer.dom.TileLayer(this, layer);
+    layerRenderer = new ol.renderer.dom.TileLayer(layer);
   } else if (!(ol.LEGACY_IE_SUPPORT && ol.IS_LEGACY_IE) &&
       ol.ENABLE_VECTOR && layer instanceof ol.layer.Vector) {
-    layerRenderer = new ol.renderer.dom.VectorLayer(this, layer);
+    layerRenderer = new ol.renderer.dom.VectorLayer(layer);
   } else {
-    goog.asserts.fail();
+    goog.asserts.fail('unexpected layer configuration');
     return null;
   }
   return layerRenderer;
@@ -232,15 +233,18 @@ ol.renderer.dom.Map.prototype.renderFrame = function(frameState) {
   this.dispatchComposeEvent_(ol.render.EventType.PRECOMPOSE, frameState);
 
   var layerStatesArray = frameState.layerStatesArray;
+  var viewResolution = frameState.viewState.resolution;
   var i, ii, layer, layerRenderer, layerState;
   for (i = 0, ii = layerStatesArray.length; i < ii; ++i) {
     layerState = layerStatesArray[i];
     layer = layerState.layer;
     layerRenderer = /** @type {ol.renderer.dom.Layer} */ (
         this.getLayerRenderer(layer));
-    goog.asserts.assertInstanceof(layerRenderer, ol.renderer.dom.Layer);
+    goog.asserts.assertInstanceof(layerRenderer, ol.renderer.dom.Layer,
+        'renderer is an instance of ol.renderer.dom.Layer');
     addChild.call(this, layerRenderer.getTarget(), i);
-    if (layerState.sourceState == ol.source.State.READY) {
+    if (ol.layer.Layer.visibleAtResolution(layerState, viewResolution) &&
+        layerState.sourceState == ol.source.State.READY) {
       if (layerRenderer.prepareFrame(frameState, layerState)) {
         layerRenderer.composeFrame(frameState, layerState);
       }
@@ -254,7 +258,8 @@ ol.renderer.dom.Map.prototype.renderFrame = function(frameState) {
   for (layerKey in this.getLayerRenderers()) {
     if (!(layerKey in layerStates)) {
       layerRenderer = this.getLayerRendererByKey(layerKey);
-      goog.asserts.assertInstanceof(layerRenderer, ol.renderer.dom.Layer);
+      goog.asserts.assertInstanceof(layerRenderer, ol.renderer.dom.Layer,
+          'renderer is an instance of ol.renderer.dom.Layer');
       goog.dom.removeNode(layerRenderer.getTarget());
     }
   }

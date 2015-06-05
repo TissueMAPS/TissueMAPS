@@ -152,21 +152,21 @@ ol.source.ImageVector.prototype.canvasFunctionInternal_ =
 /**
  * @inheritDoc
  */
-ol.source.ImageVector.prototype.forEachFeatureAtPixel = function(
-    resolution, rotation, coordinate, skippedFeatureUids, callback) {
+ol.source.ImageVector.prototype.forEachFeatureAtCoordinate = function(
+    coordinate, resolution, rotation, skippedFeatureUids, callback) {
   if (goog.isNull(this.replayGroup_)) {
     return undefined;
   } else {
     /** @type {Object.<string, boolean>} */
     var features = {};
-    return this.replayGroup_.forEachGeometryAtPixel(
-        resolution, 0, coordinate, skippedFeatureUids,
+    return this.replayGroup_.forEachFeatureAtCoordinate(
+        coordinate, resolution, 0, skippedFeatureUids,
         /**
          * @param {ol.Feature} feature Feature.
          * @return {?} Callback result.
          */
         function(feature) {
-          goog.asserts.assert(goog.isDef(feature));
+          goog.asserts.assert(goog.isDef(feature), 'passed a feature');
           var key = goog.getUid(feature).toString();
           if (!(key in features)) {
             features[key] = true;
@@ -178,6 +178,7 @@ ol.source.ImageVector.prototype.forEachFeatureAtPixel = function(
 
 
 /**
+ * Get a reference to the wrapped source.
  * @return {ol.source.Vector} Source.
  * @api
  */

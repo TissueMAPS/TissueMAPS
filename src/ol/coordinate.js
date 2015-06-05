@@ -159,7 +159,7 @@ ol.coordinate.degreesToStringHDMS_ = function(degrees, hemispheres) {
  *     that will be replaced by first and second coordinate values.
  * @param {number=} opt_fractionDigits The number of digits to include
  *    after the decimal point. Default is `0`.
- * @return {string} Formated coordinate.
+ * @return {string} Formatted coordinate.
  * @api stable
  */
 ol.coordinate.format = function(coordinate, template, opt_fractionDigits) {
@@ -280,6 +280,9 @@ ol.coordinate.squaredDistanceToSegment = function(coordinate, segment) {
 
 
 /**
+ * Format a geographic coordinate with the hemisphere, degrees, minutes, and
+ * seconds.
+ *
  * Example:
  *
  *     var coord = [7.85, 47.983333];
@@ -301,6 +304,8 @@ ol.coordinate.toStringHDMS = function(coordinate) {
 
 
 /**
+ * Format a coordinate as a comma delimited string.
+ *
  * Example without specifying fractional digits:
  *
  *     var coord = [7.85, 47.983333];

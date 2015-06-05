@@ -67,6 +67,24 @@ ol.webgl.Context = function(canvas, gl) {
   this.currentProgram_ = null;
 
   /**
+   * @private
+   * @type {WebGLFramebuffer}
+   */
+  this.hitDetectionFramebuffer_ = null;
+
+  /**
+   * @private
+   * @type {WebGLTexture}
+   */
+  this.hitDetectionTexture_ = null;
+
+  /**
+   * @private
+   * @type {WebGLRenderbuffer}
+   */
+  this.hitDetectionRenderbuffer_ = null;
+
+  /**
    * @type {boolean}
    */
   this.hasOESElementIndexUint = goog.array.contains(
@@ -75,7 +93,8 @@ ol.webgl.Context = function(canvas, gl) {
   // use the OES_element_index_uint extension if available
   if (this.hasOESElementIndexUint) {
     var ext = gl.getExtension('OES_element_index_uint');
-    goog.asserts.assert(!goog.isNull(ext));
+    goog.asserts.assert(!goog.isNull(ext),
+        'Failed to get extension "OES_element_index_uint"');
   }
 
   goog.events.listen(this.canvas_, ol.webgl.WebGLContextEventType.LOST,
@@ -104,7 +123,8 @@ ol.webgl.Context.prototype.bindBuffer = function(target, buf) {
     var buffer = gl.createBuffer();
     gl.bindBuffer(target, buffer);
     goog.asserts.assert(target == goog.webgl.ARRAY_BUFFER ||
-        target == goog.webgl.ELEMENT_ARRAY_BUFFER);
+        target == goog.webgl.ELEMENT_ARRAY_BUFFER,
+        'target is supposed to be an ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER');
     var /** @type {ArrayBufferView} */ arrayBuffer;
     if (target == goog.webgl.ARRAY_BUFFER) {
       arrayBuffer = new Float32Array(arr);
@@ -129,7 +149,8 @@ ol.webgl.Context.prototype.bindBuffer = function(target, buf) {
 ol.webgl.Context.prototype.deleteBuffer = function(buf) {
   var gl = this.getGL();
   var bufferKey = goog.getUid(buf);
-  goog.asserts.assert(bufferKey in this.bufferCache_);
+  goog.asserts.assert(bufferKey in this.bufferCache_,
+      'attempted to delete uncached buffer');
   var bufferCacheEntry = this.bufferCache_[bufferKey];
   if (!gl.isContextLost()) {
     gl.deleteBuffer(bufferCacheEntry.buffer);
@@ -153,6 +174,10 @@ ol.webgl.Context.prototype.disposeInternal = function() {
     goog.object.forEach(this.shaderCache_, function(shader) {
       gl.deleteShader(shader);
     });
+    // delete objects for hit-detection
+    gl.deleteFramebuffer(this.hitDetectionFramebuffer_);
+    gl.deleteRenderbuffer(this.hitDetectionRenderbuffer_);
+    gl.deleteTexture(this.hitDetectionTexture_);
   }
 };
 
@@ -166,7 +191,8 @@ ol.webgl.Context.prototype.getCanvas = function() {
 
 
 /**
- * @return {WebGLRenderingContext} GL.
+ * Get the WebGL rendering context
+ * @return {WebGLRenderingContext} The rendering context.
  * @api
  */
 ol.webgl.Context.prototype.getGL = function() {
@@ -175,8 +201,21 @@ ol.webgl.Context.prototype.getGL = function() {
 
 
 /**
+ * Get the frame buffer for hit detection.
+ * @return {WebGLFramebuffer} The hit detection frame buffer.
+ * @api
+ */
+ol.webgl.Context.prototype.getHitDetectionFramebuffer = function() {
+  if (goog.isNull(this.hitDetectionFramebuffer_)) {
+    this.initHitDetectionFramebuffer_();
+  }
+  return this.hitDetectionFramebuffer_;
+};
+
+
+/**
  * Get shader from the cache if it's in the cache. Otherwise, create
- * the WebGL shader, compile it, and add entry to cache.
+ * the WebGL shader, compile it, and add entry to cache.
  * @param {ol.webgl.Shader} shaderObject Shader object.
  * @return {WebGLShader} Shader.
  */
@@ -197,7 +236,8 @@ ol.webgl.Context.prototype.getShader = function(shaderObject) {
     }
     goog.asserts.assert(
         gl.getShaderParameter(shader, goog.webgl.COMPILE_STATUS) ||
-        gl.isContextLost());
+        gl.isContextLost(),
+        'illegal state, shader not compiled or context lost');
     this.shaderCache_[shaderKey] = shader;
     return shader;
   }
@@ -206,7 +246,7 @@ ol.webgl.Context.prototype.getShader = function(shaderObject) {
 
 /**
  * Get the program from the cache if it's in the cache. Otherwise create
- * the WebGL program, attach the shaders to it, and add an entry to the
+ * the WebGL program, attach the shaders to it, and add an entry to the
  * cache.
  * @param {ol.webgl.shader.Fragment} fragmentShaderObject Fragment shader.
  * @param {ol.webgl.shader.Vertex} vertexShaderObject Vertex shader.
@@ -232,7 +272,8 @@ ol.webgl.Context.prototype.getProgram = function(
     }
     goog.asserts.assert(
         gl.getProgramParameter(program, goog.webgl.LINK_STATUS) ||
-        gl.isContextLost());
+        gl.isContextLost(),
+        'illegal state, shader not linked or context lost');
     this.programCache_[programKey] = program;
     return program;
   }
@@ -247,6 +288,9 @@ ol.webgl.Context.prototype.handleWebGLContextLost = function() {
   goog.object.clear(this.shaderCache_);
   goog.object.clear(this.programCache_);
   this.currentProgram_ = null;
+  this.hitDetectionFramebuffer_ = null;
+  this.hitDetectionTexture_ = null;
+  this.hitDetectionRenderbuffer_ = null;
 };
 
 
@@ -258,9 +302,35 @@ ol.webgl.Context.prototype.handleWebGLContextRestored = function() {
 
 
 /**
- * Just return false if that program is used already. Other use
- * that program (call `gl.useProgram`) and make it the "current
- * program".
+ * Creates a 1x1 pixel framebuffer for the hit-detection.
+ * @private
+ */
+ol.webgl.Context.prototype.initHitDetectionFramebuffer_ = function() {
+  var gl = this.gl_;
+  var framebuffer = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+  var texture = ol.webgl.Context.createEmptyTexture(gl, 1, 1);
+  var renderbuffer = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, 1, 1);
+  gl.framebufferTexture2D(
+      gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,
+      gl.RENDERBUFFER, renderbuffer);
+
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  this.hitDetectionFramebuffer_ = framebuffer;
+  this.hitDetectionTexture_ = texture;
+  this.hitDetectionRenderbuffer_ = renderbuffer;
+};
+
+
+/**
+ * Use a program.  If the program is already in use, this will return `false`.
  * @param {WebGLProgram} program Program.
  * @return {boolean} Changed.
  * @api
@@ -282,3 +352,64 @@ ol.webgl.Context.prototype.useProgram = function(program) {
  * @type {goog.log.Logger}
  */
 ol.webgl.Context.prototype.logger_ = goog.log.getLogger('ol.webgl.Context');
+
+
+/**
+ * @param {WebGLRenderingContext} gl WebGL rendering context.
+ * @param {number=} opt_wrapS wrapS.
+ * @param {number=} opt_wrapT wrapT.
+ * @return {WebGLTexture}
+ * @private
+ */
+ol.webgl.Context.createTexture_ = function(gl, opt_wrapS, opt_wrapT) {
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+  if (goog.isDef(opt_wrapS)) {
+    gl.texParameteri(
+        goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_WRAP_S, opt_wrapS);
+  }
+  if (goog.isDef(opt_wrapT)) {
+    gl.texParameteri(
+        goog.webgl.TEXTURE_2D, goog.webgl.TEXTURE_WRAP_T, opt_wrapT);
+  }
+
+  return texture;
+};
+
+
+/**
+ * @param {WebGLRenderingContext} gl WebGL rendering context.
+ * @param {number} width Width.
+ * @param {number} height Height.
+ * @param {number=} opt_wrapS wrapS.
+ * @param {number=} opt_wrapT wrapT.
+ * @return {WebGLTexture}
+ */
+ol.webgl.Context.createEmptyTexture = function(
+    gl, width, height, opt_wrapS, opt_wrapT) {
+  var texture = ol.webgl.Context.createTexture_(gl, opt_wrapS, opt_wrapT);
+  gl.texImage2D(
+      gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+      null);
+
+  return texture;
+};
+
+
+/**
+ * @param {WebGLRenderingContext} gl WebGL rendering context.
+ * @param {HTMLCanvasElement|HTMLImageElement|HTMLVideoElement} image Image.
+ * @param {number=} opt_wrapS wrapS.
+ * @param {number=} opt_wrapT wrapT.
+ * @return {WebGLTexture}
+ */
+ol.webgl.Context.createTexture = function(gl, image, opt_wrapS, opt_wrapT) {
+  var texture = ol.webgl.Context.createTexture_(gl, opt_wrapS, opt_wrapT);
+  gl.texImage2D(
+      gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+  return texture;
+};

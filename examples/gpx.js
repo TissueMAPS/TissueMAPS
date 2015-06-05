@@ -5,7 +5,7 @@ goog.require('ol.layer.Tile');
 goog.require('ol.layer.Vector');
 goog.require('ol.proj');
 goog.require('ol.source.BingMaps');
-goog.require('ol.source.GPX');
+goog.require('ol.source.Vector');
 goog.require('ol.style.Circle');
 goog.require('ol.style.Fill');
 goog.require('ol.style.Stroke');
@@ -48,9 +48,9 @@ var style = {
 };
 
 var vector = new ol.layer.Vector({
-  source: new ol.source.GPX({
-    projection: projection,
-    url: 'data/gpx/fells_loop.gpx'
+  source: new ol.source.Vector({
+    url: 'data/gpx/fells_loop.gpx',
+    format: new ol.format.GPX()
   }),
   style: function(feature, resolution) {
     return style[feature.getGeometry().getType()];
@@ -85,7 +85,10 @@ var displayFeatureInfo = function(pixel) {
   }
 };
 
-$(map.getViewport()).on('mousemove', function(evt) {
+map.on('pointermove', function(evt) {
+  if (evt.dragging) {
+    return;
+  }
   var pixel = map.getEventPixel(evt.originalEvent);
   displayFeatureInfo(pixel);
 });
@@ -93,28 +96,3 @@ $(map.getViewport()).on('mousemove', function(evt) {
 map.on('click', function(evt) {
   displayFeatureInfo(evt.pixel);
 });
-
-var exportGPXElement = document.getElementById('export-gpx');
-if ('download' in exportGPXElement) {
-  var vectorSource = vector.getSource();
-  exportGPXElement.addEventListener('click', function(e) {
-    if (!exportGPXElement.href) {
-      var features = [];
-      vectorSource.forEachFeature(function(feature) {
-        var clone = feature.clone();
-        clone.getGeometry().transform(projection, 'EPSG:4326');
-        features.push(clone);
-      });
-      var string = new ol.format.GPX().writeFeatures(features);
-      var base64 = exampleNS.strToBase64(string);
-      exportGPXElement.href =
-          'data:text/gpx+xml;base64,' + base64;
-    }
-  }, false);
-} else {
-  var info = document.getElementById('no-download');
-  /**
-   * display error message
-   */
-  info.style.display = '';
-}

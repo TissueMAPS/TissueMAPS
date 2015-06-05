@@ -74,12 +74,6 @@ ol.style.Circle = function(opt_options) {
    * @private
    * @type {Array.<number>}
    */
-  this.hitDetectionOrigin_ = [0, 0];
-
-  /**
-   * @private
-   * @type {Array.<number>}
-   */
   this.anchor_ = null;
 
   /**
@@ -130,6 +124,7 @@ ol.style.Circle.prototype.getAnchor = function() {
 
 
 /**
+ * Get the fill style for the circle.
  * @return {ol.style.Fill} Fill style.
  * @api
  */
@@ -147,6 +142,7 @@ ol.style.Circle.prototype.getHitDetectionImage = function(pixelRatio) {
 
 
 /**
+ * Get the image used to render the circle.
  * @param {number} pixelRatio Pixel ratio.
  * @return {HTMLCanvasElement} Canvas element.
  * @api
@@ -190,14 +186,7 @@ ol.style.Circle.prototype.getOrigin = function() {
 
 
 /**
- * @inheritDoc
- */
-ol.style.Circle.prototype.getHitDetectionOrigin = function() {
-  return this.hitDetectionOrigin_;
-};
-
-
-/**
+ * Get the circle radius.
  * @return {number} Radius.
  * @api
  */
@@ -216,6 +205,7 @@ ol.style.Circle.prototype.getSize = function() {
 
 
 /**
+ * Get the stroke style for the circle.
  * @return {ol.style.Stroke} Stroke style.
  * @api
  */
@@ -323,12 +313,10 @@ ol.style.Circle.prototype.render_ = function(atlasManager) {
 
     if (hasCustomHitDetectionImage) {
       this.hitDetectionCanvas_ = info.hitImage;
-      this.hitDetectionOrigin_ = [info.hitOffsetX, info.hitOffsetY];
       this.hitDetectionImageSize_ =
           [info.hitImage.width, info.hitImage.height];
     } else {
       this.hitDetectionCanvas_ = this.canvas_;
-      this.hitDetectionOrigin_ = this.origin_;
       this.hitDetectionImageSize_ = [imageSize, imageSize];
     }
   }

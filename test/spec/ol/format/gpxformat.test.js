@@ -7,6 +7,18 @@ describe('ol.format.GPX', function() {
     format = new ol.format.GPX();
   });
 
+  describe('#readProjection', function() {
+    it('returns the default projection from document', function() {
+      var projection = format.readProjectionFromDocument();
+      expect(projection).to.eql(ol.proj.get('EPSG:4326'));
+    });
+
+    it('returns the default projection from node', function() {
+      var projection = format.readProjectionFromNode();
+      expect(projection).to.eql(ol.proj.get('EPSG:4326'));
+    });
+  });
+
   describe('readFeatures', function() {
 
     describe('rte', function() {
@@ -208,7 +220,7 @@ describe('ol.format.GPX', function() {
         expect(serialized).to.xmleql(ol.xml.parse(text));
       });
 
-      it('can tranform, read and write a trk with a trkseg', function() {
+      it('can transform, read and write a trk with a trkseg', function() {
         var text =
             '<gpx xmlns="http://www.topografix.com/GPX/1/1">' +
             '  <trk>' +
@@ -554,6 +566,7 @@ describe('ol.format.GPX', function() {
 
 goog.require('ol.Feature');
 goog.require('ol.format.GPX');
+goog.require('ol.geom.GeometryLayout');
 goog.require('ol.geom.LineString');
 goog.require('ol.geom.MultiLineString');
 goog.require('ol.geom.Point');

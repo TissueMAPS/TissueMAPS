@@ -1,5 +1,7 @@
 goog.provide('ol.source.ImageMapGuide');
 
+goog.require('goog.events');
+goog.require('goog.events.EventType');
 goog.require('goog.object');
 goog.require('goog.uri.utils');
 goog.require('ol.Image');
@@ -15,6 +17,7 @@ goog.require('ol.source.Image');
  * Source for images from Mapguide servers
  *
  * @constructor
+ * @fires ol.source.ImageEvent
  * @extends {ol.source.Image}
  * @param {olx.source.ImageMapGuideOptions} options Options.
  * @api stable
@@ -150,6 +153,8 @@ ol.source.ImageMapGuide.prototype.getImage =
     image = new ol.Image(extent, resolution, pixelRatio,
         this.getAttributions(), imageUrl, this.crossOrigin_,
         this.imageLoadFunction_);
+    goog.events.listen(image, goog.events.EventType.CHANGE,
+        this.handleImageChange, false, this);
   } else {
     image = null;
   }
@@ -161,8 +166,18 @@ ol.source.ImageMapGuide.prototype.getImage =
 
 
 /**
+ * Return the image load function of the source.
+ * @return {ol.ImageLoadFunctionType} The image load function.
+ * @api
+ */
+ol.source.ImageMapGuide.prototype.getImageLoadFunction = function() {
+  return this.imageLoadFunction_;
+};
+
+
+/**
  * @param {ol.Extent} extent The map extents.
- * @param {ol.Size} size the viewport size.
+ * @param {ol.Size} size The viewport size.
  * @param {number} metersPerUnit The meters-per-unit value.
  * @param {number} dpi The display resolution.
  * @return {number} The computed map scale.
@@ -220,4 +235,17 @@ ol.source.ImageMapGuide.prototype.getUrl =
   };
   goog.object.extend(baseParams, params);
   return goog.uri.utils.appendParamsFromMap(baseUrl, baseParams);
+};
+
+
+/**
+ * Set the image load function of the MapGuide source.
+ * @param {ol.ImageLoadFunctionType} imageLoadFunction Image load function.
+ * @api
+ */
+ol.source.ImageMapGuide.prototype.setImageLoadFunction = function(
+    imageLoadFunction) {
+  this.image_ = null;
+  this.imageLoadFunction_ = imageLoadFunction;
+  this.changed();
 };
