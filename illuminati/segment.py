@@ -17,6 +17,7 @@ import sys
 import scipy
 from os.path import basename, exists, realpath, join
 import util
+import re
 
 from gi.repository import Vips
 
@@ -139,6 +140,56 @@ def remove_border_cells(site_matrix):
     is_border_cell = np.in1d(mat, bordercell_ids).reshape(mat.shape)
     mat[is_border_cell] = 0
     return mat
+
+
+def create_id_lookup_matrices(sitemat, offset):
+    nonzero = sitemat != 0
+    mat = sitemat.astype('uint32')
+    mat[nonzero] = mat[nonzero] + offset
+    return mat, np.max(mat)
+
+
+def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
+    """Return a dictionary from cell ids to centroids.
+    Centroids are given as (x, y) tuples where the origin of the coordinate
+    system is assumed to be in the topleft corner (like in openlayers).
+
+    :sitemat: A numpy matrix containg the cell labels.
+    :site_row_nr: The row number of the site.
+    :site_col_nr: The col number of the site.
+    :site_width: The width of each site as an int.
+    :site_height: The height of each site as an int.
+    :offset: An integer that is added to all ids in sitemat.
+             This should correspond to the maximum id in the previously
+             processed site.
+    :returns: A (ncells x 3) numpy array of type double.
+              Cell ids are located in the first column,
+              the x coordinates of the centroids in the second column.
+              The y coordinates in the last one.
+
+    """
+    height, width = sitemat.shape
+    local_ids = np.array(
+        sorted(set(np.unique(sitemat)).difference({0})),
+        dtype='int32'
+    )
+    global_ids = local_ids + offset
+    ncells = len(local_ids)
+
+    centroids = np.empty((ncells, 3), np.double)
+    centroids[:, 0] = global_ids
+
+    for idx, id in enumerate(local_ids):
+        i, j = (sitemat == id).nonzero()
+        ycoords = i + sitemat.shape[0] * site_row_nr
+        xcoords = j + sitemat.shape[1] * site_col_nr
+        xmean = np.mean(xcoords)
+        ymean = -1 * np.mean(ycoords)
+        centroids[idx, 1] = xmean
+        centroids[idx, 2] = ymean
+
+    return centroids, np.max(global_ids)
+
 
 
 def compute_outline_polygons(site_matrix, contour_level=0.5, poly_tol=0.95):
@@ -326,6 +377,34 @@ def outlines(labels, keep_ids=False):
         return output
 
 
+def gather_siteinfo(file_grid):
+
+    height = len(file_grid)
+    width = len(file_grid[0])
+    nsites = height * width
+    infomat = np.zeros((nsites, 4), dtype='uint32')
+
+    max_id_up_to_now = 0
+    idx = 0
+    for i in range(height):
+        print 'row: %d' % i
+        for j in range(width):
+            print 'col: %d' % j
+            filename = file_grid[i][j]
+
+            site_re = '_s(\d+)_'
+            sitenr = int(re.search(site_re, filename).group(1))
+            (rownr, colnr) = map(int, re.search('_r(\d+)_c(\d+)_', filename).groups())
+            infomat[idx, :] = (sitenr, rownr, colnr, max_id_up_to_now)
+
+            max_local_id = np.max(scipy.misc.imread(filename))
+            max_id_up_to_now += max_local_id
+
+            idx += 1
+
+    return infomat
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -378,3 +457,4 @@ These outline images need to be stitched together using tm_stitch.py
             print 'Error: the path %s exists already. Aborting.' % fpath
             sys.exit(1)
         scipy.misc.imsave(fpath, outline_mat)
+

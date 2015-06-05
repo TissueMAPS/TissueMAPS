@@ -5,7 +5,8 @@ import sys
 import copy
 import random
 from gi.repository import Vips
-
+from scipy.misc import imread
+import numpy as np
 import util
 import pyramidize
 import illumcorrect
@@ -43,6 +44,18 @@ Some example use cases:
     - Create a pyramid of cell outlines, also retaining their 16 bit depth:
 
         $ illuminati --outline-mask --png path/to/*.png -o my_outline_pyramid
+
+    - Create a serialized numpy array that holds all cell centroids (border cells removed):
+
+        $ illuminati --cell-centroids path/to/label_matrices/*.png -o my_array.npy
+
+    - Create id tables:
+
+        $ illuminati --id-luts path/to/label_matrices/*.png -o id_tables
+
+    - Create a numpy array that holds information about sites:
+
+        $ illuminati --gather-siteinfo path/to/label_matrices/*.png -o siteinfo.npy
 
 """
 
@@ -177,6 +190,29 @@ if __name__ == '__main__':
                         action='store_true', default=False,
                         help="if all the cell labels should be made into "
                              "globally unique labels.")
+
+    parser.add_argument('--cell-centroids', dest='cell_centroids',
+                        action='store_true', default=False,
+                        help="if the centroid for each cell should be computed and be saved"
+                             " as a numpy array.")
+    parser.add_argument('--id-luts', dest='id_luts',
+                        action='store_true', default=False,
+                        help="if lookup tables for the cell ids should be created. "
+                             " These tables are just int32 numpy arrays with the same name"
+                             " as the original segmentation images.")
+    parser.add_argument('--gather-siteinfo', dest='gather_siteinfo',
+                        action='store_true', default=False,
+                        help="""
+if a siteinfo matrix should be created that holds information "
+about sites. The matrix has dimension (n x 4) where n is the number"
+of sites and the columns corresond to: absolute site number (sXXXX),"
+row number (rXX), column number (cXX), integer offset thas has to"
+be added to the local ids in that site in order to make those ids global."
+This offset is computed in the fashion: for i in rows { for j in cols }"
+These tables are just int32 numpy arrays with the same name"
+as the original segmentation images.""")
+
+
     parser.add_argument('--area-mask', dest='area_mask',
                         action='store_true', default=False,
                         help="if the masks should consist of the whole cell areas")
@@ -207,7 +243,8 @@ if __name__ == '__main__':
         print 'You need to specify an output directory'
         sys.exit(1)
 
-    if not os.path.exists(args.output_dir):
+    if not os.path.exists(args.output_dir) \
+            and not (args.cell_centroids or args.id_luts or args.gather_siteinfo):
         print '.. Creating pyramid output directory'
         os.makedirs(args.output_dir)
 
@@ -226,6 +263,57 @@ if __name__ == '__main__':
     #######################################################################
     #                           LOADING IMAGES                            #
     #######################################################################
+
+    if args.id_luts:
+        max_id_upto_now = 0
+        print('ᐄ  CREATING ID LOOKUP TABLES ')
+        for i in range(len(file_grid)):
+            print '   row: %d' % i
+            for j in range(len(file_grid[0])):
+                print '    col: %d' % j
+                site_fname = file_grid[i][j]
+                mat = imread(site_fname)
+                mat = segment.remove_border_cells(mat)
+                mat, max_id_upto_now = segment.create_id_lookup_matrices(
+                    mat, max_id_upto_now)
+
+                fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
+                    rownr=(i+1), colnr=(j+1))
+                fname_abs = os.path.join(args.output_dir, fname)
+                print '    Saving file: ' + fname_abs
+                with open(fname_abs, 'w') as f:
+                    np.save(f, mat)
+        sys.exit(0)
+
+    if args.gather_siteinfo:
+        mat = segment.gather_siteinfo(file_grid)
+        out = os.path.splitext(args.output_dir)[0] + '.npy'
+        print 'Saving: ' + out
+        with open(out, 'w') as f:
+            np.save(f, mat)
+        sys.exit(0)
+
+
+    if args.cell_centroids:
+        print('ᐄ  COMPUTING CELL CENTROIDS')
+        max_id_upto_now = 0
+        centroids = []
+        for i in range(len(file_grid)):
+            print '   row: %d' % i
+            for j in range(len(file_grid[0])):
+                print '   col: %d' % j
+                print '   ' + file_grid[i][j]
+                mat = imread(file_grid[i][j])
+                mat = segment.remove_border_cells(mat)
+                site_centroids, max_id_upto_now = \
+                    segment.compute_cell_centroids(mat, i, j, max_id_upto_now)
+                centroids.append(site_centroids)
+
+        centroids = np.vstack(centroids)
+        fname = os.path.splitext(args.output_dir)[0] + '.npy'
+        with open(fname, 'w') as f:
+            np.save(f, centroids)
+        sys.exit(0)
 
     # Create a vips image for each file
     print '.. Loading images'
