@@ -23,13 +23,22 @@ def is_image(filename):
     return _image_regex.match(filename) is not None
 
 
-class SiteImage:
-    """Utility class for site images files"""
+class ImageSite:
+    """
+    Utility class for image sites.
+    """
 
     # (height, width) just like numpy shape
     size = None
 
     def __init__(self, filename, row_nr, col_nr):
+        '''
+        Initialize ImageSite class.
+
+        :filename:      String. Path to the image file.
+        :row_nr:        Integer. Row number.
+        :col_nr:        Integer. Column number.
+        '''
         if not os.path.isabs(filename):
             self.filename = os.path.abspath(filename)
         else:
@@ -39,11 +48,15 @@ class SiteImage:
 
     @staticmethod
     def from_filename(filename, cfg):
+        '''
+        Get coordinates of an image within the whole acquisition area
+        and initialize an object of ImageSite class.
+        '''
         regexp = cfg['COORDINATE_FROM_FILENAME']
         m = re.search(regexp, filename)
         if not m:
-            raise Exception('Can\'t create SiteImage object '
-                            'from filename ' + filename)
+            raise Exception('Can\'t create ImageSite object from filename %s' %
+                            filename)
         else:
             row_nr, col_nr = map(int, m.groups())
             if cfg['COORDINATES_IN_FILENAME_ONE_BASED']:
@@ -52,9 +65,15 @@ class SiteImage:
             return SiteImage(filename, row_nr, col_nr)
 
     def as_numpy_array(self):
+        '''
+        Read an image form file and return it as numpy array.
+        '''
         return imread(self.filename)
 
     def get_size(self):
+        '''
+        Get size of an image.
+        '''
         if not SiteImage.size:
             SiteImage.size = self.as_numpy_array().shape
         return SiteImage.size
@@ -63,7 +82,9 @@ class SiteImage:
 class CycleDirectory:
 
     def __init__(self, filename, experiment_name, cycle_number):
-        """Utility class for cycle directories"""
+        """
+        Utility class for cycle directories
+        """
         self.filename = filename
         self.experiment_name = experiment_name
         self.cycle_number = cycle_number

@@ -31,7 +31,7 @@ from gi.repository import Vips
 
 #     def batch_compute_outline_polygons(self, site_images):
 #         """
-#         Compute outline polygons for all SiteImage objects in `site_images`
+#         Compute outline polygons for all ImageSite objects in `site_images`
 #         """
 #         outlines = {}
 #         for i, site_image in enumerate(site_images):
@@ -363,7 +363,7 @@ These outline images need to be stitched together using tm_stitch.py
     config_settings = yaml.load(open(config_filename).read())
     util.check_config(config_settings)
 
-    site_images = map(util.SiteImage.from_filename(config_settings), args.files)
+    site_images = map(util.ImageSite.from_filename(config_settings), args.files)
 
     for i, site_image in enumerate(site_images):
         print '* (%d / %d) computing outline for: %s' \
