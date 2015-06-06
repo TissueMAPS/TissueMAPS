@@ -1,5 +1,6 @@
 import re
 
+
 def check_visi_config(config):
     '''
     Utility function to check whether the YAML configuration file is provided
@@ -41,6 +42,12 @@ def check_visi_config(config):
             raise Exception('Expression "{%s}" in "NOMENCLATURE_STRING" '
                             'needs to be specified in "NOMENCLATURE_FORMAT".' %
                             exp)
+
+    # Ensure that number of expressions and number of tags are the same
+    if len(expressions) != len(config['NOMENCLATURE_FORMAT']):
+        raise Exception('Number of expressions in "NOMENCLATURE_STRING" '
+                        'need to be the same as '
+                        'the number of tags in "NOMENCLATURE_FORMAT".')
 
     # Ensure that required tags are provided in 'nomenclature_format'
     for tag in required_tags:
