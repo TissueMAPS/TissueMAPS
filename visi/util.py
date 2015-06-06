@@ -7,9 +7,21 @@ def check_visi_config(config):
     in the correct format.
     '''
     required_keys = [
-                'NOMENCLATURE_STRING',
+                'FILENAME_FORMAT',
                 'ACQUISITION_MODE',
                 'ACQUISITION_LAYOUT'
+    ]
+
+    valid_expressions = [
+                'project',
+                'well',
+                'site',
+                'row',
+                'column',
+                'channel',
+                'time',
+                'zstack',
+                'filter'
     ]
 
     supported_modes = [
@@ -27,6 +39,14 @@ def check_visi_config(config):
         if key not in config.keys():
             raise Exception('YAML configuration file must specify key "%s"' %
                             key)
+
+    # Ensure that expression in 'nomenclature_string' are also specified in
+    # 'nomenclature_format'
+    expressions = re.findall(r'{([^{}]+)}', config['FILENAME_FORMAT'])
+    for exp in expressions:
+        if exp not in valid_expressions:
+            raise Exception('"{%s}" in "FILENAME_FORMAT" is not '
+                            'a valid expression.' % exp)
 
     # Ensure that acquisition mode is supported
     if config['ACQUISITION_MODE'] not in supported_modes:

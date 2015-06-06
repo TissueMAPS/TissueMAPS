@@ -189,12 +189,13 @@ if __name__ == '__main__':
                 retry = False
 
         if args.rename:
+            expressions = re.findall(r'{([^{}]+)}', config['FILENAME_FORMAT'])
             process = Stk2png(stk_files, nd_file, config)
             print '... Get information from .nd file'
             process.get_info_from_nd_files()
             print '... Get information from image filename'
             process.get_info_from_filenames()
-            if 'row' and 'column' in config['NOMENCLATURE_FORMAT'].keys():
+            if 'row' and 'column' in expressions:
                 print '... Get image position'
                 process.get_image_position()
             print '... Rename images'

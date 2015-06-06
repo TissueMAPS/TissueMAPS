@@ -152,6 +152,7 @@ class Stk2png(object):
         self.output_files = copy(self.input_files)
         self.input_dir = os.path.dirname(input_files[0])
         self.nd_file = os.path.basename(nd_file)
+        self.info = dict()
         if config:
             self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
             self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
