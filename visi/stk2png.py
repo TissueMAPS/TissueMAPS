@@ -142,8 +142,7 @@ class Stk2png(object):
         :config:                dictionary with configuration file content
 
         The config dictionary should contain the following keys:
-         * nomenclature_string  string defining filenames
-         * nomenclature_format  dictionary defining the format of filenames
+         * nomenclature         string defining filename format using '{}'
          * acquisition_mode     string specifying the order in which images
                                 were acquired (snake)
          * acquisition_layout   'rows>columns' (more rows than columns) or
@@ -157,8 +156,7 @@ class Stk2png(object):
             self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
             self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
             self.tokens = ['filter', 'site']
-            self.nomenclature = copy(config['NOMENCLATURE_STRING'])
-            self.format = copy(config['NOMENCLATURE_FORMAT'])
+            self.nomenclature = copy(config['FILENAME_FORMAT'])
             self.acquistion_mode = copy(config['ACQUISITION_MODE'])
             self.acquisition_layout = copy(config['ACQUISITION_LAYOUT'])
         else:
@@ -166,7 +164,6 @@ class Stk2png(object):
             self.filter_pattern = None
             self.tokens = None
             self.nomenclature = None
-            self.format = None
             self.acquistion_mode = None
             self.acquisition_layout = None
 
@@ -190,9 +187,7 @@ class Stk2png(object):
         self.metainfo = metainfo
 
         # Preallocate the variables that are inserted in the output filename
-        tags = self.format.keys()
-        self.info = {t: [] for t in tags}
-        if 'well' in self.info and self.metainfo['hasWell']:
+        if 'well' in self.metainfo['hasWell']:
             well_ids = get_well_ids(nd)
             self.info['well'] = well_ids
 
@@ -205,39 +200,26 @@ class Stk2png(object):
         # Handle exceptions for 'time' and 'channel', which are not always
         # present in the filename
         if self.metainfo['hasTime']:
-            if 'time' in self.format.keys():
-                pattern = re.sub(r'(.*)\.stk$', '\\1_t(\d+).stk', pattern)
-                self.tokens = self.tokens + ['time']
-            else:
-                raise Exception('There are multiple time points, but you '
-                                'didn\'t specify a "time" format tag')
+            pattern = re.sub(r'(.*)\.stk$', '\\1_t(\d+).stk', pattern)
+            self.tokens = self.tokens + ['time']
         else:
-            if 'time' in self.format.keys():
-                info['time'] = [1 for x in xrange(len(self.input_files))]
+            info['time'] = [1 for x in xrange(len(self.input_files))]
         if self.metainfo['hasChannel']:
-            if 'channel' in self.format.keys():
-                pattern = '%s%s' % ('_w(\d)', pattern)
-                self.tokens = ['channel'] + self.tokens
-            else:
-                raise Exception('There are multiple channels, but you didn\'t '
-                                'specify a "channel" format tag')
+            pattern = '%s%s' % ('_w(\d)', pattern)
+            self.tokens = ['channel'] + self.tokens
         else:
-            if 'channel' in self.format.keys():
-                info['channel'] = [0 for x in xrange(len(self.input_files))]
+            info['channel'] = [0 for x in xrange(len(self.input_files))]
         # Information on zstacks is handled separately
-        # (here we just preallocate)
         info['zstack'] = [0 for x in xrange(len(self.input_files))]
         # The project name can be easily retrieved from .nd filename
         project_name = re.search(r'(.*)\.nd$', self.nd_file).group(1)
         info['project'] = [project_name for x in xrange(len(self.input_files))]
         for stk_file in self.input_files:
-            # Retrieve information from filename according to pattern provided
-            # in config file (using the information about the project name)
+            # Retrieve information for 'filter' from filename
             r = re.compile('%s%s' % (project_name, pattern))
             matched = re.search(r, stk_file)
             if not matched:
-                raise Exception('"filename_pattern" doesn\'t match filenames')
-            # Extract matched 'tokens' (also provided in config file)
+                raise Exception('"Filter" info could not be extracted from filenames')
             matched = map(matched.group, range(1, len(self.tokens)+1))
             for i, t in enumerate(self.tokens):
                 # Handle special cases that are more complex
@@ -272,6 +254,8 @@ class Stk2png(object):
                 ix = np.where(np.array(self.info['site']) == site)
                 well_ids[ix] = self.info['well'][i]
             self.info['well'] = well_ids.tolist()
+        else:
+            self.info['well'] = [0 for x in xrange(len(self.input_files))]
 
     def get_image_position(self):
         '''
@@ -295,8 +279,6 @@ class Stk2png(object):
             ix = np.where(sites == s)[0]
             column[ix] = snake['column'][i]
             row[ix] = snake['row'][i]
-        # The names 'site', 'column', and 'row' are hard-coded.
-        # Shall we make this more flexible in the config file?
         self.info['column'] = map(int, column)
         self.info['row'] = map(int, row)
 
@@ -306,14 +288,20 @@ class Stk2png(object):
         :rename:    bool defining whether files should be renamed
         '''
         renamed_files = [self.nomenclature for x in xrange(len(self.input_files))]
-        for key, value in self.format.iteritems():
-            for i in xrange(len(renamed_files)):
-                formatted = re.sub('{%s}' % key, value, renamed_files[i])
-                try:
-                    renamed_files[i] = formatted % self.info[key][i]
-                except TypeError as error:
-                    raise Exception('Formatting %s failed:\n%s' %
-                                    (self.info[key][i], error))
+        for i in xrange(len(renamed_files)):
+            try:
+                renamed_files[i].format(project=self.info['project'][i],
+                                        well=self.info['well'][i],
+                                        site=self.info['site'][i],
+                                        row=self.info['row'][i],
+                                        column=self.info['column'][i],
+                                        zstack=self.info['zstack'][i],
+                                        time=self.info['time'][i],
+                                        filter=self.info['filter'][i],
+                                        channel=self.info['channel'][i])
+            except TypeError as error:
+                raise Exception('Formatting "%s" failed:\n%s' %
+                                (self.input_files[i], error))
         self.output_files = renamed_files
 
     def unpack_images(self, output_dir, keep_z=False, indices=None):
