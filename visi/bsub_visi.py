@@ -8,6 +8,8 @@ import glob
 import argparse
 from subprocess32 import call, check_call
 
+import ipdb as db
+
 '''
 Brutus submission script for stk to png conversion.
 
@@ -91,10 +93,9 @@ if __name__ == '__main__':
         number_of_jobs = len(joblist_content)
         number_of_batches = number_of_jobs / batch_size
 
-        for batch in xrange(number_of_batches + 2):
+        for i in xrange(number_of_batches):
 
-            if batch == 0:
-                continue
+            batch = i + 1  # one-based
             lower = batch * batch_size - batch_size
             upper = batch * batch_size - 1
             if upper > number_of_jobs:
@@ -106,7 +107,7 @@ if __name__ == '__main__':
             lsf = osp.join(project_dir, 'lsf', 'visi_%s_%.5d_%s_%s.lsf'
                            % (subproject_name, batch, batch_range, st))
 
-            print '. submitting job %d' % batch
+            print '. submitting job %d: %s' % (batch, batch_range)
             call(['bsub', '-W', '8:00', '-o', lsf,
                  '-R', 'rusage[mem=4000,scratch=4000]',
                  'visi', '--rename', '--split_output',
