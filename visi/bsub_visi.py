@@ -99,8 +99,8 @@ if __name__ == '__main__':
 
             print '. submitting job %d: %s' % (batch, batch_range)
             call([
-                 # 'bsub', '-W', '8:00', '-o', lsf,
-                 # '-R', 'rusage[mem=4000,scratch=4000]',
+                 'bsub', '-W', '8:00', '-o', lsf,
+                 '-R', 'rusage[mem=4000,scratch=4000]',
                  'visi', '--rename', '--split_output',
                  '--batch', '%s' % batch_range,
                  '--config', config_file,
