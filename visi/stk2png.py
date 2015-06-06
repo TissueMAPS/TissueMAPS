@@ -1,17 +1,14 @@
 import os
+from os.path import join, basename, dirname
 import tifffile
 import png
 import numpy as np
 from copy import copy
 import re
 
-import ipdb as db
 
 # TODO: handle exceptions
 # - single site acquisitions with no row/column info
-# - no z-stacks
-# - multiple time points
-# - single acquisitions with no cycle info
 
 
 def read_stk(stk_filename):
@@ -132,41 +129,37 @@ def get_image_snake(stitch_dims, acquisition_layout, doZigZag):
 
 
 class Stk2png(object):
+    '''
+    Class for unpacking .stk files outputted from Visitron microscopes
+    and conversion to .png format (with optional file renaming).
+    '''
 
-    def __init__(self, input_files, nd_file, config=None):
-        '''
-        Class for unpacking .stk files outputted from Visitron microscopes
-        and conversion to .png format (with optional file renaming).
+    def __init__(self, input_files, nd_file, config):
+        '''Init Stk2png class.
+
+        Parameters:
         :input_files:           list of the .stk filenames
         :nd_file:               filename of corresponding .nd file
         :config:                dictionary with configuration file content
 
         The config dictionary should contain the following keys:
-         * nomenclature         string defining filename format using '{}'
-         * acquisition_mode     string specifying the order in which images
-                                were acquired (snake)
-         * acquisition_layout   'rows>columns' (more rows than columns) or
-                                'columns>rows' (vice versa)
+         * FILENAME_FORMAT          string defining filename format using '{}'
+         * ACQUISITION_MODE         string specifying the order in which images
+                                    were acquired (snake)
+         * ACQUISITION_LAYOUT       either 'rows>columns' or 'columns>rows'
+         * OUTPUT_DIRECTORY_NAME    string specifying name of output folder
         '''
-        self.input_files = map(os.path.basename, input_files)
+        self.input_files = map(basename, input_files)
         self.output_files = copy(self.input_files)
-        self.input_dir = os.path.dirname(input_files[0])
-        self.nd_file = os.path.basename(nd_file)
+        self.input_dir = dirname(input_files[0])
+        self.nd_file = basename(nd_file)
         self.info = dict()
-        if config:
-            self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
-            self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
-            self.tokens = ['filter', 'site']
-            self.nomenclature = copy(config['FILENAME_FORMAT'])
-            self.acquistion_mode = copy(config['ACQUISITION_MODE'])
-            self.acquisition_layout = copy(config['ACQUISITION_LAYOUT'])
-        else:
-            self.filename_pattern = None
-            self.filter_pattern = None
-            self.tokens = None
-            self.nomenclature = None
-            self.acquistion_mode = None
-            self.acquisition_layout = None
+        self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
+        self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
+        self.tokens = ['filter', 'site']
+        self.nomenclature = copy(config['FILENAME_FORMAT'])
+        self.acquistion_mode = copy(config['ACQUISITION_MODE'])
+        self.acquisition_layout = copy(config['ACQUISITION_LAYOUT'])
 
     def get_info_from_nd_files(self):
         '''
@@ -174,7 +167,7 @@ class Stk2png(object):
         We have to read additional meta information from the .nd files,
         in particular information on the position within the well plate.
         '''
-        nd_filename = os.path.join(self.input_dir, self.nd_file)
+        nd_filename = join(self.input_dir, self.nd_file)
         nd = read_nd(nd_filename)
         nd = format_nd(nd)
 
@@ -188,7 +181,7 @@ class Stk2png(object):
         self.metainfo = metainfo
 
         # Preallocate the variables that are inserted in the output filename
-        if 'well' in self.metainfo['hasWell']:
+        if self.metainfo['hasWell']:
             well_ids = get_well_ids(nd)
             self.info['well'] = well_ids
 
@@ -198,16 +191,20 @@ class Stk2png(object):
         '''
         info = self.info
         pattern = self.filename_pattern
+        for key in self.tokens:
+            info[key] = list()
         # Handle exceptions for 'time' and 'channel', which are not always
         # present in the filename
         if self.metainfo['hasTime']:
             pattern = re.sub(r'(.*)\.stk$', '\\1_t(\d+).stk', pattern)
             self.tokens = self.tokens + ['time']
+            info['time'] = []
         else:
             info['time'] = [1 for x in xrange(len(self.input_files))]
         if self.metainfo['hasChannel']:
             pattern = '%s%s' % ('_w(\d)', pattern)
             self.tokens = ['channel'] + self.tokens
+            info['channel'] = []
         else:
             info['channel'] = [0 for x in xrange(len(self.input_files))]
         # Information on zstacks is handled separately
@@ -215,6 +212,7 @@ class Stk2png(object):
         # The project name can be easily retrieved from .nd filename
         project_name = re.search(r'(.*)\.nd$', self.nd_file).group(1)
         info['project'] = [project_name for x in xrange(len(self.input_files))]
+
         for stk_file in self.input_files:
             # Retrieve information for 'filter' from filename
             r = re.compile('%s%s' % (project_name, pattern))
@@ -283,27 +281,35 @@ class Stk2png(object):
         self.info['column'] = map(int, column)
         self.info['row'] = map(int, row)
 
+    def format_filenames(self):
+        '''
+        Format filenames according to a user-defined nomenclature.
+        '''
+        self.output_files = list()
+        for i in xrange(len(self.input_files)):
+            f = self.nomenclature
+            output_filename = f.format(project=self.info['project'][i],
+                                       well=self.info['well'][i],
+                                       site=self.info['site'][i],
+                                       row=self.info['row'][i],
+                                       column=self.info['column'][i],
+                                       zstack=self.info['zstack'][i],
+                                       time=self.info['time'][i],
+                                       filter=self.info['filter'][i],
+                                       channel=self.info['channel'][i])
+            self.output_files.append(output_filename)
+
     def rename_files(self):
         '''
-        Rename files according to a user-defined nomenclature.
-        :rename:    bool defining whether files should be renamed
+        Rename stk files. To this end, get required information from
+        metadata files (.nd) and filenames (.stk) and then format filenames
+        according to nomenclature defined in configuration settings.
+
         '''
-        renamed_files = [self.nomenclature for x in xrange(len(self.input_files))]
-        for i in xrange(len(renamed_files)):
-            try:
-                renamed_files[i].format(project=self.info['project'][i],
-                                        well=self.info['well'][i],
-                                        site=self.info['site'][i],
-                                        row=self.info['row'][i],
-                                        column=self.info['column'][i],
-                                        zstack=self.info['zstack'][i],
-                                        time=self.info['time'][i],
-                                        filter=self.info['filter'][i],
-                                        channel=self.info['channel'][i])
-            except TypeError as error:
-                raise Exception('Formatting "%s" failed:\n%s' %
-                                (self.input_files[i], error))
-        self.output_files = renamed_files
+        self.get_info_from_nd_files()
+        self.get_info_from_filenames()
+        self.get_image_position()
+        self.format_filenames()
 
     def unpack_images(self, output_dir, keep_z=False, indices=None):
         '''
@@ -322,19 +328,18 @@ class Stk2png(object):
         for i in indices:
             stk_file = self.input_files[i]
             print '.... Unpack file "%s"' % stk_file
-            stack = read_stk(os.path.join(self.input_dir, stk_file))
-            output_file = re.sub(r'\.stk$', '.png', self.output_files[i])
+            stack = read_stk(join(self.input_dir, stk_file))
+            output_file = self.output_files[i]
             if keep_z and self.metainfo['hasWell']:
                 # Keep individual z-stacks
                 for z in xrange(stack.shape[0]):
                     # Encode 'zstack' info in filename
                     output_file_z = re.sub(r'_z00', '_z%.2d' % z, output_file)
                     print '.... Write file "%s"' % output_file_z
-                    write_png(os.path.join(output_dir, output_file_z),
-                              stack[z])
+                    write_png(join(output_dir, output_file_z), stack[z])
             else:
                 # Perform maximum intensity projection (MIP)
                 # Should also work if there is only one image (i.e. no stacks)
                 mip = np.array(np.max(stack, axis=0), dtype=stack[0].dtype)
                 print '.... Write file "%s"' % output_file
-                write_png(os.path.join(output_dir, output_file), mip)
+                write_png(join(output_dir, output_file), mip)

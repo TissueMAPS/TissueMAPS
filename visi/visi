@@ -188,21 +188,10 @@ if __name__ == '__main__':
             else:
                 retry = False
 
+        process = Stk2png(stk_files, nd_file, config)
         if args.rename:
-            expressions = re.findall(r'{([^{}]+)}', config['FILENAME_FORMAT'])
-            process = Stk2png(stk_files, nd_file, config)
-            print '... Get information from .nd file'
-            process.get_info_from_nd_files()
-            print '... Get information from image filename'
-            process.get_info_from_filenames()
-            if 'row' and 'column' in expressions:
-                print '... Get image position'
-                process.get_image_position()
             print '... Rename images'
             process.rename_files()
-        else:
-            process = Stk2png(stk_files, nd_file)
-
         print '... Load and unpack .stk files and save them as .png images'
         process.unpack_images(output_dir=output_dir, keep_z=args.zstacks,
                               indices=jobs)

@@ -42,7 +42,7 @@ def check_visi_config(config):
 
     # Ensure that expression in 'nomenclature_string' are also specified in
     # 'nomenclature_format'
-    expressions = re.findall(r'{([^{}]+)}', config['FILENAME_FORMAT'])
+    expressions = re.findall(r'{(\w+).*?}', config['FILENAME_FORMAT'])
     for exp in expressions:
         if exp not in valid_expressions:
             raise Exception('"{%s}" in "FILENAME_FORMAT" is not '
