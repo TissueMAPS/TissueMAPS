@@ -1,4 +1,3 @@
-import os
 from os.path import join, basename, dirname
 import tifffile
 import png
@@ -7,8 +6,9 @@ from copy import copy
 import re
 
 
-# TODO: handle exceptions
-# - single site acquisitions with no row/column info
+# TODO:
+# - single site acquisitions with no well/row/column info
+# - other acquisition modes, e.g. vertical
 
 
 def read_stk(stk_filename):
@@ -22,7 +22,9 @@ def read_stk(stk_filename):
 
 
 def write_png(png_filename, image):
-    ''' Write numpy array to disk as png.'''
+    ''' 
+    Write numpy array to disk as png.
+    '''
     with open(png_filename, 'wb') as f:
         writer = png.Writer(width=image.shape[1],
                             height=image.shape[0],

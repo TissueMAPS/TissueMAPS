@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    project_dir = os.path.abspath(args.project_dir)
+    project_dir = osp.abspath(args.project_dir)
     input_dir = osp.join(project_dir, 'STK')
     batch_size = args.batch_size
 
