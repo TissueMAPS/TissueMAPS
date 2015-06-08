@@ -83,19 +83,24 @@ def load_images(config, files):
         for j in range(len(file_grid[0])):
             im = Vips.Image.new_from_file(file_grid[i][j])
 
-            # If masks should be created we have to do some further processing
-            if args.area_mask or args.outline_mask:
-                im = segment.remove_border_cells_vips(im)
-            if args.area_mask and args.make_global_ids:
-                im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                max_id_upto_now += 1
-            if args.outline_mask and args.make_global_ids:
-                ids, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                max_id_upto_now += 1
-                outline = segment.outlines_vips(im)
-                im = outline.ifthenelse(ids, 0)
-            if args.outline_mask and not args.make_global_ids:
-                im = segment.outlines_vips(im)
+            # Should the ids be computed as RGB triples?
+            # If yes, don't remove border cells and just create the RGB images!
+            if args.make_global_ids:
+                # Should the result be a RGB area mask or RGB outline mask
+                if args.area_mask:
+                    im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
+                    max_id_upto_now += 1
+                if args.outline_mask:
+                    ids, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
+                    max_id_upto_now += 1
+                    outline = segment.outlines_vips(im)
+                    im = outline.ifthenelse(ids, 0) # Make everything except the outline black
+            else:
+                if args.area_mask:
+                    im = segment.remove_border_cells_vips(im)
+                if args.outline_mask:
+                    im = segment.remove_border_cells_vips(im)
+                    im = segment.outlines_vips(im)
 
             vips_image_grid[i][j] = im
 
