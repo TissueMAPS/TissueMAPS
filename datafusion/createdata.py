@@ -173,8 +173,9 @@ if __name__ == '__main__':
     exp_dir = args.experiment_dir[0]
     output_dir = args.output_dir
 
-    segmentation_project = join(exp_dir,
-                                df_config['SEGMENTATION_PROJECT'].format(experiment_name=basename(exp_dir)))
+    segmentation_project_dir = join(exp_dir,
+                                    df_config['SEGMENTATION_PROJECT'].format(
+                                            experiment_name=basename(exp_dir)))
 
     if not exp_dir:
         raise Exception('Experiment directory "%s" does not exist.'
@@ -201,7 +202,7 @@ if __name__ == '__main__':
 
             project_dir = join(cycle_dir, project_name)
 
-            if project_dir == segmentation_project:
+            if project_dir == segmentation_project_dir:
                 # data of segmentation project is handles separately
                 continue
 
@@ -242,6 +243,7 @@ if __name__ == '__main__':
     ids_ix = np.where([feat == 'OriginalObjectIds' for feat in feature_names])
     ids = data[:, ids_ix]
     np.delete(data, ids_ix, axis=1)
+    data_header.remove('OriginalObjectIds')
 
     print '. Separate features belonging to different objects'
     objects = [re.match(r'^([^_]+)', name).group(1) for name in data_header]
@@ -259,18 +261,14 @@ if __name__ == '__main__':
 
         f.create_dataset('/%s/ids' % obj_name, data=ids)
 
-        data_files = get_data_files(df_config['SEGMENTATION_PROJECT'])
+        data_files = get_data_files(segmentation_project_dir)
 
-        centroids = merge_data(data_files, names=['%s_Centroids' % obj],
-                               as_int=True)
+        centroids = merge_data(data_files, names=['%s_Centroids' % obj])
+        for c in centroids:
+            ids[c]
+        # TODO: centroids have to be global!!! illuminati.segment.compute_cell_centroids()
         location = '/%s/centroids' % obj_name
         f.create_dataset(location, data=centroids)
-        f[location].attrs.__setitem__('names', np.array(['y', 'x']))
-
-        boundaries = merge_data(data_files, names=['%s_Boundary' % obj],
-                                as_int=True)
-        location = '/%s/boundaries' % obj_name
-        f.create_dataset(location, data=boundaries)
         f[location].attrs.__setitem__('names', np.array(['y', 'x']))
 
         border = merge_data(data_files, names=['%s_BorderIx' % obj],
@@ -278,7 +276,7 @@ if __name__ == '__main__':
         f.create_dataset('/%s/border' % obj_name, data=border)
 
         location = '/%s/features' % obj_name
-        f.create_dataset(location, data=features[:, obj_ix])
+        f.create_dataset(location, data=data[:, obj_ix])
         # Add the 'data_header' as an attribute
         f[location].attrs.__setitem__('names', data_header[obj_ix])
 
