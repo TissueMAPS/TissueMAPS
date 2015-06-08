@@ -49,7 +49,7 @@ class ImageSite:
     @staticmethod
     def from_filename(filename, cfg):
         '''
-        Get coordinates of an image within the whole acquisition area
+        Get coordinates of an image relative to the acquisition area
         and initialize an object of ImageSite class.
         '''
         regexp = cfg['COORDINATE_FROM_FILENAME']
@@ -62,7 +62,7 @@ class ImageSite:
             if cfg['COORDINATES_IN_FILENAME_ONE_BASED']:
                 row_nr -= 1
                 col_nr -= 1
-            return SiteImage(filename, row_nr, col_nr)
+            return ImageSite(filename, row_nr, col_nr)
 
     def as_numpy_array(self):
         '''
@@ -74,9 +74,9 @@ class ImageSite:
         '''
         Get size of an image.
         '''
-        if not SiteImage.size:
-            SiteImage.size = self.as_numpy_array().shape
-        return SiteImage.size
+        if not ImageSite.size:
+            ImageSite.size = self.as_numpy_array().shape
+        return ImageSite.size
 
 
 class CycleDirectory:
@@ -85,7 +85,7 @@ class CycleDirectory:
         """
         Utility class for cycle directories
         """
-        self.filename = filename
+        self.cycle_name = filename
         self.experiment_name = experiment_name
         self.cycle_number = cycle_number
 
