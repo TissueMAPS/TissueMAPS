@@ -73,9 +73,9 @@ logo = u'''
 # TODO: define functions that can be called via the command line interface and
 # and the user interface (server)
 
-def load_images(config_settings, files):
+def load_images(config, files):
     # Prepare file grid
-    file_grid = stitch.build_file_grid(config_settings, files)
+    file_grid = stitch.build_file_grid(config, files)
     vips_image_grid = copy.deepcopy(file_grid)
 
     max_id_upto_now = 0
@@ -107,8 +107,8 @@ def load_images(config_settings, files):
     return vips_image_grid
 
 
-def apply_illumination_correction(config_settings, vips_image_grid, files):
-    illcorr = illumcorrect.Illumcorrect(config_settings, shift=args.shift)
+def apply_illumination_correction(config, vips_image_grid, files):
+    illcorr = illumcorrect.Illumcorrect(config, shift=args.shift)
     stats_file = illcorr.get_stats_file_name(files)
     mean, std = illumcorrect.load_statistics_from_mat_file_vips(stats_file)
     for i in range(len(vips_image_grid)):
@@ -120,10 +120,10 @@ def apply_illumination_correction(config_settings, vips_image_grid, files):
     return vips_image_grid
 
 
-def apply_shift(config_settings, stitched_img, files):
-    project = util.Project(config_settings)
+def apply_shift(config, stitched_img, files):
+    project = util.Project(config)
     project_dir = project.get_rootdir_from_image_file(files[0])
-    cycles = util.Cycles(config_settings)
+    cycles = util.Cycles(config)
     cycles.specify(project_dir)
     cycle_nr = cycles.get_cycle_nr_from_filename(files[0])
     cycle_nrs = sorted([c.cycle_number for c in cycles.directories])
@@ -262,8 +262,8 @@ as the original segmentation images.""")
 
     if args.config:
         # Overwrite default "image_toolbox" configuration
-        config_settings = load_config(args.config)
-        check_config(config_settings)
+        config = load_config(args.config)
+        check_config(config)
 
     #######################################################################
     #                           LOADING IMAGES                            #
@@ -329,7 +329,7 @@ as the original segmentation images.""")
     else:
         pass
 
-    vips_image_grid = load_images(config_settings, files)
+    vips_image_grid = load_images(config, files)
 
     #######################################################################
     #                       ILLUMINATION CORRECTING                       #
@@ -338,7 +338,7 @@ as the original segmentation images.""")
     if args.illum_correct:
         print 'ᐄ  CORRECTING IMAGES FOR ILLUMINATION'
 
-        vips_image_grid = apply_illumination_correction(config_settings,
+        vips_image_grid = apply_illumination_correction(config,
                                                         vips_image_grid,
                                                         files)
 
@@ -355,7 +355,7 @@ as the original segmentation images.""")
     #######################################################################
 
     if args.shift:
-        stitched_img = apply_shift(config_settings, stitched_img, files)
+        stitched_img = apply_shift(config, stitched_img, files)
 
     #######################################################################
     #                            THRESHOLDING                             #
