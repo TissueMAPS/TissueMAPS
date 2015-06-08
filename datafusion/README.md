@@ -53,4 +53,6 @@ The **ids** dataset consists of strings that specify a global id of the form:
 
 ```
 [row number]-[column number]-[site-specific id]
-``` 
+```
+
+The **centroids** and **boundaries** datasets each have an attribute **names** of length 2 specifying the 'y' and 'x' coordinate of each pixel per image site. 

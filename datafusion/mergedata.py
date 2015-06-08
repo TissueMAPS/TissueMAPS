@@ -84,124 +84,69 @@ def rename_features(feature_names, mapper):
     return feature_names
 
 
-def check1(features):
-    check1 = map(len, features.values())
-    if len(np.unique(check1)) == 1:
-        print('🍺  Check 1 passed: '
-              'all sites have same number of features')
-    else:
-        raise Exception('Sites have a different number of features.')
+def get_data_files(project_dir):
+    '''
+    List all data HDF5 files for a given Jterator project.
+    '''
+    return sorted(glob.glob(join(project_dir, 'data', '*.data')))
 
 
-def check2(features):
-    check2 = [feat.shape[0] for feat in features]
-    filter(lambda i: i[1] != check2[0], enumerate(check2))  # ignore empty sites
-    if len(np.unique(check2)) == 1:
-        print('🍺  Check 2 passed: '
-              'all features have same number of sub-features')
-    else:
-        raise Exception('Features have a different number of sub-features.')
-
-
-def merge_data(project_dir):
+def merge_data(data_files, names, as_int=False):
     '''
     Merge Jterator data of one experiment cycle stored in several HDF5 files.
 
     Parameters:
-        :project_dir:       String. Path to Jterator project folder.
+        :data_files:        List of strings. Path to Jterator data files.
+        :names:             List of strings. Name of a dataset in a HDF5 file.
+        :as_int:            Boolean. Convert to integer datatype.
 
     Returns:
-        tuple with features per object (numpy array),
-        feature names (list of strings) and object ids (list of integers)
+        data (numpy array) of shape nxp,
+        where n is the number of objects and p the number of features
     '''
-    # TODO: this is certainly not the best way to do it!!!
-    data_files = glob.glob(join(project_dir, 'data', '*.data'))
-
-    f = h5py.File(data_files[0], 'r')
-    feature_names = f.keys()
-    f.close()
-    feature_names = [feat for feat in feature_names
-                     if not re.search('OriginalObjectIds', feat)]
-    features = {feat: [] for feat in feature_names}
-
-    ids = list()
     for job_ix, filename in enumerate(data_files):
 
         f = h5py.File(filename, 'r')
         if not f.keys():
             raise Exception('File "%s" is empty' % filename)
 
-        for n in feature_names:
-            if n in f.keys():
-                features[n].append(np.matrix(f[n][()]).T)  # use matrix!!!
+        for i, name in enumerate(names):
+
+            if name not in f.keys():
+                raise Exception('Dataset "%s" does not exist in file "%s'
+                                % (name, filename))
+
+            if name == 'OriginalObjectIds':
+                # Get positional information from filename
+                im_file = image_name_from_joblist(project_dir, filename)
+                coords = ImageSite.from_filename(im_file, config)
+                # Translate site specific ids to global ids
+                nitems = len(f.values()[0])
+                feat = build_ids(orig_obj_ids=f['OriginalObjectIds'][:nitems],
+                                 row=coords.row_nr, col=coords.col_nr)
             else:
-                print('Warning: dataset "%s" does not exist in file "%s'
-                      % (n, filename))
-                features[n].append(None)
-
-        if 'OriginalObjectIds' not in f.keys():
-            raise Exception('File "%s" must contain a data called "%s"'
-                            % (filename, 'OriginalObjectIds'))
-        # Get positional information from filename
-        image_filename = image_name_from_joblist(project_dir, filename)
-        coords = ImageSite.from_filename(image_filename, config)
-        # Translate site specific ids to global ids
-        nitems = len(f.values()[0])
-        ids += build_ids(orig_obj_ids=f['OriginalObjectIds'][:nitems],
-                         row=coords.row_nr, col=coords.col_nr)
-
-        f.close()
-
-    check1(features)
-
-    # Combine features per site into a vector
-    features = np.array([np.vstack(feat) for feat in features.values()])
-
-    check2(features)
-
-    # Combine features into a nxp numpy array,
-    # where n is the number of cells and p is the number of features
-    features = np.hstack(features)
-    feature_names = rename_features(feature_names,
-                                    header_mapper[cycle.cycle_number])
-    feature_names = np.array(map(np.string_, feature_names))  # safest for hdf5
-
-    return (features, feature_names, ids)
-
-
-def merge_metadata(project_dir, name):
-    '''
-    Merge Jterator metadata (segmentation data) of one experiment cycle
-    stored in several HDF5 files.
-
-    Parameters:
-        :project_dir:       String. Path to Jterator project folder.
-        :name:              String. Name of a dataset in a HDF5 file.
-
-    Returns:
-        feature (numpy array)
-    '''
-    data_files = glob.glob(join(project_dir, 'data', '*.data'))
-
-    for job_ix, filename in enumerate(data_files):
-
-        f = h5py.File(filename, 'r')
-        if not f.keys():
-            raise Exception('File "%s" is empty' % filename)
-
-        if name in f.keys():
-            feat = f[name][()].astype(int)
-            if job_ix == 0:
+                # it seems that features saved with Matlab have different
+                # shapes when compared to those saved with Python???
+                feat = f[name][()]
+                feat = np.matrix(feat)
+                if feat.shape[0] < feat.shape[1]:
+                    feat = feat.T
+            if i == 0:
                 feature = feat
             else:
-                feature = np.vstack((feature, feat))
-        else:
-            raise Exception('Warning: dataset "%s" does not exist in file "%s'
-                            % (name, filename))
+                feature = np.hstack((feature, feat))
 
         f.close()
 
-    return feature
+        if job_ix == 0:
+            data = feature
+        else:
+            data = np.vstack((data, feature))
+
+    if as_int:
+        return data.astype(int)
+    else:
+        return data
 
 
 if __name__ == '__main__':
@@ -230,7 +175,8 @@ if __name__ == '__main__':
     output_dir = args.output_dir
 
     if not exp_dir:
-        raise Exception('Experiment directory "%s" does not exist.' % exp_dir)
+        raise Exception('Experiment directory "%s" does not exist.'
+                        % exp_dir)
 
     if not output_dir:
         raise Exception('Output directory "%s" does not exist.' % output_dir)
@@ -241,11 +187,10 @@ if __name__ == '__main__':
     cycles = cycles.get_cycle_directories(exp_dir)
 
     data_header = list()
-    metadata_header = list()
     for i, cycle in enumerate(cycles):
 
-        print('. Extracting features of cycle #%d: %s'
-              % (cycle.cycle_number, cycle.cycle_name))
+        print('. Extracting features of cycle #%d: %s' %
+              (cycle.cycle_number, cycle.cycle_name))
 
         cycle_dir = join(exp_dir, cycle.cycle_name)
         project_names = get_project_names(cycle_dir)
@@ -254,22 +199,47 @@ if __name__ == '__main__':
 
             project_dir = join(cycle_dir, project_name)
 
+            if project_dir == df_config['SEGMENTATION_PROJECT'].format(cycle_subdirectory=cycle_dir):
+                # data of segmentation project is handles separately
+                continue
+
             print '.. Merging data of project "%s"' % project_name
 
-            if project_dir == df_config['SEGMENTATION_PROJECT']:
-                continue
+            data_files = get_data_files(project_dir)
+
+            f = h5py.File(data_files[0], 'r')
+            feature_names = f.keys()
+            f.close()
+
+            if 'OriginalObjectIds' not in feature_names:
+                raise Exception('Files must contain a dataset called "%s"' %
+                                'OriginalObjectIds')
+
+            features = merge_data(data_files, names=feature_names)
+
+            if features.shape[1] != len(feature_names):
+                raise Exception('Number of features in dataset and length of '
+                                'list with feature names must be identical.')
+
+            if i == 0:
+                data = features
             else:
-                (features, feature_names, obj_ids) = merge_data(project_dir)
-                if i == 0:
-                    data = features
-                else:
-                    data = np.hstack((data, features))
-                data_header += feature_names
+                data = np.vstack((data, features))
+
+            feature_names = rename_features(feature_names,
+                                            header_mapper[cycle.cycle_number])
+            # convert to safe string format for HDF5
+            feature_names = np.array(map(np.string_, feature_names))
+            data_header += feature_names
 
     print '. Combining data from different cycles'
     (data_header, unique_ix) = np.unique(data_header, return_index=True)
     # TODO: sanity checks
     data = data[:, unique_ix]
+
+    ids_ix = np.where([feat == 'OriginalObjectIds' for feat in feature_names])
+    ids = data[:, ids_ix]
+    np.delete(data, ids_ix, axis=1)
 
     print '. Separate features belonging to different objects'
     objects = [re.match(r'^([^_]+)', name).group(1) for name in data_header]
@@ -285,26 +255,30 @@ if __name__ == '__main__':
         obj_ix = object_ix == i
         obj_name = obj.lower()  # use lower case consistently
 
-        f.create_dataset('/%s/ids' % obj_name, data=np.array(obj_ids))
+        ids = merge_data(project_dir, names=['OriginalObjectIds'],
+                         as_int=True)
+        f.create_dataset('/%s/ids' % obj_name, data=ids)
 
-        centroids = merge_metadata(df_config['SEGMENTATION_PROJECT'],
-                                   name='%s_Centroids' % obj)
+        data_files = get_data_files(df_config['SEGMENTATION_PROJECT'])
+
+        centroids = merge_data(data_files, names=['%s_Centroids' % obj],
+                               as_int=True)
         location = '/%s/centroids' % obj_name
         f.create_dataset(location, data=centroids)
         f[location].attrs.__setitem__('names', np.array(['y', 'x']))
 
-        boundaries = merge_metadata(df_config['SEGMENTATION_PROJECT'],
-                                    name='%s_Boundary' % obj)
+        boundaries = merge_data(data_files, names=['%s_Boundary' % obj],
+                                as_int=True)
         location = '/%s/boundaries' % obj_name
         f.create_dataset(location, data=boundaries)
         f[location].attrs.__setitem__('names', np.array(['y', 'x']))
 
-        border = merge_metadata(df_config['SEGMENTATION_PROJECT'],
-                                name='%s_BorderIx' % obj)
+        border = merge_data(data_files, names=['%s_BorderIx' % obj],
+                            as_int=True)
         f.create_dataset('/%s/border' % obj_name, data=border)
 
         location = '/%s/features' % obj_name
-        f.create_dataset(location, data=data[:, obj_ix])
+        f.create_dataset(location, data=features[:, obj_ix])
         # Add the 'data_header' as an attribute
         f[location].attrs.__setitem__('names', data_header[obj_ix])
 
