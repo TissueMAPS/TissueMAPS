@@ -56,11 +56,6 @@ def image_name_from_joblist(project_dir, data_filename):
     return joblist[job_id].values()[0]
 
 
-def build_ids(orig_obj_ids, row, col):
-    # TODO: generate final, global cell IDs
-    return ['%s-%s-%s' % (row, col, int(i)) for i in orig_obj_ids]
-
-
 def rename_features(feature_names, mapper):
     '''
     Rename feature, i.e. replace substring in a feature name by another
@@ -91,6 +86,11 @@ def get_data_files(project_dir):
     return sorted(glob.glob(join(project_dir, 'data', '*.data')))
 
 
+def build_ids(orig_obj_ids, row, col):
+    # TODO: generate final, global cell IDs
+    return ['%s-%s-%s' % (row, col, int(i)) for i in orig_obj_ids]
+
+
 def merge_data(data_files, names, as_int=False):
     '''
     Merge Jterator data of one experiment cycle stored in several HDF5 files.
@@ -101,7 +101,7 @@ def merge_data(data_files, names, as_int=False):
         :as_int:            Boolean. Convert to integer datatype.
 
     Returns:
-        data (numpy array) of shape nxp,
+        data (numpy matrix) of shape nxp,
         where n is the number of objects and p the number of features
     '''
     for job_ix, filename in enumerate(data_files):
@@ -110,7 +110,7 @@ def merge_data(data_files, names, as_int=False):
         if not f.keys():
             raise Exception('File "%s" is empty' % filename)
 
-        for i, name in enumerate(names):
+        for feat_ix, name in enumerate(names):
 
             if name not in f.keys():
                 raise Exception('Dataset "%s" does not exist in file "%s'
@@ -124,14 +124,13 @@ def merge_data(data_files, names, as_int=False):
                 nitems = len(f.values()[0])
                 feat = build_ids(orig_obj_ids=f['OriginalObjectIds'][:nitems],
                                  row=coords.row_nr, col=coords.col_nr)
+                feat = np.array(feat).astype(np.string_)
             else:
-                # it seems that features saved with Matlab have different
-                # shapes when compared to those saved with Python???
                 feat = f[name][()]
-                feat = np.matrix(feat)
-                if feat.shape[0] < feat.shape[1]:
-                    feat = feat.T
-            if i == 0:
+            feat = np.matrix(feat)
+            if feat.shape[0] < feat.shape[1]:
+                feat = feat.T
+            if feat_ix == 0:
                 feature = feat
             else:
                 feature = np.hstack((feature, feat))
@@ -174,6 +173,9 @@ if __name__ == '__main__':
     exp_dir = args.experiment_dir[0]
     output_dir = args.output_dir
 
+    segmentation_project = join(exp_dir,
+                                df_config['SEGMENTATION_PROJECT'].format(experiment_name=basename(exp_dir)))
+
     if not exp_dir:
         raise Exception('Experiment directory "%s" does not exist.'
                         % exp_dir)
@@ -199,7 +201,7 @@ if __name__ == '__main__':
 
             project_dir = join(cycle_dir, project_name)
 
-            if project_dir == df_config['SEGMENTATION_PROJECT'].format(cycle_subdirectory=cycle_dir):
+            if project_dir == segmentation_project:
                 # data of segmentation project is handles separately
                 continue
 
@@ -224,7 +226,7 @@ if __name__ == '__main__':
             if i == 0:
                 data = features
             else:
-                data = np.vstack((data, features))
+                data = np.hstack((data, features))
 
             feature_names = rename_features(feature_names,
                                             header_mapper[cycle.cycle_number])
@@ -255,8 +257,6 @@ if __name__ == '__main__':
         obj_ix = object_ix == i
         obj_name = obj.lower()  # use lower case consistently
 
-        ids = merge_data(project_dir, names=['OriginalObjectIds'],
-                         as_int=True)
         f.create_dataset('/%s/ids' % obj_name, data=ids)
 
         data_files = get_data_files(df_config['SEGMENTATION_PROJECT'])
