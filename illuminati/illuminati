@@ -88,11 +88,11 @@ def load_images(config, files):
             if args.make_global_ids:
                 # Should the result be a RGB area mask or RGB outline mask
                 if args.area_mask:
-                    im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                    max_id_upto_now += 1
+                    im, max_id_upto_now = segment.local_to_global_ids_vips(
+                            im, max_id_upto_now)
+                    im.write_to_file('/Users/robin/Desktop/rgb/row%d-col%d.png' % (i, j))
                 if args.outline_mask:
                     ids, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                    max_id_upto_now += 1
                     outline = segment.outlines_vips(im)
                     im = outline.ifthenelse(ids, 0) # Make everything except the outline black
             else:
@@ -270,6 +270,7 @@ as the original segmentation images.""")
     #######################################################################
 
     if args.id_luts:
+        file_grid = stitch.build_file_grid(config, files)
         max_id_upto_now = 0
         print('ᐄ  CREATING ID LOOKUP TABLES ')
         for i in range(len(file_grid)):
@@ -278,7 +279,7 @@ as the original segmentation images.""")
                 print '    col: %d' % j
                 site_fname = file_grid[i][j]
                 mat = imread(site_fname)
-                mat = segment.remove_border_cells(mat)
+                # mat = segment.remove_border_cells(mat)
                 mat, max_id_upto_now = segment.create_id_lookup_matrices(
                     mat, max_id_upto_now)
 
