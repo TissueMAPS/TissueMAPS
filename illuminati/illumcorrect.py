@@ -9,69 +9,18 @@ TissueMAPS tool for correcting images for illumination artifacts.
 
 import numpy as np
 import scipy.ndimage as ndi
-import h5py
 from scipy.misc import imread
 import png
 import yaml
 import os
-import re
 from os.path import join, realpath, basename, splitext, exists, isdir
 import sys
 from gi.repository import Vips
 import util
+from image_toolbox.illumstats import Illumstats
 
 
-class Illumcorrect:
-
-    def __init__(self, config_settings, shift=False):
-        """
-        Configuration settings provided by YAML file.
-        """
-        self.cfg = config_settings
-        self.shift = shift
-
-    def get_stats_file_name(self, image_filenames):
-        """
-        Dynamically determine name and location of illumination correction
-        statistics file from image filename.
-        Variables can be set in the configuration file!
-        """
-        image_file = image_filenames[0]
-        project = util.Project(self.cfg)
-        project_dir = project.get_rootdir_from_image_file(image_file)
-        channel_nr = project.get_channel_nr_from_filename(image_file)
-        stats_file = self.cfg['STATS_FILE_FORMAT'].format(channel_number=channel_nr)
-
-        if self.shift:
-            cycles = util.Cycles(self.cfg)
-            cycle_nr = cycles.get_cycle_nr_from_filename(image_file)
-            cycle_dirs = cycles.get_cycle_directories(project_dir)
-            cycle_index = [i for i, x in enumerate(cycle_dirs)
-                            if re.search('%d$' % cycle_nr, x.filename)]
-            if not len(cycle_index) == 1:
-                raise Exception('Cycle subdirectory could not be determined')
-            cycle_index = cycle_index[0]
-            cycle_subdir = cycle_dirs[cycle_index].filename
-
-            stats_folder = \
-                self.cfg['STATS_FOLDER_LOCATION'].format(cycle_subdirectory=cycle_subdir)
-        else:
-            stats_folder = self.cfg['STATS_FOLDER_LOCATION']
-
-        stats_path = os.path.join(project_dir, stats_folder, stats_file)
-        if not os.path.exists(stats_path):
-            raise Exception('Illumination correction statistics \
-                            filename could not be determined')
-
-        return stats_path
-
-
-# TODO: The statistics files could also be loaded directly into VIPS
-# without having to convert them from an numpy array.
-def load_statistics_from_mat_file_vips(stats_path):
-    """Load the precomputed statistics into VIPS images"""
-    mean_mat, std_mat = load_statistics_from_mat_file(stats_path)
-    return map(np_array_to_vips_image, (mean_mat, std_mat))
+# TODO: move this functionality into Illumstats class
 
 
 def load_image_from_file(image_path, dtype='float64'):
@@ -82,24 +31,6 @@ def load_image_from_file(image_path, dtype='float64'):
 def load_image_from_file_vips(image_path):
     """Load an image file into a VIPS image"""
     return Vips.Image.new_from_file(image_path)
-
-
-def load_statistics_from_mat_file(stats_path):
-    """
-    Load precomputed statistics for each pixel over all sites, that
-    are used to perform the illumination correction.
-    By default these mat files are located somewhere like
-    'Cycle1/BATCH/Measurements_batch_illcor_channel001_zstack000.mat'.
-
-    :stats_path: path to stats .mat file : string.
-    :returns: a tuple of the form (mean_matrix, std_matrix).
-
-    """
-    stats = h5py.File(stats_path, 'r')
-    stats = stats['stat_values']
-    mean_image = np.array(stats['mean'][()], dtype='float64').conj().T
-    std_image = np.array(stats['std'][()], dtype='float64').conj().T
-    return (mean_image, std_image)
 
 
 def illum_correction_vips(orig_image, mean_image, std_image):
@@ -232,8 +163,8 @@ if __name__ == '__main__':
                         help='overwrite raw image files (usually a bad idea!)')
     parser.add_argument('--suffix', dest='suffix', default='-corr',
                         help='suffix to append')
-    parser.add_argument('--no-vips', dest='no_vips', action='store_true', default=False,
-                        help='use numpy instead of vips')
+    parser.add_argument('--no-vips', dest='no_vips', action='store_true',
+                        default=False, help='use numpy instead of vips')
 
     args = parser.parse_args()
 
@@ -255,7 +186,7 @@ if __name__ == '__main__':
     config_settings = yaml.load(open(config_filename).read())
     util.check_config(config_settings)
 
-    tm_obj = Illumcorrect(config_settings)
+    tm_obj = Illumcorr(config_settings)
     stats_file = tm_obj.get_stats_file_name(args.files)
 
     if args.no_vips:

@@ -1,13 +1,12 @@
 #! /usr/bin/env python
 # encoding: utf-8
 import os
+from os.path import exists, join, basename, splitext
 import sys
 import copy
 import random
 from gi.repository import Vips
-from scipy.misc import imread
 import numpy as np
-import util
 import pyramidize
 import illumcorrect
 import stitch
@@ -15,6 +14,11 @@ import segment
 import imageutil
 from image_toolbox import config
 from image_toolbox.util import load_config, check_config
+from image_toolbox.image import is_image_file
+from image_toolbox.experiment import Experiment
+from image_toolbox.project import Project
+from image_toolbox.image import IntensityImage, MaskImage
+from illuminati.illumcorrect import np_array_to_vips_image
 
 """
 Illuminati is a command line tool for pre-processing images for TissueMAPS.
@@ -59,7 +63,7 @@ Some example use cases:
 
 """
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
 logo = u'''
@@ -73,15 +77,14 @@ logo = u'''
 # TODO: define functions that can be called via the command line interface and
 # and the user interface (server)
 
-def load_images(config, files):
-    # Prepare file grid
-    file_grid = stitch.build_file_grid(config, files)
+def load_images(file_grid):
     vips_image_grid = copy.deepcopy(file_grid)
 
     max_id_upto_now = 0
     for i in range(len(file_grid)):
         for j in range(len(file_grid[0])):
-            im = Vips.Image.new_from_file(file_grid[i][j])
+
+            im = file_grid[i][j].image
 
             # Should the ids be computed as RGB triples?
             # If yes, don't remove border cells and just create the RGB images!
@@ -107,34 +110,27 @@ def load_images(config, files):
     return vips_image_grid
 
 
-def apply_illumination_correction(config, vips_image_grid, files):
-    illcorr = illumcorrect.Illumcorrect(config, shift=args.shift)
-    stats_file = illcorr.get_stats_file_name(files)
-    mean, std = illumcorrect.load_statistics_from_mat_file_vips(stats_file)
+def apply_illumination_correction(vips_image_grid, mean_image, std_image):
     for i in range(len(vips_image_grid)):
         for j in range(len(vips_image_grid[0])):
             img = vips_image_grid[i][j]
             vips_image_grid[i][j] = \
-                illumcorrect.illum_correction_vips(img, mean, std)
+                illumcorrect.illum_correction_vips(img, mean_image, std_image)
 
     return vips_image_grid
 
 
-def apply_shift(config, stitched_img, files):
-    project = util.Project(config)
-    project_dir = project.get_rootdir_from_image_file(files[0])
-    cycles = util.Cycles(config)
-    cycles.specify(project_dir)
-    cycle_nr = cycles.get_cycle_nr_from_filename(files[0])
-    cycle_nrs = sorted([c.cycle_number for c in cycles.directories])
-    shift_desc_idx = cycle_nrs.index(cycle_nr)
-    stitched_img = stitch.global_shift(stitched_img, shift_desc_idx,
-                                       cycles.descriptors)
+def apply_shift(stitched_img, cycles):
+    shift_descriptors = [c.project.shift_file for c in cycles]
+    cycle_nrs = [c.cycle for c in cycles]
+    current_cycle_idx = cycle_nrs.index(current_cycle)
+    stitched_img = stitch.global_shift(stitched_img, current_cycle_idx,
+                                       shift_descriptors)
 
     return stitched_img
 
 
-def apply_threshold(stitched_img, files,
+def apply_threshold(stitched_img, images,
                     thresh_value=None, thresh_sample_size=None,
                     thresh_percentage=None):
     # TODO: make some checks for thresh type
@@ -143,14 +139,14 @@ def apply_threshold(stitched_img, files,
     else:
         sample_size = thresh_sample_size
         # Adjust sample size if set too large
-        if thresh_sample_size > len(files):
-            sample_size = len(files)
-        # The files from which to sample threshold
-        sample_files = random.sample(files, sample_size)
-        sample_images = map(Vips.Image.new_from_file, sample_files)
-        val = imageutil.get_threshold(sample_images, thresh_percentage)
+        if thresh_sample_size > len(images):
+            sample_size = len(image)
+        # The images from which to sample threshold
+        sample_images = random.sample(images, sample_size)
+        val = imageutil.calc_threshold_level(sample_images, thresh_percentage)
     lut = imageutil.create_thresholding_LUT(val)
     # Map image through lookup table
+    # This takes ridiculously long!!!
     stitched_img = stitched_img.maplut(lut)
 
     return stitched_img
@@ -177,70 +173,59 @@ if __name__ == '__main__':
 
     parser.add_argument('-s', '--shift', dest='shift',
                         action='store_true', default=False,
-                        help="shift stitched image according to descriptor file")
+                        help='shift stitched image according to descriptor file')
+
     parser.add_argument('-i', '--illum_correct', dest='illum_correct',
                         action='store_true', default=False,
-                        help="correct images for illumination\
-                        according to stats file")
-    parser.add_argument('-t', '--thresh', dest='thresh',
-                        action='store_true', default=False,
-                        help="threshold (rescale) stitched image")
-
-    parser.add_argument('--no-rescale', dest='no_rescale',
-                        action='store_true', default=False,
-                        help="don't perform any 16bit -> 8bit rescaling."
-                             "The resulting pyramid will have 16bit PNG tiles.")
+                        help='correct images for illumination\
+                        according to stats file')
 
     parser.add_argument('--make-global-ids', dest='make_global_ids',
                         action='store_true', default=False,
-                        help="if all the cell labels should be made into "
-                             "globally unique labels.")
+                        help='if all the cell labels should be made into '
+                             'globally unique labels.')
 
     parser.add_argument('--cell-centroids', dest='cell_centroids',
                         action='store_true', default=False,
-                        help="if the centroid for each cell should be computed and be saved"
-                             " as a numpy array.")
+                        help='if the centroid for each cell should be computed '
+                        'and be saved as a numpy array.')
     parser.add_argument('--id-luts', dest='id_luts',
                         action='store_true', default=False,
-                        help="if lookup tables for the cell ids should be created. "
-                             " These tables are just int32 numpy arrays with the same name"
-                             " as the original segmentation images.")
-    parser.add_argument('--gather-siteinfo', dest='gather_siteinfo',
-                        action='store_true', default=False,
-                        help="""
-if a siteinfo matrix should be created that holds information "
-about sites. The matrix has dimension (n x 4) where n is the number"
-of sites and the columns corresond to: absolute site number (sXXXX),"
-row number (rXX), column number (cXX), integer offset thas has to"
-be added to the local ids in that site in order to make those ids global."
-This offset is computed in the fashion: for i in rows { for j in cols }"
-These tables are just int32 numpy arrays with the same name"
-as the original segmentation images.""")
-
+                        help='if lookup tables for the cell ids should be '
+                        'created. These tables are just int32 numpy arrays '
+                        'with the same name as the original segmentations.')
 
     parser.add_argument('--area-mask', dest='area_mask',
                         action='store_true', default=False,
-                        help="if the masks should consist of the whole cell areas")
+                        help='if the masks should consist of the whole cell areas')
     parser.add_argument('--outline-mask', dest='outline_mask',
                         action='store_true', default=False,
-                        help="if the masks should consist of the cell outlines")
+                        help='if the masks should consist of the cell outlines')
+
     parser.add_argument('--png', dest='png',
                         action='store_true', default=False,
-                        help="Save the pyramid tiles as png, default is jpg.")
+                        help='Save the pyramid tiles as png, default is jpg.')
+    parser.add_argument('--no-rescale', dest='no_rescale',
+                        action='store_true', default=False,
+                        help='don\'t perform any 16bit -> 8bit rescaling. '
+                        'The resulting pyramid will have 16bit PNG tiles.')
 
+    parser.add_argument('-t', '--thresh', dest='thresh',
+                        action='store_true', default=False,
+                        help='threshold (rescale) stitched image')
     parser.add_argument('--thresh-value', dest='thresh_value',
                         type=float, default=False,
-                        help="pixel value for threshold")
+                        help='pixel value for threshold')
     parser.add_argument('--thresh-percent', dest='thresh_percentage',
                         type=float, default=0.01,
-                        help="percentage of pixel values above threshold")
+                        help='percentage of pixel values above threshold')
     parser.add_argument('--thresh-sample', dest='thresh_sample_size',
                         type=int, default=10,
-                        help="number of files to use for threshold estimation")
+                        help='number of files to use for threshold estimation')
 
     args = parser.parse_args()
 
-    if not args.files or not all(map(util.is_image, args.files)):
+    if not args.files or not all(map(is_image_file, args.files)):
         parser.print_help()
         sys.exit(1)
 
@@ -248,7 +233,7 @@ as the original segmentation images.""")
         print 'You need to specify an output directory'
         sys.exit(1)
 
-    if not os.path.exists(args.output_dir) \
+    if not exists(args.output_dir) \
             and not (args.cell_centroids or args.id_luts or args.gather_siteinfo):
         print '.. Creating pyramid output directory'
         os.makedirs(args.output_dir)
@@ -256,9 +241,16 @@ as the original segmentation images.""")
     if args.thresh_value and not args.thresh:
         print '\'--thresh-value\' command only works together with \'-t\' command'
 
-    print '.. Creating layer "%s"' % os.path.basename(args.output_dir)
+    print '.. Creating layer "%s"' % basename(args.output_dir)
 
     files = args.files
+
+    if args.area_mask or args.outline_mask:
+        images = [MaskImage(f, config, vips=True) for f in files]
+    else:
+        images = [IntensityImage(f, config, vips=True) for f in files]
+    experiment_dir = images[0].experiment_dir
+    cycles = Experiment(experiment_dir, config).subexperiments
 
     if args.config:
         # Overwrite default "image_toolbox" configuration
@@ -269,6 +261,8 @@ as the original segmentation images.""")
     #                           LOADING IMAGES                            #
     #######################################################################
 
+    file_grid = stitch.build_file_grid(images)
+
     if args.id_luts:
         max_id_upto_now = 0
         print('ᐄ  CREATING ID LOOKUP TABLES ')
@@ -276,49 +270,39 @@ as the original segmentation images.""")
             print '   row: %d' % i
             for j in range(len(file_grid[0])):
                 print '    col: %d' % j
-                site_fname = file_grid[i][j]
-                mat = imread(site_fname)
-                mat = segment.remove_border_cells(mat)
+                mat = file_grid[i][j].image
+                mat = segment.remove_border_cells(mat)  # do we want this?
                 mat, max_id_upto_now = segment.create_id_lookup_matrices(
                     mat, max_id_upto_now)
 
                 fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
                     rownr=(i+1), colnr=(j+1))
-                fname_abs = os.path.join(args.output_dir, fname)
+                fname_abs = join(args.output_dir, fname)
                 print '    Saving file: ' + fname_abs
                 with open(fname_abs, 'w') as f:
                     np.save(f, mat)
         sys.exit(0)
 
-    if args.gather_siteinfo:
-        mat = segment.gather_siteinfo(file_grid)
-        out = os.path.splitext(args.output_dir)[0] + '.npy'
-        print 'Saving: ' + out
-        with open(out, 'w') as f:
-            np.save(f, mat)
-        sys.exit(0)
+    # if args.cell_centroids:
+    #     print('ᐄ  COMPUTING CELL CENTROIDS')
+    #     max_id_upto_now = 0
+    #     centroids = []
+    #     for i in range(len(file_grid)):
+    #         print '   row: %d' % i
+    #         for j in range(len(file_grid[0])):
+    #             print '   col: %d' % j
+    #             print '   ' + file_grid[i][j]
+    #             mat = imread(file_grid[i][j])
+    #             mat = segment.remove_border_cells(mat)
+    #             site_centroids, max_id_upto_now = \
+    #                 segment.compute_cell_centroids(mat, i, j, max_id_upto_now)
+    #             centroids.append(site_centroids)
 
-
-    if args.cell_centroids:
-        print('ᐄ  COMPUTING CELL CENTROIDS')
-        max_id_upto_now = 0
-        centroids = []
-        for i in range(len(file_grid)):
-            print '   row: %d' % i
-            for j in range(len(file_grid[0])):
-                print '   col: %d' % j
-                print '   ' + file_grid[i][j]
-                mat = imread(file_grid[i][j])
-                mat = segment.remove_border_cells(mat)
-                site_centroids, max_id_upto_now = \
-                    segment.compute_cell_centroids(mat, i, j, max_id_upto_now)
-                centroids.append(site_centroids)
-
-        centroids = np.vstack(centroids)
-        fname = os.path.splitext(args.output_dir)[0] + '.npy'
-        with open(fname, 'w') as f:
-            np.save(f, centroids)
-        sys.exit(0)
+    #     centroids = np.vstack(centroids)
+    #     fname = os.path.splitext(args.output_dir)[0] + '.npy'
+    #     with open(fname, 'w') as f:
+    #         np.save(f, centroids)
+    #     sys.exit(0)
 
     # Create a vips image for each file
     print '.. Loading images'
@@ -329,7 +313,7 @@ as the original segmentation images.""")
     else:
         pass
 
-    vips_image_grid = load_images(config, files)
+    vips_image_grid = load_images(file_grid)
 
     #######################################################################
     #                       ILLUMINATION CORRECTING                       #
@@ -338,9 +322,16 @@ as the original segmentation images.""")
     if args.illum_correct:
         print 'ᐄ  CORRECTING IMAGES FOR ILLUMINATION'
 
-        vips_image_grid = apply_illumination_correction(config,
-                                                        vips_image_grid,
-                                                        files)
+        # retrieve illumination correction statistics
+        project = [c.project for c in cycles if c.cycle == images[0].cycle][0]
+        channel_index = [i for i, s in enumerate(project.stats_files)
+                         if s.channel == images[0].channel][0]
+        mean, std = project.stats_files[channel_index].statistics
+        mean = np_array_to_vips_image(mean)
+        std = np_array_to_vips_image(std)
+
+        vips_image_grid = apply_illumination_correction(vips_image_grid,
+                                                        mean, std)
 
     print 'ᐄ  STITCHING IMAGES' + (' & SHIFTING' if args.shift else '')
 
@@ -355,7 +346,7 @@ as the original segmentation images.""")
     #######################################################################
 
     if args.shift:
-        stitched_img = apply_shift(config, stitched_img, files)
+        stitched_img = apply_shift(stitched_img, cycles)
 
     #######################################################################
     #                            THRESHOLDING                             #

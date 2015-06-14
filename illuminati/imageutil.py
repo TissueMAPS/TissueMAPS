@@ -30,7 +30,7 @@ def save_hist_to_txt_file(hist, filename):
     np.savetxt(filename, hist, fmt='%d')
 
 
-def get_threshold(sample_images, threshold_top_percent=0.1):
+def calc_threshold_level(sample_images, threshold_top_percent=0.1):
     """
     Construct a 16 bit color lookup table that can be used to threshold images.
 

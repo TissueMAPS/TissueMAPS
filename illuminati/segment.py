@@ -22,46 +22,6 @@ import re
 from gi.repository import Vips
 
 
-# class Segment:
-
-#     def __init__(self, config_settings):
-#         """
-#         Configuration settings provided by YAML file.
-#         """
-#         self.cfg = config_settings
-
-#     def batch_compute_outline_polygons(self, site_images):
-#         """
-#         Compute outline polygons for all ImageSite objects in `site_images`
-#         """
-#         outlines = {}
-#         for i, site_image in enumerate(site_images):
-#             mat = site_image.as_numpy_array()
-#             mat = remove_border_cells(mat)
-#             polys = compute_outline_polygons(mat)
-
-#             # Add polygons to outlines dict with updated cell_ids
-#             for cell_id in polys:
-#                 global_cell_id = self.cfg['CELL_ID_FORMAT'].format(
-#                     site_row_nr=site_image.row_nr,
-#                     site_col_nr=site_image.col_nr,
-#                     cell_id=cell_id)
-#                 height, width = site_image.get_size()
-#                 row_offset = site_image.row_nr * height
-#                 col_offset = site_image.col_nr * width
-#                 poly = polys[cell_id] + (row_offset, col_offset)
-#                 outlines[global_cell_id] = poly
-
-#         return outlines
-
-#     def plot_outline_polygons(sitemat, outlines):
-#         fig, ax = plt.subplots()
-#         ax.imshow(sitemat, interpolation='nearest', cmap=plt.cm.gray)
-#         for cell_id, c in outlines.items():
-#             ax.plot(c[:, 1], c[:, 0], '-' + 'r')
-#         plt.show()
-
-
 def remove_border_cells_vips(im, is_source_uint16=True):
     """
     Given a site image, set all pixels with
@@ -154,7 +114,7 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
     Centroids are given as (x, y) tuples where the origin of the coordinate
     system is assumed to be in the topleft corner (like in openlayers).
 
-    :sitemat: A numpy matrix containg the cell labels.
+    :sitemat: A numpy matrix containing the cell labels.
     :site_row_nr: The row number of the site.
     :site_col_nr: The col number of the site.
     :site_width: The width of each site as an int.
@@ -189,7 +149,6 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
         centroids[idx, 2] = ymean
 
     return centroids, np.max(global_ids)
-
 
 
 def compute_outline_polygons(site_matrix, contour_level=0.5, poly_tol=0.95):
@@ -442,12 +401,12 @@ These outline images need to be stitched together using tm_stitch.py
     config_settings = yaml.load(open(config_filename).read())
     util.check_config(config_settings)
 
-    site_images = map(util.ImageSite.from_filename(config_settings), args.files)
+    site_images = map(util.Image.from_filename(config_settings), args.files)
 
     for i, site_image in enumerate(site_images):
         print '* (%d / %d) computing outline for: %s' \
             % (i, len(site_images), basename(site_image.filename))
-        mat = site_image.as_numpy_array()
+        mat = site_image.image
         mat = remove_border_cells(mat)
         outline_mat = outlines(mat)
 

@@ -8,7 +8,9 @@ import numpy as np
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
 from gi.repository import Vips
-import util
+from image_toolbox.image import Image
+from image_toolbox.image import is_image_file
+from image_toolbox.util import load_config, check_config
 import imageutil
 
 """
@@ -20,34 +22,24 @@ Images can optionally be shifted if required.
 """
 
 
-def build_file_grid(config, image_paths):
+def build_file_grid(images):
     """
     Build a 2D list of file names that indicates how images should be stitched.
     The function `get_coord_for_image` is called for each file name and
     its return value indicates the 0-based coordinates
     of where the image file should reside in the resulting stitched image.
 
-    :image_paths: the image paths : [string]
+    :images: objects of class "Image" : [Image]
     :returns: row and column of the image : (int, int)
 
     """
-    pattern = np.repeat(config['COORDINATE_FROM_FILENAME'],
-                        len(image_paths), axis=0)
-    one_based = np.repeat(config['COORDINATES_IN_FILENAME_ONE_BASED'],
-                          len(image_paths), axis=0)
-    image_coords = map(util.get_coord_by_regex, image_paths,
-                       pattern, one_based)
-    height = max([c[0] for c in image_coords]) + 1
-    width = max([c[1] for c in image_coords]) + 1
+    image_indices = [i.indices for i in images]
+    height = max([c[0] for c in image_indices]) + 1
+    width = max([c[1] for c in image_indices]) + 1
     grid = [[None for j in range(width)] for i in range(height)]
-    for img, coord in zip(image_paths, image_coords):
-        if util.is_image(img):
-            i, j = coord
-            grid[i][j] = img
-        else:
-            raise Exception(
-                'Can\'t build file grid for stitching'
-                ' with non-image file: ' + img)
+    for img, coord in zip(images, image_indices):
+        i, j = coord
+        grid[i][j] = img
     return grid
 
 
@@ -143,7 +135,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if not args.files or not all(map(util.is_image, args.files)):
+    if not args.files or not all(map(is_image_file, args.files)):
         parser.print_help()
         sys.exit(1)
 
@@ -156,12 +148,13 @@ if __name__ == '__main__':
         print('Error: configuration file %s does not exist!' % config_filename)
         sys.exit(1)
     print '.. Using configuration file %s' % config_filename
-    config_settings = yaml.load(open(config_filename).read())
-    util.check_config(config_settings)
+    config_settings = load_config(config_filename)
+    check_config(config_settings)
 
     files = args.files
+    images = [Image(f, config_settings) for f in files]
 
-    file_grid = build_file_grid(config_settings, files)
+    file_grid = build_file_grid(images)
     vips_image_grid = copy.deepcopy(file_grid)
 
     print '* LOADING IMAGES'
@@ -174,12 +167,14 @@ if __name__ == '__main__':
 
     if args.shift:
         print '* SHIFTING IMAGES'
-        root_dir = util.get_rootdir_from_image_file(files[0])
-        cycle_nr = util.get_cycle_nr_from_filename(files[0])
-        cycle_dirs = util.get_cycle_directories(root_dir)
-        cycle_nrs = sorted([c.cycle_number for c in cycle_dirs])
+        image = Image(files[0], config)
+        root_dir = image.experiment_dir
+        cycle_nr = image.cycle
+        cycles = Cycles(root_dir, config)
+        cycle_dirs = cycles.names
+        cycle_nrs = sorted([c.cycle for c in cycle_dirs])
         shift_desc_idx = cycle_nrs.index(cycle_nr)
-        descrs = util.load_shift_descrs(root_dir)
+        descrs = cycles.shift_descriptors
         stitched_img = global_shift(stitched_img, shift_desc_idx, descrs)
 
     print '* STITCHING IMAGES'
