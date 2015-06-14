@@ -4,7 +4,6 @@ import h5py
 from os.path import basename
 import argparse
 from align import registration as reg
-from image_toolbox import config
 
 
 if __name__ == '__main__':

@@ -9,7 +9,8 @@ import argparse
 import yaml
 from natsort import natsorted
 from subprocess32 import call
-from illuminati.util import Project, Cycles
+from illuminati.util import Project, Experiment
+from image_toolbox import config
 from image_toolbox.util import load_config, check_config
 
 
@@ -26,8 +27,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('Submit jobs for calculating the shift ' 
                                      'between images of different acquisition cycles.')
 
-    parser.add_argument('project_dir', default=os.getcwd(),
-                        help='project directory')
+    parser.add_argument('experiment_dir', default=os.getcwd(),
+                        help='experiment directory')
 
     parser.add_argument('--ref_cycle', dest='ref_cycle', type=int,
                         help='reference cycle number \
@@ -42,41 +43,33 @@ if __name__ == '__main__':
                         (defaults to 5)')
 
     parser.add_argument('-c', '--config', dest='config',
-                        default=os.path.join(os.path.dirname(__file__), '..',
-                                             'image_toolbox.config'),
                         help='use custom yaml configuration file \
                         (defaults to "image_toolbox" config file)')
 
     args = parser.parse_args()
 
-    project_dir = args.project_dir
+    experiment_dir = args.experiment_dir
     batch_size = args.batch_size
 
-    config_filename = args.config
-    print '. get configuration from config file: %s' % config_filename
-    config = load_config(config_filename)
-    check_config(config)
+    if args.config:
+        # Overwrite default "image_toolbox" configuration
+        print '. get configuration from file: %s' % args.config
+        config = load_config(args.config)
+        check_config(config)
 
-    # Initialize utility objects with configuration settings
-    project = Project(config)
-    cycles = Cycles(config)
+    cycles = Experiment(experiment_dir, config).subexperiments
 
-    print '. get cycle directories'
-    cycle_dirs = cycles.get_cycle_directories(project_dir)
-    print '. found %d cycles' % len(cycle_dirs)
+    print '. found %d cycles' % len(cycles)
 
     ref_channel = args.ref_channel
     print '. reference channel: %d' % ref_channel
 
     print '. get image filenames of reference channel'
     image_filenames = []
-    for cycle in cycle_dirs:
-        files = project.get_image_files(project_dir, cycle)
-        # only use files of reference channel
-        r = config['CHANNEL_NR_FROM_FILENAME'].replace('\d+',
-                                                       '%.2d' % ref_channel)
-        r = re.compile(r)
-        files = [f for f in files if re.search(r, f)]
+    for c in cycles:
+        project = Project(experiment_dir, config, subexperiment=c.name)
+        files = [f.filename for f in project.image_files
+                 if f.channel == ref_channel]  # only from reference channel
         files = natsorted(files)  # ensure correct order
         image_filenames.append(files)
 
@@ -87,7 +80,7 @@ if __name__ == '__main__':
         ref_cycle = args.ref_cycle - 1  # for zero-based indexing!
     else:
         # By default use last cycle as reference
-        ref_cycle = len(cycle_dirs) - 1  # for zero-based indexing!
+        ref_cycle = len(cycles) - 1  # for zero-based indexing!
 
     print '. reference cycle: %d' % (ref_cycle + 1)
 
@@ -96,7 +89,7 @@ if __name__ == '__main__':
     print '. batch-size: %d' % batch_size
     print '. number of batches: %d' % number_of_batches
 
-    output_dir = join(project_dir, 'lsf')
+    output_dir = join(experiment_dir, 'lsf')
     if not exists(output_dir):
         print '. create output directory: %s' % output_dir
         os.mkdir(output_dir)
@@ -145,7 +138,7 @@ if __name__ == '__main__':
         # Make timestamp
         ts = time()
         st = datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
-        lsf = os.path.join(project_dir, 'lsf', 'align_%.5d_%d-%d_%s.lsf' %
+        lsf = os.path.join(experiment_dir, 'lsf', 'align_%.5d_%d-%d_%s.lsf' %
                            (b, l, u, st))
 
         # Submit job

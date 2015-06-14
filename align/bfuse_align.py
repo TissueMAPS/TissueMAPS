@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 import os
 from os.path import join, exists
-import re
 import json
 import h5py
 import argparse
 from glob import glob
 from align import registration as reg
-import illuminati
 from image_toolbox import config
 from image_toolbox.util import load_config, check_config
-from illuminati.util import Project, Cycles
+from illuminati.util import Project, Experiment
 
 
 if __name__ == '__main__':
@@ -19,8 +17,8 @@ if __name__ == '__main__':
                                      shift between images \
                                      of different acquisition cycles.')
 
-    parser.add_argument('project_dir', default=os.getcwd(),
-                        help='project directory')
+    parser.add_argument('experiment_dir', default=os.getcwd(),
+                        help='experiment directory')
 
     parser.add_argument('--ref_cycle', dest='ref_cycle',
                         type=int, help='reference cycle number \
@@ -45,53 +43,48 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    project_dir = args.project_dir
+    experiment_dir = args.experiment_dir
     max_shift = args.max_shift
 
     if args.config:
         # Overwrite default "image_toolbox" configuration
-        config_filename = args.config
-        print '. get configuration from config file: %s' % config_filename
-        config = load_config(config_filename)
+        print '. get configuration from file: %s' % args.config
+        config = load_config(args.config)
         check_config(config)
 
-    # Initialize utility object with configuration settings
-    project = Project(config)
-    cycles = Cycles(config)
-
-    print '. get cycle directories'
-    cycle_dirs = cycles.get_cycle_directories(project_dir)
+    experiment = Experiment(experiment_dir, config)
+    cycles = experiment.subexperiments
 
     if args.ref_cycle:
         ref_cycle = args.ref_cycle
     else:
         # By default use last cycle as reference
-        ref_cycle = len(cycle_dirs)
+        ref_cycle = len(cycles)
 
     print '. reference cycle: %d' % ref_cycle
-    reference_cycle = [c for c in cycle_dirs if c.cycle_number == ref_cycle][0]
+    ref_cycle_name = [c.name for c in cycles if c.cycle == ref_cycle][0]
 
     if args.segm_dir:
         segm_dir = args.segm_dir
     else:
-        segm_dir = join('..', project.get_segmentation_dir(project_dir,
-                        reference_cycle))
+        project = Project(experiment_dir, config, subexperiment=ref_cycle_name)
+        segm_dir = project.segmentation_dir
 
     print '. define segmentation directory: %s' % segm_dir
 
     if args.segm_trunk:
         segm_trunk = args.segm_trunk
     else:
-        example_filename = project.get_image_files(project_dir,
-                                                   reference_cycle)[0]
-        exp_name = project.get_expname_from_filename(example_filename)
-        segm_trunk = config['FILENAME_FORMAT'].format(experiment_name=exp_name,
-                                                      cycle_number=ref_cycle)
+        exp_name = [c.experiment for c in cycles
+                    if c.cycle == ref_cycle_name][0]
+        segm_trunk = config['SUBEXPERIMENT_FILE_FORMAT'].format(
+                                                        experiment=exp_name,
+                                                        cycle=ref_cycle)
 
     print '. define segmentation trunk: %s' % segm_trunk
 
     # Get calculate shifts from output files
-    output_dir = join(project_dir, 'lsf', 'registration')
+    output_dir = join(experiment_dir, 'lsf', 'registration')
     print '. load shift calculations from %s' % output_dir
     output_files = glob(join(output_dir, '*.output'))
     descriptor = dict()
@@ -163,15 +156,15 @@ if __name__ == '__main__':
     no_shift_count = len(index)
 
     # Write shiftDescriptor.json files
-    for cycle_object in cycle_dirs:
-        aligncycles_dir = cycles.get_shift_dir(project_dir, cycle_object)
+    for c in cycles:
+        project = Project(experiment_dir, config, subexperiment=c.name)
+        aligncycles_dir = project.shift_dir
         if not exists(aligncycles_dir):
             os.mkdir(aligncycles_dir)
         descriptor_filename = join(aligncycles_dir, 'shiftDescriptor.json')
         print '. create shift descriptor file: %s' % descriptor_filename
 
-        cycle_num = cycle_object.cycle_number
-        cycle = 'cycle%d' % cycle_num
+        cycle = 'cycle%d' % c.cycle
         descriptor[cycle]['lowerOverlap'] = total_bottom_overlap
         descriptor[cycle]['upperOverlap'] = total_top_overlap
         descriptor[cycle]['rightOverlap'] = total_right_overlap
