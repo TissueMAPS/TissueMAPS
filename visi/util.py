@@ -12,7 +12,7 @@ def check_visi_config(config):
                 'ACQUISITION_LAYOUT'
     ]
 
-    valid_expressions = [
+    valid_keywords = [
                 'project',
                 'well',
                 'site',
@@ -42,11 +42,11 @@ def check_visi_config(config):
 
     # Ensure that expression in 'nomenclature_string' are also specified in
     # 'nomenclature_format'
-    expressions = re.findall(r'{(\w+).*?}', config['FILENAME_FORMAT'])
-    for exp in expressions:
-        if exp not in valid_expressions:
+    keywords = re.findall(r'{(\w+).*?}', config['FILENAME_FORMAT'])
+    for key in keywords:
+        if key not in valid_keywords:
             raise Exception('"{%s}" in "FILENAME_FORMAT" is not '
-                            'a valid expression.' % exp)
+                            'a valid expression.' % key)
 
     # Ensure that acquisition mode is supported
     if config['ACQUISITION_MODE'] not in supported_modes:

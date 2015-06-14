@@ -107,7 +107,7 @@ def guess_stitch_dims(max_position, layout):
     return stitch_dims
 
 
-def get_image_snake(stitch_dims, acquisition_layout, doZigZag):
+def get_image_snake(stitch_dims, doZigZag):
     '''
     The image snake defines the position of each image in the stitched
     image. Returns a list of 'row' and 'column' index of each 'site'.
@@ -212,12 +212,12 @@ class Stk2png(object):
         # Information on zstacks is handled separately
         info['zstack'] = [0 for x in xrange(len(self.input_files))]
         # The project name can be easily retrieved from .nd filename
-        project_name = re.search(r'(.*)\.nd$', self.nd_file).group(1)
-        info['project'] = [project_name for x in xrange(len(self.input_files))]
+        exp_name = re.search(r'(.*)\.nd$', self.nd_file).group(1)
+        info['project'] = [exp_name for x in xrange(len(self.input_files))]
 
         for stk_file in self.input_files:
             # Retrieve information for 'filter' from filename
-            r = re.compile('%s%s' % (project_name, pattern))
+            r = re.compile('%s%s' % (exp_name, pattern))
             matched = re.search(r, stk_file)
             if not matched:
                 raise Exception('"Filter" info could not be extracted from filenames')
@@ -260,8 +260,8 @@ class Stk2png(object):
 
     def get_image_position(self):
         '''
-        Get the position of images within the overall imaging area (e.g. well).
-        :mode:       string specifying the image acquisition order
+        Get the position of images within the continuous acquisition grid
+        (e.g. well).
         '''
         if self.acquistion_mode == 'ZigZagHorizontal':
             doZigZag = True
@@ -273,7 +273,7 @@ class Stk2png(object):
         sites = self.info['site']
         max_pos = max(sites)
         stitch_dims = guess_stitch_dims(max_pos, self.acquisition_layout)
-        snake = get_image_snake(stitch_dims, self.acquisition_layout, doZigZag)
+        snake = get_image_snake(stitch_dims, doZigZag)
         column = np.array([None for x in xrange(len(sites))])
         row = np.array([None for x in xrange(len(sites))])
         for i, s in enumerate(np.unique(sites)):
