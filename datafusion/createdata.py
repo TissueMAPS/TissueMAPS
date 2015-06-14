@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # encoding: utf-8
 
-from os.path import isdir, join, basename
+from os.path import isdir, join, basename, dirname
 from os import listdir
 import numpy as np
 import h5py
@@ -11,10 +11,9 @@ import re
 from copy import copy
 from image_toolbox import config
 from datafusion import config as df_config
-from illuminati.util import ImageSite, Cycles, Project
+from image_toolbox.image import Image
+from image_toolbox.experiment import Experiment
 from image_toolbox.util import load_config
-
-import ipdb as db
 
 
 '''
@@ -39,7 +38,7 @@ if len(np.unique(names)) < count:
     raise Exception('Names have to be unique.')
 
 
-def get_project_names(cycle_dir):
+def get_jtproject_names(cycle_dir):
     '''
     Get name of a Jterator project, i.e. a sub-folder in the experiment
     directory that contains a .pipe file.
@@ -49,9 +48,7 @@ def get_project_names(cycle_dir):
             and glob.glob(join(cycle_dir, f, '*.pipe'))]
 
 
-def image_name_from_joblist(project_dir, data_filename):
-    joblist_filename = glob.glob(join(project_dir, '*.jobs'))[0]
-    joblist = yaml.load(open(joblist_filename).read())
+def image_name_from_joblist(joblist, data_filename):
     job_id = int(re.search(r'_(\d+).data$', data_filename).group(1).lstrip('0'))
     return joblist[job_id].values()[0]
 
@@ -86,24 +83,24 @@ def get_data_files(project_dir):
     return sorted(glob.glob(join(project_dir, 'data', '*.data')))
 
 
-def build_ids(orig_obj_ids, row, col):
-    # TODO: generate final, global cell IDs
-    return ['%s-%s-%s' % (row, col, int(i)) for i in orig_obj_ids]
-
-
 def merge_data(data_files, names, as_int=False):
     '''
     Merge Jterator data of one experiment cycle stored in several HDF5 files.
 
     Parameters:
-        :data_files:        List of strings. Path to Jterator data files.
-        :names:             List of strings. Name of a dataset in a HDF5 file.
-        :as_int:            Boolean. Convert to integer datatype.
+    :data_files:        Paths to Jterator data files : list.
+    :names:             Names of a dataset in a HDF5 file : list.
+    :as_int:            Convert to integer datatype : bool?
 
-    Returns:
-        data (numpy matrix) of shape nxp,
-        where n is the number of objects and p the number of features
+    :returns:           Dataset of shape nxp,
+                        where n is the number of objects
+                        and p the number of features : ndarray.
     '''
+    joblist_filename = glob.glob(join(dirname(data_files[0]), '..',
+                                 '*.jobs'))[0]
+    joblist = yaml.load(open(joblist_filename).read())
+    ids = list()
+    feature_names = list()
     for job_ix, filename in enumerate(data_files):
 
         f = h5py.File(filename, 'r')
@@ -115,37 +112,86 @@ def merge_data(data_files, names, as_int=False):
             if name not in f.keys():
                 raise Exception('Dataset "%s" does not exist in file "%s'
                                 % (name, filename))
-
-            if name == 'OriginalObjectIds':
+            ids = re.search(r'.*ObjectIds.*', name, re.IGNORECASE)
+            if ids:
                 # Get positional information from filename
-                im_file = image_name_from_joblist(project_dir, filename)
-                coords = ImageSite.from_filename(im_file, config)
+                im_file = image_name_from_joblist(joblist, filename)
+                image = Image(im_file, config)
+                (row, column) = image.coordinates  # returns 0-based indices
+                site = image.site
                 # Translate site specific ids to global ids
                 nitems = len(f.values()[0])
-                feat = build_ids(orig_obj_ids=f['OriginalObjectIds'][:nitems],
-                                 row=coords.row_nr, col=coords.col_nr)
-                feat = np.array(feat).astype(np.string_)
+                feat = np.vstack((np.repeat(site, nitems),
+                                 np.repeat(row, nitems),
+                                 np.repeat(column, nitems),
+                                 f[ids.group(0)][:nitems]))
+                name = ['ID_site', 'ID_row', 'ID_column', 'ID_object']
             else:
                 feat = f[name][()]
+                name = [name]
             feat = np.matrix(feat)
             if feat.shape[0] < feat.shape[1]:
-                feat = feat.T
+                feat = feat.H
             if feat_ix == 0:
                 feature = feat
             else:
                 feature = np.hstack((feature, feat))
+            if job_ix == 0:
+                feature_names += name
 
         f.close()
 
         if job_ix == 0:
-            data = feature
+            features = feature
         else:
-            data = np.vstack((data, feature))
+            features = np.vstack((features, feature))
+
+    feature_names = np.array(feature_names, dtype=np.string_)
 
     if as_int:
-        return data.astype(int)
+        return (features.astype(int), feature_names)
     else:
-        return data
+        return (features, feature_names)
+
+
+def build_global_ids(ids, id_names):
+    '''
+    Build global, continuous ids from local (image specific) ids in combination
+    with row and column ids (position of the image in the acquisition "snake").
+
+    Parameters:
+    :ids:               numpy matrix with dimensions nx3, where n is the number
+                        of objects
+    :id_names:          numpy array of strings specifying the 3 ids:
+                        "ID_row", "ID_column", "ID_object"
+
+    Returns:
+        numpy array with dimensions 1xn
+    '''
+    global_ids = list()
+    ix_row = np.where(id_names == 'ID_row')[0]
+    ix_col = np.where(id_names == 'ID_column')[0]
+    ix_local = np.where(id_names == 'ID_object')[0]
+    # avoid 'matrix' !!!
+    rows = np.squeeze(np.asarray(ids[:, ix_row]))
+    columns = np.squeeze(np.asarray(ids[:, ix_col]))
+    n_row = np.max(ids[:, ix_row])
+    n_col = np.max(ids[:, ix_col])
+    global_ids = np.squeeze(np.asarray(ids[:, ix_local])).copy()
+
+    offset = 0
+    for r in range(1, n_row+1):
+        for c in range(1, n_col+1):
+            # Get the indices of the rows that belong to the site with row r
+            # and column c
+            ix = np.where(np.logical_and(rows == r, columns == c))[0]
+            local_ids = np.squeeze(np.asarray(ids[ix, ix_local]))
+            # Add a constant to the local ids and save them in the vector
+            # global_ids
+            global_ids[ix] = local_ids + offset
+            offset = np.max(local_ids + offset)
+
+    return global_ids
 
 
 if __name__ == '__main__':
@@ -175,10 +221,10 @@ if __name__ == '__main__':
 
     segmentation_project_dir = join(exp_dir,
                                     df_config['SEGMENTATION_PROJECT'].format(
-                                            experiment_name=basename(exp_dir)))
+                                            experiment=basename(exp_dir)))
 
     if not exp_dir:
-        raise Exception('Experiment directory "%s" does not exist.'
+        raise Exception('Project directory "%s" does not exist.'
                         % exp_dir)
 
     if not output_dir:
@@ -186,27 +232,26 @@ if __name__ == '__main__':
 
     output_filename = join(output_dir, 'data.h5')
 
-    cycles = Cycles(config)
-    cycles = cycles.get_cycle_directories(exp_dir)
+    cycles = Experiment(exp_dir, config).subexperiments
 
-    data_header = list()
-    for i, cycle in enumerate(cycles):
+    data_header = np.array(list(), dtype=np.string_)
+    for i, c in enumerate(cycles):
 
         print('. Extracting features of cycle #%d: %s' %
-              (cycle.cycle_number, cycle.cycle_name))
+              (c.cycle, c.name))
 
-        cycle_dir = join(exp_dir, cycle.cycle_name)
-        project_names = get_project_names(cycle_dir)
+        cycle_dir = join(exp_dir, c.name)
+        project_names = get_jtproject_names(cycle_dir)
 
         for project_name in project_names:
 
             project_dir = join(cycle_dir, project_name)
 
             if project_dir == segmentation_project_dir:
-                # data of segmentation project is handles separately
+                # data of segmentation project is handled separately
                 continue
 
-            print '.. Merging data of project "%s"' % project_name
+            print '.. Merging data of Jterator project "%s"' % project_name
 
             data_files = get_data_files(project_dir)
 
@@ -218,7 +263,8 @@ if __name__ == '__main__':
                 raise Exception('Files must contain a dataset called "%s"' %
                                 'OriginalObjectIds')
 
-            features = merge_data(data_files, names=feature_names)
+            (features, feature_names) = merge_data(data_files,
+                                                   names=feature_names)
 
             if features.shape[1] != len(feature_names):
                 raise Exception('Number of features in dataset and length of '
@@ -230,20 +276,25 @@ if __name__ == '__main__':
                 data = np.hstack((data, features))
 
             feature_names = rename_features(feature_names,
-                                            header_mapper[cycle.cycle_number])
-            # convert to safe string format for HDF5
-            feature_names = np.array(map(np.string_, feature_names))
-            data_header += feature_names
+                                            header_mapper[c.cycle])
+            # # convert to safe string format for HDF5
+            # feature_names = np.array(map(np.string_, feature_names))
+            data_header = np.hstack((data_header, feature_names))
 
     print '. Combining data from different cycles'
     (data_header, unique_ix) = np.unique(data_header, return_index=True)
     # TODO: sanity checks
     data = data[:, unique_ix]
 
-    ids_ix = np.where([feat == 'OriginalObjectIds' for feat in feature_names])
-    ids = data[:, ids_ix]
-    np.delete(data, ids_ix, axis=1)
-    data_header.remove('OriginalObjectIds')
+    # separate object ids from dataset
+    print '. Building global object ids'
+    ids_ix = np.where(np.array([re.search('ID', i) is not None
+                                for i in data_header]))[0]
+    ids = data[:, ids_ix].astype(int)
+    ids_header = data_header[ids_ix]
+    data = np.delete(data, ids_ix, axis=1)
+    data_header = np.delete(data_header, ids_ix)
+    global_ids = build_global_ids(ids, ids_header)
 
     print '. Separate features belonging to different objects'
     objects = [re.match(r'^([^_]+)', name).group(1) for name in data_header]
@@ -259,23 +310,26 @@ if __name__ == '__main__':
         obj_ix = object_ix == i
         obj_name = obj.lower()  # use lower case consistently
 
-        f.create_dataset('/%s/ids' % obj_name, data=ids)
+        location = 'objects/%s/original-ids' % obj_name
+        f.create_dataset(location, data=ids)
+        f[location].attrs.__setitem__('names', ids_header)
 
-        data_files = get_data_files(segmentation_project_dir)
+        f.create_dataset('objects/%s/ids' % obj_name, data=global_ids)
 
-        centroids = merge_data(data_files, names=['%s_Centroids' % obj])
-        for c in centroids:
-            ids[c]
-        # TODO: centroids have to be global!!! illuminati.segment.compute_cell_centroids()
-        location = '/%s/centroids' % obj_name
-        f.create_dataset(location, data=centroids)
-        f[location].attrs.__setitem__('names', np.array(['y', 'x']))
+        # data_files = get_data_files(segmentation_project_dir)
 
-        border = merge_data(data_files, names=['%s_BorderIx' % obj],
-                            as_int=True)
-        f.create_dataset('/%s/border' % obj_name, data=border)
+        # centroids = merge_data(data_files, names=['%s_Centroids' % obj])
+        # # TODO: centroids have to be global!!! 
+        # # illuminati.segment.compute_cell_centroids()
+        # location = 'objects/%s/centroids' % obj_name
+        # f.create_dataset(location, data=centroids)
+        # f[location].attrs.__setitem__('names', np.array(['y', 'x']))
 
-        location = '/%s/features' % obj_name
+        # border = merge_data(data_files, names=['%s_BorderIx' % obj],
+        #                     as_int=True)
+        # f.create_dataset('objects/%s/border' % obj_name, data=border)
+
+        location = 'objects/%s/features' % obj_name
         f.create_dataset(location, data=data[:, obj_ix])
         # Add the 'data_header' as an attribute
         f[location].attrs.__setitem__('names', data_header[obj_ix])
