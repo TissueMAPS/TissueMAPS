@@ -9,7 +9,8 @@ import argparse
 import yaml
 from natsort import natsorted
 from subprocess32 import call
-from illuminati.util import Project, Experiment
+from image_toolbox.experiment import Experiment
+from image_toolbox.project import Project
 from image_toolbox import config
 from image_toolbox.util import load_config, check_config
 
