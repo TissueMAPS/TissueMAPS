@@ -80,7 +80,7 @@ class Image(object):
         if self._dimensions is None:
             if self.vips:
                 # TODO: check Y and X used correctly
-                self._dimensions = (self._image.Ysize(), self._image.Xsize())
+                self._dimensions = (self._image.width, self._image.height)
             else:
                 self._dimensions = self._image.shape
         return self._dimensions
