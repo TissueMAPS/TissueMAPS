@@ -11,6 +11,49 @@ from image_toolbox.util import load_config, check_config
 from illuminati.util import Project, Experiment
 
 
+def combine_outputs(output_files, cycle_names):
+    descriptor = list()
+    for i, key in enumerate(cycle_names):
+        descriptor[i] = dict()
+        descriptor[i]['xShift'] = []
+        descriptor[i]['yShift'] = []
+        descriptor[i]['fileName'] = []
+    # Combine output from different output files
+    for output in output_files:
+        f = h5py.File(output, 'r')
+        for i, key in enumerate(cycle_names):
+            descriptor[i]['fileName'].extend(f[key]['reg_file'][()])
+            descriptor[i]['xShift'].extend(f[key]['x_shift'][()])
+            descriptor[i]['yShift'].extend(f[key]['y_shift'][()])
+        f.close()
+    return descriptor
+
+
+def calculate_global_overlap(descriptor):
+    top_overlap = []
+    bottom_overlap = []
+    right_overlap = []
+    left_overlap = []
+    number_of_sites = len(descriptor[0]['xShift'])
+    print '. number of sites: %d' % number_of_sites
+    for site in xrange(number_of_sites):
+        x_shift = [c['xShift'][site] for c in descriptor.values()]
+        y_shift = [c['yShift'][site] for c in descriptor.values()]
+        (top, bottom, right, left) = reg.calculate_overlap(x_shift, y_shift)
+        top_overlap.append(top)
+        bottom_overlap.append(bottom)
+        right_overlap.append(right)
+        left_overlap.append(left)
+
+    # Calculate total overlap across all sites
+    top_overlap = max(map(abs, top_overlap))
+    bottom_overlap = max(map(abs, bottom_overlap))
+    right_overlap = max(map(abs, right_overlap))
+    left_overlap = max(map(abs, left_overlap))
+
+    return (top_overlap, bottom_overlap, right_overlap, left_overlap)
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('Fuse jobs for the calculation of \
@@ -86,63 +129,34 @@ if __name__ == '__main__':
     # Get calculate shifts from output files
     output_dir = join(experiment_dir, 'lsf', 'registration')
     print '. load shift calculations from %s' % output_dir
+
+
     output_files = glob(join(output_dir, '*.output'))
-    descriptor = dict()
     # Preallocate final output
     f = h5py.File(output_files[0], 'r')
-    cycles_names = f.keys()
+    cycle_names = f.keys()
     f.close()
-    for cycle in cycles_names:
-        descriptor[cycle] = dict()
-        descriptor[cycle]['xShift'] = []
-        descriptor[cycle]['yShift'] = []
-        descriptor[cycle]['fileName'] = []
-    # Combine output from different output files
-    for output in output_files:
-        f = h5py.File(output, 'r')
-        for cycle in cycles_names:
-            descriptor[cycle]['fileName'].extend(f[cycle]['reg_file'][()])
-            descriptor[cycle]['xShift'].extend(f[cycle]['x_shift'][()])
-            descriptor[cycle]['yShift'].extend(f[cycle]['y_shift'][()])
-        f.close()
+
+    descriptor = combine_outputs(output_dir, cycle_names)
 
     # Calculate overlap at each site
     print '. calculate overlap between sites'
-    top_overlap = []
-    bottom_overlap = []
-    right_overlap = []
-    left_overlap = []
-    number_of_sites = len(descriptor[cycles_names[0]]['xShift'])
-    print '. number of sites: %d' % number_of_sites
-    for site in xrange(number_of_sites):
-        x_shift = [c['xShift'][site] for c in descriptor.values()]
-        y_shift = [c['yShift'][site] for c in descriptor.values()]
-        (top, bottom, right, left) = reg.calculate_overlap(x_shift, y_shift)
-        top_overlap.append(top)
-        bottom_overlap.append(bottom)
-        right_overlap.append(right)
-        left_overlap.append(left)
-
-    # Get total overlap across all sites
-    total_top_overlap = max(map(abs, top_overlap))
-    total_bottom_overlap = max(map(abs, bottom_overlap))
-    total_right_overlap = max(map(abs, right_overlap))
-    total_left_overlap = max(map(abs, left_overlap))
+    (top_ol, bottom_ol, right_ol, left_ol) = calculate_global_overlap(descriptor)
 
     # Limit total overlap by maximally tolerated shift
-    if total_top_overlap > max_shift:
-        total_top_overlap = max_shift
-    if total_bottom_overlap > max_shift:
-        total_bottom_overlap = max_shift
-    if total_right_overlap > max_shift:
-        total_right_overlap = max_shift
-    if total_left_overlap > max_shift:
-        total_left_overlap = max_shift
+    if top_ol > max_shift:
+        top_ol = max_shift
+    if bottom_ol > max_shift:
+        bottom_ol = max_shift
+    if right_ol > max_shift:
+        right_ol = max_shift
+    if left_ol > max_shift:
+        left_ol = max_shift
 
-    # Get indices of sites where shift exceeds maximally tolerated shift
+    # Determine indices of sites where shift exceeds maximally tolerated shift
     # in either direction
     index = []
-    for cycle in cycles_names:
+    for cycle in cycle_names:
         index.extend([descriptor[cycle]['xShift'].index(s)
                      for s in descriptor[cycle]['xShift']
                      if abs(s) > max_shift])
@@ -156,26 +170,25 @@ if __name__ == '__main__':
     no_shift_count = len(index)
 
     # Write shiftDescriptor.json files
-    for c in cycles:
-        project = Project(experiment_dir, config, subexperiment=c.name)
-        aligncycles_dir = project.shift_dir
+    for i, cycle_name in enumerate(cycle_names):
+        current_cycle = [c for c in cycles if c.name == cycle_name][0]
+        aligncycles_dir = current_cycle.project.shift_dir
         if not exists(aligncycles_dir):
             os.mkdir(aligncycles_dir)
-        descriptor_filename = join(aligncycles_dir, 'shiftDescriptor.json')
+        descriptor_filename = current_cycle.project.shift_file
         print '. create shift descriptor file: %s' % descriptor_filename
 
-        cycle = 'cycle%d' % c.cycle
-        descriptor[cycle]['lowerOverlap'] = total_bottom_overlap
-        descriptor[cycle]['upperOverlap'] = total_top_overlap
-        descriptor[cycle]['rightOverlap'] = total_right_overlap
-        descriptor[cycle]['leftOverlap'] = total_left_overlap
-        descriptor[cycle]['maxShift'] = max_shift
-        descriptor[cycle]['noShiftIndex'] = no_shift_index
-        descriptor[cycle]['noShiftCount'] = no_shift_count
-        descriptor[cycle]['SegmentationDirectory'] = segm_dir
-        descriptor[cycle]['SegmentationFileNameTrunk'] = segm_trunk
-        descriptor[cycle]['cycleNum'] = cycle_num
+        descriptor[i]['lowerOverlap'] = bottom_ol
+        descriptor[i]['upperOverlap'] = top_ol
+        descriptor[i]['rightOverlap'] = right_ol
+        descriptor[i]['leftOverlap'] = left_ol
+        descriptor[i]['maxShift'] = max_shift
+        descriptor[i]['noShiftIndex'] = no_shift_index
+        descriptor[i]['noShiftCount'] = no_shift_count
+        descriptor[i]['SegmentationDirectory'] = segm_dir
+        descriptor[i]['SegmentationFileNameTrunk'] = segm_trunk
+        descriptor[i]['cycleNum'] = current_cycle.cycle
 
         with open(descriptor_filename, 'w') as outfile:
-            outfile.write(json.dumps(descriptor[cycle],
+            outfile.write(json.dumps(descriptor[i],
                           indent=4, sort_keys=True, separators=(',', ': ')))
