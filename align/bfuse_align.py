@@ -8,7 +8,8 @@ from glob import glob
 from align import registration as reg
 from image_toolbox import config
 from image_toolbox.util import load_config, check_config
-from illuminati.util import Project, Experiment
+from image_toolbox.project import Project
+from image_toolbox.experiment import Experiment
 
 
 if __name__ == '__main__':
@@ -76,7 +77,7 @@ if __name__ == '__main__':
         segm_trunk = args.segm_trunk
     else:
         exp_name = [c.experiment for c in cycles
-                    if c.cycle == ref_cycle_name][0]
+                    if c.name == ref_cycle_name][0]
         segm_trunk = config['SUBEXPERIMENT_FILE_FORMAT'].format(
                                                         experiment=exp_name,
                                                         cycle=ref_cycle)
@@ -174,7 +175,7 @@ if __name__ == '__main__':
         descriptor[cycle]['noShiftCount'] = no_shift_count
         descriptor[cycle]['SegmentationDirectory'] = segm_dir
         descriptor[cycle]['SegmentationFileNameTrunk'] = segm_trunk
-        descriptor[cycle]['cycleNum'] = cycle_num
+        descriptor[cycle]['cycleNum'] = c.cycle
 
         with open(descriptor_filename, 'w') as outfile:
             outfile.write(json.dumps(descriptor[cycle],
