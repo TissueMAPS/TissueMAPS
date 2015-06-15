@@ -66,7 +66,7 @@ class Project(object):
                 raise Exception('No image files found in "%s"'
                                 % self.image_dir)
             self._image_files = [IntensityImage(f, self.cfg) for f in files]
-        return self.image_files
+        return self._image_files
 
     @property
     def segmentation_dir(self):  # def get_segmentation_dir(self):

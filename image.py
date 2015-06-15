@@ -2,7 +2,10 @@ import re
 from os.path import join, dirname, realpath, exists, isabs, abspath, basename
 import mahotas as mh
 import numpy as np
-from gi.repository import Vips
+try:
+    from gi.repository import Vips
+except:
+    print 'Could not import Vips!'
 
 
 SUPPORTED_IMAGE_FILES = ['png', 'jpg', 'tiff', 'jpeg']
