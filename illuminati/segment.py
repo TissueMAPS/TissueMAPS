@@ -22,32 +22,27 @@ import re
 from gi.repository import Vips
 
 
-def remove_border_cells_vips(im, is_source_uint16=True):
+def remove_nondisplay_objects(im):
     """
-    Given a site image, set all pixels with
-    ids belonging to border cells to zero.
+    Remove all objects form mask image that should not be displayed, i.e.
+    make the corresponding pixel values black.
 
-    :im: a VIPS image that represents the site.
-    :is_source_uint16: a boolean flag indicating if the source band format
-                       is uin16, otherwise its taken as uint8.
-    :returns: a new VIPS image with border cell entries set to 0.
+    Objects that should be not be displayed and thus removed include:
+        - Border objects, i.e. objects whose parent object has pixels along
+          the border of an image.
+          These objects need to be removed because they extend over image
+          borders which leads to artifacts upon parallel analysis of
+          individual images.
+        - Objects not present in the dataset.
+          This may occur when images are aligned (shifted and cropped),
+          which can lead to loss of objects, i.e. objects are no longer present
+          on the cropped image.
 
+    :im:        Vips image where each pixel value represent the object id, i.e.
+                indicates to which object the pixel belongs.
+    :object:    Name of the object : str.
+    :data:      Dataset as open HDF5 stream object.
     """
-    # Extract the edges on each side of the image
-    left = im.extract_area(0, 0, 1, im.height)
-    right = im.extract_area(im.width-1, 0, 1, im.height)
-    top = im.extract_area(0, 0, im.width, 1)
-    bottom = im.extract_area(0, im.height-1, im.width, 1)
-
-    for border in [left, right, top, bottom]:
-        # Create a histogram, i.e. a 1 x 2^16
-        hist = border.hist_find()
-        id_lut = Vips.Image.identity(ushort=is_source_uint16)
-        is_nonzero = hist > 0
-        lut = Vips.Image.ifthenelse(is_nonzero, 0, id_lut)
-        im = im.maplut(lut)
-
-    return im
 
 
 def local_to_global_ids_vips(im, offset_id):
@@ -80,13 +75,20 @@ def local_to_global_ids_vips(im, offset_id):
     return rgb, max_val
 
 
-def remove_border_cells(site_matrix):
+def create_id_lookup_matrices(sitemat, offset):
+    nonzero = sitemat != 0
+    mat = sitemat.astype('uint32')
+    mat[nonzero] = mat[nonzero] + offset
+    return mat, np.max(mat)
+
+
+def remove_border_objects(site_matrix):
     """
     Given a matrix of a site image, set all pixels with
-    ids belonging to border cells to zero.
+    ids belonging to border objects to zero.
 
     :site_matrix: a numpy array of the image matrix.
-    :returns: a new numpy array with border cell entries set to 0.
+    :returns: a new numpy array with border objects entries set to 0.
 
     """
     edges = [np.unique(site_matrix[0, :]),   # first row
@@ -95,18 +97,75 @@ def remove_border_cells(site_matrix):
              np.unique(site_matrix[:, -1])]  # last col
 
     # Count only unique ids and remove 0 since it signals 'empty space'
-    bordercell_ids = list(reduce(set.union, map(set, edges)).difference({0}))
+    border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
     mat = site_matrix.copy()  # Copy since we don't update in place
-    is_border_cell = np.in1d(mat, bordercell_ids).reshape(mat.shape)
+    is_border_cell = np.in1d(mat, border_ids).reshape(mat.shape)
     mat[is_border_cell] = 0
     return mat
 
 
-def create_id_lookup_matrices(sitemat, offset):
-    nonzero = sitemat != 0
-    mat = sitemat.astype('uint32')
-    mat[nonzero] = mat[nonzero] + offset
-    return mat, np.max(mat)
+def remove_border_objects_vips(im, is_source_uint16=True):
+    """
+    Given a site image, set all pixels with
+    ids belonging to border objects to zero.
+
+    :im: a VIPS image that represents the site.
+    :is_source_uint16: a boolean flag indicating if the source band format
+                       is uin16, otherwise its taken as uint8.
+    :returns: a new VIPS image with border object entries set to 0.
+
+    """
+    # Extract the edges on each side of the image
+    left = im.extract_area(0, 0, 1, im.height)
+    right = im.extract_area(im.width-1, 0, 1, im.height)
+    top = im.extract_area(0, 0, im.width, 1)
+    bottom = im.extract_area(0, im.height-1, im.width, 1)
+
+    for border in [left, right, top, bottom]:
+        # Create a histogram, i.e. a 1 x 2^16
+        hist = border.hist_find()
+        id_lut = Vips.Image.identity(ushort=is_source_uint16)
+        is_nonzero = hist > 0
+        lut = Vips.Image.ifthenelse(is_nonzero, 0, id_lut)
+        im = im.maplut(lut)
+
+    return im
+
+
+def remove_objects(site_matrix, ids):
+    """
+    Given a matrix of a site image, set all pixels whose values
+    are in "ids" to zero.
+
+    :site_matrix: a numpy array of the image matrix.
+    :ids: a list of unique object ids : [int].
+    :returns: a new numpy array with object entries in ids set to 0.
+
+    """
+    mat = site_matrix.copy()  # Copy since we don't update in place
+    remove_ix = np.in1d(mat, ids).reshape(mat.shape)
+    mat[remove_ix] = 0
+    return mat
+
+
+def remove_objects_vips(im, ids, is_source_uint16=True):
+    """
+    Given a matrix of a site image, set all pixels whose values
+    are in "ids" to zero.
+
+    :im: a VIPS image that represents the site.
+    :ids: a list of unique object ids : [int].
+    :is_source_uint16: a boolean flag indicating if the source band format
+                       is uin16, otherwise its taken as uint8.
+    :returns: a new VIPS image with object entries in ids set to 0.
+
+    """
+    id_lut = Vips.Image.identity(ushort=is_source_uint16)
+    for i in ids:
+        id_lut = (id_lut == i).ifthenelse(0, id_lut)
+    im = im.maplut(id_lut)
+
+    return im
 
 
 def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
@@ -223,6 +282,49 @@ def save_outline_polygons(outlines, filename):
         f.close()
 
 
+def outlines(labels, keep_ids=False):
+    """
+    Given a label matrix, return a matrix of the outlines of the labeled objects.
+    If `keep_ids` is True, the outlines will still consist of their cell's id, otherwise
+    all outlines will be 255.
+    Note that in the case of keeping the ids, the output matrix will have the original bit depth!
+
+    If a pixel is not zero and has at least one neighbor with a different
+    value, then it is part of the outline.
+
+    Taken from the BSD-licensed file:
+    https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/cpmath/outline.py
+
+    """
+
+    lr_different = labels[1:, :] != labels[:-1, :]
+    ud_different = labels[:, 1:] != labels[:, :-1]
+    d1_different = labels[1:, 1:] != labels[:-1, :-1]
+    d2_different = labels[1:, :-1] != labels[:-1, 1:]
+    different = np.zeros(labels.shape, bool)
+    different[1:, :][lr_different]  = True
+    different[:-1, :][lr_different] = True
+    different[:, 1:][ud_different]  = True
+    different[:, :-1][ud_different] = True
+    different[1:, 1:][d1_different] = True
+    different[:-1, :-1][d1_different] = True
+    different[1:, :-1][d2_different] = True
+    different[:-1, 1:][d2_different] = True
+
+    different[0, :] = False
+    different[:, 0] = False
+    different[-1, :] = False
+    different[:, -1] = False
+
+    if keep_ids:
+        return different * labels
+    else:
+        output = np.zeros(labels.shape, np.uint8)
+        output[different] = 255
+
+        return output
+
+
 def outlines_vips(im):
     """
     Given a label matrix, return a matrix of the outlines of the labeled objects.
@@ -291,49 +393,6 @@ def outlines_vips(im):
     # OR all the images
     images_disj = reduce(op.or_, results)
     return images_disj
-
-
-def outlines(labels, keep_ids=False):
-    """
-    Given a label matrix, return a matrix of the outlines of the labeled objects.
-    If `keep_ids` is True, the outlines will still consist of their cell's id, otherwise
-    all outlines will be 255.
-    Note that in the case of keeping the ids, the output matrix will have the original bit depth!
-
-    If a pixel is not zero and has at least one neighbor with a different
-    value, then it is part of the outline.
-
-    Taken from the BSD-licensed file:
-    https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/cpmath/outline.py
-
-    """
-
-    lr_different = labels[1:, :] != labels[:-1, :]
-    ud_different = labels[:, 1:] != labels[:, :-1]
-    d1_different = labels[1:, 1:] != labels[:-1, :-1]
-    d2_different = labels[1:, :-1] != labels[:-1, 1:]
-    different = np.zeros(labels.shape, bool)
-    different[1:, :][lr_different]  = True
-    different[:-1, :][lr_different] = True
-    different[:, 1:][ud_different]  = True
-    different[:, :-1][ud_different] = True
-    different[1:, 1:][d1_different] = True
-    different[:-1, :-1][d1_different] = True
-    different[1:, :-1][d2_different] = True
-    different[:-1, 1:][d2_different] = True
-
-    different[0, :] = False
-    different[:, 0] = False
-    different[-1, :] = False
-    different[:, -1] = False
-
-    if keep_ids:
-        return different * labels
-    else:
-        output = np.zeros(labels.shape, np.uint8)
-        output[different] = 255
-
-        return output
 
 
 def gather_siteinfo(file_grid):
