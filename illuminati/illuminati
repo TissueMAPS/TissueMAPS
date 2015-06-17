@@ -1,11 +1,13 @@
 #! /usr/bin/env python
 # encoding: utf-8
 import os
-from os.path import exists, join, basename, splitext
+from os.path import exists, join
 import sys
+import re
 import copy
+import h5py
 import random
-from gi.repository import Vips
+import pandas as pd
 import numpy as np
 import pyramidize
 import illumcorrect
@@ -16,7 +18,6 @@ from image_toolbox import config
 from image_toolbox.util import load_config, check_config
 from image_toolbox.image import is_image_file
 from image_toolbox.experiment import Experiment
-from image_toolbox.project import Project
 from image_toolbox.image import IntensityImage, MaskImage
 from illuminati.illumcorrect import np_array_to_vips_image
 
@@ -63,7 +64,7 @@ Some example use cases:
 
 """
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 
 logo = u'''
@@ -74,82 +75,157 @@ logo = u'''
 '''
 
 
-# TODO: define functions that can be called via the command line interface and
-# and the user interface (server)
+def build_image_grid(file_grid):
+    image_grid = copy.deepcopy(file_grid)
 
-def load_images(file_grid):
-    vips_image_grid = copy.deepcopy(file_grid)
-
-    max_id_upto_now = 0
     for i in range(len(file_grid)):
         for j in range(len(file_grid[0])):
 
             im = file_grid[i][j].image
 
+            image_grid[i][j] = im
+
+    return image_grid
+
+
+def build_mask_grid(file_grid, data_file, mask, make_global_ids=False):
+
+    mask_grid = copy.deepcopy(file_grid)
+
+    f = h5py.File(data_file, 'r')
+
+    # NOTE: Masks are used in TissueMAPS to visualize the position of
+    # segmented objects in the image. In addition, they can be selected
+    # (i.e. one can click on them) and use them with analysis tools.
+    # Here we remove unwanted objects from the masks so that these objects
+    # will not be displayed and cannot be selected. Removal of objects is based
+    # on the parent objects (e.g. cells) and all corresponding children objects
+    # (e.g. nuclei) will be removed as well.
+
+    parent_obj = f['parent'][()].lower()  # lower case!
+    parent = pd.DataFrame(f['objects/%s/original-ids' % parent_obj][()])
+    parent.columns = f['objects/%s/original-ids' % parent_obj].attrs['names'][()]
+    parent['IX_border'] = f['objects/%s/border' % parent_obj][()]
+
+    current_obj = file_grid[0][0].objects.lower()
+    current = pd.DataFrame(f['objects/%s/original-ids' % current_obj][()])
+    current.columns = f['objects/%s/original-ids' % current_obj].attrs['names'][()]
+    current['ID_global'] = f['objects/%s/ids' % current_obj][()]
+
+    if current_obj != parent_obj:
+        current['ID_parent'] = f['objects/%s/parent-ids' % current_obj][()]
+    else:
+        current['ID_parent'] = current['ID_object']
+
+    max_id = 0
+    for i in range(len(file_grid)):
+        for j in range(len(file_grid[0])):
+
+            im = file_grid[i][j].image
+            site_id = file_grid[i][j].site
+
+            # Which of the current objects are not in the dataset?
+            # (Tracked via their parent object ids)
+            ids_image = file_grid[i][j].ids
+            ids_data = np.unique(current['ID_parent'][current.ID_site == site_id])
+            ids_nodata = [o for o in ids_data if o not in ids_image]
+
+            # Which parent objects lie at the border of the image?
+            ids_border = parent['ID_object'][(parent.IX_border > 0) &
+                                             (parent.ID_site == site_id)]
+            ids_border = ids_border.tolist()
+
+            # Combine all object ids that should not be displayed and thus
+            # removed from the images for the creation of masks
+            ids_nodisplay = ids_border + ids_nodata
+
             # Should the ids be computed as RGB triples?
             # If yes, don't remove border cells and just create the RGB images!
-            if args.make_global_ids:
+            if make_global_ids:
+                # These masks will be used to visualize results of tools on 
+                # the objects. Keep all objects for these masks!
                 # Should the result be a RGB area mask or RGB outline mask
-                if args.area_mask:
-                    im, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                    max_id_upto_now += 1
-                if args.outline_mask:
-                    ids, max_id_upto_now = segment.local_to_global_ids_vips(im, max_id_upto_now)
-                    max_id_upto_now += 1
+                if mask == 'area':
+                    im, max_id = segment.local_to_global_ids_vips(im, max_id)
+                    max_id += 1
+                if mask == 'outline':
+                    ids, max_id = segment.local_to_global_ids_vips(im, max_id)
+                    max_id += 1
                     outline = segment.outlines_vips(im)
-                    im = outline.ifthenelse(ids, 0) # Make everything except the outline black
+                    # Make everything except the outline black
+                    im = outline.ifthenelse(ids, 0)
             else:
-                if args.area_mask:
-                    im = segment.remove_border_cells_vips(im)
-                if args.outline_mask:
-                    im = segment.remove_border_cells_vips(im)
+                # These masks will be used for the display and selection of
+                # objects. Remove objects that should not be displayed
+                # (and will thus not be selectable).
+                if mask == 'area':
+                    im = segment.remove_objects_vips(im, ids_nodisplay)
+                if mask == 'outline':
+                    im = segment.remove_objects_vips(im, ids_nodisplay)
                     im = segment.outlines_vips(im)
 
-            vips_image_grid[i][j] = im
+            mask_grid[i][j] = im
 
-    return vips_image_grid
+    f.close()
+
+    return mask_grid
 
 
-def apply_illumination_correction(vips_image_grid, mean_image, std_image):
-    for i in range(len(vips_image_grid)):
-        for j in range(len(vips_image_grid[0])):
-            img = vips_image_grid[i][j]
-            vips_image_grid[i][j] = \
+def create_and_save_lookup_tables(file_grid):
+    max_id = 0
+    for i in range(len(file_grid)):
+        for j in range(len(file_grid[0])):
+            print '    row: %d - col: %d' % (i, j)
+
+            im = file_grid[i][j].image
+
+            im = segment.remove_border_cells_vips(im)
+            im, max_id = segment.create_id_lookup_matrices(im, max_id)
+            fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
+                        rownr=(i+1), colnr=(j+1))
+            fname_abs = join(layer_dir, fname)
+            print '    Saving file: ' + fname_abs
+            with open(fname_abs, 'w') as f:
+                np.save(f, im)
+
+
+def apply_illumination_correction(img_grid, mean_image, std_image):
+    for i in range(len(img_grid)):
+        for j in range(len(img_grid[0])):
+            img = img_grid[i][j]
+            img_grid[i][j] = \
                 illumcorrect.illum_correction_vips(img, mean_image, std_image)
 
-    return vips_image_grid
+    return img_grid
 
 
-def apply_shift(stitched_img, cycles):
-    shift_descriptors = [c.project.shift_file for c in cycles]
-    cycle_nrs = [c.cycle for c in cycles]
-    current_cycle_idx = cycle_nrs.index(current_cycle)
-    stitched_img = stitch.global_shift(stitched_img, current_cycle_idx,
-                                       shift_descriptors)
+def apply_threshold(img, images,
+                    thresh_value=None, thresh_sample=None,
+                    thresh_percent=None):
 
-    return stitched_img
+    # NOTE: If the 'thresh' argument has not been set with a particular pixel
+    # value, then a certain percentage of the pixels with the highest values
+    # will be thresholded, i.e. their value will be set to the threshold level.
+    # The `args.thresh_sample` is the number of images that are used to
+    # determine the threshold level above which the `args.thresh_percent`
+    # highest pixel values lie.
 
-
-def apply_threshold(stitched_img, images,
-                    thresh_value=None, thresh_sample_size=None,
-                    thresh_percentage=None):
-    # TODO: make some checks for thresh type
     if thresh_value:
         val = args.thresh_value
     else:
-        sample_size = thresh_sample_size
+        sample_size = thresh_sample
         # Adjust sample size if set too large
-        if thresh_sample_size > len(images):
-            sample_size = len(image)
+        if thresh_sample > len(images):
+            sample_size = len(images)
         # The images from which to sample threshold
         sample_images = random.sample(images, sample_size)
-        val = imageutil.calc_threshold_level(sample_images, thresh_percentage)
+        val = imageutil.calc_threshold_level(sample_images, thresh_percent)
+    # Create lookup table
     lut = imageutil.create_thresholding_LUT(val)
     # Map image through lookup table
-    # This takes ridiculously long!!!
-    stitched_img = stitched_img.maplut(lut)
+    img = img.maplut(lut)
 
-    return stitched_img
+    return img
 
 
 if __name__ == '__main__':
@@ -185,10 +261,6 @@ if __name__ == '__main__':
                         help='if all the cell labels should be made into '
                              'globally unique labels.')
 
-    parser.add_argument('--cell-centroids', dest='cell_centroids',
-                        action='store_true', default=False,
-                        help='if the centroid for each cell should be computed '
-                        'and be saved as a numpy array.')
     parser.add_argument('--id-luts', dest='id_luts',
                         action='store_true', default=False,
                         help='if lookup tables for the cell ids should be '
@@ -197,10 +269,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--area-mask', dest='area_mask',
                         action='store_true', default=False,
-                        help='if the masks should consist of the whole cell areas')
-    parser.add_argument('--outline-mask', dest='outline_mask',
+                        help='create masks that consist of the whole cell areas')
+    parser.add_argument('-m', '--outline-mask', dest='outline_mask',
                         action='store_true', default=False,
-                        help='if the masks should consist of the cell outlines')
+                        help='create masks that consist only of the cell outlines')
 
     parser.add_argument('--png', dest='png',
                         action='store_true', default=False,
@@ -216,32 +288,33 @@ if __name__ == '__main__':
     parser.add_argument('--thresh-value', dest='thresh_value',
                         type=float, default=False,
                         help='pixel value for threshold')
-    parser.add_argument('--thresh-percent', dest='thresh_percentage',
+    parser.add_argument('--thresh-percent', dest='thresh_percent',
                         type=float, default=0.01,
                         help='percentage of pixel values above threshold')
-    parser.add_argument('--thresh-sample', dest='thresh_sample_size',
+    parser.add_argument('--thresh-sample', dest='thresh_sample',
                         type=int, default=10,
                         help='number of files to use for threshold estimation')
 
     args = parser.parse_args()
 
+    layer_dir = args.output_dir
+
     if not args.files or not all(map(is_image_file, args.files)):
         parser.print_help()
         sys.exit(1)
 
-    if not args.output_dir:
+    if not layer_dir:
         print 'You need to specify an output directory'
         sys.exit(1)
 
-    if not exists(args.output_dir) \
-            and not (args.cell_centroids or args.id_luts or args.gather_siteinfo):
-        print '.. Creating pyramid output directory'
-        os.makedirs(args.output_dir)
+    if args.outline_mask or args.area_mask:
+        # TissueMAPS requires mask layer folders to end on "_Mask"
+        if not re.search('_Mask$', layer_dir):
+            layer_dir = '%s_Mask' % layer_dir
 
-    if args.thresh_value and not args.thresh:
-        print '\'--thresh-value\' command only works together with \'-t\' command'
-
-    print '.. Creating layer "%s"' % basename(args.output_dir)
+    if not exists(layer_dir) and not args.id_luts:
+        print '.. Creating layer output directory: "%s"' % layer_dir
+        os.makedirs(layer_dir)
 
     files = args.files
 
@@ -250,7 +323,13 @@ if __name__ == '__main__':
     else:
         images = [IntensityImage(f, config, vips=True) for f in files]
     experiment_dir = images[0].experiment_dir
-    cycles = Experiment(experiment_dir, config).subexperiments
+    experiment = Experiment(experiment_dir, config)
+    cycles = experiment.subexperiments
+    current_cycle = images[0].cycle
+    data_file = experiment.data_filename
+
+    if args.thresh_sample > len(images):
+        args.thresh_sample = len(images)
 
     if args.config:
         # Overwrite default "image_toolbox" configuration
@@ -264,56 +343,23 @@ if __name__ == '__main__':
     file_grid = stitch.build_file_grid(images)
 
     if args.id_luts:
-        max_id_upto_now = 0
         print('ᐄ  CREATING ID LOOKUP TABLES ')
-        for i in range(len(file_grid)):
-            print '   row: %d' % i
-            for j in range(len(file_grid[0])):
-                print '    col: %d' % j
-                mat = file_grid[i][j].image
-                mat = segment.remove_border_cells(mat)  # do we want this?
-                mat, max_id_upto_now = segment.create_id_lookup_matrices(
-                    mat, max_id_upto_now)
-
-                fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
-                    rownr=(i+1), colnr=(j+1))
-                fname_abs = join(args.output_dir, fname)
-                print '    Saving file: ' + fname_abs
-                with open(fname_abs, 'w') as f:
-                    np.save(f, mat)
+        create_and_save_lookup_tables(file_grid)
         sys.exit(0)
-
-    # if args.cell_centroids:
-    #     print('ᐄ  COMPUTING CELL CENTROIDS')
-    #     max_id_upto_now = 0
-    #     centroids = []
-    #     for i in range(len(file_grid)):
-    #         print '   row: %d' % i
-    #         for j in range(len(file_grid[0])):
-    #             print '   col: %d' % j
-    #             print '   ' + file_grid[i][j]
-    #             mat = imread(file_grid[i][j])
-    #             mat = segment.remove_border_cells(mat)
-    #             site_centroids, max_id_upto_now = \
-    #                 segment.compute_cell_centroids(mat, i, j, max_id_upto_now)
-    #             centroids.append(site_centroids)
-
-    #     centroids = np.vstack(centroids)
-    #     fname = os.path.splitext(args.output_dir)[0] + '.npy'
-    #     with open(fname, 'w') as f:
-    #         np.save(f, centroids)
-    #     sys.exit(0)
 
     # Create a vips image for each file
     print '.. Loading images'
-    if args.outline_mask:
-        print('ᐄ  CREATING OUTLINE MASKS')
-    elif args.area_mask:
-        print('ᐄ  CREATING AREA MASKS')
+    if args.outline_mask or args.area_mask:
+        if args.outline_mask:
+            print('ᐄ  CREATING OUTLINE MASKS')
+            img_grid = build_mask_grid(file_grid, data_file, mask='outline',
+                                       make_global_ids=args.make_global_ids)
+        elif args.area_mask:
+            print('ᐄ  CREATING AREA MASKS')
+            img_grid = build_mask_grid(file_grid, data_file, mask='area',
+                                       make_global_ids=args.make_global_ids)
     else:
-        pass
-
-    vips_image_grid = load_images(file_grid)
+        img_grid = build_image_grid(file_grid)
 
     #######################################################################
     #                       ILLUMINATION CORRECTING                       #
@@ -330,63 +376,63 @@ if __name__ == '__main__':
         mean = np_array_to_vips_image(mean)
         std = np_array_to_vips_image(std)
 
-        vips_image_grid = apply_illumination_correction(vips_image_grid,
-                                                        mean, std)
-
-    print 'ᐄ  STITCHING IMAGES' + (' & SHIFTING' if args.shift else '')
+        img_grid = apply_illumination_correction(img_grid, mean, std)
 
     #######################################################################
     #                             STITCHING                               #
     #######################################################################
 
-    stitched_img = stitch.stitch_all_images(vips_image_grid)
+    print '.. Stitching images to mosaic image'
+
+    img = stitch.stitch_all_images(img_grid)
 
     #######################################################################
     #                              SHIFTING                               #
     #######################################################################
 
     if args.shift:
-        stitched_img = apply_shift(stitched_img, cycles)
+        print 'ᐄ  SHIFTING MOSAIC IMAGE'
+        img = stitch.shift_stitched_image(img, cycles, current_cycle)
 
     #######################################################################
     #                            THRESHOLDING                             #
     #######################################################################
 
-    # If 'thresh' has been set then a certain percentage of the pixels
-    # with the largest value will be thresholded (i.e., set to the lowest of their values).
-    # A sample of size `args.thresh_sample_size` is used to determine the cut off value
-    # above which the `args.thresh_percentage`% of all pixels with the largest values lie.
     if args.thresh:
-        print 'ᐄ  THRESHOLDING'
+        print 'ᐄ  THRESHOLDING MOSAIC IMAGE'
         if args.thresh_value:
             print '   ... Using provided threshold value'
         else:
-            print '   ... Computing threshold value'
+            print('   ... Computing threshold value corresponding to the %d\% '
+                  'highest pixel values on %d sampled images'
+                  % (args.thresh_percent, args.thresh_sample))
 
-        stitched_img = apply_threshold(stitched_img, files,
-                                       thresh_value=args.thresh_value,
-                                       thresh_sample_size=args.thresh_sample_size,
-                                       thresh_percentage=args.thresh_percentage)
+        img = apply_threshold(img, images,
+                              thresh_value=args.thresh_value,
+                              thresh_sample=args.thresh_sample,
+                              thresh_percent=args.thresh_percent)
 
     # The image will be rescaled s.t. the pixel values fill the whole range
     # of possible values (0 to 2^16) and then converted to 8 bit
     if not args.make_global_ids and not args.no_rescale:
-        stitched_img = stitched_img.scale()
+        print '.. Rescaling mosaic image'
+        img = img.scale()
 
     #######################################################################
     #                            PYRAMIDIZING                             #
     #######################################################################
 
-    print 'ᐄ  CREATING ZOOMIFY PYRAMID FROM STITCHED IMAGE'
+    print '.. Creating pyramid from mosaic image'
     if not args.no_rescale and not args.png:
-        pyramidize.create_pyramid(stitched_img, args.output_dir)
+        pyramidize.create_pyramid(img, layer_dir)
     else:
         # The stitched image wasn't rescaled and is still 16 bit.
         # In order to have the resulting pyramid be 16 bit as well, we have
         # do change the file format from JPEG to PNG.
-        # Note that pyramids created in this manner shouldn't be visualized directly
-        # in the browser since they will be coerced to 8 bit, thus losing information.
-        pyramidize.create_pyramid(stitched_img, args.output_dir,
+        # Note that pyramids created in this manner shouldn't be visualized
+        # directly in the browser since they will be coerced to 8 bit,
+        # which will result in loss of information.
+        pyramidize.create_pyramid(img, layer_dir,
                                   tile_file_extension='.png')
 
     print '🍺  Done!'
