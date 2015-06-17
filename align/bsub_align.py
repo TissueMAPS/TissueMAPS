@@ -68,8 +68,7 @@ if __name__ == '__main__':
     print '. get image filenames of reference channel'
     image_filenames = []
     for c in cycles:
-        project = Project(experiment_dir, config, subexperiment=c.name)
-        files = [f.filename for f in project.image_files
+        files = [f.filename for f in c.project.image_files
                  if f.channel == ref_channel]  # only from reference channel
         files = natsorted(files)  # ensure correct order
         image_filenames.append(files)

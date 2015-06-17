@@ -30,7 +30,7 @@ def combine_outputs(output_files, cycle_names):
     return descriptor
 
 
-def calculate_global_overlap(descriptor):
+def calc_global_overlap(descriptor):
     top_overlap = []
     bottom_overlap = []
     right_overlap = []
@@ -112,7 +112,8 @@ if __name__ == '__main__':
         segm_dir = args.segm_dir
     else:
         project = Project(experiment_dir, config, subexperiment=ref_cycle_name)
-        segm_dir = project.segmentation_dir
+        # default for Jterator projects
+        segm_dir = join('..', '..', project.segmentation_dir)
 
     print '. define segmentation directory: %s' % segm_dir
 
@@ -142,7 +143,7 @@ if __name__ == '__main__':
 
     # Calculate overlap at each site
     print '. calculate overlap between sites'
-    (top_ol, bottom_ol, right_ol, left_ol) = calculate_global_overlap(descriptor)
+    top_ol, bottom_ol, right_ol, left_ol = calc_global_overlap(descriptor)
 
     # Limit total overlap by maximally tolerated shift
     if top_ol > max_shift:

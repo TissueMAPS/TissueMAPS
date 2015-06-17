@@ -6,6 +6,8 @@ import argparse
 from align import registration as reg
 
 
+# TODO: implement creation of joblists, see visi
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('Calculate shift between images \
