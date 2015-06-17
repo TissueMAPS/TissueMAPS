@@ -6,19 +6,19 @@ The package is configured via a YAML configuration settings file [tmt.config](tm
 
 It contains several sub-packages, which are all dependent on these configurations.
 
-## [align](tmp/align) ##
+## [align](tmt/align) ##
 
 A package for aligning images between different acquisition cycles.
 
-## [illuminati](tmp/illuminati) ##
+## [illuminati](tmt/illuminati) ##
 
 A package for creating pyramid images.
 
-## [visi](tmp/visi) ##
+## [visi](tmt/visi) ##
 
 A package for converting Visitron's STK files to PNG images with optional renaming.
 
-## [datafusion](tmp/datafusion) ##
+## [datafusion](tmt/datafusion) ##
 
 A package for fusing data produced by [Jterator](https://github.com/HackerMD/Jterator).
 
