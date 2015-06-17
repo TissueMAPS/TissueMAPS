@@ -50,17 +50,9 @@ Some example use cases:
 
         $ illuminati --outline-mask --png path/to/*.png -o my_outline_pyramid
 
-    - Create a serialized numpy array that holds all cell centroids (border cells removed):
-
-        $ illuminati --cell-centroids path/to/label_matrices/*.png -o my_array.npy
-
     - Create id tables:
 
         $ illuminati --id-luts path/to/label_matrices/*.png -o id_tables
-
-    - Create a numpy array that holds information about sites:
-
-        $ illuminati --gather-siteinfo path/to/label_matrices/*.png -o siteinfo.npy
 
 """
 
@@ -88,13 +80,9 @@ def build_image_grid(file_grid):
     return image_grid
 
 
-def build_mask_grid(file_grid, data_file, mask, make_global_ids=False):
+def ids_from_data(data_file, current_obj):
 
-    mask_grid = copy.deepcopy(file_grid)
-
-    f = h5py.File(data_file, 'r')
-
-    # NOTE: Masks are used in TissueMAPS to visualize the position of
+    # Masks are used in TissueMAPS to visualize the position of
     # segmented objects in the image. In addition, they can be selected
     # (i.e. one can click on them) and use them with analysis tools.
     # Here we remove unwanted objects from the masks so that these objects
@@ -102,12 +90,15 @@ def build_mask_grid(file_grid, data_file, mask, make_global_ids=False):
     # on the parent objects (e.g. cells) and all corresponding children objects
     # (e.g. nuclei) will be removed as well.
 
+    # NOTE: The internal hierarchical structure of the data file is hard-coded!
+
+    f = h5py.File(data_file, 'r')
+
     parent_obj = f['parent'][()].lower()  # lower case!
     parent = pd.DataFrame(f['objects/%s/original-ids' % parent_obj][()])
     parent.columns = f['objects/%s/original-ids' % parent_obj].attrs['names'][()]
     parent['IX_border'] = f['objects/%s/border' % parent_obj][()]
 
-    current_obj = file_grid[0][0].objects.lower()
     current = pd.DataFrame(f['objects/%s/original-ids' % current_obj][()])
     current.columns = f['objects/%s/original-ids' % current_obj].attrs['names'][()]
     current['ID_global'] = f['objects/%s/ids' % current_obj][()]
@@ -117,15 +108,28 @@ def build_mask_grid(file_grid, data_file, mask, make_global_ids=False):
     else:
         current['ID_parent'] = current['ID_object']
 
+    f.close()
+
+    return (current, parent)
+
+
+def build_mask_grid(file_grid, data_file, mask='outline',
+                    make_global_ids=False):
+
+    current_obj = file_grid[0][0].objects.lower()
+
+    current, parent = ids_from_data(data_file, current_obj)
+
     max_id = 0
+    mask_grid = copy.deepcopy(file_grid)
     for i in range(len(file_grid)):
         for j in range(len(file_grid[0])):
 
             im = file_grid[i][j].image
-            site_id = file_grid[i][j].site
 
             # Which of the current objects are not in the dataset?
             # (Tracked via their parent object ids)
+            site_id = file_grid[i][j].site
             ids_image = file_grid[i][j].ids
             ids_data = np.unique(current['ID_parent'][current.ID_site == site_id])
             ids_nodata = [o for o in ids_data if o not in ids_image]
@@ -166,20 +170,39 @@ def build_mask_grid(file_grid, data_file, mask, make_global_ids=False):
 
             mask_grid[i][j] = im
 
-    f.close()
-
     return mask_grid
 
 
-def create_and_save_lookup_tables(file_grid):
+def create_and_save_lookup_tables(file_grid, data_file):
+
+    current_obj = file_grid[0][0].objects.lower()
+
+    current, parent = ids_from_data(data_file, current_obj)
+
     max_id = 0
     for i in range(len(file_grid)):
         for j in range(len(file_grid[0])):
-            print '    row: %d - col: %d' % (i, j)
 
             im = file_grid[i][j].image
 
-            im = segment.remove_border_cells_vips(im)
+            # Which of the current objects are not in the dataset?
+            # (Tracked via their parent object ids)
+            site_id = file_grid[i][j].site
+            ids_image = file_grid[i][j].ids
+            ids_data = np.unique(current['ID_parent'][current.ID_site == site_id])
+            ids_nodata = [o for o in ids_data if o not in ids_image]
+
+            # Which parent objects lie at the border of the image?
+            ids_border = parent['ID_object'][(parent.IX_border > 0) &
+                                             (parent.ID_site == site_id)]
+            ids_border = ids_border.tolist()
+
+            # Combine all object ids that should not be displayed and thus
+            # removed from the images for the creation of masks
+            ids_nodisplay = ids_border + ids_nodata
+
+            im = segment.remove_objects(im, ids_nodisplay)
+
             im, max_id = segment.create_id_lookup_matrices(im, max_id)
             fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
                         rownr=(i+1), colnr=(j+1))
@@ -320,6 +343,8 @@ if __name__ == '__main__':
 
     if args.area_mask or args.outline_mask:
         images = [MaskImage(f, config, vips=True) for f in files]
+    elif args.id_luts:
+        images = [MaskImage(f, config) for f in files]
     else:
         images = [IntensityImage(f, config, vips=True) for f in files]
     experiment_dir = images[0].experiment_dir
@@ -344,7 +369,7 @@ if __name__ == '__main__':
 
     if args.id_luts:
         print('ᐄ  CREATING ID LOOKUP TABLES ')
-        create_and_save_lookup_tables(file_grid)
+        create_and_save_lookup_tables(file_grid, data_file)
         sys.exit(0)
 
     # Create a vips image for each file
