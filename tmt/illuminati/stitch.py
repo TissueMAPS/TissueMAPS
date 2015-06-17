@@ -8,9 +8,9 @@ import numpy as np
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
 from gi.repository import Vips
-from image_toolbox.image import Image
-from image_toolbox.image import is_image_file
-from image_toolbox.util import load_config, check_config
+from tmt.image import Image
+from tmt.image import is_image_file
+from tmt.util import load_config, check_config
 import imageutil
 
 """
@@ -128,9 +128,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--config', dest='config',
                         default=os.path.join(os.path.dirname(__file__), '..',
-                                             'image_toolbox.config'),
+                                             'tmt.config'),
                         help='use custom yaml configuration file \
-                        (defaults to "image_toolbox" config file)')
+                        (defaults to "tmt" config file)')
 
     parser.add_argument('-s', '--shift', dest='shift',
                         action='store_true', default=False,

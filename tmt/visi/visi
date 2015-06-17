@@ -10,7 +10,7 @@ import time
 import sys
 from visi.stk2png import Stk2png
 from visi import config
-from image_toolbox.util import load_config
+from tmt.util import load_config
 from visi.util import check_visi_config
 
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.config:
-        # Overwrite default "image_toolbox" configuration
+        # Overwrite default "tmt" configuration
         config_filename = args.config
         print '. Using configuration file "%s"' % config_filename
         config = load_config(config_filename)

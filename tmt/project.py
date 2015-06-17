@@ -3,9 +3,9 @@ import os
 import json
 from natsort import natsorted
 from os.path import join, basename, isdir, exists
-from image_toolbox.image import is_image_file
-from image_toolbox.illumstats import Illumstats
-from image_toolbox.image import IntensityImage, MaskImage
+from tmt.image import is_image_file
+from tmt.illumstats import Illumstats
+from tmt.image import IntensityImage, MaskImage
 
 
 class Project(object):

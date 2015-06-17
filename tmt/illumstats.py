@@ -1,7 +1,7 @@
 import h5py
 import re
 import numpy as np
-from image_toolbox.util import regex_from_format_string
+from tmt.util import regex_from_format_string
 
 
 class Illumstats:

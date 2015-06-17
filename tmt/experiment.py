@@ -2,8 +2,8 @@ import re
 import os
 from os.path import isdir, join, basename, dirname, exists
 from natsort import natsorted
-from image_toolbox.util import regex_from_format_string
-from image_toolbox.project import Project
+from tmt.util import regex_from_format_string
+from tmt.project import Project
 
 
 class Experiment(object):

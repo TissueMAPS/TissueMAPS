@@ -1,5 +1,5 @@
 from os.path import join, dirname, realpath
-from image_toolbox.util import load_config
+from tmt.util import load_config
 
 version = '0.1.0'
 

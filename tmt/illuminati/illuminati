@@ -14,11 +14,11 @@ import illumcorrect
 import stitch
 import segment
 import imageutil
-from image_toolbox import config
-from image_toolbox.util import load_config, check_config
-from image_toolbox.image import is_image_file
-from image_toolbox.experiment import Experiment
-from image_toolbox.image import IntensityImage, MaskImage
+from tmt import config
+from tmt.util import load_config, check_config
+from tmt.image import is_image_file
+from tmt.experiment import Experiment
+from tmt.image import IntensityImage, MaskImage
 from illuminati.illumcorrect import np_array_to_vips_image
 
 """
@@ -268,7 +268,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--config', dest='config',
                         help='path to custom yaml configuration file \
-                        (defaults to "image_toolbox" configuration)')
+                        (defaults to "tmt" configuration)')
 
     parser.add_argument('-s', '--shift', dest='shift',
                         action='store_true', default=False,
@@ -357,7 +357,7 @@ if __name__ == '__main__':
         args.thresh_sample = len(images)
 
     if args.config:
-        # Overwrite default "image_toolbox" configuration
+        # Overwrite default "tmt" configuration
         config = load_config(args.config)
         check_config(config)
 

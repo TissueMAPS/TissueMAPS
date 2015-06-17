@@ -17,7 +17,7 @@ from os.path import join, realpath, basename, splitext, exists, isdir
 import sys
 from gi.repository import Vips
 import util
-from image_toolbox.illumstats import Illumstats
+from tmt.illumstats import Illumstats
 
 
 # TODO: move this functionality into Illumstats class
@@ -154,9 +154,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--config', dest='config',
                         default=os.path.join(os.path.dirname(__file__), '..',
-                                             'image_toolbox.config'),
+                                             'tmt.config'),
                         help='use custom yaml configuration file \
-                        (defaults to "image_toolbox" config file)')
+                        (defaults to "tmt" config file)')
 
     # Optional args
     parser.add_argument('--overwrite', default=False, action='store_true',

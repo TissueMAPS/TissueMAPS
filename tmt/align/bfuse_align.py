@@ -6,10 +6,10 @@ import h5py
 import argparse
 from glob import glob
 from align import registration as reg
-from image_toolbox import config
-from image_toolbox.util import load_config, check_config
-from image_toolbox.project import Project
-from image_toolbox.experiment import Experiment
+from tmt import config
+from tmt.util import load_config, check_config
+from tmt.project import Project
+from tmt.experiment import Experiment
 
 
 def combine_outputs(output_files, cycle_names):
@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--config', dest='config',
                         help='use custom yaml configuration file \
-                        (defaults to "image_toolbox" configuration)')
+                        (defaults to "tmt" configuration)')
 
     args = parser.parse_args()
 
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     max_shift = args.max_shift
 
     if args.config:
-        # Overwrite default "image_toolbox" configuration
+        # Overwrite default "tmt" configuration
         print '. get configuration from file: %s' % args.config
         config = load_config(args.config)
         check_config(config)

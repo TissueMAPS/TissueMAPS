@@ -442,9 +442,9 @@ These outline images need to be stitched together using tm_stitch.py
 
     parser.add_argument('-c', '--config', dest='config',
                         default=os.path.join(os.path.dirname(__file__), '..',
-                                             'image_toolbox.config'),
+                                             'tmt.config'),
                         help='use custom yaml configuration file \
-                        (defaults to "image_toolbox" config file)')
+                        (defaults to "tmt" config file)')
 
     args = parser.parse_args()
 

@@ -9,11 +9,11 @@ import yaml
 import glob
 import re
 from copy import copy
-from image_toolbox import config
+from tmt import config
 from datafusion import config as df_config
-from image_toolbox.image import Image
-from image_toolbox.experiment import Experiment
-from image_toolbox.util import load_config
+from tmt.image import Image
+from tmt.experiment import Experiment
+from tmt.util import load_config
 
 
 '''

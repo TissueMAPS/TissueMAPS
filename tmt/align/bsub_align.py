@@ -9,10 +9,10 @@ import argparse
 import yaml
 from natsort import natsorted
 from subprocess32 import call
-from image_toolbox.experiment import Experiment
-from image_toolbox.project import Project
-from image_toolbox import config
-from image_toolbox.util import load_config, check_config
+from tmt.experiment import Experiment
+from tmt.project import Project
+from tmt import config
+from tmt.util import load_config, check_config
 
 
 def on_brutus():
@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--config', dest='config',
                         help='use custom yaml configuration file \
-                        (defaults to "image_toolbox" config file)')
+                        (defaults to "tmt" config file)')
 
     args = parser.parse_args()
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size
 
     if args.config:
-        # Overwrite default "image_toolbox" configuration
+        # Overwrite default "tmt" configuration
         print '. get configuration from file: %s' % args.config
         config = load_config(args.config)
         check_config(config)

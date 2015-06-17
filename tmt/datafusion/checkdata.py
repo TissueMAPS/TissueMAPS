@@ -5,8 +5,8 @@ import matplotlib.pylab as plt
 from matplotlib import colors
 from copy import copy
 import h5py
-from image_toolbox import config
-from image_toolbox.experiment import Experiment
+from tmt import config
+from tmt.experiment import Experiment
 
 
 def read_dataset(data_filename, feature_name, site_number):
