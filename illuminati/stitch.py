@@ -69,9 +69,9 @@ def stitch_all_images(vips_image_grid):
     return whole_image
 
 
-def global_shift(vips_img, current_idx, shift_descrs):
+def shift_stitched_image(vips_img, cycles, current_cycle):
     """
-    Crop the image in such a way that all images overlay each other.
+    Shift the image in such a way that all images overlay each other.
 
     The shift descriptor files assume an inverted y-axis.
     An x-shift of "+2" means that the image is shifted 2 pixel to the right
@@ -80,13 +80,16 @@ def global_shift(vips_img, current_idx, shift_descrs):
     w.r.t. the reference.
 
     :vips_img: the VIPS image to crop.
-    :current_idx: the index of the current cycle (0-based).
-    :shift_descrs: a list of all shift descriptors : list[hash]
+    :cycles: cycle objects holding shift information : [Subexperiment].
     :returns: the cropped VIPS image.
 
     """
-    x_shifts = [np.median(desc['xShift']) for desc in shift_descrs]
-    y_shifts = [np.median(desc['yShift']) for desc in shift_descrs]
+    shift_descriptors = [c.project.shift_file for c in cycles]
+    cycle_nrs = [c.cycle for c in cycles]
+    current_cycle_idx = cycle_nrs.index(current_cycle)
+
+    x_shifts = [np.median(desc['xShift']) for desc in shift_descriptors]
+    y_shifts = [np.median(desc['yShift']) for desc in shift_descriptors]
 
     width, height = vips_img.width, vips_img.height  # size of the image
 
@@ -95,7 +98,7 @@ def global_shift(vips_img, current_idx, shift_descrs):
              for x, y in zip(x_shifts, y_shifts)]
 
     # Compute the intersection of all those rectangles
-    this_box = boxes[current_idx].bounds
+    this_box = boxes[current_cycle_idx].bounds
     intersection = reduce(Polygon.intersection, boxes)
     minx, miny, maxx, maxy = intersection.bounds
 
@@ -152,7 +155,9 @@ if __name__ == '__main__':
     check_config(config_settings)
 
     files = args.files
-    images = [Image(f, config_settings) for f in files]
+    images = [Image(f, config_settings, vips=True) for f in files]
+    experiment_dir = images[0].experiment_dir
+    cycles = Experiment(experiment_dir, config).subexperiments
 
     file_grid = build_file_grid(images)
     vips_image_grid = copy.deepcopy(file_grid)
@@ -160,22 +165,13 @@ if __name__ == '__main__':
     print '* LOADING IMAGES'
     for i in range(len(file_grid)):
         for j in range(len(file_grid[0])):
-            im = Vips.Image.new_from_file(file_grid[i][j])
-            vips_image_grid[i][j] = im
+            vips_image_grid[i][j] = file_grid[i][j].image
 
     stitched_img = stitch_all_images(vips_image_grid)
 
     if args.shift:
         print '* SHIFTING IMAGES'
-        image = Image(files[0], config)
-        root_dir = image.experiment_dir
-        cycle_nr = image.cycle
-        cycles = Cycles(root_dir, config)
-        cycle_dirs = cycles.names
-        cycle_nrs = sorted([c.cycle for c in cycle_dirs])
-        shift_desc_idx = cycle_nrs.index(cycle_nr)
-        descrs = cycles.shift_descriptors
-        stitched_img = global_shift(stitched_img, shift_desc_idx, descrs)
+        stitched_img = shift_and_crop_stitched_image(stitched_img, cycles)
 
     print '* STITCHING IMAGES'
     output_file = os.path.join(args.output_dir, 'stitched.png')
