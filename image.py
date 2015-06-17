@@ -5,7 +5,7 @@ import numpy as np
 try:
     from gi.repository import Vips
 except:
-    print 'Could not import Vips!'
+    print 'Vips could not be imported!'
 
 
 SUPPORTED_IMAGE_FILES = ['png', 'jpg', 'tiff', 'jpeg']
@@ -49,7 +49,6 @@ class Image(object):
         # from filenames for which no absolute path is available.
         self.vips = vips
         self._image = None
-        self._image_vips = None
         self._dimensions = None
         self._coordinates = None
         self._indices = None
@@ -64,6 +63,8 @@ class Image(object):
         '''
         Read image form file and return it as numpy array (default)
         or as Vips object if vips set to True.
+
+        :returns: image : ndarray.
         '''
         if self._image is None:
             if not exists(self.filename):
@@ -78,21 +79,20 @@ class Image(object):
     @property
     def dimensions(self):
         '''
-        Return the y, x dimensions of the image as tuple.
+        :returns: y, x dimensions (height, width) of the image : (int, int).
         '''
         if self._dimensions is None:
             if self.vips:
-                # TODO: check Y and X used correctly
-                self._dimensions = (self._image.width, self._image.height)
+                self._dimensions = (self.image.height, self.image.width)
             else:
-                self._dimensions = self._image.shape
+                self._dimensions = self.image.shape
         return self._dimensions
 
     @property
     def coordinates(self):
         '''
-        Return one-based row, column coordinates of an image
-        relative to the acquisition grid.
+        :returns: one-based row, column coordinates of an image
+        relative to the acquisition grid : (int, int).
         '''
         if not self._coordinates:
             m = re.search(self.cfg['COORDINATES_FROM_FILENAME'], self.filename)
@@ -111,8 +111,8 @@ class Image(object):
     @property
     def indices(self):
         '''
-        Return zero-based row, column indices of an image
-        relative to the acquisition grid.
+        :returns: zero-based row, column indices of an image
+        relative to the acquisition grid : (int, int).
         '''
         if self._indices is None:
             row_nr, col_nr = self.coordinates
@@ -125,8 +125,8 @@ class Image(object):
     @property
     def site(self):
         '''
-        Return one-based site number of an image
-        relative to the acquisition sequence over time.
+        :returns: one-based site number of an image
+        relative to the acquisition sequence over time : int.
         '''
         if self._site is None:
             m = re.search(self.cfg['SITE_FROM_FILENAME'], self.filename)
@@ -139,7 +139,7 @@ class Image(object):
     @property
     def cycle(self):
         '''
-        Return one-based cycle number of an image.
+        :returns: one-based cycle number of an image : int.
         '''
         if self._cycle is None:
             m = re.search(self.cfg['CYCLE_FROM_FILENAME'], self.filename)
@@ -152,7 +152,7 @@ class Image(object):
     @property
     def experiment(self):  # get_expname_from_filename()
         '''
-        Return experiment name.
+        :returns: experiment name : str.
         '''
         if self._experiment is None:
             m = re.search(self.cfg['EXPERIMENT_FROM_FILENAME'],
@@ -166,7 +166,7 @@ class Image(object):
     @property
     def experiment_dir(self):
         '''
-        Return path to the experiment folder.
+        :returns: path to the experiment folder : str.
         '''
         if self._experiment_dir is None:
             if self.cfg['SUBEXPERIMENTS_EXIST']:
@@ -198,7 +198,10 @@ class IntensityImage(Image):
     @property
     def image(self):
         '''
-        Read image form file and return it as numpy array of type float.
+        Read image form file and return it as numpy array of type float
+        (default) or as Vips object if vips is set to True.
+
+        :returns: image : ndarray.
         '''
         if self._image is None:
             if self.vips:
@@ -209,6 +212,9 @@ class IntensityImage(Image):
 
     @property
     def channel(self):  # get_channel_nr_from_filename()
+        '''
+        :returns: channel number : int.
+        '''
         if self._channel is None:
             m = re.search(self.cfg['CHANNEL_FROM_FILENAME'], self.filename)
             if not m:
@@ -227,15 +233,19 @@ class MaskImage(Image):
     from the image filename, such as the name of objects encoded in the image
     and their unique ids.
     '''
-    def __init__(self, filename, cfg):
-        Image.__init__(self, filename, cfg)
+    def __init__(self, filename, cfg, vips=False):
+        Image.__init__(self, filename, cfg, vips=False)
         self.filename = filename
         self.cfg = cfg
+        self.vips = vips
         self._objects = None
         self._ids = None
 
     @property
     def objects(self):
+        '''
+        :returns: name of objects in the mask image : str.
+        '''
         if self._objects is None:
             m = re.search(self.cfg['OBJECT_FROM_FILENAME'], self.filename)
             if not m:
@@ -246,9 +256,17 @@ class MaskImage(Image):
 
     @property
     def ids(self):
+        '''
+        :returns: unique ids of objects in the mask image : int.
+        '''
         if self._ids is None:
-            values = np.unique(self._image)
-            self._ids = filter(np.nonzero, values)  # remove 0 background
+            if self.vips:
+                num_labels = int(self.image.max())
+                values = range(1, num_labels+1)
+            else:
+                num_labels = int(np.max(self.image))
+                values = range(1, num_labels+1)
+            self._ids = values
         return self._ids
 
     # TODO:
