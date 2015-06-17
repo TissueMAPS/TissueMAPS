@@ -8,14 +8,13 @@ from image_toolbox.project import Project
 
 class Experiment(object):
     '''Utility class for an experiment.
+
     An experiment may represent a "project" itself or it may contain one or
     several subexperiments, each of them representing a "project".   
     '''
 
     def __init__(self, experiment_dir, cfg):
-        '''
-        Initialize Experiment class.
-        An Experiment may hold subexperiments.
+        '''Initialize Experiment class.
 
         Parameters:
         :experiment_dir:    Absolute path to experiment folder. : str
@@ -26,6 +25,7 @@ class Experiment(object):
         self.experiment_name = basename(experiment_dir)
         self._subexperiments = None
         self._project = None
+        self._data_filename = None
 
     def is_valid_subexperiment(self, folder_name):
         regexp = regex_from_format_string(
@@ -35,7 +35,7 @@ class Experiment(object):
 
     @property
     def subexperiments(self):
-        if not self._subexperiments:
+        if self._subexperiments is None:
             experiment_subfolders = os.listdir(self.experiment_dir)
             experiment_subfolders = natsorted(experiment_subfolders)
             folders = [Subexperiment(join(self.experiment_dir, f), self.cfg)
@@ -52,10 +52,19 @@ class Experiment(object):
         if self._project is None:
             self._project = Project(self.experiment_dir, self.cfg)
         return self._project
+
+    @property
+    def data_filename(self):
+        if self._data_filename is None:
+            self._data_filename = self.cfg['DATA_FILE_LOCATION'].format(
+                                        experiment_dir=self.experiment_dir)
+        return self._data_filename
+    
     
 
 class Subexperiment(object):
     '''Utility class for a subexperiment.
+
     A subexperiment represents a child folder of an experiment folder.
     The class provides information on the subexperiment, such as its name,
     cycle number, and parent experiment's name.
