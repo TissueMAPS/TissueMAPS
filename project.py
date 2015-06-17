@@ -1,5 +1,6 @@
 import re
 import os
+import json
 from natsort import natsorted
 from os.path import join, basename, isdir, exists
 from image_toolbox.image import is_image_file
@@ -9,6 +10,7 @@ from image_toolbox.image import IntensityImage, MaskImage
 
 class Project(object):
     '''Utility class for a project.
+    
     A project represents the directory that holds the image folder
     and potentially additional folders for segmentation, shift, and
     illumination statistics files.
@@ -48,6 +50,9 @@ class Project(object):
 
     @property
     def image_dir(self):
+        '''
+        :returns: path to directory holding image files : string
+        '''
         if not self._image_dir:
             folder = self.cfg['IMAGE_FOLDER_LOCATION'].format(
                             experiment_dir=self.experiment_dir,
@@ -57,7 +62,9 @@ class Project(object):
 
     @property
     def image_files(self):  # def get_image_files(self):
-        # of class "IntensityImage"
+        '''
+        :returns: list of objects of class "IntensityImage" : [IntensityImage]
+        '''
         if not self._image_files:
             files = [join(self.image_dir, f)
                      for f in os.listdir(self.image_dir) if is_image_file(f)]
@@ -69,7 +76,10 @@ class Project(object):
         return self._image_files
 
     @property
-    def segmentation_dir(self):  # def get_segmentation_dir(self):
+    def segmentation_dir(self):
+        '''
+        :returns: path to directory holding segmentation files : string
+        '''
         if not self._segmentation_dir:
             try:
                 # in case of MPCycle experiments the segmentation directory
@@ -84,8 +94,10 @@ class Project(object):
         return self._segmentation_dir
 
     @property
-    def segmentation_files(self):  # def get_segmentation_files(self):
-        # of class "MaskImage"
+    def segmentation_files(self):
+        '''
+        :returns: list of objects of class "MaskImage" : [MaskImage]
+        '''
         if not self._segmentation_files:
             files = [join(self.segmentation_dir, f)
                      for f in os.listdir(self.segmentation_dir)
@@ -99,6 +111,9 @@ class Project(object):
 
     @property
     def stats_dir(self):
+        '''
+        :returns: path to directory holding illumination statistic files : string
+        '''
         if not self._stats_dir:
             folder = self.cfg['STATS_FOLDER_LOCATION'].format(
                                 experiment_dir=self.experiment_dir,
@@ -108,7 +123,9 @@ class Project(object):
 
     @property
     def stats_files(self):
-        # of class "Illumstats"
+        '''
+        :returns: list of objects of class "Illumstats" : [Illumstats]
+        '''
         if not self._stats_files:
             stats_pattern = self.cfg['STATS_FILE_FORMAT'].format(channel='\d+')
             stats_pattern = re.compile(stats_pattern)
@@ -124,6 +141,9 @@ class Project(object):
 
     @property
     def shift_dir(self):
+        '''
+        :returns: path to directory holding shift descriptor files : string
+        '''
         if not self._shift_dir:
             folder = self.cfg['SHIFT_FOLDER_LOCATION'].format(
                                 experiment_dir=self.experiment_dir,
@@ -133,6 +153,9 @@ class Project(object):
 
     @property
     def shift_file(self):
+        '''
+        :returns: content of shift descriptor JSON file : dictionary
+        '''
         if not self._shift_file:
             shift_pattern = self.cfg['SHIFT_FILE_FORMAT']
             shift_pattern = re.compile(shift_pattern)
@@ -141,9 +164,9 @@ class Project(object):
                      if re.search(shift_pattern, f)]
             # there should only be one file, but in case there are more take
             # the first one
-            files = natsorted(files)[0]
+            files = natsorted(files)
             if not files:
                 raise Exception('No shift descriptor file found in "%s"'
                                 % self.shift_dir)
-            self._shift_file = files
+            self._shift_file = json.load(open(files[0]))
         return self._shift_file
