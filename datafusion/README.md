@@ -7,7 +7,8 @@ The final `data.h5` file is structured as follows:
 ```
 /
 
-/parent                     Dataset {SCALAR}    :: STRING
+/objects                    Group
+/objects/cells                      Group
 
 /cells                      Group
 /cells/ids                  Dataset {n}         :: INTEGER
@@ -32,6 +33,7 @@ The **ids** of each object should map to the row number (one-based) in the corre
 
 The **original-ids** dataset contains for each object its *site*, *row*, *column*, and *object* id of each original individual images. It has an attribute with the **names** of the ids.
 
+
 The **features** datasets have an attribute called **names** of length *p* specifying the features (:: STRING) in the form:
 
 ```
@@ -44,7 +46,7 @@ e.g.
 Cells_AreaShape_Morphology_Area
 ```
 
-or 
+or
 
 ```
 Cells_Texture_DAPI_Haralick_entropy
