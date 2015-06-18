@@ -13,7 +13,7 @@ import pyramidize
 import illumcorrect
 import stitch
 import segment
-import imageutil
+from tmt import imageutil
 from tmt import config
 from tmt.util import load_config, check_config
 from tmt.image import is_image_file
@@ -55,16 +55,6 @@ Some example use cases:
         $ illuminati --id-luts path/to/label_matrices/*.png -o id_tables
 
 """
-
-__version__ = '0.3.0'
-
-
-logo = u'''
-   .
-   I        Illuminati (%(version)s)
-  LLU       Creates pyramid images for tissueMAPS.
- MINATI
-'''
 
 
 def build_image_grid(file_grid):

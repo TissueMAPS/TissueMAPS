@@ -3,7 +3,6 @@
 import os
 import sys
 import copy
-import yaml
 import numpy as np
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
@@ -11,7 +10,7 @@ from gi.repository import Vips
 from tmt.image import Image
 from tmt.image import is_image_file
 from tmt.util import load_config, check_config
-import imageutil
+from tmt.imageutil import save_image_to_file
 
 """
 TissueMAPS tool for stitching individual images together to one large image.
@@ -54,7 +53,6 @@ def stitch_all_images(vips_image_grid):
     :returns: the VIPS image object.
 
     """
-
     grid_height = len(vips_image_grid)
     row_images = []
     for i in range(grid_height):
@@ -175,4 +173,4 @@ if __name__ == '__main__':
 
     print '* STITCHING IMAGES'
     output_file = os.path.join(args.output_dir, 'stitched.png')
-    imageutil.save_image_to_file(stitched_img, output_file)
+    save_image_to_file(stitched_img, output_file)

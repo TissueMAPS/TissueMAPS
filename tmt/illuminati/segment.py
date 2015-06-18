@@ -18,7 +18,7 @@ import scipy
 from os.path import basename, exists, realpath, join
 import util
 import re
-
+from tmt import imageutil
 from gi.repository import Vips
 
 
@@ -91,16 +91,9 @@ def remove_border_objects(site_matrix):
     :returns: a new numpy array with border objects entries set to 0.
 
     """
-    edges = [np.unique(site_matrix[0, :]),   # first row
-             np.unique(site_matrix[-1, :]),  # last row
-             np.unique(site_matrix[:, 0]),   # first col
-             np.unique(site_matrix[:, -1])]  # last col
-
-    # Count only unique ids and remove 0 since it signals 'empty space'
-    border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
-    mat = site_matrix.copy()  # Copy since we don't update in place
-    is_border_cell = np.in1d(mat, border_ids).reshape(mat.shape)
-    mat[is_border_cell] = 0
+    is_border_object = imageutil.find_border_objects(site_matrix)
+    mat = site_matrix.copy()
+    mat[is_border_object] = 0
     return mat
 
 
@@ -466,7 +459,7 @@ These outline images need to be stitched together using tm_stitch.py
         print '* (%d / %d) computing outline for: %s' \
             % (i, len(site_images), basename(site_image.filename))
         mat = site_image.image
-        mat = remove_border_cells(mat)
+        mat = remove_border_objects(mat)
         outline_mat = outlines(mat)
 
         fname = 'outline-' + basename(site_image.filename)
