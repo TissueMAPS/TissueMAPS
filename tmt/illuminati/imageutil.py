@@ -5,7 +5,6 @@ Utility functions for image pre-processing.
 import random as rand
 from scipy.misc import imread, bytescale
 import numpy as np
-
 from gi.repository import Vips
 
 
@@ -24,6 +23,27 @@ def hist_sample_from_sites(filenames, nr_to_sample=5):
         hist += h
     hist /= len(files)
     return hist
+
+
+def find_border_objects(site_matrix):
+    """
+    Given a matrix of a site image, find the objects the border of the image.
+
+    :site_matrix: numpy array of the image matrix.
+
+    :returns:  numpy array with 1 if objects is a border object and 0 otherwise.
+
+    """
+    edges = [np.unique(site_matrix[0, :]),   # first row
+             np.unique(site_matrix[-1, :]),  # last row
+             np.unique(site_matrix[:, 0]),   # first col
+             np.unique(site_matrix[:, -1])]  # last col
+
+    # Count only unique ids and remove 0 since it signals 'empty space'
+    border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
+    object_ids = np.unique(site_matrix[site_matrix != 0])
+    is_border_object = [1 if o in border_ids else 0 for o in object_ids]
+    return is_border_object
 
 
 def save_hist_to_txt_file(hist, filename):
