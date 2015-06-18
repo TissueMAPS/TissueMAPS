@@ -121,12 +121,3 @@ TissueMAPS tool for creating a "zoomify" pyramid of a stitched image.
     $ pyramidize.py --help
 
     $ pyramidize.py some_large_image.png -o folder_of_the_pyramid
-
-Pyramids are built using VIPS.
-
-
-### YAML configuration file ###
-
-Illuminati assumes a few things about your project layout, such as file naming convention and folder structure. These variables are defined in the [config.yaml](config.yaml) file and can be changed by the user for customization.
-
-Note that the parenthesis around a string `" string "` value are not necessary, but it is advised to use them in this file due to the complexity of regular expression pattern strings to prevent things to get screwed-up!
