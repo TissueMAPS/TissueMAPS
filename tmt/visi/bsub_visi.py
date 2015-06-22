@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 import os
-import os.path as osp
 from time import time
 from datetime import datetime
 import yaml
 import glob
 import argparse
-from subprocess32 import call, check_call
+import subprocess32
 from visi.util import check_visi_config
 
 
@@ -22,29 +21,23 @@ config = {
     'FILENAME_FORMAT': '{project}_s{site:0>4}_r{row:0>2}_c{column:0>2}_{filter}_C{channel:0>2}.png',
     'ACQUISITION_MODE': 'ZigZagHorizontal',
     'ACQUISITION_LAYOUT': 'columns>rows',
-    'OUTPUT_DIRECTORY_NAME': 'TIFF'
 }
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Brutus submission script '
-                                     'for .stk to .png image conversion')
+                                     'for .stk to .png conversion')
 
-    parser.add_argument('project_dir', nargs='?',
-                        help='path to the project folder')
-
-    parser.add_argument('-b', '--batch_size', dest='batch_size',
-                        type=int, default=20,
-                        help='number of "jobs" that are submitted per batch \
-                              default: 20')
+    parser.add_argument('experiment_dir', nargs='?',
+                        help='path to the experiment folder')
 
     args = parser.parse_args()
 
-    project_dir = osp.abspath(args.project_dir)
-    input_dir = osp.join(project_dir, 'STK')
-    batch_size = args.batch_size
+    experiment_dir = os.path.abspath(args.experiment_dir)
+    experiment = os.path.basename(experiment_dir)
+    input_dir = os.path.join(experiment_dir, 'STK')
 
-    lsf_dir = osp.join(project_dir, 'lsf')
-    if not osp.exists(lsf_dir):
+    lsf_dir = os.path.join(experiment_dir, 'lsf')
+    if not os.path.exists(lsf_dir):
         print '. creating "lsf" output directory'
         os.mkdir(lsf_dir)
 
@@ -52,57 +45,32 @@ if __name__ == '__main__':
     check_visi_config(config)
 
     # Create custom config.yaml file
-    config_file = osp.join(lsf_dir, 'visi_custom.config')
+    config_file = os.path.join(lsf_dir, 'visi_%s.config' % experiment)
     with open(config_file, 'w') as f:
-        # Write it in safe mode
         f.write(yaml.safe_dump(config, default_flow_style=False,
                 default_style='"'))
 
-    print '. creating joblist files'
-    joblists_dir = osp.join(lsf_dir, 'joblists')
-    if not osp.exists(joblists_dir):
-        os.mkdir(joblists_dir)
-    command = ['visi', '-o', joblists_dir, '--joblist', input_dir]
-    check_call(command)
+    joblist_filenames = glob.glob(os.path.join(experiment_dir, 'visi*.jobs'))
+    if len(joblist_filenames) == 1:
+        joblist_filename = joblist_filenames[0]
+    elif len(joblist_filenames) > 1:
+        raise OSError('There must not be more than one joblist file.')
+    else:
+        raise OSError('Joblist file does not exist.')
 
-    joblist_files = glob.glob(osp.join(joblists_dir, '*.joblist'))
+    with open(joblist_filename, 'r') as joblist_file:
+        joblist = yaml.load(joblist_file.read())
 
-    if not joblist_files:
-        raise Exception('Could not find any .joblist files.')
+    for job in range(1, len(joblist)+1):  # jobs are one-based!
 
-    for joblist_file in joblist_files:
+        ts = datetime.fromtimestamp(time()).strftime('%Y-%m-%d_%H-%M-%S')
+        lsf = os.path.join(experiment_dir, 'lsf',
+                           'visi_%s_%.5d_%s.lsf' % (experiment, job, ts))
 
-        print '. processing joblist from file "%s"' % joblist_file
-
-        subproject_name = osp.splitext(osp.basename(joblist_file))[0]
-        wildcards = '%s*' % subproject_name
-
-        joblist_content = yaml.load(open(joblist_file).read())
-
-        jobs = map(int, joblist_content.keys())
-        number_of_jobs = len(joblist_content)
-        number_of_batches = number_of_jobs / batch_size
-
-        for i in xrange(number_of_batches):
-
-            batch = i + 1  # one-based
-            lower = batch * batch_size - batch_size
-            upper = batch * batch_size - 1
-            if upper > number_of_jobs:
-                upper = number_of_jobs - 1
-            batch_range = '%s-%s' % (jobs[lower], jobs[upper])
-
-            ts = time()
-            st = datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
-            lsf = osp.join(project_dir, 'lsf', 'visi_%s_%.5d_%s_%s.lsf'
-                           % (subproject_name, batch, batch_range, st))
-
-            print '. submitting job %d: %s' % (batch, batch_range)
-            call([
-                 'bsub', '-W', '8:00', '-o', lsf,
-                 '-R', 'rusage[mem=4000,scratch=4000]',
-                 'visi', '--rename', '--split_output',
-                 '--batch', '%s' % batch_range,
-                 '--config', config_file,
-                 input_dir, '--wildcards', wildcards
-            ])
+        print '. submitting job #%d' % job
+        subprocess32.call([
+             'bsub', '-W', '8:00', '-o', lsf,
+             '-R', 'rusage[mem=4000,scratch=4000]',
+             'visi', 'run', '--job', job,
+             '--rename', '--config', config_file, input_dir
+        ])

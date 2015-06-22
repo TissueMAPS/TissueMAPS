@@ -1,199 +1,122 @@
 #! /usr/bin/env python
 # encoding: utf-8
-
 import os
 import argparse
-import yaml
-import glob
-import re
-import time
 import sys
-from visi.stk2png import Stk2png
-from visi import config
-from tmt.util import load_config
-from visi.util import check_visi_config
+from functools import partial
+import tmt.visi
+import traceback
+import tmt.util
+import tmt.visi
+import tmt.visi.util
+from tmt.visi.cli import Visi
 
-
-logo = '''
-      _    _ 
- __ _(_)__(_)
- \ V / (_-< |
-  \_/|_/__/_|   Convert Visitron's .stk files to .png images
-
-'''
 
 if __name__ == '__main__':
 
-    print logo
+    parser = argparse.ArgumentParser(
+            description='''Command line tool for the conversion of .stk files
+                         to .png with optional renaming.
+                         Files will be written into a separate folder sibling
+                         to the input "stk_folder".'''
+    )
 
-    parser = argparse.ArgumentParser()
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s ' + tmt.visi.__version__,
+                        help='Display version')
 
-    parser.add_argument('folder', type=str,
-                        help='folder containing input images')
+    subparsers = parser.add_subparsers()
 
-    parser.add_argument('-w', '--wildcards', dest='wildcards', default='*',
-                        help='wildcards (globbing patterns) \
-                        to select subset of files in folder')
+    run_parser = subparsers.add_parser('run',
+                            help='run conversion from .stk to .png')
 
-    parser.add_argument('-o', '--output_dir', dest='output_dir',
-                        help='alternative output directory')
+    run_parser.add_argument('stk_folder',
+                            nargs='?', type=str, default=os.getcwd(),
+                            help='path to folder holding .stk files \
+                                  (defaults to cwd)')
 
-    parser.add_argument('-s', '--split_output', dest='split_output',
-                        action='store_true', default=False,
-                        help='place output files for different .nd files \
-                        into separate folders')
+    run_parser.add_argument('-w', '--wildcards', dest='wildcards',
+                            type=str, default='*',
+                            help='wildcards (globbing patterns) \
+                                  to select subset of files in folder')
 
-    parser.add_argument('--output_dir_name', dest='output_dir_name', type=str,
-                        help='name of the output folder (defaults to location \
-                             specified in config file)')
+    run_parser.add_argument('-j', '--job', dest='job', type=int,
+                            help='id of the job to process (integer)')
 
-    parser.add_argument('-r', '--rename', dest='rename',
-                        action='store_true', default=False,
-                        help='rename files according to configuration file')
+    run_parser.add_argument('-s', '--split_output', dest='split_output',
+                            action='store_true', default=False,
+                            help='place output files for each .nd file \
+                                  into separate folders')
 
-    parser.add_argument('-z', '--zstacks', dest='zstacks',
-                        action='store_true', default=False,
-                        help='keep z-stacks')
+    run_parser.add_argument('-z', '--zstacks', dest='zstacks',
+                            action='store_true', default=False,
+                            help='keep z-stacks')
 
-    parser.add_argument('-j', '--jobs', dest='jobs',
-                        nargs='+', type=int,
-                        help='job ids to process (integers, e.g. 1 2 3)')
+    run_parser.add_argument('-r', '--rename', dest='rename',
+                            action='store_true', default=False,
+                            help='rename files according to configuration')
 
-    parser.add_argument('-b', '--batch', dest='batch', type=str,
-                        help='batch to process \
-                        (two integers separated by a hyphen, e.g. 1-10)')
+    run_parser.add_argument('-c', '--config', dest='config',
+                            help='use custom yaml configuration file \
+                                  (defaults to "visi" configuration)')
 
-    parser.add_argument('-c', '--config', dest='config',
-                        help='use custom yaml configuration file \
-                        (defaults to "visi" configuration)')
+    run_parser.set_defaults(handler=partial(Visi.process_commands,
+                                            subparser=run_parser))
 
-    parser.add_argument('--joblist', dest='joblist',
-                        action='store_true', default=False,
-                        help='create a list of jobs for parallel processing')
+    joblist_parser = subparsers.add_parser('joblist',
+                                help='create a joblist for parallel computing \
+                                      (.joblist YAML file in parent directory \
+                                       of "stk_folder")')
+
+    joblist_parser.add_argument('stk_folder',
+                                nargs='?', type=str, default=os.getcwd(),
+                                help='path to folder holding .stk files \
+                                      (defaults to cwd)')
+
+    joblist_parser.add_argument('-w', '--wildcards', dest='wildcards',
+                                type=str, default='*',
+                                help='wildcards (globbing patterns) \
+                                      to select subset of files in folder')
+
+    joblist_parser.add_argument('-s', '--split_output', dest='split_output',
+                                action='store_true', default=False,
+                                help='place output files for each .nd file \
+                                      into separate folders')
+
+    joblist_parser.add_argument('-b', '--batch_size', dest='batch_size',
+                                type=int, default=10,
+                                help='number of files that should be \
+                                      processed per job (defaults to 10)')
+
+    joblist_parser.add_argument('--output_folder_name',
+                                dest='output_folder_name',
+                                type=str, default='TIFF',
+                                help='name of the output folder \
+                                      (defaults to "TIFF")')
+
+    joblist_parser.set_defaults(handler=partial(Visi.process_commands,
+                                                subparser=joblist_parser))
 
     args = parser.parse_args()
 
-    if args.config:
-        # Overwrite default "tmt" configuration
-        config_filename = args.config
-        print '. Using configuration file "%s"' % config_filename
-        config = load_config(config_filename)
-        print '. Checking configuration file'
-        check_visi_config(config)
+    if 'config' in args:
+        if args.config:
+            # Overwrite default "visi" configuration
+            print '. Using configuration file "%s"' % args.config
+            args.config = tmt.util.load_config(args.config)
+            print '. Checking configuration file'
+            tmt.visi.util.check_visi_config(args.config)
+        else:
+            args.config = tmt.visi.config
 
-    # List files in input directory matching wildcards
-    input_dir = args.folder
-    files = glob.glob(os.path.join(input_dir, args.wildcards))
-
-    # Create name of output directory
-    if args.output_dir_name:
-        output_dir_name = args.output_dir_name
-    else:
-        output_dir_name = config['OUTPUT_DIRECTORY_NAME']
-    if args.output_dir:
-        output_dir = os.path.join(args.output_dir, output_dir_name)
-    else:
-        output_dir = os.path.join(input_dir, '..', output_dir_name)
-
-    # Find .nd files in the list of files.
-    r = re.compile('.*\.nd$')
-    nd_files = filter(r.search, files)
-    if not nd_files:
-        raise Exception('No .nd files found in file list.')
-
-    # Handle processing of individual 'jobs'
-    if args.jobs:
-        jobs = args.jobs
-        print('. The following jobs will be processed: %s' %
-              ', '.join(map(str, jobs)))
-    elif args.batch:
-        # Custom input syntax that requires some formatting
-        try:
-            batch = map(int, args.batch.split('-'))
-        except:
-            raise Exception('"BATCH" argument must contain two integers '
-                            'separated by a hyphen')
-        jobs = range(batch[0], batch[1]+1)  # one-based indexing!
-        print('. These jobs that will be processed: %d-%d' %
-              (jobs[0], jobs[-1]))
-    else:
-        jobs = None
-
-    # Convert to zero-based indexing
-    if jobs:
-        jobs = [j-1 for j in jobs]
-
-    print '. Folder to process: "%s"' % os.path.dirname(nd_files[0])
-
-    if args.split_output:
-        print '. Output will be split into several folders'
-
-    # Loop over .nd files, because they could correspond to different
-    # acquisition settings, i.e. different number of sites, channels, ...
-    files_to_process = dict()
-    for nd_file in nd_files:
-        nd = os.path.splitext(os.path.basename(nd_file))[0]
-        r = re.compile('%s_' % nd)
-        files_to_process[nd_file] = filter(r.search, files)
-
-    # print files_to_process
-
-    for nd_file, stk_files in files_to_process.iteritems():
-
-        nd = os.path.splitext(os.path.basename(nd_file))[0]
-        print '.. Processing files corresponding to .nd file "%s"' % nd
-
-        if args.joblist:
-            # Write joblist to file in YAML syntax
-            joblist_file = os.path.join(args.output_dir,
-                                        '%s.joblist' % nd)
-            print '... Writing joblist to file "%s"' % joblist_file
-            joblist = dict()
-            with open(joblist_file, 'w') as out:
-                for i, f in enumerate(stk_files):
-                    out.write(yaml.dump({(i+1): f}, default_flow_style=False))
-            continue
-
-        if args.split_output:
-            # Put files corresponding to current .nd file in separate folder
-            sub_parts = re.search(r'(.*)_(\d+)$', nd)
-            output_sub_dir = '%s_%.2d' % (sub_parts.group(1),
-                                          int(sub_parts.group(2)))
-            if args.output_dir:
-                output_dir = os.path.join(args.output_dir, output_sub_dir,
-                                          output_dir_name)
-            else:
-                output_dir = os.path.join(input_dir, '..',
-                                          output_sub_dir,
-                                          output_dir_name)
-
-        retry = True
-        ii = 0
-        while retry:
-            if not os.path.exists(output_dir):
-                print '.. Trying to create output directory "%s"' % output_dir
-                # This sometimes produces an error if two nodes try to create
-                # the directory at the same time.
-                ii += 1
-                try:
-                    os.makedirs(output_dir)
-                    print '.. Creation of output directory was successful'
-                    retry = False
-                except OSError:
-                    print '.. Creation of output directory failed. Retrying...'
-                    time.sleep(10)
-                    if ii == 100:
-                        sys.exit(1)
-                    continue
-            else:
-                retry = False
-
-        process = Stk2png(stk_files, nd_file, config)
-        if args.rename:
-            print '... Rename images'
-            process.rename_files()
-        print '... Load and unpack .stk files and save them as .png images'
-        process.unpack_images(output_dir=output_dir, keep_z=args.zstacks,
-                              indices=jobs)
-
-    print '🍺  Done!'
+    try:
+        if args.handler:
+            args.handler(args)
+            print '🍺  Done!'
+        else:
+            parser.print_help()
+    except Exception as error:
+        sys.stdout.write('Failed. ')
+        print 'Error message: "%s"\n' % str(error)
+        for tb in traceback.format_tb(sys.exc_info()[2]):
+            print tb

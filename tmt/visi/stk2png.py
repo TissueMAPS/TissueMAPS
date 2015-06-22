@@ -13,17 +13,27 @@ import re
 
 def read_stk(stk_filename):
     '''
-    Read stk file from disk and unpack individual images (z-stacks).
-    Store it in a numpy array.
+    Read stk file from disk and unpack individual stacks.
+
+    Parameters
+    ----------
+    stk_filename: str
+
+    Returns
+    -------
+    ndarray
     '''
-    # Something goes wrong with reading/writing!!!
-    stack = tifffile.imread(stk_filename)
-    return stack
+    return tifffile.imread(stk_filename)
 
 
 def write_png(png_filename, image):
-    ''' 
-    Write numpy array to disk as png.
+    '''
+    Write image to disk as png.
+
+    Parameters
+    ----------
+    png_filename: str
+    image: ndarray
     '''
     with open(png_filename, 'wb') as f:
         writer = png.Writer(width=image.shape[1],
@@ -36,12 +46,18 @@ def write_png(png_filename, image):
 def read_nd(nd_filename):
     '''
     Read the content of the .nd file and do some pre-formatting.
+
+    Parameters
+    ----------
+    nd_filename: str
+
+    Returns
+    -------
+    Dict[str, str or List[str]]
     '''
-    # Read content
-    f = open(nd_filename, 'r')
-    content = f.readlines()
-    f.close()
-    # Extract information and store it in a dictionary
+    with open(nd_filename, 'r') as f:
+        content = f.readlines()
+
     nd = dict()
     for line in content:
         if re.search('NDInfoFile', line) or re.search('EndFile', line):
@@ -56,11 +72,20 @@ def read_nd(nd_filename):
 def format_nd(nd):
     '''
     Format .nd file content, i.e. translate it into python syntax.
+
     Important keys:
-        - DoStage       -> 'well'
-        - DoTimelapse   -> 'time'
-        - DoWave        -> 'channel'
-        - DoZSeries     -> 'zstack'
+        - DoStage
+        - DoTimelapse
+        - DoWave
+        - DoZSeries
+
+    Parameters
+    ----------
+    nd: Dict[str, str or List[str]]
+
+    Returns
+    -------
+    Dict[str, str or List[str]]
     '''
     for k, v in nd.iteritems():
         string_match = re.search(r'"(.+)"', v)
@@ -76,22 +101,22 @@ def format_nd(nd):
     return nd
 
 
-def get_well_ids(nd):
-    '''
-    Get information on well position (well id) from .nd files.
-    '''
-    wells = [v for k, v in nd.iteritems() if re.search(r'Stage\d+', k)]
-    well_info = [re.search(r'row:(\w),column:(\d+)', w) for w in wells]
-    well_ids = [''.join(map(w.group, xrange(1, 3))) for w in well_info]
-    return well_ids
-
-
 def guess_stitch_dims(max_position, layout):
     '''
-    Simply algorithm to guess correct dimensions of the stitched image.
-    :max_position:  integer giving the maximum position in the image
-    :layout:        string for more rows than columns ('columns<rows')
-                    or vice versa ('columns>rows')
+    Simple algorithm to guess correct dimensions of a stitched image.
+
+    Parameters
+    ----------
+    max_position: int
+                  maximum position in the stitched image
+    layout: str
+            either "columns<rows" (more rows than columns)
+            or "columns>rows" (vice versa)
+
+    Returns
+    -------
+    Tuple[int]
+    y, x dimensions (height, width) of the stitched image
     '''
     if layout == 'columns<rows':
         decent = True
@@ -107,20 +132,29 @@ def guess_stitch_dims(max_position, layout):
     return stitch_dims
 
 
-def get_image_snake(stitch_dims, doZigZag):
+def get_image_snake(stitch_dims, zig_zag):
     '''
     The image snake defines the position of each image in the stitched
-    image. Returns a list of 'row' and 'column' index of each 'site'.
-    :stitch_dims:   list of the dimensions of the stitched image [rows, columns]
-    :doZigZag:      bool indicating whether images were acquired in
-                    "ZigZag" mode
+    image.
+
+    Parameters
+    ----------
+    stitch_dims: Tuple[int]
+                 y,x dimensions (height, width) of the stitched image
+    zig_zag: bool
+             were images acquired in "ZigZag" mode?
+
+    Returns
+    -------
+    Dict[str, List[int]]
+    one-based "row" and "column" position of each image in the stitched image
     '''
     cols = []
     rows = []
     # Currently, only horizontal snakes are supported!
     for i in xrange(stitch_dims[0]):  # loop over rows
         # Change order of sites in columns if acquired in ZigZag mode
-        if i % 2 and doZigZag:
+        if i % 2 and zig_zag:
             cols += range(stitch_dims[1], 0, -1)
         # Preserve order of sites in columns
         else:
@@ -137,22 +171,27 @@ class Stk2png(object):
     '''
 
     def __init__(self, input_files, nd_file, config):
-        '''Init Stk2png class.
+        '''
+        Initiate Stk2png class.
 
-        Parameters:
-        :input_files:           list of the .stk filenames
-        :nd_file:               filename of corresponding .nd file
-        :config:                dictionary with configuration file content
+        Parameters
+        ----------
+        input_files: List[str]
+                     .stk filenames
+        nd_file: str
+                 filename of the corresponding .nd file
+        config: Dict[str, str]
+                configuration settings (from YAML config file)
 
-        The config dictionary should contain the following keys:
-         * FILENAME_FORMAT          string defining filename format using '{}'
-         * ACQUISITION_MODE         string specifying the order in which images
-                                    were acquired (snake)
-         * ACQUISITION_LAYOUT       either 'rows>columns' or 'columns>rows'
-         * OUTPUT_DIRECTORY_NAME    string specifying name of output folder
+        Config should contain the following keys:
+         * FILENAME_FORMAT          format string
+         * ACQUISITION_MODE         the order in which images were acquired,
+                                    e.g. "ZigZagHorizontal"
+         * ACQUISITION_LAYOUT       either "rows>columns" or "columns>rows"
         '''
         self.input_files = map(basename, input_files)
-        self.output_files = copy(self.input_files)
+        self.output_files = [re.sub(r'stk$', 'png', f)
+                             for f in self.input_files]
         self.input_dir = dirname(input_files[0])
         self.nd_file = basename(nd_file)
         self.info = dict()
@@ -163,10 +202,9 @@ class Stk2png(object):
         self.acquistion_mode = copy(config['ACQUISITION_MODE'])
         self.acquisition_layout = copy(config['ACQUISITION_LAYOUT'])
 
-    def get_info_from_nd_files(self):
+    def extract_info_from_nd_files(self):
         '''
-        Not all image information can be retrieved form the filename.
-        We have to read additional meta information from the .nd files,
+        Extract meta information from .nd files,
         in particular information on the position within the well plate.
         '''
         nd_filename = join(self.input_dir, self.nd_file)
@@ -182,14 +220,26 @@ class Stk2png(object):
         metainfo['hasCycle'] = False
         self.metainfo = metainfo
 
-        # Preallocate the variables that are inserted in the output filename
+        def extract_well_ids(nd, files):
+            '''
+            Extract information on well position from .nd file content.
+
+            Returns:
+            --------
+            List[str]
+            '''
+            wells = [v for k, v in nd.iteritems() if re.search(r'Stage\d+', k)]
+            well_info = [re.search(r'row:(\w),column:(\d+)', w) for w in wells]
+            well_ids = [''.join(map(w.group, xrange(1, 3))) for w in well_info]
+            return well_ids
+
         if self.metainfo['hasWell']:
-            well_ids = get_well_ids(nd)
+            well_ids = extract_well_ids(nd, self.input_files)
             self.info['well'] = well_ids
 
-    def get_info_from_filenames(self):
+    def extract_info_from_filenames(self):
         '''
-        Get image information (such as channel, site, etc.) from filenames.
+        Extract image information (such as channel, site, etc.) from filenames.
         '''
         info = self.info
         pattern = self.filename_pattern
@@ -220,7 +270,8 @@ class Stk2png(object):
             r = re.compile('%s%s' % (exp_name, pattern))
             matched = re.search(r, stk_file)
             if not matched:
-                raise Exception('"Filter" info could not be extracted from filenames')
+                raise ValueError('"filter" info could not be determined \
+                                 from filenames')
             matched = map(matched.group, range(1, len(self.tokens)+1))
             for i, t in enumerate(self.tokens):
                 # Handle special cases that are more complex
@@ -236,7 +287,7 @@ class Stk2png(object):
                 try:
                     info[t].append(match)
                 except:
-                    raise Exception('... Token "%s" didn\'t match filename.' % t)
+                    raise ValueError('... Token "%s" didn\'t match filename.' % t)
         # Assert correct data type (string, interger, etc)
         convert_to_int = ['site', 'channel']
         for i in convert_to_int:
@@ -247,21 +298,17 @@ class Stk2png(object):
         if 'well' in self.info and self.metainfo['hasWell']:
             # Map well ids to filenames
             unique_sites = np.unique(self.info['site'])
-            if len(self.info['well']) is not len(unique_sites):
-                raise Exception('Number of well positions doesn\'t match ',
-                                'number of sites!')
-            well_ids = np.chararray(len(self.info['site']), itemsize=3)
-            for i, site in enumerate(unique_sites):
-                ix = np.where(np.array(self.info['site']) == site)
-                well_ids[ix] = self.info['well'][i]
-            self.info['well'] = well_ids.tolist()
+            # We simply loaded the well information for all sites form nd file,
+            # now we have to extract the relevant info for the processed sites
+            self.info['well'] = [self.info['well'][i]
+                                 for i in map(int, unique_sites)]
         else:
             self.info['well'] = [0 for x in xrange(len(self.input_files))]
 
-    def get_image_position(self):
+    def calc_image_position(self):
         '''
-        Get the position of images within the continuous acquisition grid
-        (e.g. well).
+        Calculate the y,x (row, column) position of images
+        within the continuous acquisition grid, i.e. the well.
         '''
         if self.acquistion_mode == 'ZigZagHorizontal':
             doZigZag = True
@@ -306,28 +353,26 @@ class Stk2png(object):
         Rename stk files. To this end, get required information from
         metadata files (.nd) and filenames (.stk) and then format filenames
         according to nomenclature defined in configuration settings.
-
         '''
-        self.get_info_from_nd_files()
-        self.get_info_from_filenames()
-        self.get_image_position()
+        self.extract_info_from_nd_files()
+        self.extract_info_from_filenames()
+        self.calc_image_position()
         self.format_filenames()
 
-    def unpack_images(self, output_dir, keep_z=False, indices=None):
+    def unpack_images(self, output_dir, keep_z=False):
         '''
         Read and upstack stk files and write images (z-stacks or MIPs)
         to disk as .png files.
-        :indices:       list of integers specifying which files are processed,
-                        one-based (by default all files are processed)
-        :output_dir:    string specifying directory where images are saved
-        :keep_z:        bool to keep individual z stacks
-                        (if `False` MIPs are generated - default)
-        '''
-        if indices is None:
-            # Process all files if no indices are provided
-            indices = range(len(self.input_files))
 
-        for i in indices:
+        Parameters
+        ----------
+        output_dir: str
+                    directory where images should be saved
+        keep_z: bool
+                keep individual z stacks (True) or perform maximum intensity
+                projection (False - default)
+        '''
+        for i in xrange(len(self.input_files)):
             stk_file = self.input_files[i]
             print '.... Unpack file "%s"' % stk_file
             stack = read_stk(join(self.input_dir, stk_file))
