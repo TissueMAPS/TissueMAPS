@@ -1,0 +1,2 @@
+[ ] clean-up illuminati modules: segment, stitch, pyramidize, ... -> integrate them into the illuminati command line tool (subparser?)
+[ ] update README of illuminati and align packages
