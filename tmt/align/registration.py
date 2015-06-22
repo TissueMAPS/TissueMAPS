@@ -342,10 +342,9 @@ class Registration(object):
                           'for joblist creation')
 
         joblist = list()
-        n_files = len(self.image_files[0])
-        n_batches = n_files / batch_size
         ref_filenames = create_batches(self.image_files[self.ref_cycle],
                                        batch_size)
+        n_batches = len(ref_filenames)
         # Create a list of dictionaries holding the image filenames per batch
         # segregated for the different cycles
         n_cycles = len(self.image_files)
