@@ -6,7 +6,6 @@ import copy
 import numpy as np
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
-from gi.repository import Vips
 from tmt.image import Image
 from tmt.image import is_image_file
 from tmt.util import load_config, check_config

@@ -19,46 +19,32 @@ from os.path import basename, exists, realpath, join
 import util
 import re
 from tmt import imageutil
+import datafusion.util
 from gi.repository import Vips
 
 
-def remove_nondisplay_objects(im):
-    """
-    Remove all objects form mask image that should not be displayed, i.e.
-    make the corresponding pixel values black.
-
-    Objects that should be not be displayed and thus removed include:
-        - Border objects, i.e. objects whose parent object has pixels along
-          the border of an image.
-          These objects need to be removed because they extend over image
-          borders which leads to artifacts upon parallel analysis of
-          individual images.
-        - Objects not present in the dataset.
-          This may occur when images are aligned (shifted and cropped),
-          which can lead to loss of objects, i.e. objects are no longer present
-          on the cropped image.
-
-    :im:        Vips image where each pixel value represent the object id, i.e.
-                indicates to which object the pixel belongs.
-    :object:    Name of the object : str.
-    :data:      Dataset as open HDF5 stream object.
-    """
-
-
 def local_to_global_ids_vips(im, offset_id):
-    """
+    '''
     Add an offset to site-local cell labels and then encode
     that number as a (R, G, B) triple.
     So if at one pixel there was a value of x this would mean
     that that pixel belongs to the xth cell in the image `im`.
-    The function would now add `offset_id` to x and encode the resulting value in terms of RGB s.t.
-    R * 256^2 + G * 256 + B == x + offset_id
+    The function would now add `offset_id` to x and encode the resulting value
+    in terms of RGB s.t. R * 256^2 + G * 256 + B == x + offset_id
 
-    :im: a vips image where each pixel indicates to which cell this pixel belongs.
-    :offset_id: a integer value to add to all labels.
-    :returns: a RGB image with band format UCHAR.
+    Parameters
+    ----------
 
-    """
+    im: VipsImage
+        each pixel indicates to which object this pixel belongs
+    offset_id: int
+               value to add to all labels
+
+    Returns
+    -------
+    VipsImage
+    a RGB image with band format UCHAR
+    '''
     # Convert the image to integer and add an offset to all ids.
     nonzero = im > 0
     im = im.cast('uint')
@@ -82,15 +68,60 @@ def create_id_lookup_matrices(sitemat, offset):
     return mat, np.max(mat)
 
 
+def create_and_save_lookup_tables(image_grid, data_file, output_dir):
+
+    current_obj = image_grid[0][0].objects.lower()
+
+    current, parent = datafusion.util.extract_ids(data_file, current_obj)
+
+    max_id = 0
+    for i in range(len(image_grid)):
+        for j in range(len(image_grid[0])):
+
+            im = image_grid[i][j].image
+
+            # Which of the current objects are not in the dataset?
+            # (Tracked via their parent object ids)
+            site_id = image_grid[i][j].site
+            ids_image = image_grid[i][j].ids
+            ids_data = np.unique(current['ID_parent'][current.ID_site == site_id])
+            ids_nodata = [o for o in ids_data if o not in ids_image]
+
+            # Which parent objects lie at the border of the image?
+            ids_border = parent['ID_object'][(parent.IX_border > 0) &
+                                             (parent.ID_site == site_id)]
+            ids_border = ids_border.tolist()
+
+            # Combine all object ids that should not be displayed and thus
+            # removed from the images for the creation of masks
+            ids_nodisplay = ids_border + ids_nodata
+
+            im = remove_objects(im, ids_nodisplay)
+
+            im, max_id = create_id_lookup_matrices(im, max_id)
+            fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
+                        rownr=(i+1), colnr=(j+1))
+            fname_abs = join(output_dir, fname)
+            print '    Saving file: ' + fname_abs
+            with open(fname_abs, 'w') as f:
+                np.save(f, im)
+
+
 def remove_border_objects(site_matrix):
-    """
+    '''
     Given a matrix of a site image, set all pixels with
     ids belonging to border objects to zero.
 
-    :site_matrix: a numpy array of the image matrix.
-    :returns: a new numpy array with border objects entries set to 0.
+    Parameters
+    ----------
+    site_matrix: ndarray
+                 the image matrix, where values correspond to object ids
 
-    """
+    Returns
+    ------- 
+    ndarray
+    the modified image matrix with pixel values of border objects set to 0
+    '''
     is_border_object = imageutil.find_border_objects(site_matrix)
     mat = site_matrix.copy()
     mat[is_border_object] = 0
@@ -98,16 +129,23 @@ def remove_border_objects(site_matrix):
 
 
 def remove_border_objects_vips(im, is_source_uint16=True):
-    """
-    Given a site image, set all pixels with
+    '''
+    Given a matrix of a site image, set all pixels with
     ids belonging to border objects to zero.
 
-    :im: a VIPS image that represents the site.
-    :is_source_uint16: a boolean flag indicating if the source band format
-                       is uin16, otherwise its taken as uint8.
-    :returns: a new VIPS image with border object entries set to 0.
+    Parameters
+    ----------
+    site_matrix: VipsImage
+                 the image matrix, where values correspond to object ids
+    is_source_uint16: bool
+                      indicating if the source band format is uin16
+                      (otherwise its taken as uint8)
 
-    """
+    Returns
+    ------- 
+    VipsImage
+    the modified image matrix with pixel values of border objects set to 0
+    '''
     # Extract the edges on each side of the image
     left = im.extract_area(0, 0, 1, im.height)
     right = im.extract_area(im.width-1, 0, 1, im.height)
@@ -126,15 +164,22 @@ def remove_border_objects_vips(im, is_source_uint16=True):
 
 
 def remove_objects(site_matrix, ids):
-    """
+    '''
     Given a matrix of a site image, set all pixels whose values
     are in "ids" to zero.
 
-    :site_matrix: a numpy array of the image matrix.
-    :ids: a list of unique object ids : [int].
-    :returns: a new numpy array with object entries in ids set to 0.
+    Parameters
+    ----------
+    site_matrix: ndarray
+                 the image matrix, where values correspond to object ids
+    ids: List[int]
+         unique object ids
 
-    """
+    Returns
+    -------
+    ndarray
+    the modified image matrix with pixel values in ids set to 0
+    '''
     mat = site_matrix.copy()  # Copy since we don't update in place
     remove_ix = np.in1d(mat, ids).reshape(mat.shape)
     mat[remove_ix] = 0
@@ -142,17 +187,25 @@ def remove_objects(site_matrix, ids):
 
 
 def remove_objects_vips(im, ids, is_source_uint16=True):
-    """
+    '''
     Given a matrix of a site image, set all pixels whose values
     are in "ids" to zero.
 
-    :im: a VIPS image that represents the site.
-    :ids: a list of unique object ids : [int].
-    :is_source_uint16: a boolean flag indicating if the source band format
-                       is uin16, otherwise its taken as uint8.
-    :returns: a new VIPS image with object entries in ids set to 0.
+    Parameters
+    ----------
+    site_matrix: VipsImage
+                 the image matrix, where values correspond to object ids
+    ids: List[int]
+         unique object ids
+    is_source_uint16: bool
+                      indicating if the source band format is uin16
+                      (otherwise its taken as uint8)
 
-    """
+    Returns
+    -------
+    VipsImage
+    the modified image matrix with pixel values in ids set to 0
+    '''
     id_lut = Vips.Image.identity(ushort=is_source_uint16)
     for i in ids:
         id_lut = (id_lut == i).ifthenelse(0, id_lut)
@@ -162,7 +215,8 @@ def remove_objects_vips(im, ids, is_source_uint16=True):
 
 
 def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
-    """Return a dictionary from cell ids to centroids.
+    '''
+    Return a dictionary from cell ids to centroids.
     Centroids are given as (x, y) tuples where the origin of the coordinate
     system is assumed to be in the topleft corner (like in openlayers).
 
@@ -179,7 +233,7 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
               the x coordinates of the centroids in the second column.
               The y coordinates in the last one.
 
-    """
+    '''
     height, width = sitemat.shape
     local_ids = np.array(
         sorted(set(np.unique(sitemat)).difference({0})),
@@ -276,20 +330,19 @@ def save_outline_polygons(outlines, filename):
 
 
 def outlines(labels, keep_ids=False):
-    """
+    '''
     Given a label matrix, return a matrix of the outlines of the labeled objects.
-    If `keep_ids` is True, the outlines will still consist of their cell's id, otherwise
-    all outlines will be 255.
-    Note that in the case of keeping the ids, the output matrix will have the original bit depth!
+    If `keep_ids` is True, the outlines will still consist of their cell's id,
+    otherwise all outlines will be 255.
+    Note that in the case of keeping the ids,
+    the output matrix will have the original bit depth!
 
     If a pixel is not zero and has at least one neighbor with a different
     value, then it is part of the outline.
 
     Taken from the BSD-licensed file:
     https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/cpmath/outline.py
-
-    """
-
+    '''
     lr_different = labels[1:, :] != labels[:-1, :]
     ud_different = labels[:, 1:] != labels[:, :-1]
     d1_different = labels[1:, 1:] != labels[:-1, :-1]
@@ -319,16 +372,15 @@ def outlines(labels, keep_ids=False):
 
 
 def outlines_vips(im):
-    """
-    Given a label matrix, return a matrix of the outlines of the labeled objects.
+    '''
+    Given a label matrix, return a matrix of the outlines of labeled objects.
 
     If a pixel is not zero and has at least one neighbor with a different
     value, then it is part of the outline.
 
     For more info about how this works, see here:
     http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/libvips-morphology.html
-
-    """
+    '''
     # Since the images are sometimes not square, they can't be rotated at all times.
     # Normally you would define one mask and apply it repeatedly to the image while rotating it.
     # Since this isn't possible, I just define all the masks right here.

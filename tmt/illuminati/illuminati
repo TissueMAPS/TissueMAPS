@@ -1,25 +1,18 @@
 #! /usr/bin/env python
 # encoding: utf-8
 import os
-from os.path import exists, join
+import os.path
 import sys
 import re
-import copy
-import h5py
-import random
-import pandas as pd
-import numpy as np
-import pyramidize
-import illumcorrect
-import stitch
 import segment
-from tmt import imageutil
-from tmt import config
+from tmt.illuminati import Mosaic
+import tmt
 from tmt.util import load_config, check_config
-from tmt.image import is_image_file
+import tmt.image
 from tmt.experiment import Experiment
 from tmt.image import IntensityImage, MaskImage
-from illuminati.illumcorrect import np_array_to_vips_image
+from tmt.illuminati.illumcorrect import np_array_to_vips_image
+from tmt.illuminati import logo, __version__
 
 """
 Illuminati is a command line tool for pre-processing images for TissueMAPS.
@@ -57,190 +50,6 @@ Some example use cases:
 """
 
 
-def build_image_grid(file_grid):
-    image_grid = copy.deepcopy(file_grid)
-
-    for i in range(len(file_grid)):
-        for j in range(len(file_grid[0])):
-
-            im = file_grid[i][j].image
-
-            image_grid[i][j] = im
-
-    return image_grid
-
-
-def ids_from_data(data_file, current_obj):
-
-    # Masks are used in TissueMAPS to visualize the position of
-    # segmented objects in the image. In addition, they can be selected
-    # (i.e. one can click on them) and use them with analysis tools.
-    # Here we remove unwanted objects from the masks so that these objects
-    # will not be displayed and cannot be selected. Removal of objects is based
-    # on the parent objects (e.g. cells) and all corresponding children objects
-    # (e.g. nuclei) will be removed as well.
-
-    # NOTE: The internal hierarchical structure of the data file is hard-coded!
-
-    f = h5py.File(data_file, 'r')
-
-    parent_obj = f['parent'][()].lower()  # lower case!
-    parent = pd.DataFrame(f['objects/%s/original-ids' % parent_obj][()])
-    parent.columns = f['objects/%s/original-ids' % parent_obj].attrs['names'][()]
-    parent['IX_border'] = f['objects/%s/border' % parent_obj][()]
-
-    current = pd.DataFrame(f['objects/%s/original-ids' % current_obj][()])
-    current.columns = f['objects/%s/original-ids' % current_obj].attrs['names'][()]
-    current['ID_global'] = f['objects/%s/ids' % current_obj][()]
-
-    if current_obj != parent_obj:
-        current['ID_parent'] = f['objects/%s/parent-ids' % current_obj][()]
-    else:
-        current['ID_parent'] = current['ID_object']
-
-    f.close()
-
-    return (current, parent)
-
-
-def build_mask_grid(file_grid, data_file, mask='outline',
-                    make_global_ids=False):
-
-    current_obj = file_grid[0][0].objects.lower()
-
-    current, parent = ids_from_data(data_file, current_obj)
-
-    max_id = 0
-    mask_grid = copy.deepcopy(file_grid)
-    for i in range(len(file_grid)):
-        for j in range(len(file_grid[0])):
-
-            im = file_grid[i][j].image
-
-            # Which of the current objects are not in the dataset?
-            # (Tracked via their parent object ids)
-            site_id = file_grid[i][j].site
-            ids_image = file_grid[i][j].ids
-            ids_data = np.unique(current['ID_parent'][current.ID_site == site_id])
-            ids_nodata = [o for o in ids_data if o not in ids_image]
-
-            # Which parent objects lie at the border of the image?
-            ids_border = parent['ID_object'][(parent.IX_border > 0) &
-                                             (parent.ID_site == site_id)]
-            ids_border = ids_border.tolist()
-
-            # Combine all object ids that should not be displayed and thus
-            # removed from the images for the creation of masks
-            ids_nodisplay = ids_border + ids_nodata
-
-            # Should the ids be computed as RGB triples?
-            # If yes, don't remove border cells and just create the RGB images!
-            if make_global_ids:
-                # These masks will be used to visualize results of tools on 
-                # the objects. Keep all objects for these masks!
-                # Should the result be a RGB area mask or RGB outline mask
-                if mask == 'area':
-                    im, max_id = segment.local_to_global_ids_vips(im, max_id)
-                    max_id += 1
-                if mask == 'outline':
-                    ids, max_id = segment.local_to_global_ids_vips(im, max_id)
-                    max_id += 1
-                    outline = segment.outlines_vips(im)
-                    # Make everything except the outline black
-                    im = outline.ifthenelse(ids, 0)
-            else:
-                # These masks will be used for the display and selection of
-                # objects. Remove objects that should not be displayed
-                # (and will thus not be selectable).
-                if mask == 'area':
-                    im = segment.remove_objects_vips(im, ids_nodisplay)
-                if mask == 'outline':
-                    im = segment.remove_objects_vips(im, ids_nodisplay)
-                    im = segment.outlines_vips(im)
-
-            mask_grid[i][j] = im
-
-    return mask_grid
-
-
-def create_and_save_lookup_tables(file_grid, data_file):
-
-    current_obj = file_grid[0][0].objects.lower()
-
-    current, parent = ids_from_data(data_file, current_obj)
-
-    max_id = 0
-    for i in range(len(file_grid)):
-        for j in range(len(file_grid[0])):
-
-            im = file_grid[i][j].image
-
-            # Which of the current objects are not in the dataset?
-            # (Tracked via their parent object ids)
-            site_id = file_grid[i][j].site
-            ids_image = file_grid[i][j].ids
-            ids_data = np.unique(current['ID_parent'][current.ID_site == site_id])
-            ids_nodata = [o for o in ids_data if o not in ids_image]
-
-            # Which parent objects lie at the border of the image?
-            ids_border = parent['ID_object'][(parent.IX_border > 0) &
-                                             (parent.ID_site == site_id)]
-            ids_border = ids_border.tolist()
-
-            # Combine all object ids that should not be displayed and thus
-            # removed from the images for the creation of masks
-            ids_nodisplay = ids_border + ids_nodata
-
-            im = segment.remove_objects(im, ids_nodisplay)
-
-            im, max_id = segment.create_id_lookup_matrices(im, max_id)
-            fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
-                        rownr=(i+1), colnr=(j+1))
-            fname_abs = join(layer_dir, fname)
-            print '    Saving file: ' + fname_abs
-            with open(fname_abs, 'w') as f:
-                np.save(f, im)
-
-
-def apply_illumination_correction(img_grid, mean_image, std_image):
-    for i in range(len(img_grid)):
-        for j in range(len(img_grid[0])):
-            img = img_grid[i][j]
-            img_grid[i][j] = \
-                illumcorrect.illum_correction_vips(img, mean_image, std_image)
-
-    return img_grid
-
-
-def apply_threshold(img, images,
-                    thresh_value=None, thresh_sample=None,
-                    thresh_percent=None):
-
-    # NOTE: If the 'thresh' argument has not been set with a particular pixel
-    # value, then a certain percentage of the pixels with the highest values
-    # will be thresholded, i.e. their value will be set to the threshold level.
-    # The `args.thresh_sample` is the number of images that are used to
-    # determine the threshold level above which the `args.thresh_percent`
-    # highest pixel values lie.
-
-    if thresh_value:
-        val = args.thresh_value
-    else:
-        sample_size = thresh_sample
-        # Adjust sample size if set too large
-        if thresh_sample > len(images):
-            sample_size = len(images)
-        # The images from which to sample threshold
-        sample_images = random.sample(images, sample_size)
-        val = imageutil.calc_threshold_level(sample_images, thresh_percent)
-    # Create lookup table
-    lut = imageutil.create_thresholding_LUT(val)
-    # Map image through lookup table
-    img = img.maplut(lut)
-
-    return img
-
-
 if __name__ == '__main__':
     import argparse
 
@@ -250,11 +59,11 @@ if __name__ == '__main__':
         description='Create pyramid images for TissueMAPS.')
 
     parser.add_argument('files', nargs='*',
-                        help='image files to process (pattern),\
+                        help='image files to process (globbing pattern),\
                         e.g. TIFF/*.png')
 
     parser.add_argument('-o', '--output', dest='output_dir', required=True,
-                        help="directory where the pyramid should be saved")
+                        help="directory where output should be saved")
 
     parser.add_argument('-c', '--config', dest='config',
                         help='path to custom yaml configuration file \
@@ -269,32 +78,6 @@ if __name__ == '__main__':
                         help='correct images for illumination\
                         according to stats file')
 
-    parser.add_argument('--make-global-ids', dest='make_global_ids',
-                        action='store_true', default=False,
-                        help='if all the cell labels should be made into '
-                             'globally unique labels.')
-
-    parser.add_argument('--id-luts', dest='id_luts',
-                        action='store_true', default=False,
-                        help='if lookup tables for the cell ids should be '
-                        'created. These tables are just int32 numpy arrays '
-                        'with the same name as the original segmentations.')
-
-    parser.add_argument('--area-mask', dest='area_mask',
-                        action='store_true', default=False,
-                        help='create masks that consist of the whole cell areas')
-    parser.add_argument('-m', '--outline-mask', dest='outline_mask',
-                        action='store_true', default=False,
-                        help='create masks that consist only of the cell outlines')
-
-    parser.add_argument('--png', dest='png',
-                        action='store_true', default=False,
-                        help='Save the pyramid tiles as png, default is jpg.')
-    parser.add_argument('--no-rescale', dest='no_rescale',
-                        action='store_true', default=False,
-                        help='don\'t perform any 16bit -> 8bit rescaling. '
-                        'The resulting pyramid will have 16bit PNG tiles.')
-
     parser.add_argument('-t', '--thresh', dest='thresh',
                         action='store_true', default=False,
                         help='threshold (rescale) stitched image')
@@ -308,28 +91,63 @@ if __name__ == '__main__':
                         type=int, default=10,
                         help='number of files to use for threshold estimation')
 
+    parser.add_argument('--id-luts', dest='id_luts',
+                        action='store_true', default=False,
+                        help='if lookup tables for the cell ids should be '
+                        'created. These tables are just int32 numpy arrays '
+                        'with the same name as the original segmentations.')
+
+    parser.add_argument('--area-mask', dest='area_mask',
+                        action='store_true', default=False,
+                        help='create masks that consist of whole objects')
+    parser.add_argument('-m', '--outline-mask', dest='outline_mask',
+                        action='store_true', default=False,
+                        help='create masks that consist of object outlines')
+
+    parser.add_argument('--make-global-ids', dest='make_global_ids',
+                        action='store_true', default=False,
+                        help='if all the cell labels should be made into '
+                             'globally unique labels.')
+    parser.add_argument('--png', dest='png',
+                        action='store_true', default=False,
+                        help='Save the pyramid tiles as png, default is jpg.')
+    parser.add_argument('--no-rescale', dest='no_rescale',
+                        action='store_true', default=False,
+                        help='don\'t perform any 16bit -> 8bit rescaling. '
+                        'The resulting pyramid will have 16bit PNG tiles.')
+
     args = parser.parse_args()
 
-    layer_dir = args.output_dir
+    output_dir = args.output_dir
+    files = args.files
 
-    if not args.files or not all(map(is_image_file, args.files)):
+    #######################################################################
+    #                       PREPARATORY FILE HANDLING                     #
+    #######################################################################
+
+    if not args.files or not all(map(tmt.image.is_image_file, args.files)):
         parser.print_help()
         sys.exit(1)
 
-    if not layer_dir:
+    if not output_dir:
         print 'You need to specify an output directory'
         sys.exit(1)
 
     if args.outline_mask or args.area_mask:
         # TissueMAPS requires mask layer folders to end on "_Mask"
-        if not re.search('_Mask$', layer_dir):
-            layer_dir = '%s_Mask' % layer_dir
+        if not re.search('_Mask$', output_dir):
+            output_dir = '%s_Mask' % output_dir
 
-    if not exists(layer_dir) and not args.id_luts:
-        print '.. Creating layer output directory: "%s"' % layer_dir
-        os.makedirs(layer_dir)
+    if not os.path.exists(output_dir) and not args.id_luts:
+        print '.. Creating output directory: "%s"' % output_dir
+        os.makedirs(output_dir)
 
-    files = args.files
+    if args.config:
+        # Overwrite default "tmt" configuration
+        config = load_config(args.config)
+        check_config(config)
+    else:
+        config = tmt.config
 
     if args.area_mask or args.outline_mask:
         images = [MaskImage(f, config, vips=True) for f in files]
@@ -341,25 +159,21 @@ if __name__ == '__main__':
     experiment = Experiment(experiment_dir, config)
     cycles = experiment.subexperiments
     current_cycle = images[0].cycle
-    data_file = experiment.data_filename
+    data_filename = experiment.data_filename
 
     if args.thresh_sample > len(images):
         args.thresh_sample = len(images)
-
-    if args.config:
-        # Overwrite default "tmt" configuration
-        config = load_config(args.config)
-        check_config(config)
 
     #######################################################################
     #                           LOADING IMAGES                            #
     #######################################################################
 
-    file_grid = stitch.build_file_grid(images)
+    layer = Mosaic(images)
 
     if args.id_luts:
         print('ᐄ  CREATING ID LOOKUP TABLES ')
-        create_and_save_lookup_tables(file_grid, data_file)
+        segment.create_and_save_lookup_tables(layer.image_grid, data_filename,
+                                              output_dir)
         sys.exit(0)
 
     # Create a vips image for each file
@@ -367,14 +181,14 @@ if __name__ == '__main__':
     if args.outline_mask or args.area_mask:
         if args.outline_mask:
             print('ᐄ  CREATING OUTLINE MASKS')
-            img_grid = build_mask_grid(file_grid, data_file, mask='outline',
-                                       make_global_ids=args.make_global_ids)
+            layer.build_mask_grid(data_filename, mask='outline',
+                                  make_global_ids=args.make_global_ids)
         elif args.area_mask:
             print('ᐄ  CREATING AREA MASKS')
-            img_grid = build_mask_grid(file_grid, data_file, mask='area',
-                                       make_global_ids=args.make_global_ids)
+            layer.build_mask_grid(data_filename, mask='area',
+                                  make_global_ids=args.make_global_ids)
     else:
-        img_grid = build_image_grid(file_grid)
+        layer.build_channel_grid()
 
     #######################################################################
     #                       ILLUMINATION CORRECTING                       #
@@ -391,7 +205,7 @@ if __name__ == '__main__':
         mean = np_array_to_vips_image(mean)
         std = np_array_to_vips_image(std)
 
-        img_grid = apply_illumination_correction(img_grid, mean, std)
+        layer.apply_illumination_correction_to_grid(mean, std)
 
     #######################################################################
     #                             STITCHING                               #
@@ -399,7 +213,7 @@ if __name__ == '__main__':
 
     print '.. Stitching images to mosaic image'
 
-    img = stitch.stitch_all_images(img_grid)
+    layer.stitch_images()
 
     #######################################################################
     #                              SHIFTING                               #
@@ -407,7 +221,7 @@ if __name__ == '__main__':
 
     if args.shift:
         print 'ᐄ  SHIFTING MOSAIC IMAGE'
-        img = stitch.shift_stitched_image(img, cycles, current_cycle)
+        layer.shift_stitched_image(cycles, current_cycle)
 
     #######################################################################
     #                            THRESHOLDING                             #
@@ -422,16 +236,15 @@ if __name__ == '__main__':
                   'highest pixel values on %d sampled images'
                   % (args.thresh_percent, args.thresh_sample))
 
-        img = apply_threshold(img, images,
-                              thresh_value=args.thresh_value,
-                              thresh_sample=args.thresh_sample,
-                              thresh_percent=args.thresh_percent)
+        layer.apply_threshold_to_stitched_image(
+                    thresh_value=args.thresh_value,
+                    thresh_sample=args.thresh_sample,
+                    thresh_percent=args.thresh_percent
+        )
 
-    # The image will be rescaled s.t. the pixel values fill the whole range
-    # of possible values (0 to 2^16) and then converted to 8 bit
     if not args.make_global_ids and not args.no_rescale:
         print '.. Rescaling mosaic image'
-        img = img.scale()
+        layer.scale_stitched_image()
 
     #######################################################################
     #                            PYRAMIDIZING                             #
@@ -439,7 +252,7 @@ if __name__ == '__main__':
 
     print '.. Creating pyramid from mosaic image'
     if not args.no_rescale and not args.png:
-        pyramidize.create_pyramid(img, layer_dir)
+        layer.create_pyramid(output_dir)
     else:
         # The stitched image wasn't rescaled and is still 16 bit.
         # In order to have the resulting pyramid be 16 bit as well, we have
@@ -447,7 +260,6 @@ if __name__ == '__main__':
         # Note that pyramids created in this manner shouldn't be visualized
         # directly in the browser since they will be coerced to 8 bit,
         # which will result in loss of information.
-        pyramidize.create_pyramid(img, layer_dir,
-                                  tile_file_extension='.png')
+        layer.create_pyramid(output_dir, tile_file_extension='.png')
 
     print '🍺  Done!'
