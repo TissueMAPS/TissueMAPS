@@ -5,19 +5,28 @@ from tmt.util import regex_from_format_string
 
 
 class Illumstats:
-    '''Utility class for an illumination correction statistics file.
-    The class provides the mean and standard deviation image,
-    which were precalculated across all images acquired in the same channel,
-    and the corresponding channel number.
+    '''
+    Utility class for illumination correction statistics.
+
+    It provides the mean and standard deviation images and the channel number.
+    The statistics were calculated for each pixel position over all image sites
+    acquired in the same channel.
+
+    Reference
+    ---------
+    Battich et al. 2015 Methods
     '''
 
     def __init__(self, filename, cfg):
         '''
-        Initialize Illumstats class.
+        Initiate Illumstats class.
 
-        Parameters:
-        :filename:      Path to the statistics file : str.
-        :cfg:           Configuration settings : dict.
+        Parameters
+        ----------
+        filename: str
+                  path to the statistics file
+        cfg: Dict[str, str]
+             configuration settings
         '''
         self.cfg = cfg
         self.filename = filename
@@ -29,14 +38,17 @@ class Illumstats:
     @property
     def statistics(self):
         '''
-        Load precomputed statistics and return mean and standard deviation
-        images as a tuple of numpy arrays.
+        Load precomputed statistics and return mean and std images.
 
         By default the statistics files are HDF5 files
         with the following structure:
         /stat_values            Group
         /stat_values/mean       Dataset
         /stat_values/std        Dataset
+
+        Returns
+        -------
+        Tuple[ndarray]
         '''
         if not self._statistics:
             stats = h5py.File(self.filename, 'r')
@@ -50,24 +62,44 @@ class Illumstats:
 
     @property
     def channel(self):
+        '''
+        Returns
+        -------
+        int
+        channel number
+        '''
         if not self._channel:
             regexp = regex_from_format_string(self.cfg['STATS_FILE_FORMAT'])
             m = re.search(regexp, self.filename)
             if not m:
-                raise Exception('Can\'t determine channel from '
-                                'illumination statistics file "%s"'
-                                % self.filename)
+                raise ValueError('Can\'t determine channel from '
+                                 'illumination statistics file "%s"'
+                                 % self.filename)
             self._channel = int(m.group('channel'))
         return self._channel
 
     @property
     def mean_image(self):
+        '''
+        Returns
+        -------
+        ndarray
+        image matrix of mean values at each pixel position
+        (statistic pre-calculated at each pixel position over all image sites)
+        '''
         if not self._mean_image:
             self._mean_image = self._statistics[0]
         return self._mean_image
 
     @property
     def std_image(self):
+        '''
+        Returns
+        -------
+        ndarray
+        image matrix of standard deviation values
+        (statistic pre-calculated at each pixel position over all image sites)
+        '''
         if not self._std_image:
             self._std_image = self._statistics[1]
         return self._std_image

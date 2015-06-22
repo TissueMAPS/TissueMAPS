@@ -21,20 +21,27 @@ def is_image_file(filename):
 
 
 class Image(object):
-    '''Utility class for an image.
-    The class provides the image itself and additional information derived
+    '''
+    Utility class for images.
+
+    It provides the image itself and additional information derived
     from the image filename, such as the position (row/column coordinates)
-    of the image within the total imaging acquisition grid (zero based!),
-    site number, cycle number, and name of the corresponding experiment.
+    of the image within the total imaging acquisition grid, site number,
+    cycle number, and name of the corresponding experiment.
     '''
 
     def __init__(self, filename, cfg, vips=False):
         '''
-        Initialize Image class.
+        Initiate Image class.
 
-        Parameters:
-        :filename:      Path to the image file : str.
-        :cfg:           Configuration settings : dict.
+        Parameters
+        ----------
+        filename: str
+                  path to the image file
+        cfg: Dict[str, str]
+             configuration settings
+        vips: bool
+              indicate whether to use numpy or Vips (True: Vips, False: numpy)
         '''
         self.cfg = cfg
         if not isabs(filename):
@@ -64,7 +71,9 @@ class Image(object):
         Read image form file and return it as numpy array (default)
         or as Vips object if vips set to True.
 
-        :returns: image : ndarray.
+        Returns
+        -------
+        ndarray or VipsImage
         '''
         if self._image is None:
             if not exists(self.filename):
@@ -79,7 +88,10 @@ class Image(object):
     @property
     def dimensions(self):
         '''
-        :returns: y, x dimensions (height, width) of the image : (int, int).
+        Returns
+        -------
+        Tuple[int]
+        y, x dimensions (height, width) of the image
         '''
         if self._dimensions is None:
             if self.vips:
@@ -91,8 +103,11 @@ class Image(object):
     @property
     def coordinates(self):
         '''
-        :returns: one-based row, column coordinates of an image
-        relative to the acquisition grid : (int, int).
+        Returns
+        -------
+        Tuple[int]
+        one-based row, column coordinates of an image
+        relative to the acquisition grid in 2D
         '''
         if not self._coordinates:
             m = re.search(self.cfg['COORDINATES_FROM_FILENAME'], self.filename)
@@ -111,8 +126,11 @@ class Image(object):
     @property
     def indices(self):
         '''
-        :returns: zero-based row, column indices of an image
-        relative to the acquisition grid : (int, int).
+        Returns
+        -------
+        Tuple[int]
+        zero-based row, column coordinates of an image
+        relative to the acquisition grid in 2D
         '''
         if self._indices is None:
             row_nr, col_nr = self.coordinates
@@ -125,8 +143,11 @@ class Image(object):
     @property
     def site(self):
         '''
-        :returns: one-based site number of an image
-        relative to the acquisition sequence over time : int.
+        Returns
+        -------
+        int
+        one-based site number of an image
+        relative to the acquisition sequence over time
         '''
         if self._site is None:
             m = re.search(self.cfg['SITE_FROM_FILENAME'], self.filename)
@@ -139,7 +160,10 @@ class Image(object):
     @property
     def cycle(self):
         '''
-        :returns: one-based cycle number of an image : int.
+        Returns
+        -------
+        int
+        one-based cycle number of an image
         '''
         if self._cycle is None:
             m = re.search(self.cfg['CYCLE_FROM_FILENAME'], self.filename)
@@ -152,7 +176,10 @@ class Image(object):
     @property
     def experiment(self):  # get_expname_from_filename()
         '''
-        :returns: experiment name : str.
+        Returns
+        -------
+        str
+        experiment name
         '''
         if self._experiment is None:
             m = re.search(self.cfg['EXPERIMENT_FROM_FILENAME'],
@@ -166,7 +193,10 @@ class Image(object):
     @property
     def experiment_dir(self):
         '''
-        :returns: path to the experiment folder : str.
+        Returns
+        -------
+        str
+        path to experiment directory
         '''
         if self._experiment_dir is None:
             if self.cfg['SUBEXPERIMENTS_EXIST']:
@@ -179,9 +209,11 @@ class Image(object):
 
 
 class IntensityImage(Image):
-    '''Utility class for an intensity image.
-    An intensity image is a two dimensional gray-scale image.
-    The class provides the image itself (type float!)
+    '''
+    Utility class for an intensity image,
+    i.e. a two dimensional gray-scale image.
+
+    It provides the image itself (type float!)
     and additional information derived from the image filename,
     such as the channel number.
     '''
@@ -201,7 +233,9 @@ class IntensityImage(Image):
         Read image form file and return it as numpy array of type float
         (default) or as Vips object if vips is set to True.
 
-        :returns: image : ndarray.
+        Returns
+        -------
+        ndarray or VipsImage
         '''
         if self._image is None:
             if self.vips:
@@ -213,7 +247,10 @@ class IntensityImage(Image):
     @property
     def channel(self):  # get_channel_nr_from_filename()
         '''
-        :returns: channel number : int.
+        Returns
+        -------
+        int
+        channel number
         '''
         if self._channel is None:
             m = re.search(self.cfg['CHANNEL_FROM_FILENAME'], self.filename)
@@ -225,11 +262,13 @@ class IntensityImage(Image):
 
 
 class MaskImage(Image):
-    '''Utility class for a mask image.
-    A mask image is a two dimensional labeled image that represents
+    '''
+    Utility class for a mask image,
+    i.e. a two dimensional labeled image that represents
     segmented objects as a continuous region of identical pixel values > 0.
     The list of unique pixels values are also referred to as the objects IDs.
-    The class provides the image itself and additional information derived
+
+    It provides the image itself and additional information derived
     from the image filename, such as the name of objects encoded in the image
     and their unique ids.
     '''
@@ -244,7 +283,10 @@ class MaskImage(Image):
     @property
     def objects(self):
         '''
-        :returns: name of objects in the mask image : str.
+        Returns
+        -------
+        str
+        name of objects in the mask image
         '''
         if self._objects is None:
             m = re.search(self.cfg['OBJECT_FROM_FILENAME'], self.filename)
@@ -257,7 +299,10 @@ class MaskImage(Image):
     @property
     def ids(self):
         '''
-        :returns: unique ids of objects in the mask image : int.
+        Returns
+        -------
+        List[int]
+        unique ids of objects in the mask image
         '''
         if self._ids is None:
             if self.vips:

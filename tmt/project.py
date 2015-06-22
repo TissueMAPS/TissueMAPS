@@ -2,30 +2,35 @@ import re
 import os
 import json
 from natsort import natsorted
-from os.path import join, basename, isdir, exists
+from os.path import join, basename, isdir
 from tmt.image import is_image_file
 from tmt.illumstats import Illumstats
 from tmt.image import IntensityImage, MaskImage
 
 
 class Project(object):
-    '''Utility class for a project.
+    '''
+    Utility class for a project.
     
     A project represents the directory that holds the image folder
     and potentially additional folders for segmentation, shift, and
     illumination statistics files.
-    The project folder may either correspond to the "experiment"
-    or "subexperiment" directory, depending on the experiment layout.
+    The project folder may either correspond to an "experiment"
+    or a "subexperiment".
     '''
 
     def __init__(self, experiment_dir, cfg, subexperiment=''):
         '''
-        Initialize Project class.
+        Initiate Project class.
 
-        Parameters:
-        :experiment_dir:        Absolute path to experiment folder : str.
-        :cfg:                   Configuration settings : dict.
-        :subexperiment_name:    Name of subexperiment folder : str.
+        Parameters
+        ----------
+        experiment_dir: str
+                        absolute path to experiment folder
+        cfg: Dict[str, str]
+             configuration settings
+        subexperiment_name: str
+                            name of subexperiment folder (empty by default)
         '''
         self.experiment_dir = experiment_dir
         if not isdir(experiment_dir):
@@ -46,12 +51,15 @@ class Project(object):
         self._stats_files = None
 
     # NOTE: We don't check whether directories exist, because this allows us
-    # to use these names to create these folders!
+    # to use these names to create the folders!
 
     @property
     def image_dir(self):
         '''
-        :returns: path to directory holding image files : string
+        Returns
+        -------
+        str
+        path to directory holding image files
         '''
         if not self._image_dir:
             folder = self.cfg['IMAGE_FOLDER_LOCATION'].format(
@@ -63,7 +71,9 @@ class Project(object):
     @property
     def image_files(self):  # def get_image_files(self):
         '''
-        :returns: list of objects of class "IntensityImage" : [IntensityImage]
+        Returns
+        -------
+        List[IntensityImage]
         '''
         if not self._image_files:
             files = [join(self.image_dir, f)
@@ -78,14 +88,20 @@ class Project(object):
     @property
     def segmentation_dir(self):
         '''
-        :returns: path to directory holding segmentation files : string
+        Returns
+        -------
+        str
+        path to directory holding segmentation files
         '''
         if not self._segmentation_dir:
             try:
-                # in case of MPCycle experiments the segmentation directory
-                # is defined in the JSON shift descriptor file
+                # In case of MPCycle experiments the segmentation directory
+                # is defined in the JSON shift descriptor file. The path
+                # is stored for use in Jterator pipelines. Therefore, we
+                # have to remove all relative parts of the path.
                 folder = join(self.experiment_dir,
-                              self.shift_file['SegmentationDirectory'])
+                              re.sub(r'../', '',
+                                     self.shift_file['SegmentationDirectory']))
             except:
                 folder = self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
                                     experiment_dir=self.experiment_dir,
@@ -96,7 +112,9 @@ class Project(object):
     @property
     def segmentation_files(self):
         '''
-        :returns: list of objects of class "MaskImage" : [MaskImage]
+        Returns
+        -------
+        List[MaskImage]
         '''
         if not self._segmentation_files:
             files = [join(self.segmentation_dir, f)
@@ -112,7 +130,10 @@ class Project(object):
     @property
     def stats_dir(self):
         '''
-        :returns: path to directory holding illumination statistic files : string
+        Returns
+        -------
+        str
+        path to directory holding illumination statistic files
         '''
         if not self._stats_dir:
             folder = self.cfg['STATS_FOLDER_LOCATION'].format(
@@ -124,7 +145,9 @@ class Project(object):
     @property
     def stats_files(self):
         '''
-        :returns: list of objects of class "Illumstats" : [Illumstats]
+        Returns
+        -------
+        List[Illumstats]
         '''
         if not self._stats_files:
             stats_pattern = self.cfg['STATS_FILE_FORMAT'].format(channel='\d+')
@@ -142,7 +165,10 @@ class Project(object):
     @property
     def shift_dir(self):
         '''
-        :returns: path to directory holding shift descriptor files : string
+        Returns
+        -------
+        str
+        path to directory holding shift descriptor files
         '''
         if not self._shift_dir:
             folder = self.cfg['SHIFT_FOLDER_LOCATION'].format(
@@ -154,7 +180,10 @@ class Project(object):
     @property
     def shift_file(self):
         '''
-        :returns: content of shift descriptor JSON file : dictionary
+        Returns
+        -------
+        dict
+        content of a shift descriptor JSON file
         '''
         if not self._shift_file:
             shift_pattern = self.cfg['SHIFT_FILE_FORMAT']
