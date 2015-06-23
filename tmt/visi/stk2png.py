@@ -21,7 +21,7 @@ def read_stk(stk_filename):
 
     Returns
     -------
-    ndarray
+    numpy.ndarray
     '''
     return tifffile.imread(stk_filename)
 
@@ -33,7 +33,7 @@ def write_png(png_filename, image):
     Parameters
     ----------
     png_filename: str
-    image: ndarray
+    image: numpy.ndarray
     '''
     with open(png_filename, 'wb') as f:
         writer = png.Writer(width=image.shape[1],

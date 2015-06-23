@@ -65,17 +65,17 @@ visi run -r -c [config_filename] [stk_folder]
 
 ## Parallel processing ##
 
-If you don't want to process all *.stk* files one after another, you can specify which "jobs" should be processed.
+If you don't want to process all *.stk* files one after another, you can specify which "job" should be processed.
 
-This can be done by specifying individual jobs directly using the `-j` or `--jobs` argument (note that these job IDs are *one-based*!):
+This can be done by specifying individual jobs directly using the `-j` or `--job` argument (note that these job IDs are *one-based*!):
 
 ```{bash}
 visi run -j [job_id] [stk_folder]
 ```
 
-However, in order to run individual jobs you first need to create a **joblist**. A joblist lists all jobs and the files to be processed per job, which is written into a file in *YAML* syntax.
+However, in order to run individual jobs you first need to create a **joblist**. A joblist is a file in *YAML* syntax that lists the files to be processed per job.
 
-To create such a joblist file, do:
+To create such a *.jobs* file, do:
 
 ```{bash}
 visi joblist [stk_folder]
@@ -88,11 +88,11 @@ You can change this number using the `-b` or `--batch_size` argument:
 visi joblist -b [batch_size] [stk_folder]
 ```
 
-### Usage on Brutus ###
+#### Usage on Brutus ####
 
-The repository contains the example submission script [bsub_visi.py](bsub_visi.py). You can create a copy of it (outside of this repository!) and adapt it to your needs.
+The repository contains the example submission script [bsub_visi.py](tmt/visi/bsub_visi.py). You can create a copy of it (outside of this repository!) and adapt it to your needs.
 
-On Brutus you will need to load Python and you may also have to install some additional Python packages.
+On Brutus you will need to load Python and, depending on your configuration,you may also have to install some additional Python packages.
 
 To load python, do:
 ```{bash}
