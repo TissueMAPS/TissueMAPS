@@ -48,7 +48,7 @@ class Illumstats:
 
         Returns
         -------
-        Tuple[ndarray]
+        Tuple[numpy.ndarray]
         '''
         if not self._statistics:
             stats = h5py.File(self.filename, 'r')
@@ -83,7 +83,7 @@ class Illumstats:
         '''
         Returns
         -------
-        ndarray
+        numpy.ndarray
         image matrix of mean values at each pixel position
         (statistic pre-calculated at each pixel position over all image sites)
         '''
@@ -96,7 +96,7 @@ class Illumstats:
         '''
         Returns
         -------
-        ndarray
+        numpy.ndarray
         image matrix of standard deviation values
         (statistic pre-calculated at each pixel position over all image sites)
         '''

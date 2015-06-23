@@ -7,7 +7,6 @@ from tmt.align import registration as reg
 from tmt.experiment import Experiment
 from tmt.project import Project
 
-
 class Align(object):
 
     def __init__(self, args):
@@ -148,8 +147,8 @@ class Align(object):
             descriptor[i]['maxShift'] = self.args.max_shift
             descriptor[i]['noShiftIndex'] = no_shift_ix
             descriptor[i]['noShiftCount'] = no_shift_count
-            descriptor[i]['SegmentationDirectory'] = segm_dir
-            descriptor[i]['SegmentationFileNameTrunk'] = segm_trunk
+            descriptor[i]['segmentationDirectory'] = segm_dir
+            descriptor[i]['segmentationFileNameTrunk'] = segm_trunk
             descriptor[i]['cycleNum'] = current_cycle.cycle
 
             with open(descriptor_filename, 'w') as outfile:
