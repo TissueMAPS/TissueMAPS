@@ -126,7 +126,7 @@ def fuse_data(data_files, names, joblist):
 
     Returns
     -------
-    pandas DataFrame
+    pandas.core.frame.DataFrame
     fused dataset with dimensions nxp,
     where n is the number of objects and p the number of features
     '''
@@ -187,7 +187,7 @@ def build_global_ids(ids):
 
     Parameters
     ----------
-    ids: pandas DataFrame
+    ids: pandas.core.frame.DataFrame
          dataset of size nx4 with the following columns:
          "{object name}_ID_site"
          "{object name}_ID_row"
@@ -196,7 +196,7 @@ def build_global_ids(ids):
 
     Returns
     -------
-    pandas Series
+    pandas.core.series.Series
     '''
     n_row = int(np.max(ids.filter(regex='^[^_]+_ID_row')))
     n_col = int(np.max(ids.filter(regex='^[^_]+_ID_column')))
@@ -219,11 +219,11 @@ def calc_global_centroids(local_centroids, ids, image_size):
 
     Parameters
     ----------
-    local_centroids: pandas DataFrame
+    local_centroids: pandas.core.frame.DataFrame
                      size nx2, where n is the number of
                      objects, and the columns are the y, x coordinates
                      of each object at the local site (i.e. in the image)
-    ids: pandas DataFrame
+    ids: pandas.core.frame.DataFrame
          dataset of size nx4 with the following columns:
          "{object name}_ID_site"
          "{object name}_ID_row"
@@ -234,7 +234,7 @@ def calc_global_centroids(local_centroids, ids, image_size):
 
     Returns
     -------
-    pandas DataFrame
+    pandas.core.frame.DataFrame
     dataset with dimensions nx2 and columns "y" and "x"
     '''
     n_row = int(np.max(ids.filter(regex='^[^_]+_ID_row')))

@@ -20,7 +20,7 @@ def extract_ids(data_file, current_obj):
 
     Returns:
     --------
-    Tuple[pandas DataFrame]
+    Tuple[pandas.core.frame.DataFrame]
     with ids for current objects and their corresponding parent objects
     '''
 
