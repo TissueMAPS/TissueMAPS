@@ -80,16 +80,24 @@ if __name__ == '__main__':
 
     parser.add_argument('-t', '--thresh', dest='thresh',
                         action='store_true', default=False,
-                        help='threshold (rescale) stitched image')
+                        help='rescale stitched image between min value and a \
+                              threshold level')
     parser.add_argument('--thresh-value', dest='thresh_value',
                         type=float, default=False,
-                        help='pixel value for threshold')
+                        help='fixed pixel value for threshold')
     parser.add_argument('--thresh-percent', dest='thresh_percent',
-                        type=float, default=0.01,
-                        help='percentage of pixel values above threshold')
+                        type=float, default=9.99,
+                        help='percentile of pixel values above threshold \
+                              (defaults to 99.99)')
     parser.add_argument('--thresh-sample', dest='thresh_sample',
                         type=int, default=10,
-                        help='number of files to use for threshold estimation')
+                        help='number of files to use for threshold estimation \
+                              (defaults to 10')
+
+    parser.add_argument('--stitch_only', dest='stitch_only',
+                        action='store_true', default=False,
+                        help='if the stitched image should be saved without \
+                              pyramid creation')
 
     parser.add_argument('--id-luts', dest='id_luts',
                         action='store_true', default=False,
@@ -174,6 +182,7 @@ if __name__ == '__main__':
         print('ᐄ  CREATING ID LOOKUP TABLES ')
         segment.create_and_save_lookup_tables(layer.image_grid, data_filename,
                                               output_dir)
+        print '🍺  Done!'
         sys.exit(0)
 
     # Create a vips image for each file
@@ -233,7 +242,7 @@ if __name__ == '__main__':
             print '   ... Using provided threshold value'
         else:
             print('   ... Computing threshold value corresponding to the %d\% '
-                  'highest pixel values on %d sampled images'
+                  'percentile on %d sampled images'
                   % (args.thresh_percent, args.thresh_sample))
 
         layer.apply_threshold_to_stitched_image(
@@ -249,6 +258,12 @@ if __name__ == '__main__':
     #######################################################################
     #                            PYRAMIDIZING                             #
     #######################################################################
+
+    if args.stitch_only:
+        print('ᐄ  SAVING MOSAIC IMAGE')
+        layer.save_stitched_image(output_dir)
+        print '🍺  Done!'
+        sys.exit(0)
 
     print '.. Creating pyramid from mosaic image'
     if not args.no_rescale and not args.png:

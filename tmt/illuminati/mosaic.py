@@ -2,33 +2,38 @@ from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
 import random
 import copy
+import os
 import numpy as np
 import itertools
 import illumcorrect
-import stitch
 import segment
 import datafusion.util
+import tmt
 from tmt import imageutil
 
 
 class Mosaic(object):
     '''
-    A class for mosaic images for use with TissueMAPS.
+    A class for a mosaic image, i.e. a large image stitched together
+    from a grid of smaller images.
+
+    Holds methods for image processing and pyramid creation.
     '''
 
     def __init__(self, images):
         '''
         Init class Mosaic.
 
-        Parameters:
-        -----------
-        images: List[Image]
+        Parameters
+        ----------
+        images: List[tmt.image.Image]
                 Image objects with lazy loading method.
-                Loaded images will be objects of class VIPSImage.
+                Loaded images will be type gi.overrides.Vips.Image.
         '''
         self.images = images
         self._image_grid = None
         self.mosaic_image = None
+        self._mosaic_image_name = None
 
     @property
     def image_grid(self):
@@ -37,9 +42,9 @@ class Mosaic(object):
         should be stitched together. Each image object provides information
         the image (lazy loading) and additional meta information.
 
-        Returns:
-        --------
-        List[List[Image]]
+        Returns
+        -------
+        List[List[tmt.image.Image]]
 
         '''
         if self._image_grid is None:
@@ -58,9 +63,9 @@ class Mosaic(object):
         Build an image grid for channel images, i.e. load the actual intensity
         images into the image grid.
 
-        Returns:
-        --------
-        List[List[VIPSImage]]
+        Returns
+        -------
+        List[List[gi.overrides.Vips.Image]]
         '''
         self.layer_grid = copy.deepcopy(self.image_grid)
         for i in range(len(self.image_grid)):
@@ -76,14 +81,14 @@ class Mosaic(object):
         '''
         Apply illumination correction to a grid image.
 
-        Parameters:
-        -----------
-        mean_image: ndarray[float]
-        std_image: ndarray[float]
+        Parameters
+        ----------
+        mean_image: numpy.ndarray[float]
+        std_image: numpy.ndarray[float]
 
-        Returns:
-        --------
-        List[List[VIPSImage]]
+        Returns
+        -------
+        List[List[gi.overrides.Vips.Image]]
         '''
         # TODO: only makes sense for channel images -> is_channel_layer()
         for i in range(len(self.layer_grid)):
@@ -99,8 +104,8 @@ class Mosaic(object):
         Build an image grid for mask images, i.e. load the actual segmentation
         images into the existing grid.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         data_file: str
                    Path to data.h5 HDF5 file holding the complete dataset.
         mask: str
@@ -109,9 +114,9 @@ class Mosaic(object):
                          Create a mask image that encodes the global object ids
                          in RGB.
 
-        Returns:
-        --------
-        List[List[VIPSImage]]
+        Returns
+        -------
+        List[List[gi.overrides.Vips.Image]]
         '''
 
         current_obj = self.image_grid[0][0].objects.lower()
@@ -185,9 +190,9 @@ class Mosaic(object):
         '''
         Stitch all images according to the format given in the image grid.
 
-        Returns:
-        --------
-        VIPSImage
+        Returns
+        -------
+        gi.overrides.Vips.Image
         '''
         grid_height = len(self.layer_grid)
         row_images = []
@@ -216,16 +221,16 @@ class Mosaic(object):
         y-shift of "+3" would mean that the image is shifted 3 pixel downwards
         with respect to the reference.
 
-        Parameters:
-        -----------
-        cycles: List[Subexperiment]
+        Parameters
+        ----------
+        cycles: List[tmt.experiment.Subexperiment]
                 cycle objects holding shift information
         current_cycle: int
                        index of the currently processed cycle (one-based)
 
-        Returns:
-        --------
-        VIPSImage
+        Returns
+        -------
+        gi.overrides.Vips.Image
         '''
         shift_descriptors = [c.project.shift_file for c in cycles]
         cycle_nrs = [c.cycle for c in cycles]
@@ -269,23 +274,24 @@ class Mosaic(object):
         value, then a certain percentage of pixels with the highest values
         will be thresholded, i.e. their value will be set to the threshold
         level. The `args.thresh_sample` is the number of images that are used
-        to determine the threshold level above which the `args.thresh_percent`
-        highest pixel values lie.
+        to determine the threshold level below which `args.thresh_percent`
+        pixel values lie.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         thresh_value: int
         thresh_sample: int
         thresh_percent: int
 
-        Returns:
-        --------
-        VipsImage
+        Returns
+        -------
+        gi.overrides.Vips.Image
         '''
         # TODO: only makes sense for channel images -> check: is_channel_layer()
         if thresh_value:
             val = thresh_value
         else:
+            thresh_percent = 100 - thresh_percent
             # The images from which to sample threshold
             images = list(itertools.chain(*self.image_grid))  # linearize
             # Adjust sample size if set too large
@@ -305,12 +311,62 @@ class Mosaic(object):
         Scale mosaic image s.t. the pixel values fill the whole range
         of possible values (16-bit: 0 to 2^16) and then converted to 8-bit.
 
-        Returns:
-        --------
-        VipsImage
+        Returns
+        -------
+        gi.overrides.Vips.Image
         '''
         self.mosaic_image = self.mosaic_image.scale()
         return self.mosaic_image
+
+    def save_stitched_image(self, output_dir, quality):
+        '''
+        Write stitched image to file as JPEG.
+
+        Parameters
+        ----------
+        output_dir: str
+                    folder location were image should be saved
+        quality: int
+                 quality of the JPEG image (defaults to 75)
+        '''
+        filename = os.path.join(output_dir, self.mosaic_image_name)
+        imageutil.save_vips_image_jpg(self.mosaic_image, filename, quality)
+
+    @property
+    def mosaic_image_name(self):
+        '''
+        Build name for the mosaic image based on metainformation stored in the
+        Image object. Names will differ between MaskImage and IntensityImage
+        objects, since they hold different information, such as objects name
+        or channel number, respectively.
+
+        Returns
+        -------
+        str
+
+        Raises
+        ------
+        TypeError
+        '''
+        if self._mosaic_image_name is None:
+            im = self.images[0]
+            if isinstance(im, tmt.image.MaskImage):
+                f = '{experiment}_{cycle}_segmented{objects}.jpg'.format(
+                                            experiment=im.experiment,
+                                            cycle=im.cycle,
+                                            objects=im.objects)
+
+            elif isinstance(im, tmt.image.IntensityImage):
+                f = '{experiment}_{cycle}_{filter}_C{channel:0>2}.jpg'.format(
+                                            experiment=im.experiment,
+                                            cycle=im.cycle,
+                                            filter=im.filter,
+                                            channel=im.channel)
+            else:
+                raise TypeError('Images must be objects of class MaskImage '
+                                'or IntensityImage')
+            self._mosaic_image_name = f
+        return self._mosaic_image_name
 
     def create_pyramid(self, pyramid_dir, tile_file_extension='.jpg[Q=100]'):
         '''
@@ -321,8 +377,8 @@ class Mosaic(object):
         otherwise the 16-bit images will be automatically converted
         to 8-bit JPEGs.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         pyramide_dir: str
                       Path to the folder where pyramid should be saved
         tile_file_extension: str
