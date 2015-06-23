@@ -10,6 +10,14 @@ It contains several sub-packages, which are all dependent on these configuration
 
 A package for aligning images between different acquisition cycles.
 
+## [corilla](tmt/corilla) ##
+
+A package for calculating online illumination statistics.
+
+## [datafusion](tmt/datafusion) ##
+
+A package for fusing data produced by [Jterator](https://github.com/HackerMD/Jterator).
+
 ## [illuminati](tmt/illuminati) ##
 
 A package for creating pyramid images.
@@ -17,10 +25,6 @@ A package for creating pyramid images.
 ## [visi](tmt/visi) ##
 
 A package for converting Visitron's STK files to PNG images with optional renaming.
-
-## [datafusion](tmt/datafusion) ##
-
-A package for fusing data produced by [Jterator](https://github.com/HackerMD/Jterator).
 
 
 *For more details, please refer to the individual tools.*
