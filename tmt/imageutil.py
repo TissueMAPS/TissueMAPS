@@ -5,12 +5,75 @@ Utility functions for image pre-processing.
 import random as rand
 from scipy.misc import imread, bytescale
 import numpy as np
+import png
 from gi.repository import Vips
 
 
-def save_image_to_file(image_obj, out_filepath):
-    """Save a VIPS image object to a file."""
-    image_obj.write_to_file(out_filepath)
+def save_vips_image_jpg(image_obj, filename, quality=75):
+    '''
+    Save a VIPS image object to a file as JPEG image.
+
+    Parameters
+    ----------
+    image_obj: gi.overrides.Vips.Image
+    filename: str
+    quality: int
+             defaults to 75
+    '''
+    image_obj.write_to_file(filename, Q=quality, optimize_coding=True)
+
+
+def save_numpy_image_png(image, filename, bitdepth=16):
+    '''
+    Save the numpy array to file as PNG image.
+
+    Parameters
+    ----------
+    image: numpy.ndarray
+    filename: str
+    bitdepth: int
+              defaults to 16
+    '''
+    # img = Image.fromarray(image)
+    with open(filename, 'wb') as f:
+        height, width = image.shape
+        w = png.Writer(width=width, height=height,
+                       bitdepth=bitdepth, greyscale=True)
+        w.write(f, image.astype(np.uint16))
+
+
+def np_array_to_vips_image(nparray):
+    """Convert a numpy array to a VIPS image"""
+    # Dictionary to map VIPS data formats to numpy data formats
+    nptype_to_vips_format = {
+        np.dtype('int8'): Vips.BandFormat.CHAR,
+        np.dtype('uint8'): Vips.BandFormat.UCHAR,
+        np.dtype('int16'): Vips.BandFormat.SHORT,
+        np.dtype('uint16'): Vips.BandFormat.USHORT,
+        np.dtype('int32'): Vips.BandFormat.INT,
+        np.dtype('float32'): Vips.BandFormat.FLOAT,
+        np.dtype('float64'): Vips.BandFormat.DOUBLE
+    }
+    # Look up what VIPS format corresponds to the type of this np array
+    vips_format = nptype_to_vips_format[nparray.dtype]
+
+    # VIPS reads the buffer as if the data is saved column by column (column major)
+    # but numpy saves it in row major order.
+    nparray_trans = nparray.T
+    buf = np.getbuffer(nparray_trans)
+    height, width = nparray_trans.shape
+    img = Vips.Image.new_from_memory(buf, width, height, 1, vips_format)
+
+    # Resulting image has the wrong orientation
+    #
+    #      |  rotate 90 CW and flip
+    #     _|       ------>           ___|
+    #
+    # (same as horizontal flip and 90 deg CCW, but VIPS can't seem to do CCW rotations)
+    img = img.rot(1)
+    img = img.flip('horizontal')
+
+    return img.copy()
 
 
 def hist_sample_from_sites(filenames, nr_to_sample=5):
