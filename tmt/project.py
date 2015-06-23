@@ -101,7 +101,7 @@ class Project(object):
                 # have to remove all relative parts of the path.
                 folder = join(self.experiment_dir,
                               re.sub(r'../', '',
-                                     self.shift_file['SegmentationDirectory']))
+                                     self.shift_file['segmentationDirectory']))
             except:
                 folder = self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
                                     experiment_dir=self.experiment_dir,

@@ -73,7 +73,7 @@ class Image(object):
 
         Returns
         -------
-        ndarray or VipsImage
+        numpy.ndarray or gi.overrides.Vips.Image
         '''
         if self._image is None:
             if not exists(self.filename):
@@ -235,7 +235,7 @@ class IntensityImage(Image):
 
         Returns
         -------
-        ndarray or VipsImage
+        numpy.ndarray or gi.overrides.Vips.Image
         '''
         if self._image is None:
             if self.vips:
