@@ -1,49 +1,61 @@
-"""
-Utility functions for image pre-processing.
-"""
-
 import random as rand
 from scipy.misc import imread, bytescale
 import numpy as np
 import png
 from gi.repository import Vips
 
+'''Utility functions for image processing routines.'''
 
-def save_vips_image_jpg(image_obj, filename, quality=75):
+
+def save_vips_image_jpg(im, filename, quality=75):
     '''
-    Save a VIPS image object to a file as JPEG image.
+    Save a `Vips` image object to a file as JPEG image.
 
     Parameters
     ----------
-    image_obj: gi.overrides.Vips.Image
+    im: Vips.Image
+        image
     filename: str
-    quality: int
-             defaults to 75
+        name of the output file
+    quality: int, optional
+        quality of the JPEG image (defaults to 75)
     '''
-    image_obj.write_to_file(filename, Q=quality, optimize_coding=True)
+    im.write_to_file(filename, Q=quality, optimize_coding=True)
 
 
-def save_numpy_image_png(image, filename, bitdepth=16):
+def save_numpy_image_png(im, filename, bitdepth=16):
     '''
-    Save the numpy array to file as PNG image.
+    Save the `numpy` array to file as PNG image.
 
     Parameters
     ----------
-    image: numpy.ndarray
+    im: numpy.ndarray
+        image
     filename: str
-    bitdepth: int
-              defaults to 16
+        name of the output file
+    bitdepth: int, optional
+        bit depth of the PNG image (defaults to 16)
     '''
     # img = Image.fromarray(image)
     with open(filename, 'wb') as f:
-        height, width = image.shape
+        height, width = im.shape
         w = png.Writer(width=width, height=height,
                        bitdepth=bitdepth, greyscale=True)
-        w.write(f, image.astype(np.uint16))
+        w.write(f, im.astype(np.uint16))
 
 
 def np_array_to_vips_image(nparray):
-    """Convert a numpy array to a VIPS image"""
+    '''
+    Convert a `numpy` array to a `Vips` image object.
+
+    Parameters
+    ----------
+    nparray: numpy.ndarray
+
+    Returns
+    -------
+    Vips.image
+    '''
     # Dictionary to map VIPS data formats to numpy data formats
     nptype_to_vips_format = {
         np.dtype('int8'): Vips.BandFormat.CHAR,
@@ -77,6 +89,21 @@ def np_array_to_vips_image(nparray):
 
 
 def hist_sample_from_sites(filenames, nr_to_sample=5):
+    '''
+    Compute histogram for a set of sampled images.
+
+    Parameters
+    ----------
+    filenames: List[str]
+        names of image files
+    nr_to_sample: int, optional
+        number of images to sample (defaults to 5)
+
+    Returns
+    -------
+    numpy.ndarray
+        values of the histogram averaged over the sampled images
+    '''
     files = rand.sample(filenames, nr_to_sample)
     hist = np.zeros((256,), dtype='uint32')
     for f in files:
@@ -88,23 +115,29 @@ def hist_sample_from_sites(filenames, nr_to_sample=5):
     return hist
 
 
-def find_border_objects(site_matrix):
-    """
+def find_border_objects(im):
+    '''
     Given a matrix of a site image, find the objects the border of the image.
 
-    :site_matrix: numpy array of the image matrix.
+    Parameters
+    ----------
+    im: numpy.ndarray
+        image
 
-    :returns:  numpy array with 1 if objects is a border object and 0 otherwise.
+    Returns
+    -------
+    List[int]
+        1 if object represent a border object and 0 otherwise
 
-    """
-    edges = [np.unique(site_matrix[0, :]),   # first row
-             np.unique(site_matrix[-1, :]),  # last row
-             np.unique(site_matrix[:, 0]),   # first col
-             np.unique(site_matrix[:, -1])]  # last col
+    '''
+    edges = [np.unique(im[0, :]),   # first row
+             np.unique(im[-1, :]),  # last row
+             np.unique(im[:, 0]),   # first col
+             np.unique(im[:, -1])]  # last col
 
     # Count only unique ids and remove 0 since it signals 'empty space'
     border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
-    object_ids = np.unique(site_matrix[site_matrix != 0])
+    object_ids = np.unique(im[im != 0])
     is_border_object = [1 if o in border_ids else 0 for o in object_ids]
     return is_border_object
 
@@ -114,20 +147,29 @@ def save_hist_to_txt_file(hist, filename):
 
 
 def calc_threshold_level(sample_images, threshold_top_percent=0.1):
-    """
-    Construct a 16 bit color lookup table that can be used to threshold images.
+    '''
+    Calculate threshold level for a particular quantile across a set of
+    sample images.
 
-    A top threshold percentage of 0.1 would mean that 0.1 % of the
+    A top threshold percentage of 0.1 would mean that 0.1% of the
     pixels with the largest value should be set to their lowest value.
 
-    The quantile above with there are `threshold_top_percent` pixels is computed
-    for each image in `sample_images` and then averaged.
+    The quantile above `threshold_top_percent` pixels is computed for each
+    image in `sample_images` and then averaged.
 
-    :sample_images: a list of USHORT VIPS images that are representative
-                    of the images that are to be thresholded.
+    Parameters
+    ----------
+    sample_images: List[Vips.Image[Vips.BandFormat.USHORT]]
+        images that are representative of the images that are to be thresholded
 
-    :threshold_top_percent:
-    """
+    threshold_top_percent: float, optional
+        quantile (defaults to 0.1)
+
+    Returns
+    -------
+    int
+        threshold level
+    '''
 
     # `percent` % of all pixels lie below `thresh`
     # i.e. `1 - percent` % lie above it.
@@ -139,30 +181,38 @@ def calc_threshold_level(sample_images, threshold_top_percent=0.1):
 
 
 def create_thresholding_LUT(avg_thresh):
-    """
+    '''
     Construct a 16 bit color lookup table that can be used to threshold images.
 
-    The computed lookup table will set any values above a threshold to that threshold.
+    The computed lookup table will set any values above a threshold level
+    to that threshold level.
 
-    The LUT is then used like this:
+    Parameters
+    ----------
+    sample_images: List[Vips.Image[Vips.BandFormat.USHORT]]
+        images that are representative of the images that are to be thresholded
+
+    Returns
+    -------
+    Vips.Image
+        LUT (= 1 x 2^16 pixel `Vips` image)
+
+    Examples
+    --------
+    The LUT can be used like this::
 
     lut = create_thresholding_LUT(some_images, 0.1)
     thresholded_img = img.maplut(lut)  # apply to some image
-
-    :sample_images: a list of USHORT VIPS images that are representative
-                    of the images that are to be thresholded.
-    :returns: a LUT (= 1 x 2^16 pixel VIPS image)
-
-    """
-
+    '''
     # Create a 1 by 2**16 image (the lookup table) with linear values
-    # [0, 1, 2, ..., 2^16-1] that is used to map colors in the original image to new ones.
-    # So if a the original gray value for some pixel was 20, then the new pixel value
-    # would correspond to the value at position 20 in the LUT.
+    # [0, 1, 2, ..., 2^16-1] that is used to map colors in the original image
+    # to new ones. So if a the original gray value for some pixel was 20,
+    # then the new pixel value would correspond to the value at position 20
+    # in the LUT.
     id_lut = Vips.Image.identity(ushort=True)
 
-    # Transform the LUT in such a way that pixels with values above the threshold
-    # get the same value (= threshold).
+    # Transform the LUT in such a way that pixels with values above the
+    # threshold get the same value (= threshold).
     cond_image = (id_lut >= avg_thresh)
     lut = cond_image.ifthenelse(avg_thresh, id_lut)
 
