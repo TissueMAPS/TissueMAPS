@@ -108,6 +108,16 @@ if __name__ == '__main__':
     joblist_parser.set_defaults(handler=partial(Align.process_cli_commands,
                                                 subparser=joblist_parser))
 
+    submit_parser = subparsers.add_parser('submit',
+                                          help='submit shift calculation')
+
+    submit_parser.add_argument('experiment_dir', default=os.getcwd(),
+                               help='experiment directory')
+
+    submit_parser.add_argument('-c', '--config', dest='config',
+                               help='use custom yaml configuration file \
+                                     (defaults to "tmt" configuration)')
+
     args = parser.parse_args()
 
     if args.config:

@@ -6,6 +6,7 @@ import tmt
 from tmt.align import registration as reg
 from tmt.experiment import Experiment
 from tmt.project import Project
+from tmt.cluster import Cluster
 
 
 class Align(object):
@@ -61,11 +62,14 @@ class Align(object):
                             self.args.config).subexperiments
 
         if self.args.job:
+
+            job_ix = self.args.job-1  # job ids are one-based!
+
             shift = reg.Registration(cycles)
             print '. Reading joblist from file'
             joblist = shift.read_joblist()
 
-            batch = joblist[self.args.job]
+            batch = joblist[job_ix]
             print '. Processing job #%d' % self.args.job
             reg.register_images(batch['registration_files'],
                                 batch['reference_files'],
@@ -147,6 +151,7 @@ class Align(object):
 
         # Write shiftDescriptor.json files
         for i, cycle_name in enumerate(cycle_names):
+            print cycle_name
             current_cycle = [c for c in cycles if c.name == cycle_name][0]
             aligncycles_dir = current_cycle.project.shift_dir
             if not os.path.exists(aligncycles_dir):
@@ -170,6 +175,31 @@ class Align(object):
                                          indent=4, sort_keys=True,
                                          separators=(',', ': ')))
 
+    def submit(self):
+
+        cycles = Experiment(self.args.experiment_dir,
+                            self.args.config).subexperiments
+
+        shift = reg.Registration(cycles)
+        joblist = shift.read_joblist()
+
+        for j in joblist:
+            # build output filename
+            timestamp = tmt.cluster.create_timestamp()
+            lsf = os.path.join(self.args.experiment_dir, 'lsf',
+                               'align_%s_%.5d_%s.lsf'
+                               % (shift.experiment, j.job_id, timestamp))
+            # build command
+            command = [
+                'align', 'run', '--job', str(j.job_id),
+                self.args.experiment_dir
+            ]
+
+            print '. submitting job #%d' % j.job_id
+
+            job = Cluster(lsf)
+            job.submit(command)
+
     @staticmethod
     def process_cli_commands(args, subparser):
         '''
@@ -188,5 +218,7 @@ class Align(object):
             cli.joblist()
         elif subparser.prog == 'align fuse':
             cli.fuse()
+        elif subparser.prog == 'align submit':
+            cli.submit()
         else:
             subparser.print_help()

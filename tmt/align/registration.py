@@ -5,7 +5,6 @@ import numpy as np
 from scipy import misc
 import tmt
 import image_registration
-from tmt.cluster import create_batches
 
 
 def calculate_shift(filename, ref_filename):
@@ -187,7 +186,7 @@ def fuse_registration(output_files, cycle_names):
     for output in output_files:
         f = h5py.File(output, 'r')
         for i, key in enumerate(cycle_names):
-            descriptor[i]['fileName'].extend(f[key]['reg_file'][()])
+            descriptor[i]['fileName'].extend(f[key]['file_name'][()])
             descriptor[i]['xShift'].extend(f[key]['x_shift'][()])
             descriptor[i]['yShift'].extend(f[key]['y_shift'][()])
         f.close()
@@ -215,10 +214,10 @@ def calculate_overlap(descriptor, max_shift):
         upper, lower, right, and left overlap per site (in pixels)
         and indices of sites were shift exceeds maximally tolerated value
     '''
-    top = []
-    bottom = []
-    right = []
-    left = []
+    top_ol = []
+    bottom_ol = []
+    right_ol = []
+    left_ol = []
     no_shift = []
     number_of_sites = len(descriptor[0]['xShift'])
     print '. number of sites: %d' % number_of_sites
@@ -228,28 +227,28 @@ def calculate_overlap(descriptor, max_shift):
         no_shift.append(any(abs(x_shift) > max_shift) or
                         any(abs(y_shift) > max_shift))
         (top, bottom, right, left) = calculate_local_overlap(x_shift, y_shift)
-        top.append(top)
-        bottom.append(bottom)
-        right.append(right)
-        left.append(left)
+        top_ol.append(top)
+        bottom_ol.append(bottom)
+        right_ol.append(right)
+        left_ol.append(left)
 
     # Calculate total overlap across all sites
-    top = int(max(map(abs, top)))
-    bottom = int(max(map(abs, bottom)))
-    right = int(max(map(abs, right)))
-    left = int(max(map(abs, left)))
+    top_ol = int(max(map(abs, top_ol)))
+    bottom_ol = int(max(map(abs, bottom_ol)))
+    right_ol = int(max(map(abs, right_ol)))
+    left_ol = int(max(map(abs, left_ol)))
 
     # Limit total overlap by maximally tolerated shift
-    if top > max_shift:
-        top = max_shift
-    if bottom > max_shift:
-        bottom = max_shift
-    if right > max_shift:
-        right = max_shift
-    if left > max_shift:
-        left = max_shift
+    if top_ol > max_shift:
+        top_ol = max_shift
+    if bottom_ol > max_shift:
+        bottom_ol = max_shift
+    if right_ol > max_shift:
+        right_ol = max_shift
+    if left_ol > max_shift:
+        left_ol = max_shift
 
-    return (top, bottom, right, left, no_shift)
+    return (top_ol, bottom_ol, right_ol, left_ol, no_shift)
 
 
 class Registration(object):
@@ -318,11 +317,13 @@ class Registration(object):
 
         A joblist has the following structure (YAML)::
 
-            - registration_files: Dict[str, List[str]]
+            - job_id: int
+              registration_files: Dict[str, List[str]]
               reference_files:  List[str]
               output_file: str
 
-            - registration_files: Dict[str, List[str]]
+            - job_id: int
+              registration_files: Dict[str, List[str]]
               reference_files:  List[str]
               output_file: str
 
@@ -337,31 +338,38 @@ class Registration(object):
         -------
         List[Dict[str, List[str] or str]]
             job description
+
+        Raises
+        ------
+        IOError
+            when argument `reference_cycle` is not specified
         '''
         if not self.ref_cycle:
             raise IOError('Parameter "reference_cycle" is required '
                           'for joblist creation')
 
         joblist = list()
-        ref_filenames = create_batches(self.image_files[self.ref_cycle],
-                                           batch_size)
-        n_batches = len(ref_filenames)
+        ref_files = tmt.cluster.create_batches(self.image_files[self.ref_cycle],
+                                               batch_size)
+        n_batches = len(ref_files)
         # Create a list of dictionaries holding the image filenames per batch
         # segregated for the different cycles
         n_cycles = len(self.image_files)
-        reg_filenames = [dict() for x in xrange(n_batches)]
+        reg_files = [dict() for x in xrange(n_batches)]
         for x in xrange(n_cycles):
-            batches = create_batches(self.image_files[x], batch_size)
+            batches = tmt.cluster.create_batches(self.image_files[x],
+                                                 batch_size)
             for i, batch in enumerate(batches):
-                reg_filenames[i]['cycle%d' % (x+1)] = batch
+                reg_files[i][self.cycles[x].name] = batch
 
         for i in xrange(n_batches):
             output_filename = os.path.join(self.registration_dir,
                                            'align_%.5d.output' % i)
             joblist.append({
-                'registration_files': reg_filenames[i],  # Dict[List[str]]
-                'reference_files': ref_filenames[i],     # List[str]
-                'output_file': output_filename           # str
+                'job_id': i+1,                       # int
+                'registration_files': reg_files[i],  # Dict[List[str]]
+                'reference_files': ref_files[i],     # List[str]
+                'output_file': output_filename       # str
             })
         self.joblist = joblist
         return joblist
@@ -381,4 +389,4 @@ class Registration(object):
         List[dict[str, list[str] or str]]
             job description
         '''
-        return tmt.util.read_joblist(self.joblist_file)
+        return tmt.cluster.read_joblist(self.joblist_file)
