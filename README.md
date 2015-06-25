@@ -68,8 +68,9 @@ SITE_FROM_FILENAME: '_s(\d+)_'
 CHANNEL_FROM_FILENAME: 'C(\d+)\.png$'
 OBJECT_FROM_FILENAME: '_segmented(\w+).png$'
 
-USE_VIPS_LIBRARY: Yes
+USE_VIPS_LIBRARY: Yes  # required by illuminati
 
+# These settings are hard-coded in TissueMAPS, so don't change them!
 LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
 ID_TABLES_FOLDER_LOCATION: '{experiment_dir}/id_tables'
 ID_PYRAMIDS_FOLDER_LOCATION: '{experiment_dir}/id_pyramids'
