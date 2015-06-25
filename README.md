@@ -5,7 +5,7 @@
 It makes use of a YAML configuration settings file [tmt.config](tmt/tmt.config) (see below) in order to specify the experiment layout, i.e. the directory structure on disk, and thereby define paths and filenames.
 
 
-The tmt package contains the following subpackages for different image processing routines:
+The tmt package contains the following subpackages for different image and data processing routines:
 
 ### [align](tmt/align) ###
 
@@ -67,6 +67,13 @@ COORDINATES_IN_FILENAME_ONE_BASED: Yes
 SITE_FROM_FILENAME: '_s(\d+)_'
 CHANNEL_FROM_FILENAME: 'C(\d+)\.png$'
 OBJECT_FROM_FILENAME: '_segmented(\w+).png$'
+
+USE_VIPS_LIBRARY: Yes
+
+LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
+ID_TABLES_FOLDER_LOCATION: '{experiment_dir}/id_tables'
+ID_PYRAMIDS_FOLDER_LOCATION: '{experiment_dir}/id_pyramids'
+DATA_FILE_LOCATION: '{experiment_dir}/data.h5'
 ```
 
 > NOTE: The quotation marks are generally not required around strings in YAML syntax, but are necessary here because of the parenthesis in the format strings!
