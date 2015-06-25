@@ -42,7 +42,8 @@ class Corilla(object):
             stats = OnlineStatistics(dims)
             for im in images:
                 print im.filename
-                stats.update(im.image)
+                stats.update(im.image,
+                             log_transform=tmt.config['LOG_TRANSFORM_STATS'])
 
             stats_filename = tmt.config['STATS_FILE_FORMAT'].format(channel=c)
             stats_filename = os.path.join(project.stats_dir, stats_filename)

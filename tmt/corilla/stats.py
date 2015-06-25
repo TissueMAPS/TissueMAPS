@@ -30,7 +30,7 @@ class OnlineStatistics(object):
         self.mean = np.zeros(dims, dtype=float)
         self.M2 = np.zeros(dims, dtype=float)
 
-    def update(self, x):
+    def update(self, x, log_transform=True):
         '''
         Update statistics with new matrix.
 
@@ -38,10 +38,14 @@ class OnlineStatistics(object):
         ----------
         x: numpy.ndarray[float]
             new matrix
+        log_transform: bool, optional
+            log10 transform matrix (defaults to True)
         '''
         if not isinstance(x, np.ndarray):
             raise TypeError('data must be a numpy array')
         x = x.astype(float)
+        if log_transform:
+            x = np.log10(x)
         self.n = self.n + 1
         delta = x - self.mean
         self.mean = self.mean + delta/self.n
