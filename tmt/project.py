@@ -1,10 +1,10 @@
 import re
 import os
 from natsort import natsorted
-import tmt
 from tmt.image import is_image_file
 from tmt.illumstats import Illumstats
 from tmt.image import IntensityImage, MaskImage
+from tmt.shift import ShiftDescriptor
 
 
 class Project(object):
@@ -117,7 +117,8 @@ class Project(object):
         if self._image_dir is None:
             folder = self.cfg['IMAGE_FOLDER_LOCATION'].format(
                             experiment_dir=self.experiment_dir,
-                            subexperiment=self.subexperiment)
+                            subexperiment=self.subexperiment,
+                            sep=os.path.sep)
             self._image_dir = folder
         return self._image_dir
 
@@ -170,7 +171,8 @@ class Project(object):
             except:
                 folder = self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
                                     experiment_dir=self.experiment_dir,
-                                    subexperiment=self.subexperiment)
+                                    subexperiment=self.subexperiment,
+                                    sep=os.path.sep)
             self._segmentation_dir = folder
         return self._segmentation_dir
 
@@ -214,7 +216,8 @@ class Project(object):
         if self._stats_dir is None:
             folder = self.cfg['STATS_FOLDER_LOCATION'].format(
                                 experiment_dir=self.experiment_dir,
-                                subexperiment=self.subexperiment)
+                                subexperiment=self.subexperiment,
+                                sep=os.path.sep)
             self._stats_dir = folder
         return self._stats_dir
 
@@ -260,7 +263,8 @@ class Project(object):
         if self._shift_dir is None:
             folder = self.cfg['SHIFT_FOLDER_LOCATION'].format(
                                 experiment_dir=self.experiment_dir,
-                                subexperiment=self.subexperiment)
+                                subexperiment=self.subexperiment,
+                                sep=os.path.sep)
             self._shift_dir = folder
         return self._shift_dir
 
@@ -298,7 +302,5 @@ class Project(object):
                               'Check your configuration settings!'
                               % (self.shift_dir,
                                  self.cfg['SHIFT_FILE_FORMAT']))
-            content = tmt.util.load_shift_descriptor(files[0])
-            self._shift_file.description = tmt.util.Namespacified(content)
-            self._shift_file.filename = files[0]
+            self._shift_file = ShiftDescriptor(files[0], self.cfg)
         return self._shift_file
