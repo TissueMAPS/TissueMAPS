@@ -5,8 +5,6 @@
 It makes use of a YAML configuration settings file [tmt.config](tmt/tmt.config) (see below) in order to specify the experiment layout, i.e. the directory structure on disk, and thereby define paths and filenames.
 
 
-## Tools ##
-
 The tmt package contains the following subpackages for different image processing routines:
 
 ### [align](tmt/align) ###
