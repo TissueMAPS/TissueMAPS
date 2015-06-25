@@ -183,7 +183,8 @@ if __name__ == '__main__':
     # There should be only one and it will be treated separately.
     segmentation_project_dir = args.config['SEGMENTATION_PROJECT'].format(
                                         experiment_dir=exp_dir,
-                                        experiment=os.path.basename(exp_dir))
+                                        experiment=os.path.basename(exp_dir),
+                                        sep=os.path.sep)
 
     ###########################################################################
     #                 load individual datasets and fuse them                  #
