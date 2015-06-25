@@ -7,7 +7,7 @@ import traceback
 import argparse
 import tmt.util
 import tmt.align
-from tmt.align.cli import Align
+from tmt.align.api import Align
 
 
 if __name__ == '__main__':
@@ -46,7 +46,7 @@ if __name__ == '__main__':
                             help='use custom yaml configuration file \
                                   (defaults to "tmt" configuration)')
 
-    run_parser.set_defaults(handler=partial(Align.process_commands,
+    run_parser.set_defaults(handler=partial(Align.process_cli_commands,
                                             subparser=run_parser))
 
     fuse_parser = subparsers.add_parser('fuse',
@@ -76,7 +76,7 @@ if __name__ == '__main__':
                              help='use custom yaml configuration file \
                                    (defaults to "tmt" configuration)')
 
-    fuse_parser.set_defaults(handler=partial(Align.process_commands,
+    fuse_parser.set_defaults(handler=partial(Align.process_cli_commands,
                                              subparser=fuse_parser))
 
     joblist_parser = subparsers.add_parser('joblist',
@@ -105,7 +105,7 @@ if __name__ == '__main__':
                                 help='use custom yaml configuration file \
                                       (defaults to "tmt" configuration)')
 
-    joblist_parser.set_defaults(handler=partial(Align.process_commands,
+    joblist_parser.set_defaults(handler=partial(Align.process_cli_commands,
                                                 subparser=joblist_parser))
 
     args = parser.parse_args()

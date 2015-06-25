@@ -7,9 +7,21 @@ from tmt.align import registration as reg
 from tmt.experiment import Experiment
 from tmt.project import Project
 
+
 class Align(object):
+    '''
+    Class for alignment of images based on registration.
+    '''
 
     def __init__(self, args):
+        '''
+        Initialize Align class.
+
+        Parameters
+        ----------
+        args: argparse.Namespace
+            arguments
+        '''
         self.args = args
         self.args.experiment_dir = os.path.abspath(args.experiment_dir)
         self.print_logo_and_prompt()
@@ -19,7 +31,7 @@ class Align(object):
 
     def joblist(self):
         '''
-        Create a list of jobs in YAML format for parallel computing.
+        Create a joblist in YAML format for parallel computing.
         '''
         cycles = Experiment(self.args.experiment_dir,
                             self.args.config).subexperiments
@@ -29,7 +41,7 @@ class Align(object):
             ref_cycle = self.args.ref_cycle - 1  # for zero-based indexing!
         else:
             # By default use last cycle as reference
-            ref_cycle = len(cycles) - 1  # for zero-based indexing!
+            ref_cycle = len(cycles) - 1  # for zero-based indexing
         print '. reference cycle: %d' % (ref_cycle + 1)
 
         ref_channel = self.args.ref_channel
@@ -81,7 +93,9 @@ class Align(object):
                                     batch['output_file'])
 
     def fuse(self):
-        '''Fuse shift calculations and create shift descriptor JSON file'''
+        '''
+        Fuse shift calculations and create shift descriptor JSON file.
+        '''
         cycles = Experiment(self.args.experiment_dir,
                             self.args.config).subexperiments
 
@@ -137,7 +151,7 @@ class Align(object):
             aligncycles_dir = current_cycle.project.shift_dir
             if not os.path.exists(aligncycles_dir):
                 os.mkdir(aligncycles_dir)
-            descriptor_filename = current_cycle.project.shift_file
+            descriptor_filename = current_cycle.project.shift_file.filename
             print '. create shift descriptor file: %s' % descriptor_filename
 
             descriptor[i]['lowerOverlap'] = b
@@ -147,8 +161,8 @@ class Align(object):
             descriptor[i]['maxShift'] = self.args.max_shift
             descriptor[i]['noShiftIndex'] = no_shift_ix
             descriptor[i]['noShiftCount'] = no_shift_count
-            descriptor[i]['segmentationDirectory'] = segm_dir
-            descriptor[i]['segmentationFileNameTrunk'] = segm_trunk
+            descriptor[i]['segmentationDir'] = segm_dir
+            descriptor[i]['segmentationFilenameTrunk'] = segm_trunk
             descriptor[i]['cycleNum'] = current_cycle.cycle
 
             with open(descriptor_filename, 'w') as outfile:
@@ -157,7 +171,16 @@ class Align(object):
                                          separators=(',', ': ')))
 
     @staticmethod
-    def process_commands(args, subparser):
+    def process_cli_commands(args, subparser):
+        '''
+        Initialize Corilla class with parsed command line arguments.
+
+        Parameters
+        ----------
+        args: argparse.Namespace
+            arguments parsed by command line interface
+        subparser: argparse.ArgumentParser
+        '''
         cli = Align(args)
         if subparser.prog == 'align run':
             cli.run()

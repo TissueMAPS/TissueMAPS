@@ -1,32 +1,35 @@
 import os
-import yaml
 import natsort
 import h5py
 import numpy as np
 from scipy import misc
+import tmt
 import image_registration
+from tmt.cluster import create_batches
 
 
 def calculate_shift(filename, ref_filename):
     '''
-    Calculate shift between two images from different cycles.
+    Calculate shift between two images based on fast Fourier transform.
+
+    "Apparently astronomical images look a lot like microscopic images." [1]_
 
     Parameters
     ----------
     filename: str
-              path to image that should be registered
+        path to image that should be registered
 
     ref_filename: str
-                  path to image that should be used as a reference
+        path to image that should be used as a reference
 
     Returns
     -------
     Tuple[int]
-    shift in x, y direction
+        shift in x, y direction
 
-    "Apparently astronomical images look a lot like microscopic images." [*]
-
-    [*] http://image-registration.readthedocs.org/en/latest/
+    References
+    ----------
+    ..[1] http://image-registration.readthedocs.org/en/latest/
     '''
     # Load image that should be registered
     im = np.array(misc.imread(filename), dtype='float64')
@@ -39,17 +42,33 @@ def calculate_shift(filename, ref_filename):
 
 def register_images(registration_files, reference_files, output_file):
     '''
-    Calculate the shift between a set of images (image to register and
-    reference image) and store the results in an HDF5 file.
+    Calculate shift between a set of two images (image to register and
+    reference image) from two different acquisition cycles
+    and store the results in an HDF5 file.
+
+    The HDF5 file will have the following internal hierarchical structure::
+
+        /
+        /cycle1                Group
+        /cycle1/x_shift        Dataset {n}  : INTEGER
+        /cycle1/y_shift        Dataset {n}  : INTEGER
+        /cycle1/file_name      Dataset {n}  : STRING
+        /cycle2                Group
+        /cycle2/x_shift        Dataset {n}  : INTEGER
+        /cycle2/y_shift        Dataset {n}  : INTEGER
+        /cycle2/file_name      Dataset {n}  : STRING
+        ...
+
+    where `n` is the number of image sites per cycle.
 
     Parameters
     ----------
     registration_files: List[Dict[str, List[str]]]
-                        name of image files that should be registered
+        name of image files that should be registered
     reference_files: List[str]
-                     name of image files used as reference for registration
+        name of image files used as reference for registration
     output_file: str
-                 name of the HDF5 file, where calculated values will be stored
+        name of the HDF5 file, where calculated values will be stored
     '''
     out = dict()
     for cycle, files in registration_files.iteritems():
@@ -57,7 +76,7 @@ def register_images(registration_files, reference_files, output_file):
         out[cycle] = dict()
         out[cycle]['x_shift'] = []
         out[cycle]['y_shift'] = []
-        out[cycle]['reg_file'] = []
+        out[cycle]['file_name'] = []
         for site in xrange(len(files)):
             print '.. Process site #%d' % (site+1)
             reg_filename = files[site]
@@ -71,7 +90,7 @@ def register_images(registration_files, reference_files, output_file):
             # Store shift values and name of the registered image
             out[cycle]['x_shift'].append(int(x))
             out[cycle]['y_shift'].append(int(y))
-            out[cycle]['reg_file'].append(os.path.basename(reg_filename))
+            out[cycle]['file_name'].append(os.path.basename(reg_filename))
 
     print '. Store registration in file: %s' % output_file
     f = h5py.File(output_file, 'w')
@@ -92,14 +111,14 @@ def calculate_local_overlap(x_shift, y_shift):
     Parameters
     ----------
     x_shift: List[int]
-             shift values in x direction
+        shift values in x direction
     y_shift: List[int]
-             shift values in y direction
+        shift values in y direction
 
     Returns
     -------
     List[int]
-    upper, lower, right and left overlap
+        upper, lower, right and left overlap
     '''
     # in y direction
     y_positive = [i > 0 for i in y_shift]
@@ -150,14 +169,14 @@ def fuse_registration(output_files, cycle_names):
     Parameters
     ----------
     output_files: List[str]
-                  name of HDF5 files, where registration results were stored
+        names of HDF5 files, where registration results were stored
     cycle_names: List[str]
-                 name of cycles (correspond to groups in HDF5 files)
+        names of cycles (correspond to groups in HDF5 files)
 
     Returns
     -------
     List[Dict[str, List[str or int]]]
-    "xShift", "yShift", and "fileName" of each registered image
+        "xShift", "yShift", and "fileName" of each registered image
     '''
     descriptor = list()
     for i, key in enumerate(cycle_names):
@@ -186,16 +205,16 @@ def calculate_overlap(descriptor, max_shift):
     Parameters
     ----------
     descriptor: List[Dict[str, List[str or int]]]
-                calculated shift values (and names) of registered images for
-                each acquisition cycle
+        calculated shift values (and names) of registered images for
+        each acquisition cycle
     max_shift: int
-               maximally tolerated shift value
+        maximally tolerated shift (in pixels)
 
     Returns
     -------
     Tuple[List[int]]
-    upper, lower, right, and left overlap per site
-    and indices of sites were shift exceeds maximally tolerated value
+        upper, lower, right, and left overlap per site (in pixels)
+        and indices of sites were shift exceeds maximally tolerated value
     '''
     top = []
     bottom = []
@@ -241,17 +260,15 @@ class Registration(object):
 
     def __init__(self, cycles, reference_cycle=None, reference_channel=None):
         '''
-        Initiate Registration class.
+        Initialize Registration class.
 
         Parameters
         ----------
         cycles: List[Subexperiment]
         reference_cycle: int
-                         cycle that should be used as reference for
-                         image registration
+            cycle that should be used as reference for image registration
         reference_channel: int
-                           channel from which images should be used for
-                           registration
+            channel from which images should be used for registration
         '''
         self.cycles = cycles
         self.ref_cycle = reference_cycle
@@ -267,11 +284,10 @@ class Registration(object):
     @property
     def image_files(self):
         '''
-        For each cycle list image files of the reference channel.
-
         Returns
         -------
         List[List[str]]
+            image files of the reference channel grouped by cycle
         '''
         if self._image_files is None:
             image_filenames = []
@@ -300,7 +316,7 @@ class Registration(object):
         '''
         Create list of jobs for parallel processing.
 
-        A joblist has the following structure (YAML):
+        A joblist has the following structure (YAML)::
 
             - registration_files: Dict[str, List[str]]
               reference_files:  List[str]
@@ -315,35 +331,20 @@ class Registration(object):
         Parameters
         ----------
         batch_size: int
-                    number of batches
+            number of batches
 
         Returns
         -------
         List[Dict[str, List[str] or str]]
+            job description
         '''
-        def create_batches(l, n):
-            '''
-            Separate a list into several n-sized sub-lists.
-
-            Parameters
-            ----------
-            l: list
-            n: int
-
-            Returns
-            -------
-            List[list]
-            '''
-            n = max(1, n)
-            return [l[i:i + n] for i in range(0, len(l), n)]
-
         if not self.ref_cycle:
             raise IOError('Parameter "reference_cycle" is required '
                           'for joblist creation')
 
         joblist = list()
         ref_filenames = create_batches(self.image_files[self.ref_cycle],
-                                       batch_size)
+                                           batch_size)
         n_batches = len(ref_filenames)
         # Create a list of dictionaries holding the image filenames per batch
         # segregated for the different cycles
@@ -369,8 +370,7 @@ class Registration(object):
         '''
         Write joblist to file as YAML.
         '''
-        with open(self.joblist_file, 'w') as outfile:
-            outfile.write(yaml.dump(self.joblist, default_flow_style=False))
+        tmt.util.write_joblist(self.joblist_file, self.joblist)
 
     def read_joblist(self):
         '''
@@ -379,7 +379,6 @@ class Registration(object):
         Returns
         -------
         List[dict[str, list[str] or str]]
+            job description
         '''
-        with open(self.joblist_file, 'r') as joblist_file:
-            return yaml.load(joblist_file.read())
-
+        return tmt.util.read_joblist(self.joblist_file)
