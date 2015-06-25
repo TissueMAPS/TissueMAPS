@@ -188,14 +188,14 @@ class Align(object):
             timestamp = tmt.cluster.create_timestamp()
             lsf = os.path.join(self.args.experiment_dir, 'lsf',
                                'align_%s_%.5d_%s.lsf'
-                               % (shift.experiment, j.job_id, timestamp))
+                               % (shift.experiment, j['job_id'], timestamp))
             # build command
             command = [
-                'align', 'run', '--job', str(j.job_id),
+                'align', 'run', '--job', str(j['job_id']),
                 self.args.experiment_dir
             ]
 
-            print '. submitting job #%d' % j.job_id
+            print '. submitting job #%d' % j['job_id']
 
             job = Cluster(lsf)
             job.submit(command)

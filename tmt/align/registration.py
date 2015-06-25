@@ -378,7 +378,7 @@ class Registration(object):
         '''
         Write joblist to file as YAML.
         '''
-        tmt.util.write_joblist(self.joblist_file, self.joblist)
+        tmt.cluster.write_joblist(self.joblist_file, self.joblist)
 
     def read_joblist(self):
         '''
