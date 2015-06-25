@@ -112,8 +112,8 @@ class Align(object):
         if self.args.segm_dir:
             segm_dir = self.args.segm_dir
         else:
-            project = Project(self.args.experiment_dir,
-                              self.args.config, subexperiment=ref_cycle_name)
+            project = Project(os.path.join(self.args.experiment_dir,
+                              ref_cycle_name), self.args.config)
             # default for Jterator projects
             segm_dir = os.path.join('..', '..', project.segmentation_dir)
         print '. Segmentation directory: %s' % segm_dir
@@ -135,7 +135,7 @@ class Align(object):
         cycle_names = f.keys()
         f.close()
 
-        descriptor = reg.fuse_registration(self.args.output_dir, cycle_names)
+        descriptor = reg.fuse_registration(output_files, cycle_names)
 
         # Calculate overlap at each site
         print '. calculate overlap between sites'
@@ -187,6 +187,6 @@ class Align(object):
         elif subparser.prog == 'align joblist':
             cli.joblist()
         elif subparser.prog == 'align fuse':
-            cli.joblist()
+            cli.fuse()
         else:
             subparser.print_help()

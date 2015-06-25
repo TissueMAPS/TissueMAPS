@@ -72,13 +72,12 @@ def register_images(registration_files, reference_files, output_file):
     '''
     out = dict()
     for cycle, files in registration_files.iteritems():
-        print '. Process "%s"' % cycle
+        print '.. "%s"' % cycle
         out[cycle] = dict()
         out[cycle]['x_shift'] = []
         out[cycle]['y_shift'] = []
         out[cycle]['file_name'] = []
         for site in xrange(len(files)):
-            print '.. Process site #%d' % (site+1)
             reg_filename = files[site]
             print '... registration: %s' % reg_filename
             ref_filename = reference_files[site]
@@ -180,7 +179,7 @@ def fuse_registration(output_files, cycle_names):
     '''
     descriptor = list()
     for i, key in enumerate(cycle_names):
-        descriptor[i] = dict()
+        descriptor.append(dict())
         descriptor[i]['xShift'] = []
         descriptor[i]['yShift'] = []
         descriptor[i]['fileName'] = []
@@ -224,9 +223,10 @@ def calculate_overlap(descriptor, max_shift):
     number_of_sites = len(descriptor[0]['xShift'])
     print '. number of sites: %d' % number_of_sites
     for site in xrange(number_of_sites):
-        x_shift = [c['xShift'][site] for c in descriptor.values()]
-        y_shift = [c['yShift'][site] for c in descriptor.values()]
-        no_shift.append(abs(x_shift) > max_shift or abs(y_shift) > max_shift)
+        x_shift = np.array([c['xShift'][site] for c in descriptor])
+        y_shift = np.array([c['yShift'][site] for c in descriptor])
+        no_shift.append(any(abs(x_shift) > max_shift) or
+                        any(abs(y_shift) > max_shift))
         (top, bottom, right, left) = calculate_local_overlap(x_shift, y_shift)
         top.append(top)
         bottom.append(bottom)
