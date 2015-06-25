@@ -46,17 +46,17 @@ You can describe your experiment layout using the following keywords:
 SUBEXPERIMENTS_EXIST: Yes
 
 # Path format strings
-IMAGE_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/TIFF'
-SHIFT_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/ALIGNCYCLES'
-STATS_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/BATCH'
-SEGMENTATION_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/SEGMENTATION'
+IMAGE_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/images'
+SHIFT_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/shift'
+STATS_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/stats'
+SEGMENTATION_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/segmentations'
 LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
 DATA_FILE_LOCATION: '{experiment_dir}/data.h5'
 
 # Filename format strings
 SUBEXPERIMENT_FOLDER_FORMAT: '{experiment}_{cycle:0>2}'
 SUBEXPERIMENT_FILE_FORMAT: '{experiment}_{cycle}'
-STATS_FILE_FORMAT: 'Measurements_batch_illcor_channel{channel:0>3}_zstack000.mat'
+STATS_FILE_FORMAT: 'illumstats_channel{channel:0>3}.h5'
 SHIFT_FILE_FORMAT: 'shiftDescriptor.json'
 
 # Regular expression patterns to extract information encoded in filenames
