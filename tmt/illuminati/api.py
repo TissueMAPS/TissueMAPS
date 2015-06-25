@@ -72,7 +72,7 @@ class Illuminati(object):
         if self.args.thresh_sample > len(images):
             self.args.thresh_sample = len(images)
 
-        layer = Mosaic(images)
+        layer = Mosaic(images, self.args.config)
 
         if self.args.id_luts:
             print('ᐄ  CREATING ID LOOKUP TABLES ')

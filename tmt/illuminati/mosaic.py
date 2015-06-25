@@ -21,17 +21,19 @@ class Mosaic(object):
     Holds methods for image processing and pyramid creation.
     '''
 
-    def __init__(self, images):
+    def __init__(self, images, cfg):
         '''
         Init class Mosaic.
 
         Parameters
         ----------
         images: List[tmt.image.Image]
-                Image objects with lazy loading method.
-                Loaded images will be type Vips.Image.
+            image objects with lazy loading method
+        cfg: dict
+            configuration settings
         '''
         self.images = images
+        self.cfg = cfg
         self._image_grid = None
         self.mosaic_image = None
         self._mosaic_image_name = None
@@ -120,9 +122,9 @@ class Mosaic(object):
         for i in range(len(self.layer_grid)):
             for j in range(len(self.layer_grid[0])):
                 img = self.layer_grid[i][j]
-                self.layer_grid[i][j] = illum_correction_vips(img,
-                                                              stats[0],
-                                                              stats[1])
+                self.layer_grid[i][j] = illum_correction_vips(
+                                            img, stats[0], stats[1],
+                                            self.cfg['LOG_TRANSFORM_STATS'])
         return self.layer_grid
 
     def build_mask_grid(self, data_file, mask='outline',

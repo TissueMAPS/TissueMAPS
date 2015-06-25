@@ -358,7 +358,7 @@ def save_outline_polygons(outlines, filename):
 
 def outlines(labels, keep_ids=False):
     '''
-    Given a label matrix, return a matrix of the outlines of the labeled objects.
+    Given a label matrix, return a matrix of the outlines of labeled objects.
     If `keep_ids` is True, the outlines will still consist of their cell's id,
     otherwise all outlines will be 255.
     Note that in the case of keeping the ids,
@@ -375,9 +375,9 @@ def outlines(labels, keep_ids=False):
     d1_different = labels[1:, 1:] != labels[:-1, :-1]
     d2_different = labels[1:, :-1] != labels[:-1, 1:]
     different = np.zeros(labels.shape, bool)
-    different[1:, :][lr_different]  = True
+    different[1:, :][lr_different] = True
     different[:-1, :][lr_different] = True
-    different[:, 1:][ud_different]  = True
+    different[:, 1:][ud_different] = True
     different[:, :-1][ud_different] = True
     different[1:, 1:][d1_different] = True
     different[:-1, :-1][d1_different] = True
@@ -459,8 +459,8 @@ def outlines_vips(im):
     nonbg = im > 0
     # Apply all the masks and save each result
     for i, mask in enumerate(masks):
-       img = nonbg.morph(mask, 'erode')
-       results.append(img)
+        img = nonbg.morph(mask, 'erode')
+        results.append(img)
 
     # OR all the images
     images_disj = reduce(op.or_, results)
