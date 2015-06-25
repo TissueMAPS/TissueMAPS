@@ -1,4 +1,8 @@
 import re
+import os
+import yaml
+import time
+import datetime
 import socket
 import subprocess32
 
@@ -21,6 +25,57 @@ def create_batches(li, n):
     '''
     n = max(1, n)
     return [li[i:i + n] for i in range(0, len(li), n)]
+
+
+def create_timestamp():
+    '''
+    Create timestamp in the form "year-month-day_hour_minute_second".
+    Returns
+    -------
+    str
+        timestamp
+    '''
+    return datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H-%M-%S')
+
+
+def write_joblist(filename, joblist):
+    '''
+    Write joblist to YAML file.
+
+    Parameters
+    ----------
+    filename: str
+        name of the YAML file
+    joblist: List[dict]
+        job descriptions
+    '''
+    with open(filename, 'w') as joblist_file:
+            joblist_file.write(yaml.dump(joblist, default_flow_style=False))
+
+
+def read_joblist(filename):
+    '''
+    Read joblist to YAML file.
+
+    Parameters
+    ----------
+    filename: str
+        name of the YAML file
+
+    Returns
+    -------
+    List[dict]
+        job descriptions
+
+    Raises
+    ------
+    OSError
+        when `filename` does not exist
+    '''
+    if not os.path.exists(filename):
+        raise OSError('Joblist file does not exist: %s' % filename)
+    with open(filename, 'r') as joblist_file:
+            return yaml.load(joblist_file.read())
 
 
 class Cluster(object):
