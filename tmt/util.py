@@ -63,31 +63,6 @@ def load_config(filename):
         return yaml.load(f.read())
 
 
-def load_shift_descriptor(filename):
-    '''
-    Load shift description from JSON file.
-
-    Parameters
-    ----------
-    filename: str
-        name of the shift descriptor file
-
-    Returns
-    -------
-    dict
-        JSON content
-
-    Raises
-    ------
-    OSError
-        when `filename` does not exist
-    '''
-    if not os.path.exists(filename):
-        raise OSError('Shift descriptor file does not exist: %s' % filename)
-    with open(filename) as f:
-        return json.load(f)
-
-
 def check_config(cfg):
     '''
     Check that configuration settings contains all required keys.
@@ -117,8 +92,7 @@ def check_config(cfg):
         'SHIFT_FILE_FORMAT',
         'STATS_FOLDER_LOCATION',
         'STATS_FILE_FORMAT',
-        'CHANNEL_FROM_FILENAME',
-        'MEASUREMENT_FOLDER_LOCATION'
+        'CHANNEL_FROM_FILENAME'
     }
     for key in required_keys:
         if key not in cfg:
