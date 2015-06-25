@@ -6,7 +6,8 @@ from tmt.imageutil import np_array_to_vips_image
 from tmt.util import regex_from_format_string
 
 
-def illum_correction_vips(orig_image, mean_image, std_image):
+def illum_correction_vips(orig_image, mean_image, std_image,
+                          log_transform=True):
     '''
     Correct fluorescence microscopy image for illumination artifacts
     using the image processing library Vips.
@@ -19,6 +20,8 @@ def illum_correction_vips(orig_image, mean_image, std_image):
         matrix of mean values (same dimensions as `orig_image`)
     std_image: Vips.Image[Vips.BandFormat.DOUBLE]
         matrix of standard deviation values (same dimensions as `orig_image`)
+    log_transform: bool, optional
+            log10 transform image (defaults to True)
 
     Returns
     -------
@@ -33,10 +36,12 @@ def illum_correction_vips(orig_image, mean_image, std_image):
 
     # Do all computations with double precision
     img = img.cast('double')
-    img = img.log10()
+    if log_transform:
+        img = img.log10()
     img = (img - mean_image) / std_image
     img = img * std_image.avg() + mean_image.avg()
-    img = 10 ** img
+    if log_transform:
+        img = 10 ** img
 
     # Cast back to UINT16 or whatever the original image was
     img = img.cast(orig_format)
@@ -44,7 +49,8 @@ def illum_correction_vips(orig_image, mean_image, std_image):
     return img
 
 
-def illum_correction(orig_image, mean_mat, std_mat, fix_pixels=False):
+def illum_correction(orig_image, mean_mat, std_mat,
+                     log_transform=True, fix_pixels=False):
     """
     Correct fluorescence microscopy image for illumination artifacts.
 
@@ -66,9 +72,12 @@ def illum_correction(orig_image, mean_mat, std_mat, fix_pixels=False):
     img = orig_image.copy()
     img = img.astype(np.float64)
     img[img == 0] = 1
-    img = (np.log10(img) - mean_mat) / std_mat
+    if log_transform:
+        img = np.log10(img)
+    img = (img - mean_mat) / std_mat
     img = (img * np.mean(std_mat)) + np.mean(mean_mat)
-    img = 10 ** img
+    if log_transform:
+        img = 10 ** img
 
     if fix_pixels:
         # fix "bad" pixels with non numeric values (NaN or Inf)
