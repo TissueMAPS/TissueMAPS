@@ -1,5 +1,5 @@
 import re
-from os.path import join, dirname, realpath, exists, isabs, abspath, basename
+import os
 import mahotas as mh
 import numpy as np
 try:
@@ -16,7 +16,14 @@ _image_regex = re.compile('.*(' + '|'.join(
 
 
 def is_image_file(filename):
-    '''Check if filename ends with a supported file extension'''
+    '''
+    Check if filename ends with a supported file extension.
+
+    Parameters
+    ----------
+    filename: str
+        name of the image file
+    '''
     return _image_regex.match(filename)
 
 
@@ -30,31 +37,36 @@ class Image(object):
     cycle number, and name of the corresponding experiment.
     '''
 
-    def __init__(self, filename, cfg, vips=False):
+    def __init__(self, filename, cfg):
         '''
-        Initiate Image class.
+        Initialize Image class.
 
         Parameters
         ----------
         filename: str
-                  path to the image file
+            path to the image file
         cfg: Dict[str, str]
-             configuration settings
-        vips: bool
-              indicate whether to use numpy or Vips (True: Vips, False: numpy)
+            configuration settings
+
+        Raises
+        ------
+        ValueError
+            when file is not a valid image file format
         '''
         self.cfg = cfg
-        if not isabs(filename):
-            self.filename = abspath(filename)
+        if not os.path.isabs(filename):
+            self.filename = os.path.abspath(filename)
         else:
             self.filename = filename
         if not is_image_file(self.filename):
-            raise Exception('File "%s" is not a supported image file.' %
-                            self.filename)
+            raise ValueError('File "%s" is not a supported image file format. '
+                             'Supported formats are: %s '
+                             % (self.filename,
+                                SUPPORTED_IMAGE_FILES.join(', ')))
         # NOTE: We only check whether the image file actually exists when
-        # we try to load the image. This allows us to extract information
+        # we try to load the image. This still allows us to extract information
         # from filenames for which no absolute path is available.
-        self.vips = vips
+        self.use_vips = self.cfg['USE_VIPS_LIBRARY']
         self._image = None
         self._dimensions = None
         self._coordinates = None
@@ -68,17 +80,23 @@ class Image(object):
     @property
     def image(self):
         '''
-        Read image form file and return it as numpy array (default)
-        or as Vips object if vips set to True.
+        Read image form file and return it as `numpy` array (default -
+        if vips set to False) or as `Vips` image (if vips set to True).
 
         Returns
         -------
-        numpy.ndarray or gi.overrides.Vips.Image
+        numpy.ndarray or Vips.Image
+            image
+
+        Raises
+        ------
+        OSError
+            when image file does not exist on disk
         '''
         if self._image is None:
-            if not exists(self.filename):
-                raise Exception('Cannot load image because '
-                                'file "%s" does not exist.' % self.filename)
+            if not os.path.exists(self.filename):
+                raise OSError('Cannot load image because '
+                              'file "%s" does not exist.' % self.filename)
             if self.vips:
                 self._image = Vips.Image.new_from_file(self.filename)
             else:
@@ -91,7 +109,7 @@ class Image(object):
         Returns
         -------
         Tuple[int]
-        y, x dimensions (height, width) of the image
+            y, x dimensions (height, width) of the image
         '''
         if self._dimensions is None:
             if self.vips:
@@ -106,14 +124,23 @@ class Image(object):
         Returns
         -------
         Tuple[int]
-        one-based row, column coordinates of an image
-        relative to the acquisition grid in 2D
+            one-based row, column coordinates of an image
+            relative to the acquisition grid in 2D, determined from filename
+            using regular expression pattern provided in configuration settings
+
+        Raises
+        ------
+        ValueError
+            when coordinates cannot not be determined from filename
         '''
         if not self._coordinates:
             m = re.search(self.cfg['COORDINATES_FROM_FILENAME'], self.filename)
             if not m:
-                raise Exception('Can\'t determine coordinates from file "%s"'
-                                % self.filename)
+                raise ValueError('Can\'t determine coordinates from file "%s" '
+                                 'using pattern "%s". \n'
+                                 'Check your configuration settings!'
+                                 % (self.filename,
+                                    self.cfg['COORDINATES_FROM_FILENAME']))
             row_nr, col_nr = map(int, m.groups())
             if not self.cfg['COORDINATES_IN_FILENAME_ONE_BASED']:
                 row_nr += 1
@@ -129,8 +156,9 @@ class Image(object):
         Returns
         -------
         Tuple[int]
-        zero-based row, column coordinates of an image
-        relative to the acquisition grid in 2D
+            zero-based row, column coordinates of an image
+            relative to the acquisition grid in 2D, determined from filename
+            using regular expression pattern provided in configuration settings
         '''
         if self._indices is None:
             row_nr, col_nr = self.coordinates
@@ -146,14 +174,22 @@ class Image(object):
         Returns
         -------
         int
-        one-based site number of an image
-        relative to the acquisition sequence over time
+            one-based site number of an image, determined from filename
+            using regular expression pattern provided in configuration settings
+
+        Raises
+        ------
+        ValueError
+            when site number cannot not be determined from filename
         '''
         if self._site is None:
             m = re.search(self.cfg['SITE_FROM_FILENAME'], self.filename)
             if not m:
-                raise Exception('Can\'t determine site from file "%s"'
-                                % self.filename)
+                raise ValueError('Can\'t determine site from file "%s" '
+                                 'using pattern "%s". \n'
+                                 'Check your configuration settings!'
+                                 % (self.filename,
+                                    self.cfg['SITE_FROM_FILENAME']))
             self._site = int(m.group(1))
         return self._site
 
@@ -163,30 +199,48 @@ class Image(object):
         Returns
         -------
         int
-        one-based cycle number of an image
+            one-based cycle number of an image, determined from filename
+            using regular expression pattern provided in configuration settings
+
+        Raises
+        ------
+        ValueError
+            when cycle number cannot not be determined from filename
         '''
         if self._cycle is None:
             m = re.search(self.cfg['CYCLE_FROM_FILENAME'], self.filename)
             if not m:
-                raise Exception('Can\'t determine cycle from file "%s"'
-                                % self.filename)
+                raise ValueError('Can\'t determine cycle from file "%s" '
+                                 'using pattern "%s". \n'
+                                 'Check your configuration settings!'
+                                 % (self.filename,
+                                    self.cfg['CYCLE_FROM_FILENAME']))
             self._cycle = int(m.group(1))
         return self._cycle
 
     @property
-    def experiment(self):  # get_expname_from_filename()
+    def experiment(self):
         '''
         Returns
         -------
         str
-        experiment name
+            experiment name, determined from filename
+            using regular expression pattern provided in configuration settings
+
+        Raises
+        ------
+        ValueError
+            when experiment name cannot not be determined from filename
         '''
         if self._experiment is None:
             m = re.search(self.cfg['EXPERIMENT_FROM_FILENAME'],
-                          basename(self.filename))
+                          os.path.basename(self.filename))
             if not m:
-                raise Exception('Can\'t determine experiment from file "%s"'
-                                % self.filename)
+                raise ValueError('Can\'t determine experiment from file "%s" '
+                                 'using pattern "%s". \n'
+                                 'Check your configuration settings!'
+                                 % (self.filename,
+                                    self.cfg['EXPERIMENT_FROM_FILENAME']))
             self._experiment = m.group(1)
         return self._experiment
 
@@ -196,15 +250,16 @@ class Image(object):
         Returns
         -------
         str
-        path to experiment directory
+            path to experiment directory, determined from filename
         '''
         if self._experiment_dir is None:
             if self.cfg['SUBEXPERIMENTS_EXIST']:
                 levels = 2
             else:
                 levels = 1
-            self._experiment_dir = realpath(join(dirname(self.filename),
-                                                 * ['..'] * levels))
+            self._experiment_dir = os.path.realpath(os.path.join(
+                                        os.path.dirname(self.filename),
+                                        * ['..'] * levels))
         return self._experiment_dir
 
 
@@ -213,50 +268,40 @@ class IntensityImage(Image):
     Utility class for an intensity image,
     i.e. a two dimensional gray-scale image.
 
-    It provides the image itself (type float!)
+    It provides the image itself (as type float)
     and additional information derived from the image filename,
     such as the channel number.
     '''
 
-    # TODO: vips
-
-    def __init__(self, filename, cfg, vips=False):
-        Image.__init__(self, filename, cfg, vips=False)
+    def __init__(self, filename, cfg):
+        Image.__init__(self, filename, cfg)
         self.filename = filename
         self.cfg = cfg
-        self.vips = vips
+        self.use_vips = cfg['USE_VIPS_LIBRARY']
         self._channel = None
 
     @property
-    def image(self):
-        '''
-        Read image form file and return it as numpy array of type float
-        (default) or as Vips object if vips is set to True.
-
-        Returns
-        -------
-        numpy.ndarray or gi.overrides.Vips.Image
-        '''
-        if self._image is None:
-            if self.vips:
-                self._image = Vips.Image.new_from_file(self.filename)
-            else:
-                self._image = mh.imread(self.filename).astype(float)
-        return self._image
-
-    @property
-    def channel(self):  # get_channel_nr_from_filename()
+    def channel(self):
         '''
         Returns
         -------
         int
-        channel number
+            channel number, determined from filename
+            using regular expression pattern provided in configuration settings
+
+        Raises
+        ------
+        ValueError
+            when channel number cannot be determined from filename
         '''
         if self._channel is None:
             m = re.search(self.cfg['CHANNEL_FROM_FILENAME'], self.filename)
             if not m:
-                raise Exception('Can\'t determine channel from file "%s"'
-                                % self.filename)
+                raise ValueError('Can\'t determine channel from file "%s" '
+                                 'using pattern "%s". \n'
+                                 'Check your configuration settings!'
+                                 % (self.filename,
+                                    self.cfg['CHANNEL_FROM_FILENAME']))
             self._channel = int(m.group(1))
         return self._channel
 
@@ -272,11 +317,11 @@ class MaskImage(Image):
     from the image filename, such as the name of objects encoded in the image
     and their unique ids.
     '''
-    def __init__(self, filename, cfg, vips=False):
-        Image.__init__(self, filename, cfg, vips=False)
+    def __init__(self, filename, cfg):
+        Image.__init__(self, filename, cfg)
         self.filename = filename
         self.cfg = cfg
-        self.vips = vips
+        self.use_vips = cfg['USE_VIPS_LIBRARY']
         self._objects = None
         self._ids = None
 
@@ -286,13 +331,22 @@ class MaskImage(Image):
         Returns
         -------
         str
-        name of objects in the mask image
+            name of objects in the mask image, determined from filename
+            using regular expression pattern provided in configuration settings
+
+        Raises
+        ------
+        ValueError
+            when objects name cannot not be determined from filename
         '''
         if self._objects is None:
-            m = re.search(self.cfg['OBJECT_FROM_FILENAME'], self.filename)
+            m = re.search(self.cfg['OBJECTS_FROM_FILENAME'], self.filename)
             if not m:
-                raise Exception('Can\'t determine object from file "%s"'
-                                % self.filename)
+                raise ValueError('Can\'t determine objects from file "%s" '
+                                 'using pattern "%s". \n'
+                                 'Check your configuration settings!'
+                                 % (self.filename,
+                                    self.cfg['OBJECTS_FROM_FILENAME']))
             self._objects = m.group(1)
         return self._objects
 
@@ -315,5 +369,5 @@ class MaskImage(Image):
         return self._ids
 
     # TODO:
-    # include more methods for providing the sub-images (from bounding boxes)
+    # add methods for providing the sub-images (from bounding boxes)
     # as iterable object
