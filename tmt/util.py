@@ -1,17 +1,25 @@
 import yaml
-from os.path import exists
+import json
+import os
 import re
 
-"""
-Utility functions for filename and path routines.
-"""
+'''Utility functions for filename and path routines.'''
 
 
 def regex_from_format_string(format_string):
     '''
-    Convert a format string of the sort
-    '{name}_bla/something_{number}'
-    to a named regular expression.
+    Convert a format string of the sort "{name}_bla/something_{number}"
+    to a named regular expression a la "P<name>.*_bla/something_P<number>\d+".
+
+    Parameters
+    ----------
+    format_string: str
+        Python format string
+
+    Returns
+    -------
+    str
+        named regular expression pattern
     '''
     # Extract the names of all placeholders from the format string
     placeholders_inner_parts = re.findall(r'{(.+?)}', format_string)
@@ -30,16 +38,71 @@ def regex_from_format_string(format_string):
     return regex
 
 
-def load_config(cfg_filename):
-    '''Load configuration from yaml file.'''
-    if not exists(cfg_filename):
-        raise Exception('Error: configuration file %s does not exist!'
-                        % cfg_filename)
-    return yaml.load(open(cfg_filename).read())
+def load_config(filename):
+    '''
+    Load configuration settings from YAML file.
+
+    Parameters
+    ----------
+    filename: str
+        name of the config file
+
+    Returns
+    -------
+    dict
+        YAML content
+
+    Raises
+    ------
+    OSError
+        when `filename` does not exist
+    '''
+    if not os.path.exists(filename):
+        raise OSError('Configuration file does not exist: %s' % filename)
+    with open(filename) as f:
+        return yaml.load(f.read())
+
+
+def load_shift_descriptor(filename):
+    '''
+    Load shift description from JSON file.
+
+    Parameters
+    ----------
+    filename: str
+        name of the shift descriptor file
+
+    Returns
+    -------
+    dict
+        JSON content
+
+    Raises
+    ------
+    OSError
+        when `filename` does not exist
+    '''
+    if not os.path.exists(filename):
+        raise OSError('Shift descriptor file does not exist: %s' % filename)
+    with open(filename) as f:
+        return json.load(f)
 
 
 def check_config(cfg):
-    yaml_keys = [
+    '''
+    Check that configuration settings contains all required keys.
+
+    Parameters
+    ----------
+    cfg: dict
+        configuration settings
+
+    Raises
+    ------
+    KeyError
+        when a required key is missing
+    '''
+    required_keys = {
         'COORDINATES_FROM_FILENAME',
         'COORDINATES_IN_FILENAME_ONE_BASED',
         'SUBEXPERIMENT_FOLDER_FORMAT',
@@ -49,15 +112,70 @@ def check_config(cfg):
         'IMAGE_FOLDER_LOCATION',
         'SUBEXPERIMENTS_EXIST',
         'SEGMENTATION_FOLDER_LOCATION',
-        'OBJECT_FROM_FILENAME',
+        'OBJECTS_FROM_FILENAME',
         'SHIFT_FOLDER_LOCATION',
         'SHIFT_FILE_FORMAT',
         'STATS_FOLDER_LOCATION',
         'STATS_FILE_FORMAT',
         'CHANNEL_FROM_FILENAME',
-        'MEASUREMENT_FOLDER_LOCATION',
-        'CELL_ID_FORMAT'
-    ]
-    for key in yaml_keys:
+        'MEASUREMENT_FOLDER_LOCATION'
+    }
+    for key in required_keys:
         if key not in cfg:
-            raise Exception('Configuration file must contain the key "%s"' % key)
+            raise KeyError('Configuration file must contain the key "%s"'
+                           % key)
+
+
+def write_joblist(filename, joblist):
+    '''
+    Write joblist to YAML file.
+
+    Parameters
+    ----------
+    filename: str
+        name of the YAML file
+    joblist: List[dict]
+        job descriptions
+
+    Raises
+    ------
+    OSError
+        when `filename` does not exist
+    '''
+    if not os.path.exists(filename):
+        raise OSError('Joblist file does not exist: %s' % filename)
+    with open(filename, 'w') as joblist_file:
+            joblist_file.write(yaml.dump(joblist, default_flow_style=False))
+
+
+def read_joblist(filename):
+    '''
+    Read joblist to YAML file.
+
+    Parameters
+    ----------
+    filename: str
+        name of the YAML file
+
+    Returns
+    -------
+    List[dict]
+        job descriptions
+
+    Raises
+    ------
+    OSError
+        when `filename` does not exist
+    '''
+    if not os.path.exists(filename):
+        raise OSError('Joblist file does not exist: %s' % filename)
+    with open(filename, 'r') as joblist_file:
+            return yaml.load(joblist_file.read())
+
+
+class Namespacified(object):
+    '''
+    Class for loading key-value pairs of a dictionary into a Namespace object.
+    '''
+    def __init__(self, adict):
+        self.__dict__.update(adict)
