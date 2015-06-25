@@ -218,7 +218,7 @@ if __name__ == '__main__':
             # filename of the image, which was used to generate the data
             joblist_files = glob.glob(os.path.join(
                                 os.path.dirname(data_files[0]), '..', '*jobs'))
-            joblist = tmt.util.read_joblist(joblist_files[0])
+            joblist = tmt.cluster.read_joblist(joblist_files[0])
 
             if not any([re.search(r'_OriginalObjectIds$', name)
                         for name in feature_names]):
