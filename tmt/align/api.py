@@ -116,10 +116,11 @@ class Align(object):
         if self.args.segm_dir:
             segm_dir = self.args.segm_dir
         else:
-            project = Project(os.path.join(self.args.experiment_dir,
-                              ref_cycle_name), self.args.config)
-            # default for Jterator projects
-            segm_dir = os.path.join('..', '..', project.segmentation_dir)
+            # relative path for Jterator projects
+            segm_dir = self.args.config['SEGMENTATION_FOLDER_LOCATION'].format(
+                                    experiment_dir='..%s..' % os.path.sep,
+                                    sep=os.path.sep,
+                                    subexperiment=ref_cycle_name)
         print '. Segmentation directory: %s' % segm_dir
 
         if self.args.segm_trunk:
@@ -156,7 +157,9 @@ class Align(object):
             aligncycles_dir = current_cycle.project.shift_dir
             if not os.path.exists(aligncycles_dir):
                 os.mkdir(aligncycles_dir)
-            descriptor_filename = current_cycle.project.shift_file.filename
+            descriptor_filename = self.args.config['SHIFT_FILE_FORMAT']
+            descriptor_filename = os.path.join(aligncycles_dir,
+                                               descriptor_filename)
             print '. create shift descriptor file: %s' % descriptor_filename
 
             descriptor[i]['lowerOverlap'] = b
@@ -183,12 +186,18 @@ class Align(object):
         shift = reg.Registration(cycles)
         joblist = shift.read_joblist()
 
+        lsf_dir = os.path.join(self.args.experiment_dir, 'lsf')
+        if not os.path.exists(lsf_dir):
+                os.mkdir(lsf_dir)
+
         for j in joblist:
             # build output filename
             timestamp = tmt.cluster.create_timestamp()
-            lsf = os.path.join(self.args.experiment_dir, 'lsf',
-                               'align_%s_%.5d_%s.lsf'
+            lsf = os.path.join(lsf_dir, 'align_%s_%.5d_%s.lsf'
                                % (shift.experiment, j['job_id'], timestamp))
+            if not os.path.exists(lsf):
+                os.makedirs(lsf)
+
             # build command
             command = [
                 'align', 'run', '--job', str(j['job_id']),
@@ -196,9 +205,12 @@ class Align(object):
             ]
 
             print '. submitting job #%d' % j['job_id']
-
             job = Cluster(lsf)
             job.submit(command)
+
+    def apply(self):
+        # TODO
+        pass
 
     @staticmethod
     def process_cli_commands(args, subparser):
@@ -220,5 +232,7 @@ class Align(object):
             cli.fuse()
         elif subparser.prog == 'align submit':
             cli.submit()
+        elif subparser.prog == 'align apply':
+            cli.apply()
         else:
             subparser.print_help()

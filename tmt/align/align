@@ -121,6 +121,24 @@ if __name__ == '__main__':
     submit_parser.set_defaults(handler=partial(Align.process_cli_commands,
                                subparser=submit_parser))
 
+    apply_parser = subparsers.add_parser('apply',
+                              help='shift and crop images')
+
+    apply_parser.add_argument('experiment_dir', default=os.getcwd(),
+                              help='experiment directory')
+
+    apply_parser.add_argument('-w', '--wildcards', dest='wildcards',
+                              type=str, default='*',
+                              help='wildcards (globbing patterns) \
+                                    to process only a subset of files')
+
+    apply_parser.add_argument('-c', '--config', dest='config',
+                              help='path to custom yaml configuration file \
+                                    (defaults to "tmt" configuration)')
+
+    apply_parser.set_defaults(handler=partial(Align.process_cli_commands,
+                              subparser=apply_parser))
+
     args = parser.parse_args()
 
     if args.config:
