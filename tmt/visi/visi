@@ -99,17 +99,31 @@ if __name__ == '__main__':
     joblist_parser.set_defaults(handler=partial(Visi.process_cli_commands,
                                                 subparser=joblist_parser))
 
+    submit_parser = subparsers.add_parser('submit',
+                                          help='submit stk to png conversion')
+
+    submit_parser.add_argument('stk_folder',
+                               nargs='?', type=str, default=os.getcwd(),
+                               help='path to folder holding .stk files \
+                                     (defaults to cwd)')
+
+    submit_parser.add_argument('-c', '--config', dest='config',
+                               help='use custom yaml configuration file \
+                                     (defaults to "visi" configuration)')
+
     args = parser.parse_args()
 
     if 'config' in args:
         if args.config:
             # Overwrite default "visi" configuration
             print '. Using configuration file "%s"' % args.config
+            args.config_file = args.config.copy()
             args.config = tmt.util.load_config(args.config)
             print '. Checking configuration file'
             tmt.visi.util.check_visi_config(args.config)
         else:
             args.config = tmt.visi.config
+            args.config_file = ''
 
     try:
         if args.handler:

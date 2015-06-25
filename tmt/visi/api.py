@@ -2,6 +2,7 @@ import os
 import tmt
 from tmt.visi.stk import Stk
 from tmt.visi.stk2png import Stk2png
+from tmt.cluster import Cluster
 
 
 class Visi(object):
@@ -36,11 +37,14 @@ class Visi(object):
         project = Stk(self.args.stk_folder, self.args.wildcards)
 
         if self.args.job:
+
+            job_ix = self.args.job-1  # job ids are one-based!
+
             print '. Reading joblist from file'
             joblist = project.read_joblist()
 
             print '. Processing job #%d' % self.args.job
-            batch = joblist[self.args.job]
+            batch = joblist[job_ix]
             process = Stk2png(batch['stk_files'], batch['nd_file'],
                               self.args.config)
             if self.args.rename:
@@ -69,6 +73,34 @@ class Visi(object):
                 process.unpack_images(output_dir=batch['output_dir'],
                                       keep_z=self.args.zstacks)
 
+    def submit(self):
+        project = Stk(self.args.stk_folder, '*')
+        joblist = project.read_joblist()
+
+        for j in joblist:
+            # build output filename
+            timestamp = tmt.cluster.create_timestamp()
+            lsf = os.path.join(project.experiment_dir, 'lsf',
+                               'visi_%s_%.5d_%s.lsf'
+                               % (project.experiment, j.job_id, timestamp))
+
+            # build command
+            if self.args.config_file:
+                command = [
+                    'visi', 'run', '--job', j.job_id, '--rename',
+                    '--config', self.args.config_file, self.args.stk_folder
+                ]
+            else:
+                command = [
+                    'visi', 'run', '--job', j.job_id, '--rename',
+                    self.args.stk_folder
+                ]
+
+            print '. submitting job #%d' % j.job_id
+
+            job = Cluster(lsf)
+            job.submit(command)
+
     @staticmethod
     def process_cli_commands(args, subparser):
         cli = Visi(args)
@@ -76,5 +108,7 @@ class Visi(object):
             cli.run()
         elif subparser.prog == 'visi joblist':
             cli.joblist()
+        elif subparser.prog == 'visi submit':
+            cli.submit()
         else:
             subparser.print_help()

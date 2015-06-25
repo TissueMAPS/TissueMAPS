@@ -1,7 +1,7 @@
-import yaml
 import glob
 import os
 import re
+import tmt
 
 
 class Stk(object):
@@ -130,11 +130,13 @@ class Stk(object):
 
         A joblist has the following structure:
 
-            - stk_files: List[str]
+            - job_id: int
+              stk_files: List[str]
               nd_file:  str
               output_dir: str
 
-            - stk_files: List[str]
+            - job_id: int
+              stk_files: List[str]
               nd_file:  str
               output_dir: str
 
@@ -149,27 +151,12 @@ class Stk(object):
         -------
         List[dict[str, list[str] or str]]
         '''
-        def create_batches(l, n):
-            '''
-            Separate a list into several n-sized sub-lists.
-
-            Parameters
-            ----------
-            l: list
-            n: int
-
-            Returns
-            -------
-            List[list]
-            '''
-            n = max(1, n)
-            return [l[i:i + n] for i in range(0, len(l), n)]
-
         joblist = list()
         for i, nd in enumerate(self.nd_files):
-            batches = create_batches(self.stk_files[i], batch_size)
+            batches = tmt.cluster.create_batches(self.stk_files[i], batch_size)
             for j, batch in enumerate(batches):
                 joblist.append({
+                    'job_id': i*len(batches)+j+1,
                     'stk_files': batch,
                     'nd_file': nd,
                     'output_dir': self.output_dirs[i]
@@ -181,8 +168,7 @@ class Stk(object):
         '''
         Write joblist to file as YAML.
         '''
-        with open(self.joblist_file, 'w') as outfile:
-            outfile.write(yaml.dump(self.joblist, default_flow_style=False))
+        tmt.cluster.write_joblist(self.joblist_file, self.joblist)
 
     def read_joblist(self):
         '''
@@ -192,5 +178,4 @@ class Stk(object):
         -------
         List[dict[str, list[str] or str]]
         '''
-        with open(self.joblist_file, 'r') as joblist_file:
-            return yaml.load(joblist_file.read())
+        tmt.cluster.read_joblist(self.joblist_file)
