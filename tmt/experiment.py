@@ -60,8 +60,7 @@ class Experiment(object):
         if self._subexperiments is None:
             experiment_subfolders = os.listdir(self.experiment_dir)
             experiment_subfolders = natsorted(experiment_subfolders)
-            folders = [Subexperiment(join(self.experiment_dir, f),
-                                     self.cfg, self.vips)
+            folders = [Subexperiment(join(self.experiment_dir, f), self.cfg)
                        for f in experiment_subfolders
                        if self.is_valid_subexperiment(f)]
             if not folders:
@@ -92,7 +91,8 @@ class Experiment(object):
         '''
         if self._data_filename is None:
             self._data_filename = self.cfg['DATA_FILE_LOCATION'].format(
-                                        experiment_dir=self.experiment_dir)
+                                        experiment_dir=self.experiment_dir,
+                                        sep=os.path.sep)
         return self._data_filename
 
 
