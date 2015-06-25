@@ -100,46 +100,6 @@ def check_config(cfg):
                            % key)
 
 
-def write_joblist(filename, joblist):
-    '''
-    Write joblist to YAML file.
-
-    Parameters
-    ----------
-    filename: str
-        name of the YAML file
-    joblist: List[dict]
-        job descriptions
-    '''
-    with open(filename, 'w') as joblist_file:
-            joblist_file.write(yaml.dump(joblist, default_flow_style=False))
-
-
-def read_joblist(filename):
-    '''
-    Read joblist to YAML file.
-
-    Parameters
-    ----------
-    filename: str
-        name of the YAML file
-
-    Returns
-    -------
-    List[dict]
-        job descriptions
-
-    Raises
-    ------
-    OSError
-        when `filename` does not exist
-    '''
-    if not os.path.exists(filename):
-        raise OSError('Joblist file does not exist: %s' % filename)
-    with open(filename, 'r') as joblist_file:
-            return yaml.load(joblist_file.read())
-
-
 class Namespacified(object):
     '''
     Class for loading key-value pairs of a dictionary into a Namespace object.
