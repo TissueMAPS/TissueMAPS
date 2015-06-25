@@ -110,14 +110,7 @@ def write_joblist(filename, joblist):
         name of the YAML file
     joblist: List[dict]
         job descriptions
-
-    Raises
-    ------
-    OSError
-        when `filename` does not exist
     '''
-    if not os.path.exists(filename):
-        raise OSError('Joblist file does not exist: %s' % filename)
     with open(filename, 'w') as joblist_file:
             joblist_file.write(yaml.dump(joblist, default_flow_style=False))
 
