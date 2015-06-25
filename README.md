@@ -68,7 +68,44 @@ COORDINATES_FROM_FILENAME: '_r(\d+)_c(\d+)_'
 COORDINATES_IN_FILENAME_ONE_BASED: Yes
 SITE_FROM_FILENAME: '_s(\d+)_'
 CHANNEL_FROM_FILENAME: 'C(\d+)\.png$'
-OBJECT_FROM_FILENAME: '_segmented(\w+).png$'
+OBJECTS_FROM_FILENAME: '_segmented(\w+).png$'
+
+# Should Vips image processing library be used? Required for pyramid creation!
+USE_VIPS_LIBRARY: Yes
+
+# Should illumination statistics be calculated on log-transformed images?
+LOG_TRANSFORM_STATS: No
+
+# TissueMAPS input: Don't change these variables!
+LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
+ID_TABLES_FOLDER_LOCATION: '{experiment_dir}/id_tables'
+ID_PYRAMIDS_FOLDER_LOCATION: '{experiment_dir}/id_pyramids'
+DATA_FILE_LOCATION: '{experiment_dir}/data.h5'
 ```
 
 > NOTE: The quotation marks are generally not required around strings in YAML syntax, but are necessary here because of the parenthesis in the format strings!
+
+## Documentation
+
+*tmt* uses [Sphinx](http://sphinx-doc.org/index.html) in combination with the [reStructuredText NumPy style](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) for documentation of source code. This is achieved via the [Napoleon extension](https://pypi.python.org/pypi/sphinxcontrib-napoleon).
+
+
+Documentation is located under `docs` and will ultimately be hosted on [Read the Docs](https://readthedocs.org/).
+
+To update the documentation, first do
+
+```{bash}
+sphinx-apidoc -o ./docs ./tmt
+```
+
+and then build HTML
+
+```{bash}
+make html
+```
+
+To read the docs, do
+
+```{bash}
+open ./docs/_build/html/index.html
+```
