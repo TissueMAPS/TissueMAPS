@@ -1,8 +1,8 @@
 import re
 import os
 import yaml
-import time
-import datetime
+from time import time
+from datetime import datetime
 import socket
 import subprocess32
 
@@ -35,7 +35,7 @@ def create_timestamp():
     str
         timestamp
     '''
-    return datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H-%M-%S')
+    return datetime.fromtimestamp(time()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def write_joblist(filename, joblist):
