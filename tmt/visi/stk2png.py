@@ -172,7 +172,7 @@ class Stk2png(object):
 
     def __init__(self, input_files, nd_file, config):
         '''
-        Initiate Stk2png class.
+        Initialize Stk2png class.
 
         Parameters
         ----------
@@ -224,7 +224,7 @@ class Stk2png(object):
             '''
             Extract information on well position from .nd file content.
 
-            Returns:
+            Returns
             --------
             List[str]
             '''

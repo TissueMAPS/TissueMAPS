@@ -5,14 +5,13 @@ from tmt.visi.stk2png import Stk2png
 
 
 class Visi(object):
+    '''
+    Class for visi interface.
+    '''
 
     def __init__(self, args):
         self.args = args
         self.args.stk_folder = os.path.abspath(args.stk_folder)
-        self.print_logo_and_prompt()
-
-    def print_logo_and_prompt(self):
-        print tmt.visi.logo % {'version': tmt.visi.__version__}
 
     def joblist(self):
         '''
@@ -71,7 +70,7 @@ class Visi(object):
                                       keep_z=self.args.zstacks)
 
     @staticmethod
-    def process_commands(args, subparser):
+    def process_cli_commands(args, subparser):
         cli = Visi(args)
         if subparser.prog == 'visi run':
             cli.run()

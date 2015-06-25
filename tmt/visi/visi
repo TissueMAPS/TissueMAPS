@@ -9,10 +9,12 @@ import traceback
 import tmt.util
 import tmt.visi
 import tmt.visi.util
-from tmt.visi.cli import Visi
+from tmt.visi.api import Visi
 
 
 if __name__ == '__main__':
+
+    print tmt.visi.logo % {'version': tmt.visi.__version__}
 
     parser = argparse.ArgumentParser(
             description='''Command line tool for the conversion of .stk files
@@ -60,7 +62,7 @@ if __name__ == '__main__':
                             help='use custom yaml configuration file \
                                   (defaults to "visi" configuration)')
 
-    run_parser.set_defaults(handler=partial(Visi.process_commands,
+    run_parser.set_defaults(handler=partial(Visi.process_cli_commands,
                                             subparser=run_parser))
 
     joblist_parser = subparsers.add_parser('joblist',
@@ -94,7 +96,7 @@ if __name__ == '__main__':
                                 help='name of the output folder \
                                       (defaults to "TIFF")')
 
-    joblist_parser.set_defaults(handler=partial(Visi.process_commands,
+    joblist_parser.set_defaults(handler=partial(Visi.process_cli_commands,
                                                 subparser=joblist_parser))
 
     args = parser.parse_args()
