@@ -5,11 +5,12 @@ import copy
 import os
 import numpy as np
 import itertools
-import illumcorrect
 import segment
-import datafusion.util
+import dafu
 import tmt
+from tmt.illumstats import illum_correction_vips
 from tmt import imageutil
+from gi.repository import Vips
 
 
 class Mosaic(object):
@@ -28,7 +29,7 @@ class Mosaic(object):
         ----------
         images: List[tmt.image.Image]
                 Image objects with lazy loading method.
-                Loaded images will be type gi.overrides.Vips.Image.
+                Loaded images will be type Vips.Image.
         '''
         self.images = images
         self._image_grid = None
@@ -58,6 +59,12 @@ class Mosaic(object):
             self._image_grid = grid
         return self._image_grid
 
+    def _is_channel_layer(self):
+        return isinstance(self.image_grid[0][0], tmt.image.IntensityImage)
+
+    def _is_mask_layer(self):
+        return isinstance(self.image_grid[0][0], tmt.image.MaskImage)
+
     def build_channel_grid(self):
         '''
         Build an image grid for channel images, i.e. load the actual intensity
@@ -65,8 +72,16 @@ class Mosaic(object):
 
         Returns
         -------
-        List[List[gi.overrides.Vips.Image]]
+        List[List[Vips.Image]]
+
+        Raises
+        ------
+        AttributeError
+            when channel grid is build from non-intensity images
         '''
+        if not self._is_channel_layer():
+            raise AttributeError('Channel grid can only be build from '
+                                 'intensity images')
         self.layer_grid = copy.deepcopy(self.image_grid)
         for i in range(len(self.image_grid)):
             for j in range(len(self.image_grid[0])):
@@ -77,29 +92,41 @@ class Mosaic(object):
 
         return self.layer_grid
 
-    def apply_illumination_correction_to_grid(self, mean_image, std_image):
+    def apply_illumination_correction_to_grid(self, stats):
         '''
-        Apply illumination correction to a grid image.
+        Apply illumination correction to each image in a grid of images.
 
         Parameters
         ----------
-        mean_image: numpy.ndarray[float]
-        std_image: numpy.ndarray[float]
+        stats: Tuple[Vips.Image[Vips.BandFormat.DOUBLE]]
+            matrices with pre-calculated mean and standard deviation values
 
         Returns
         -------
-        List[List[gi.overrides.Vips.Image]]
+        List[List[Vips.Image]]
+
+        Raises
+        ------
+        TypeError
+            when `stats` are not of correct type
+        AttributeError
+            when illumination correction is applied to non-intensity images
         '''
-        # TODO: only makes sense for channel images -> is_channel_layer()
+        if not self._is_channel_layer():
+            raise AttributeError('Illumination correction can only be '
+                                 'applied to intensity images')
+        if not all([isinstance(s, Vips.Image) for s in stats]):
+            raise TypeError('Statistics must be of type "Vips.Image"')
         for i in range(len(self.layer_grid)):
             for j in range(len(self.layer_grid[0])):
                 img = self.layer_grid[i][j]
-                self.layer_grid[i][j] = \
-                    illumcorrect.illum_correction_vips(img, mean_image, std_image)
+                self.layer_grid[i][j] = illum_correction_vips(img,
+                                                              stats[0],
+                                                              stats[1])
         return self.layer_grid
 
     def build_mask_grid(self, data_file, mask='outline',
-                        make_global_ids=False):
+                        global_ids=False):
         '''
         Build an image grid for mask images, i.e. load the actual segmentation
         images into the existing grid.
@@ -107,21 +134,27 @@ class Mosaic(object):
         Parameters
         ----------
         data_file: str
-                   Path to data.h5 HDF5 file holding the complete dataset.
+            Path to data.h5 HDF5 file holding the complete dataset.
         mask: str
-              "outline" or "area"
-        make_global_ids: bool
-                         Create a mask image that encodes the global object ids
-                         in RGB.
+            "outline" or "area"
+        global_ids: bool
+            Create a mask image that encodes the global object ids in RGB.
 
         Returns
         -------
-        List[List[gi.overrides.Vips.Image]]
-        '''
+        List[List[Vips.Image]]
 
+        Raises
+        ------
+        AttributeError
+            when mask grid is build from non-mask images
+        '''
+        if not self._is_channel_layer():
+            raise AttributeError('Mask grid can only be build from '
+                                 'intensity images')
         current_obj = self.image_grid[0][0].objects.lower()
 
-        current, parent = datafusion.util.extract_ids(data_file, current_obj)
+        current, parent = dafu.util.extract_ids(data_file, current_obj)
 
         # Masks are used in TissueMAPS to visualize the position of
         # segmented objects in the image. In addition, they can be selected
@@ -131,7 +164,7 @@ class Mosaic(object):
         # Removal of objects is based on the parent objects (e.g. cells) and
         # all corresponding children objects (e.g. nuclei) will be removed, too
         # The internal hierarchical structure of the data file is hard-coded!
-        # See datafusion package for more info.
+        # See dafu package for more info.
 
         self.layer_grid = copy.deepcopy(self.image_grid)
 
@@ -159,7 +192,7 @@ class Mosaic(object):
 
                 # Should the ids be computed as RGB triples?
                 # If yes, don't remove border cells and just create the RGB images!
-                if make_global_ids:
+                if global_ids:
                     # These masks will be used to visualize results of tools on 
                     # the objects. Keep all objects for these masks!
                     # Should the result be a RGB area mask or RGB outline mask
@@ -192,7 +225,12 @@ class Mosaic(object):
 
         Returns
         -------
-        gi.overrides.Vips.Image
+        Vips.Image
+
+        Raises
+        ------
+        TypeError
+            when images is not of correct type
         '''
         grid_height = len(self.layer_grid)
         row_images = []
@@ -202,9 +240,12 @@ class Mosaic(object):
                                images_in_row)
             row_images.append(row_image)
 
-        self.mosaic_image = reduce(lambda x, y: x.join(y, 'vertical'),
-                                   row_images)
+        mosaic_image = reduce(lambda x, y: x.join(y, 'vertical'), row_images)
 
+        if not isinstance(mosaic_image, Vips.Image):
+            raise TypeError('Images must be of type "Vips.Image"')
+
+        self.mosaic_image = mosaic_image
         return self.mosaic_image
 
     def shift_stiched_image(self, cycles, current_cycle):
@@ -224,20 +265,20 @@ class Mosaic(object):
         Parameters
         ----------
         cycles: List[tmt.experiment.Subexperiment]
-                cycle objects holding shift information
+            cycle objects holding shift information
         current_cycle: int
-                       index of the currently processed cycle (one-based)
+            index of the currently processed cycle (one-based)
 
         Returns
         -------
-        gi.overrides.Vips.Image
+        Vips.Image
         '''
-        shift_descriptors = [c.project.shift_file for c in cycles]
+        shift_descriptors = [c.project.shift_file.filename for c in cycles]
         cycle_nrs = [c.cycle for c in cycles]
         current_cycle_idx = cycle_nrs.index(current_cycle)
 
-        x_shifts = [np.median(desc['xShift']) for desc in shift_descriptors]
-        y_shifts = [np.median(desc['yShift']) for desc in shift_descriptors]
+        x_shifts = [np.median(desc.xShift) for desc in shift_descriptors]
+        y_shifts = [np.median(desc.yShift) for desc in shift_descriptors]
 
         width, height = self.mosaic_image.width, self.mosaic_image.height
 
@@ -254,7 +295,7 @@ class Mosaic(object):
         offset_left = minx - this_box[0]
         offset_top = miny - this_box[1]
 
-        # How large the area to extract is (= the dimensions of the intersection)
+        # How large is the extracted area (dimensions of the intersection)
         intersection_width = maxx - minx
         intersection_height = maxy - miny
 
@@ -285,9 +326,16 @@ class Mosaic(object):
 
         Returns
         -------
-        gi.overrides.Vips.Image
+        Vips.Image
+
+        Raises
+        ------
+        AttributeError
+            when thresholding is applied to non-intensity images
         '''
-        # TODO: only makes sense for channel images -> check: is_channel_layer()
+        if not self._is_channel_layer():
+            raise AttributeError('Illumination correction can only be '
+                                 'applied to channel layer images')
         if thresh_value:
             val = thresh_value
         else:
@@ -313,7 +361,7 @@ class Mosaic(object):
 
         Returns
         -------
-        gi.overrides.Vips.Image
+        Vips.Image
         '''
         self.mosaic_image = self.mosaic_image.scale()
         return self.mosaic_image
@@ -325,9 +373,9 @@ class Mosaic(object):
         Parameters
         ----------
         output_dir: str
-                    folder location were image should be saved
+            folder location were image should be saved
         quality: int
-                 quality of the JPEG image (defaults to 75)
+            quality of the JPEG image (defaults to 75)
         '''
         filename = os.path.join(output_dir, self.mosaic_image_name)
         imageutil.save_vips_image_jpg(self.mosaic_image, filename, quality)
@@ -347,6 +395,7 @@ class Mosaic(object):
         Raises
         ------
         TypeError
+            when image files are of unknown type
         '''
         if self._mosaic_image_name is None:
             im = self.images[0]
@@ -363,8 +412,8 @@ class Mosaic(object):
                                             filter=im.filter,
                                             channel=im.channel)
             else:
-                raise TypeError('Images must be objects of class MaskImage '
-                                'or IntensityImage')
+                raise TypeError('Image files must be of class "MaskImage" '
+                                'or "IntensityImage"')
             self._mosaic_image_name = f
         return self._mosaic_image_name
 
@@ -380,9 +429,9 @@ class Mosaic(object):
         Parameters
         ----------
         pyramide_dir: str
-                      Path to the folder where pyramid should be saved
+            path to the folder where pyramid should be saved
         tile_file_extension: str
-                             Image file format: ".png" or ".jpg" (default)
+            image file format: ".png" or ".jpg" (default)
         '''
         self.mosaic_image.dzsave(
             pyramid_dir, layout='zoomify', suffix=tile_file_extension)

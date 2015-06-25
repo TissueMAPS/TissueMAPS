@@ -1,46 +1,54 @@
 # Illuminati #
 
-Illuminati is a tool for pre-processing images for tissueMAPS. It stitches individual images and creates pyramids in [zoomify](http://www.zoomify.com/) format. In addition, it can be used to perform several custom image processing tasks, such as correcting images for illumination artifacts, shifting images for alignment between cycles, and rescaling images for convenient display.
+Illuminati is a tool for creation of pyramids in [zoomify](http://www.zoomify.com/) format. In addition, it can be used to perform several custom image processing tasks, such as correcting images for illumination artifacts, shifting images for alignment between cycles, and rescaling images for convenient display.
 
-The file *illuminati* represents the command line tool that combines the different routines. Each of the .py files provides the individual subroutines, such as: 
-* illumination correction    
-* stitching   
-* thresholding (rescaling) 
-* creation of outline masks   
-
-These files can also be used as a command line tool (if called as the main module). See below for more details on these subroutines.
-
-## Usage ##
-
-The following sections provide a short example of how the tools would be used. For all supported options and default values see the tools help, which can be displayed with: 
+The file *illuminati* represents the command line interface that combines the different routines. For help, do
 
 ```{bash}
 illuminati -h
 ```
 
+## Common use cases ##
+
+The following sections provide a short example of how the tools would be used. For all supported options and default values see the tools help.
+
 Illuminati allows you to create pyramid images and apply different pre-processing routines "on-the-fly", without having to save intermediate steps to disk. 
 
-For example, in order to create a pyramid image of individual images corrected for illumination `-i`, shifted `-s` and thresholded `-t` (for rescaling), you can call the following command:
+For example, in order to create a pyramid image of individual images corrected for illumination `-i`, shifted `-s` and thresholded `-t` (for rescaling purposes), you can call the following command:
 
 ```{bash}
-illuminati TIFF/*C01.png -sit -o [folder_of_pyramid]
+illuminati ./ -w *C01.png -sit
 ```
 
-Or to create a pyramid image of object outlines from individual segmentation images using the `-m` command:
+The `-w` or `--wildcard` argument is required to select a subset of images within the image folder, in this example all images of channel 1.
+
+To create a pyramid image of object outlines from individual segmentation images use the `-m` argument:
 
 ```{bash}
-illuminati SEGMENTATION/*segmentedCells*.png -m -o [folder_of_pyramid]
+illuminati ./ -w *segmentedCells*.png -m
 ```
 
 If you want to run a custom project, i.e. if your project layout deviates from the default *tmt* configuration, you can create a custom configuration file `-c` and use it by calling the following command:
 
 ```{bash}
-illuminati TIFF/*C01*png -sit -o [folder_of_pyramid] -c [config_filename]
+illuminati ./ -w *C01*png -sit -c [config_filename]
 ```
 
-## Dependencies ##
+Output directories for the different types of pyramids are dynamically determined from the configuration settings. However, you can also specify a different output directory:
 
-### Vips ###
+```{bash}
+illuminati ./ -w *C01*png -sit -o [output_dir]
+```
+
+If you want the program to only create the stitched mosaic image (without creating a pyramid) you can use the `--stitch_only` argument:
+
+```{bash}
+illuminati ./ -w *C01*png -sit --stitch_only -o [output_dir]
+```
+
+In this case you have to explicitly provide an output directory.
+
+## Vips ##
 
 Illuminati uses the image processing library [VIPS](http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS) ([API](http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html)). It can be conveniently installed via homebrew (or other package managers). 
 

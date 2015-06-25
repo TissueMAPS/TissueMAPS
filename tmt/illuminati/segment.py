@@ -5,7 +5,7 @@ import scipy
 import os
 import re
 from tmt import imageutil
-import datafusion.util
+import dafu
 from gi.repository import Vips
 from skimage.measure import find_contours, approximate_polygon
 
@@ -22,15 +22,15 @@ def local_to_global_ids_vips(im, offset_id):
     Parameters
     ----------
 
-    im: gi.overrides.Vips.Image
+    im: Vips.Image
         each pixel indicates to which object this pixel belongs
     offset_id: int
-               value to add to all labels
+        value to add to all labels
 
     Returns
     -------
-    gi.overrides.Vips.Image
-    a RGB image with band format UCHAR
+    Vips.Image
+        RGB image with band format UCHAR
     '''
     # Convert the image to integer and add an offset to all ids.
     nonzero = im > 0
@@ -56,9 +56,9 @@ def create_id_lookup_matrices(sitemat, offset):
     Parameters
     ----------
     sitemat: numpy.ndarray
-             image matrix where pixel values represent site-specific object ids
+        image matrix where pixel values represent site-specific object ids
     offset: int
-            value that will be added to each object id
+        value that will be added to each object id
     
     Returns
     -------
@@ -80,13 +80,13 @@ def create_and_save_lookup_tables(image_grid, data_file, output_dir):
     ----------
     image_grid: List[List[tmt.image.MaskImage]]
     data_file: str
-               path to the `data.h5` file containing the object id datasets
+        path to the `data.h5` file containing the object id datasets
     output_dir: str
-                location were files should be saved
+        location were files should be saved
     '''
     current_obj = image_grid[0][0].objects.lower()
 
-    current, parent = datafusion.util.extract_ids(data_file, current_obj)
+    current, parent = dafu.util.extract_ids(data_file, current_obj)
 
     max_id = 0
     for i in range(len(image_grid)):
@@ -129,12 +129,12 @@ def remove_border_objects(site_matrix):
     Parameters
     ----------
     site_matrix: numpy.ndarray
-                 the image matrix, where values correspond to object ids
+        image matrix with values corresponding to object ids
 
     Returns
-    ------- 
+    -------
     numpy.ndarray
-    the modified image matrix with pixel values of border objects set to 0
+        modified image matrix with pixel values of border objects set to 0
     '''
     is_border_object = imageutil.find_border_objects(site_matrix)
     mat = site_matrix.copy()
@@ -149,16 +149,15 @@ def remove_border_objects_vips(im, is_source_uint16=True):
 
     Parameters
     ----------
-    site_matrix: gi.overrides.Vips.Image
-                 the image matrix, where values correspond to object ids
-    is_source_uint16: bool
-                      indicating if the source band format is uin16
-                      (otherwise its taken as uint8)
+    site_matrix: Vips.Image
+        image matrix with values corresponding to object ids
+    is_source_uint16: bool, optional
+        indicating if the source band format is uin16 (defaults to uint8)
 
     Returns
     ------- 
-    gi.overrides.Vips.Image
-    the modified image matrix with pixel values of border objects set to 0
+    Vips.Image
+        modified image matrix with pixel values of border objects set to 0
     '''
     # Extract the edges on each side of the image
     left = im.extract_area(0, 0, 1, im.height)
@@ -185,14 +184,14 @@ def remove_objects(site_matrix, ids):
     Parameters
     ----------
     site_matrix: numpy.ndarray
-                 the image matrix, where values correspond to object ids
+        image matrix with values corresponding to object ids
     ids: List[int]
-         unique object ids
+        unique object ids
 
     Returns
     -------
     numpy.ndarray
-    the modified image matrix with pixel values in ids set to 0
+        modified image matrix with pixel values in `ids` set to 0
     '''
     mat = site_matrix.copy()  # Copy since we don't update in place
     remove_ix = np.in1d(mat, ids).reshape(mat.shape)
@@ -207,18 +206,17 @@ def remove_objects_vips(im, ids, is_source_uint16=True):
 
     Parameters
     ----------
-    site_matrix: gi.overrides.Vips.Image
-                 the image matrix, where values correspond to object ids
+    site_matrix: Vips.Image
+        image matrix with values corresponding to object ids
     ids: List[int]
-         unique object ids
-    is_source_uint16: bool
-                      indicating if the source band format is uin16
-                      (otherwise its taken as uint8)
+        unique object ids
+    is_source_uint16: bool, optional
+        indicating if the source band format is uin16 (defaults to uint8)
 
     Returns
     -------
-    gi.overrides.Vips.Image
-    the modified image matrix with pixel values in ids set to 0
+    Vips.Image
+        modified image matrix with pixel values in ids set to 0
     '''
     id_lut = Vips.Image.identity(ushort=is_source_uint16)
     for i in ids:
@@ -237,24 +235,24 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
     Parameters
     ----------
     sitemat: numpy.ndarray[int]
-             image matrix containing the cell labels
+        image matrix containing the cell labels
     site_row_nr: int
-                 row number of the site
+        row number of the site
     site_col_nr: int
-                 col number of the site
+        col number of the site
     site_width: int
-                width of each site
+        width of each site
     site_height: int
-                 height of each site
+        height of each site
     offset: int
-            value that is added to all ids in sitemat
-            (maximum id in the previously processed site)
+        value that is added to all ids in sitemat
+        (maximum id in the previously processed site)
 
     Returns
     -------
     Tuple[numpy.ndarray[float], int]
-    Cell ids are located in the first column, the x coordinates of the
-    centroids in the second column, and the y coordinates in the last one.
+        cell ids are located in the first column, the x coordinates of the
+        centroids in the second column, and the y coordinates in the last one
     '''
     height, width = sitemat.shape
     local_ids = np.array(
@@ -288,14 +286,13 @@ def compute_outline_polygons(site_matrix, contour_level=0.5, poly_tol=0.95):
     Parameters
     ----------
     site_matrix: numpy.ndarray
-                 image matrix where pixel values encode cell ids
-                 (background is expected to be 0)
+        image matrix where pixel values encode cell ids (background is 0)
 
     Returns
     -------
     Dict
-    a hash that maps each cell id to a list of polygon vertices
-    (local i-j coordinates)
+        a hash that maps each cell id to a list of polygon vertices
+        (local i-j coordinates)
     '''
     outlines = {}
     cell_ids = set(np.unique(site_matrix)).difference({0})
@@ -471,7 +468,6 @@ def outlines_vips(im):
 
 
 def gather_siteinfo(file_grid):
-
     height = len(file_grid)
     width = len(file_grid[0])
     nsites = height * width
@@ -487,7 +483,8 @@ def gather_siteinfo(file_grid):
 
             site_re = '_s(\d+)_'
             sitenr = int(re.search(site_re, filename).group(1))
-            (rownr, colnr) = map(int, re.search('_r(\d+)_c(\d+)_', filename).groups())
+            (rownr, colnr) = map(int, re.search('_r(\d+)_c(\d+)_',
+                                                filename).groups())
             infomat[idx, :] = (sitenr, rownr, colnr, max_id_up_to_now)
 
             max_local_id = np.max(scipy.misc.imread(filename))

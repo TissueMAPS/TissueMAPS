@@ -4,15 +4,10 @@ import os
 import os.path
 import sys
 import re
-import segment
-from tmt.illuminati import Mosaic
+import argparse
 import tmt
-from tmt.util import load_config, check_config
-import tmt.image
-from tmt.experiment import Experiment
-from tmt.image import IntensityImage, MaskImage
-from tmt.illuminati.illumcorrect import np_array_to_vips_image
-from tmt.illuminati import logo, __version__
+import traceback
+from tmt.illuminati.api import Illuminati
 
 """
 Illuminati is a command line tool for pre-processing images for TissueMAPS.
@@ -22,7 +17,7 @@ It combines the following routines:
 * thresholding (-t)
 Each of these routines comes with a separate command line interface that provides
 additional functionality and can be used independently. For more details on the
-individual steps see the respective files.
+individual steps see the respective args.files.
 
 A potential call (from BASH) to this tool could look something like this:
 
@@ -35,7 +30,7 @@ See all available options with:
 
 Some example use cases:
 
-    - Create a pyramid out of segmentation files, retaining their 16 bit depth:
+    - Create a pyramid out of segmentation args.files, retaining their 16 bit depth:
 
         $ illuminati --area-mask --png --make-global-ids path/to/*.png -o my_cell_id_pyramid
 
@@ -51,19 +46,22 @@ Some example use cases:
 
 
 if __name__ == '__main__':
-    import argparse
 
-    print logo % {'version': __version__}
+    print tmt.illuminati.logo % {'version': tmt.illuminati.__version__}
 
     parser = argparse.ArgumentParser(
         description='Create pyramid images for TissueMAPS.')
 
-    parser.add_argument('files', nargs='*',
-                        help='image files to process (globbing pattern),\
-                        e.g. TIFF/*.png')
+    parser.add_argument('project_dir', nargs='*', type=str,
+                        help='project directory')
 
-    parser.add_argument('-o', '--output', dest='output_dir', required=True,
-                        help="directory where output should be saved")
+    parser.add_argument('-w', '--wildcards', dest='wildcards',
+                        type=str, required=True,
+                        help='wildcards (globbing patterns) to select a \
+                              subset of image files, e.g. *DAPI*.png')
+
+    parser.add_argument('-o', '--output', dest='output_dir',
+                        help='directory where output should be saved')
 
     parser.add_argument('-c', '--config', dest='config',
                         help='path to custom yaml configuration file \
@@ -71,7 +69,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-s', '--shift', dest='shift',
                         action='store_true', default=False,
-                        help='shift stitched image according to descriptor file')
+                        help='shift stitched image')
 
     parser.add_argument('-i', '--illum_correct', dest='illum_correct',
                         action='store_true', default=False,
@@ -91,8 +89,8 @@ if __name__ == '__main__':
                               (defaults to 99.99)')
     parser.add_argument('--thresh-sample', dest='thresh_sample',
                         type=int, default=10,
-                        help='number of files to use for threshold estimation \
-                              (defaults to 10')
+                        help='number of args.files to use for threshold \
+                              estimation (defaults to 10')
 
     parser.add_argument('--stitch_only', dest='stitch_only',
                         action='store_true', default=False,
@@ -126,155 +124,45 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    output_dir = args.output_dir
-    files = args.files
-
-    #######################################################################
-    #                       PREPARATORY FILE HANDLING                     #
-    #######################################################################
-
-    if not args.files or not all(map(tmt.image.is_image_file, args.files)):
-        parser.print_help()
-        sys.exit(1)
-
-    if not output_dir:
-        print 'You need to specify an output directory'
-        sys.exit(1)
-
-    if args.outline_mask or args.area_mask:
-        # TissueMAPS requires mask layer folders to end on "_Mask"
-        if not re.search('_Mask$', output_dir):
-            output_dir = '%s_Mask' % output_dir
-
-    if not os.path.exists(output_dir) and not args.id_luts:
-        print '.. Creating output directory: "%s"' % output_dir
-        os.makedirs(output_dir)
+    if not os.path.exists(args.project_dir):
+        raise OSError('Project directory does not exist: %s'
+                      % args.project_dir)
 
     if args.config:
         # Overwrite default "tmt" configuration
-        config = load_config(args.config)
-        check_config(config)
+        args.config = tmt.util.load_config(args.config)
+        tmt.util.check_config(args.config)
     else:
-        config = tmt.config
+        args.config = tmt.config
 
-    if args.area_mask or args.outline_mask:
-        images = [MaskImage(f, config, vips=True) for f in files]
-    elif args.id_luts:
-        images = [MaskImage(f, config) for f in files]
-    else:
-        images = [IntensityImage(f, config, vips=True) for f in files]
-    experiment_dir = images[0].experiment_dir
-    experiment = Experiment(experiment_dir, config)
-    cycles = experiment.subexperiments
-    current_cycle = images[0].cycle
-    data_filename = experiment.data_filename
+    if args.shift_only and not args.output_dir:
+        raise Exception('The `--stich_only` argument is only valid together '
+                        'with the `--output` argument, because you need to '
+                        'explicitly provide an output directory.')
 
-    if args.thresh_sample > len(images):
-        args.thresh_sample = len(images)
+    if not args.output_dir:
+        args.output_dir = args.config['LAYERS_FOLDER_LOCATION']
 
-    #######################################################################
-    #                           LOADING IMAGES                            #
-    #######################################################################
-
-    layer = Mosaic(images)
+    if args.outline_mask or args.area_mask:
+        if args.make_global_ids:
+            args.output_dir = args.config['ID_PYRAMIDS_FOLDER_LOCATION']
+        else:
+            # TissueMAPS requires mask layer folders to end on "_Mask"
+            if not re.search('_Mask$', args.output_dir):
+                args.output_dir = '%s_Mask' % args.output_dir
 
     if args.id_luts:
-        print('ᐄ  CREATING ID LOOKUP TABLES ')
-        segment.create_and_save_lookup_tables(layer.image_grid, data_filename,
-                                              output_dir)
+        args.output_dir = args.config['ID_TABLES_FOLDER_LOCATION']
+
+    if not os.path.exists(args.output_dir) and not args.id_luts:
+        print '.. Creating output directory: "%s"' % args.output_dir
+        os.makedirs(args.output_dir)
+
+    try:
+        Illuminati.process_cli_commands(args)
         print '🍺  Done!'
-        sys.exit(0)
-
-    # Create a vips image for each file
-    print '.. Loading images'
-    if args.outline_mask or args.area_mask:
-        if args.outline_mask:
-            print('ᐄ  CREATING OUTLINE MASKS')
-            layer.build_mask_grid(data_filename, mask='outline',
-                                  make_global_ids=args.make_global_ids)
-        elif args.area_mask:
-            print('ᐄ  CREATING AREA MASKS')
-            layer.build_mask_grid(data_filename, mask='area',
-                                  make_global_ids=args.make_global_ids)
-    else:
-        layer.build_channel_grid()
-
-    #######################################################################
-    #                       ILLUMINATION CORRECTING                       #
-    #######################################################################
-
-    if args.illum_correct:
-        print 'ᐄ  CORRECTING IMAGES FOR ILLUMINATION'
-
-        # retrieve illumination correction statistics
-        project = [c.project for c in cycles if c.cycle == images[0].cycle][0]
-        channel_index = [i for i, s in enumerate(project.stats_files)
-                         if s.channel == images[0].channel][0]
-        mean, std = project.stats_files[channel_index].statistics
-        mean = np_array_to_vips_image(mean)
-        std = np_array_to_vips_image(std)
-
-        layer.apply_illumination_correction_to_grid(mean, std)
-
-    #######################################################################
-    #                             STITCHING                               #
-    #######################################################################
-
-    print '.. Stitching images to mosaic image'
-
-    layer.stitch_images()
-
-    #######################################################################
-    #                              SHIFTING                               #
-    #######################################################################
-
-    if args.shift:
-        print 'ᐄ  SHIFTING MOSAIC IMAGE'
-        layer.shift_stitched_image(cycles, current_cycle)
-
-    #######################################################################
-    #                            THRESHOLDING                             #
-    #######################################################################
-
-    if args.thresh:
-        print 'ᐄ  THRESHOLDING MOSAIC IMAGE'
-        if args.thresh_value:
-            print '   ... Using provided threshold value'
-        else:
-            print('   ... Computing threshold value corresponding to the %d\% '
-                  'percentile on %d sampled images'
-                  % (args.thresh_percent, args.thresh_sample))
-
-        layer.apply_threshold_to_stitched_image(
-                    thresh_value=args.thresh_value,
-                    thresh_sample=args.thresh_sample,
-                    thresh_percent=args.thresh_percent
-        )
-
-    if not args.make_global_ids and not args.no_rescale:
-        print '.. Rescaling mosaic image'
-        layer.scale_stitched_image()
-
-    #######################################################################
-    #                            PYRAMIDIZING                             #
-    #######################################################################
-
-    if args.stitch_only:
-        print('ᐄ  SAVING MOSAIC IMAGE')
-        layer.save_stitched_image(output_dir)
-        print '🍺  Done!'
-        sys.exit(0)
-
-    print '.. Creating pyramid from mosaic image'
-    if not args.no_rescale and not args.png:
-        layer.create_pyramid(output_dir)
-    else:
-        # The stitched image wasn't rescaled and is still 16 bit.
-        # In order to have the resulting pyramid be 16 bit as well, we have
-        # do change the file format from JPEG to PNG.
-        # Note that pyramids created in this manner shouldn't be visualized
-        # directly in the browser since they will be coerced to 8 bit,
-        # which will result in loss of information.
-        layer.create_pyramid(output_dir, tile_file_extension='.png')
-
-    print '🍺  Done!'
+    except Exception as error:
+        sys.stdout.write('Failed. ')
+        print 'Error message: "%s"\n' % str(error)
+        for tb in traceback.format_tb(sys.exc_info()[2]):
+            print tb
