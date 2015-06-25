@@ -17,7 +17,7 @@ A package for aligning images between different acquisition cycles.
 
 A package for calculating online statistics on images in order to correct illumination artifacts.
 
-### [datafusion](tmt/datafusion) ###
+### [dafu](tmt/dafu) ###
 
 A package for fusing data produced by [Jterator](https://github.com/HackerMD/Jterator).
 
