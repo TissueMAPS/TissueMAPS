@@ -5,9 +5,7 @@
 It makes use of a YAML configuration settings file [tmt.config](tmt/tmt.config) (see below) in order to specify the experiment layout, i.e. the directory structure on disk, and thereby define paths and filenames.
 
 
-## Tools ##
-
-The tmt package contains the following subpackages for different image processing routines:
+The tmt package contains the following subpackages for different image and data processing routines:
 
 ### [align](tmt/align) ###
 
@@ -17,7 +15,7 @@ A package for aligning images between different acquisition cycles.
 
 A package for calculating online statistics on images in order to correct illumination artifacts.
 
-### [datafusion](tmt/datafusion) ###
+### [dafu](tmt/dafu) ###
 
 A package for fusing data produced by [Jterator](https://github.com/HackerMD/Jterator).
 
@@ -48,17 +46,17 @@ You can describe your experiment layout using the following keywords:
 SUBEXPERIMENTS_EXIST: Yes
 
 # Path format strings
-IMAGE_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/TIFF'
-SHIFT_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/ALIGNCYCLES'
-STATS_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/BATCH'
-SEGMENTATION_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/SEGMENTATION'
+IMAGE_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/images'
+SHIFT_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/shift'
+STATS_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/stats'
+SEGMENTATION_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/segmentations'
 LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
 DATA_FILE_LOCATION: '{experiment_dir}/data.h5'
 
 # Filename format strings
 SUBEXPERIMENT_FOLDER_FORMAT: '{experiment}_{cycle:0>2}'
 SUBEXPERIMENT_FILE_FORMAT: '{experiment}_{cycle}'
-STATS_FILE_FORMAT: 'Measurements_batch_illcor_channel{channel:0>3}_zstack000.mat'
+STATS_FILE_FORMAT: 'illumstats_channel{channel:0>3}.h5'
 SHIFT_FILE_FORMAT: 'shiftDescriptor.json'
 
 # Regular expression patterns to extract information encoded in filenames
@@ -76,7 +74,7 @@ USE_VIPS_LIBRARY: Yes
 # Should illumination statistics be calculated on log-transformed images?
 LOG_TRANSFORM_STATS: No
 
-# TissueMAPS input: Don't change these variables!
+# These settings are hard-coded in TissueMAPS, so don't change them!
 LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
 ID_TABLES_FOLDER_LOCATION: '{experiment_dir}/id_tables'
 ID_PYRAMIDS_FOLDER_LOCATION: '{experiment_dir}/id_pyramids'
