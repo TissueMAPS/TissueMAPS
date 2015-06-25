@@ -1,2 +1,4 @@
-[ ] clean-up illuminati modules: segment, stitch, pyramidize, ... -> integrate them into the illuminati command line tool (subparser?)
-[ ] update README of illuminati and align packages
+[ ] align: "apply" positional argument to shift and crop images
+[ ] corilla: "apply" positional argument to correct images for illumination
+[ ] checks for arguments of interface classes
+[ ] "submit" positional arguments for align, visi and corilla for parallel processing
