@@ -68,7 +68,7 @@ class Cluster(object):
         '''
         if self.on_brutus:
             bsub = [
-                 'bsub', '-W', '8:00', '-o', output_dir,
+                 'bsub', '-W', '8:00', '-o', self.output_dir,
                  '-R', 'rusage[mem=4000,scratch=4000]'
             ]
             subprocess32.call(bsub + command)
