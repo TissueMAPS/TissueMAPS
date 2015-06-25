@@ -2,7 +2,11 @@ import random as rand
 from scipy.misc import imread, bytescale
 import numpy as np
 import png
-from gi.repository import Vips
+try:
+    from gi.repository import Vips
+except ImportError as error:
+    print 'Vips could not be imported.\nReason: %s' % str(error)
+
 
 '''Utility functions for image processing routines.'''
 

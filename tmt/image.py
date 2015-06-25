@@ -4,8 +4,8 @@ import mahotas as mh
 import numpy as np
 try:
     from gi.repository import Vips
-except:
-    print 'Vips could not be imported!'
+except ImportError as error:
+    print 'Vips could not be imported.\nReason: %s' % str(error)
 
 
 SUPPORTED_IMAGE_FILES = ['png', 'jpg', 'tiff', 'jpeg']
