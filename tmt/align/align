@@ -118,6 +118,9 @@ if __name__ == '__main__':
                                help='use custom yaml configuration file \
                                      (defaults to "tmt" configuration)')
 
+    submit_parser.set_defaults(handler=partial(Align.process_cli_commands,
+                               subparser=submit_parser))
+
     args = parser.parse_args()
 
     if args.config:

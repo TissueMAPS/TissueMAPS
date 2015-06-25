@@ -111,6 +111,9 @@ if __name__ == '__main__':
                                help='use custom yaml configuration file \
                                      (defaults to "visi" configuration)')
 
+    submit_parser.set_defaults(handler=partial(Visi.process_cli_commands,
+                               subparser=submit_parser))
+
     args = parser.parse_args()
 
     if 'config' in args:
