@@ -1,8 +1,7 @@
 import re
 import os
-import json
 from natsort import natsorted
-from os.path import join, basename, isdir
+import tmt
 from tmt.image import is_image_file
 from tmt.illumstats import Illumstats
 from tmt.image import IntensityImage, MaskImage
@@ -11,7 +10,7 @@ from tmt.image import IntensityImage, MaskImage
 class Project(object):
     '''
     Utility class for a project.
-    
+
     A project represents the directory that holds the image folder
     and potentially additional folders for segmentation, shift, and
     illumination statistics files.
@@ -19,27 +18,31 @@ class Project(object):
     or a "subexperiment".
     '''
 
-    def __init__(self, experiment_dir, cfg, subexperiment=''):
+    def __init__(self, project_dir, cfg):
         '''
-        Initiate Project class.
+        Initialize Project class.
 
         Parameters
         ----------
-        experiment_dir: str
-                        absolute path to experiment folder
+        project_dir: str
+            absolute path to project folder
         cfg: Dict[str, str]
-             configuration settings
-        subexperiment_name: str
-                            name of subexperiment folder (empty by default)
+            configuration settings
+
+        Raises
+        ------
+        IOError
+            when `project_dir` is not a directory
         '''
-        self.experiment_dir = experiment_dir
-        if not isdir(experiment_dir):
-            raise Exception('Failed to initialize class "Project" because '
-                            '"%s" is not a directory.'
-                            % self.experiment_dir)
-        self.experiment = basename(experiment_dir)
+        self.project_dir = project_dir
+        if not os.path.isdir(project_dir):
+            raise IOError('Failed to initialize class "Project" because '
+                          '"%s" is not a directory.'
+                          % self.project_dir)
         self.cfg = cfg
-        self.subexperiment = subexperiment
+        self._experiment_dir = None
+        self._experiment = None
+        self._subexperiment = None
         self.is_MPcycle = False
         self._image_dir = None
         self._image_files = None
@@ -50,8 +53,58 @@ class Project(object):
         self._stats_dir = None
         self._stats_files = None
 
-    # NOTE: We don't check whether directories exist, because this allows us
-    # to use these names to create the folders!
+    @property
+    def experiment_dir(self):
+        '''
+        Returns
+        -------
+        str
+            path to experiment directory, determined from `project_dir`
+
+        Raises
+        ------
+        OSError
+            when determined directory does not exist
+        '''
+        if self._experiment_dir is None:
+            if self.cfg['SUBEXPERIMENTS_EXIST']:
+                levels = 1
+            else:
+                levels = 0
+            exp_dir = os.path.realpath(os.path.join(self.project_dir,
+                                                    * ['..'] * levels))
+            if not os.path.exists(exp_dir):
+                raise OSError('Experiment directory could not be determined '
+                              'correctly. The determined directory does not '
+                              'exist: %s' % exp_dir)
+            self._experiment_dir = exp_dir
+        return self._experiment_dir
+
+    @property
+    def experiment(self):
+        '''
+        Returns
+        -------
+        str
+            name of the experiment
+        '''
+        return os.path.basename(self.experiment_dir)
+
+    @property
+    def subexperiment(self):
+        '''
+        Returns
+        -------
+        str
+            name of the subexperiment
+            (empty string if the project is no subexperiment)
+        '''
+        if self._subexperiment is None:
+            if self.cfg['SUBEXPERIMENTS_EXIST']:
+                self._subexperiment = os.path.basename(self.project_dir)
+            else:
+                self._subexperiment = ''
+        return self._subexperiment
 
     @property
     def image_dir(self):
@@ -59,9 +112,9 @@ class Project(object):
         Returns
         -------
         str
-        path to directory holding image files
+            path to directory holding image files
         '''
-        if not self._image_dir:
+        if self._image_dir is None:
             folder = self.cfg['IMAGE_FOLDER_LOCATION'].format(
                             experiment_dir=self.experiment_dir,
                             subexperiment=self.subexperiment)
@@ -69,19 +122,30 @@ class Project(object):
         return self._image_dir
 
     @property
-    def image_files(self):  # def get_image_files(self):
+    def image_files(self):
         '''
         Returns
         -------
-        List[IntensityImage]
+        List[tmt.image.IntensityImage]
+            image files (intensity images)
+
+        Raises
+        ------
+        OSError
+            when image directory does not exist
+        IOError
+            when no image files are found
         '''
-        if not self._image_files:
-            files = [join(self.image_dir, f)
+        if self._image_files is None:
+            if not os.path.exists(self.image_dir):
+                raise OSError('Image directory does not exist: %s'
+                              % self.image_dir)
+            files = [os.path.join(self.image_dir, f)
                      for f in os.listdir(self.image_dir) if is_image_file(f)]
             files = natsorted(files)
             if not files:
-                raise Exception('No image files found in "%s"'
-                                % self.image_dir)
+                raise IOError('No image files found in "%s"'
+                              % self.image_dir)
             self._image_files = [IntensityImage(f, self.cfg) for f in files]
         return self._image_files
 
@@ -91,17 +155,18 @@ class Project(object):
         Returns
         -------
         str
-        path to directory holding segmentation files
+            path to directory holding segmentation image files
         '''
-        if not self._segmentation_dir:
+        if self._segmentation_dir is None:
             try:
                 # In case of MPCycle experiments the segmentation directory
                 # is defined in the JSON shift descriptor file. The path
                 # is stored for use in Jterator pipelines. Therefore, we
                 # have to remove all relative parts of the path.
-                folder = join(self.experiment_dir,
-                              re.sub(r'../', '',
-                                     self.shift_file['segmentationDirectory']))
+                folder = os.path.join(
+                            self.project_dir,
+                            re.sub(r'../', '',
+                                   self.shift_file.description.segmentationDir))
             except:
                 folder = self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
                                     experiment_dir=self.experiment_dir,
@@ -114,16 +179,27 @@ class Project(object):
         '''
         Returns
         -------
-        List[MaskImage]
+        List[tmt.image.MaskImage]
+            segmentation image files (mask images)
+
+        Raises
+        ------
+        OSError
+            when segmentation directory does not exist
+        IOError
+            when no segmentation files are found
         '''
-        if not self._segmentation_files:
-            files = [join(self.segmentation_dir, f)
+        if self._segmentation_files is None:
+            if not os.path.exists(self.segmentation_dir):
+                raise OSError('Segmentation directory does not exist: %s'
+                              % self.segmentation_dir)
+            files = [os.path.join(self.segmentation_dir, f)
                      for f in os.listdir(self.segmentation_dir)
                      if is_image_file(f)]
             files = natsorted(files)
             if not files:
-                raise Exception('No image files found in "%s"'
-                                % self.segmentation_dir)
+                raise IOError('No image files found in "%s"'
+                              % self.segmentation_dir)
             self._segmentation_files = [MaskImage(f, self.cfg) for f in files]
         return self._segmentation_files
 
@@ -133,9 +209,9 @@ class Project(object):
         Returns
         -------
         str
-        path to directory holding illumination statistic files
+            path to directory holding illumination statistic files
         '''
-        if not self._stats_dir:
+        if self._stats_dir is None:
             folder = self.cfg['STATS_FOLDER_LOCATION'].format(
                                 experiment_dir=self.experiment_dir,
                                 subexperiment=self.subexperiment)
@@ -147,18 +223,29 @@ class Project(object):
         '''
         Returns
         -------
-        List[Illumstats]
+        List[tmt.illumstats.Illumstats]
+            files containing calculated illumination statistics
+
+        Raises
+        ------
+        OSError
+            when stats directory does not exist
+        IOError
+            when no illumination statistic files are found
         '''
-        if not self._stats_files:
+        if self._stats_files is None:
             stats_pattern = self.cfg['STATS_FILE_FORMAT'].format(channel='\d+')
-            stats_pattern = re.compile(stats_pattern)
-            files = [join(self.stats_dir, f)
+            stats_pattern = re.compile(self.stats_dir)
+            if not os.path.exists(self.stats_dir):
+                raise OSError('Stats directory does not exist: %s'
+                              % self.stats_dir)
+            files = [os.path.join(self.stats_dir, f)
                      for f in os.listdir(self.stats_dir)
                      if re.search(stats_pattern, f)]
             files = natsorted(files)
             if not files:
-                raise Exception('No illumination statistic files found in "%s"'
-                                % self.stats_dir)
+                raise IOError('No illumination statistic files found in "%s"'
+                              % self.stats_dir)
             self._stats_files = [Illumstats(f, self.cfg) for f in files]
         return self._stats_files
 
@@ -168,9 +255,9 @@ class Project(object):
         Returns
         -------
         str
-        path to directory holding shift descriptor files
+            path to directory holding shift descriptor files
         '''
-        if not self._shift_dir:
+        if self._shift_dir is None:
             folder = self.cfg['SHIFT_FOLDER_LOCATION'].format(
                                 experiment_dir=self.experiment_dir,
                                 subexperiment=self.subexperiment)
@@ -182,20 +269,36 @@ class Project(object):
         '''
         Returns
         -------
-        dict
-        content of a shift descriptor JSON file
+        Namespacified
+            description (content of a shift descriptor JSON file)
+            and filename
+
+        Raises
+        ------
+        OSError
+            when shift directory does not exist
+        IOError
+            when no shift descriptor file is found
         '''
-        if not self._shift_file:
+        if self._shift_file is None:
             shift_pattern = self.cfg['SHIFT_FILE_FORMAT']
             shift_pattern = re.compile(shift_pattern)
-            files = [join(self.shift_dir, f)
+            if not os.path.exists(self.shift_dir):
+                raise OSError('Shift directory does not exist: %s'
+                              % self.shift_dir)
+            files = [os.path.join(self.shift_dir, f)
                      for f in os.listdir(self.shift_dir)
                      if re.search(shift_pattern, f)]
             # there should only be one file, but in case there are more take
             # the first one
             files = natsorted(files)
             if not files:
-                raise Exception('No shift descriptor file found in "%s"'
-                                % self.shift_dir)
-            self._shift_file = json.load(open(files[0]))
+                raise IOError('No shift descriptor file found in "%s" '
+                              'that matches the provided pattern "%s".\n'
+                              'Check your configuration settings!'
+                              % (self.shift_dir,
+                                 self.cfg['SHIFT_FILE_FORMAT']))
+            content = tmt.util.load_shift_descriptor(files[0])
+            self._shift_file.description = tmt.util.Namespacified(content)
+            self._shift_file.filename = files[0]
         return self._shift_file
