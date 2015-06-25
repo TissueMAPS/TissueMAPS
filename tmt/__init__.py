@@ -3,7 +3,7 @@ import util
 
 try:
     from gi.repository import Vips
-    vips_available: True
+    vips_available = True
 except ImportError as error:
     print 'Vips could not be imported.\nReason: %s' % str(error)
     vips_available = False
