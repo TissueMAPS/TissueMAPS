@@ -15,7 +15,7 @@ class OnlineStatistics(object):
 
     def __init__(self, dims):
         '''
-        Initiate class OnlineStatistics.
+        Initialize class OnlineStatistics.
 
         Calculate online statistics (mean, variance, and standard deviation)
         element-by-element on a series of numpy arrays.
@@ -23,7 +23,7 @@ class OnlineStatistics(object):
         Parameters
         ----------
         dims: Tuple[int]
-              dimensions (i.e. shape) of a numpy array
+            dimensions of the matrix (i.e. shape of the numpy array)
         '''
         self.n = 0
         self.dims = dims
@@ -32,14 +32,16 @@ class OnlineStatistics(object):
 
     def update(self, x):
         '''
+        Update statistics with new matrix.
+
         Parameters
         ----------
         x: numpy.ndarray[float]
+            new matrix
         '''
         if not isinstance(x, np.ndarray):
             raise TypeError('data must be a numpy array')
-        if x.dtype != np.float:
-            raise TypeError('data type must be float')
+        x = x.astype(float)
         self.n = self.n + 1
         delta = x - self.mean
         self.mean = self.mean + delta/self.n
@@ -51,7 +53,7 @@ class OnlineStatistics(object):
         Returns
         -------
         numpy.ndarray[float]
-        variance
+            variance
         '''
         if self.n < 2:
             self._var = np.zeros(self.dims, dtype=float)
@@ -66,7 +68,7 @@ class OnlineStatistics(object):
         Returns
         -------
         numpy.ndarray[float]
-        standard deviation
+            standard deviation
         '''
         self._std = np.sqrt(self.var)
         return self._std
