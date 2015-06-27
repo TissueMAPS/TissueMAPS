@@ -1,1 +1,1 @@
-.. include:: ./docs/intro.rst
+.. include:: intro.rst
