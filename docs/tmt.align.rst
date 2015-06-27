@@ -12,14 +12,6 @@ tmt.align.api module
     :undoc-members:
     :show-inheritance:
 
-tmt.align.bsub_align module
----------------------------
-
-.. automodule:: tmt.align.bsub_align
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmt.align.registration module
 -----------------------------
 

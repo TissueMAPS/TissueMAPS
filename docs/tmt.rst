@@ -71,6 +71,14 @@ tmt.setup module
     :undoc-members:
     :show-inheritance:
 
+tmt.shift module
+----------------
+
+.. automodule:: tmt.shift
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmt.util module
 ---------------
 

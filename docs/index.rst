@@ -1,20 +1,15 @@
-.. tmt documentation master file, created by
-   sphinx-quickstart on Wed Jun 24 14:21:12 2015.
+.. TissueMAPS Toolbox documentation master file, created by
+   sphinx-quickstart on Sat Jun 27 13:43:01 2015.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to tmt's documentation!
-===============================
+Welcome to TissueMAPS Toolbox's documentation!
+==============================================
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
-
-   intro
-   tutorial
-   api
-   developer
 
 
 

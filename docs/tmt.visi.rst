@@ -12,14 +12,6 @@ tmt.visi.api module
     :undoc-members:
     :show-inheritance:
 
-tmt.visi.bsub_visi module
--------------------------
-
-.. automodule:: tmt.visi.bsub_visi
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmt.visi.stk module
 -------------------
 
