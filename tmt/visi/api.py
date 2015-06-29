@@ -88,12 +88,12 @@ class Visi(object):
 
             if self.args.config_file:
                 command = [
-                    'visi', 'run', '--job', j['job_id'], '--rename',
+                    'visi', 'run', '--job', str(j['job_id']), '--rename',
                     '--config', self.args.config_file, self.args.stk_folder
                 ]
             else:
                 command = [
-                    'visi', 'run', '--job', j['job_id'], '--rename',
+                    'visi', 'run', '--job', str(j['job_id']), '--rename',
                     self.args.stk_folder
                 ]
 
