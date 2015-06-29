@@ -4,80 +4,53 @@
 Introduction
 ************
 
-**tmt** is a Python package that bundles image processing and data analysis tools for `TissueMAPS <https://github.com/HackerMD/TissueMAPS>`_.
+**tmt** is a Python package that bundles tools for image processing and data analysis in `TissueMAPS <https://github.com/HackerMD/TissueMAPS>`_.
 
 .. _subpackages:
 
-Subpackages
-===========
+Sub-packages
+============
 
-**align** - Alignment of images between different acquisition cycles.
+The toolbox provides the following routines:
 
-**corilla** - Correction of illumination artifacts.
+- **align** - Alignment of images between different acquisition cycles.
 
-**dafu** - Data fusion for `Jterator <https://github.com/HackerMD/Jterator>`_ projects.
+- **corilla** - Correction of illumination artifacts.
 
-**illuminati** - Creation of image pyramids.
+- **dafu** - Data fusion for `Jterator <https://github.com/HackerMD/Jterator>`_ projects.
 
-**visi** - Conversion of Visitron's STK files to PNG images with optional renaming.
+- **illuminati** - Creation of image pyramids.
 
+- **visi** - Conversion of `Visiview <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_'s STK files to PNG images with optional renaming.
+
+Each tool comes with a separate API and command line interface, but they all depend on the package wide configuration settings.
 
 .. _configurationsettings:
 
 Configuration settings
 ======================
 
-Configurations are defined in *.config* `YAML <http://yaml.org/>`_ files to specify the experiment layout, such as the directory structure on disk.
+Config file
+-----------
 
-Paths and filenames are described with `Python format strings <https://docs.python.org/2/library/string.html#formatstrings>`_. The **replacement fields** surrounded by curly braces ``{}`` are then automatically replaced with experiment specific variables.
+The *tmt.config* `YAML <http://yaml.org/>`_ file specifies the experiment layout, such as the directory structure on disk.
 
-To this end, you can use the following *replacement fields*:
-    - *experiment_dir*: absolute path to the experiment directory
-    - *experiment*: name of the experiment folder
-    - *subexperiment*: name of a subexperiment folder, i.e. a subfolder of the experiment folder
-    - *cycle*: number of a subexperiment
-    - *channel*: number of a channel of intensity images (layers)
-    - *objects*: name of objects in segmentation images (masks)
-
-.. code:: yaml
-
-    SUBEXPERIMENTS_EXIST: Yes
-
-    # Path format strings
-    IMAGE_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/images'
-    SHIFT_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/shift'
-    STATS_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/stats'
-    SEGMENTATION_FOLDER_LOCATION: '{experiment_dir}/{subexperiment}/segmentations'
-    LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
-    DATA_FILE_LOCATION: '{experiment_dir}/data.h5'
-
-    # Filename format strings
-    SUBEXPERIMENT_FOLDER_FORMAT: '{experiment}_{cycle:0>2}'
-    SUBEXPERIMENT_FILE_FORMAT: '{experiment}_{cycle}'
-    STATS_FILE_FORMAT: 'illumstats_channel{channel:0>3}.h5'
-    SHIFT_FILE_FORMAT: 'shiftDescriptor.json'
-
-    # Regular expression patterns to extract information encoded in filenames
-    EXPERIMENT_FROM_FILENAME: '^([^_]+)'
-    CYCLE_FROM_FILENAME: '_(\d+)_'
-    COORDINATES_FROM_FILENAME: '_r(\d+)_c(\d+)_'
-    COORDINATES_IN_FILENAME_ONE_BASED: Yes
-    SITE_FROM_FILENAME: '_s(\d+)_'
-    CHANNEL_FROM_FILENAME: 'C(\d+)\.png$'
-    OBJECTS_FROM_FILENAME: '_segmented(\w+).png$'
-
-    # Should Vips image processing library be used? Required for pyramid creation!
-    USE_VIPS_LIBRARY: Yes
-
-    # These settings are hard-coded in TissueMAPS, so don't change them!
-    LAYERS_FOLDER_LOCATION: '{experiment_dir}/layers'
-    ID_TABLES_FOLDER_LOCATION: '{experiment_dir}/id_tables'
-    ID_PYRAMIDS_FOLDER_LOCATION: '{experiment_dir}/id_pyramids'
-    DATA_FILE_LOCATION: '{experiment_dir}/data.h5'
-
+.. literalinclude:: ../tmt/tmt.config
+   :language: yaml
 ..
 
-    NOTE: Quotes are generally not required around strings in YAML syntax, but are necessary here because of the curly braces in the format strings!
+    NOTE: Quotes are generally not required around strings in YAML syntax, but are necessary here to escape the curly braces in the format strings!
+
+
+Configuration classes
+---------------------
+
+Paths and filenames are described with `Python format strings <https://docs.python.org/2/library/string.html#formatstrings>`_. The configuration classes replace the **replacement fields** surrounded by curly braces ``{}`` with experiment specific variables and provide the formatted path or filename in form of an attribute.
+
+Definitions
+-----------
+
+A **project** represents the folder on disk, which contains the images and corresponding data. This may either be an **experiment** or a **subexperiment**, in case the experiment is made up of several related image acquisition *cycles*, i.e. if you acquired images of the same sample at different time points.
 
 
 .. _documentation:
@@ -85,22 +58,19 @@ To this end, you can use the following *replacement fields*:
 Documentation
 =============
 
-`Sphinx <http://sphinx-doc.org/index.html>`_ is used for the documentation of source code in combination with the `Napoleon extension <https://pypi.python.org/pypi/sphinxcontrib-napoleon>`_ to support the `reStructuredText NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard>`_.
-
-
-Documentation is located under `docs` and will ultimately be hosted on `Read the Docs <https://readthedocs.org/>`_.
+We use `Sphinx <http://sphinx-doc.org/index.html>`_ in combination with the `Napoleon extension <https://pypi.python.org/pypi/sphinxcontrib-napoleon>`_ for support of the `reStructuredText NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard>`_.
 
 To update the documentation upon changes in the source code, do
 
 .. code:: bash
 
-    sphinx-apidoc -o ./docs ./tmt
+    $ sphinx-apidoc -o ./docs ./tmt
 
-To build HTML, do
+To build the documentation website, do
 
 .. code:: bash
     
-    cd docs
-    make html
+    $ cd docs
+    $ make html
 
 The generated HTML files are located at `docs/_build/html`.

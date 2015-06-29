@@ -39,6 +39,7 @@ extensions = [
     'matplotlib.sphinxext.mathmpl',
     'matplotlib.sphinxext.only_directives',
     'matplotlib.sphinxext.plot_directive',
+    'sphinx.ext.inheritance_diagram'
     # 'matplotlib.sphinxext.ipython_directive'
 ]
 
@@ -85,7 +86,7 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', 'setup']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -131,7 +132,7 @@ html_theme = 'alabaster'
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = 'TissueMAPS toolbox'
+# html_title = None
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 html_short_title = 'tmt docs'
@@ -239,7 +240,7 @@ latex_documents = [
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-#latex_logo = None
+latex_logo = '_static/logo.png'
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
