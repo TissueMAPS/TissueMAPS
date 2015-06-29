@@ -196,10 +196,10 @@ class Align(object):
 
         for j in joblist:
             timestamp = tmt.cluster.create_timestamp()
+            if not os.path.exists(lsf_dir):
+                os.makedirs(lsf_dir)
             lsf = os.path.join(lsf_dir, 'align_%s_%.5d_%s.lsf'
                                % (shift.experiment, j['job_id'], timestamp))
-            if not os.path.exists(lsf):
-                os.makedirs(lsf)
 
             command = [
                 'align', 'run', '--job', str(j['job_id']),
