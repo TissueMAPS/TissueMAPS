@@ -3,6 +3,7 @@
 import os
 import sys
 import tmt
+from functools import partial
 import traceback
 from tmt.corilla.api import Corilla
 
@@ -19,15 +20,47 @@ if __name__ == '__main__':
                     '''
     )
 
-    parser.add_argument('project_dir', nargs='?', default=os.getcwd(),
-                        help='absolute path to project directory')
+    subparsers = parser.add_subparsers()
 
-    parser.add_argument('--channel', dest='channel', type=int,
-                        help='calculate statistics only for a single channel')
+    run_parser = subparsers.add_parser('run',
+                            help='run calculation of statistics')
 
-    parser.add_argument('-c', '--config', dest='config',
-                        help='path to custom yaml configuration file \
-                              (defaults to "dafu" configuration)')
+    run_parser.add_argument('project_dir', nargs='?', default=os.getcwd(),
+                            help='path to project directory')
+
+    run_parser.add_argument('--channel', dest='channel', type=int,
+                            help='number of channel to process')
+
+    run_parser.add_argument('-c', '--config', dest='config',
+                            help='path to custom yaml configuration file \
+                                  (defaults to "tmt" configuration)')
+
+    run_parser.set_defaults(handler=partial(Corilla.process_cli_commands,
+                                            subparser=run_parser))
+
+    apply_parser = subparsers.add_parser('apply',
+                              help='correct images for illumination')
+
+    apply_parser.add_argument('project_dir', nargs='?', default=os.getcwd(),
+                              help='path to project directory')
+
+    apply_parser.add_argument('--channel', dest='channels', nargs='+',
+                              type=int,
+                              help='number(s) of channels to process')
+
+    apply_parser.add_argument('--site', dest='sites', nargs='+', type=int,
+                              help='number(s) of sites to process')
+
+    apply_parser.add_argument('-o', '--output_dir', dest='output_dir',
+                              type=str, required=True,
+                              help='path to output directory')
+
+    apply_parser.add_argument('-c', '--config', dest='config',
+                              help='path to custom yaml configuration file \
+                                    (defaults to "tmt" configuration)')
+
+    apply_parser.set_defaults(handler=partial(Corilla.process_cli_commands,
+                              subparser=apply_parser))
 
     args = parser.parse_args()
 
@@ -45,8 +78,11 @@ if __name__ == '__main__':
         args.config = tmt.config
 
     try:
-        Corilla.process_cli_commands(args)
-        print '🍺  Done!'
+        if args.handler:
+            args.handler(args)
+            print '🍺  Done!'
+        else:
+            parser.print_help()
     except Exception as error:
         sys.stdout.write('Failed. ')
         print 'Error message: "%s"\n' % str(error)

@@ -2,10 +2,12 @@ import os
 import glob
 import json
 import h5py
+import re
+import numpy as np
 import tmt
+import tmt.imageutil
 from tmt.align import registration as reg
 from tmt.experiment import Experiment
-from tmt.project import Project
 from tmt.cluster import Cluster
 
 
@@ -179,7 +181,9 @@ class Align(object):
                                          separators=(',', ': ')))
 
     def submit(self):
-
+        '''
+        Submit jobs for shift calculation.
+        '''
         cycles = Experiment(self.args.experiment_dir,
                             self.args.config).subexperiments
 
@@ -191,14 +195,12 @@ class Align(object):
                 os.mkdir(lsf_dir)
 
         for j in joblist:
-            # build output filename
             timestamp = tmt.cluster.create_timestamp()
             lsf = os.path.join(lsf_dir, 'align_%s_%.5d_%s.lsf'
                                % (shift.experiment, j['job_id'], timestamp))
             if not os.path.exists(lsf):
                 os.makedirs(lsf)
 
-            # build command
             command = [
                 'align', 'run', '--job', str(j['job_id']),
                 self.args.experiment_dir
@@ -209,8 +211,44 @@ class Align(object):
             job.submit(command)
 
     def apply(self):
-        # TODO
-        pass
+        '''
+        Apply calculated shift and overlap values in order to align images.
+        '''
+        cycles = Experiment(self.args.experiment_dir,
+                            self.args.config).subexperiments
+        for c in cycles:
+            print '\n. Processing images of cycle #%d' % c.cycle
+            project = c.project
+            channels = np.unique([i.channel for i in project.image_files])
+            print '. Found %d channels' % len(channels)
+            if self.args.channels:
+                channels = [c for c in channels if c in self.args.channels]
+            for c in channels:
+                print '.. Align images of channel #%d' % c
+                if self.args.sites:
+                    images = [i for i in project.image_files
+                              if i.channel == c and i.site in self.args.sites]
+                else:
+                    images = [i for i in project.image_files if i.channel == c]
+                if not self.args.no_illcorr:
+                    print '.. Correct images for illumination artifact'
+                    stats = [f for f in project.stats_files
+                             if f.channel == c][0]
+                shift = project.shift_file
+                for im in images:
+                    img = im.image.copy()
+                    if not self.args.no_illcorr:
+                        img = stats.correct(img)
+                    print '... Shift and crop "%s"' % im.name
+                    aligned_im = shift.align(img, im.name)
+                    suffix = os.path.splitext(im.filename)[1]
+                    output_filename = re.sub(r'\%s$' % suffix,
+                                             '_aligned_corrected%s' % suffix,
+                                             im.filename)
+                    output_filename = os.path.basename(output_filename)
+                    output_filename = os.path.join(self.args.output_dir,
+                                                   output_filename)
+                    tmt.imageutil.save_image(aligned_im, output_filename)
 
     @staticmethod
     def process_cli_commands(args, subparser):

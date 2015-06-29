@@ -1,7 +1,9 @@
 import os
 import numpy as np
 import tmt
+import re
 import h5py
+import tmt.imageutil
 from tmt.project import Project
 from tmt.corilla.stats import OnlineStatistics
 
@@ -27,23 +29,24 @@ class Corilla(object):
         '''
         Run calculation of online statistics and write results to HDF5 file.
         '''
+        self.args.config['USE_VIPS_LIBRARY'] = False  # TODO: Vips
         project = Project(self.args.project_dir, self.args.config)
 
         channels = np.unique([i.channel for i in project.image_files])
         print 'Found %d channels' % len(channels)
         if self.args.channel:
-            print 'Process only channel #%d' % self.arg.channel
+            print 'Process only images of channel #%d' % self.arg.channel
             channels = [c for c in channels if c == self.args.channel]
         for c in channels:
-            print '. Calculating statistics for channel #%d' % c
+            print '\n. Calculating statistics for images of channel #%d' % c
             images = [i for i in project.image_files if i.channel == c]
 
             dims = images[0].dimensions
             stats = OnlineStatistics(dims)
             for im in images:
-                print im.filename
-                stats.update(im.image,
-                             log_transform=tmt.config['LOG_TRANSFORM_STATS'])
+                print('.. Updating statistics with "%s"'
+                      % os.path.basename(im.filename))
+                stats.update(im.image)
 
             stats_filename = tmt.config['STATS_FILE_FORMAT'].format(channel=c)
             stats_filename = os.path.join(project.stats_dir, stats_filename)
@@ -54,8 +57,38 @@ class Corilla(object):
             f.create_dataset('/stat_values/std', data=stats.std)
             f.close()
 
+    def apply(self):
+        '''
+        Apply calculated statistics in order to correct illumination artifacts.
+        '''
+        project = Project(self.args.project_dir, self.args.config)
+        channels = np.unique([i.channel for i in project.image_files])
+        print 'Found %d channels' % len(channels)
+        if self.args.channels:
+            channels = [c for c in channels if c in self.args.channels]
+        for c in channels:
+            print '\n. Correct images of channel #%d' % c
+            if self.args.sites:
+                images = [i for i in project.image_files
+                          if i.channel == c and i.site in self.args.sites]
+            else:
+                images = [i for i in project.image_files if i.channel == c]
+            # apply illumination correction
+            stats = [f for f in project.stats_files if f.channel == c][0]
+            for im in images:
+                print '.. Process site #%d' % im.site
+                im_corrected = stats.correct(im.image)
+                suffix = os.path.splitext(im.filename)[1]
+                output_filename = re.sub(r'\%s$' % suffix,
+                                         '_corrected%s' % suffix,
+                                         im.filename)
+                output_filename = os.path.basename(output_filename)
+                output_filename = os.path.join(self.args.output_dir,
+                                               output_filename)
+                tmt.imageutil.save_image(im_corrected, output_filename)
+
     @staticmethod
-    def process_cli_commands(args):
+    def process_cli_commands(args, subparser):
         '''
         Initialize Corilla class with parsed command line arguments.
 
@@ -63,20 +96,12 @@ class Corilla(object):
         ----------
         args: Namespace
             arguments parsed by command line interface
+        subparser: argparse.ArgumentParser
         '''
         cli = Corilla(args)
-        cli.run()
-
-    @staticmethod
-    def process_ui_commands(args):
-        '''
-        Initialize Corilla class with parsed user interface arguments.
-
-        Parameters
-        ----------
-        args: dict
-            arguments parsed by user interface
-        '''
-        args = tmt.util.Namespacified(args)
-        cli = Corilla(args)
-        cli.run()
+        if subparser.prog == 'corilla run':
+            cli.run()
+        elif subparser.prog == 'corilla apply':
+            cli.apply()
+        else:
+            subparser.print_help()

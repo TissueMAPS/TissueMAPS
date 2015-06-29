@@ -77,14 +77,15 @@ class Visi(object):
         project = Stk(self.args.stk_folder, '*')
         joblist = project.read_joblist()
 
+        lsf_dir = os.path.join(project.experiment_dir, 'lsf')
+        if not os.path.exists(lsf_dir):
+                os.mkdir(lsf_dir)
+
         for j in joblist:
-            # build output filename
             timestamp = tmt.cluster.create_timestamp()
-            lsf = os.path.join(project.experiment_dir, 'lsf',
-                               'visi_%s_%.5d_%s.lsf'
+            lsf = os.path.join(lsf_dir, 'visi_%s_%.5d_%s.lsf'
                                % (project.experiment, j['job_id'], timestamp))
 
-            # build command
             if self.args.config_file:
                 command = [
                     'visi', 'run', '--job', j['job_id'], '--rename',
@@ -97,7 +98,6 @@ class Visi(object):
                 ]
 
             print '. submitting job #%d' % j['job_id']
-
             job = Cluster(lsf)
             job.submit(command)
 

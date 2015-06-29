@@ -28,7 +28,7 @@ def calculate_shift(filename, ref_filename):
 
     References
     ----------
-    ..[1] http://image-registration.readthedocs.org/en/latest/
+    .. [1] http://image-registration.readthedocs.org/en/latest/
     '''
     # Load image that should be registered
     im = np.array(misc.imread(filename), dtype='float64')

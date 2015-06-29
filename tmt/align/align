@@ -84,7 +84,8 @@ if __name__ == '__main__':
                                       (.joblist YAML file in parent directory \
                                        of "stk_folder")')
 
-    joblist_parser.add_argument('experiment_dir', default=os.getcwd(),
+    joblist_parser.add_argument('experiment_dir', nargs='?',
+                                default=os.getcwd(),
                                 help='experiment directory')
 
     joblist_parser.add_argument('--ref_cycle', dest='ref_cycle', type=int,
@@ -111,7 +112,8 @@ if __name__ == '__main__':
     submit_parser = subparsers.add_parser('submit',
                                           help='submit shift calculation')
 
-    submit_parser.add_argument('experiment_dir', default=os.getcwd(),
+    submit_parser.add_argument('experiment_dir', nargs='?',
+                               default=os.getcwd(),
                                help='experiment directory')
 
     submit_parser.add_argument('-c', '--config', dest='config',
@@ -122,15 +124,27 @@ if __name__ == '__main__':
                                subparser=submit_parser))
 
     apply_parser = subparsers.add_parser('apply',
-                              help='shift and crop images')
+                              help='shift and crop images \
+                                    (by default also corrects illumination)')
 
-    apply_parser.add_argument('experiment_dir', default=os.getcwd(),
+    apply_parser.add_argument('experiment_dir', nargs='?',
+                              default=os.getcwd(),
                               help='experiment directory')
 
-    apply_parser.add_argument('-w', '--wildcards', dest='wildcards',
-                              type=str, default='*',
-                              help='wildcards (globbing patterns) \
-                                    to process only a subset of files')
+    apply_parser.add_argument('--channel', dest='channels', nargs='+',
+                              type=int,
+                              help='number(s) of channels to process')
+
+    apply_parser.add_argument('--site', dest='sites', nargs='+', type=int,
+                              help='number(s) of sites to process')
+
+    apply_parser.add_argument('--no_illcorr', dest='no_illcorr',
+                              action='store_true', default=False,
+                              help='don\'t correct for illumination')
+
+    apply_parser.add_argument('-o', '--output_dir', dest='output_dir',
+                              type=str, required=True,
+                              help='path to output directory')
 
     apply_parser.add_argument('-c', '--config', dest='config',
                               help='path to custom yaml configuration file \

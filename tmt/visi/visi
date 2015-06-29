@@ -100,7 +100,7 @@ if __name__ == '__main__':
                                                 subparser=joblist_parser))
 
     submit_parser = subparsers.add_parser('submit',
-                                          help='submit stk to png conversion')
+                                          help='run on cluster')
 
     submit_parser.add_argument('stk_folder',
                                nargs='?', type=str, default=os.getcwd(),

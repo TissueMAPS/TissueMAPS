@@ -8,7 +8,7 @@ import itertools
 import segment
 import dafu
 import tmt
-from tmt.illumstats import illum_correction_vips
+from tmt.illumstats import illum_correct_vips
 from tmt import imageutil
 from gi.repository import Vips
 
@@ -122,9 +122,8 @@ class Mosaic(object):
         for i in range(len(self.layer_grid)):
             for j in range(len(self.layer_grid[0])):
                 img = self.layer_grid[i][j]
-                self.layer_grid[i][j] = illum_correction_vips(
-                                            img, stats[0], stats[1],
-                                            self.cfg['LOG_TRANSFORM_STATS'])
+                self.layer_grid[i][j] = illum_correct_vips(img,
+                                                           stats[0], stats[1])
         return self.layer_grid
 
     def build_mask_grid(self, data_file, mask='outline',

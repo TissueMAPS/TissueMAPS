@@ -10,7 +10,7 @@ class OnlineStatistics(object):
     squares and products". Technometrics 4(3):419-420.
 
     Code adapted from Wikipedia article "Algorithms for calculating variance".
-    https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+    https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
     '''
 
     def __init__(self, dims):

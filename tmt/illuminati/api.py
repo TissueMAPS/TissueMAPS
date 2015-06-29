@@ -1,12 +1,20 @@
+# encoding: utf-8
 import os
 import sys
 import tmt
 import glob
-from tmt import segment
+from tmt.illuminati import segment
 from tmt.illuminati.mosaic import Mosaic
 from tmt.experiment import Experiment
 from tmt.project import Project
 from tmt.image import IntensityImage, MaskImage
+
+
+class IlluminatiArgs(object):
+
+    def __init__(self):
+        pass
+        # TODO: parse arguments via defined attributes
 
 
 class Illuminati(object):
@@ -198,3 +206,4 @@ class Illuminati(object):
         args = tmt.util.Namespacified(args)
         ui = Illuminati(args)
         ui.run()
+
