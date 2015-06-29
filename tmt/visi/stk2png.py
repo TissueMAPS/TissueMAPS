@@ -199,7 +199,7 @@ class Stk2png(object):
         self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
         self.tokens = ['filter', 'site']
         self.nomenclature = copy(config['FILENAME_FORMAT'])
-        self.acquistion_mode = copy(config['ACQUISITION_MODE'])
+        self.acquisition_mode = copy(config['ACQUISITION_MODE'])
         self.acquisition_layout = copy(config['ACQUISITION_LAYOUT'])
 
     def extract_info_from_nd_files(self):
@@ -232,6 +232,7 @@ class Stk2png(object):
             well_info = [re.search(r'row:(\w),column:(\d+)', w) for w in wells]
             well_ids = [''.join(map(w.group, xrange(1, 3))) for w in well_info]
             return well_ids
+        self.nr_sites = nd['NStagePositions']
 
         if self.metainfo['hasWell']:
             well_ids = extract_well_ids(nd, self.input_files)
@@ -310,16 +311,16 @@ class Stk2png(object):
         Calculate the y,x (row, column) position of images
         within the continuous acquisition grid, i.e. the well.
         '''
-        if self.acquistion_mode == 'ZigZagHorizontal':
+        if self.acquisition_mode == 'ZigZagHorizontal':
             doZigZag = True
-        elif self.acquistion_mode == 'Horizontal':
+        elif self.acquisition_mode == 'Horizontal':
             doZigZag = False
         else:
             raise Exception('The provided acquisition mode is not supported.')
 
         sites = self.info['site']
-        max_pos = max(sites)
-        stitch_dims = guess_stitch_dims(max_pos, self.acquisition_layout)
+        import ipdb; ipdb.set_trace()
+        stitch_dims = guess_stitch_dims(self.nr_sites, self.acquisition_layout)
         snake = get_image_snake(stitch_dims, doZigZag)
         column = np.array([None for x in xrange(len(sites))])
         row = np.array([None for x in xrange(len(sites))])
