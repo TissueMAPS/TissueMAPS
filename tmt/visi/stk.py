@@ -178,4 +178,4 @@ class Stk(object):
         -------
         List[dict[str, list[str] or str]]
         '''
-        tmt.cluster.read_joblist(self.joblist_file)
+        return tmt.cluster.read_joblist(self.joblist_file)
