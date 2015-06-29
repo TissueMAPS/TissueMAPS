@@ -1,6 +1,6 @@
 import re
 import os
-from os.path import isdir, join, basename, dirname
+from os.path import isdir, join, basename
 from natsort import natsorted
 from tmt.util import regex_from_format_string
 from tmt.project import Project

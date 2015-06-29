@@ -78,6 +78,17 @@ class Image(object):
         self._experiment_dir = None
 
     @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            basename of the image file
+        '''
+        self._name = os.path.basename(self.filename)
+        return self._name
+
+    @property
     def image(self):
         '''
         Read image form file and return it as `numpy` array (default -
@@ -97,7 +108,7 @@ class Image(object):
             if not os.path.exists(self.filename):
                 raise OSError('Cannot load image because '
                               'file "%s" does not exist.' % self.filename)
-            if self.vips:
+            if self.use_vips:
                 self._image = Vips.Image.new_from_file(self.filename)
             else:
                 self._image = mh.imread(self.filename)
@@ -112,7 +123,7 @@ class Image(object):
             y, x dimensions (height, width) of the image
         '''
         if self._dimensions is None:
-            if self.vips:
+            if self.use_vips:
                 self._dimensions = (self.image.height, self.image.width)
             else:
                 self._dimensions = self.image.shape
@@ -359,7 +370,7 @@ class MaskImage(Image):
         unique ids of objects in the mask image
         '''
         if self._ids is None:
-            if self.vips:
+            if self.use_vips:
                 num_labels = int(self.image.max())
                 values = range(1, num_labels+1)
             else:

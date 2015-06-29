@@ -238,7 +238,7 @@ class Project(object):
         '''
         if self._stats_files is None:
             stats_pattern = self.cfg['STATS_FILE_FORMAT'].format(channel='\d+')
-            stats_pattern = re.compile(self.stats_dir)
+            stats_pattern = re.compile(stats_pattern)
             if not os.path.exists(self.stats_dir):
                 raise OSError('Stats directory does not exist: %s'
                               % self.stats_dir)

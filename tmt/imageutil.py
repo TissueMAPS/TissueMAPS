@@ -27,7 +27,23 @@ def save_vips_image_jpg(im, filename, quality=75):
     im.write_to_file(filename, Q=quality, optimize_coding=True)
 
 
-def save_numpy_image_png(im, filename, bitdepth=16):
+def save_image_png_vips(im, filename, bitdepth=16):
+    '''
+    Save the `Vips` image object to file as PNG image.
+
+    Parameters
+    ----------
+    im: Vips.Image
+        image
+    filename: str
+        name of the output file
+    bitdepth: int, optional
+        bit depth of the PNG image (defaults to 16)
+    '''
+    im.cast('ushort').write_to_file(filename)
+
+
+def save_image_png_numpy(im, filename, bitdepth=16):
     '''
     Save the `numpy` array to file as PNG image.
 
@@ -46,6 +62,23 @@ def save_numpy_image_png(im, filename, bitdepth=16):
         w = png.Writer(width=width, height=height,
                        bitdepth=bitdepth, greyscale=True)
         w.write(f, im.astype(np.uint16))
+
+
+def save_image(im, filename):
+    '''
+    Save image to file in 16-bit PNG format.
+
+    Parameters
+    ----------
+    im: numpy.ndarray or Vips.Image
+        image that should be saved
+    filename: str
+        path to the image file
+    '''
+    if isinstance(im, np.ndarray):
+        save_image_png_numpy(im, filename)
+    else:
+        save_image_png_vips(im, filename)
 
 
 def np_array_to_vips_image(nparray):
@@ -205,8 +238,8 @@ def create_thresholding_LUT(avg_thresh):
     --------
     The LUT can be used like this::
 
-    lut = create_thresholding_LUT(some_images, 0.1)
-    thresholded_img = img.maplut(lut)  # apply to some image
+        lut = create_thresholding_LUT(some_images, 0.1)
+        thresholded_img = img.maplut(lut)  # apply to some image
     '''
     # Create a 1 by 2**16 image (the lookup table) with linear values
     # [0, 1, 2, ..., 2^16-1] that is used to map colors in the original image
