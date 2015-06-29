@@ -319,7 +319,6 @@ class Stk2png(object):
             raise Exception('The provided acquisition mode is not supported.')
 
         sites = self.info['site']
-        import ipdb; ipdb.set_trace()
         stitch_dims = guess_stitch_dims(self.nr_sites, self.acquisition_layout)
         snake = get_image_snake(stitch_dims, doZigZag)
         column = np.array([None for x in xrange(len(sites))])
