@@ -1,6 +1,6 @@
 from os.path import join, dirname, realpath
 from tmt.util import load_config
-from visi.util import check_visi_config
+from tmt.visi.util import check_visi_config
 
 __version__ = '0.1.0'
 
