@@ -2,12 +2,15 @@ import h5py
 import re
 import numpy as np
 import scipy.ndimage as ndi
-from tmt.imageutil import np_array_to_vips_image
 from tmt.util import regex_from_format_string
+try:
+    from gi.repository import Vips
+except ImportError as error:
+    print 'Vips could not be imported.\nReason: %s' % str(error)
 
 
-def illum_correction_vips(orig_image, mean_image, std_image,
-                          log_transform=True):
+def illum_correct_vips(orig_image, mean_mat, std_mat,
+                       log_transform=True, smooth=False, sigma=5):
     '''
     Correct fluorescence microscopy image for illumination artifacts
     using the image processing library Vips.
@@ -16,17 +19,21 @@ def illum_correction_vips(orig_image, mean_image, std_image,
     ----------
     orig_image: Vips.Image[Vips.BandFormat.USHORT]
         image that should be corrected
-    mean_image: Vips.Image[Vips.BandFormat.DOUBLE]
+    mean_mat: Vips.Image[Vips.BandFormat.DOUBLE]
         matrix of mean values (same dimensions as `orig_image`)
-    std_image: Vips.Image[Vips.BandFormat.DOUBLE]
+    std_mat: Vips.Image[Vips.BandFormat.DOUBLE]
         matrix of standard deviation values (same dimensions as `orig_image`)
     log_transform: bool, optional
-            log10 transform image (defaults to True)
+        log10 transform `orig_image` (defaults to True)
+    smooth: bool, optional
+        blur `mean_mat` and `std_mat` with a Gaussian filter (defaults to False)
+    sigma: int, optional
+        size of the standard deviation of the Gaussian kernel (defaults to 5)
 
     Returns
     -------
-    Vips.Image[Vips.BandFormat.USHORT]
-        corrected image
+    Vips.Image
+        corrected image (same data type as `orig_image`)
     '''
     # If we don't cast the conditional image, the result of ifthenelse
     # will be UCHAR
@@ -38,42 +45,54 @@ def illum_correction_vips(orig_image, mean_image, std_image,
     img = img.cast('double')
     if log_transform:
         img = img.log10()
-    img = (img - mean_image) / std_image
-    img = img * std_image.avg() + mean_image.avg()
+    if smooth:
+        mean_mat = mean_mat.gaussblur(sigma)
+        std_mat = std_mat.gaussblur(sigma)
+    img = (img - mean_mat) / std_mat
+    img = img * std_mat.avg() + mean_mat.avg()
     if log_transform:
         img = 10 ** img
 
     # Cast back to UINT16 or whatever the original image was
-    img = img.cast(orig_format)
-
-    return img
+    return img.cast(orig_format)
 
 
-def illum_correction(orig_image, mean_mat, std_mat,
-                     log_transform=True, fix_pixels=False):
-    """
+def illum_correct_numpy(orig_image, mean_mat, std_mat,
+                        log_transform=True, smooth=True, sigma=5,
+                        fix_pixels=False):
+    '''
     Correct fluorescence microscopy image for illumination artifacts.
 
     Parameters
     ----------
-    orig_image: numpy.ndarray[numpy.uint16]
+    orig_image: numpy.ndarray
         image that should be corrected
     mean_mat: numpy.ndarray[numpy.float64]
         matrix of mean values (same dimensions as `orig_image`)
     std_mat: numpy.ndarray[numpy.float64]
         matrix of standard deviation values (same dimensions as `orig_image`)
-    
+    log_transform: bool, optional
+        log10 transform `orig_image` (defaults to True)
+    smooth: bool, optional
+        blur `mean_mat` and `std_mat` with a Gaussian filter (defaults to False)
+    sigma: int, optional
+        size of the standard deviation of the Gaussian kernel (defaults to 5)
+
     Returns
     -------
-    numpy.ndarray[numpy.uint16]
-        corrected image
-    """
+    numpy.ndarray
+        corrected image (same data type as `orig_image`)
+    '''
     # correct intensity image for illumination artifact
     img = orig_image.copy()
+    img_type = orig_image.dtype
     img = img.astype(np.float64)
     img[img == 0] = 1
     if log_transform:
         img = np.log10(img)
+    if smooth:
+        mean_mat = ndi.filters.gaussian_filter(mean_mat, sigma)
+        std_mat = ndi.filters.gaussian_filter(std_mat, sigma)
     img = (img - mean_mat) / std_mat
     img = (img * np.mean(std_mat)) + np.mean(mean_mat)
     if log_transform:
@@ -92,7 +111,48 @@ def illum_correction(orig_image, mean_mat, std_mat,
         thresh = np.percentile(img, percent)
         img[img > thresh] = thresh
 
-    return img.astype(np.uint16)
+    # TODO: is this save? Converting to integer values may lead to loss of
+    # information, which would be a problem for values scaled between 0 and 1!
+    return img.astype(img_type)
+
+
+def illum_correct(orig_image, mean_mat, std_mat,
+                  log_transform=True, smooth=False, sigma=5):
+    '''
+    Correct fluorescence microscopy image for illumination artifacts.
+
+    Parameters
+    ----------
+    orig_image: numpy.ndarray or Vips.Image
+        image that should be corrected
+    mean_mat: numpy.ndarray[numpy.float64] or Vips.Image[Vips.BandFormat.DOUBLE]
+        matrix of mean values (same dimensions as `orig_image`)
+    std_mat: numpy.ndarray[numpy.float64] or Vips.Image[Vips.BandFormat.DOUBLE]
+        matrix of standard deviation values (same dimensions as `orig_image`)
+    log_transform: bool, optional
+        log10 transform `orig_image` (defaults to True)
+    smooth: bool, optional
+        blur `mean_mat` and `std_mat` with a Gaussian filter (defaults to False)
+    sigma: int, optional
+        size of the standard deviation of the Gaussian kernel (defaults to 5)
+    
+    Returns
+    -------
+    numpy.ndarray or Vips.Image
+        corrected image (same data type as `orig_image`)
+
+    See also
+    --------
+    illum_correct_numpy
+    illum_correct_vips
+    '''
+    if isinstance(orig_image, np.ndarray):
+        img = illum_correct_numpy(orig_image, mean_mat, std_mat,
+                                  log_transform, smooth, sigma)
+    else:
+        img = illum_correct_vips(orig_image, mean_mat, std_mat,
+                                 log_transform, smooth, sigma)
+    return img
 
 
 class Illumstats(object):
@@ -129,28 +189,29 @@ class Illumstats(object):
         self.filename = filename
         self.matlab = matlab
         self.use_vips = self.cfg['USE_VIPS_LIBRARY']
-        self._statistics = None
+        self.__statistics = None
         self._mean_image = None
         self._std_image = None
         self._channel = None
 
     @property
     def _statistics(self):
-        if not self._statistics:
+        if not self.__statistics:
             stats = h5py.File(self.filename, 'r')
             stats = stats['stat_values']
-            mean_image = np.array(stats['mean'][()], dtype='float64')
-            std_image = np.array(stats['std'][()], dtype='float64')
-            if self.matlab:
-                # Matlab transposes arrays when saving them to HDF5 files
-                # so we have to transpose them back!
-                mean_image = mean_image.conj().T
-                std_image = std_image.conj().T
             if self.use_vips:
-                mean_image = np_array_to_vips_image(mean_image)
-                std_image = np_array_to_vips_image(std_image)
-            self._statistics = (mean_image, std_image)
-        return self._statistics
+                mean_image = Vips.Image.new_from_array(stats['mean'][()].tolist()).cast('double')
+                std_image = Vips.Image.new_from_array(stats['std'][()].tolist()).cast('double')
+            else:
+                mean_image = np.array(stats['mean'][()], dtype='float64')
+                std_image = np.array(stats['std'][()], dtype='float64')
+                if self.matlab:
+                    # Matlab transposes arrays when saving them to HDF5 files
+                    # so we have to transpose them back!
+                    mean_image = mean_image.conj().T
+                    std_image = std_image.conj().T
+            self.__statistics = (mean_image, std_image)
+        return self.__statistics
 
     @property
     def channel(self):
@@ -196,7 +257,7 @@ class Illumstats(object):
             self._std_image = self._statistics[1]
         return self._std_image
 
-    def correct_illumination(self, image):
+    def correct(self, image):
         '''
         Correct image for illumination artifacts.
 
@@ -207,12 +268,8 @@ class Illumstats(object):
 
         Returns
         -------
-        numpy.ndarray[numpy.unit16] or Vips.Image[Vips.BandFormat.USHORT]
+        numpy.ndarray or Vips.Image
             corrected image
         '''
-        if self.use_vips:
-            img = illum_correction_vips(image, self.mean_image, self.std_image)
-        else:
-            img = illum_correction(image, self.mean_image, self.std_image)
-
-        return img
+        corrected_image = illum_correct(image, self.mean_image, self.std_image)
+        return corrected_image
