@@ -8,9 +8,9 @@ import itertools
 import segment
 import dafu
 import tmt
+from gi.repository import Vips
 from tmt.illumstats import illum_correct_vips
 from tmt import imageutil
-from gi.repository import Vips
 
 
 class Mosaic(object):
@@ -117,13 +117,12 @@ class Mosaic(object):
         if not self._is_channel_layer():
             raise AttributeError('Illumination correction can only be '
                                  'applied to intensity images')
-        if not all([isinstance(s, Vips.Image) for s in stats]):
-            raise TypeError('Statistics must be of type "Vips.Image"')
         for i in range(len(self.layer_grid)):
             for j in range(len(self.layer_grid[0])):
                 img = self.layer_grid[i][j]
                 self.layer_grid[i][j] = illum_correct_vips(img,
-                                                           stats[0], stats[1])
+                                                           stats.mean_image,
+                                                           stats.std_image)
         return self.layer_grid
 
     def build_mask_grid(self, data_file, mask='outline',
@@ -249,7 +248,7 @@ class Mosaic(object):
         self.mosaic_image = mosaic_image
         return self.mosaic_image
 
-    def shift_stiched_image(self, cycles, current_cycle):
+    def shift_stitched_image(self, cycles, current_cycle):
         '''
         Shift the stitched mosaic image in such a way that
         all images from different channels and masks overlay each other.
@@ -274,7 +273,7 @@ class Mosaic(object):
         -------
         Vips.Image
         '''
-        shift_descriptors = [c.project.shift_file.filename for c in cycles]
+        shift_descriptors = [c.project.shift_file.description for c in cycles]
         cycle_nrs = [c.cycle for c in cycles]
         current_cycle_idx = cycle_nrs.index(current_cycle)
 

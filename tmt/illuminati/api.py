@@ -2,12 +2,11 @@
 import os
 import sys
 import tmt
-import glob
+import re
 from tmt.illuminati import segment
 from tmt.illuminati.mosaic import Mosaic
 from tmt.experiment import Experiment
 from tmt.project import Project
-from tmt.image import IntensityImage, MaskImage
 
 
 class IlluminatiArgs(object):
@@ -35,74 +34,49 @@ class Illuminati(object):
         self.args = args
         self.args.project_dir = os.path.abspath(args.project_dir)
 
-    def run(self):
+    def channel(self):
         '''
-        Run pyramid creation.
-
-        Raises
-        ------
-        IOError
-            when no files are found that match globbing pattern
+        Create pyramid for "channel" images.
         '''
         #######################################################################
-        #                           LOADING IMAGES                            #
+        #                       CONFIGURATION HANDLING                        #
         #######################################################################
 
         project = Project(self.args.project_dir, self.args.config)
-        files = glob.glob(os.path.join(project.image_dir,
-                                       self.args.wildcards))
 
-        if self.args.area_mask or self.args.outline_mask or self.args.id_luts:
-            files = glob.glob(os.path.join(project.segmentation_dir,
-                                           self.args.wildcards))
-            if not files:
-                raise IOError('No files were found in "%s" that match '
-                              'provided pattern "%s"'
-                              % (project.segmentation_dir,
-                                 self.args.wildcards))
-            images = [MaskImage(f, self.args.config) for f in files]
-            # TODO: handle id_luts with Vips
-        else:
-            files = glob.glob(os.path.join(project.image_dir,
-                                           self.args.wildcards))
-            if not files:
-                raise IOError('No files were found in "%s" that match '
-                              'provided pattern "%s"'
-                              % (project.image_dir,
-                                 self.args.wildcards))
-            images = [IntensityImage(f, self.args.config) for f in files]
+        files = [f for f in project.image_files
+                 if f.channel == self.args.channel_nr]
 
-        experiment = Experiment(project.experiment_dir, self.args.config)
-        cycles = experiment.subexperiments
-        current_cycle = images[0].cycle
-        data_filename = experiment.data_filename
-
-        if self.args.thresh_sample > len(images):
-            self.args.thresh_sample = len(images)
-
+        images = [f.image for f in files]
         layer = Mosaic(images, self.args.config)
 
-        if self.args.id_luts:
-            print('ᐄ  CREATING ID LOOKUP TABLES ')
-            segment.create_and_save_lookup_tables(layer.image_grid,
-                                                  data_filename,
-                                                  self.args.output_dir)
-            print '🍺  Done!'
-            sys.exit(0)
+        experiment = Experiment(project.experiment_dir, self.args.config)
 
-        # Create a vips image for each file
+        print('ᐄ  CREATING CHANNEL LAYER')
+
+        #######################################################################
+        #                           IMAGE LOADING                             #
+        #######################################################################
+
         print '.. Loading images'
-        if self.args.outline_mask or self.args.area_mask:
-            if self.args.outline_mask:
-                print('ᐄ  CREATING OUTLINE MASKS')
-                layer.build_mask_grid(data_filename, mask='outline',
-                                      global_ids=self.args.make_global_ids)
-            elif self.args.area_mask:
-                print('ᐄ  CREATING AREA MASKS')
-                layer.build_mask_grid(data_filename, mask='area',
-                                      global_ids=self.args.make_global_ids)
-        else:
-            layer.build_channel_grid()
+        layer.build_channel_grid()
+
+        #######################################################################
+        #                        OUTPUT PREPARATION                           #
+        #######################################################################
+
+        if not self.args.output_dir:
+            self.args.output_dir = self.args.config['LAYERS_FOLDER_LOCATION'].format(
+                                    experiment_dir=experiment.experiment_dir,
+                                    sep=os.path.sep)
+            if not self.args.layer_name:
+                raise IOError('You need to provide the name of the layer.')
+            self.args.output_dir = os.path.join(self.args.output_dir,
+                                                self.args.layer_name)
+
+        if not os.path.exists(self.args.output_dir):
+            print '.. Creating output directory: "%s"' % self.args.output_dir
+            os.makedirs(self.args.output_dir)
 
         #######################################################################
         #                       ILLUMINATION CORRECTING                       #
@@ -113,7 +87,7 @@ class Illuminati(object):
 
             # retrieve illumination correction statistics
             channel_index = [i for i, s in enumerate(project.stats_files)
-                             if s.channel == images[0].channel][0]
+                             if s.channel == self.args.channel_nr][0]
             stats = project.stats_files[channel_index]
 
             layer.apply_illumination_correction_to_grid(stats)
@@ -132,6 +106,9 @@ class Illuminati(object):
 
         if self.args.shift:
             print 'ᐄ  SHIFTING MOSAIC IMAGE'
+            cycles = experiment.subexperiments
+            current_cycle = images[0].cycle
+
             layer.shift_stitched_image(cycles, current_cycle)
 
         #######################################################################
@@ -143,6 +120,8 @@ class Illuminati(object):
             if self.args.thresh_value:
                 print '   ... Using provided threshold value'
             else:
+                if self.args.thresh_sample > len(images):
+                    self.args.thresh_sample = len(images)
                 print('   ... Computing threshold value corresponding to the '
                       '%d\% percentile on %d sampled images'
                       % (self.args.thresh_percent, self.args.thresh_sample))
@@ -168,6 +147,98 @@ class Illuminati(object):
             sys.exit(0)
 
         print '.. Creating pyramid from mosaic image'
+        layer.create_pyramid(self.args.output_dir)
+
+    def mask(self):
+        '''
+        Create pyramid of "mask" images.
+        '''
+        #######################################################################
+        #                       CONFIGURATION HANDLING                        #
+        #######################################################################
+
+        project = Project(self.args.project_dir, self.args.config)
+
+        files = [f for f in project.segmentation_files
+                 if f.objects == self.args.objects_name]
+
+        images = [f.image for f in files]
+        layer = Mosaic(images, self.args.config)
+
+        experiment = Experiment(project.experiment_dir, self.args.config)
+        data_filename = experiment.data_filename
+
+        if self.args.mask == 'outline':
+            print('ᐄ  CREATING OUTLINE MASK LAYER')
+        elif self.args.mask == 'area':
+            print('ᐄ  CREATING AREA MASK LAYER')
+        else:
+            raise ValueError('Mask must either be "outline" or "area".')
+
+        #######################################################################
+        #                          IMAGE LOADING                              #
+        #######################################################################
+
+        print '.. Loading images'
+        layer.build_mask_grid(data_filename, mask=self.args.mask,
+                              global_ids=self.args.make_global_ids)
+
+        #######################################################################
+        #                       OUTPUT PREPARATION                            #
+        #######################################################################
+
+        if not self.args.output_dir:
+            self.args.output_dir = self.args.config['LAYERS_FOLDER_LOCATION'].format(
+                                    experiment_dir=experiment.experiment_dir,
+                                    sep=os.path.sep)
+            if not self.args.layer_name:
+                raise IOError('You need to provide the name of the layer.')
+            self.args.output_dir = os.path.join(self.args.output_dir,
+                                                self.args.layer_name)
+
+        if self.args.make_global_ids:
+            self.args.output_dir = self.args.config['ID_PYRAMIDS_FOLDER_LOCATION'].format(
+                                    experiment_dir=experiment.experiment_dir,
+                                    sep=os.path.sep)
+        else:
+            # TissueMAPS requires mask layer folders to end on "_Mask"
+            if not re.search('_Mask$', self.args.output_dir):
+                self.args.output_dir = '%s_Mask' % self.args.output_dir
+
+        if not os.path.exists(self.args.output_dir) and not self.args.id_luts:
+            print '.. Creating output directory: "%s"' % self.args.output_dir
+            os.makedirs(self.args.output_dir)
+
+        #######################################################################
+        #                             STITCHING                               #
+        #######################################################################
+
+        print '.. Stitching images to mosaic image'
+
+        layer.stitch_images()
+
+        #######################################################################
+        #                              SHIFTING                               #
+        #######################################################################
+
+        if self.args.shift:
+            print 'ᐄ  SHIFTING MOSAIC IMAGE'
+            cycles = experiment.subexperiments
+            current_cycle = images[0].cycle
+
+            layer.shift_stitched_image(cycles, current_cycle)
+
+        #######################################################################
+        #                            PYRAMIDIZING                             #
+        #######################################################################
+
+        if self.args.stitch_only:
+            print('ᐄ  SAVING MOSAIC IMAGE')
+            layer.save_stitched_image(self.args.output_dir)
+            print '🍺  Done!'
+            sys.exit(0)
+
+        print '.. Creating pyramid from mosaic image'
         if not self.args.no_rescale and not self.args.png:
             layer.create_pyramid(self.args.output_dir)
         else:
@@ -180,8 +251,51 @@ class Illuminati(object):
             layer.create_pyramid(self.args.output_dir,
                                  tile_file_extension='.png')
 
+    def lut(self):
+        '''
+        Create ID lookup tables.
+        '''
+
+        # TODO: create LUTs as HDF5 files
+
+        #######################################################################
+        #                       CONFIGURATION HANDLING                        #
+        #######################################################################
+        project = Project(self.args.project_dir, self.args.config)
+
+        files = [f for f in project.segmentation_files
+                 if f.objects == self.args.objects_name]
+
+        images = [f.image for f in files]
+        layer = Mosaic(images, self.args.config)
+
+        experiment = Experiment(project.experiment_dir, self.args.config)
+        data_filename = experiment.data_filename
+
+        print('ᐄ  CREATING ID LOOKUP TABLES ')
+
+        #######################################################################
+        #                        OUTPUT PREPARATION                           #
+        #######################################################################
+
+        self.args.output_dir = self.args.config['ID_TABLES_FOLDER_LOCATION'].format(
+                                    experiment_dir=experiment.experiment_dir,
+                                    sep=os.path.sep)
+
+        if not os.path.exists(self.args.output_dir) and not self.args.id_luts:
+            print '.. Creating output directory: "%s"' % self.args.output_dir
+            os.makedirs(self.args.output_dir)
+
+        #######################################################################
+        #                             CREATE LUTS                             #
+        #######################################################################
+
+        segment.create_and_save_lookup_tables(layer.image_grid,
+                                              data_filename,
+                                              self.args.output_dir)
+
     @staticmethod
-    def process_cli_commands(args):
+    def process_cli_commands(args, subparser):
         '''
         Initialize Corilla class with parsed command line arguments.
 
@@ -189,9 +303,17 @@ class Illuminati(object):
         ----------
         args: argparse.Namespace
             arguments parsed by command line interface
+        subparser: argparse.ArgumentParser
         '''
         cli = Illuminati(args)
-        cli.build()
+        if subparser.prog == 'illuminati channel':
+            cli.channel()
+        elif subparser.prog == 'illuminati mask':
+            cli.mask()
+        elif subparser.prog == 'illuminati lut':
+            cli.lut()
+        else:
+            subparser.print_help()
 
     @staticmethod
     def process_ui_commands(args):
@@ -205,5 +327,3 @@ class Illuminati(object):
         '''
         args = tmt.util.Namespacified(args)
         ui = Illuminati(args)
-        ui.run()
-

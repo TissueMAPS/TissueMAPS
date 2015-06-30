@@ -1,48 +1,11 @@
 #! /usr/bin/env python
 # encoding: utf-8
-import os
-import os.path
 import sys
-import re
+from functools import partial
 import argparse
 import tmt
 import traceback
 from tmt.illuminati.api import Illuminati
-
-"""
-Illuminati is a command line tool for pre-processing images for TissueMAPS.
-It combines the following routines:
-* shifting (-s)
-* illumination correcting (-i)
-* thresholding (-t)
-Each of these routines comes with a separate command line interface that provides
-additional functionality and can be used independently. For more details on the
-individual steps see the respective args.files.
-
-A potential call (from BASH) to this tool could look something like this:
-
-    $ illuminati \\
-        -sit TIFF/15*_r0[1-4]*_c0[1-4]*DAPI*.png -o out.png \\
-
-See all available options with:
-
-    $ illuminati --help
-
-Some example use cases:
-
-    - Create a pyramid out of segmentation args.files, retaining their 16 bit depth:
-
-        $ illuminati --area-mask --png --make-global-ids path/to/*.png -o my_cell_id_pyramid
-
-    - Create a pyramid of cell outlines, also retaining their 16 bit depth:
-
-        $ illuminati --outline-mask --png path/to/*.png -o my_outline_pyramid
-
-    - Create id tables:
-
-        $ illuminati --id-luts path/to/label_matrices/*.png -o id_tables
-
-"""
 
 
 if __name__ == '__main__':
@@ -52,115 +15,144 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create pyramid images for TissueMAPS.')
 
-    parser.add_argument('project_dir', nargs='*', type=str,
-                        help='project directory')
+    subparsers = parser.add_subparsers()
 
-    parser.add_argument('-w', '--wildcards', dest='wildcards',
-                        type=str, required=True,
-                        help='wildcards (globbing patterns) to select a \
-                              subset of image files, e.g. *DAPI*.png')
+    channel_parser = subparsers.add_parser('channel',
+                                help='create pyramid for "channel" layer')
 
-    parser.add_argument('-o', '--output', dest='output_dir',
-                        help='directory where output should be saved')
+    channel_parser.add_argument('project_dir', type=str,
+                                help='path to project directory')
 
-    parser.add_argument('-c', '--config', dest='config',
-                        help='path to custom yaml configuration file \
-                        (defaults to "tmt" configuration)')
+    channel_parser.add_argument('-n', dest='channel_nr', type=int,
+                                help='number of channel to process')
 
-    parser.add_argument('-s', '--shift', dest='shift',
-                        action='store_true', default=False,
-                        help='shift stitched image')
+    channel_parser.add_argument('-s', '--shift', dest='shift',
+                                action='store_true', default=False,
+                                help='shift stitched image')
 
-    parser.add_argument('-i', '--illum_correct', dest='illum_correct',
-                        action='store_true', default=False,
-                        help='correct images for illumination\
-                        according to stats file')
+    channel_parser.add_argument('-i', '--illum_correct', dest='illum_correct',
+                                action='store_true', default=False,
+                                help='correct images for illumination\
+                                      according to stats file')
 
-    parser.add_argument('-t', '--thresh', dest='thresh',
-                        action='store_true', default=False,
-                        help='rescale stitched image between min value and a \
-                              threshold level')
-    parser.add_argument('--thresh-value', dest='thresh_value',
-                        type=float, default=False,
-                        help='fixed pixel value for threshold')
-    parser.add_argument('--thresh-percent', dest='thresh_percent',
-                        type=float, default=9.99,
-                        help='percentile of pixel values above threshold \
-                              (defaults to 99.99)')
-    parser.add_argument('--thresh-sample', dest='thresh_sample',
-                        type=int, default=10,
-                        help='number of args.files to use for threshold \
-                              estimation (defaults to 10')
+    channel_parser.add_argument('-t', '--thresh', dest='thresh',
+                                action='store_true', default=False,
+                                help='rescale stitched image between min \
+                                      value and a threshold level')
+    channel_parser.add_argument('--thresh-value', dest='thresh_value',
+                                type=float, default=False,
+                                help='fixed pixel value for threshold')
+    channel_parser.add_argument('--thresh-percent', dest='thresh_percent',
+                                type=float, default=9.99,
+                                help='percentile of pixel values above \
+                                      threshold (defaults to 99.99)')
+    channel_parser.add_argument('--thresh-sample', dest='thresh_sample',
+                                type=int, default=10,
+                                help='number of args.files to use for \
+                                      threshold estimation (defaults to 10')
 
-    parser.add_argument('--stitch_only', dest='stitch_only',
-                        action='store_true', default=False,
-                        help='if the stitched image should be saved without \
-                              pyramid creation')
+    channel_parser.add_argument('--stitch_only', dest='stitch_only',
+                                action='store_true', default=False,
+                                help='if the stitched image should be saved \
+                                      without pyramid creation')
 
-    parser.add_argument('--id-luts', dest='id_luts',
-                        action='store_true', default=False,
-                        help='if lookup tables for the cell ids should be '
-                        'created. These tables are just int32 numpy arrays '
-                        'with the same name as the original segmentations.')
+    channel_parser.add_argument('-o', '--output', dest='output_dir',
+                                help='directory where output should be saved')
 
-    parser.add_argument('--area-mask', dest='area_mask',
-                        action='store_true', default=False,
-                        help='create masks that consist of whole objects')
-    parser.add_argument('-m', '--outline-mask', dest='outline_mask',
-                        action='store_true', default=False,
-                        help='create masks that consist of object outlines')
+    channel_parser.add_argument('-l', '--layer', dest='layer_name', type=str,
+                                help='name that should be given to the layer')
 
-    parser.add_argument('--make-global-ids', dest='make_global_ids',
-                        action='store_true', default=False,
-                        help='if all the cell labels should be made into '
-                             'globally unique labels.')
-    parser.add_argument('--png', dest='png',
-                        action='store_true', default=False,
-                        help='Save the pyramid tiles as png, default is jpg.')
-    parser.add_argument('--no-rescale', dest='no_rescale',
-                        action='store_true', default=False,
-                        help='don\'t perform any 16bit -> 8bit rescaling. '
-                        'The resulting pyramid will have 16bit PNG tiles.')
+    channel_parser.add_argument('-c', '--config', dest='config',
+                                help='path to custom yaml configuration file \
+                                      (defaults to "tmt" configuration)')
+
+    channel_parser.set_defaults(handler=partial(Illuminati.process_cli_commands,
+                                                subparser=channel_parser))
+
+    mask_parser = subparsers.add_parser('mask',
+                             help='create pyramid for "mask" layer')
+
+    mask_parser.add_argument('project_dir', type=str,
+                             help='path to project directory')
+
+    mask_parser.add_argument('-n', dest='objects_name', type=int,
+                             help='name of objects to process (e.g. "cells")')
+
+    mask_parser.add_argument('-s', '--shift', dest='shift',
+                             action='store_true', default=False,
+                             help='shift stitched image')
+
+    mask_parser.add_argument('--stitch_only', dest='stitch_only',
+                             action='store_true', default=False,
+                             help='if the stitched image should be saved \
+                                   without pyramid creation')
+
+    mask_parser.add_argument('-o', '--output', dest='output_dir',
+                             help='directory where output should be saved')
+
+    mask_parser.add_argument('-l', '--layer', dest='layer_name', type=str,
+                             help='name that should be given to the layer')
+
+    mask_parser.add_argument('-c', '--config', dest='config',
+                             help='path to custom yaml configuration file \
+                                   (defaults to "tmt" configuration)')
+
+    mask_parser.add_argument('-m', dest='mask', type=str, default='outline',
+                             help='type of mask that should be created, \
+                                   "area" or "outline" (default)')
+
+    mask_parser.add_argument('--make-global-ids', dest='make_global_ids',
+                             action='store_true', default=False,
+                             help='if cell labels should be converted into \
+                                   globally unique labels')
+    mask_parser.add_argument('--png', dest='png',
+                             action='store_true', default=False,
+                             help='save pyramid tiles as png (default is jpg)')
+    mask_parser.add_argument('--no-rescale', dest='no_rescale',
+                             action='store_true', default=False,
+                             help='no 16bit -> 8bit rescaling')
+
+    mask_parser.set_defaults(handler=partial(Illuminati.process_cli_commands,
+                                             subparser=mask_parser))
+
+    lut_parser = subparsers.add_parser('lut',
+                            help='create id lookup tables')
+
+    lut_parser.add_argument('project_dir', type=str,
+                            help='path to project directory')
+
+    lut_parser.add_argument('-n', dest='objects_name', type=int,
+                            help='name of objects to process (e.g. "cells")')
+
+    lut_parser.add_argument('-c', '--config', dest='config',
+                            help='path to custom yaml configuration file \
+                                  (defaults to "tmt" configuration)')
+
+    lut_parser.set_defaults(handler=partial(Illuminati.process_cli_commands,
+                                            subparser=lut_parser))
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.project_dir):
-        raise OSError('Project directory does not exist: %s'
-                      % args.project_dir)
-
-    if args.config:
-        # Overwrite default "tmt" configuration
-        args.config = tmt.util.load_config(args.config)
-        tmt.util.check_config(args.config)
-    else:
-        args.config = tmt.config
-
-    if args.shift_only and not args.output_dir:
+    if args.stitch_only and not args.output_dir:
         raise Exception('The `--stich_only` argument is only valid together '
                         'with the `--output` argument, because you need to '
                         'explicitly provide an output directory.')
 
-    if not args.output_dir:
-        args.output_dir = args.config['LAYERS_FOLDER_LOCATION']
-
-    if args.outline_mask or args.area_mask:
-        if args.make_global_ids:
-            args.output_dir = args.config['ID_PYRAMIDS_FOLDER_LOCATION']
-        else:
-            # TissueMAPS requires mask layer folders to end on "_Mask"
-            if not re.search('_Mask$', args.output_dir):
-                args.output_dir = '%s_Mask' % args.output_dir
-
-    if args.id_luts:
-        args.output_dir = args.config['ID_TABLES_FOLDER_LOCATION']
-
-    if not os.path.exists(args.output_dir) and not args.id_luts:
-        print '.. Creating output directory: "%s"' % args.output_dir
-        os.makedirs(args.output_dir)
+    if args.config:
+        # Overwrite default "tmt" configuration
+        print '. Using configuration file "%s"' % args.config
+        args.config = tmt.util.load_config(args.config)
+        print '. Checking configuration file'
+        tmt.util.check_config(args.config)
+    else:
+        args.config = tmt.config
 
     try:
-        Illuminati.process_cli_commands(args)
-        print '🍺  Done!'
+        if args.handler:
+            args.handler(args)
+            print '🍺  Done!'
+        else:
+            parser.print_help()
     except Exception as error:
         sys.stdout.write('Failed. ')
         print 'Error message: "%s"\n' % str(error)
