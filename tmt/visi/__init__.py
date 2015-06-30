@@ -2,7 +2,7 @@ from os.path import join, dirname, realpath
 from tmt.util import load_config
 from tmt.visi.util import check_visi_config
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 logo = '''

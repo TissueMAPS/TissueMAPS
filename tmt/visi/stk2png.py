@@ -300,8 +300,9 @@ class Stk2png(object):
             # Map well ids to filenames:
             # We simply loaded the well information for all sites form nd file,
             # now we have to extract the relevant info for the processed sites
-            unique_sites = np.unique(self.info['site']) - 1  # one-based!
-            self.info['well'] = [self.info['well'][i] for i in unique_sites]
+            # They are sorted according to "site".
+            self.info['well'] = [self.info['well'][i-1]  # sites are one-based!
+                                 for i in self.info['site']]
         else:
             self.info['well'] = [0 for x in xrange(len(self.input_files))]
 
