@@ -10,7 +10,9 @@ align -h
 Positional arguments:
 - **run**: run shift calculation
 - **joblist**: create a joblist YAML file for parallel processing
+- **submit**: submit jobs for shift calculation on a cluster
 - **fuse**: fuse calculated shifts, calculate overlaps, and create the shift descriptor JSON file
+- **apply**: apply the calculated shift and overlap values to images in order to align them, i.e. crop them
 
 The information required for alignment is generated in two steps:     
 1) **Image registration**: calculate shift between an image and a reference image (*run* step)
