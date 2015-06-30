@@ -132,7 +132,7 @@ def guess_stitch_dims(max_position, layout):
     return stitch_dims
 
 
-def get_image_snake(stitch_dims, zig_zag):
+def determine_image_snake(stitch_dims, zig_zag):
     '''
     The image snake defines the position of each image in the stitched
     image.
@@ -318,15 +318,18 @@ class Stk2png(object):
         else:
             raise Exception('The provided acquisition mode is not supported.')
 
-        sites = np.array(self.info['site'])
+        # determine acquisition grid layout a.k.a. image "snake"
         stitch_dims = guess_stitch_dims(self.nr_sites, self.acquisition_layout)
-        snake = get_image_snake(stitch_dims, doZigZag)
+        snake = determine_image_snake(stitch_dims, doZigZag)
+
+        sites = np.array(self.info['site'])
         column = np.array([None for x in xrange(len(sites))])
         row = np.array([None for x in xrange(len(sites))])
         for i in xrange(self.nr_sites):
-            if i not in sites:
+            j = i+1  # sites are one-based
+            if j not in sites:
                 continue
-            ix = np.where(sites == i)[0]
+            ix = np.where(sites == j)[0]
             column[ix] = snake['column'][i]
             row[ix] = snake['row'][i]
         self.info['column'] = map(int, column)
