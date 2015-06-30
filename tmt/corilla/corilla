@@ -62,6 +62,39 @@ if __name__ == '__main__':
     apply_parser.set_defaults(handler=partial(Corilla.process_cli_commands,
                               subparser=apply_parser))
 
+    joblist_parser = subparsers.add_parser('joblist',
+                                help='create a joblist for parallel computing')
+
+    joblist_parser.add_argument('project_dir', nargs='?',
+                                default=os.getcwd(),
+                                help='path to project directory')
+
+    joblist_parser.add_argument('-b', '--batch_size', dest='batch_size',
+                                type=int, default=5,
+                                help='number of files that should be \
+                                      processed per job (defaults to 5)')
+
+    joblist_parser.add_argument('-c', '--config', dest='config',
+                                help='use custom yaml configuration file \
+                                      (defaults to "tmt" configuration)')
+
+    joblist_parser.set_defaults(handler=partial(Corilla.process_cli_commands,
+                                                subparser=joblist_parser))
+
+    submit_parser = subparsers.add_parser('submit',
+                               help='submit statistics calculation')
+
+    submit_parser.add_argument('project_dir', nargs='?',
+                               default=os.getcwd(),
+                               help='path to project directory')
+
+    submit_parser.add_argument('-c', '--config', dest='config',
+                               help='use custom yaml configuration file \
+                                     (defaults to "tmt" configuration)')
+
+    submit_parser.set_defaults(handler=partial(Corilla.process_cli_commands,
+                               subparser=submit_parser))
+
     args = parser.parse_args()
 
     if not os.path.exists(args.project_dir):

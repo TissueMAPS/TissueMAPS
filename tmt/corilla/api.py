@@ -5,6 +5,7 @@ import re
 import h5py
 import tmt.imageutil
 from tmt.project import Project
+from tmt.cluster import Cluster
 from tmt.corilla.stats import OnlineStatistics
 
 
@@ -31,6 +32,10 @@ class Corilla(object):
         '''
         self.args.config['USE_VIPS_LIBRARY'] = False  # TODO: Vips
         project = Project(self.args.project_dir, self.args.config)
+
+        if not os.path.exists(project.stats_dir):
+            print 'Creating output directory: %s' % project.stats_dir
+            os.mkdir(project.stats_dir)
 
         channels = np.unique([i.channel for i in project.image_files])
         print 'Found %d channels' % len(channels)
@@ -87,6 +92,40 @@ class Corilla(object):
                                                output_filename)
                 tmt.imageutil.save_image(im_corrected, output_filename)
 
+    def submit(self):
+        '''
+        Submit jobs for shift calculation.
+
+        In contrast to other routines, submission doesn't require joblist!
+        '''
+        project = Project(self.args.project_dir, self.args.config)
+        channels = np.unique([i.channel for i in project.image_files])
+        print 'Found %d channels' % len(channels)
+
+        if not os.path.exists(project.stats_dir):
+            print 'Creating output directory: %s' % project.stats_dir
+            os.mkdir(project.stats_dir)
+
+        lsf_dir = os.path.join(project.experiment_dir, 'lsf')
+        if not os.path.exists(lsf_dir):
+            os.mkdir(lsf_dir)
+
+        for c in channels:
+            timestamp = tmt.cluster.create_timestamp()
+            if not os.path.exists(lsf_dir):
+                os.makedirs(lsf_dir)
+            lsf = os.path.join(lsf_dir, 'corilla_%s_%s_C%.2d_%s.lsf'
+                               % (project.experiment,
+                                  project.subexperiment, c, timestamp))
+
+            command = [
+                'corilla', 'run', '--channel', str(c), self.args.project_dir
+            ]
+
+            print '. submitting job #%d' % c
+            job = Cluster(lsf)
+            job.submit(command)
+
     @staticmethod
     def process_cli_commands(args, subparser):
         '''
@@ -103,5 +142,9 @@ class Corilla(object):
             cli.run()
         elif subparser.prog == 'corilla apply':
             cli.apply()
+        # elif subparser.prog == 'corilla joblist':
+        #     cli.joblist()
+        elif subparser.prog == 'corilla submit':
+            cli.submit()
         else:
             subparser.print_help()

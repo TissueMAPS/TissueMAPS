@@ -7,10 +7,15 @@ For help, do
 corilla -h
 ```
 
+Positional arguments:
+- **run**: run statistics calculation
+- **submit**: submit jobs for statistics calculation on a cluster
+- **apply**: apply calculated statistics to images in order to correct them for illumination artifacts
+
 In order to calculate illumination statistics for all channels of your project, do
 
 ```{bash}
-corilla [project_dir]
+corilla run [project_dir]
 ```
 
 ## Output
