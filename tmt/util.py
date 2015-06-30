@@ -25,8 +25,7 @@ def regex_from_format_string(format_string):
     placeholders_inner_parts = re.findall(r'{(.+?)}', format_string)
     # Remove format strings
     placeholder_names = [pl.split(':')[0] for pl in placeholders_inner_parts]
-    placeholder_regexes = [re.escape('{%s}') % pl
-                           for pl in placeholders_inner_parts]
+    placeholder_regexes = [re.escape('{%s}' % pl) for pl in placeholders_inner_parts]
 
     regex = format_string
     for pl_name, pl_regex in zip(placeholder_names, placeholder_regexes):
