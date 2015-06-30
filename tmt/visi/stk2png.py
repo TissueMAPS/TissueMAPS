@@ -316,12 +316,12 @@ class Stk2png(object):
         elif self.acquisition_mode == 'Horizontal':
             doZigZag = False
         else:
-            raise Exception('The provided acquisition mode is not supported.')
+            raise ValueError('The provided acquisition mode is not supported.')
 
         # determine acquisition grid layout a.k.a. image "snake"
         stitch_dims = guess_stitch_dims(self.nr_sites, self.acquisition_layout)
         snake = determine_image_snake(stitch_dims, doZigZag)
-
+        # find "row" and "column" position of processed sites within the grid
         sites = np.array(self.info['site'])
         column = np.array([None for x in xrange(len(sites))])
         row = np.array([None for x in xrange(len(sites))])

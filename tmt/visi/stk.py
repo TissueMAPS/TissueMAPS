@@ -11,9 +11,19 @@ class Stk(object):
     A visi project corresponds to a folder holding .stk and .nd files.
     '''
 
-    def __init__(self, input_dir, wildcards):
+    def __init__(self, input_dir, wildcards, config):
+        '''
+        Initialize Stk class.
+
+        Parameters
+        ----------
+        input_dir: str
+        wildcards: str
+        config: Dict[str, str]
+        '''
         self.input_dir = input_dir
         self.wildcards = wildcards
+        self.cfg = config
         self.experiment_dir = os.path.dirname(input_dir)
         self.experiment = os.path.basename(self.experiment_dir)
         self.joblist_file = os.path.join(self.experiment_dir,
@@ -78,7 +88,7 @@ class Stk(object):
             self._stk_files = stk_files
         return self._stk_files
 
-    def create_output_dirs(self, output_folder_name, split_output):
+    def create_output_dirs(self, split_output):
         '''
         Create an output directory for each .nd file.
 
@@ -87,9 +97,6 @@ class Stk(object):
 
         Parameters
         ----------
-
-        output_folder_name: str
-                            Name of the output folder.
 
         split_output: bool
                       Should output be split into separate folders for each
@@ -101,6 +108,14 @@ class Stk(object):
         List[str]
 
         '''
+        image_folder_name = self.cfg['IMAGE_FOLDER_LOCATION'].format(
+                                        experiment_dir=self.experiment_dir,
+                                        subexperiment='irrelevant',
+                                        sep=os.path.sep)
+        output_folder_name = os.path.basename(image_folder_name)
+        if not output_folder_name:
+            raise IOError('Output image folder name could not be '
+                          'determined from configuration settings!')
         if split_output:
             nd_bases = [os.path.splitext(os.path.basename(nd))[0]
                         for nd in self.nd_files]

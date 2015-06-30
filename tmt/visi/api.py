@@ -18,11 +18,11 @@ class Visi(object):
         '''
         Create a list of jobs in YAML format for parallel computing.
         '''
-        project = Stk(self.args.stk_folder, self.args.wildcards)
+        project = Stk(self.args.stk_folder, self.args.wildcards,
+                      config=self.args.config)
 
         print '. Creating output directories'
-        project.create_output_dirs(self.args.output_folder_name,
-                                   self.args.split_output)
+        project.create_output_dirs(self.args.split_output)
 
         print '. Creating joblist'
         project.create_joblist(self.args.batch_size)
@@ -34,7 +34,8 @@ class Visi(object):
         '''
         Run unpacking of stk files with optional renaming.
         '''
-        project = Stk(self.args.stk_folder, self.args.wildcards)
+        project = Stk(self.args.stk_folder, self.args.wildcards,
+                      config=self.args.config)
 
         if self.args.job:
 
@@ -74,7 +75,7 @@ class Visi(object):
                                       keep_z=self.args.zstacks)
 
     def submit(self):
-        project = Stk(self.args.stk_folder, '*')
+        project = Stk(self.args.stk_folder, '*', config=self.args.config)
         joblist = project.read_joblist()
 
         lsf_dir = os.path.join(project.experiment_dir, 'lsf')
@@ -89,7 +90,8 @@ class Visi(object):
             if self.args.config_file:
                 command = [
                     'visi', 'run', '--job', str(j['job_id']), '--rename',
-                    '--config', self.args.config_file, self.args.stk_folder
+                    '--visi_config', self.args.config_file,
+                    self.args.stk_folder
                 ]
             else:
                 command = [
