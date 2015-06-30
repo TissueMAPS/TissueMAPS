@@ -17,12 +17,12 @@ __version__ = '0.1.0'
 #             ////
 # '''
 
-logo = u'''
-  /~\ 
- C oo         corilla (%(version)s)
- _( ^)        CORrect for ILLumination Artifact.
-/   ~\        https://github.com/HackerMD/TissueMAPSToolbox
-
-'''
-
 # from http://www.ascii-art.de/ascii/mno/monkey.txt
+
+logo = u'''
+             _ _ _      
+  __ ___ _ _(_) | |__ _     corilla (%(version)s)
+ / _/ _ \ '_| | | / _` |    CORrect for ILLumination Artifact.
+ \__\___/_| |_|_|_\__,_|    https://github.com/HackerMD/TissueMAPSToolbox
+                        
+'''

@@ -40,7 +40,7 @@ class Corilla(object):
         channels = np.unique([i.channel for i in project.image_files])
         print 'Found %d channels' % len(channels)
         if self.args.channel:
-            print 'Process only images of channel #%d' % self.arg.channel
+            print 'Process only images of channel #%d' % self.args.channel
             channels = [c for c in channels if c == self.args.channel]
         for c in channels:
             print '\n. Calculating statistics for images of channel #%d' % c
@@ -122,7 +122,7 @@ class Corilla(object):
                 'corilla', 'run', '--channel', str(c), self.args.project_dir
             ]
 
-            print '. submitting job #%d' % c
+            print '. submitting calculation for channel #%d' % c
             job = Cluster(lsf)
             job.submit(command)
 
@@ -142,8 +142,6 @@ class Corilla(object):
             cli.run()
         elif subparser.prog == 'corilla apply':
             cli.apply()
-        # elif subparser.prog == 'corilla joblist':
-        #     cli.joblist()
         elif subparser.prog == 'corilla submit':
             cli.submit()
         else:
