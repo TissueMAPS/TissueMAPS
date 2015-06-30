@@ -318,13 +318,15 @@ class Stk2png(object):
         else:
             raise Exception('The provided acquisition mode is not supported.')
 
-        sites = self.info['site']
+        sites = np.array(self.info['site'])
         stitch_dims = guess_stitch_dims(self.nr_sites, self.acquisition_layout)
         snake = get_image_snake(stitch_dims, doZigZag)
         column = np.array([None for x in xrange(len(sites))])
         row = np.array([None for x in xrange(len(sites))])
-        for i, s in enumerate(np.unique(sites)):
-            ix = np.where(sites == s)[0]
+        for i in xrange(self.nr_sites):
+            if i not in sites:
+                continue
+            ix = np.where(sites == i)[0]
             column[ix] = snake['column'][i]
             row[ix] = snake['row'][i]
         self.info['column'] = map(int, column)
