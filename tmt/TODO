@@ -1,4 +1,8 @@
-[ ] align: "apply" positional argument to shift and crop images
-[ ] corilla: "apply" positional argument to correct images for illumination
-[ ] checks for arguments of interface classes
-[ ] "submit" positional arguments for align, visi and corilla for parallel processing
+[ ] create class for parsed arguments: keys -> attributes
+    (consider doing the same for configuration settings?)
+[ ] popcon: implement population context measurement in python
+[ ] create a Dataset class for dafu
+[ ] issue for sphinxcontrib-matlabdomain
+[-] ConfigParser class for tmt.config file?
+[ ] ShiftParser class for shiftDescriptor.json file
+[ ] Move documentation on usage from READMEs into docstrings in actual code

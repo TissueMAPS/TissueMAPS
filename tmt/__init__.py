@@ -15,4 +15,5 @@ util.check_config(config)
 
 if not vips_available:
     config['USE_VIPS_LIBRARY'] = False
-    print 'Vips library not available. Configuration overwritten!'
+    print('Vips library not available. Configuration overwritten!'
+          'Illuminati package will consequently not work!')

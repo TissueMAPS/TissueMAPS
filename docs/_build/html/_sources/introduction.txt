@@ -1,0 +1,81 @@
+.. _introduction:
+
+************
+Introduction
+************
+
+.. _sub-packages:
+
+Sub-packages
+============
+
+The toolbox provides the following routines:
+
+- `align`_ - Alignment of images between different acquisition cycles.
+
+- `corilla`_ - Correction of illumination artifacts.
+
+- `dafu`_ - Data fusion for `Jterator <https://github.com/HackerMD/Jterator>`_ projects.
+
+- `illuminati`_ - Creation of image pyramids.
+
+- `visi`_ - Conversion of `Visiview <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_'s STK files to PNG images with optional renaming.
+
+Each tool comes with a separate API and command line interface, but they all depend on the package wide configuration settings.
+
+.. _configuration-settings:
+
+Configuration settings
+======================
+
+.. literatalinclude:: tmt.config
+    :language: yaml
+
+Config file
+-----------
+
+The *tmt.config* `YAML <http://yaml.org/>`_ file specifies the experiment layout, such as the directory structure on disk.
+
+.. literalinclude:: ../tmt/tmt.config
+   :language: yaml
+
+
+.. note::
+
+    Quotes are generally not required around strings in YAML syntax, but are necessary here to escape the curly braces in the format strings!
+
+.. _config-classes:
+
+Configuration classes
+---------------------
+
+Paths and filenames are described with `Python format strings <https://docs.python.org/2/library/string.html#formatstrings>`_. The configuration classes replace the **replacement fields** surrounded by curly braces ``{}`` with experiment specific variables and provide the formatted path or filename in form of an attribute.
+
+Definitions
+-----------
+
+A **project** represents the folder on disk, which contains the images and corresponding data. This may either be an **experiment** or a **subexperiment**, in case the experiment is made up of several related image acquisition *cycles*, i.e. if you acquired images of the same sample at different time points.
+
+
+Documentation
+=============
+
+We use `Sphinx <http://sphinx-doc.org/index.html>`_ in combination with the `Napoleon extension <https://pypi.python.org/pypi/sphinxcontrib-napoleon>`_ for support of the `reStructuredText NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard>`_.
+
+To update the documentation upon changes in the source code, do
+
+.. code:: bash
+
+    $ sphinx-apidoc -o ./docs ./tmt
+
+To build the documentation website, do
+
+.. code:: bash
+    
+    $ cd docs
+    $ make html
+
+The generated HTML files are located at `docs/_build/html`.
+
+Documentation is available `here <docs/intro.rst>`_.
+

@@ -4,31 +4,32 @@
 Introduction
 ************
 
-**tmt** is a Python package that bundles tools for image processing and data analysis in `TissueMAPS <https://github.com/HackerMD/TissueMAPS>`_.
-
-.. _subpackages:
+.. _sub-packages:
 
 Sub-packages
 ============
 
 The toolbox provides the following routines:
 
-- **align** - Alignment of images between different acquisition cycles.
+- `align`_ - Alignment of images between different acquisition cycles.
 
-- **corilla** - Correction of illumination artifacts.
+- `corilla`_ - Correction of illumination artifacts.
 
-- **dafu** - Data fusion for `Jterator <https://github.com/HackerMD/Jterator>`_ projects.
+- `dafu`_ - Data fusion for `Jterator <https://github.com/HackerMD/Jterator>`_ projects.
 
-- **illuminati** - Creation of image pyramids.
+- `illuminati`_ - Creation of image pyramids.
 
-- **visi** - Conversion of `Visiview <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_'s STK files to PNG images with optional renaming.
+- `visi`_ - Conversion of `Visiview <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_'s STK files to PNG images with optional renaming.
 
 Each tool comes with a separate API and command line interface, but they all depend on the package wide configuration settings.
 
-.. _configurationsettings:
+.. _configuration-settings:
 
 Configuration settings
 ======================
+
+.. literatalinclude:: tmt.config
+    :language: yaml
 
 Config file
 -----------
@@ -37,10 +38,13 @@ The *tmt.config* `YAML <http://yaml.org/>`_ file specifies the experiment layout
 
 .. literalinclude:: ../tmt/tmt.config
    :language: yaml
-..
 
-    NOTE: Quotes are generally not required around strings in YAML syntax, but are necessary here to escape the curly braces in the format strings!
 
+.. note::
+
+    Quotes are generally not required around strings in YAML syntax, but are necessary here to escape the curly braces in the format strings!
+
+.. _config-classes:
 
 Configuration classes
 ---------------------
@@ -52,8 +56,6 @@ Definitions
 
 A **project** represents the folder on disk, which contains the images and corresponding data. This may either be an **experiment** or a **subexperiment**, in case the experiment is made up of several related image acquisition *cycles*, i.e. if you acquired images of the same sample at different time points.
 
-
-.. _documentation:
 
 Documentation
 =============

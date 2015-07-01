@@ -1,13 +1,8 @@
-.. _gettingstarted:
-
-***************
-Getting started
-***************
-
 .. _installation:
 
+************
 Installation
-============
+************
 
 Clone the repository
 
@@ -28,10 +23,12 @@ and install it
 Dependencies
 ============
 
+.. _vips:
+
 Vips
 ----
 
- Images are processed with `VIPS <http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS>`_, a fast and memory efficient image processing library (`API <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html>`_). The library can be installed via homebrew (or other package managers). 
+ Images are processed with `VIPS <http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS>`_, a fast and memory efficient image processing library (`Libvips API <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html>`_). The library can be installed via homebrew (or other package managers). 
 
 On Mac OSX:
 
@@ -71,8 +68,9 @@ For more information see `VIPS from Python <http://www.vips.ecs.soton.ac.uk/supp
 It may also be helpful to look into the `VIPS function list <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/func-list.html>`_.
 
 
-    NOTE: The `illuminati` package depends on `VIPS`, but the other routines also work without `VIPS` and use `numpy` instead if you set ``USE_VIPS_LIBRARY`` to 'No'.
+    NOTE: The `illuminati` package depends on `VIPS`, but the other routines also work without `VIPS` and use `numpy` instead if you set ``USE_VIPS_LIBRARY`` to "No".
 
+.. _hdf5:
 
 HDF5
 ----
@@ -86,4 +84,4 @@ On Mac OSX:
     $ brew tab homebrew/science
     $ brew install hdf5
 
-The content of `HDF5` files can be conveniently inspected via the command line using `h5ls <https://www.hdfgroup.org/HDF5/doc/RM/Tools.html#Tools-Ls>`_ or via the graphical user interface `HDFVIEW <https://www.hdfgroup.org/products/java/hdfview/index.html>`_.
+The content of `HDF5` files can be conveniently inspected via the command line interface `h5ls <https://www.hdfgroup.org/HDF5/doc/RM/Tools.html#Tools-Ls>`_ or via the graphical user interface `HDFVIEW <https://www.hdfgroup.org/products/java/hdfview/index.html>`_.
