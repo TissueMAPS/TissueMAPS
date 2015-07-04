@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="../../../_static/favicon.png"/>
+    <link rel="shortcut icon" href="../../../_static/tm_favicon.png"/>
     <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
@@ -89,8 +89,7 @@
         <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">image_files</span>
                  <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">channel</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">channel_nr</span><span class="p">]</span>
 
-        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">image</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
 
         <span class="n">experiment</span> <span class="o">=</span> <span class="n">Experiment</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">experiment_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
 
@@ -100,7 +99,7 @@
         <span class="c">#                           IMAGE LOADING                             #</span>
         <span class="c">#######################################################################</span>
 
-        <span class="k">print</span> <span class="s">&#39;.. Loading images&#39;</span>
+        <span class="k">print</span> <span class="s">&#39;.. Loading files&#39;</span>
         <span class="n">layer</span><span class="o">.</span><span class="n">build_channel_grid</span><span class="p">()</span>
 
         <span class="c">#######################################################################</span>
@@ -138,7 +137,7 @@
         <span class="c">#                             STITCHING                               #</span>
         <span class="c">#######################################################################</span>
 
-        <span class="k">print</span> <span class="s">&#39;.. Stitching images to mosaic image&#39;</span>
+        <span class="k">print</span> <span class="s">&#39;.. Stitching files to mosaic image&#39;</span>
 
         <span class="n">layer</span><span class="o">.</span><span class="n">stitch_images</span><span class="p">()</span>
 
@@ -149,7 +148,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">shift</span><span class="p">:</span>
             <span class="k">print</span> <span class="s">&#39;ᐄ  SHIFTING MOSAIC IMAGE&#39;</span>
             <span class="n">cycles</span> <span class="o">=</span> <span class="n">experiment</span><span class="o">.</span><span class="n">subexperiments</span>
-            <span class="n">current_cycle</span> <span class="o">=</span> <span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">cycle</span>
+            <span class="n">current_cycle</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">cycle</span>
 
             <span class="n">layer</span><span class="o">.</span><span class="n">shift_stitched_image</span><span class="p">(</span><span class="n">cycles</span><span class="p">,</span> <span class="n">current_cycle</span><span class="p">)</span>
 
@@ -162,10 +161,10 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_value</span><span class="p">:</span>
                 <span class="k">print</span> <span class="s">&#39;   ... Using provided threshold value&#39;</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_sample</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_sample</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_sample</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_sample</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
                 <span class="k">print</span><span class="p">(</span><span class="s">&#39;   ... Computing threshold value corresponding to the &#39;</span>
-                      <span class="s">&#39;</span><span class="si">%d</span><span class="s">\% percentile on </span><span class="si">%d</span><span class="s"> sampled images&#39;</span>
+                      <span class="s">&#39;</span><span class="si">%d</span><span class="s">\% percentile on </span><span class="si">%d</span><span class="s"> sampled files&#39;</span>
                       <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_percent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_sample</span><span class="p">))</span>
 
             <span class="n">layer</span><span class="o">.</span><span class="n">apply_threshold_to_stitched_image</span><span class="p">(</span>
@@ -174,9 +173,8 @@
                         <span class="n">thresh_percent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">thresh_percent</span>
             <span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">make_global_ids</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">no_rescale</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&#39;.. Rescaling mosaic image&#39;</span>
-            <span class="n">layer</span><span class="o">.</span><span class="n">scale_stitched_image</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&#39;.. Rescaling mosaic image&#39;</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">scale_stitched_image</span><span class="p">()</span>
 
         <span class="c">#######################################################################</span>
         <span class="c">#                            PYRAMIDIZING                             #</span>
@@ -193,7 +191,7 @@
 </div>
 <div class="viewcode-block" id="Illuminati.mask"><a class="viewcode-back" href="../../../tmt.illuminati.html#tmt.illuminati.api.Illuminati.mask">[docs]</a>    <span class="k">def</span> <span class="nf">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Create pyramid of &quot;mask&quot; images.</span>
+<span class="sd">        Create pyramid of &quot;mask&quot; files.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="c">#######################################################################</span>
         <span class="c">#                       CONFIGURATION HANDLING                        #</span>
@@ -204,8 +202,7 @@
         <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">segmentation_files</span>
                  <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">objects</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">objects_name</span><span class="p">]</span>
 
-        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">image</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
 
         <span class="n">experiment</span> <span class="o">=</span> <span class="n">Experiment</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">experiment_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
         <span class="n">data_filename</span> <span class="o">=</span> <span class="n">experiment</span><span class="o">.</span><span class="n">data_filename</span>
@@ -221,7 +218,7 @@
         <span class="c">#                          IMAGE LOADING                              #</span>
         <span class="c">#######################################################################</span>
 
-        <span class="k">print</span> <span class="s">&#39;.. Loading images&#39;</span>
+        <span class="k">print</span> <span class="s">&#39;.. Loading files&#39;</span>
         <span class="n">layer</span><span class="o">.</span><span class="n">build_mask_grid</span><span class="p">(</span><span class="n">data_filename</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span>
                               <span class="n">global_ids</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">make_global_ids</span><span class="p">)</span>
 
@@ -255,7 +252,7 @@
         <span class="c">#                             STITCHING                               #</span>
         <span class="c">#######################################################################</span>
 
-        <span class="k">print</span> <span class="s">&#39;.. Stitching images to mosaic image&#39;</span>
+        <span class="k">print</span> <span class="s">&#39;.. Stitching files to mosaic image&#39;</span>
 
         <span class="n">layer</span><span class="o">.</span><span class="n">stitch_images</span><span class="p">()</span>
 
@@ -266,7 +263,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">shift</span><span class="p">:</span>
             <span class="k">print</span> <span class="s">&#39;ᐄ  SHIFTING MOSAIC IMAGE&#39;</span>
             <span class="n">cycles</span> <span class="o">=</span> <span class="n">experiment</span><span class="o">.</span><span class="n">subexperiments</span>
-            <span class="n">current_cycle</span> <span class="o">=</span> <span class="n">images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">cycle</span>
+            <span class="n">current_cycle</span> <span class="o">=</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">cycle</span>
 
             <span class="n">layer</span><span class="o">.</span><span class="n">shift_stitched_image</span><span class="p">(</span><span class="n">cycles</span><span class="p">,</span> <span class="n">current_cycle</span><span class="p">)</span>
 
@@ -308,8 +305,8 @@
         <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">segmentation_files</span>
                  <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">objects</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">objects_name</span><span class="p">]</span>
 
-        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">image</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
-        <span class="n">layer</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">image</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
 
         <span class="n">experiment</span> <span class="o">=</span> <span class="n">Experiment</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">experiment_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
         <span class="n">data_filename</span> <span class="o">=</span> <span class="n">experiment</span><span class="o">.</span><span class="n">data_filename</span>
@@ -377,7 +374,7 @@
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
-              <img class="logo" src="../../../_static/logo.png" alt="Logo"/>
+              <img class="logo" src="../../../_static/tm_logo.svg" alt="Logo"/>
             </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>

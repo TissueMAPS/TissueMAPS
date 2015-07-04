@@ -42,7 +42,7 @@ Since `VIPS` is used from python, you also need to install the required python p
   
 .. code:: bash
 
-    $ pip install pygobject3
+    $ brew install pygobject3
 
 
 You also need to set the ``GI_TYPELIB_PATH`` variable.

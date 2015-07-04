@@ -76,6 +76,3 @@ To build the documentation website, do
     $ make html
 
 The generated HTML files are located at `docs/_build/html`.
-
-Documentation is available `here <docs/intro.rst>`_.
-

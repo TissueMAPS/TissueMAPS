@@ -139,12 +139,12 @@ html_short_title = 'tmt docs'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = '_static/logo.png'
+html_logo = '_static/tm_logo.svg'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = '_static/favicon.png'
+html_favicon = '_static/tm_favicon.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -235,7 +235,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'TissueMAPSToolbox.tex', u'TissueMAPS Toolbox Documentation',
-   u'Markus D. Herrmann, Robin Hafen', 'manual'),
+   u'Markus D. Herrmann, Robin Hafen, Lucas Pelkmans', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

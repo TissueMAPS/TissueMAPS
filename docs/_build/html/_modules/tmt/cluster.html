@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="../../_static/favicon.png"/>
+    <link rel="shortcut icon" href="../../_static/tm_favicon.png"/>
     <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="../../index.html" />
     <link rel="up" title="Module code" href="../index.html" />
    
@@ -40,13 +40,12 @@
           <div class="body" role="main">
             
   <h1>Source code for tmt.cluster</h1><div class="highlight"><pre>
-<span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">yaml</span>
 <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-<span class="kn">import</span> <span class="nn">socket</span>
-<span class="kn">import</span> <span class="nn">subprocess32</span>
+<span class="c"># import socket</span>
+<span class="c"># import subprocess32</span>
 
 
 <div class="viewcode-block" id="create_batches"><a class="viewcode-back" href="../../tmt.html#tmt.cluster.create_batches">[docs]</a><span class="k">def</span> <span class="nf">create_batches</span><span class="p">(</span><span class="n">li</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
@@ -119,58 +118,58 @@
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">joblist_file</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">joblist_file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
 
-</div>
-<div class="viewcode-block" id="Cluster"><a class="viewcode-back" href="../../tmt.html#tmt.cluster.Cluster">[docs]</a><span class="k">class</span> <span class="nc">Cluster</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Class for cluster job handling.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Initialize Cluster class.</span>
-<span class="sd">        </span>
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        output_dir: str</span>
-<span class="sd">            path to directory were output log files should be saved</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_on_brutus</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir</span>
+<span class="c"># class Cluster(object):</span>
+<span class="c">#     &#39;&#39;&#39;</span>
+<span class="c">#     Class for cluster job handling.</span>
+<span class="c">#     &#39;&#39;&#39;</span>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">on_brutus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Are we on Brutus?</span>
+<span class="c">#     def __init__(self, output_dir):</span>
+<span class="c">#         &#39;&#39;&#39;</span>
+<span class="c">#         Initialize Cluster class.</span>
+        
+<span class="c">#         Parameters</span>
+<span class="c">#         ----------</span>
+<span class="c">#         output_dir: str</span>
+<span class="c">#             path to directory were output log files should be saved</span>
+<span class="c">#         &#39;&#39;&#39;</span>
+<span class="c">#         self._on_brutus = None</span>
+<span class="c">#         self.output_dir = output_dir</span>
 
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_brutus</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">hostname</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">r&#39;brutus&#39;</span><span class="p">,</span> <span class="n">hostname</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_on_brutus</span> <span class="o">=</span> <span class="bp">True</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_on_brutus</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_brutus</span>
+<span class="c">#     @property</span>
+<span class="c">#     def on_brutus(self):</span>
+<span class="c">#         &#39;&#39;&#39;</span>
+<span class="c">#         Are we on Brutus?</span>
 
-<div class="viewcode-block" id="Cluster.submit"><a class="viewcode-back" href="../../tmt.html#tmt.cluster.Cluster.submit">[docs]</a>    <span class="k">def</span> <span class="nf">submit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Submit a standard 8h job. Runs locally if not on the cluster.</span>
+<span class="c">#         Returns</span>
+<span class="c">#         -------</span>
+<span class="c">#         bool</span>
+<span class="c">#         &#39;&#39;&#39;</span>
+<span class="c">#         if self._on_brutus is None:</span>
+<span class="c">#             hostname = socket.gethostname()</span>
+<span class="c">#             if re.search(r&#39;brutus&#39;, hostname):</span>
+<span class="c">#                 self._on_brutus = True</span>
+<span class="c">#             else:</span>
+<span class="c">#                 self._on_brutus = False</span>
+<span class="c">#         return self._on_brutus</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        command: List[str]</span>
-<span class="sd">            elements of the bash command, e.g. [&#39;find&#39;, &#39;-name&#39;, &#39;bla*&#39;]</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_brutus</span><span class="p">:</span>
-            <span class="n">bsub</span> <span class="o">=</span> <span class="p">[</span>
-                 <span class="s">&#39;bsub&#39;</span><span class="p">,</span> <span class="s">&#39;-W&#39;</span><span class="p">,</span> <span class="s">&#39;8:00&#39;</span><span class="p">,</span> <span class="s">&#39;-o&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span>
-                 <span class="s">&#39;-R&#39;</span><span class="p">,</span> <span class="s">&#39;rusage[mem=4000,scratch=4000]&#39;</span>
-            <span class="p">]</span>
-            <span class="n">subprocess32</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">bsub</span> <span class="o">+</span> <span class="n">command</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">subprocess32</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">command</span><span class="p">)</span></div></div>
+<span class="c">#     def submit(self, command):</span>
+<span class="c">#         &#39;&#39;&#39;</span>
+<span class="c">#         Submit a standard 8h job. Runs locally if not on the cluster.</span>
+
+<span class="c">#         Parameters</span>
+<span class="c">#         ----------</span>
+<span class="c">#         command: List[str]</span>
+<span class="c">#             elements of the bash command, e.g. [&#39;find&#39;, &#39;-name&#39;, &#39;bla*&#39;]</span>
+<span class="c">#         &#39;&#39;&#39;</span>
+<span class="c">#         if self.on_brutus:</span>
+<span class="c">#             bsub = [</span>
+<span class="c">#                  &#39;bsub&#39;, &#39;-W&#39;, &#39;8:00&#39;, &#39;-o&#39;, self.output_dir,</span>
+<span class="c">#                  &#39;-R&#39;, &#39;rusage[mem=4000,scratch=4000]&#39;</span>
+<span class="c">#             ]</span>
+<span class="c">#             subprocess32.call(bsub + command)</span>
+<span class="c">#         else:</span>
+<span class="c">#             subprocess32.call(command)</span></div>
 </pre></div>
 
           </div>
@@ -179,7 +178,7 @@
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../index.html">
-              <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+              <img class="logo" src="../../_static/tm_logo.svg" alt="Logo"/>
             </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>
