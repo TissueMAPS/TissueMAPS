@@ -7,8 +7,8 @@ from tmt.visi.stk import Stk
 from tmt.visi.stk2png import Stk2png
 
 import logging
-# gc3libs.configure_logger(level=logging.DEBUG)
-gc3libs.configure_logger(level=logging.INFO)
+gc3libs.configure_logger(level=logging.DEBUG)
+# gc3libs.configure_logger(level=logging.INFO)
 
 class Visi(object):
     '''
@@ -95,7 +95,8 @@ class Visi(object):
         # Put all output files in the same directory
         e.retrieve_overwrites = True
         # Create parallel task collection
-        jobs = gc3libs.workflow.ParallelTaskCollection()
+        # jobs = gc3libs.workflow.ParallelTaskCollection()
+        jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
         for batch in joblist:
 
             if batch['job_id'] > 1:
@@ -103,7 +104,7 @@ class Visi(object):
 
             timestamp = tmt.cluster.create_timestamp()
             log_file = os.path.join('log',
-                                    'visi_%s_%.5d_%s.log'
+                                    'visi_%s_%.5d_%s.txt'
                                     % (project.experiment,
                                        batch['job_id'], timestamp))
 
@@ -124,14 +125,14 @@ class Visi(object):
                 inputs=[batch['nd_file']] + batch['stk_files'],
                 outputs=batch['png_files'],
                 output_dir=batch['output_dir'],
-                jobname=str(batch['job_id']),
+                jobname='visi_%s_%.5d' % (project.experiment, batch['job_id']),
                 # stdout=log_file
             )
             jobs.add(app)
         e.add(jobs)
 
         print 'submit jobs'
-        # Periodically check the status of the jobs
+        # Periodically check the status of the submitted jobs
         while jobs.execution.state != gc3libs.Run.State.TERMINATED:
             print "Jobs in status %s " % jobs.execution.state
             # `Engine.progress()` will do the GC3Pie magic:

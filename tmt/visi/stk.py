@@ -128,16 +128,17 @@ class Stk(object):
         else:
             output_sub_dirs = ['' for x in xrange(len(self.nd_files))]
 
-        # Build full path to output directory
-        output_dirs = [os.path.join(self.input_dir, '..',
-                                    out, output_folder_name)
+        # Relative path to output directories for images
+        output_dirs = [os.path.join(out, output_folder_name)
                        for out in output_sub_dirs]
 
         for out_dir in output_dirs:
+            # Build full path to output directory
+            out_dir = os.path.join(self.input_dir, '..', out_dir)
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
 
-        self.output_dirs = output_dirs
+        self.image_output_dirs = output_dirs
 
     def create_joblist(self, batch_size, rename=True):
         '''
@@ -174,15 +175,18 @@ class Stk(object):
         joblist = list()
         for i, nd_file in enumerate(self.nd_files):
             batches = tmt.cluster.create_batches(self.stk_files[i], batch_size)
-            for j, batch in enumerate(batches):
-                conversion = Stk2png(batch, nd_file, self.cfg)
-                conversion.format_filenames(rename)
+            for j, batch_stk_files in enumerate(batches):
+                renaming = Stk2png(batch_stk_files, nd_file, self.cfg)
+                renaming.format_filenames(rename)
+                # Build path to output files relative to the output directory
+                batch_png_files = [os.path.join(self.image_output_dirs[i], f)
+                                   for f in renaming.output_files]
                 joblist.append({
                     'job_id': i*len(batches)+j+1,
-                    'stk_files': batch,
+                    'stk_files': batch_stk_files,
                     'nd_file': nd_file,
-                    'png_files': conversion.output_files,
-                    'output_dir': self.output_dirs[i]
+                    'png_files': batch_png_files,
+                    'output_dir': self.experiment_dir
                 })
         self.joblist = joblist
         return joblist
