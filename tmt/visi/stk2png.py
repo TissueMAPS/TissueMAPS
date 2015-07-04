@@ -1,4 +1,4 @@
-from os.path import join, basename, dirname
+import os
 import tifffile
 import png
 import numpy as np
@@ -189,11 +189,9 @@ class Stk2png(object):
                                     e.g. "ZigZagHorizontal"
          * ACQUISITION_LAYOUT       either "rows>columns" or "columns>rows"
         '''
-        self.input_files = map(basename, input_files)
-        self.output_files = [re.sub(r'stk$', 'png', f)
-                             for f in self.input_files]
-        self.input_dir = dirname(input_files[0])
-        self.nd_file = basename(nd_file)
+        self.input_files = map(os.path.basename, input_files)
+        self.input_dir = os.path.dirname(input_files[0])
+        self.nd_file = os.path.basename(nd_file)
         self.info = dict()
         self.filename_pattern = '(?:sdc|dualsdc|hxp|tirf|led)(.*)_s(\d+).stk'
         self.filter_pattern = '.*?([^mx]+[0-9]?)(?=xm)'
@@ -207,7 +205,7 @@ class Stk2png(object):
         Extract meta information from .nd files,
         in particular information on the position within the well plate.
         '''
-        nd_filename = join(self.input_dir, self.nd_file)
+        nd_filename = os.path.join(self.input_dir, self.nd_file)
         nd = read_nd(nd_filename)
         nd = format_nd(nd)
 
@@ -335,36 +333,44 @@ class Stk2png(object):
         self.info['column'] = map(int, column)
         self.info['row'] = map(int, row)
 
-    def format_filenames(self):
+    def format_filenames(self, rename=True):
         '''
-        Format filenames according to a user-defined nomenclature.
-        '''
-        self.output_files = list()
-        for i in xrange(len(self.input_files)):
-            f = self.nomenclature
-            output_filename = f.format(project=self.info['project'][i],
-                                       well=self.info['well'][i],
-                                       site=self.info['site'][i],
-                                       row=self.info['row'][i],
-                                       column=self.info['column'][i],
-                                       zstack=self.info['zstack'][i],
-                                       time=self.info['time'][i],
-                                       filter=self.info['filter'][i],
-                                       channel=self.info['channel'][i])
-            self.output_files.append(output_filename)
-
-    def rename_files(self):
-        '''
-        Rename stk files. To this end, get required information from
+        If files should be renamed, first extract required information from
         metadata files (.nd) and filenames (.stk) and then format filenames
         according to nomenclature defined in configuration settings.
-        '''
-        self.extract_info_from_nd_files()
-        self.extract_info_from_filenames()
-        self.calc_image_position()
-        self.format_filenames()
+        Otherwise, simply replace ".stk" suffix with ".png".
 
-    def unpack_images(self, output_dir, keep_z=False):
+        Parameters
+        ----------
+        rename: bool, optional
+            whether files should be renamed according to configuration settings
+            (defaults to True)
+        '''
+        if rename:
+            # Get required information for renaming
+            self.extract_info_from_nd_files()
+            self.extract_info_from_filenames()
+            self.calc_image_position()
+            # Format filename strings according to configuration settings
+            self.output_files = list()
+            for i in xrange(len(self.input_files)):
+                f = self.nomenclature
+                output_filename = f.format(project=self.info['project'][i],
+                                           well=self.info['well'][i],
+                                           site=self.info['site'][i],
+                                           row=self.info['row'][i],
+                                           column=self.info['column'][i],
+                                           zstack=self.info['zstack'][i],
+                                           time=self.info['time'][i],
+                                           filter=self.info['filter'][i],
+                                           channel=self.info['channel'][i])
+                self.output_files.append(output_filename)
+        else:
+            # Replace .stk suffix with .png
+            self.output_files = [re.sub(r'stk$', 'png', f)
+                                 for f in self.input_files]
+
+    def unpack_images(self, output_dir, output_files=None, keep_z=False):
         '''
         Read and upstack stk files and write images (z-stacks or MIPs)
         to disk as .png files.
@@ -372,26 +378,30 @@ class Stk2png(object):
         Parameters
         ----------
         output_dir: str
-                    directory where images should be saved
-        keep_z: bool
-                keep individual z stacks (True) or perform maximum intensity
-                projection (False - default)
+            directory where images should be saved
+        output_files: List[str], optional
+            list of output filenames
+        keep_z: bool, optional
+            keep individual z stacks (True) or perform maximum intensity
+            projection (False - default)
         '''
+        if output_files is None:
+            output_files = self.output_files
         for i in xrange(len(self.input_files)):
             stk_file = self.input_files[i]
             print '.... Unpack file "%s"' % stk_file
-            stack = read_stk(join(self.input_dir, stk_file))
-            output_file = self.output_files[i]
+            stack = read_stk(os.path.join(self.input_dir, stk_file))
+            output_file = output_files[i]
             if keep_z and self.metainfo['hasWell']:
                 # Keep individual z-stacks
                 for z in xrange(stack.shape[0]):
                     # Encode 'zstack' info in filename
-                    output_file_z = re.sub(r'_z00', '_z%.2d' % z, output_file)
-                    print '.... Write file "%s"' % output_file_z
-                    write_png(join(output_dir, output_file_z), stack[z])
+                    output_file = re.sub(r'_z00', '_z%.2d' % z, output_file)
+                    print '.... Write file "%s"' % output_file
+                    write_png(os.path.join(output_dir, output_file), stack[z])
             else:
                 # Perform maximum intensity projection (MIP)
                 # Should also work if there is only one image (i.e. no stacks)
                 mip = np.array(np.max(stack, axis=0), dtype=stack[0].dtype)
                 print '.... Write file "%s"' % output_file
-                write_png(join(output_dir, output_file), mip)
+                write_png(os.path.join(output_dir, output_file), mip)

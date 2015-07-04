@@ -86,6 +86,10 @@ if __name__ == '__main__':
                                 help='wildcards (globbing patterns) \
                                       to select subset of files in folder')
 
+    joblist_parser.add_argument('-r', '--rename', dest='rename',
+                                action='store_true', default=False,
+                                help='rename files according to configuration')
+
     joblist_parser.add_argument('-s', '--split_output', dest='split_output',
                                 action='store_true', default=False,
                                 help='place output files for each .nd file \
@@ -133,12 +137,16 @@ if __name__ == '__main__':
         args.config = tmt.config
 
     if 'visi_config' in args:
-        # Overwrite default "visi" configuration
-        print '. Using configuration file "%s"' % args.visi_config
-        args.config_file = args.config.copy()
-        visi_configuration = tmt.util.load_config(args.visi_config)
-        print '. Checking configuration file'
-        tmt.visi.util.check_visi_config(visi_configuration)
+        if args.visi_config:
+            # Overwrite default "visi" configuration
+            print '. Using configuration file "%s"' % args.visi_config
+            args.config_file = args.config.copy()
+            visi_configuration = tmt.util.load_config(args.visi_config)
+            print '. Checking configuration file'
+            tmt.visi.util.check_visi_config(visi_configuration)
+        else:
+            visi_configuration = tmt.visi.config
+            args.config_file = ''
     else:
         visi_configuration = tmt.visi.config
         args.config_file = ''

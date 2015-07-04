@@ -1,7 +1,8 @@
 import glob
 import os
 import re
-import tmt
+import tmt.cluster
+from tmt.visi.stk2png import Stk2png
 
 
 class Stk(object):
@@ -99,8 +100,7 @@ class Stk(object):
         ----------
 
         split_output: bool
-                      Should output be split into separate folders for each
-                      .nd file?
+            Should output be split into separate folders for each .nd file?
 
         Returns
         -------
@@ -139,20 +139,22 @@ class Stk(object):
 
         self.output_dirs = output_dirs
 
-    def create_joblist(self, batch_size):
+    def create_joblist(self, batch_size, rename=True):
         '''
         Create list of jobs for parallel processing.
 
-        A joblist has the following structure:
+        A joblist has the following structure (YAML format)::
 
             - job_id: int
               stk_files: List[str]
               nd_file:  str
+              png_files: List[str]
               output_dir: str
 
             - job_id: int
               stk_files: List[str]
               nd_file:  str
+              png_files: List[str]
               output_dir: str
 
             ...
@@ -160,20 +162,26 @@ class Stk(object):
         Parameters
         ----------
         batch_size: int
-                    number of batches
+            number of batches
+        rename: bool, optional
+            whether files should be renamed according to configuration settings
+            (defaults to True)
 
         Returns
         -------
         List[dict[str, list[str] or str]]
         '''
         joblist = list()
-        for i, nd in enumerate(self.nd_files):
+        for i, nd_file in enumerate(self.nd_files):
             batches = tmt.cluster.create_batches(self.stk_files[i], batch_size)
             for j, batch in enumerate(batches):
+                conversion = Stk2png(batch, nd_file, self.cfg)
+                conversion.format_filenames(rename)
                 joblist.append({
                     'job_id': i*len(batches)+j+1,
                     'stk_files': batch,
-                    'nd_file': nd,
+                    'nd_file': nd_file,
+                    'png_files': conversion.output_files,
                     'output_dir': self.output_dirs[i]
                 })
         self.joblist = joblist
