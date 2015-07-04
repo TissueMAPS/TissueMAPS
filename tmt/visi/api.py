@@ -95,8 +95,8 @@ class Visi(object):
         # Put all output files in the same directory
         e.retrieve_overwrites = True
         # Create parallel task collection
-        # jobs = gc3libs.workflow.ParallelTaskCollection()
-        jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
+        jobs = gc3libs.workflow.ParallelTaskCollection()
+        # jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
         for batch in joblist:
 
             if batch['job_id'] > 1:
@@ -126,7 +126,7 @@ class Visi(object):
                 outputs=batch['png_files'],
                 output_dir=batch['output_dir'],
                 jobname='visi_%s_%.5d' % (project.experiment, batch['job_id']),
-                # stdout=log_file
+                stdout=log_file
             )
             jobs.add(app)
         e.add(jobs)
