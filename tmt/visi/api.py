@@ -1,8 +1,15 @@
 import os
 import tmt
+import time
+import gc3libs
+import gc3libs.workflow
 from tmt.visi.stk import Stk
 from tmt.visi.stk2png import Stk2png
-from tmt.cluster import Cluster
+
+import logging
+logger = logging.getLogger(__name__)
+# gc3libs.configure_logger(level=logging.DEBUG)
+gc3libs.configure_logger(level=logging.CRITICAL)
 
 
 class Visi(object):
@@ -25,7 +32,8 @@ class Visi(object):
         project.create_output_dirs(self.args.split_output)
 
         print '. Creating joblist'
-        project.create_joblist(self.args.batch_size)
+        project.create_joblist(batch_size=self.args.batch_size,
+                               rename=self.args.rename)
 
         print '. Writing joblist to file'
         project.write_joblist()
@@ -59,45 +67,90 @@ class Visi(object):
                                        self.args.split_output)
 
             print '. Creating joblist'
-            joblist = project.create_joblist(batch_size=1)
+            joblist = project.create_joblist(batch_size=1,
+                                             rename=self.args.rename)
 
-            for job, batch in enumerate(joblist):
-                print '. Processing job #%d' % job
+            for batch in joblist:
+                print '. Processing job #%d' % batch['job_id']
                 process = Stk2png(batch['stk_files'], batch['nd_file'],
                                   self.args.config)
+
                 print '.. Unpack .stk files and convert them to .png images'
                 process.unpack_images(output_dir=batch['output_dir'],
                                       output_files=batch['png_files'],
                                       keep_z=self.args.zstacks)
 
     def submit(self):
+        '''
+        Submit jobs to run in parallel on a cluster via `gc3pie`.
+
+        On your local machine, jobs will be run sequentially.
+        '''
         project = Stk(self.args.stk_folder, '*', config=self.args.config)
         joblist = project.read_joblist()
 
-        lsf_dir = os.path.join(project.experiment_dir, 'lsf')
-        if not os.path.exists(lsf_dir):
-                os.mkdir(lsf_dir)
+        # Prepare for STDOUT log
+        log_dir = os.path.join(project.experiment_dir, 'log')
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
 
-        for j in joblist:
+        # Create an `Engine` instance for running jobs in parallel
+        e = gc3libs.create_engine()
+        # Put all output files in the same directory
+        e.retrieve_overwrites = True
+        # Create parallel task collection
+        jobs = gc3libs.workflow.ParallelTaskCollection(jobname='parallel_submission')
+        # jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
+        for batch in joblist:
+
             timestamp = tmt.cluster.create_timestamp()
-            lsf = os.path.join(lsf_dir, 'visi_%s_%.5d_%s.lsf'
-                               % (project.experiment, j['job_id'], timestamp))
+            log_file = os.path.join('log', 'visi_%s_%.5d_%s.txt' % (project.experiment,
+                                                batch['job_id'], timestamp))
 
             if self.args.config_file:
                 command = [
-                    'visi', 'run', '--job', str(j['job_id']), '--rename',
+                    'visi', 'run', '--job', str(batch['job_id']),
                     '--visi_config', self.args.config_file,
                     self.args.stk_folder
                 ]
             else:
                 command = [
-                    'visi', 'run', '--job', str(j['job_id']), '--rename',
+                    'visi', 'run', '--job', str(batch['job_id']),
                     self.args.stk_folder
                 ]
 
-            print '. submitting job #%d' % j['job_id']
-            job = Cluster(lsf)
-            job.submit(command)
+            app = gc3libs.Application(
+                arguments=command,
+                inputs=[batch['nd_file']] + batch['stk_files'],
+                outputs=batch['png_files'],
+                output_dir=batch['output_dir'],
+                jobname='visi_%s_%.5d' % (project.experiment, batch['job_id']),
+                stdout=log_file.replace('.txt', '.out'),
+                stderr=log_file.replace('.txt', '.err')
+            )
+            jobs.add(app)
+        e.add(jobs)
+
+        print 'submit jobs'
+        # Periodically check the status of the submitted jobs
+        while jobs.execution.state != gc3libs.Run.State.TERMINATED:
+            print "Jobs in status %s " % jobs.execution.state
+            # `Engine.progress()` will do the GC3Pie magic:
+            # submit new jobs, update status of submitted jobs, get
+            # results of terminating jobs etc...
+            e.progress()
+            # Wait a few seconds...
+            time.sleep(2)
+
+        print 'Job is now terminated.'
+
+        for task in jobs.iter_workflow():
+            if task.execution.returncode != 0 or task.execution.exitcode != 0:
+                print 'Job {%s} has failed. See: %s' % (task.jobname, task.output_dir)
+                print task.stdout
+                print task.stderr
+
+        # sequential task collection for "pipelines" of tasks with dependencies
 
     @staticmethod
     def process_cli_commands(args, subparser):

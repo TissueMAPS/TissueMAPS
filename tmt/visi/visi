@@ -11,8 +11,6 @@ import tmt.visi
 import tmt.visi.util
 from tmt.visi.api import Visi
 
-# TODO: merge "tmt" and "visi" configurations
-
 
 if __name__ == '__main__':
 
