@@ -386,22 +386,27 @@ class Stk2png(object):
             projection (False - default)
         '''
         if output_files is None:
+            if not self.output_files:
+                raise IOError('Output files were not provided are could not '
+                              'be retrieved either.')
             output_files = self.output_files
         for i in xrange(len(self.input_files)):
             stk_file = self.input_files[i]
-            print '.... Unpack file "%s"' % stk_file
+            print '.... Unpack file "%s"' % os.path.join(self.input_dir,
+                                                         stk_file)
             stack = read_stk(os.path.join(self.input_dir, stk_file))
             output_file = output_files[i]
+            output_filename = os.path.join(output_dir, output_file)
             if keep_z and self.metainfo['hasWell']:
                 # Keep individual z-stacks
                 for z in xrange(stack.shape[0]):
                     # Encode 'zstack' info in filename
                     output_file = re.sub(r'_z00', '_z%.2d' % z, output_file)
-                    print '.... Write file "%s"' % output_file
-                    write_png(os.path.join(output_dir, output_file), stack[z])
+                    print '.... Write file "%s"' % output_filename
+                    write_png(output_filename, stack[z])
             else:
                 # Perform maximum intensity projection (MIP)
                 # Should also work if there is only one image (i.e. no stacks)
                 mip = np.array(np.max(stack, axis=0), dtype=stack[0].dtype)
-                print '.... Write file "%s"' % output_file
-                write_png(os.path.join(output_dir, output_file), mip)
+                print '.... Write file "%s"' % output_filename
+                write_png(output_filename, mip)

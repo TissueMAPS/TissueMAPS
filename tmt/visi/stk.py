@@ -19,8 +19,11 @@ class Stk(object):
         Parameters
         ----------
         input_dir: str
+            path to the directory holding the .stk files
         wildcards: str
+            globbing pattern to select subset of .stk files
         config: Dict[str, str]
+            configuration settings
         '''
         self.input_dir = input_dir
         self.wildcards = wildcards
@@ -72,11 +75,12 @@ class Stk(object):
     @property
     def stk_files(self):
         '''
-        Extract .stk files from the list of selected files, grouped by .nd file.
+        Extract .stk files from the list of selected files,
+        grouped per .nd file.
 
         Returns
         -------
-        List[list]
+        List[List[str]]
         '''
         if self._stk_files is None:
             stk_files = [list() for x in self.nd_files]
@@ -93,18 +97,16 @@ class Stk(object):
         '''
         Create an output directory for each .nd file.
 
-        The elements may be the same or different depending on the value
-        of `split_output`.
+        There may be one or more unique output directories,
+        depending on the value of the `split_output` parameter.
 
         Parameters
         ----------
-
         split_output: bool
             Should output be split into separate folders for each .nd file?
 
         Returns
         -------
-
         List[str]
 
         '''
@@ -160,6 +162,9 @@ class Stk(object):
 
             ...
 
+        The `nd_file` and `stk_files` are provided as absolute path,
+        while `png_files` are relative paths (relative to `output_dir`).
+
         Parameters
         ----------
         batch_size: int
@@ -171,6 +176,7 @@ class Stk(object):
         Returns
         -------
         List[dict[str, list[str] or str]]
+            joblist
         '''
         joblist = list()
         for i, nd_file in enumerate(self.nd_files):

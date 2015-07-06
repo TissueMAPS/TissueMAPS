@@ -2,8 +2,8 @@ import os
 import yaml
 from time import time
 from datetime import datetime
-# import socket
-# import subprocess32
+import socket
+import subprocess32
 
 
 def create_batches(li, n):
@@ -77,54 +77,54 @@ def read_joblist(filename):
             return yaml.load(joblist_file.read())
 
 
-# class Cluster(object):
-#     '''
-#     Class for cluster job handling.
-#     '''
+class Cluster(object):
+    '''
+    Class for cluster job handling.
+    '''
 
-#     def __init__(self, output_dir):
-#         '''
-#         Initialize Cluster class.
+    def __init__(self, output_dir):
+        '''
+        Initialize Cluster class.
         
-#         Parameters
-#         ----------
-#         output_dir: str
-#             path to directory were output log files should be saved
-#         '''
-#         self._on_brutus = None
-#         self.output_dir = output_dir
+        Parameters
+        ----------
+        output_dir: str
+            path to directory were output log files should be saved
+        '''
+        self._on_brutus = None
+        self.output_dir = output_dir
 
-#     @property
-#     def on_brutus(self):
-#         '''
-#         Are we on Brutus?
+    @property
+    def on_brutus(self):
+        '''
+        Are we on Brutus?
 
-#         Returns
-#         -------
-#         bool
-#         '''
-#         if self._on_brutus is None:
-#             hostname = socket.gethostname()
-#             if re.search(r'brutus', hostname):
-#                 self._on_brutus = True
-#             else:
-#                 self._on_brutus = False
-#         return self._on_brutus
+        Returns
+        -------
+        bool
+        '''
+        if self._on_brutus is None:
+            hostname = socket.gethostname()
+            if re.search(r'brutus', hostname):
+                self._on_brutus = True
+            else:
+                self._on_brutus = False
+        return self._on_brutus
 
-#     def submit(self, command):
-#         '''
-#         Submit a standard 8h job. Runs locally if not on the cluster.
+    def submit(self, command):
+        '''
+        Submit a standard 8h job. Runs locally if not on the cluster.
 
-#         Parameters
-#         ----------
-#         command: List[str]
-#             elements of the bash command, e.g. ['find', '-name', 'bla*']
-#         '''
-#         if self.on_brutus:
-#             bsub = [
-#                  'bsub', '-W', '8:00', '-o', self.output_dir,
-#                  '-R', 'rusage[mem=4000,scratch=4000]'
-#             ]
-#             subprocess32.call(bsub + command)
-#         else:
-#             subprocess32.call(command)
+        Parameters
+        ----------
+        command: List[str]
+            elements of the bash command, e.g. ['find', '-name', 'bla*']
+        '''
+        if self.on_brutus:
+            bsub = [
+                 'bsub', '-W', '8:00', '-o', self.output_dir,
+                 '-R', 'rusage[mem=4000,scratch=4000]'
+            ]
+            subprocess32.call(bsub + command)
+        else:
+            subprocess32.call(command)
