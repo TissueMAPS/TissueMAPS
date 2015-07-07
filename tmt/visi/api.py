@@ -5,6 +5,7 @@ import gc3libs
 import gc3libs.workflow
 from tmt.visi.stk import Stk
 from tmt.visi.stk2png import Stk2png
+from tmt.cluster import Cluster
 
 import logging
 logger = logging.getLogger(__name__)
@@ -82,12 +83,12 @@ class Visi(object):
 
     def submit(self):
         '''
-        Submit jobs to run in parallel on a cluster via `gc3pie`.
+        Submit jobs to run in parallel on a cluster.
+
+        By default, `gc3pie` is used for job handling unless ``--brutus``
+        argument is specified.
         '''
         project = Stk(self.args.stk_folder, '*', config=self.args.config)
-
-        print '. Creating output directories'
-        project.create_output_dirs(self.args.split_output)
 
         joblist = project.read_joblist()
 
@@ -96,15 +97,16 @@ class Visi(object):
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
 
-        # Create an `Engine` instance for running jobs in parallel
-        e = gc3libs.create_engine()
-        # Put all output files in the same directory
-        e.retrieve_overwrites = True
-        # Create parallel task collection
-        jobs = gc3libs.workflow.ParallelTaskCollection(
+        if not self.args.brutus:
+            # Create an `Engine` instance for running jobs in parallel
+            e = gc3libs.create_engine()
+            # Put all output files in the same directory
+            e.retrieve_overwrites = True
+            # Create parallel task collection
+            jobs = gc3libs.workflow.ParallelTaskCollection(
                     jobname='visi_%s_parallel_submission' % project.experiment
-        )
-        # jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
+            )
+            # jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
         for batch in joblist:
 
             timestamp = tmt.cluster.create_timestamp()
@@ -123,35 +125,44 @@ class Visi(object):
                     self.args.stk_folder
                 ]
 
-            app = gc3libs.Application(
-                arguments=command,
-                inputs=[batch['nd_file']] + batch['stk_files'],
-                outputs=batch['png_files'],
-                output_dir=batch['output_dir'],
-                jobname='visi_%s_%.5d' % (project.experiment, batch['job_id']),
-                stdout=log_file.replace('.txt', '.out'),
-                stderr=log_file.replace('.txt', '.err')
-            )
-            jobs.add(app)
-        e.add(jobs)
+            if self.args.brutus:
+                print '. submitting job #%d' % batch['job_id']
+                job = Cluster(log_file)
+                job.submit(command)
+            else:
+                app = gc3libs.Application(
+                    arguments=command,
+                    inputs=[batch['nd_file']] + batch['stk_files'],
+                    outputs=batch['png_files'],
+                    output_dir=batch['output_dir'],
+                    jobname='visi_%s_%.5d' % (project.experiment, batch['job_id']),
+                    stdout=log_file.replace('.txt', '.out'),
+                    stderr=log_file.replace('.txt', '.err')
+                )
+                jobs.add(app)
 
-        print 'submit jobs'
-        # Periodically check the status of the submitted jobs
-        while jobs.execution.state != gc3libs.Run.State.TERMINATED:
-            print "Jobs in status %s " % jobs.execution.state
-            # `Engine.progress()` will do the GC3Pie magic:
-            # submit new jobs, update status of submitted jobs, get
-            # results of terminating jobs etc...
-            e.progress()
-            # Wait a few seconds...
-            time.sleep(2)
+        if not self.args.brutus:
+            # Add jobs tasks to engine instance
+            e.add(jobs)
 
-        print 'Job is now terminated.'
+            print 'submit jobs'
+            # Periodically check the status of the submitted jobs
+            while jobs.execution.state != gc3libs.Run.State.TERMINATED:
+                print "Jobs in status %s " % jobs.execution.state
+                # `Engine.progress()` will do the GC3Pie magic:
+                # submit new jobs, update status of submitted jobs, get
+                # results of terminating jobs etc...
+                e.progress()
+                # Wait a few seconds...
+                time.sleep(60)
 
-        for task in jobs.iter_workflow():
-            if task.execution.returncode != 0 or task.execution.exitcode != 0:
-                print 'Job "%s" has failed!' % task.jobname
-                print task.stderr
+            print 'Job is now terminated.'
+
+            for task in jobs.iter_workflow():
+                if(task.execution.returncode != 0
+                        or task.execution.exitcode != 0):
+                    print 'Job "%s" has failed!' % task.jobname
+                    print task.stderr
 
         # sequential task collection for "pipelines" of tasks with dependencies
 
