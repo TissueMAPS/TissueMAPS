@@ -31,7 +31,7 @@ class Stk(object):
         self.experiment_dir = os.path.dirname(input_dir)
         self.experiment = os.path.basename(self.experiment_dir)
         self.joblist_file = os.path.join(self.experiment_dir,
-                                         'visi_%s.joblist' % self.experiment)
+                                         'visi_%s.jobs' % self.experiment)
         self._files = None
         self._nd_files = None
         self._stk_files = None
@@ -179,6 +179,7 @@ class Stk(object):
             joblist
         '''
         joblist = list()
+        count = 0
         for i, nd_file in enumerate(self.nd_files):
             batches = tmt.cluster.create_batches(self.stk_files[i], batch_size)
             for j, batch_stk_files in enumerate(batches):
@@ -187,8 +188,9 @@ class Stk(object):
                 # Build path to output files relative to the output directory
                 batch_png_files = [os.path.join(self.image_output_dirs[i], f)
                                    for f in renaming.output_files]
+                count += 1
                 joblist.append({
-                    'job_id': i*len(batches)+j+1,
+                    'job_id': count,
                     'stk_files': batch_stk_files,
                     'nd_file': nd_file,
                     'png_files': batch_png_files,

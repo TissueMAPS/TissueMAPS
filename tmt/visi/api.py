@@ -110,7 +110,7 @@ class Visi(object):
         for batch in joblist:
 
             timestamp = tmt.cluster.create_timestamp()
-            log_file = 'visi_%s_%.5d_%s.txt' % (project.experiment,
+            log_file = 'visi_%s_%.5d_%s.log' % (project.experiment,
                                                 batch['job_id'], timestamp)
 
             if self.args.config_file:
@@ -136,8 +136,7 @@ class Visi(object):
                     outputs=batch['png_files'],
                     output_dir=batch['output_dir'],
                     jobname='visi_%s_%.5d' % (project.experiment, batch['job_id']),
-                    stdout=log_file.replace('.txt', '.out'),
-                    stderr=log_file.replace('.txt', '.err')
+                    stdout=log_file
                 )
                 jobs.add(app)
 
