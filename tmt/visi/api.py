@@ -83,10 +83,12 @@ class Visi(object):
     def submit(self):
         '''
         Submit jobs to run in parallel on a cluster via `gc3pie`.
-
-        On your local machine, jobs will be run sequentially.
         '''
         project = Stk(self.args.stk_folder, '*', config=self.args.config)
+
+        print '. Creating output directories'
+        project.create_output_dirs(self.args.split_output)
+
         joblist = project.read_joblist()
 
         # Prepare for STDOUT log
@@ -99,13 +101,15 @@ class Visi(object):
         # Put all output files in the same directory
         e.retrieve_overwrites = True
         # Create parallel task collection
-        jobs = gc3libs.workflow.ParallelTaskCollection(jobname='parallel_submission')
+        jobs = gc3libs.workflow.ParallelTaskCollection(
+                    jobname='visi_%s_parallel_submission' % project.experiment
+        )
         # jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
         for batch in joblist:
 
             timestamp = tmt.cluster.create_timestamp()
-            log_file = os.path.join('log', 'visi_%s_%.5d_%s.txt' % (project.experiment,
-                                                batch['job_id'], timestamp))
+            log_file = 'visi_%s_%.5d_%s.txt' % (project.experiment,
+                                                batch['job_id'], timestamp)
 
             if self.args.config_file:
                 command = [
@@ -146,8 +150,7 @@ class Visi(object):
 
         for task in jobs.iter_workflow():
             if task.execution.returncode != 0 or task.execution.exitcode != 0:
-                print 'Job {%s} has failed. See: %s' % (task.jobname, task.output_dir)
-                print task.stdout
+                print 'Job "%s" has failed!' % task.jobname
                 print task.stderr
 
         # sequential task collection for "pipelines" of tasks with dependencies
