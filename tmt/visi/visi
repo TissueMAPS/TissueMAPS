@@ -113,9 +113,9 @@ if __name__ == '__main__':
                                help='path to folder holding .stk files \
                                      (defaults to cwd)')
 
-    submit_parser.add_argument('--shared_network', dest='shared_network',
-                               action='store_true', default=False,
-                               help='in case worker nodes have access \
+    submit_parser.add_argument('--no_shared_network', dest='shared_network',
+                               action='store_false', default=True,
+                               help='in case worker nodes don\'t have access \
                                      to a shared network')
 
     submit_parser.add_argument('-c', '--config', dest='config',

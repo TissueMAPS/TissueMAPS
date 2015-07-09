@@ -44,7 +44,7 @@ class Visi(object):
         Parameters
         ----------
         batch_size: int
-            number of files per job
+            number of files per batch job
         split_output: bool, optional
             whether files belonging to different (sub)experiments, i.e.
             in case there are multiple .nd files in the input folder,
@@ -147,7 +147,7 @@ class Visi(object):
         timestamp = tmt.cluster.create_timestamp(time_only=True)
         print '%s: All jobs terminated.' % timestamp
 
-    def build_jobs(self, shared_network=False):
+    def build_jobs(self, shared_network=True):
         '''
         Build a parallel task collection of "jobs" for GC3Pie.
 
@@ -155,7 +155,7 @@ class Visi(object):
         ----------
         shared_network: bool, optional
             whether worker nodes have access to a shared network
-            or filesystem (defaults to False)
+            or filesystem (defaults to True)
 
         Returns
         -------
@@ -185,12 +185,17 @@ class Visi(object):
             ]
 
             if shared_network:
-                # This prevents files from being copied into ~/.gc3pie_jobs,
-                # they will rather directly read from or written to disk
+                # This prevents files from being copied into ~/.gc3pie_jobs.
+                # Instead they will be directly read from or written to disk,
+                # which will dramatically speed up the processing time.
+                # However, this only works if a shared network is available
+                # on your resource!
                 inputs = []
                 outputs = []
             else:
-                inputs = [batch['nd_file']] + batch['stk_files']
+                inputs = batch['stk_files']
+                inputs.append(batch['nd_file'])
+                inputs.append(self.project.joblist_file)
                 outputs = batch['png_files']
 
             # Add individual task to collection
@@ -202,6 +207,7 @@ class Visi(object):
                     jobname=jobname,
                     # write STDOUT and STDERR combined into a single log file
                     stdout=log_file,
+                    join=True,
                     # activate the virtual environment
                     application_name='tmt'
             )
