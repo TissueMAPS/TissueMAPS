@@ -171,10 +171,10 @@ class Visi(object):
                           'For help call "visi joblist -h"')
         for batch in joblist:
 
+            jobname = 'visi_%s_job%.5d' % (self.project.experiment,
+                                           batch['job_id'])
             timestamp = tmt.cluster.create_timestamp()
-            log_file = 'visi_%s_job%.5d_%s.log' % (self.project.experiment,
-                                                   batch['job_id'],
-                                                   timestamp)
+            log_file = '%s_%s.log' % (jobname, timestamp)
             # NOTE: There is a GDC3Pie bug that prevents the use of relative
             # paths for `stdout` and `stderr` to bundle log files
             # in a subdirectory of the `output_dir`
@@ -184,8 +184,9 @@ class Visi(object):
                 self.stk_folder
             ]
 
-            if self.args.shared_network:
-                # This prevents that files are copied into ~/.gc3pie_jobs
+            if shared_network:
+                # This prevents files from being copied into ~/.gc3pie_jobs,
+                # they will rather directly read from or written to disk
                 inputs = []
                 outputs = []
             else:
@@ -198,9 +199,8 @@ class Visi(object):
                     inputs=inputs,
                     outputs=outputs,
                     output_dir=batch['output_dir'],
-                    jobname='visi_%s_%.5d' % (self.project.experiment,
-                                              batch['job_id']),
-                    # write STDOUT and STDERR combined into a log file
+                    jobname=jobname,
+                    # write STDOUT and STDERR combined into a single log file
                     stdout=log_file,
                     # activate the virtual environment
                     application_name='tmt'

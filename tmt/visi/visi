@@ -118,6 +118,10 @@ if __name__ == '__main__':
                                help='in case worker nodes have access \
                                      to a shared network')
 
+    submit_parser.add_argument('-c', '--config', dest='config',
+                               help='use custom yaml configuration file \
+                                     (defaults to "tmt" configuration)')
+
     submit_parser.set_defaults(handler=partial(Visi.process_cli_commands,
                                subparser=submit_parser))
 
