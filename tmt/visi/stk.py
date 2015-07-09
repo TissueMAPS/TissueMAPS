@@ -21,10 +21,17 @@ class Stk(object):
         input_dir: str
             path to the directory holding the .stk files
         wildcards: str
-            globbing pattern to select subset of .stk files
+            globbing pattern to select subset of files
         config: Dict[str, str]
             configuration settings
+
+        Raises
+        ------
+        OSERROR
+            when `input_dir` does not exist
         '''
+        if not os.path.exists(input_dir):
+            raise OSError('Input directory does not exist')
         self.input_dir = input_dir
         self.wildcards = wildcards
         self.cfg = config
@@ -45,6 +52,11 @@ class Stk(object):
         Returns
         -------
         List[str]
+
+        Raises
+        ------
+        ValueError
+            when no files are found in `input_dir` that match `wildcards`
         '''
         if self._files is None:
             self._files = glob.glob(os.path.join(self.input_dir,
@@ -63,12 +75,17 @@ class Stk(object):
         Returns
         -------
         List[str]
+
+        Raises
+        ------
+        ValueError
+            when there are no .nd files in `files`
         '''
         if self._nd_files is None:
             r = re.compile('.*\.nd$')
             nd_files = filter(r.search, self.files)
             if not nd_files:
-                raise ValueError('No .nd files found in file list.')
+                raise ValueError('No .nd files in file list.')
             self._nd_files = nd_files
         return self._nd_files
 
@@ -81,6 +98,11 @@ class Stk(object):
         Returns
         -------
         List[List[str]]
+
+        Raises
+        ------
+        ValueError
+            when there are no .stk files in `files`
         '''
         if self._stk_files is None:
             stk_files = [list() for x in self.nd_files]
@@ -109,6 +131,11 @@ class Stk(object):
         -------
         List[str]
 
+
+        Raises
+        ------
+        IOERROR
+            when output directory could not be determined from `config`
         '''
         image_folder_name = self.cfg['IMAGE_FOLDER_LOCATION'].format(
                                         experiment_dir=self.experiment_dir,
@@ -142,7 +169,7 @@ class Stk(object):
 
         self.image_output_dirs = output_dirs
 
-    def create_joblist(self, batch_size, rename=True):
+    def create_joblist(self, batch_size, rename=False):
         '''
         Create list of jobs for parallel processing.
 
@@ -171,7 +198,7 @@ class Stk(object):
             number of batches
         rename: bool, optional
             whether files should be renamed according to configuration settings
-            (defaults to True)
+            (defaults to False)
 
         Returns
         -------

@@ -113,13 +113,10 @@ if __name__ == '__main__':
                                help='path to folder holding .stk files \
                                      (defaults to cwd)')
 
-    submit_parser.add_argument('--visi_config', dest='visi_config',
-                               help='use custom yaml configuration file \
-                                     (defaults to "visi" configuration)')
-
-    submit_parser.add_argument('-c', '--config', dest='config',
-                               help='use custom yaml configuration file \
-                                     (defaults to "tmt" configuration)')
+    submit_parser.add_argument('--shared_network', dest='shared_network',
+                               action='store_true', default=False,
+                               help='in case worker nodes have access \
+                                     to a shared network')
 
     submit_parser.set_defaults(handler=partial(Visi.process_cli_commands,
                                subparser=submit_parser))
@@ -151,9 +148,6 @@ if __name__ == '__main__':
 
     # Add "visi" to "tmt" configuration
     args.config.update(visi_configuration)
-
-    if 'wildcards' not in args:
-        args.wildcards = '*'
 
     try:
         if args.handler:
