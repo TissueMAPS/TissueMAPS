@@ -2,6 +2,7 @@ import os
 import yaml
 from time import time
 from datetime import datetime
+import re
 import socket
 import subprocess32
 
@@ -26,7 +27,7 @@ def create_batches(li, n):
     return [li[i:i + n] for i in range(0, len(li), n)]
 
 
-def create_timestamp():
+def create_timestamp(time_only=False):
     '''
     Create timestamp in the form "year-month-day_hour_minute_second".
     Returns
@@ -34,7 +35,10 @@ def create_timestamp():
     str
         timestamp
     '''
-    return datetime.fromtimestamp(time()).strftime('%Y-%m-%d_%H-%M-%S')
+    if time_only:
+        return datetime.fromtimestamp(time()).strftime('%H-%M-%S')
+    else:
+        return datetime.fromtimestamp(time()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def write_joblist(filename, joblist):
