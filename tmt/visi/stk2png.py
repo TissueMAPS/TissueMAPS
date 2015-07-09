@@ -74,6 +74,7 @@ def format_nd(nd):
     Format .nd file content, i.e. translate it into python syntax.
 
     Important keys:
+
         - DoStage
         - DoTimelapse
         - DoWave
@@ -82,10 +83,12 @@ def format_nd(nd):
     Parameters
     ----------
     nd: Dict[str, str or List[str]]
+        unformatted content of an .nd file
 
     Returns
     -------
     Dict[str, str or List[str]]
+        formatted content of an .nd file
     '''
     for k, v in nd.iteritems():
         string_match = re.search(r'"(.+)"', v)
@@ -103,20 +106,20 @@ def format_nd(nd):
 
 def guess_stitch_dims(max_position, layout):
     '''
-    Simple algorithm to guess correct dimensions of a stitched image.
+    Simple algorithm to guess correct dimensions of a stitched mosaic image.
 
     Parameters
     ----------
     max_position: int
-                  maximum position in the stitched image
+        maximum position in the stitched image
     layout: str
-            either "columns<rows" (more rows than columns)
-            or "columns>rows" (vice versa)
+        either "columns<rows" (more rows than columns)
+        or "columns>rows" (vice versa)
 
     Returns
     -------
     Tuple[int]
-    y, x dimensions (height, width) of the stitched image
+        y, x dimensions (height, width) of the stitched image
     '''
     if layout == 'columns<rows':
         decent = True
@@ -135,19 +138,20 @@ def guess_stitch_dims(max_position, layout):
 def determine_image_snake(stitch_dims, zig_zag):
     '''
     The image snake defines the position of each image in the stitched
-    image.
+    mosaic image.
 
     Parameters
     ----------
     stitch_dims: Tuple[int]
-                 y,x dimensions (height, width) of the stitched image
+        y,x dimensions (height, width) of the stitched image
     zig_zag: bool
-             were images acquired in "ZigZag" mode?
+        were images acquired in "ZigZag" mode?
 
     Returns
     -------
     Dict[str, List[int]]
-    one-based "row" and "column" position of each image in the stitched image
+        one-based "row" and "column" position of each individual image
+        in the stitched mosaic image
     '''
     cols = []
     rows = []
@@ -166,8 +170,8 @@ def determine_image_snake(stitch_dims, zig_zag):
 
 class Stk2png(object):
     '''
-    Class for unpacking .stk files outputted from Visitron microscopes
-    and conversion to .png format (with optional file renaming).
+    Class for converting .stk files to .png images
+    (with optional file renaming).
     '''
 
     def __init__(self, input_files, nd_file, config):
@@ -177,17 +181,11 @@ class Stk2png(object):
         Parameters
         ----------
         input_files: List[str]
-                     .stk filenames
+            .stk filenames
         nd_file: str
-                 filename of the corresponding .nd file
+            filename of the corresponding .nd file
         config: Dict[str, str]
-                configuration settings (from YAML config file)
-
-        Config should contain the following keys:
-         * FILENAME_FORMAT          format string
-         * ACQUISITION_MODE         the order in which images were acquired,
-                                    e.g. "ZigZagHorizontal"
-         * ACQUISITION_LAYOUT       either "rows>columns" or "columns>rows"
+            configuration settings (from YAML config file)
         '''
         self.input_files = map(os.path.basename, input_files)
         self.input_dir = os.path.dirname(input_files[0])

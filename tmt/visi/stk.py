@@ -9,7 +9,7 @@ class Stk(object):
     '''
     Class for a visi project.
 
-    A visi project corresponds to a folder holding .stk and .nd files.
+    A visi project corresponds to a folder on disk holding .stk and .nd files.
     '''
 
     def __init__(self, input_dir, wildcards, config):
