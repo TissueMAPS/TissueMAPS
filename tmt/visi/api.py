@@ -229,7 +229,7 @@ class Visi(object):
         subparser: argparse.ArgumentParser
             subparser used in the command
         '''
-        cli = Visi(args)
+        cli = Visi(args.stk_folder, args.config)
         if subparser.prog == 'visi run':
             cli.run(args.zstacks, args.job, args.rename)
         elif subparser.prog == 'visi joblist':
