@@ -18,7 +18,7 @@ class Visi(object):
     Class for visi interface.
     '''
 
-    def __init__(self, *args):
+    def __init__(self, args):
         self.args = args
         self.args.stk_folder = os.path.abspath(args.stk_folder)
         self._jobs = None
@@ -94,9 +94,6 @@ class Visi(object):
         e = gc3libs.create_engine()
         # Put all output files in the same directory
         e.retrieve_overwrites = True
-
-        # Build parallel task collection
-        self.build_jobs()
 
         # Add tasks to engine instance
         e.add(self.jobs)
