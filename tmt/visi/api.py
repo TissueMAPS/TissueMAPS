@@ -18,11 +18,12 @@ class Visi(object):
     Class for visi interface.
     '''
 
-    def __init__(self, args):
+    def __init__(self, *args):
         self.args = args
         self.args.stk_folder = os.path.abspath(args.stk_folder)
+        self._jobs = None
         # Create an instance of class Stk
-        self.project = Stk(stk_folder=self.args.stk_folder,
+        self.project = Stk(input_dir=self.args.stk_folder,
                            wildcards=self.args.wildcards,
                            config=self.args.config)
 
@@ -95,7 +96,7 @@ class Visi(object):
         e.retrieve_overwrites = True
 
         # Build parallel task collection
-        self.build_jobs(config_file=self.args.config_file)
+        self.build_jobs()
 
         # Add tasks to engine instance
         e.add(self.jobs)
@@ -123,57 +124,53 @@ class Visi(object):
         # sequential task collection for "pipelines" of tasks with dependencies
         # jobs = gc3libs.workflow.SequentialTaskCollection(tasks=None)
 
-    def build_jobs(self, joblist, config_file):
+    @property
+    def jobs(self):
         '''
         Build a parallel task collection of "jobs" for GC3Pie.
-
-        Parameters
-        ----------
-        config_file: str
-            path to a custom configuration file
 
         Returns
         -------
         jobs: gc3libs.workflow.ParallelTaskCollection
         '''
-        jobs = gc3libs.workflow.ParallelTaskCollection(
-                        jobname='visi_%s_jobs' % self.project.experiment
-        )
-        joblist = self.project.read_joblist()
-        for batch in joblist:
-
-            timestamp = tmt.cluster.create_timestamp()
-            log_file = 'visi_%s_job%.5d_%s.log' % (self.project.experiment,
-                                                   batch['job_id'],
-                                                   timestamp)
-
-            if config_file:
-                command = [
-                    'visi', 'run', '--job', str(batch['job_id']),
-                    '--visi_config', config_file,
-                    self.stk_folder
-                ]
-            else:
-                command = [
-                    'visi', 'run', '--job', str(batch['job_id']),
-                    self.stk_folder
-                ]
-            # Add individual task to collection
-            app = gc3libs.Application(
-                    arguments=command,
-                    inputs=[batch['nd_file']] + batch['stk_files'],
-                    outputs=batch['png_files'],
-                    output_dir=batch['output_dir'],
-                    jobname='visi_%s_%.5d' % (self.project.experiment,
-                                              batch['job_id']),
-                    # write STDOUT and STDERR combined into one log file
-                    stdout=log_file,
-                    # activate the virtual environment "tmt"
-                    application_name='tmt'
+        if self._jobs is None:
+            self._jobs = gc3libs.workflow.ParallelTaskCollection(
+                            jobname='visi_%s_jobs' % self.project.experiment
             )
-            jobs.add(app)
-        self.jobs = jobs
-        return jobs
+            joblist = self.project.read_joblist()
+            for batch in joblist:
+
+                timestamp = tmt.cluster.create_timestamp()
+                log_file = 'visi_%s_job%.5d_%s.log' % (self.project.experiment,
+                                                       batch['job_id'],
+                                                       timestamp)
+
+                if self.args.config_file:
+                    command = [
+                        'visi', 'run', '--job', str(batch['job_id']),
+                        '--visi_config', self.args.config_file,
+                        self.args.stk_folder
+                    ]
+                else:
+                    command = [
+                        'visi', 'run', '--job', str(batch['job_id']),
+                        self.args.stk_folder
+                    ]
+                # Add individual task to collection
+                app = gc3libs.Application(
+                        arguments=command,
+                        inputs=[batch['nd_file']] + batch['stk_files'],
+                        outputs=batch['png_files'],
+                        output_dir=batch['output_dir'],
+                        jobname='visi_%s_%.5d' % (self.project.experiment,
+                                                  batch['job_id']),
+                        # write STDOUT and STDERR combined into one log file
+                        stdout=log_file,
+                        # activate the virtual environment "tmt"
+                        application_name='tmt'
+                )
+                self._jobs.add(app)
+        return self._jobs
 
     @staticmethod
     def process_cli_commands(args, subparser):

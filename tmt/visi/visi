@@ -113,11 +113,6 @@ if __name__ == '__main__':
                                help='path to folder holding .stk files \
                                      (defaults to cwd)')
 
-    submit_parser.add_argument('-b', '--brutus', dest='brutus',
-                               action='store_true', default=False,
-                               help='submits jobs on Brutus via bsub \
-                                     (not using gc3pie)')
-
     submit_parser.add_argument('--visi_config', dest='visi_config',
                                help='use custom yaml configuration file \
                                      (defaults to "visi" configuration)')
@@ -156,6 +151,9 @@ if __name__ == '__main__':
 
     # Add "visi" to "tmt" configuration
     args.config.update(visi_configuration)
+
+    if 'wildcards' not in args:
+        args.wildcards = '*'
 
     try:
         if args.handler:
