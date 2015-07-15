@@ -1,3 +1,4 @@
+setuptools==5.8
 Cython==0.22.1
 decorator==3.4.2
 ecdsa==0.13
@@ -26,8 +27,15 @@ pytz==2015.4
 PyYAML==3.11
 scipy==0.15.1
 scikit-image==0.11.3
+scikit-learn==0.16.0
 Shapely==1.5.9
 six==1.9.0
 SQLAlchemy==1.0.6
 tifffile==0.6.2
 subprocess32==3.2.6
+julia==0.1.1
+matlab-wrapper==0.9.6
+rpy2==2.6.0
+ruamel.yaml==0.8
+pandas==0.16.2
+image-registration==0.2.1
