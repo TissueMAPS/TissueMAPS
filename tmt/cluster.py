@@ -1,22 +1,27 @@
 import os
 import yaml
-from time import time
-from datetime import datetime
+import time
+import datetime
 import re
 import socket
+import gc3libs
 import subprocess32
+
+import logging
+logger = logging.getLogger(__name__)
+# gc3libs.configure_logger(level=logging.DEBUG)
+gc3libs.configure_logger(level=logging.CRITICAL)
 
 
 def create_batches(li, n):
     '''
-    Separate a list into several n-sized sub-lists, i.e. batches.
+    Break a list into several n-sized partitions, i.e. batches.
 
     Parameters
     ----------
     li: list
-        usually list of files
     n: int
-        batch size
+        batch size, i.e. number of elements per batch
 
     Returns
     -------
@@ -27,18 +32,29 @@ def create_batches(li, n):
     return [li[i:i + n] for i in range(0, len(li), n)]
 
 
-def create_timestamp(time_only=False):
+def create_datetimestamp():
     '''
-    Create timestamp in the form "year-month-day_hour_minute_second".
+    Create datetimestamp in the form "year-month-day_hour:minute:second".
+    Returns
+    -------
+    str
+        datetimestamp
+    '''
+    t = time.time()
+    return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
+
+
+def create_timestamp():
+    '''
+    Create timestamp in the form "hour:minute:second".
+
     Returns
     -------
     str
         timestamp
     '''
-    if time_only:
-        return datetime.fromtimestamp(time()).strftime('%H-%M-%S')
-    else:
-        return datetime.fromtimestamp(time()).strftime('%Y-%m-%d_%H-%M-%S')
+    t = time.time()
+    return datetime.datetime.fromtimestamp(t).strftime('%H:%M:%S')
 
 
 def write_joblist(filename, joblist):
@@ -79,6 +95,51 @@ def read_joblist(filename):
         raise OSError('Joblist file does not exist: %s' % filename)
     with open(filename, 'r') as joblist_file:
             return yaml.load(joblist_file.read())
+
+
+def submit_jobs_gc3pie(jobs):
+    '''
+    Create a GC3Pie engine that submits jobs to a cluster or cloud
+    for parallel processing and monitors their progress.
+
+    Parameters
+    ----------
+    jobs: gc3libs.workflow.ParallelTaskCollection[gc3libs.Application]
+        collection of "jobs" that should be processed in parallel
+    '''
+    # Create an `Engine` instance for running jobs in parallel
+    e = gc3libs.create_engine()
+
+    # Put all output files in the same directory
+    e.retrieve_overwrites = True
+
+    # Add tasks to engine instance
+    e.add(jobs)
+
+    # Periodically check the status of submitted jobs
+    while jobs.execution.state != gc3libs.Run.State.TERMINATED:
+        print '%s: Status of jobs "%s": %s ' % (create_timestamp(),
+                                                jobs.jobname,
+                                                jobs.execution.state)
+        # `progess` will do the GC3Pie magic:
+        # submit new jobs, update status of submitted jobs, get
+        # results of terminating jobs etc...
+        e.progress()
+        for task in jobs.iter_workflow():
+            if task.jobname == jobs.jobname:
+                continue
+            print '%s: Status of job "%s": %s ' % (create_timestamp(),
+                                                   task.jobname,
+                                                   task.execution.state)
+        time.sleep(3)
+
+    for task in jobs.iter_workflow():
+        if(task.execution.returncode != 0
+                or task.execution.exitcode != 0):
+            print 'Job "%s" failed.' % task.jobname
+            # TODO: resubmit
+
+    print '%s: Jobs "%s" terminated.' % (create_timestamp(), jobs.jobname)
 
 
 class Cluster(object):
