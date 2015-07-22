@@ -3,7 +3,7 @@ import os
 from natsort import natsorted
 from tmt.image import is_image_file
 from tmt.illumstats import Illumstats
-from tmt.image import IntensityImage, MaskImage
+from tmt.image import ChannelImage, LabelImage
 from tmt.shift import ShiftDescriptor
 
 
@@ -127,7 +127,7 @@ class Project(object):
         '''
         Returns
         -------
-        List[tmt.image.IntensityImage]
+        List[tmt.image.ChannelImage]
             image files (intensity images)
 
         Raises
@@ -147,7 +147,7 @@ class Project(object):
             if not files:
                 raise IOError('No image files found in "%s"'
                               % self.image_dir)
-            self._image_files = [IntensityImage(f, self.cfg) for f in files]
+            self._image_files = [ChannelImage(f, self.cfg) for f in files]
         return self._image_files
 
     @property
@@ -181,7 +181,7 @@ class Project(object):
         '''
         Returns
         -------
-        List[tmt.image.MaskImage]
+        List[tmt.image.LabelImage]
             segmentation image files (mask images)
 
         Raises
@@ -202,7 +202,7 @@ class Project(object):
             if not files:
                 raise IOError('No image files found in "%s"'
                               % self.segmentation_dir)
-            self._segmentation_files = [MaskImage(f, self.cfg) for f in files]
+            self._segmentation_files = [LabelImage(f, self.cfg) for f in files]
         return self._segmentation_files
 
     @property

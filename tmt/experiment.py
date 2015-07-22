@@ -27,7 +27,7 @@ class Experiment(object):
         '''
         self.cfg = cfg
         self.experiment_dir = experiment_dir
-        self.experiment = basename(experiment_dir)
+        self.name = basename(experiment_dir)
         self._subexperiments = None
         self._project = None
         self._data_filename = None
@@ -64,8 +64,8 @@ class Experiment(object):
                        for f in experiment_subfolders
                        if self.is_valid_subexperiment(f)]
             if not folders:
-                raise AttributeError('Experiment "%s" does not contain any '
-                                     'subexperiments' % self.experiment)
+                print('Experiment "%s" does not contain any subexperiments'
+                      % self.name)
             self._subexperiments = folders
         return self._subexperiments
 

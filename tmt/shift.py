@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 import json
 import tmt
@@ -31,7 +32,7 @@ def shift_and_crop_image(im, y, x, upper, lower, left, right):
 
     Parameters
     ----------
-    im: numpy.ndarray
+    im: numpy.ndarray or Vips.Image
         input image
     y: int
         shift in y direction (positive value -> down, negative value -> up)
@@ -48,7 +49,7 @@ def shift_and_crop_image(im, y, x, upper, lower, left, right):
 
     Returns
     -------
-    numpy.array
+    numpy.array or Vips.Image
         shifted and cropped image
 
     Raises
@@ -169,8 +170,10 @@ class ShiftDescriptor(object):
         numpy.ndarray or Vips.Image
             aligned image
         '''
+        r = re.compile(self.cfg['SITE_FROM_FILENAME'])
+        site = re.search(r, im_name).group(1)
         index = [i for i, f in enumerate(self.description.fileName)
-                 if f == im_name][0]
+                 if re.search(r, f).group(1) == site][0]
         y = self.description.yShift[index]
         x = self.description.xShift[index]
         upper = self.description.upperOverlap

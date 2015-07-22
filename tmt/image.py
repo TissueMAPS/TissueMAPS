@@ -1,6 +1,7 @@
 import re
 import os
 import mahotas as mh
+from scipy import misc
 import numpy as np
 try:
     from gi.repository import Vips
@@ -91,13 +92,13 @@ class Image(object):
     @property
     def image(self):
         '''
-        Read image form file and return it as `numpy` array (default -
-        if vips set to False) or as `Vips` image (if vips set to True).
+        Read image form file and return it as `ndarray`
+        (if `USE_VIPS_LIBRARY` is set to False) or as `VipsImage` otherwise.
 
         Returns
         -------
         numpy.ndarray or Vips.Image
-            image
+            loaded image
 
         Raises
         ------
@@ -274,9 +275,9 @@ class Image(object):
         return self._experiment_dir
 
 
-class IntensityImage(Image):
+class ChannelImage(Image):
     '''
-    Utility class for an intensity image,
+    Utility class for a channel image,
     i.e. a two dimensional gray-scale image.
 
     It provides the image itself (as type float)
@@ -316,10 +317,37 @@ class IntensityImage(Image):
             self._channel = int(m.group(1))
         return self._channel
 
+    @property
+    def image(self):
+        '''
+        Read image form file and return it as `ndarray`
+        (if `USE_VIPS_LIBRARY` is set to False) or as `VipsImage` otherwise.
 
-class MaskImage(Image):
+        Returns
+        -------
+        numpy.ndarray[float64] or Vips.Image[double]
+            image
+
+        Raises
+        ------
+        OSError
+            when image file does not exist on disk
+        '''
+        f = self.filename
+        if self._image is None:
+            if not os.path.exists(self.filename):
+                raise OSError('Cannot load image because '
+                              'file "%s" does not exist.' % self.filename)
+            if self.use_vips:
+                self._image = Vips.Image.new_from_file(f).cast('double')
+            else:
+                self._image = np.array(misc.imread(f), dtype='float64')
+        return self._image
+
+
+class LabelImage(Image):
     '''
-    Utility class for a mask image,
+    Utility class for a label image,
     i.e. a two dimensional labeled image that represents
     segmented objects as a continuous region of identical pixel values > 0.
     The list of unique pixels values are also referred to as the objects IDs.
