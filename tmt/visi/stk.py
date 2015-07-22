@@ -30,6 +30,9 @@ class Stk(object):
         OSERROR
             when `input_dir` does not exist
         '''
+        input_dir = os.path.expandvars(input_dir)
+        input_dir = os.path.expanduser(input_dir)
+        self.input_dir = os.path.abspath(input_dir)
         if not os.path.exists(input_dir):
             raise OSError('Input directory does not exist')
         self.input_dir = input_dir
@@ -175,13 +178,13 @@ class Stk(object):
 
         A joblist has the following structure (YAML format)::
 
-            - job_id: int
+            - id: int
               stk_files: List[str]
               nd_file:  str
               png_files: List[str]
               output_dir: str
 
-            - job_id: int
+            - id: int
               stk_files: List[str]
               nd_file:  str
               png_files: List[str]
@@ -217,7 +220,7 @@ class Stk(object):
                                    for f in renaming.output_files]
                 count += 1
                 joblist.append({
-                    'job_id': count,
+                    'id': count,
                     'stk_files': batch_stk_files,
                     'nd_file': nd_file,
                     'png_files': batch_png_files,
@@ -238,6 +241,11 @@ class Stk(object):
 
         Returns
         -------
-        List[dict[str, list[str] or str]]
+        List[Dict[str, List[str] or str]]
+
+        Raises
+        ------
+        OSERROR
+            when `joblist_file` does not exist
         '''
         return tmt.cluster.read_joblist(self.joblist_file)

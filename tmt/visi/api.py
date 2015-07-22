@@ -1,16 +1,11 @@
 import os
 import tmt
-import time
+import sys
 import gc3libs
 import gc3libs.workflow
 from tmt.visi.stk import Stk
 from tmt.visi.stk2png import Stk2png
 import tmt.cluster
-
-import logging
-logger = logging.getLogger(__name__)
-# gc3libs.configure_logger(level=logging.DEBUG)
-gc3libs.configure_logger(level=logging.CRITICAL)
 
 
 class Visi(object):
@@ -31,10 +26,12 @@ class Visi(object):
         wildcards: str, optional
             globbing pattern to select subset of files in the `stk_folder`
         '''
-        self.stk_folder = os.path.abspath(stk_folder)
+        self.stk_folder = os.path.expandvars(stk_folder)
+        self.stk_folder = os.path.expanduser(self.stk_folder)
+        self.stk_folder = os.path.abspath(self.stk_folder)
         self.config = config
         # Create an instance of class Stk
-        self.project = Stk(input_dir=stk_folder, wildcards=wildcards,
+        self.project = Stk(input_dir=self.stk_folder, wildcards=wildcards,
                            config=config)
 
     def joblist(self, batch_size, split_output=False, rename=False):
@@ -44,7 +41,7 @@ class Visi(object):
         Parameters
         ----------
         batch_size: int
-            number of files per batch job
+            number of files per j job
         split_output: bool, optional
             whether files belonging to different (sub)experiments, i.e.
             in case there are multiple .nd files in the input folder,
@@ -86,12 +83,12 @@ class Visi(object):
             joblist = self.project.read_joblist()
 
             print '. Processing job #%d' % job_id
-            batch = joblist[job_ix]
-            process = Stk2png(batch['stk_files'], batch['nd_file'],
+            j = joblist[job_ix]
+            process = Stk2png(j['stk_files'], j['nd_file'],
                               self.config)
             print '.. Unpack .stk files and convert them to .png images'
-            process.unpack_images(output_dir=batch['output_dir'],
-                                  output_files=batch['png_files'],
+            process.unpack_images(output_dir=j['output_dir'],
+                                  output_files=j['png_files'],
                                   keep_z=zstacks)
         else:
 
@@ -103,53 +100,33 @@ class Visi(object):
             joblist = self.project.create_joblist(batch_size=1,
                                                   rename=rename)
 
-            for batch in joblist:
-                print '. Processing job #%d' % batch['job_id']
-                process = Stk2png(batch['stk_files'], batch['nd_file'],
+            for j in joblist:
+                print '. Processing job #%d' % j['id']
+                process = Stk2png(j['stk_files'], j['nd_file'],
                                   self.config)
 
                 print '.. Unpack .stk files and convert them to .png images'
-                process.unpack_images(output_dir=batch['output_dir'],
-                                      output_files=batch['png_files'],
+                process.unpack_images(output_dir=j['output_dir'],
+                                      output_files=j['png_files'],
                                       keep_z=zstacks)
 
-    def submit(self):
+    def submit(self, shared_network=True):
         '''
-        Submit jobs to cluster or cloud to run in parallel.
+        Submit jobs to cluster or cloud to run in parallel. Requires prior
+        creation of a `joblist`.
 
-        You need to create a `joblist` and `build_jobs` first!
+        Parameters
+        ----------
+        shared_network: bool, optional
+            whether worker nodes have access to a shared network
+            or filesystem (defaults to True)
         '''
-        # Create an `Engine` instance for running jobs in parallel
-        e = gc3libs.create_engine()
-        # Put all output files in the same directory
-        e.retrieve_overwrites = True
-
-        # Add tasks to engine instance
-        e.add(self.jobs)
-
-        # Periodically check the status of submitted jobs
-        while self.jobs.execution.state != gc3libs.Run.State.TERMINATED:
-            timestamp = tmt.cluster.create_timestamp(time_only=True)
-            print "%s: Job status: %s " % (timestamp,
-                                           self.jobs.execution.state)
-            # `progess` will do the GC3Pie magic:
-            # submit new jobs, update status of submitted jobs, get
-            # results of terminating jobs etc...
-            e.progress()
-            time.sleep(10)
-
-        for task in self.jobs.iter_workflow():
-            if(task.execution.returncode != 0
-                    or task.execution.exitcode != 0):
-                print 'Job "%s" failed.' % task.jobname
-                # resubmit?
-
-        timestamp = tmt.cluster.create_timestamp(time_only=True)
-        print '%s: All jobs terminated.' % timestamp
+        self.build_jobs(shared_network=shared_network)
+        tmt.cluster.submit_jobs_gc3pie(self.jobs)
 
     def build_jobs(self, shared_network=True):
         '''
-        Build a parallel task collection of "jobs" for GC3Pie.
+        Build a GC3Pie parallel task collection of "jobs".
 
         Parameters
         ----------
@@ -159,28 +136,31 @@ class Visi(object):
 
         Returns
         -------
-        jobs: gc3libs.workflow.ParallelTaskCollection
+        gc3libs.workflow.ParallelTaskCollection
+            jobs
         '''
         self.jobs = gc3libs.workflow.ParallelTaskCollection(
                         jobname='visi_%s_jobs' % self.project.experiment
         )
+
         try:
             joblist = self.project.read_joblist()
-        except OSError:
-            raise OSError('Create a joblist first!\n'
-                          'For help call "visi joblist -h"')
-        for batch in joblist:
+        except OSError as e:
+            print str(e)
+            print('Create a joblist first!\nFor help call "visi joblist -h"')
+            sys.exit(0)
 
-            jobname = 'visi_%s_job%.5d' % (self.project.experiment,
-                                           batch['job_id'])
-            timestamp = tmt.cluster.create_timestamp()
+        for j in joblist:
+
+            jobname = 'visi_%s_job-%.5d' % (self.project.experiment, j['id'])
+            timestamp = tmt.cluster.create_datetimestamp()
             log_file = '%s_%s.log' % (jobname, timestamp)
             # NOTE: There is a GDC3Pie bug that prevents the use of relative
             # paths for `stdout` and `stderr` to bundle log files
             # in a subdirectory of the `output_dir`
 
             command = [
-                'visi', 'run', '--job', str(batch['job_id']),
+                'visi', 'run', '--job', str(j['id']),
                 self.stk_folder
             ]
 
@@ -193,23 +173,23 @@ class Visi(object):
                 inputs = []
                 outputs = []
             else:
-                inputs = batch['stk_files']
-                inputs.append(batch['nd_file'])
+                inputs = j['stk_files']
+                inputs.append(j['nd_file'])
                 inputs.append(self.project.joblist_file)
-                outputs = batch['png_files']
+                outputs = j['png_files']
 
             # Add individual task to collection
             app = gc3libs.Application(
                     arguments=command,
                     inputs=inputs,
                     outputs=outputs,
-                    output_dir=batch['output_dir'],
+                    output_dir=j['output_dir'],
                     jobname=jobname,
                     # write STDOUT and STDERR combined into a single log file
                     stdout=log_file,
                     join=True,
                     # activate the virtual environment
-                    application_name='tmt'
+                    application_name='tmaps'
             )
             self.jobs.add(app)
         return self.jobs
@@ -220,7 +200,7 @@ class Visi(object):
         Initializes an instance of class Visi with parsed command line
         arguments.
 
-        For a list of arguments use the following command::
+        For more info on the arguments of a particular subparser, call::
 
             visi <subparser_name> -h
 
@@ -241,7 +221,6 @@ class Visi(object):
         elif subparser.prog == 'visi joblist':
             cli.joblist(args.batch_size, args.split_output, args.rename)
         elif subparser.prog == 'visi submit':
-            cli.build_jobs(args.shared_network)
-            cli.submit()
+            cli.submit(args.shared_network)
         else:
             subparser.print_help()
