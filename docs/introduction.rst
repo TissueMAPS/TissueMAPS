@@ -49,12 +49,31 @@ The *tmt.config* `YAML <http://yaml.org/>`_ file specifies the experiment layout
 Configuration classes
 ---------------------
 
-Paths and filenames are described with `Python format strings <https://docs.python.org/2/library/string.html#formatstrings>`_. The configuration classes replace the **replacement fields** surrounded by curly braces ``{}`` with experiment specific variables and provide the formatted path or filename in form of an attribute.
+Paths and filenames are described with `Python format strings <https://docs.python.org/2/library/string.html#formatstrings>`_. The configuration classes replace the **replacement fields** surrounded by curly braces ``{}`` with experiment specific variables and provide the formatted path or filename in form of an attribute. The classes use lazy loading, which means that the actual files are only loaded into memory once they are explicitly requested.
+
+.. _image-filenames:
+
+Image filenames
+---------------
+
+Note that image filenames need to encode the following information:
+
+- row
+- column 
+- channel
+
+For more information on how to rename files accordingly, see `visi` package.
+Here are the visi-specific configuration settings:
+
+.. literalinclude:: ../tmt/visi/visi.config
+   :language: yaml
+
+.. _definitions:
 
 Definitions
 -----------
 
-A **project** represents the folder on disk, which contains the images and corresponding data. This may either be an **experiment** or a **subexperiment**, in case the experiment is made up of several related image acquisition *cycles*, i.e. if you acquired images of the same sample at different time points.
+A **project** represents the folder on disk, which contains the images and corresponding data. This may either correspond to an **experiment** or a **subexperiment**, in case the experiment is made up of several related image acquisition *cycles* (images of the same sample acquired at different time points).
 
 
 Documentation
