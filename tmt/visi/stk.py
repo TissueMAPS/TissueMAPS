@@ -140,7 +140,7 @@ class Stk(object):
         IOERROR
             when output directory could not be determined from `config`
         '''
-        image_folder_name = self.cfg['IMAGE_FOLDER_LOCATION'].format(
+        image_folder_name = self.cfg['IMAGE_FOLDER_FORMAT'].format(
                                         experiment_dir=self.experiment_dir,
                                         subexperiment='irrelevant',
                                         sep=os.path.sep)

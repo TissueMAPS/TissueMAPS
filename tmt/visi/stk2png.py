@@ -4,6 +4,7 @@ import png
 import numpy as np
 from copy import copy
 import re
+from tmt.illuminati import stitch
 
 
 # TODO:
@@ -102,70 +103,6 @@ def format_nd(nd):
         elif number_match:
             nd[k] = int(number_match.group(1))
     return nd
-
-
-def guess_stitch_dims(max_position, layout):
-    '''
-    Simple algorithm to guess correct dimensions of a stitched mosaic image.
-
-    Parameters
-    ----------
-    max_position: int
-        maximum position in the stitched image
-    layout: str
-        either "columns<rows" (more rows than columns)
-        or "columns>rows" (vice versa)
-
-    Returns
-    -------
-    Tuple[int]
-        y, x dimensions (height, width) of the stitched image
-    '''
-    if layout == 'columns<rows':
-        decent = True
-    elif layout == 'columns>rows':
-        decent = False
-    else:
-        raise Exception('Layout needs to be specified.')
-    tmpI = np.arange((int(np.sqrt(max_position)) - 5),
-                     (int(np.sqrt(max_position)) + 5))
-    tmpII = np.matrix(tmpI).conj().T * np.matrix(tmpI)
-    (a, b) = np.where(np.triu(tmpII) == max_position)
-    stitch_dims = sorted([tmpI[a[0]], tmpI[b[0]]], reverse=decent)
-    return stitch_dims
-
-
-def determine_image_snake(stitch_dims, zig_zag):
-    '''
-    The image snake defines the position of each image in the stitched
-    mosaic image.
-
-    Parameters
-    ----------
-    stitch_dims: Tuple[int]
-        y,x dimensions (height, width) of the stitched image
-    zig_zag: bool
-        were images acquired in "ZigZag" mode?
-
-    Returns
-    -------
-    Dict[str, List[int]]
-        one-based "row" and "column" position of each individual image
-        in the stitched mosaic image
-    '''
-    cols = []
-    rows = []
-    # Currently, only horizontal snakes are supported!
-    for i in xrange(stitch_dims[0]):  # loop over rows
-        # Change order of sites in columns if acquired in ZigZag mode
-        if i % 2 and zig_zag:
-            cols += range(stitch_dims[1], 0, -1)
-        # Preserve order of sites in columns
-        else:
-            cols += range(1, stitch_dims[1]+1, 1)
-        rows += [i+1 for x in range(stitch_dims[1])]
-    snake = {'row': rows, 'column': cols}
-    return snake
 
 
 class Stk2png(object):
@@ -315,8 +252,9 @@ class Stk2png(object):
             raise ValueError('The provided acquisition mode is not supported.')
 
         # determine acquisition grid layout a.k.a. image "snake"
-        stitch_dims = guess_stitch_dims(self.nr_sites, self.acquisition_layout)
-        snake = determine_image_snake(stitch_dims, doZigZag)
+        stitch_dims = stitch.guess_stitch_dims(self.nr_sites,
+                                               self.acquisition_layout)
+        snake = stitch.determine_image_position(stitch_dims, doZigZag)
         # find "row" and "column" position of processed sites within the grid
         sites = np.array(self.info['site'])
         column = np.array([None for x in xrange(len(sites))])
@@ -326,10 +264,10 @@ class Stk2png(object):
             if j not in sites:
                 continue
             ix = np.where(sites == j)[0]
-            column[ix] = snake['column'][i]
-            row[ix] = snake['row'][i]
-        self.info['column'] = map(int, column)
+            row[ix] = snake[i][0]
+            column[ix] = snake[i][1]
         self.info['row'] = map(int, row)
+        self.info['column'] = map(int, column)
 
     def format_filenames(self, rename=True):
         '''
