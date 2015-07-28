@@ -3,6 +3,7 @@ import os
 import mahotas as mh
 from scipy import misc
 import numpy as np
+import utils
 try:
     from gi.repository import Vips
 except ImportError as error:
@@ -30,17 +31,17 @@ def is_image_file(filename):
 
 class Image(object):
     '''
-    Utility class for images.
+    Utility class for an image.
 
-    It provides the image itself and additional information derived
-    from the image filename, such as the position (row/column coordinates)
-    of the image within the total imaging acquisition grid, site number,
-    cycle number, and name of the corresponding experiment.
+    It provides the image itself and additional meta-information derived
+    from the image filename or a provided by the user, such as the position
+    (row/column coordinates) of the image within the total imaging acquisition
+    grid, site number, cycle number, and name of the corresponding experiment.
     '''
 
-    def __init__(self, filename, cfg):
+    def __init__(self, filename, cfg, info):
         '''
-        Initialize Image class.
+        Initialize instance of class Image.
 
         Parameters
         ----------
@@ -48,11 +49,15 @@ class Image(object):
             path to the image file
         cfg: Dict[str, str]
             configuration settings
+        info: Dict[str, str or int], optional
+            information about image files, such as positional information
+            within the acquisition grid
 
         Raises
         ------
         ValueError
-            when file is not a valid image file format
+            when `filename` is not a valid image file format or
+            when `info` is not provided, but would be required
         '''
         self.cfg = cfg
         if not os.path.isabs(filename):
@@ -68,6 +73,12 @@ class Image(object):
         # we try to load the image. This still allows us to extract information
         # from filenames for which no absolute path is available.
         self.use_vips = self.cfg['USE_VIPS_LIBRARY']
+        self.info_from_filename = self.cfg['IMAGE_INFO_FROM_FILENAME']
+        self.info = info
+        if not self.cfg['IMAGE_INFO_FROM_FILENAME'] and self.info is None:
+            raise ValueError('IMAGE_INFO_FROM_FILENAME is set to False in '
+                             'configuration settings, but no information '
+                             'is provided.')
         self._image = None
         self._dimensions = None
         self._coordinates = None
@@ -77,6 +88,36 @@ class Image(object):
         self._channel = None
         self._experiment = None
         self._experiment_dir = None
+
+    @property
+    def named_regex_string(self):
+        '''
+        Returns
+        -------
+        str
+            named regular expression string built from format string
+            "IMAGE_FILE_FORMAT" defined in the `tmt.config`_ file
+
+        See also
+        --------
+        `utils.regex_from_format_string`
+        '''
+        string = utils.regex_from_format_string(self.cfg['IMAGE_FILE_FORMAT'])
+        self._named_regex_string = string
+        return self._named_regex_string
+
+    @property
+    def metadata(self):
+        '''
+        Returns
+        -------
+        Dict[str, int]
+            metadata for an image filename: "site", "row", "column", and
+            "cycle" number
+        '''
+        if self._metadata is None and self.info:
+            self._metadata = self.info[self.filename]
+        return self._metadata
 
     @property
     def name(self):
@@ -146,17 +187,22 @@ class Image(object):
             when coordinates cannot not be determined from filename
         '''
         if not self._coordinates:
-            m = re.search(self.cfg['COORDINATES_FROM_FILENAME'], self.filename)
-            if not m:
-                raise ValueError('Can\'t determine coordinates from file "%s" '
-                                 'using pattern "%s". \n'
-                                 'Check your configuration settings!'
-                                 % (self.filename,
-                                    self.cfg['COORDINATES_FROM_FILENAME']))
-            row_nr, col_nr = map(int, m.groups())
-            if not self.cfg['COORDINATES_IN_FILENAME_ONE_BASED']:
-                row_nr += 1
-                col_nr += 1
+            if self.info_from_filename:
+                m = re.search(self.named_regex_string, self.filename)
+                if not m:
+                    raise ValueError('Can\'t determine coordinates from '
+                                     'filename "%s" using format string "%s".'
+                                     '\nCheck your configuration settings!'
+                                     % (self.filename,
+                                        self.cfg['IMAGE_FILE_FORMAT']))
+                row_nr = int(m.group('row'))
+                col_nr = int(m.group('column'))
+                if not self.cfg['COORDINATES_IN_FILENAME_ONE_BASED']:
+                    row_nr += 1
+                    col_nr += 1
+            else:
+                row_nr = self.metadata['row']
+                col_nr = self.metadata['column']
             self.row = row_nr
             self.column = col_nr
             self._coordinates = (row_nr, col_nr)
@@ -195,14 +241,17 @@ class Image(object):
             when site number cannot not be determined from filename
         '''
         if self._site is None:
-            m = re.search(self.cfg['SITE_FROM_FILENAME'], self.filename)
-            if not m:
-                raise ValueError('Can\'t determine site from file "%s" '
-                                 'using pattern "%s". \n'
-                                 'Check your configuration settings!'
-                                 % (self.filename,
-                                    self.cfg['SITE_FROM_FILENAME']))
-            self._site = int(m.group(1))
+            if self.info_from_filename:
+                m = re.search(self.named_regex_string, self.filename)
+                if not m:
+                    raise ValueError('Can\'t determine site from filename "%s" '
+                                     'using format string "%s".'
+                                     '\nCheck your configuration settings!'
+                                     % (self.filename,
+                                        self.cfg['IMAGE_FILE_FORMAT']))
+                self._site = int(m.group('site'))
+            else:
+                self._site = self.metadata['site']
         return self._site
 
     @property
@@ -220,14 +269,17 @@ class Image(object):
             when cycle number cannot not be determined from filename
         '''
         if self._cycle is None:
-            m = re.search(self.cfg['CYCLE_FROM_FILENAME'], self.filename)
-            if not m:
-                raise ValueError('Can\'t determine cycle from file "%s" '
-                                 'using pattern "%s". \n'
-                                 'Check your configuration settings!'
-                                 % (self.filename,
-                                    self.cfg['CYCLE_FROM_FILENAME']))
-            self._cycle = int(m.group(1))
+            if self.info_from_filename:
+                m = re.search(self.named_regex_string, self.filename)
+                if not m:
+                    raise ValueError('Can\'t determine cycle from '
+                                     'filename "%s" using format string "%s".'
+                                     '\nCheck your configuration settings!'
+                                     % (self.filename,
+                                        self.cfg['IMAGE_FILE_FORMAT']))
+                self._cycle = int(m.group('cycle'))
+            else:
+                self._cycle = self.metadata['cycle']
         return self._cycle
 
     @property
@@ -245,15 +297,19 @@ class Image(object):
             when experiment name cannot not be determined from filename
         '''
         if self._experiment is None:
-            m = re.search(self.cfg['EXPERIMENT_FROM_FILENAME'],
-                          os.path.basename(self.filename))
-            if not m:
-                raise ValueError('Can\'t determine experiment from file "%s" '
-                                 'using pattern "%s". \n'
-                                 'Check your configuration settings!'
-                                 % (self.filename,
-                                    self.cfg['EXPERIMENT_FROM_FILENAME']))
-            self._experiment = m.group(1)
+            if self.info_from_filename:
+                m = re.search(self.named_regex_string,
+                              os.path.basename(self.filename))
+                if not m:
+                    raise ValueError('Can\'t determine experiment from '
+                                     'filename "%s" using format string "%s".'
+                                     '\nCheck your configuration settings!'
+                                     % (self.filename,
+                                        self.cfg['IMAGE_FILE_FORMAT']))
+                self._experiment = m.group(1)
+            else:
+                # TODO: wouldn't it be better to always use this approach?
+                self._experiment = os.path.basename(self.experiment_dir)
         return self._experiment
 
     @property
@@ -281,16 +337,54 @@ class ChannelImage(Image):
     i.e. a two dimensional gray-scale image.
 
     It provides the image itself (as type float)
-    and additional information derived from the image filename,
-    such as the channel number.
+    and additional information derived from the image filename or
+    provided by the user, such as the channel number.
+
+    See also
+    --------
+    `Image`_
     '''
 
-    def __init__(self, filename, cfg):
-        Image.__init__(self, filename, cfg)
+    def __init__(self, filename, cfg, info=None):
+        '''
+        Initialize instance of class ChannelImage.
+
+        Parameters
+        ----------
+        filename: str
+            path to the image file
+        cfg: Dict[str, str]
+            configuration settings
+        info: Dict[str, str or int], optional
+            information about image files, such as positional information
+            within the acquisition grid
+
+        Raises
+        ------
+        ValueError
+            when `filename` is not a valid image file format or
+            when `info` is not provided, but would be required
+        '''
+        Image.__init__(self, filename, cfg, info)
         self.filename = filename
         self.cfg = cfg
         self.use_vips = cfg['USE_VIPS_LIBRARY']
+        self.info = info
+        self._metadata = None
         self._channel = None
+
+    @property
+    def metadata(self):
+        '''
+        Returns
+        -------
+        Dict[str, int]
+            metadata for an image filename: "site", "row", "column", cycle",
+            and "channel" number
+        '''
+        if self._metadata is None:
+            self._metadata = self.info[self.filename]
+        return self._metadata
 
     @property
     def channel(self):
@@ -307,14 +401,17 @@ class ChannelImage(Image):
             when channel number cannot be determined from filename
         '''
         if self._channel is None:
-            m = re.search(self.cfg['CHANNEL_FROM_FILENAME'], self.filename)
-            if not m:
-                raise ValueError('Can\'t determine channel from file "%s" '
-                                 'using pattern "%s". \n'
-                                 'Check your configuration settings!'
-                                 % (self.filename,
-                                    self.cfg['CHANNEL_FROM_FILENAME']))
-            self._channel = int(m.group(1))
+            if self.info_from_filename:
+                m = re.search(self.named_regex_string, self.filename)
+                if not m:
+                    raise ValueError('Can\'t determine channel from '
+                                     'filename "%s" using format string "%s".'
+                                     '\nCheck your configuration settings!'
+                                     % (self.filename,
+                                        self.cfg['IMAGE_FILE_FORMAT']))
+                self._channel = int(m.group('channel'))
+            else:
+                self._channel = self.metadata['channel']
         return self._channel
 
     @property
@@ -345,24 +442,90 @@ class ChannelImage(Image):
         return self._image
 
 
-class LabelImage(Image):
+class SegmentationImage(Image):
     '''
-    Utility class for a label image,
+    Utility class for a segmentation image,
     i.e. a two dimensional labeled image that represents
     segmented objects as a continuous region of identical pixel values > 0.
     The list of unique pixels values are also referred to as the objects IDs.
 
     It provides the image itself and additional information derived
-    from the image filename, such as the name of objects encoded in the image
-    and their unique ids.
+    from the image filename or provided by the user, such as the name
+    of objects encoded in the image and their unique ids.
+
+    See also
+    --------
+    `Image`_
     '''
-    def __init__(self, filename, cfg):
-        Image.__init__(self, filename, cfg)
+    def __init__(self, filename, cfg, info):
+        '''
+        Initialize instance of class SegmentationImage.
+
+        Parameters
+        ----------
+        filename: str
+            path to the image file
+        cfg: Dict[str, str]
+            configuration settings
+        info: Dict[str, str or int], optional
+            information about image files, such as positional information
+            within the acquisition grid
+
+        Raises
+        ------
+        ValueError
+            when `filename` is not a valid image file format or
+            when `info` is not provided, but would be required
+        '''
+        Image.__init__(self, filename, cfg, info)
         self.filename = filename
         self.cfg = cfg
         self.use_vips = cfg['USE_VIPS_LIBRARY']
+        self.info = info
+        self._metadata = None
         self._objects = None
         self._ids = None
+
+    @property
+    def named_regex_string(self):
+        '''
+        Returns
+        -------
+        str
+            named regular expression string built from format string
+            "SEGMENTATION_FILE_FORMAT" defined in the `tmt.config`_ file
+
+        See also
+        --------
+        `utils.regex_from_format_string`_
+        '''
+        string = utils.regex_from_format_string(self.cfg['SEGMENTATION_FILE_FORMAT'])
+        self._named_regex_string = string
+        return self._named_regex_string
+
+    @property
+    def metadata(self):
+        '''
+        Returns
+        -------
+        Dict[str, int]
+            metadata for an image filename: "site", "row", "column", and cycle"
+            number and "objects" name
+        '''
+        if self._metadata is None:
+            self._metadata = self.info[self.filename]
+        return self._metadata
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            basename of the image file
+        '''
+        self._name = os.path.basename(self.filename)
+        return self._name
 
     @property
     def objects(self):
@@ -379,14 +542,17 @@ class LabelImage(Image):
             when objects name cannot not be determined from filename
         '''
         if self._objects is None:
-            m = re.search(self.cfg['OBJECTS_FROM_FILENAME'], self.filename)
-            if not m:
-                raise ValueError('Can\'t determine objects from file "%s" '
-                                 'using pattern "%s". \n'
-                                 'Check your configuration settings!'
-                                 % (self.filename,
-                                    self.cfg['OBJECTS_FROM_FILENAME']))
-            self._objects = m.group(1)
+            if self.info_from_filename:
+                m = re.search(self.named_regex_string, self.filename)
+                if not m:
+                    raise ValueError('Can\'t determine objects from '
+                                     'filename "%s" using format string "%s".'
+                                     '\nCheck your configuration settings!'
+                                     % (self.filename,
+                                        self.cfg['SEGMENTATION_FILE_FORMAT']))
+                self._objects = m.group('objects')
+            else:
+                self._objects = self.metadata['objects']
         return self._objects
 
     @property
@@ -409,4 +575,4 @@ class LabelImage(Image):
 
     # TODO:
     # add methods for providing the sub-images (from bounding boxes)
-    # as iterable object
+    # as iterable object?

@@ -1,9 +1,10 @@
 import re
 import os
+import yaml
 from natsort import natsorted
 from tmt.image import is_image_file
 from tmt.illumstats import Illumstats
-from tmt.image import ChannelImage, LabelImage
+from tmt.image import ChannelImage, SegmentationImage
 from tmt.shift import ShiftDescriptor
 
 
@@ -14,13 +15,18 @@ class Project(object):
     A project represents the directory that holds the image folder
     and potentially additional folders for segmentation, shift, and
     illumination statistics files.
-    The project folder may either correspond to an "experiment"
-    or a "subexperiment".
+    The project folder may either correspond to an "experiment" or a
+    "subexperiment".
+
+    See also
+    --------
+    `experiment.Experiment`_
+    `experiment.Subexperiment`_
     '''
 
     def __init__(self, project_dir, cfg):
         '''
-        Initialize Project class.
+        Initialize an instance of class Project.
 
         Parameters
         ----------
@@ -46,8 +52,10 @@ class Project(object):
         self.is_MPcycle = False
         self._image_dir = None
         self._image_files = None
+        self._image_info = None
         self._segmentation_dir = None
         self._segmentation_files = None
+        self._segmentation_info = None
         self._shift_dir = None
         self._shift_file = None
         self._stats_dir = None
@@ -97,7 +105,7 @@ class Project(object):
         -------
         str
             name of the subexperiment
-            (empty string if the project is no subexperiment)
+            (empty string if the project is not a subexperiment)
         '''
         if self._subexperiment is None:
             if self.cfg['SUBEXPERIMENTS_EXIST']:
@@ -115,7 +123,7 @@ class Project(object):
             path to directory holding image files
         '''
         if self._image_dir is None:
-            folder = self.cfg['IMAGE_FOLDER_LOCATION'].format(
+            folder = self.cfg['IMAGE_FOLDER_FORMAT'].format(
                             experiment_dir=self.experiment_dir,
                             subexperiment=self.subexperiment,
                             sep=os.path.sep)
@@ -145,10 +153,26 @@ class Project(object):
                      for f in os.listdir(self.image_dir) if is_image_file(f)]
             files = natsorted(files)
             if not files:
-                raise IOError('No image files found in "%s"'
-                              % self.image_dir)
-            self._image_files = [ChannelImage(f, self.cfg) for f in files]
+                raise IOError('No image files found in "%s"' % self.image_dir)
+            self._image_files = [ChannelImage(f, self.cfg, self.image_info)
+                                 for f in files]
         return self._image_files
+
+    @property
+    def image_info(self):
+        '''
+        Returns
+        -------
+        Dict[str, Dict[str, int]]
+            information about image files, such as "site", "row", "column",
+            and "channel" number
+        '''
+        if (not self.cfg['INFO_FROM_FILENAME']
+                and self._image_info is None):
+            info_file = os.path.join(self.segmentation_dir,
+                                     self.cfg['IMAGE_INFO_FILE_FORMAT'])
+            self._image_info = yaml.load(open(info_file))
+        return self._image_info
 
     @property
     def segmentation_dir(self):
@@ -169,7 +193,7 @@ class Project(object):
                             re.sub(r'../', '',
                                    self.shift_file.description.segmentationDir))
             except:
-                folder = self.cfg['SEGMENTATION_FOLDER_LOCATION'].format(
+                folder = self.cfg['SEGMENTATION_FOLDER_FORMAT'].format(
                                     experiment_dir=self.experiment_dir,
                                     subexperiment=self.subexperiment,
                                     sep=os.path.sep)
@@ -181,7 +205,7 @@ class Project(object):
         '''
         Returns
         -------
-        List[tmt.image.LabelImage]
+        List[tmt.image.SegmentationImage]
             segmentation image files (mask images)
 
         Raises
@@ -200,10 +224,28 @@ class Project(object):
                      if is_image_file(f)]
             files = natsorted(files)
             if not files:
-                raise IOError('No image files found in "%s"'
+                raise IOError('No segmentation files found in "%s"'
                               % self.segmentation_dir)
-            self._segmentation_files = [LabelImage(f, self.cfg) for f in files]
+            self._segmentation_files = \
+                [SegmentationImage(f, self.cfg, self.segmentation_info)
+                 for f in files]
         return self._segmentation_files
+
+    @property
+    def segmentation_info(self):
+        '''
+        Returns
+        -------
+        Dict[str, Dict[str, int]]
+            information about segmentation files, such as "site", "row",
+            "column" number and "objects" name
+        '''
+        if (not self.cfg['INFO_FROM_FILENAME']
+                and self._segmentation_info is None):
+            info_file = os.path.join(self.segmentation_dir,
+                                     self.cfg['SEGMENTATION_INFO_FILE_FORMAT'])
+            self._segmentation_info = yaml.load(open(info_file))
+        return self._segmentation_info
 
     @property
     def stats_dir(self):
@@ -214,7 +256,7 @@ class Project(object):
             path to directory holding illumination statistic files
         '''
         if self._stats_dir is None:
-            folder = self.cfg['STATS_FOLDER_LOCATION'].format(
+            folder = self.cfg['STATS_FOLDER_FORMAT'].format(
                                 experiment_dir=self.experiment_dir,
                                 subexperiment=self.subexperiment,
                                 sep=os.path.sep)
@@ -261,7 +303,7 @@ class Project(object):
             path to directory holding shift descriptor files
         '''
         if self._shift_dir is None:
-            folder = self.cfg['SHIFT_FOLDER_LOCATION'].format(
+            folder = self.cfg['SHIFT_FOLDER_FORMAT'].format(
                                 experiment_dir=self.experiment_dir,
                                 subexperiment=self.subexperiment,
                                 sep=os.path.sep)

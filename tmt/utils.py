@@ -1,5 +1,4 @@
 import yaml
-import json
 import os
 import re
 
@@ -22,10 +21,12 @@ def regex_from_format_string(format_string):
         named regular expression pattern
     '''
     # Extract the names of all placeholders from the format string
+    format_string = re.sub(r'\.', '\.', format_string)  # escape dot
     placeholders_inner_parts = re.findall(r'{(.+?)}', format_string)
     # Remove format strings
     placeholder_names = [pl.split(':')[0] for pl in placeholders_inner_parts]
-    placeholder_regexes = [re.escape('{%s}' % pl) for pl in placeholders_inner_parts]
+    placeholder_regexes = [re.escape('{%s}' % pl)
+                           for pl in placeholders_inner_parts]
 
     regex = format_string
     for pl_name, pl_regex in zip(placeholder_names, placeholder_regexes):
@@ -77,21 +78,21 @@ def check_config(cfg):
         when a required key is missing
     '''
     required_keys = {
-        'COORDINATES_FROM_FILENAME',
-        'COORDINATES_IN_FILENAME_ONE_BASED',
-        'SUBEXPERIMENT_FOLDER_FORMAT',
-        'SUBEXPERIMENT_FILE_FORMAT',
-        'CYCLE_FROM_FILENAME',
-        'EXPERIMENT_FROM_FILENAME',
-        'IMAGE_FOLDER_LOCATION',
         'SUBEXPERIMENTS_EXIST',
-        'SEGMENTATION_FOLDER_LOCATION',
-        'OBJECTS_FROM_FILENAME',
-        'SHIFT_FOLDER_LOCATION',
+        'COORDINATES_IN_FILENAME_ONE_BASED',
+        'USE_VIPS_LIBRARY',
+        'INFO_FROM_FILENAME',
+        'SUBEXPERIMENT_FOLDER_FORMAT',
+        'IMAGE_FOLDER_FORMAT',
+        'IMAGE_FILE_FORMAT',
+        'IMAGE_INFO_FILE_FORMAT',
+        'SEGMENTATION_FOLDER_FORMAT',
+        'SEGMENTATION_FILE_FORMAT',
+        'SEGMENTATION_INFO_FILE_FORMAT',
+        'SHIFT_FOLDER_FORMAT',
         'SHIFT_FILE_FORMAT',
-        'STATS_FOLDER_LOCATION',
-        'STATS_FILE_FORMAT',
-        'CHANNEL_FROM_FILENAME'
+        'STATS_FOLDER_FORMAT',
+        'STATS_FILE_FORMAT'
     }
     for key in required_keys:
         if key not in cfg:
