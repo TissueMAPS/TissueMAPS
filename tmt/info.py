@@ -14,10 +14,8 @@ image_file = 'P8_WT_animal8_serie1_section6_hippocampus_tilescan_20X_3.2.lif'
 
 filename = os.path.join(image_folder, image_file)
 
-# TODO: how to update to newer schema?
-# http://downloads.openmicroscopy.org/bio-formats/5.1.3/
-# new_jar = '/Users/mdh/Envs/tmaps/lib/python2.7/site-packages/bioformats/jars/loci_tools.jar'
-# jars = [new_jar] + bioformats.JARS
+# NOTE: updated "loci_tools.jar" file to latest schema:
+# http://downloads.openmicroscopy.org/bio-formats/5.1.3
 jars = bioformats.JARS
 javabridge.start_vm(class_path=jars)
 ome_xml = bioformats.get_omexml_metadata(filename)
@@ -71,9 +69,9 @@ for i in xrange(n_images):
         print '  plane #%d:' % p
         plane = metadata.image(i).Pixels.Plane(p)
         x = plane.get_PositionX()
-        # print '    x position: {0}'.format(x)
+        print '    x position: {0}'.format(x)
         y = plane.get_PositionY()
-        # print '    y position: {0}'.format(y)
+        print '    y position: {0}'.format(y)
         images[i]['position'] = (y, x)
         z = plane.get_TheZ()
         print '    zstack: {0}'.format(z)
@@ -119,9 +117,7 @@ with bioformats.ImageReader(filename) as reader:
             #                        pixels=mip, pixel_type=image_dtype)
             visi.stk2png.write_png(output_filename, mip)
 
-# TODO:
-# if n_images > 0:
-#   load all images stored in `filename`
+# TODO: handle different cases without planes, etc.
 # 
 # write to disk as OME-TIFF files
 # (and attach the corresponding metadata as OME-XML)
