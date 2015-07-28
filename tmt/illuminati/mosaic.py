@@ -62,10 +62,10 @@ class Mosaic(object):
         return self._image_grid
 
     def _is_channel_layer(self):
-        return isinstance(self.image_grid[0][0], tmt.image.IntensityImage)
+        return isinstance(self.image_grid[0][0], tmt.image.ChannelImage)
 
     def _is_mask_layer(self):
-        return isinstance(self.image_grid[0][0], tmt.image.MaskImage)
+        return isinstance(self.image_grid[0][0], tmt.image.SegmentationImage)
 
     def build_channel_grid(self):
         '''
@@ -384,7 +384,7 @@ class Mosaic(object):
     def mosaic_image_name(self):
         '''
         Build name for the mosaic image based on metainformation stored in the
-        Image object. Names will differ between MaskImage and IntensityImage
+        Image object. Names will differ between SegmentationImage and ChannelImage
         objects, since they hold different information, such as objects name
         or channel number, respectively.
 
@@ -399,21 +399,21 @@ class Mosaic(object):
         '''
         if self._mosaic_image_name is None:
             im = self.images[0]
-            if isinstance(im, tmt.image.MaskImage):
+            if isinstance(im, tmt.image.SegmentationImage):
                 f = '{experiment}_{cycle}_segmented{objects}.jpg'.format(
                                             experiment=im.experiment,
                                             cycle=im.cycle,
                                             objects=im.objects)
 
-            elif isinstance(im, tmt.image.IntensityImage):
+            elif isinstance(im, tmt.image.ChannelImage):
                 f = '{experiment}_{cycle}_{filter}_C{channel:0>2}.jpg'.format(
                                             experiment=im.experiment,
                                             cycle=im.cycle,
                                             filter=im.filter,
                                             channel=im.channel)
             else:
-                raise TypeError('Image files must be of class "MaskImage" '
-                                'or "IntensityImage"')
+                raise TypeError('Image files must be of class "SegmentationImage" '
+                                'or "ChannelImage"')
             self._mosaic_image_name = f
         return self._mosaic_image_name
 

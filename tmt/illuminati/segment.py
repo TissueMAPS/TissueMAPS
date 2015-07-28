@@ -59,7 +59,7 @@ def create_id_lookup_matrices(sitemat, offset):
         image matrix where pixel values represent site-specific object ids
     offset: int
         value that will be added to each object id
-    
+
     Returns
     -------
     Tuple[numpy.ndarray[np.uint32], np.uint32]
@@ -72,17 +72,19 @@ def create_id_lookup_matrices(sitemat, offset):
 
 def create_and_save_lookup_tables(image_grid, data_file, output_dir):
     '''
-    Create lookup tables for global object ids and save them as .npy files.
+    Create lookup tables (lut) for global object ids
+    and save them as .npy files.
     They are required by TissueMAPS to map pixel positions in a pyramid image
     to the corresponding object.
 
     Parameters
     ----------
-    image_grid: List[List[tmt.image.MaskImage]]
+    image_grid: List[List[tmt.image.SegmentationImage]]
+        image files
     data_file: str
         path to the `data.h5` file containing the object id datasets
     output_dir: str
-        location were files should be saved
+        location were lut files should be saved
     '''
     current_obj = image_grid[0][0].objects.lower()
 

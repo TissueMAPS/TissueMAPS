@@ -39,14 +39,14 @@ if __name__ == '__main__':
                                 action='store_true', default=False,
                                 help='rescale stitched image between min \
                                       value and a threshold level')
-    channel_parser.add_argument('--thresh-value', dest='thresh_value',
-                                type=float, default=False,
+    channel_parser.add_argument('--thresh_value', dest='thresh_value',
+                                type=float, default=None,
                                 help='fixed pixel value for threshold')
-    channel_parser.add_argument('--thresh-percent', dest='thresh_percent',
+    channel_parser.add_argument('--thresh_percent', dest='thresh_percent',
                                 type=float, default=9.99,
                                 help='percentile of pixel values above \
                                       threshold (defaults to 99.99)')
-    channel_parser.add_argument('--thresh-sample', dest='thresh_sample',
+    channel_parser.add_argument('--thresh_sample', dest='thresh_sample',
                                 type=int, default=10,
                                 help='number of args.files to use for \
                                       threshold estimation (defaults to 10')
@@ -59,8 +59,8 @@ if __name__ == '__main__':
     channel_parser.add_argument('-o', '--output', dest='output_dir',
                                 help='directory where output should be saved')
 
-    channel_parser.add_argument('-l', '--layer', dest='layer_name', type=str,
-                                help='name that should be given to the layer')
+    channel_parser.add_argument('-l', '--layer_name', dest='layer_name',
+                                type=str, help='name of the layer')
 
     channel_parser.add_argument('-c', '--config', dest='config',
                                 help='path to custom yaml configuration file \
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     mask_parser.add_argument('-o', '--output', dest='output_dir',
                              help='directory where output should be saved')
 
-    mask_parser.add_argument('-l', '--layer', dest='layer_name', type=str,
-                             help='name that should be given to the layer')
+    mask_parser.add_argument('-l', '--layer_name', dest='layer_name',
+                             type=str, help='name of the layer')
 
     mask_parser.add_argument('-c', '--config', dest='config',
                              help='path to custom yaml configuration file \
@@ -101,14 +101,14 @@ if __name__ == '__main__':
                              help='type of mask that should be created, \
                                    "area" or "outline" (default)')
 
-    mask_parser.add_argument('--make-global-ids', dest='make_global_ids',
+    mask_parser.add_argument('-g', '--global_ids', dest='global_ids',
                              action='store_true', default=False,
                              help='if cell labels should be converted into \
                                    globally unique labels')
     mask_parser.add_argument('--png', dest='png',
                              action='store_true', default=False,
                              help='save pyramid tiles as png (default is jpg)')
-    mask_parser.add_argument('--no-rescale', dest='no_rescale',
+    mask_parser.add_argument('--no_rescale', dest='no_rescale',
                              action='store_true', default=False,
                              help='no 16bit -> 8bit rescaling')
 
@@ -141,9 +141,9 @@ if __name__ == '__main__':
     if args.config:
         # Overwrite default "tmt" configuration
         print '. Using configuration file "%s"' % args.config
-        args.config = tmt.util.load_config(args.config)
+        args.config = tmt.utils.load_config(args.config)
         print '. Checking configuration file'
-        tmt.util.check_config(args.config)
+        tmt.utils.check_config(args.config)
     else:
         args.config = tmt.config
 

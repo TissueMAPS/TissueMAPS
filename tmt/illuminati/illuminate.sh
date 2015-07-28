@@ -11,8 +11,8 @@ for CYCLE in $CYCLES; do
 	echo ""
 	echo "processing cycle ${CYCLE}"
 
-	illuminati ${PROJECTDIR}/${PROJECTNAME}*${CYCLE}/TIFF/*DAPI*png -sit --thresh-value=5000 -o ~/tissueMAPS/tmaps/expdata/${PROJECTNAME}/layers/DAPI_cycle${CYCLE}
-	illuminati ${PROJECTDIR}/${PROJECTNAME}*${CYCLE}/TIFF/*RFP*png -sit --thresh-value=3000 -o ~/tissueMAPS/tmaps/expdata/${PROJECTNAME}/layers/EEA1_cycle${CYCLE}
-	illuminati ${PROJECTDIR}/${PROJECTNAME}*${CYCLE}/TIFF/*GFP*png -sit --thresh-value=5000 -o ~/tissueMAPS/tmaps/expdata/${PROJECTNAME}/layers/Tubulin_cycle${CYCLE}
+	illuminati -n 1 -l DAPI_${CYCLE} -sit --thresh-value=5000 -o ~/tissueMAPS/tmaps/expdata/${PROJECTNAME}/layers
+	illuminati -n 2 -l RFP_${CYCLE} -sit --thresh-value=5000 -o ~/tissueMAPS/tmaps/expdata/${PROJECTNAME}/layers
+	illuminati -n 3 -l GFP_${CYCLE} -sit --thresh-value=5000 -o ~/tissueMAPS/tmaps/expdata/${PROJECTNAME}/layers
 
 done
