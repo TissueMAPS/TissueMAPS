@@ -2,7 +2,7 @@ import h5py
 import re
 import numpy as np
 import scipy.ndimage as ndi
-from tmt.util import regex_from_format_string
+from tmt.utils import regex_from_format_string
 try:
     from gi.repository import Vips
 except ImportError as error:
@@ -76,7 +76,7 @@ def illum_correct_numpy(orig_image, mean_mat, std_mat,
     smooth: bool, optional
         blur `mean_mat` and `std_mat` with a Gaussian filter (defaults to False)
     sigma: int, optional
-        size of the standard deviation of the Gaussian kernel (defaults to 5)
+        standard deviation of the Gaussian kernel (defaults to 5)
 
     Returns
     -------
@@ -134,7 +134,7 @@ def illum_correct(orig_image, mean_mat, std_mat,
     smooth: bool, optional
         blur `mean_mat` and `std_mat` with a Gaussian filter (defaults to False)
     sigma: int, optional
-        size of the standard deviation of the Gaussian kernel (defaults to 5)
+        standard deviation of the Gaussian kernel (defaults to 5)
     
     Returns
     -------
@@ -196,7 +196,7 @@ class Illumstats(object):
 
     @property
     def _statistics(self):
-        if not self.__statistics:
+        if self.__statistics is None:
             stats = h5py.File(self.filename, 'r')
             stats = stats['stat_values']
             if self.use_vips:
@@ -221,7 +221,7 @@ class Illumstats(object):
         int
             channel number
         '''
-        if not self._channel:
+        if self._channel is None:
             regexp = regex_from_format_string(self.cfg['STATS_FILE_FORMAT'])
             m = re.search(regexp, self.filename)
             if not m:
@@ -240,7 +240,7 @@ class Illumstats(object):
             image matrix of mean values at each pixel position
             (statistic calculated at each pixel position over all image sites)
         '''
-        if not self._mean_image:
+        if self._mean_image is None:
             self._mean_image = self._statistics[0]
         return self._mean_image
 
@@ -253,11 +253,11 @@ class Illumstats(object):
             image matrix of standard deviation values
             (statistic calculated at each pixel position over all image sites)
         '''
-        if not self._std_image:
+        if self._std_image is None:
             self._std_image = self._statistics[1]
         return self._std_image
 
-    def correct(self, image):
+    def correct(self, image, smooth=False, sigma=5):
         '''
         Correct image for illumination artifacts.
 
@@ -265,6 +265,12 @@ class Illumstats(object):
         ----------
         image: numpy.ndarray or Vips.Image
             image that should be corrected
+        smooth: bool, optional
+            whether smoothing of statistics images should be performed
+            prior to correction by applying a Gaussian kernel (defaults to False)
+        sigma: int, optional
+            size of the smoothing filter, i.e. standard deviation of the
+            Gaussian kernel (defaults to 5)
 
         Returns
         -------

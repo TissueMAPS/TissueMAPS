@@ -108,7 +108,7 @@ class ShiftDescriptor(object):
             'xShift', 'yShift', 'fileName',
             'lowerOverlap', 'upperOverlap', 'rightOverlap', 'leftOverlap',
             'maxShift', 'noShiftIndex', 'noShiftCount',
-            'segmentationDir', 'segmentationFilenameTrunk', 'cycleNum'
+            'segmentationDir', 'cycleNum'
         }
         return self._required_keys
 
@@ -139,7 +139,6 @@ class ShiftDescriptor(object):
             |    noShiftIndex
             |    noShiftCount
             |    segmentationDir
-            |    segmentationFilenameTrunk
             |    cycleNum
 
         Raises
@@ -150,7 +149,7 @@ class ShiftDescriptor(object):
         if self._description is None:
             content = load_shift_descriptor(self.filename)
             self._check_descriptor(content)
-            self._description = tmt.util.Namespacified(content)
+            self._description = tmt.utils.Namespacified(content)
         return self._description
 
     def align(self, im, im_name):

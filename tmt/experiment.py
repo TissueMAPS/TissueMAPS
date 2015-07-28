@@ -2,7 +2,7 @@ import re
 import os
 from os.path import isdir, join, basename
 from natsort import natsorted
-from tmt.util import regex_from_format_string
+from tmt.utils import regex_from_format_string
 from tmt.project import Project
 
 
@@ -16,7 +16,7 @@ class Experiment(object):
 
     def __init__(self, experiment_dir, cfg):
         '''
-        Initialize Experiment class.
+        Initialize instance of class Experiment.
 
         Parameters
         ----------
@@ -90,7 +90,7 @@ class Experiment(object):
             (see `dafu` package)
         '''
         if self._data_filename is None:
-            self._data_filename = self.cfg['DATA_FILE_LOCATION'].format(
+            self._data_filename = self.cfg['DATA_FILE_FORMAT'].format(
                                         experiment_dir=self.experiment_dir,
                                         sep=os.path.sep)
         return self._data_filename
@@ -102,12 +102,12 @@ class Subexperiment(object):
 
     A subexperiment represents a child folder of an experiment folder.
     The class provides information on the subexperiment, such as its name,
-    cycle number, and parent experiment's name.
+    cycle number, and the name of the parent experiment.
     '''
 
     def __init__(self, subexperiment_dir, cfg):
         '''
-        Initialize Subexperiment class.
+        Initialize instance of class Subexperiment.
 
         Parameters
         ----------
