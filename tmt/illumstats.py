@@ -146,20 +146,22 @@ def illum_correct(orig_image, mean_mat, std_mat,
     illum_correct_numpy
     illum_correct_vips
     '''
-    if isinstance(orig_image, np.ndarray):
+    if isinstance(orig_image, Vips.Image):
+        img = illum_correct_vips(orig_image, mean_mat, std_mat,
+                                 log_transform, smooth, sigma)
+    elif isinstance(orig_image, np.ndarray):
         img = illum_correct_numpy(orig_image, mean_mat, std_mat,
                                   log_transform, smooth, sigma)
     else:
-        img = illum_correct_vips(orig_image, mean_mat, std_mat,
-                                 log_transform, smooth, sigma)
+        raise TypeError('Image type must be "Vips.Image" or "numpy.ndarray".')
     return img
 
 
 class Illumstats(object):
     '''
-    Utility class for illumination correction statistics.
+    Class for illumination correction statistics.
 
-    It provides the mean and standard deviation images and the channel number.
+    It provides the mean and standard deviation matrices for a given channel.
     The statistics were calculated for each pixel position over all image sites
     acquired in the same channel [1]_.
 
@@ -171,10 +173,10 @@ class Illumstats(object):
 
     def __init__(self, filename, cfg, matlab=False):
         '''
-        Initialize Illumstats class.
+        Initialize an instance of class Illumstats.
 
         Images are either `Vips` or `numpy`,
-        depending on `USE_VIPS_LIBRARY` configuration.
+        depending on "USE_VIPS_LIBRARY" configuration.
 
         Parameters
         ----------
@@ -184,6 +186,11 @@ class Illumstats(object):
             configuration settings
         matlab: bool, optional
             if statistics were calculated with Matlab
+
+        See also
+        --------
+        `corilla`_
+        `tmt.config`_
         '''
         self.cfg = cfg
         self.filename = filename
@@ -200,8 +207,10 @@ class Illumstats(object):
             stats = h5py.File(self.filename, 'r')
             stats = stats['stat_values']
             if self.use_vips:
-                mean_image = Vips.Image.new_from_array(stats['mean'][()].tolist()).cast('double')
-                std_image = Vips.Image.new_from_array(stats['std'][()].tolist()).cast('double')
+                mean_image = Vips.Image.new_from_array(
+                                    stats['mean'][()].tolist()).cast('double')
+                std_image = Vips.Image.new_from_array(
+                                    stats['std'][()].tolist()).cast('double')
             else:
                 mean_image = np.array(stats['mean'][()], dtype='float64')
                 std_image = np.array(stats['std'][()], dtype='float64')
@@ -219,7 +228,7 @@ class Illumstats(object):
         Returns
         -------
         int
-            channel number
+            identifier number of the channel to which the statistics correspond
         '''
         if self._channel is None:
             regexp = regex_from_format_string(self.cfg['STATS_FILE_FORMAT'])
@@ -257,7 +266,7 @@ class Illumstats(object):
             self._std_image = self._statistics[1]
         return self._std_image
 
-    def correct(self, image, smooth=False, sigma=5):
+    def correct(self, image, log_transform=True, smooth=False, sigma=5):
         '''
         Correct image for illumination artifacts.
 
@@ -265,8 +274,10 @@ class Illumstats(object):
         ----------
         image: numpy.ndarray or Vips.Image
             image that should be corrected
+        log_transform: bool, optional
+            log10 transform `image` (defaults to True)
         smooth: bool, optional
-            whether smoothing of statistics images should be performed
+            whether smoothing of statistics matrices should be performed
             prior to correction by applying a Gaussian kernel (defaults to False)
         sigma: int, optional
             size of the smoothing filter, i.e. standard deviation of the
@@ -276,6 +287,11 @@ class Illumstats(object):
         -------
         numpy.ndarray or Vips.Image
             corrected image
+
+        See also
+        --------
+        `illumstats.illum_correct`_
         '''
-        corrected_image = illum_correct(image, self.mean_image, self.std_image)
+        corrected_image = illum_correct(image, self.mean_image, self.std_image,
+                                        log_transform, smooth, sigma)
         return corrected_image

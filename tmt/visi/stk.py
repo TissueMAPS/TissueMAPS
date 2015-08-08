@@ -128,7 +128,8 @@ class Stk(object):
         Parameters
         ----------
         split_output: bool
-            Should output be split into separate folders for each .nd file?
+            Whether output should be split into separate folders
+            for each .nd file
 
         Returns
         -------

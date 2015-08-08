@@ -5,7 +5,7 @@ import sys
 from functools import partial
 import traceback
 import argparse
-import tmt.util
+import tmt.utils
 import tmt.align
 from tmt.align.api import Align
 
@@ -54,18 +54,6 @@ if __name__ == '__main__':
 
     fuse_parser.add_argument('experiment_dir', default=os.getcwd(),
                              help='experiment directory')
-
-    fuse_parser.add_argument('--ref_cycle', dest='ref_cycle', type=int,
-                             help='reference cycle number \
-                                   (defaults to number of last cycle)')
-
-    fuse_parser.add_argument('--segm_dir', dest='segm_dir', type=str,
-                             help='relative path to segmentation directory \
-                                   (relative from other cycle subdirectory)')
-
-    fuse_parser.add_argument('--segm_trunk', dest='segm_trunk',type=str,
-                             help='trunk of segmentation filenames \
-                                   (substring image filenames have in common)')
 
     fuse_parser.add_argument('-m', '--max_shift', dest='max_shift',
                              type=int, default=100,
@@ -116,6 +104,11 @@ if __name__ == '__main__':
                                default=os.getcwd(),
                                help='experiment directory')
 
+    submit_parser.add_argument('--no_shared_network', dest='shared_network',
+                               action='store_false', default=True,
+                               help='in case worker nodes don\'t have access \
+                                     to a shared network')
+
     submit_parser.add_argument('-c', '--config', dest='config',
                                help='use custom yaml configuration file \
                                      (defaults to "tmt" configuration)')
@@ -158,9 +151,9 @@ if __name__ == '__main__':
     if args.config:
         # Overwrite default "tmt" configuration
         print '. Using configuration file "%s"' % args.config
-        args.config = tmt.util.load_config(args.config)
+        args.config = tmt.utils.load_config(args.config)
         print '. Checking configuration file'
-        tmt.util.check_config(args.config)
+        tmt.utils.check_config(args.config)
     else:
         args.config = tmt.config
 

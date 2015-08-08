@@ -124,14 +124,14 @@ def calc_global_centroids(local_centroids, ids, image_size):
     return global_centroids
 
 
-def list_jtproject(cycle_dir):
+def list_jtprojects(cycle_dir):
     '''
     Returns
     -------
     List[str]
         names of Jterator projects
     '''
-    return [f for f in os.path.listdir(cycle_dir)
+    return [f for f in os.listdir(cycle_dir)
             if os.path.isdir(os.path.join(cycle_dir, f))
             and glob.glob(os.path.join(cycle_dir, f, '*.pipe'))]
 

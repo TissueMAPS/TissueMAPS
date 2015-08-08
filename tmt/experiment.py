@@ -1,22 +1,53 @@
 import re
 import os
-from os.path import isdir, join, basename
 from natsort import natsorted
-from tmt.utils import regex_from_format_string
-from tmt.project import Project
+from utils import regex_from_format_string
+from image import is_image_file
+from plates import WellPlate
+from plates import Slide
+from reader import read_yaml
+from metadata import SegmentationMetadata
 
 
 class Experiment(object):
     '''
-    Utility class for an experiment.
+    Class for an experiment.
 
-    An experiment may represent a "project" itself or it may contain one or
-    several subexperiments, each of them representing a "project".
+    An experiment represents a folder on disk that contains image files
+    and additional data associated with the images, such as metainformation,
+    measured features, segmentations, etc. The structure of the directory tree
+    and the location of files is defined via format strings
+    in the configuration settings file.
+
+    An experiment consists of one or more cycles. A cycle represents a
+    particular time point of image acquisition for a given sample.
+    In the simplest case, the experiment represents a cycle itself, i.e. a
+    single round of image acquisition. However, the experiment may also
+    represent a time series, consisting of several iterative rounds of
+    image acquisitions. In this case there are multiple cycles and each cycle
+    should be represented by a separate subfolder on disk. The names of these
+    subexperiment folders should encode the name of the experiment as well as
+    the cycle number, i.e. the one-based index of the time series sequence.
+    For example, given an experiment called "myExperiment",
+    the directory tree could be structured as follows::
+
+        myExperiment           # experiment folder
+            myExperiment_1     # subexperiment folder corresponding to cycle #1
+            myExperiment_2     # subexperiment folder corresponding to cycle #2
+            ...
+
+    The exact format of cycle folders can be specified with the key
+    *CYCLE_FOLDER_FORMAT* in the configuration settings file.
+
+    See also
+    --------
+    `subexperiments.Cycle`_
+    `tmt.conifg`_
     '''
 
     def __init__(self, experiment_dir, cfg):
         '''
-        Initialize instance of class Experiment.
+        Initialize an instance of class Experiment.
 
         Parameters
         ----------
@@ -24,174 +55,127 @@ class Experiment(object):
             absolute path to experiment folder
         cfg: Dict[str, str]
             configuration settings
+
+        See also
+        --------
+        `tmt.config`_
         '''
         self.cfg = cfg
-        self.experiment_dir = experiment_dir
-        self.name = basename(experiment_dir)
-        self._subexperiments = None
-        self._project = None
-        self._data_filename = None
+        self.experiment_dir = os.path.abspath(experiment_dir)
+        self._segmentation_files = None
+        self._segmentations = None
 
-    def is_valid_subexperiment(self, folder_name):
+    @property
+    def name(self):
         '''
-        Check whether a folder represents a valid subexperiment.
+        Returns
+        -------
+        str
+            name of the experiment
+        '''
+        self._name = os.path.basename(self.experiment_dir)
+        return self._name
+
+    def _is_valid_cycle(self, folder):
+        '''
+        Determine whether a folder represents a valid "cycle".
+
+        The format of a cycle folders is defined in the configuration settings.
+        The format string is converted to a regular expression. If the regular
+        expression matches the folder name, the folder represents a cycle.
 
         Returns
         -------
         bool
         '''
         regexp = regex_from_format_string(
-                        self.cfg['SUBEXPERIMENT_FOLDER_FORMAT'])
-        return(re.match(regexp, folder_name)
-               and isdir(join(self.experiment_dir, folder_name)))
+                    self.cfg['CYCLE_FOLDER_FORMAT'])
+        return(re.match(regexp, folder)
+               and os.path.isdir(os.path.join(self.experiment_dir, folder)))
 
     @property
-    def subexperiments(self):
+    def cycles(self):
         '''
+        An experiment folder may contain several cycles or represent a cycle
+        itself. Depending on the *plate format*, a cycle corresponds either to
+        a well plate or a slide. This is defined by the key *WELLPLATE_FORMAT*
+        in the configuration settings file.
+
         Returns
         -------
-        List[Subexperiment]
+        List[WellPlate or Slide]
+            object representations of cycles
 
-        Raises
-        ------
-        AttributeError
-            when there are no subexperiments
+        See also
+        --------
+        `plates.WellPlate`_
+        `plates.Slide`_
+        `tmt.config`_
         '''
         if self._subexperiments is None:
-            experiment_subfolders = os.listdir(self.experiment_dir)
-            experiment_subfolders = natsorted(experiment_subfolders)
-            folders = [Subexperiment(join(self.experiment_dir, f), self.cfg)
-                       for f in experiment_subfolders
-                       if self.is_valid_subexperiment(f)]
-            if not folders:
-                print('Experiment "%s" does not contain any subexperiments'
-                      % self.name)
-            self._subexperiments = folders
-        return self._subexperiments
+            subexperiment_folders = os.listdir(self.experiment_dir)
+            # sort subexperiment folders
+            subexperiment_folders = natsorted(subexperiment_folders)
+            cycle_dirs = [os.path.join(self.experiment_folder, f)
+                          for f in subexperiment_folders
+                          if self._is_valid_cycle(f)]
+            if not cycle_dirs:
+                # in this case, the cycle directory is the same as the
+                # the experiment directory
+                cycle_dirs = self.experiment_dir
+            if self.cfg['WELLPLATE_FORMAT']:
+                n_wells = self.cfg['NUMBER_OF_WELLS']
+                cycles = [WellPlate(c, self.cfg, n_wells) for c in cycle_dirs]
+            else:
+                cycles = [Slide(c, self.cfg) for c in cycle_dirs]
+            self._cycles = cycles
+        return self._cycles
 
     @property
-    def project(self):
-        '''
-        Returns
-        -------
-        Project
-        '''
-        if self._project is None:
-            self._project = Project(self.experiment_dir, self.cfg)
-        return self._project
-
-    @property
-    def data_filename(self):
-        '''
-        Returns
-        -------
-        str
-            path to the HDF5 file holding the complete dataset
-            (see `dafu` package)
-        '''
-        if self._data_filename is None:
-            self._data_filename = self.cfg['DATA_FILE_FORMAT'].format(
-                                        experiment_dir=self.experiment_dir,
-                                        sep=os.path.sep)
-        return self._data_filename
-
-
-class Subexperiment(object):
-    '''
-    Utility class for a subexperiment.
-
-    A subexperiment represents a child folder of an experiment folder.
-    The class provides information on the subexperiment, such as its name,
-    cycle number, and the name of the parent experiment.
-    '''
-
-    def __init__(self, subexperiment_dir, cfg):
-        '''
-        Initialize instance of class Subexperiment.
-
-        Parameters
-        ----------
-        subexperiment_dir: str
-            path to the subexperiment folder
-        cfg: Dict[str, str]
-            configuration settings
-        '''
-        self.directory = subexperiment_dir
-        self.name = basename(subexperiment_dir)
-        self.cfg = cfg
-        self._experiment = None
-        self._cycle = None
-        self._project = None
-
-    @property
-    def experiment(self):
-        '''
-        Returns
-        -------
-        str
-            name of the corresponding parent experiment, determined from
-            format string provided in configuration settings
-
-        Raises
-        ------
-        ValueError
-            when the experiment name cannot not be determined from format string
-        '''
-        if self._experiment is None:
-            regexp = regex_from_format_string(
-                            self.cfg['SUBEXPERIMENT_FOLDER_FORMAT'])
-            m = re.search(regexp, self.name)
-            if not m:
-                raise ValueError('Can\'t determine experiment from '
-                                 'subexperiment folder "%s" '
-                                 'using provided format "%s".\n'
-                                 'Check your configuration settings!'
-                                 % (self.name,
-                                    self.cfg['SUBEXPERIMENT_FOLDER_FORMAT']))
-            self._experiment = m.group('experiment')
-        return self._experiment
-
-    @property
-    def cycle(self):
+    def n_cycles(self):
         '''
         Returns
         -------
         int
-            cycle number, determined from format string
-            provided in configuration settings
-
-        Raises
-        ------
-        ValueError
-            when cycle number cannot not be determined from format string
+            number of cycles in the experiment
         '''
-        if self._cycle is None:
-            regexp = regex_from_format_string(
-                            self.cfg['SUBEXPERIMENT_FOLDER_FORMAT'])
-            m = re.search(regexp, self.name)
-            if not m:
-                raise ValueError('Can\'t determine cycle from '
-                                 'subexperiment folder "%s" '
-                                 'using provided format "%s".\n'
-                                 'Check your configuration settings!'
-                                 % (self.name,
-                                    self.cfg['SUBEXPERIMENT_FOLDER_FORMAT']))
-            self._cycle = int(m.group('cycle'))
-        return self._cycle
+        self._n_cycles = len(self.cycles)
+        return self._n_cycles
 
     @property
-    def project(self):
+    def data_file(self):
         '''
+        Measurement data for all cycles are stored in a single HDF5 file.
+        The format of the filename is defined by the key *DATA_FILE_FORMAT*
+        in the configuration settings file.
+
         Returns
         -------
-        Project
+        str
+            absolute path to the HDF5 file holding the complete dataset
+        
+        See also
+        --------
+        `dafu`_
         '''
-        if self._project is None:
-            self._project = Project(self.directory, self.cfg)
-        return self._project
+        self._data_filename = self.cfg['DATA_FILE_FORMAT'].format(
+                                            experiment_dir=self.experiment_dir,
+                                            sep=os.path.sep)
+        return self._data_filename
 
-    def __str__(self):
-        return '%s - %s' % (self.experiment, self.cycle)
+    @property
+    def layers_dir(self):
+        '''
+        Image pyramids for all cycles are stored in single folder.
+        The format of the folder name is defined by the key
+        *LAYERS_FOLDER_FORMAT* in the configuration settings file.
 
-    def __unicode__(self):
-        return self.__str__()
+        Returns
+        -------
+        str
+            absolute path to the folder holding the layers (zoomify pyramids)
+        '''
+        self._layers_dir = self.cfg['LAYERS_FOLDER_FORMAT'].format(
+                                            experiment_dir=self.experiment_dir,
+                                            sep=os.path.sep)
+        return self._layers_dir

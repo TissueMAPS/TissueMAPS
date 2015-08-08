@@ -63,6 +63,21 @@ def load_config(filename):
         return yaml.load(f.read())
 
 
+def write_yaml(filename, content):
+    '''
+    Write content to YAML file.
+
+    Parameters
+    ----------
+    filename: str
+        name of the YAML file
+    content: list or dict
+        description that should be written to file
+    '''
+    with open(filename, 'w') as f:
+        f.write(yaml.dump(content, default_flow_style=False))
+
+
 def check_config(cfg):
     '''
     Check that configuration settings contains all required keys.
@@ -98,11 +113,3 @@ def check_config(cfg):
         if key not in cfg:
             raise KeyError('Configuration file must contain the key "%s"'
                            % key)
-
-
-class Namespacified(object):
-    '''
-    Class for loading key-value pairs of a dictionary into a Namespace object.
-    '''
-    def __init__(self, adict):
-        self.__dict__.update(adict)

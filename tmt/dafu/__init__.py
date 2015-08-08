@@ -1,7 +1,7 @@
 from os.path import join, dirname, realpath
-from tmt.util import load_config
+from tmt.utils import load_config
 
-version = '0.1.0'
+__version__ = '0.1.0'
 
 
 logo = u'''

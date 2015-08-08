@@ -15,7 +15,7 @@ from tmt import imageutil
 
 class Mosaic(object):
     '''
-    A class for a mosaic image, i.e. a large image stitched together
+    Class for a mosaic image, i.e. a large image stitched together
     from a grid of smaller images.
 
     Holds methods for image processing and pyramid creation.
@@ -287,11 +287,11 @@ class Mosaic(object):
                  for x, y in zip(x_shifts, y_shifts)]
 
         # Compute the intersection of all those rectangles
-        this_box = boxes[current_cycle_idx].bounds
         intersection = reduce(Polygon.intersection, boxes)
         minx, miny, maxx, maxy = intersection.bounds
 
         # How much to cut from the left side and from the top
+        this_box = boxes[current_cycle_idx].bounds
         offset_left = minx - this_box[0]
         offset_top = miny - this_box[1]
 

@@ -252,9 +252,9 @@ class Stk2png(object):
             raise ValueError('The provided acquisition mode is not supported.')
 
         # determine acquisition grid layout a.k.a. image "snake"
-        stitch_dims = stitch.guess_stitch_dims(self.nr_sites,
-                                               self.acquisition_layout)
-        snake = stitch.determine_image_position(stitch_dims, doZigZag)
+        stitch_dims = stitch.guess_stitch_dimensions(self.nr_sites,
+                                                     self.acquisition_layout)
+        snake = stitch.calc_image_position(stitch_dims, doZigZag)
         # find "row" and "column" position of processed sites within the grid
         sites = np.array(self.info['site'])
         column = np.array([None for x in xrange(len(sites))])

@@ -1,11 +1,10 @@
 import os
-import tmt
 import sys
 import gc3libs
 import gc3libs.workflow
 from tmt.visi.stk import Stk
 from tmt.visi.stk2png import Stk2png
-import tmt.cluster
+import cluster
 
 
 class Visi(object):
@@ -41,7 +40,7 @@ class Visi(object):
         Parameters
         ----------
         batch_size: int
-            number of files per j job
+            number of files per job
         split_output: bool, optional
             whether files belonging to different (sub)experiments, i.e.
             in case there are multiple .nd files in the input folder,
@@ -122,7 +121,7 @@ class Visi(object):
             or filesystem (defaults to True)
         '''
         self.build_jobs(shared_network=shared_network)
-        tmt.cluster.submit_jobs_gc3pie(self.jobs)
+        cluster.submit_jobs_gc3pie(self.jobs)
 
     def build_jobs(self, shared_network=True):
         '''
@@ -146,14 +145,15 @@ class Visi(object):
         try:
             joblist = self.project.read_joblist()
         except OSError as e:
-            print str(e)
-            print('Create a joblist first!\nFor help call "visi joblist -h"')
+            sys.stderr.write(str(e))
+            sys.stderr.write('Create a joblist first!\n'
+                             'For help call "visi joblist -h"')
             sys.exit(0)
 
         for j in joblist:
 
             jobname = 'visi_%s_job-%.5d' % (self.project.experiment, j['id'])
-            timestamp = tmt.cluster.create_datetimestamp()
+            timestamp = cluster.create_datetimestamp()
             log_file = '%s_%s.log' % (jobname, timestamp)
             # NOTE: There is a GDC3Pie bug that prevents the use of relative
             # paths for `stdout` and `stderr` to bundle log files

@@ -1,34 +1,11 @@
-import os
-import re
 import numpy as np
-import json
-import tmt
+from gi.repository import Vips
 
 
-def load_shift_descriptor(filename):
-    '''
-    Load shift description from JSON file.
-
-    Parameters
-    ----------
-    filename: str
-        name of the shift descriptor file
-
-    Returns
-    -------
-    dict
-        JSON content
-    '''
-    if not os.path.exists(filename):
-        raise OSError('Shift descriptor file does not exist: %s' % filename)
-    with open(filename) as f:
-        return json.load(f)
-
-
-def shift_and_crop_image(im, y, x, upper, lower, left, right):
+def shift_and_crop_image(im, y, x, upper, lower, left, right, shift=True):
     '''
     Shift and crop an image according to the calculated values shift and
-    overlap values.
+    overhang values.
 
     Parameters
     ----------
@@ -39,13 +16,16 @@ def shift_and_crop_image(im, y, x, upper, lower, left, right):
     x: int
         shift in x direction (position value -> right, negative value -> left)
     upper: int
-        upper overlap - pixels cropped from the bottom
+        upper overhang - pixels cropped at the bottom
     lower: int
-        lower overlap - pixels cropped form the top
+        lower overhang - pixels cropped at the top
     left: int
-        left overlap - pixels cropped form the right
+        left overhang - pixels cropped at the right
     right: int
-        right overlap - pixels cropped from the left
+        right overhang - pixels cropped at the left
+    shift: bool, optional
+        whether image should be shifted (if ``False`` it is still cropped, but
+        all pixel values are set to zero)
 
     Returns
     -------
@@ -55,107 +35,251 @@ def shift_and_crop_image(im, y, x, upper, lower, left, right):
     Raises
     ------
     IndexError
-        when shift or overlap values are too extreme
+        when shift or overhang values are too extreme
     Exception
         when it fails for unknown reasons
     '''
-    # TODO: check that Vips works correctly
     try:
         if isinstance(im, np.ndarray):
-            # we may loose one pixel when shift values are zero
-            return im[(lower-y):-(upper+y+1), (right-x):-(left+x+1)]
+            if shift:
+                aligned_im = im[(lower-y):-(upper+y+1), (right-x):-(left+x+1)]
+            else:
+                empty_im = np.zeros(im.shape, dtype=im.dtype)
+                aligned_im = empty_im[lower:-(upper+1), right:-(left+1)]
         else:
-            return im.crop(right-x, lower-y,
-                           im.width-left-right, im.height-upper-lower)
+            if shift:
+                aligned_im = im.crop(right-x, lower-y,
+                                     im.width-left-right,
+                                     im.height-upper-lower)
+            else:
+                empty_im = Vips.Image.new_from_array(
+                                np.zeros(im.height, im.width).tolist()).cast(
+                                im.get_format())
+                aligned_im = empty_im.crop(right, lower,
+                                           im.width-left-right,
+                                           im.height-upper-lower)
+        return aligned_im
     except IndexError as e:
         raise IndexError('Shifting and cropping of the image failed!\n'
-                         'Shift or overlap values are incorrect:\n%s' % str(e))
+                         'Shift or overhang values are incorrect:\n%s'
+                         % str(e))
     except Exception as e:
         raise Exception('Shifting and cropping of the image failed!\n'
                         'Reason: %s' % str(e))
 
 
-class ShiftDescriptor(object):
+class ShiftDescription(object):
     '''
-    Utility class for a shift descriptor.
+    Class for shift description for an image.
 
-    A shift descriptor is file in JSON format, which holds calculated shift
-    values and additional metainformation.
+    A shift description consists of shift and overhang values as well as
+    additional metainformation that are based on the registration of an
+    image acquired at the same position with a corresponding image
+    of the reference cycle.
 
     See also
     --------
-    `tmt.corilla` package
+    `corilla`_
     '''
 
-    def __init__(self, filename, cfg):
+    def __init__(self, description):
         '''
-        Initialize ShiftDescriptor class.
+        Initialize an instance of class ShiftDescription.
 
         Parameters
         ----------
-        filename: str
-            path to the JSON shift descriptor file
-        cfg: Dict[str, str]
-            configuration settings
+        description: Dict[str, int or str or bool]
+            content of the shift description file
+
+        See also
+        --------
+        `tmt.config`_
         '''
-        self.filename = filename
-        self.cfg = cfg
-        self._description = None
+        self.description = description
 
     @property
-    def required_keys(self):
-        self._required_keys = {
-            'xShift', 'yShift', 'fileName',
-            'lowerOverlap', 'upperOverlap', 'rightOverlap', 'leftOverlap',
-            'maxShift', 'noShiftIndex', 'noShiftCount',
-            'segmentationDir', 'cycleNum'
-        }
-        return self._required_keys
-
-    def _check_descriptor(self, content):
-        if not content:
-            raise IOError('Shift descriptor is empty: "%s"' % self.filename)
-        for key in content:
-            if key not in self.required_keys:
-                raise KeyError('Shift descriptor must have key "%s"' % key)
-
-    @property
-    def description(self):
+    def x_shift(self):
         '''
         Returns
         -------
-        Namespacified
-            content of a JSON shift descriptor file
-            with the following name spaces:
-
-            |    xShift
-            |    yShift
-            |    fileName
-            |    lowerOverlap
-            |    upperOverlap
-            |    rightOverlap
-            |    leftOverlap
-            |    maxShift
-            |    noShiftIndex
-            |    noShiftCount
-            |    segmentationDir
-            |    cycleNum
+        int
+            shift of the image in pixels in x direction relative to its
+            reference (positive value -> to the right; negative value -> to the
+            left)
 
         Raises
         ------
-        IOError
-            when file is empty
+        KeyError
+            when `description` does not contain "x_shift"
         '''
-        if self._description is None:
-            content = load_shift_descriptor(self.filename)
-            self._check_descriptor(content)
-            self._description = tmt.utils.Namespacified(content)
-        return self._description
+        if 'x_shift' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"x_shift" information.')
+        self._x_shift = self.description['x_shift']
+        return self._x_shift
+
+    @property
+    def y_shift(self):
+        '''
+        Returns
+        -------
+        int
+            shift of the image in pixels in y direction relative to its
+            reference (positive value -> downwards; negative value -> upwards)
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "y_shift"
+        '''
+        if 'y_shift' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"y_shift" information.')
+        self._y_shift = self.description['y_shift']
+        return self._y_shift
+
+    @property
+    def lower_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the lower side (bottom) of the image relative
+            to its reference: pixels to crop at the top of the image
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "lower_overhang"
+        '''
+        if 'lower_overhang' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"lower_overhang" information.')
+        self._lower_overhang = self.description['lower_overhang']
+        return self._lower_overhang
+
+    @property
+    def upper_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the upper side (top) of the image relative
+            to its reference: pixels to crop at the bottom of the image
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "upper_overhang"
+        '''
+        if 'upper_overhang' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"upper_overhang" information.')
+        self._upper_overhang = self.description['upper_overhang']
+        return self._upper_overhang
+
+    @property
+    def right_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the right side of the image relative
+            to its reference: pixels to crop at the left side of the image
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "right_overhang"
+        '''
+        if 'right_overhang' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"right_overhang" information.')
+        self._right_overhang = self.description['right_overhang']
+        return self._right_overhang
+
+    @property
+    def left_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the left side of the image relative
+            to its reference: pixels to crop at the right side of the image
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "left_overhang"
+        '''
+        if 'left_overhang' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"left_overhang" information.')
+        self._left_overhang = self.description['left_overhang']
+        return self._left_overhang
+
+    @property
+    def dont_shift(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the image should be shifted (``False`` means that the
+            shift values for this site exceed the maximally tolerated shift)
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "dont_shift"
+        '''
+        if 'dont_shift' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"dont_shift" information.')
+        self._dont_shift = self.description['dont_shift']
+        return self._dont_shift
+
+    @property
+    def cycle(self):
+        '''
+        Returns
+        -------
+        int
+            cycle identifier number
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "cycle"
+        '''
+        if 'cycle' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"cycle" information.')
+        self._cycle = self.description['cycle']
+        return self._cycle
+
+    @property
+    def filename(self):
+        '''
+        Returns
+        -------
+        str
+            name of the image file that was used for registration
+
+        Raises
+        ------
+        KeyError
+            when `description` does not contain "filename"
+        '''
+        if 'filename' not in self.description:
+            raise KeyError('Descriptor must contain '
+                           '"filename" information.')
+        self._filename = self.description['filename']
+        return self._filename
 
     def align(self, im, im_name):
         '''
         Align, i.e. shift and crop, an image based on calculated shift
-        and overlap values.
+        and overhang values.
 
         Parameters
         ----------
@@ -169,14 +293,10 @@ class ShiftDescriptor(object):
         numpy.ndarray or Vips.Image
             aligned image
         '''
-        r = re.compile(self.cfg['SITE_FROM_FILENAME'])
-        site = re.search(r, im_name).group(1)
-        index = [i for i, f in enumerate(self.description.fileName)
-                 if re.search(r, f).group(1) == site][0]
-        y = self.description.yShift[index]
-        x = self.description.xShift[index]
-        upper = self.description.upperOverlap
-        lower = self.description.lowerOverlap
-        left = self.description.leftOverlap
-        right = self.description.rightOverlap
-        return shift_and_crop_image(im, y, x, upper, lower, left, right)
+        shifted_im = shift_and_crop_image(im, y=self.y_shift, x=self.x_shift,
+                                          upper=self.upper_overhang,
+                                          lower=self.lower_overhang,
+                                          left=self.left_overhang,
+                                          right=self.right_overhang,
+                                          shift=not(self.dont_shift))
+        return shifted_im

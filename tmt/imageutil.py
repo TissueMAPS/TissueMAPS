@@ -8,7 +8,7 @@ except ImportError as error:
     print 'Vips could not be imported.\nReason: %s' % str(error)
 
 
-'''Utility functions for image processing routines.'''
+'''Utility functions for common image processing routines.'''
 
 
 def save_vips_image_jpg(im, filename, quality=75):
@@ -93,7 +93,7 @@ def np_array_to_vips_image(nparray):
     -------
     Vips.image
     '''
-    # Dictionary to map VIPS data formats to numpy data formats
+    # Dictionary to map VIPS data formats to numpy data types
     nptype_to_vips_format = {
         np.dtype('int8'): Vips.BandFormat.CHAR,
         np.dtype('uint8'): Vips.BandFormat.UCHAR,
@@ -123,6 +123,36 @@ def np_array_to_vips_image(nparray):
     img = img.flip('horizontal')
 
     return img.copy()
+
+
+def vips_image_to_np_array(vips_image):
+    '''
+    Convert a `Vips` image object to a `numpy` array.
+
+    Parameters
+    ----------
+    vips_image: Vips.image
+
+    Returns
+    -------
+    Vips.image
+    '''
+    # Dictionary to map numpy data types to VIPS data formats
+    vips_to_nptype_format = {
+        Vips.BandFormat.CHAR: np.dtype('int8'),
+        Vips.BandFormat.UCHAR: np.dtype('uint8'),
+        Vips.BandFormat.SHORT: np.dtype('int16'),
+        Vips.BandFormat.USHORT: np.dtype('uint16'),
+        Vips.BandFormat.INT: np.dtype('int32'),
+        Vips.BandFormat.FLOAT: np.dtype('float32'),
+        Vips.BandFormat.DOUBLE: np.dtype('float64')
+    }
+    nptype = vips_to_nptype_format[vips_image.get_format()]
+    mem_string = vips_image.write_to_memory()
+    array = np.fromstring(mem_string, dtype=nptype).reshape(vips_image.width,
+                                                            vips_image.height)
+    # TODO: 3D RGB images
+    return array
 
 
 def hist_sample_from_sites(filenames, nr_to_sample=5):
@@ -159,7 +189,7 @@ def find_border_objects(im):
     Parameters
     ----------
     im: numpy.ndarray
-        image
+        label image
 
     Returns
     -------

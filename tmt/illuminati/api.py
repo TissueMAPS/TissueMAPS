@@ -12,7 +12,7 @@ class Illuminati(object):
 
     '''Illuminati API'''
 
-    def __init__(self, project_dir, config):
+    def __init__(self, project_dir, cfg):
         '''
         Initialize an instance of class Illuminati.
 
@@ -20,11 +20,15 @@ class Illuminati(object):
         ----------
         project_dir: str
             path to project folder
-        config: dict
+        cfg: dict
             configuration settings
+
+        See also
+        --------
+        `tmt.config`_
         '''
         self.project_dir = os.path.abspath(project_dir)
-        self.cfg = config
+        self.cfg = cfg
 
     def create_channel_layer(self, channel_nr, layer_name,
                              illum_correct=False, shift=False,

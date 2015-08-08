@@ -85,9 +85,9 @@ if __name__ == '__main__':
     if args.config:
         # Overwrite default "tmt" configuration
         print '. Using configuration file "%s"' % args.config
-        args.config = tmt.util.load_config(args.config)
+        args.config = tmt.utils.load_config(args.config)
         print '. Checking configuration file'
-        tmt.util.check_config(args.config)
+        tmt.utils.check_config(args.config)
     else:
         args.config = tmt.config
 

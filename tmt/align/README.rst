@@ -53,7 +53,7 @@ Calculated shift and overlap values are stored together with additional metainfo
         "rightOverlap": int,
         "leftOverlap": int,
         "maxShift": int,
-        "noShiftIndex": List[int],
+        "noShiftIndex": List[bool],
         "noShiftCount": int,
         "segmentationDirectory": str,
         "segmentationFileNameTrunk": str,
@@ -66,9 +66,9 @@ Calculated shift and overlap values are stored together with additional metainfo
 
 **fileName**: The name of the image that was used as a reference upon registration.
 
-**noShiftIndex**: 1 if the maximally tolerated shift value exceeded the actual shift value at this image site, 0 otherwise. This can for example happen for empty images. By default the **maxShift** value is set to 100 to avoid arbitrary large shifts at empty sites. You can overwrite this behavior and change the value using the `-m` or `--max_shift` argument.
+**noShiftIndex**: true if the maximally tolerated shift value exceeded the actual shift value at this image site, false otherwise. This can for example happen in case of empty images. By default the **maxShift** value is set to 100 to avoid arbitrary large shifts at empty sites. You can overwrite this behavior and change the value using the ``-m`` or ``--max_shift`` argument.
 
-**segmentationDirectory**: Relative path to the folder holding the segmentation images. By default this assumes that you want to use the shift description files for alignment in Jterator modules and sets the path relative to a Jterator project. You can overwrite this behavior and change the path using the `--segm_dir` command.
+**segmentationDirectory**: Relative path to the folder holding the segmentation images. By default this assumes that you want to use the shift description files for alignment in Jterator modules and sets the path relative to a Jterator project. You can overwrite this behavior and change the path using the ``--segm_dir`` command.
 
-**segmentationFileNameTrunk**: The first part of the filename every image file of the same cycle has in common. This may be required for regular expression operations. You can set this string using the `--segm_trunk` argument.
+**segmentationFileNameTrunk**: The first part of the filename all image files of the same cycle have in common. This may be required for regular expressions operations. You can define this string using the ``--segm_trunk`` argument.
 

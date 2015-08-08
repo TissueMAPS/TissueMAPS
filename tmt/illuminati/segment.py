@@ -21,7 +21,6 @@ def local_to_global_ids_vips(im, offset_id):
 
     Parameters
     ----------
-
     im: Vips.Image
         each pixel indicates to which object this pixel belongs
     offset_id: int

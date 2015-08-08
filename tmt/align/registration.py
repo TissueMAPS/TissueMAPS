@@ -3,7 +3,7 @@ import natsort
 import h5py
 import numpy as np
 from scipy import misc
-import tmt
+import cluster
 import image_registration
 
 
@@ -17,7 +17,6 @@ def calculate_shift(filename, ref_filename):
     ----------
     filename: str
         path to image that should be registered
-
     ref_filename: str
         path to image that should be used as a reference
 
@@ -39,7 +38,7 @@ def calculate_shift(filename, ref_filename):
     return (x, y)
 
 
-def register_images(registration_files, reference_files, output_file):
+def register_images(sites, registration_files, reference_files, output_file):
     '''
     Calculate shift between a set of two images (image to register and
     reference image) from two different acquisition cycles
@@ -51,23 +50,27 @@ def register_images(registration_files, reference_files, output_file):
         /cycle1                Group
         /cycle1/x_shift        Dataset {n}  : INTEGER
         /cycle1/y_shift        Dataset {n}  : INTEGER
-        /cycle1/file_name      Dataset {n}  : STRING
+        /cycle1/filename       Dataset {n}  : STRING
+        /cycle1/site           Dataset {n}  : INTEGER
         /cycle2                Group
         /cycle2/x_shift        Dataset {n}  : INTEGER
         /cycle2/y_shift        Dataset {n}  : INTEGER
-        /cycle2/file_name      Dataset {n}  : STRING
+        /cycle2/filename       Dataset {n}  : STRING
+        /cycle2/site           Dataset {n}  : INTEGER
         ...
 
     where `n` is the number of image sites per cycle.
 
     Parameters
     ----------
+    sites: List[int]
+        acquisition sites (numbers in the acquisition sequence)
     registration_files: List[Dict[str, List[str]]]
-        name of image files that should be registered
+        path to the image files that should be registered
     reference_files: List[str]
-        name of image files used as reference for registration
+        path to the image files used as reference for registration
     output_file: str
-        name of the HDF5 file, where calculated values will be stored
+        path to the HDF5 file, where calculated values will be stored
     '''
     out = dict()
     for cycle, files in registration_files.iteritems():
@@ -75,11 +78,11 @@ def register_images(registration_files, reference_files, output_file):
         out[cycle] = dict()
         out[cycle]['x_shift'] = []
         out[cycle]['y_shift'] = []
-        out[cycle]['file_name'] = []
-        for site in xrange(len(files)):
-            reg_filename = files[site]
+        out[cycle]['filename'] = []
+        for i in xrange(len(files)):
+            reg_filename = files[i]
             print '... registration: %s' % reg_filename
-            ref_filename = reference_files[site]
+            ref_filename = reference_files[i]
             print '... reference: %s' % ref_filename
 
             # Calculate shift between images
@@ -88,7 +91,8 @@ def register_images(registration_files, reference_files, output_file):
             # Store shift values and name of the registered image
             out[cycle]['x_shift'].append(int(x))
             out[cycle]['y_shift'].append(int(y))
-            out[cycle]['file_name'].append(os.path.basename(reg_filename))
+            out[cycle]['filename'].append(os.path.basename(reg_filename))
+            out[cycle]['site'].append(sites[i])
 
     print '. Store registration in file: %s' % output_file
     f = h5py.File(output_file, 'w')
@@ -101,9 +105,9 @@ def register_images(registration_files, reference_files, output_file):
     f.close()
 
 
-def calculate_local_overlap(x_shift, y_shift):
+def calculate_local_overhang(x_shift, y_shift):
     '''
-    Calculates the overlap of images at one acquisition site
+    Calculates the overhang of images at one acquisition site
     across different acquisition cycles.
 
     Parameters
@@ -116,7 +120,7 @@ def calculate_local_overlap(x_shift, y_shift):
     Returns
     -------
     List[int]
-        upper, lower, right and left overlap
+        upper, lower, right and left overhang
     '''
     # in y direction
     y_positive = [i > 0 for i in y_shift]
@@ -173,31 +177,35 @@ def fuse_registration(output_files, cycle_names):
 
     Returns
     -------
-    List[Dict[str, List[str or int]]]
-        "xShift", "yShift", and "fileName" of each registered image
+    List[List[Dict[str, str or int]]]
+        "x_shift", "y_shift", and "filename" of each registered image and
+        each cycle
     '''
     descriptor = list()
-    for i, key in enumerate(cycle_names):
-        descriptor.append(dict())
-        descriptor[i]['xShift'] = []
-        descriptor[i]['yShift'] = []
-        descriptor[i]['fileName'] = []
     # Combine output from different output files
     for output in output_files:
         f = h5py.File(output, 'r')
         for i, key in enumerate(cycle_names):
-            descriptor[i]['fileName'].extend(f[key]['file_name'][()])
-            descriptor[i]['xShift'].extend(f[key]['x_shift'][()])
-            descriptor[i]['yShift'].extend(f[key]['y_shift'][()])
+            descriptor.append(list())
+            filenames = f[key]['filename'][()]
+            x_shifts = f[key]['x_shift'][()]
+            y_shifts = f[key]['y_shift'][()]
+            sites = f[key]['site'][()]
+            for j in xrange(len(filenames)):
+                descriptor[i].append(dict())
+                descriptor[i][j]['filename'] = filenames[j]
+                descriptor[i][j]['x_shift'] = x_shifts[j]
+                descriptor[i][j]['y_shift'] = y_shifts[j]
+                descriptor[i][j]['site'] = sites[j]
         f.close()
     return descriptor
 
 
-def calculate_overlap(descriptor, max_shift):
+def calculate_overhang(descriptor, max_shift):
     '''
-    Calculate the maximum overlap of images across all sites and
+    Calculate the maximum overhang of images across all sites and
     across all acquisition cycles. The images will later be cropped according
-    to this overlap. In order to limit the extent of cropping, `max_shift` can
+    to this overhang. In order to limit the extent of cropping, `max_shift` can
     be set.
 
     Parameters
@@ -211,7 +219,7 @@ def calculate_overlap(descriptor, max_shift):
     Returns
     -------
     Tuple[List[int]]
-        upper, lower, right, and left overlap per site (in pixels)
+        upper, lower, right, and left overhang per site (in pixels)
         and indices of sites were shift exceeds maximally tolerated value
     '''
     top_ol = []
@@ -219,26 +227,26 @@ def calculate_overlap(descriptor, max_shift):
     right_ol = []
     left_ol = []
     no_shift = []
-    number_of_sites = len(descriptor[0]['xShift'])
+    number_of_sites = len(descriptor[0]['x_shift'])
     print '. number of sites: %d' % number_of_sites
     for site in xrange(number_of_sites):
-        x_shift = np.array([c['xShift'][site] for c in descriptor])
-        y_shift = np.array([c['yShift'][site] for c in descriptor])
+        x_shift = np.array([c['x_shift'][site] for c in descriptor])
+        y_shift = np.array([c['y_shift'][site] for c in descriptor])
         no_shift.append(any(abs(x_shift) > max_shift) or
                         any(abs(y_shift) > max_shift))
-        (top, bottom, right, left) = calculate_local_overlap(x_shift, y_shift)
+        (top, bottom, right, left) = calculate_local_overhang(x_shift, y_shift)
         top_ol.append(top)
         bottom_ol.append(bottom)
         right_ol.append(right)
         left_ol.append(left)
 
-    # Calculate total overlap across all sites
+    # Calculate total overhang across all sites
     top_ol = int(max(map(abs, top_ol)))
     bottom_ol = int(max(map(abs, bottom_ol)))
     right_ol = int(max(map(abs, right_ol)))
     left_ol = int(max(map(abs, left_ol)))
 
-    # Limit total overlap by maximally tolerated shift
+    # Limit total overhang by maximally tolerated shift
     if top_ol > max_shift:
         top_ol = max_shift
     if bottom_ol > max_shift:
@@ -259,7 +267,7 @@ class Registration(object):
 
     def __init__(self, cycles, reference_cycle=None, reference_channel=None):
         '''
-        Initialize Registration class.
+        Initialize an instance of class Registration.
 
         Parameters
         ----------
@@ -317,15 +325,12 @@ class Registration(object):
 
         A joblist has the following structure (YAML)::
 
-            - job_id: int
+            - id: int
               registration_files: Dict[str, List[str]]
               reference_files:  List[str]
+              aquisition_sites: List[int]
               output_file: str
-
-            - job_id: int
-              registration_files: Dict[str, List[str]]
-              reference_files:  List[str]
-              output_file: str
+              output_dir: str
 
             ...
 
@@ -349,27 +354,32 @@ class Registration(object):
                           'for joblist creation')
 
         joblist = list()
-        ref_files = tmt.cluster.create_batches(self.image_files[self.ref_cycle],
-                                               batch_size)
+        ref_files = cluster.create_batches(self.image_files[self.ref_cycle],
+                                           batch_size)
         n_batches = len(ref_files)
         # Create a list of dictionaries holding the image filenames per batch
         # segregated for the different cycles
         n_cycles = len(self.image_files)
         reg_files = [dict() for x in xrange(n_batches)]
         for x in xrange(n_cycles):
-            batches = tmt.cluster.create_batches(self.image_files[x],
-                                                 batch_size)
+            batches = cluster.create_batches(self.image_files[x], batch_size)
             for i, batch in enumerate(batches):
                 reg_files[i][self.cycles[x].name] = batch
+                sites[i]
 
         for i in xrange(n_batches):
             output_filename = os.path.join(self.registration_dir,
-                                           'align_%.5d.output' % i)
+                                           'align_%.5d.registration' % i)
+            # output paths should be relative to output directory
+            output_filename = os.path.relpath(output_filename,
+                                              self.experiment_dir)
             joblist.append({
-                'job_id': i+1,                       # int
-                'registration_files': reg_files[i],  # Dict[List[str]]
-                'reference_files': ref_files[i],     # List[str]
-                'output_file': output_filename       # str
+                'id': i+1,
+                'registration_files': reg_files[i],
+                'reference_files': ref_files[i],
+                'acquisition_sites': self.image_files[i].channel
+                'output_file': output_filename,
+                'output_dir': self.experiment_dir
             })
         self.joblist = joblist
         return joblist
@@ -378,7 +388,7 @@ class Registration(object):
         '''
         Write joblist to file as YAML.
         '''
-        tmt.cluster.write_joblist(self.joblist_file, self.joblist)
+        cluster.write_joblist(self.joblist_file, self.joblist)
 
     def read_joblist(self):
         '''
@@ -389,4 +399,4 @@ class Registration(object):
         List[dict[str, list[str] or str]]
             job description
         '''
-        return tmt.cluster.read_joblist(self.joblist_file)
+        return cluster.read_joblist(self.joblist_file)
