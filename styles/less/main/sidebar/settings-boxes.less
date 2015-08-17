@@ -1,0 +1,221 @@
+@import "../../lesshat/lesshat-prefixed";
+@import "../../variables.less";
+@import "../../ui.less";
+
+.inline-layer-control {
+    width: 30px;
+    display: inline-block;
+    text-align: center;
+}
+
+.no-input-style {
+    background: none;
+    padding: 0;
+    border: 0;
+    outline: 0;
+}
+
+.channel-section, .mask-section, .selection-section {
+    .tm-selectable-tab-content {
+        white-space: nowrap;
+        input[type=text] {
+            .no-input-style();
+        }
+    }
+}
+
+/******************************************************************************
+ *                              CHANNEL SETTNGS                               *
+ ******************************************************************************/
+.channel-section {
+
+    height: @channel-section-height;
+
+    // The inner div
+    .channel-settings {
+        height: 100%;
+    }
+
+    .inline-color-switcher:extend(.inline-layer-control) {
+
+        width: auto;
+        vertical-align: middle; // align div in middle of line
+        height: 85%;
+        line-height: 85%; // align RGB in middle of div
+
+        // buttons should lie side by side
+        button {
+            &:focus { outline: 0; }
+            transition: background 500ms ease;
+            border: none;
+            background: @panel-bg-color;
+            font-size: 0.8em;
+            padding: 0px 2px;
+            height: 100%;
+            display: inline-block;
+
+            // Don't change even when selection on list item changes font colors
+            color: @font-color-light;
+        }
+        .r.active {
+            background-color: red;
+        }
+        .g.active {
+            background-color: green;
+        }
+        .b.active {
+            background-color: blue;
+        }
+    }
+
+    .tm-selectable-tabs {
+        li {
+            line-height: @channel-settings-li-height;
+            height: @channel-settings-li-height;
+        }
+    }
+
+    .tm-selectable-tab-popup-window {
+        width: 300px;
+        /*
+         * This is interpreted as offset from parent since this the box uses
+         * tmAttachToParent which updates the location of the popup window based
+         * on the position of the parent.
+         * Necessary hack due to overflow-behavior.
+         */
+        right: @sidebar-section-padding + 1;
+    }
+
+    .ui-slider {
+        background-color: darken(@panel-bg-color, 10%);
+    }
+}
+
+
+/******************************************************************************
+ *                               MASK SETTINGS                                *
+ ******************************************************************************/
+@color-square-size: 20px;
+
+.mask-section {
+    height: @mask-section-height;
+
+    // The inner div
+    .mask-settings {
+        height: 100%;
+    }
+
+    .tm-selectable-tabs {
+        li {
+            line-height: @mask-settings-li-height;
+            height: @mask-settings-li-height;
+        }
+    }
+
+    .name-container {
+        // without a fixed width, the container will expand
+        // with longer names, expanding the slider
+        width: 180px;
+        display: inline-block;
+        line-height: normal;
+        vertical-align: middle;
+    }
+
+    .tm-selectable-tab-popup-window {
+        width: 260px;
+    }
+
+    .color-picker {
+        ul {
+            height: @color-square-size;
+            width: 260px - @color-square-size;
+        }
+        li {
+            height: @color-square-size;
+            width: @color-square-size;
+        }
+    }
+
+
+    .slider-container {
+
+        .ui-slider {
+            height: 5px;
+            width: 100%;
+
+            .ui-slider-handle.ui-state-default {
+                width: 0.5em;
+                height: 0.8em;
+            }
+        }
+    }
+
+}
+
+
+/******************************************************************************
+ *                             SELECTION SETTINGS                             *
+ ******************************************************************************/
+@activate-button-height: @selection-settings-li-height - 4px;
+
+.selection-section {
+    height: @selection-section-height;
+
+    // The inner div
+    .selection-settings {
+        height: 100%;
+    }
+
+    .tm-selectable-tabs {
+        li {
+            height: @selection-settings-li-height;
+            line-height: @selection-settings-li-height;
+        }
+    }
+
+    .activate-button {
+        font-size: 0.8em;
+        background: @panel-bg-color;
+        width: auto;
+        color: @font-color-light;
+        transition: color 500ms ease;
+
+        vertical-align: middle; // align div in middle of line
+
+        // center span inside
+        height: @activate-button-height;
+        line-height: @activate-button-height;
+
+        padding: 0px 2px;
+
+        &.currently-active {
+            span {
+                color: @flashy-blue;
+            }
+        }
+    }
+}
+
+
+/*********************************************
+ *  Sliders, TODO: find some place for them  *
+ *********************************************/
+.ui-slider {
+    width: 220px;
+    background-color: @panel-bg-color;
+    display: inline-block;
+    border: 1px solid black;
+
+}
+.ui-slider-handle.ui-state-default
+{
+    background-color: @panel-fg2;
+    border: 1px solid black;
+    outline: 0;
+}
+.ui-slider-handle.ui-state-active
+{
+    background-color: @panel-selection-color;
+    border: 1px solid black;
+}
+

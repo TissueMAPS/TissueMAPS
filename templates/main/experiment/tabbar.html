@@ -1,0 +1,18 @@
+<div class="tabbar-container" ng-controller="TopbarCtrl as topbarCtrl">
+  <ul class="tabbar" ng-controller="InstanceTabsCtrl as tabsCtrl">
+    <div class="inner-container">
+      <li ng-repeat="appInstance in app.getAppInstances()"
+          ng-click="tabsCtrl.clickTab($index)"
+          ng-class="{active: app.isActiveInstanceByIndex($index)}">
+          <a>
+            {{ appInstance.getExperimentName() }}
+
+            <span ng-click="tabsCtrl.removeTab($index)">
+              <i class="fa fa-times"></i>
+            </span>
+          </a>
+      </li>
+    </div>
+  </ul>
+  <div class="tabbar-spacer"></div>
+</div>

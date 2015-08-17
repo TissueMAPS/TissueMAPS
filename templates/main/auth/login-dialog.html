@@ -1,0 +1,27 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss(false)" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Login required</h2>
+</div>
+
+<div class="modal-body">
+    <p>
+    The page you tried to access needs authentication. Please login using the following form:
+    </p>
+
+  <form class="form-inline" ng-submit="login.login(login.form.username, login.form.password)">
+    <div class="form-group">
+      <label class="sr-only" for="username">Username</label>
+      <input type="text" class="form-control" id="username" placeholder="Your username"
+             ng-model="login.form.username">
+    </div>
+    <div class="form-group">
+      <label class="sr-only" for="password">Password</label>
+      <input type="password" class="form-control" id="password" placeholder="Your password"
+              ng-model="login.form.password">
+    </div>
+    <button type="submit" class="btn btn-default">Login</button>
+  </form>
+</div>

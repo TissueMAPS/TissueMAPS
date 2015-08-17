@@ -1,0 +1,28 @@
+<div class="content-container">
+
+  <div class="top-container">
+    <div class="topbar">
+      <div class="user-indicator">
+        <div ng-show="app.isUserAuthenticated()">
+          <a ui-sref="viewport.userpanel">
+            {{ app.getUser().name}}
+          </a>
+          <a ui-sref="welcome" ng-click="app.logout()">(logout)</a>
+        </div>
+
+        <button class="btn btn-success" ui-sref="viewport">
+          <i class="fa fa-chevron-right"></i>
+          Start tissueMAPS
+        </button>
+
+        <tm-inline-login-form></tm-inline-login-form>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="middle-container">
+    <ui-view></ui-view>
+  </div>
+
+</div>

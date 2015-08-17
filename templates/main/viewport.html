@@ -1,0 +1,47 @@
+<div class="instance-viewport">
+
+    <div class="toolbar"
+        ng-show="viewport.isUserAuthenticated() && !viewport.isUserViewingSnapshot()">
+        <tm-toolbar app-instance="appInstance"/>
+    </div>
+
+    <div class="map-container"></div>
+
+    <div class="sidebar">
+
+        <div class="sidebar-section channel-section">
+            <div class="sidebar-section-title">
+                <span>
+                    Channels
+                </span>
+            </div>
+            <div class="sidebar-section-content">
+                <tm-channel-settings app-instance="appInstance"/>
+            </div>
+        </div>
+
+        <div class="sidebar-section mask-section">
+            <div class="sidebar-section-title" tm-resize-handle>
+                <span>
+                    Masks
+                </span>
+            </div>
+            <div class="sidebar-section-content">
+                <tm-mask-settings app-instance="appInstance"/>
+            </div>
+        </div>
+
+        <div class="sidebar-section selection-section">
+            <div class="sidebar-section-title" tm-resize-handle>
+                <span>
+                    Selections
+                </span>
+            </div>
+            <div class="sidebar-section-content">
+                <tm-selection-settings app-instance="appInstance"/>
+            </div>
+        </div>
+    </div>
+
+
+</div>

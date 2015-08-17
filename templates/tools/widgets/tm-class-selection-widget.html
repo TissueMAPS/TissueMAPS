@@ -1,0 +1,39 @@
+<div class="class-selection-widget panel panel-default">
+  <div class="panel-body">
+
+    <table class="table table-condensed">
+      <tr>
+        <th>Selection</th>
+        <th>Label</th>
+      </tr>
+      <tr ng-repeat="sel in selections">
+        <td>
+          <span class="flag-label">
+            <i class="fa fa-flag" ng-style="{'color': sel.getColor().toRGBString()}"></i>
+          </span>
+          <span>
+            {{ sel.name }}
+          </span>
+        </td>
+
+        <td>
+          <div class="input-group">
+            <div class="input-group-addon">label</div>
+            <input
+              type="text" class="form-control" placeholder="Don't use in training" ng-model="sel.viewProps.class"
+              ng-change="updateClasses()">
+            </input>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <ul class="list-group">
+      <li ng-repeat="cls in classArray"
+        class="list-group-item">
+      {{cls.name}} <span class="badge">{{cls.cellIds.length}} cells</span>
+      </li>
+    </ul>
+  </div>
+</div>
+
