@@ -1,0 +1,11 @@
+flask-migrate
+flask-jwt
+Flask-SQLAlchemy
+psycopg2
+passlib
+pytest
+pytest-flask
+flask-script
+hashids
+Flask-uWSGI-WebSocket
+uwsgi
