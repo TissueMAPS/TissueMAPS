@@ -17,7 +17,7 @@ def open_browser(port, path='', delay=0.5):
 
 if __name__ == "__main__":
     import argparse
-    import appfactory
+    import tmaps.appfactory
 
     parser = argparse.ArgumentParser(description='TissueMAPS server')
     parser.add_argument(
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # start `flask` development server
 
-    from tmaps_wsgi import app
+    from wsgi import app
     # application = appfactory.create_app('dev')
     # application.run(debug=True, port=args.port)
 

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-# TODO: Change to virtualenv
-
 from flask.ext.script import Manager
 from flask.ext.migrate import Migrate, MigrateCommand
 
@@ -76,19 +74,7 @@ def populate_db():
         e1 = Experiment(name='150316-30min-PBS',
                         description='Very nice exp',
                         owner_id=u1.id)
-        e2 = Experiment(name='150117MP',
-                        description='Some other nice exp',
-                        owner_id=u2.id)
         db.session.add(e1)
-        db.session.add(e2)
-        db.session.commit()
-
-        e2share = ExperimentShare(
-                recipient_user_id=u1.id,
-                donor_user_id=u2.id,
-                experiment_id=e2.id)
-
-        db.session.add(e2share)
         db.session.commit()
 
 if __name__ == '__main__':
