@@ -5,9 +5,10 @@ Initial setup (OSX)
 -------------
 
 Install all flask packages:
-TODO: Use virtualenv
 
-    $ pip install -r requirements.txt
+    $ cd TissueMAPS/server
+    $ mkvirtualenv tmaps
+    $ pip install -r tmaps/requirements/requirements.txt
 
 ### Postgres
 
@@ -46,7 +47,7 @@ Now, create a new database called 'tissuemaps' using pgadmin3 or the createdb cl
 
     $ createdb tissuemaps
 
-Make sure that the database access information is set in `config/dev.py` accordingly.
+Make sure that the database access information is set in `tmaps/config/dev.py` accordingly.
 Depending on your setup, this could look something like this:
 
     POSTGRES_DB_USER = 'your name'
@@ -71,7 +72,7 @@ Add some dummy data (like a user with name 'testuser'):
 
 There is also a small shortcut script to recreate the drop and repopulate the db after you change the schema:
 
-    $ sh recreate_db.sh
+    $ sh scripts/recreate_db.sh
 
 Note that you need to close any existing connection (e.g. with pgAdmin) if you want to drop tables!
 
