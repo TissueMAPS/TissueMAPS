@@ -6,7 +6,7 @@
  * process got somewhat complicated when the map canvas got resized
  * etc. This approach is less angulary but it works.
  */
-angular.module('tmaps.main.experiment').factory('createViewport',
+angular.module('tmaps.main.viewport').factory('createViewport',
      ['$http', 'openlayers', '$q', '$controller', '$compile', '$rootScope',
          function($http, ol, $q, $controller, $compile, $rootScope) {
 

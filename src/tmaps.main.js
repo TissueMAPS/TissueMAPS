@@ -6,7 +6,9 @@
      * => Make sure to never redeclare a module in another file
      * (i.e. never call an already declared module with an array argument).
      */
-    angular.module('tmaps.core', []);
+    angular.module('tmaps.core', [
+        'tmaps.main.viewport'
+    ]);
     angular.module('tmaps.mock.core', []);
     angular.module('tmaps.core.layer', []);
     angular.module('tmaps.core.selection', ['tmaps.core.layer', 'tmaps.shared.services']);
@@ -29,7 +31,18 @@
     angular.module('tmaps.main.layerprops.masks', ['tmaps.main.layerprops']);
     angular.module('tmaps.main.layerprops.selections', ['tmaps.main.layerprops']);
 
-    angular.module('tmaps.main.experiment', []);
+    angular.module('tmaps.main.experiment', [
+        'tmaps.shared.thirdpartymodules',
+        'tmaps.main.appstate',
+        'tmaps.core'
+    ]);
+
+    angular.module('tmaps.main.viewport', [
+        'tmaps.shared.thirdpartymodules',
+        'tmaps.main.appstate',
+        'tmauth',
+        'tmaps.core'
+    ]);
     angular.module('tmaps.mock.main.experiment', []);
 
     angular.module('tmaps.main.appstate', [
@@ -73,6 +86,7 @@
 
         'tmaps.main.misc',
 
+        'tmaps.main.viewport',
         'tmaps.main.experiment',
         'tmaps.main.appstate',
         'tmaps.main.user',
