@@ -4,13 +4,13 @@
 from flask.ext.script import Manager
 from flask.ext.migrate import Migrate, MigrateCommand
 
-from appfactory import create_app, MODE
-from db import db
+from tmaps.appfactory import create_app
+from tmaps.extensions.database import db
 
 # Execute all model definitions
-from models import *
+from tmaps.models import *
 
-app = create_app(MODE.DEV)
+app = create_app()
 
 migrate = Migrate(app, db)
 manager = Manager(app)
@@ -41,12 +41,10 @@ def populate_db():
         # Add admin user
         u1 = User(name='testuser',
                  email='testuser@something.com',
-                 password='123',
-                 expdatadir='/Users/robin/Dev/TissueMAPS/tmaps/expdata')
+                 password='123')
         u2 = User(name='testuser2',
                   email='testuser2@something.com',
-                  password='123',
-                  expdatadir='/Users/robin/Dev/TissueMAPS/tmaps/expdata')
+                  password='123')
         db.session.add(u1)
         db.session.add(u2)
         db.session.commit()
@@ -73,7 +71,8 @@ def populate_db():
 
         e1 = Experiment(name='150316-30min-PBS',
                         description='Very nice exp',
-                        owner_id=u1.id)
+                        owner_id=u1.id,
+                        location='/Users/robin/Dev/TissueMAPS/expdata/150316-30min-PBS')
         db.session.add(e1)
         db.session.commit()
 

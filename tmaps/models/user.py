@@ -18,8 +18,6 @@ class User(db.Model):
 
     active = db.Column(db.Boolean(), default=True)
 
-    expdatadir = db.Column(db.String(80))
-
     # both 'one to many'
     # owned_experiments = db.relationship("Experiment")
 
@@ -27,13 +25,11 @@ class User(db.Model):
     updated_on = db.Column(db.DateTime, default=db.func.now(),
                            onupdate=db.func.now())
 
-    def __init__(self, name, email, password, expdatadir,
-                 experiments=[]):
+    def __init__(self, name, email, password, experiments=[]):
 
         self.name = name
         self.email = email
         self.password = sha256_crypt.encrypt(password)
-        self.expdatadir = expdatadir
         self.experiments = experiments
 
     def __repr__(self):

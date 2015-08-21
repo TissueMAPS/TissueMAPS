@@ -56,8 +56,7 @@ def db(app, request):
     # Add some testing data
     u = User(name='testuser',
              email='testuser@something.com',
-             password='123',
-             expdatadir='/home/testuser')
+             password='123')
 
     _db.session.add(u)
     _db.session.commit()

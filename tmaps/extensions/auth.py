@@ -1,4 +1,4 @@
-from ..models import User
+from tmaps.models import User
 from passlib.hash import sha256_crypt
 
 from flask_jwt import JWT
@@ -10,6 +10,7 @@ jwt = JWT()
 def authenticate(username, password):
     """Check if there is a user with this username-pw-combo
     and return the user object if a matching user has been found."""
+
     user = User.query.filter_by(name=username).first_or_404()
     if user and sha256_crypt.verify(password, user.password):
         return user
