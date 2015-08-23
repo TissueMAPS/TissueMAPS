@@ -9,24 +9,22 @@
  *
  *      $ grunt [dev]
  *
- *      will watch files for change and automatically compile them (specyfing 'dev' is optional).
- *      It will also autoreload the browser as soon as the CSS or the Script files change.
- *
+ *      will watch files for change and automatically compile them
+ *      (specyfing 'dev' is optional).
+ *      This command will also start a development server.
+ *      The browser is reloaded automatically as soon as any of the files change.
  *
  *      $ grunt prod
  *
- *      will create a release build in the directory specified by the PRODUCTION_DIR variable.
- *
+ *      will create a release build in the directory specified by the productionDir variable.
  *
  *      $ grunt test
  *
  *      will start a continous testing cycle.
  *
- *
- *
  *  New tasks should be installed with:
  *
- *      $ cd /path/to/tissueMAPS
+ *      $ cd /path/to/TissueMAPS/client
  *      $ npm install grunt-sometask --save-dev
  */
 
@@ -56,22 +54,22 @@ module.exports = function(grunt) {
          */
 
         // Absolute path of client root directory
-        ROOT_DIR: path.resolve('.'),
+        rootDir: path.resolve('.'),
 
         // Styles
-        LESS_DIR: 'styles/less',   // need to be compiled
-        CSS_DIR: 'styles/css',    // does not need to be compiled
+        lessDir: 'app/assets/less',   // need to be compiled
+        cssDir: 'app/assets/css',    // does not need to be compiled
 
         // Temp dir where tasks should put intermediate files
-        TMP_DIR: '.tmp',
+        tmpDir: '_tmp',
 
         // Where to place all files when the app is built for production
-        PRODUCTION_DIR: 'dist',
+        productionDir: '_dist',
 
         // Where to place the compiled files
-        BUILD_DIR: 'build',
+        buildDir: '_build',
 
-        OL_DIR: 'ol3',
+        olDir: 'ol3',
 
         // TODO: Specify license
         // A banner that will be added to the minified files.
@@ -113,9 +111,9 @@ module.exports = function(grunt) {
          * Delete content of build directory
          */
         clean: {
-            prod: ['<%= PRODUCTION_DIR %>'],
-            build: ['<%= BUILD_DIR %>'],
-            tmp: ['<%= TMP_DIR %>']
+            prod: ['<%= productionDir %>'],
+            build: ['<%= buildDir %>'],
+            tmp: ['<%= tmpDir %>']
         },
 
         /**
@@ -124,16 +122,14 @@ module.exports = function(grunt) {
         copy: {
             prod: {
                 files: [
-                    {expand: true, src: ['templates/**/*.html'], dest: '<%= PRODUCTION_DIR %>/'},
-                    {'<%= PRODUCTION_DIR %>/index.html': 'index.html'},
-                    {'<%= PRODUCTION_DIR %>/style-tools.css': '<%= BUILD_DIR %>/style-tools.css'},
-                    {'<%= PRODUCTION_DIR %>/style-main.css': '<%= BUILD_DIR %>/style-main.css'},
-                    {expand: true, src: ['resources/**'], dest: '<%= PRODUCTION_DIR %>/'}
+                    {cwd: 'app', expand: true, src: ['templates/**/*.html'], dest: '<%= productionDir %>/'},
+                    {'<%= productionDir %>/index.html': 'index.html'},
+                    {cwd: 'app', expand: true, src: ['resources/**'], dest: '<%= productionDir %>/'}
                 ]
             },
             olSource: {
                 files: {
-                    'libs/unmanaged/': '<%= OL_DIR %>/build/ol.js'
+                    'app/assets/libs/unmanaged/': '<%= olDir %>/build/ol.js'
                 }
             }
         },
@@ -150,10 +146,10 @@ module.exports = function(grunt) {
                 },
                 files: {
                     src: [
-                        '<%= PRODUCTION_DIR %>/script-main.min.js',
-                        '<%= PRODUCTION_DIR %>/script-tools.min.js',
-                        '<%= PRODUCTION_DIR %>/style-tools.min.css',
-                        '<%= PRODUCTION_DIR %>/style-main.min.css'
+                        '<%= productionDir %>/script-main.min.js',
+                        '<%= productionDir %>/script-tools.min.js',
+                        '<%= productionDir %>/style-tools.min.css',
+                        '<%= productionDir %>/style-main.min.css'
                     ]
                 }
             }
@@ -164,6 +160,7 @@ module.exports = function(grunt) {
          */
         includeSource: {
             options: {
+                basePath: 'app',
                 templates: {
                     html: {
                         js: '<script src="/{filePath}"></script>'
@@ -172,13 +169,12 @@ module.exports = function(grunt) {
             },
             main: {
                 files: {
-                    'index.html': 'index.pre.html'
+                    'app/index.html': 'app/index.pre.html'
                 }
             },
             tools: {
-                // basePath: '../../',
                 files: {
-                    'templates/tools/index.html': 'templates/tools/index.pre.html'
+                    'app/templates/tools/index.html': 'app/templates/tools/index.pre.html'
                 }
             }
         },
@@ -192,26 +188,25 @@ module.exports = function(grunt) {
          */
         useminPrepare: {
             html: [
-                'index.html',
-                'templates/tools/index.html'
+                'app/index.html',
+                'app/templates/tools/index.html'
             ],
             options: {
-                dest: '<%= PRODUCTION_DIR %>'
+                dest: '<%= productionDir %>'
             }
         },
         usemin: {
-            html: [
-                '<%= PRODUCTION_DIR %>/index.html',
-                '<%= PRODUCTION_DIR %>/templates/tools/index.html'
-            ],
+            // html: [
+            //     '<%= productionDir %>/index.html',
+            //     '<%= productionDir %>/templates/tools/index.html'
+            // ],
             options: {
                 assetDirs: [
-                    '<% PRODUCTION_DIR %>',
-                    '<% PRODUCTION_DIR %>/resources',
-                    '<% PRODUCTION_DIR %>/resources/img'
+                    '<% productionDir %>',
+                    '<% productionDir %>/resources',
+                    '<% productionDir %>/resources/img'
                 ]
             }
-
         },
 
         /**
@@ -222,8 +217,8 @@ module.exports = function(grunt) {
         filerev: {
             dist: {
                 src: [
-                    '<%= PRODUCTION_DIR %>/resources/img/**/*.{jpg,png,gif,ico}',
-                    '<%= PRODUCTION_DIR %>/**/*.{js,css}'
+                    '<%= productionDir %>/resources/img/**/*.{jpg,png,gif,ico}',
+                    '<%= productionDir %>/**/*.{js,css}'
                 ]
             },
         },
@@ -234,7 +229,7 @@ module.exports = function(grunt) {
         watch: {
             // Preprocess html files as soon as one changes
             htmlPre: {
-                files: ['templates/tools/index.pre.html', 'index.pre.html'],
+                files: ['app/templates/tools/index.pre.html', 'app/index.pre.html'],
                 tasks: ['includeSource']
             },
 
@@ -242,21 +237,24 @@ module.exports = function(grunt) {
             html: {
                 options: { livereload: true },
                 files: [
-                    'index.html',
-                    'templates/**/*.html',
-                    '!templates/tools/index.pre.html' // needs to be globbed first
+                    'app/index.html',
+                    'app/templates/**/*.html',
+                    '!app/templates/tools/index.pre.html' // needs to be globbed first
                 ]
             },
 
             // Automatically compile less files on change
             less: {
-                files: ['<%= LESS_DIR %>/**/*.less'],
+                files: ['<%= lessDir %>/**/*.less'],
                 tasks: ['less', 'includeSource']
             },
 
             js: {
-                files: ['src/**/*.js'],
-                tasks: ['includeSource', 'test:unit']
+                files: ['app/src/**/*.js'],
+                tasks: [
+                    'includeSource'
+                    // , 'test:unit'
+                ]
             },
 
             // jsTest: {
@@ -266,7 +264,7 @@ module.exports = function(grunt) {
 
             // NOTE: Enabling this produces some error messages when running 'watch'
             // openlayersSource: {
-            //     files: ['<%= OL_DIR %>/**/*.js'],
+            //     files: ['<%= olDir %>/**/*.js'],
             //     tasks: [
             //         'exec:buildOL',
             //         'copy:olSource'
@@ -277,13 +275,57 @@ module.exports = function(grunt) {
             grunt: { files: ['gruntfile.js'] }
         },
 
+        connect: {
+            server: {
+                options: {
+                    port: 8000, // default
+                    base: 'app', // from where to serve files
+                    livereload: true, // port
+                    open: 'http://localhost:8000/index.html',
+                    middleware: function(connect, options) {
+                        if (!Array.isArray(options.base)) {
+                            options.base = [options.base];
+                        }
+                        // Setup the proxy
+                        var middlewares = [require('grunt-connect-proxy/lib/utils').proxyRequest];
+                        // Serve static files.
+                        options.base.forEach(function(base) {
+                            middlewares.push(connect.static(base));
+                        });
+                        // Make directory browse-able.
+                        var directory = options.directory || options.base[options.base.length - 1];
+                        middlewares.push(connect.directory(directory));
+                        return middlewares;
+                    }
+                },
+                proxies: [
+                    {
+                        context: '/api',
+                        host: 'localhost',
+                        port: 8080,
+                        https: false,
+                        xforward: false,
+                        ws: true // proxy websockets
+                    },
+                    {
+                        context: '/auth',
+                        host: 'localhost',
+                        port: 8080,
+                        https: false,
+                        xforward: false,
+                        ws: true // proxy websockets
+                    }
+                ]
+            }
+        },
+
         /*
          * Execute the python build script for openlayers.
          * This will create the file ol3/build/ol.js.
          * (has to be copied to libs/unmanaged)
          */
         exec: {
-            buildOL: '(cd <%= OL_DIR %> && ./build.py build)' // temporarily change working directory
+            buildOL: '(cd <%= olDir %> && ./build.py build)' // temporarily change working directory
         },
 
         /*
@@ -295,14 +337,14 @@ module.exports = function(grunt) {
          */
         less: {
             options: {
-                paths: ['<%= LESS_DIR %>'],
+                paths: ['<%= lessDir %>'],
                 cleancss: false
             },
             compile: {
                 files: {
                     // The style.less file imports all other less files
-                    '<%= BUILD_DIR %>/style-main.css': '<%= LESS_DIR %>/main/style.less',
-                    '<%= BUILD_DIR %>/style-tools.css': '<%= LESS_DIR %>/tools/style.less'
+                    '<%= cssDir %>/style-main.css': '<%= lessDir %>/main/style.less',
+                    '<%= cssDir %>/style-tools.css': '<%= lessDir %>/tools/style.less'
                 }
             }
         },
@@ -318,8 +360,8 @@ module.exports = function(grunt) {
                     collapseWhitespace: false
                 },
                 files: {
-                    '<%= PRODUCTION_DIR %>/index.html': '<%= PRODUCTION_DIR %>/index.html',
-                    '<%= PRODUCTION_DIR %>/templates/tools/index.html': '<%= PRODUCTION_DIR %>/templates/tools/index.html'
+                    '<%= productionDir %>/index.html': '<%= productionDir %>/index.html',
+                    '<%= productionDir %>/templates/tools/index.html': '<%= productionDir %>/templates/tools/index.html'
                 }
             }
         },
@@ -344,35 +386,35 @@ module.exports = function(grunt) {
                 files: [
                     // Files to include everywhere
                     // Library code
-                    'libs/bower/jquery/dist/jquery.js',
-                    'libs/unmanaged/jquery-ui.min.js',
-                    'libs/bower/underscore/underscore.js',
+                    'app/assets/libs/bower_components/jquery/dist/jquery.js',
+                    'app/assets/libs/unmanaged/jquery-ui.min.js',
+                    'app/assets/libs/bower_components/underscore/underscore.js',
 
-                    'libs/unmanaged/ol3/build/ol.js',
+                    'app/assets/libs/unmanaged/ol3/build/ol.js',
 
-                    'libs/bower/angular/angular.js',
-                    'libs/bower/angular-mocks/angular-mocks.js',
-                    'libs/bower/angular-ui-router/release/angular-ui-router.js',
-                    'libs/bower/angular-sanitize/angular-sanitize.js',
-                    'libs/bower/highcharts/highcharts.js',
-                    'libs/bower/highcharts-ng/dist/highcharts-ng.min.js',
-                    'libs/bower/angular-ui-sortable/sortable.min.js',
-                    'libs/bower/angular-ui-slider/src/slider.js',
-                    'libs/bower/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js',
-                    'libs/bower/ng-color-picker/color-picker.js',
-                    'libs/bower/perfect-scrollbar/js/perfect-scrollbar.jquery.js',
-                    'libs/unmanaged/angular-perfect-scrollbar.js',
-                    'libs/bower/ng-websocket/ng-websocket.js',
+                    'app/assets/libs/bower_components/angular/angular.js',
+                    'app/assets/libs/bower_components/angular-mocks/angular-mocks.js',
+                    'app/assets/libs/bower_components/angular-ui-router/release/angular-ui-router.js',
+                    'app/assets/libs/bower_components/angular-sanitize/angular-sanitize.js',
+                    'app/assets/libs/bower_components/highcharts/highcharts.js',
+                    'app/assets/libs/bower_components/highcharts-ng/dist/highcharts-ng.min.js',
+                    'app/assets/libs/bower_components/angular-ui-sortable/sortable.min.js',
+                    'app/assets/libs/bower_components/angular-ui-slider/src/slider.js',
+                    'app/assets/libs/bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js',
+                    'app/assets/libs/bower_components/ng-color-picker/color-picker.js',
+                    'app/assets/libs/bower_components/perfect-scrollbar/js/perfect-scrollbar.jquery.js',
+                    'app/assets/libs/unmanaged/angular-perfect-scrollbar.js',
+                    'app/assets/libs/bower_components/ng-websocket/ng-websocket.js',
 
                     // Module declarations
-                    'src/tmaps.shared.js',
-                    'src/tmaps.main.js',
-                    'src/tmaps.tools.js',
+                    'app/src/tmaps.shared.js',
+                    'app/src/tmaps.main.js',
+                    'app/src/tmaps.tools.js',
 
                     // Source
-                    'src/shared/**/*.js',
-                    'src/main/**/*.js',
-                    'src/tools/**/*.js'
+                    'app/src/shared/**/*.js',
+                    'app/src/main/**/*.js',
+                    'app/src/tools/**/*.js'
                 ]
             },
             unit: {
@@ -383,7 +425,7 @@ module.exports = function(grunt) {
             },
             midway: {
                 files: [
-                    { src: 'libs/bower/ngMidwayTester/src/ngMidwayTester.js' },
+                    { src: 'app/assets/libs/bower_components/ngMidwayTester/src/ngMidwayTester.js' },
                     { src: ['test/midway/**/*.js'] }
                 ]
             },
@@ -397,7 +439,7 @@ module.exports = function(grunt) {
                 autoWatch: true,
                 files: [
                     { src: ['test/unit/**/*.js'] },
-                    { src: 'libs/bower/ngMidwayTester/src/ngMidwayTester.js' },
+                    { src: 'app/assets/libs/bower_components/ngMidwayTester/src/ngMidwayTester.js' },
                     { src: ['test/midway/**/*.js'] },
                     { src: ['test/e2e/**/*.js'] }
                 ]
@@ -405,7 +447,7 @@ module.exports = function(grunt) {
             cov: {
                 singleRun: true,
                 preprocessors: {
-                    'src/**/*.js': 'coverage'
+                    'app/src/**/*.js': 'coverage'
                 },
                 reporters: ['coverage'],
                 coverageReporter: {
@@ -442,13 +484,16 @@ module.exports = function(grunt) {
      */
 
     // Build for development and watch files for changes.
+    // This will also start a development server that serves files
+    // without needing to minify them first (much faster).
     grunt.registerTask('dev', [
         'clean:build',
         'clean:tmp',
         'copy:olSource',
         'less',
         'includeSource',
-
+        'configureProxies:server',
+        'connect',
         'watch'
     ]);
     // The dev task is also executed when no task is specified (i.e. just running 'grunt').
