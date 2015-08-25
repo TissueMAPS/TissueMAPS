@@ -1,23 +1,47 @@
-class ImageMetadata(object):
+from abc import ABCMeta
+from abc import abstractmethod
+
+
+class Metadata(object):
 
     '''
-    A base class for holding metadata about an image, such as the
-    position of the image in the acquisition grid.
+    Abstract base class for the metadata of an image, such as its
+    relative position within the acquisition grid.
     '''
 
-    def __init__(self, metadata, cycle=1):
+    __metaclass__ = ABCMeta
+
+    required_metadata = {
+        'filename', 'name', 'cycle', 'dtype', 'dimensions', 'position',
+        'row', 'column', 'well'
+    }
+
+    def __init__(self, metadata=None):
         '''
         Initialize an instance of class Metadata.
 
         Parameters
         ----------
-        metadata: Dict[str, int or str]
-            metadata read from the *.metadata* YAML file
-        cycle: int, optional
-            one-based cycle index (defaults to 1)
+        metadata: Dict[str, int or str or tuple]
+            metadata read from a *.metadata* JSON file
         '''
         self.metadata = metadata
-        self.cycle = cycle
+        if self.metadata:
+            self.set(self.metadata)
+
+    @property
+    def cycle(self):
+        '''
+        Returns
+        -------
+        int
+            one-based cycle identifier number
+        '''
+        return self._cycle
+
+    @cycle.setter
+    def cycle(self, value):
+        self._cycle = value
 
     @property
     def filename(self):
@@ -26,16 +50,54 @@ class ImageMetadata(object):
         -------
         str
             name of the corresponding image file
-
-        Raises
-        ------
-        KeyError
-            when `metadata` doesn't contain "filename" information
         '''
-        if 'filename' not in self.metadata:
-            raise KeyError('Metadata must contain "filename" information')
-        self._filename = self.metadata['filename']
         return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the image (given by the microscope)
+        '''
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def dtype(self):
+        '''
+        Returns
+        -------
+        int
+            data type of the image pixel array
+        '''
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self._dtype = value
+
+    @property
+    def dimensions(self):
+        '''
+        Returns
+        -------
+        int
+            dimensions of the image pixel array
+        '''
+        return self._dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        self._dimensions = value
 
     @property
     def site(self):
@@ -43,17 +105,27 @@ class ImageMetadata(object):
         Returns
         -------
         int
-            zero-based index of the image in the acquisition sequence
-
-        Raises
-        ------
-        KeyError
-            when `metadata` doesn't contain "site" information
+            one-based index of the image in the acquisition sequence
         '''
-        if 'site' not in self.metadata:
-            raise KeyError('Metadata must contain "site" information')
-        self._site = self.metadata['site']
         return self._site
+
+    @site.setter
+    def site(self, value):
+        self._site = value
+
+    @property
+    def position(self):
+        '''
+        Returns
+        -------
+        Tuple[float]
+            absolute y, x microscope stage positions
+        '''
+        return self._position
+
+    @position.setter
+    def position(self, value):
+        self._position = value
 
     @property
     def row(self):
@@ -61,17 +133,13 @@ class ImageMetadata(object):
         Returns
         -------
         int
-            zero-based row index of the image in the acquisition grid
-
-        Raises
-        ------
-        KeyError
-            when `metadata` doesn't contain "row" information
+            one-based row index of the image in the acquisition grid
         '''
-        if 'row' not in self.metadata:
-            raise KeyError('Metadata must contain "row" information')
-        self._row = self.metadata['row']
         return self._row
+
+    @row.setter
+    def row(self, value):
+        self._row = value
 
     @property
     def column(self):
@@ -79,110 +147,197 @@ class ImageMetadata(object):
         Returns
         -------
         int
-            zero-based column index of the image in the acquisition grid
-
-        Raises
-        ------
-        KeyError
-            when `metadata` doesn't contain "column" information
+            one-based column index of the image in the acquisition grid
         '''
-        if 'column' not in self.metadata:
-            raise KeyError('Metadata must contain "column" information')
-        self._column = self.metadata['column']
         return self._column
 
+    @column.setter
+    def column(self, value):
+        self._row = value
+
     @property
-    def coordinates(self):
+    def grid_coordinates(self):
         '''
         Returns
         -------
         Tuple[int]
             zero-based row, column indices of the image in the acquisition grid
         '''
-        self._coordinates = (self.row, self.column)
+        self._coordinates = (self.row-1, self.column-1)
         return self._coordinates
-
-    @property
-    def well_position(self):
-        '''
-        Returns
-        -------
-        Tuple[int]
-            zero-based row, column indices of the well in the plate
-        '''
-        if 'well_position' in self.metadata:
-            self._well_position = self.metadata['well_position']
-        else:
-            self._well = tuple()
-        return self._well_position
 
     @property
     def well(self):
         '''
         Returns
         -------
-        str
-            name given to a well in the multi-well plate
+        Tuple[int] or None
+            one-based row, column indices of the well in the plate
         '''
-        if 'well' in self.metadata:
-            self._well = self.metadata['well']
-        else:
-            self._well = ''
         return self._well
 
+    @well.setter
+    def well(self, value):
+        self._well = value
 
-class ChannelMetadata(ImageMetadata):
+    @property
+    def plate_coordinates(self):
+        '''
+        Returns
+        -------
+        Tuple[int]
+            zero-based row, column indices of the well in the plate
+        '''
+        self._well_coordinates = (self.well[0]-1, self.well[1]-1)
+        return self._well_coordinates
 
-    def __init__(self, metadata, cycle=1):
+    @abstractmethod
+    def serialize(self):
+        '''
+        Serialize required metadata attributes to key-value pairs.
+        '''
+        pass
+
+    @abstractmethod
+    def set(self, metadata):
+        '''
+        Set attributes from key-value pairs in dictionary.
+        '''
+        pass
+
+
+class ChannelMetadata(Metadata):
+
+    '''
+    Class for metadata specific to channel images.
+    '''
+
+    required_metadata = Metadata.required_metadata.union({
+                            'channel', 'channel_name'
+    })
+
+    def __init__(self, metadata=None):
         '''
         Initialize an instance of class ChannelMetadata.
 
         Parameters
         ----------
         metadata: Dict[str, int or str]
-            metadata read from the *.metadata* YAML file
-        cycle: int, optional
-            one-based cycle index (defaults to 1)
+            image metadata read from the *.metadata* JSON file
         '''
-        ImageMetadata.__init__(self, metadata, cycle)
+        super(ChannelMetadata, self).__init__(metadata)
         self.metadata = metadata
-        self.cycle = cycle
+        if self.metadata:
+            self.set(self.metadata)
+
+    @property
+    def channel_name(self):
+        '''
+        Returns
+        -------
+        str
+            name given to the channel
+        '''
+        return self._channel_name
+
+    @channel_name.setter
+    def channel_name(self, value):
+        self._channel_name = value
 
     @property
     def channel(self):
         '''
         Returns
         -------
-        str
-            name given to the channel
+        int
+            one-based channel identifier number
+        '''
+        return self._channel
+
+    @channel.setter
+    def channel(self, value):
+        self._channel = value
+
+    @property
+    def channel_planes(self):
+        '''
+        Returns
+        -------
+        List[]
+        '''
+        return self._channel_planes
+
+    def serialize(self):
+        '''
+        Serialize required metadata attributes to key-value pairs.
+
+        Returns
+        -------
+        Dict[str, str or int or tuple]
+            required metadata as key-value pairs
+        
+        Raises
+        ------
+        AttributeError
+            when instance doesn't have a required attribute
+        '''
+        serialized_metadata = dict()
+        for a in dir(self):
+            if a in ChannelMetadata.required_metadata:
+                if not hasattr(self, a):
+                    raise AttributeError('Object "%s" has no attribute "%s"'
+                                         % (self.__name__, a))
+                serialized_metadata[a] = getattr(self, a)
+        return serialized_metadata
+
+    def set(self, metadata):
+        '''
+        Set attributes based on values in dictionary.
+
+        Parameters
+        ----------
+        metadata: Dict[str, str or int or tuple]
+            metadata as key-value pairs
 
         Raises
         ------
         KeyError
-            when `metadata` doesn't contain "channel" information
+            when keys for required attributes are not provided
+        AttributeError
+            when keys are provided that don't have a corresponding attribute
         '''
-        if 'channel' not in self.metadata:
-            raise KeyError('Metadata must contain "channel" information')
-        self._channel = self.metadata['channel']
-        return self._channel
+        missing_keys = [a for a in ChannelMetadata.required_metadata
+                        if a not in metadata.keys()]
+        if len(missing_keys) > 0:
+            raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
+        for k, v in metadata:
+            if k not in ChannelMetadata.required_metadata:
+                raise AttributeError('Object "%s" has no attribute "%s"'
+                                     % (self.__name__, k))
+            setattr(self, k, v)
 
 
-class SegmentationMetadata(ImageMetadata):
+class SegmentationMetadata(Metadata):
 
-    def __init__(self, metadata, cycle=1):
+    '''
+    Class for metadata specific to segmentation images.
+    '''
+
+    required_metadata = Metadata.required_metadata.union({'objects'})
+
+    def __init__(self, metadata=None):
         '''
         Initialize an instance of class SegmentationMetadata.
 
         Parameters
         ----------
         metadata: Dict[str, int or str]
-            metadata read from the *.metadata* YAML file
-        cycle: int, optional
-            one-based cycle index (defaults to 1)
+            image metadata read from the *.metadata* JSON file
         '''
-        ImageMetadata.__init__(self, metadata, cycle)
+        super(SegmentationMetadata, self).__init__(metadata)
         self.metadata = metadata
-        self.cycle = cycle
+        if self.metadata:
+            self._objects = self.metadata['objects']
 
     @property
     def objects(self):
@@ -192,12 +347,58 @@ class SegmentationMetadata(ImageMetadata):
         str
             name given to the objects in the image
 
+        '''
+        return self._objects
+
+    @objects.setter
+    def objects(self, value):
+        self._objects = value
+
+    def serialize(self):
+        '''
+        Serialize required metadata attributes to key-value pairs.
+
+        Returns
+        -------
+        Dict[str, str or int or tuple]
+            required metadata as key-value pairs
+        
+        Raises
+        ------
+        AttributeError
+            when instance doesn't have a required attribute
+        '''
+        serialized_metadata = dict()
+        for a in dir(self):
+            if a in SegmentationMetadata.required_metadata:
+                if not hasattr(self, a):
+                    raise AttributeError('Object "%s" has no attribute "%s"'
+                                         % (self.__name__, a))
+                serialized_metadata[a] = getattr(self, a)
+        return serialized_metadata
+
+    def set(self, metadata):
+        '''
+        Set attributes based on values in dictionary.
+
+        Parameters
+        ----------
+        metadata: Dict[str, str or int or tuple]
+            metadata as key-value pairs
+
         Raises
         ------
         KeyError
-            when `metadata` doesn't contain "objects' information
+            when keys for required attributes are not provided
+        AttributeError
+            when keys are provided that don't have a corresponding attribute
         '''
-        if 'objects' not in self.metadata:
-            raise KeyError('Metadata must contain "objects' information')
-        self._objects = self.metadata['objects']
-        return self._objects
+        missing_keys = [a for a in SegmentationMetadata.required_metadata
+                        if a not in metadata.keys()]
+        if len(missing_keys) > 0:
+            raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
+        for k, v in metadata:
+            if k not in SegmentationMetadata.required_metadata:
+                raise AttributeError('Object "%s" has no attribute "%s"'
+                                     % (self.__name__, k))
+            setattr(self, k, v)
