@@ -1,7 +1,7 @@
-from ..cluster import Api
+from ..cluster import Cluster
 
 
-class Format(Api):
+class Format(Cluster):
 
     def __init__(self):
         super(Format, self).__init__()

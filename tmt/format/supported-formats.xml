@@ -1,0 +1,798 @@
+<response>
+
+<format name='File pattern'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pattern' />
+</format>
+
+<format name='Zip'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='zip' />
+</format>
+
+<format name='Animated PNG'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='png' />
+</format>
+
+<format name='JPEG'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='extensions' value='jpg|jpeg|jpe' />
+</format>
+
+<format name='Portable Any Map'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pbm|pgm|ppm' />
+</format>
+
+<format name='Flexible Image Transport System'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='fits|fts' />
+</format>
+
+<format name='PCX'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pcx' />
+</format>
+
+<format name='Graphics Interchange Format'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='gif' />
+</format>
+
+<format name='Windows Bitmap'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='bmp' />
+</format>
+
+<format name='IPLab'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ipl' />
+</format>
+
+<format name='IVision'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ipm' />
+</format>
+
+<format name='Deltavision'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='dv|r3d|r3d_d3d|dv.log|r3d.log' />
+</format>
+
+<format name='Medical Research Council'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='mrc|st|ali|map|rec' />
+</format>
+
+<format name='Gatan Digital Micrograph'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='dm3' />
+</format>
+
+<format name='Gatan DM2'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='dm2' />
+</format>
+
+<format name='Bitplane Imaris'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ims' />
+</format>
+
+<format name='Openlab RAW'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='raw' />
+</format>
+
+<format name='OME-XML'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='ome' />
+</format>
+
+<format name='Leica Image File Format'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='lif' />
+</format>
+
+<format name='Audio Video Interleave'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='avi' />
+</format>
+
+<format name='PICT'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pict|pct' />
+</format>
+
+<format name='SPCImage Data'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='sdt' />
+</format>
+
+<format name='Encapsulated PostScript'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='extensions' value='eps|epsi|ps' />
+</format>
+
+<format name='SlideBook 6 SLD (native)'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='sld' />
+</format>
+
+<format name='Olympus Slidebook'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='sld|spl' />
+</format>
+
+<format name='Alicona AL3D'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='al3d' />
+</format>
+
+<format name='Multiple Network Graphics'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='mng' />
+</format>
+
+<format name='Khoros XV'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='xv' />
+</format>
+
+<format name='Visitech XYS'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='xys|html' />
+</format>
+
+<format name='Laboratory Imaging'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='lim' />
+</format>
+
+<format name='Adobe Photoshop'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='psd' />
+</format>
+
+<format name='InCell 1000/2000'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='xdce|xml|tiff|tif|xlog' />
+</format>
+
+<format name='Li-Cor L2D'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='l2d|scn|tif' />
+</format>
+
+<format name='FEI/Philips'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='img' />
+</format>
+
+<format name='Hamamatsu Aquacosmos'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='naf' />
+</format>
+
+<format name='MINC MRI'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='mnc' />
+</format>
+
+<format name='QuickTime'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='mov' />
+</format>
+
+<format name='Minolta MRW'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='mrw' />
+</format>
+
+<format name='TillVision'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='vws|pst|inf' />
+</format>
+
+<format name='ARF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='arf' />
+</format>
+
+<format name='Cellomics C01'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='c01|dib' />
+</format>
+
+<format name='LI-FLIM'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='fli' />
+</format>
+
+<format name='Truevision Targa'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tga' />
+</format>
+
+<format name='Oxford Instruments'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='top' />
+</format>
+
+<format name='VG SAM'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='dti' />
+</format>
+
+<format name='Hamamatsu HIS'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='his' />
+</format>
+
+<format name='WA Technology TOP'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='wat' />
+</format>
+
+<format name='Seiko'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='xqd|xqf' />
+</format>
+
+<format name='TopoMetrix'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tfr|ffr|zfr|zfp|2fl' />
+</format>
+
+<format name='UBM'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pr3' />
+</format>
+
+<format name='Quesant AFM'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='afm' />
+</format>
+
+<format name='Bio-Rad GEL'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='1sc' />
+</format>
+
+<format name='RHK Technologies'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='sm2|sm3' />
+</format>
+
+<format name='Molecular Imaging'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='stp' />
+</format>
+
+<format name='CellWorx'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pnl|htd|log' />
+</format>
+
+<format name='ECAT7'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='v' />
+</format>
+
+<format name='Varian FDF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='fdf' />
+</format>
+
+<format name='AIM'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='aim' />
+</format>
+
+<format name='InCell 3000'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='frm' />
+</format>
+
+<format name='SPIDER'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='spi' />
+</format>
+
+<format name='Volocity Library'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='mvd2|aisf|aiix|dat|atsf' />
+</format>
+
+<format name='IMAGIC'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='hed|img' />
+</format>
+
+<format name='Hamamatsu VMS'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='vms' />
+</format>
+
+<format name='CellSens VSI'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='vsi|ets' />
+</format>
+
+<format name='INR'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='inr' />
+</format>
+
+<format name='Kodak Molecular Imaging'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='bip' />
+</format>
+
+<format name='Volocity Library Clipping'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='acff' />
+</format>
+
+<format name='Zeiss CZI'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='czi' />
+</format>
+
+<format name='Andor SIF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='sif' />
+</format>
+
+<format name='Hamamatsu NDPIS'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ndpis' />
+</format>
+
+<format name='POV-Ray'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='df3' />
+</format>
+
+<format name='IMOD'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='mod' />
+</format>
+
+<format name='Simulated data'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='fake' />
+</format>
+
+<format name='Aperio AFI'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='afi' />
+</format>
+
+<format name='Lavision Imspector'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='msr' />
+</format>
+
+<format name='Bio-Rad SCN'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='scn' />
+</format>
+
+<format name='Zeiss LMS'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='lms' />
+</format>
+
+<format name='PicoQuant Bin'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='bin' />
+</format>
+
+<format name='FlowSight'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='cif' />
+</format>
+
+<format name='Perkin-Elmer Nuance IM3'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='im3' />
+</format>
+
+<format name='I2I'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='i2i' />
+</format>
+
+<format name='JEOL'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='dat|img|par' />
+</format>
+
+<format name='NIfTI'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='nii|img|hdr' />
+</format>
+
+<format name='Analyze 7.5'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='img|hdr' />
+</format>
+
+<format name='Olympus APL'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='apl|tnb|mtb|tif' />
+</format>
+
+<format name='NRRD'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='nrrd|nhdr' />
+</format>
+
+<format name='Image Cytometry Standard'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='ics|ids' />
+</format>
+
+<format name='PerkinElmer'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ano|cfg|csv|htm|rec|tim|zpo|tif' />
+</format>
+
+<format name='Amira'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='am|amiramesh|grey|hx|labels' />
+</format>
+
+<format name='Olympus ScanR'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='dat|xml|tif' />
+</format>
+
+<format name='BD Pathway'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='exp|tif' />
+</format>
+
+<format name='Unisoku STM'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='hdr|dat' />
+</format>
+
+<format name='Perkin Elmer Densitometer'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='hdr|img' />
+</format>
+
+<format name='Fuji LAS 3000'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='img|inf' />
+</format>
+
+<format name='PerkinElmer Operetta'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff|xml' />
+</format>
+
+<format name='Inveon'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='hdr' />
+</format>
+
+<format name='CellVoyager'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|xml' />
+</format>
+
+<format name='Bio-Rad PIC'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pic|xml|raw' />
+</format>
+
+<format name='Olympus FV1000'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='oib|oif|pty|lut' />
+</format>
+
+<format name='Zeiss Vision Image (ZVI)'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='zvi' />
+</format>
+
+<format name='Image-Pro Workspace'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ipw' />
+</format>
+
+<format name='JPEG-2000'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='extensions' value='jp2|j2k|jpf' />
+</format>
+
+<format name='JPX'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='jpx' />
+</format>
+
+<format name='Nikon ND2'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='nd2' />
+</format>
+
+<format name='Compix Simple-PCI'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='cxd' />
+</format>
+
+<format name='Bitplane Imaris 5.5 (HDF)'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ims' />
+</format>
+
+<format name='CellH5 (HDF)'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ch5' />
+</format>
+
+<format name='Woolz'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='wlz' />
+</format>
+
+<format name='Veeco'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='hdf' />
+</format>
+
+<format name='Zeiss Laser-Scanning Microscopy'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='lsm|mdb' />
+</format>
+
+<format name='Image-Pro Sequence'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='seq' />
+</format>
+
+<format name='Amersham Biosciences GEL'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='gel' />
+</format>
+
+<format name='Bitplane Imaris 3 (TIFF)'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ims' />
+</format>
+
+<format name='Evotec Flex'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='flex|mea|res' />
+</format>
+
+<format name='Aperio SVS'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='svs' />
+</format>
+
+<format name='Imacon'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='fff' />
+</format>
+
+<format name='LEO'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='sxm|tif|tiff' />
+</format>
+
+<format name='JPK Instruments'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='jpk' />
+</format>
+
+<format name='Hamamatsu NDPI'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='ndpi' />
+</format>
+
+<format name='PCO-RAW'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='pcoraw|rec' />
+</format>
+
+<format name='OME-TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='ome.tif|ome.tiff|companion.ome' />
+</format>
+
+<format name='Pyramid TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='MIAS'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff|txt' />
+</format>
+
+<format name='Leica TCS TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff|xml' />
+</format>
+
+<format name='Leica'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='lei|tif|tiff|raw' />
+</format>
+
+<format name='Nikon NEF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='nef|tif|tiff' />
+</format>
+
+<format name='Olympus Fluoview/ABD TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='Prairie TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff|cfg|env|xml' />
+</format>
+
+<format name='Metamorph STK'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='stk|nd|tif|tiff' />
+</format>
+
+<format name='Micro-Manager'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff|txt|xml' />
+</format>
+
+<format name='Improvision TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='Metamorph TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='Nikon TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='Adobe Photoshop TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='FEI TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='SimplePCI TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='Nikon Elements TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='Trestle'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif' />
+</format>
+
+<format name='Olympus SIS TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='DNG'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='cr2|crw|jpg|thm|wav|tif|tiff' />
+</format>
+
+<format name='Zeiss AxioVision TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|xml' />
+</format>
+
+<format name='Leica SCN'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='scn' />
+</format>
+
+<format name='Slidebook TIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='tif|tiff' />
+</format>
+
+<format name='Tagged Image File Format'>
+  <tag name='support' value='reading' />
+  <tag name='support' value='writing' />
+  <tag name='support' value='writing multiple pages' />
+  <tag name='extensions' value='tif|tiff|tf2|tf8|btf' />
+</format>
+
+<format name='Text'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='txt|csv' />
+</format>
+
+<format name='Burleigh'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='img' />
+</format>
+
+<format name='Openlab LIFF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='liff' />
+</format>
+
+<format name='DICOM'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='dic|dcm|dicom|jp2|j2ki|j2kr|raw|ima' />
+</format>
+
+<format name='SM Camera'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='' />
+</format>
+
+<format name='SBIG'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='' />
+</format>
+
+<format name='NOAA-HRD Gridded Data Format'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='' />
+</format>
+
+<format name='Hitachi'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='txt' />
+</format>
+
+<format name='Bruker'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='' />
+</format>
+
+<format name='Canon RAW'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='cr2|crw|jpg|thm|wav' />
+</format>
+
+<format name='OBF'>
+  <tag name='support' value='reading' />
+  <tag name='extensions' value='obf|msr' />
+</format>
+
+</response>
+

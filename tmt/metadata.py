@@ -12,8 +12,13 @@ class Metadata(object):
     __metaclass__ = ABCMeta
 
     required_metadata = {
-        'filename', 'name', 'cycle', 'dtype', 'dimensions', 'position',
-        'row', 'column', 'well'
+        'orig_filename', 'name', 'cycle', 'dtype', 'dimensions',
+        'position', 'well'
+    }
+
+    persistent_metadata = {
+        'filename', 'name', 'cycle', 'dtype', 'dimensions',
+        'site', 'row', 'column', 'well'
     }
 
     def __init__(self, metadata=None):
@@ -56,6 +61,34 @@ class Metadata(object):
     @filename.setter
     def filename(self, value):
         self._filename = value
+
+    @property
+    def orig_filename(self):
+        '''
+        Returns
+        -------
+        str
+            name of the original image file
+        '''
+        return self._orig_filename
+
+    @orig_filename.setter
+    def orig_filename(self, value):
+        self._orig_filename = value
+
+    @property
+    def series(self):
+        '''
+        Returns
+        -------
+        int
+            identifier number of the series within the original image file
+        '''
+        return self._series
+
+    @series.setter
+    def series(self, value):
+        self._series = value
 
     @property
     def name(self):
@@ -105,7 +138,11 @@ class Metadata(object):
         Returns
         -------
         int
-            one-based index of the image in the acquisition sequence
+            one-based unique position index
+
+        Note
+        ----
+        Sites are not necessarily sorted according to acquisition time.
         '''
         return self._site
 
@@ -267,14 +304,18 @@ class ChannelMetadata(Metadata):
         '''
         return self._channel_planes
 
+    @channel_planes.setter
+    def channel_planes(self, value):
+        self._channel_planes = value
+
     def serialize(self):
         '''
-        Serialize required metadata attributes to key-value pairs.
+        Serialize persistent metadata attributes to key-value pairs.
 
         Returns
         -------
         Dict[str, str or int or tuple]
-            required metadata as key-value pairs
+            metadata as key-value pairs
         
         Raises
         ------
@@ -283,7 +324,7 @@ class ChannelMetadata(Metadata):
         '''
         serialized_metadata = dict()
         for a in dir(self):
-            if a in ChannelMetadata.required_metadata:
+            if a in ChannelMetadata.persistent_metadata:
                 if not hasattr(self, a):
                     raise AttributeError('Object "%s" has no attribute "%s"'
                                          % (self.__name__, a))
@@ -306,12 +347,12 @@ class ChannelMetadata(Metadata):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in ChannelMetadata.required_metadata
+        missing_keys = [a for a in ChannelMetadata.persistent_metadata
                         if a not in metadata.keys()]
         if len(missing_keys) > 0:
             raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in metadata:
-            if k not in ChannelMetadata.required_metadata:
+            if k not in ChannelMetadata.persistent_metadata:
                 raise AttributeError('Object "%s" has no attribute "%s"'
                                      % (self.__name__, k))
             setattr(self, k, v)
