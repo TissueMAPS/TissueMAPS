@@ -1,12 +1,13 @@
 import numpy as np
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
-import imageutil
-import dafu
-from illuminati import segment
-from reader import ImageReader
-from image import ChannelImage
-from image import MaskImage
+from . import imageutils
+from . import dafu
+from .illuminati import segment
+from .image_reader import VipsImageReader
+from .image_reader import OpenslideImageReader
+from .image import ChannelImage
+from .image import MaskImage
 
 
 class Layer(object):
@@ -14,7 +15,7 @@ class Layer(object):
     '''
     Base class for a layer.
 
-    A layer is a 2D grid of images (mosaic) that can be used to build a pyramid.
+    A layer is a 2D image grid (mosaic) that can be used to build a pyramid.
     '''
 
     def __init__(self, image_files, metadata):
@@ -66,16 +67,15 @@ class Layer(object):
         Vips.Image
             mosaic image
         '''
-        with ImageReader('vips') as reader:
+        with VipsImageReader() as reader:
             rows = list()
             for i in xrange(self.file_grid.shape[0]):
                 images_in_row = list()
                 for j in xrange(self.file_grid.shape[1]):
-                    images_in_row.append(reader.read(self.file_grid[i, j]))
+                    images_in_row.append(reader.read_image(self.file_grid[i, j]))
                 rows.append(reduce(lambda x, y: x.merge(y, 'horizontal',
                                    dx, 0), images_in_row))
-        self.mosaic = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy),
-                             rows)
+        self.mosaic = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
         return self.mosaic
 
     def align(self, shift_descriptions):
@@ -181,7 +181,7 @@ class Layer(object):
         if self.mosaic is None:
             raise AttributeError('Mosaic has not yet been created. '
                                  'Call "stitch_mosaic" method first.')
-        imageutil.save_vips_image_jpg(self.mosaic, output_filename, quality)
+        imageutils.save_vips_image_jpg(self.mosaic, output_filename, quality)
 
     def create_pyramid(self, pyramid_dir):
         '''
@@ -235,7 +235,7 @@ class ChannelLayer(Layer):
         str
             name of the layer (will become the name of the pyramid directory)
         '''
-        self._name = self.metadata[0].channel
+        self._name = self.metadata[0].channel_name
         return self._name
 
     def stitch_mosaic(self, stats=None, dx=0, dy=0):
@@ -340,7 +340,7 @@ class MaskLayer(Layer):
             absolute path to the data file (HDF5 file that holds measurement
             data for each object in the images in `image_files`)
         '''
-        Layer.__init__(self, image_files, metadata)
+        super(MaskLayer, self).__init__(image_files, metadata)
         self.image_files = image_files
         self.metadata = metadata
         self.data_file
@@ -403,12 +403,12 @@ class MaskLayer(Layer):
         obj_name = self.metadata[0].objects.lower()
         # Get ids for current objects from dataset (pandas data frames)
         obj, parent = dafu.utils.extract_ids(self.data_file, obj_name)
-        with ImageReader('vips') as reader:
+        with VipsImageReader() as reader:
             rows = list()
             for i in xrange(self.file_grid.shape[0]):
                 images_in_row = list()
                 for j in xrange(self.file_grid.shape[1]):
-                    im = MaskImage(reader.read(self.file_grid[i, j]))
+                    im = MaskImage(reader.read_image(self.file_grid[i, j]))
                     # Objects without data points
                     current_metadata = [m for m in self.metadata
                                         if m.filename == self.file_grid[i, j]]
@@ -431,20 +431,71 @@ class MaskLayer(Layer):
         return self.mosaic
 
 
-class BrightfieldLayer(Layer):
+class BrightfieldLayer(object):
 
     '''
-    Class for a brightfield layer, i.e. a mosaic layer that can be displayed
+    Class for a brightfield layer, i.e. a mosaic that can be displayed
     in TissueMAPS as RGB.
+
+    Currently, brightfield mode is only supported for virtual slide formats
+    that can be read via `Openslide <http://openslide.org/formats>`_.
+    For compatibility with TissueMAPS they are converted to *zoomify* format.
     '''
 
-    def __init__(self, image_files, metadata):
-        self.image_files = image_files
-        self.metadata = metadata
+    def __init__(self, image_file):
+        '''
+        Initialize an instance of class BrightfieldLayer.
 
-    # TODO: preprocessing step: use openslide to extract image at highest
-    # resolution from provided pyramid and save individual images (cut).
-    # then business as usual
+        Parameters
+        ----------
+        image_file: str
+            absolute path to virtual slide image
+        '''
+        self.image_file = image_file
+
+    def load_mosaic(self):
+        '''
+        Read highest-resolution level of a virtual slide.
+
+        Returns
+        -------
+        Vips.Image
+            mosaic image
+
+        See also
+        --------
+        `reader.OpenslideImageReader`_
+        '''
+        with OpenslideImageReader() as reader:
+            self.mosaic = reader.read_image(self.image_file)
+
+    def create_pyramid(self, pyramid_dir):
+        '''
+        Create zoomify pyramid (8-bit RGB JPEG images).
+
+        Parameters
+        ----------
+        pyramide_dir: str
+            path to the folder where pyramid should be saved
+
+        Raises
+        ------
+        AttributeError
+            when mosaic does not exist
+        '''
+        if self.mosaic is None:
+            raise AttributeError('Mosaic does not exist. '
+                                 'Call "load_mosaic" method first.')
+        self.mosaic_image.dzsave(pyramid_dir, layout='zoomify',
+                                 suffix='.jpg[Q=100]')
+
+    def level_zero_tile_files(self):
+        '''
+        List the relative path within the pyramid directory to all tile images
+        of level 0 (highest resolution level). 
+        '''
+        # TODO
+        print('TODO')
 
 
 class LabelLayer(Layer):
@@ -456,7 +507,7 @@ class LabelLayer(Layer):
     '''
 
     def __init__(self, image_files, metadata):
-        Layer.__init__(self, image_files, metadata)
+        super(LabelLayer, self).__init__(image_files, metadata)
         self.image_files = image_files
         self.metadata = metadata
 

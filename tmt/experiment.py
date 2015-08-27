@@ -2,11 +2,9 @@ import re
 import os
 from natsort import natsorted
 from utils import regex_from_format_string
-from image import is_image_file
 from plates import WellPlate
 from plates import Slide
-from reader import read_yaml
-from metadata import SegmentationMetadata
+from db import db
 
 
 class Experiment(object):
@@ -53,12 +51,12 @@ class Experiment(object):
         ----------
         experiment_dir: str
             absolute path to experiment folder
-        cfg: Dict[str, str]
-            configuration settings
+        cfg: Configuration
+            configuration settings provided via config file
 
         See also
         --------
-        `tmt.config`_
+        `configuration.Configuration`_
         '''
         self.cfg = cfg
         self.experiment_dir = os.path.abspath(experiment_dir)

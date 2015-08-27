@@ -1,21 +1,15 @@
 import os
 import re
 import numpy as np
-from cycle import Cycle
-from layers import ChannelLayer
-from layers import MaskLayer
-from layers import LabelLayer
-from layers import BrightfieldLayer
+from .cycle import Cycle
+from .layers import ChannelLayer
+from .layers import MaskLayer
+from .layers import LabelLayer
+from .layers import BrightfieldLayer
+from .errors import NotSupportedError
 
 
 class WellPlate(Cycle):
-
-    '''
-    Class that serves as a container for layers.
-
-    A layer represents an acquisition grid, i.e. a continuous image
-    acquisition area. In case of a well plate, layers are grouped by well.
-    '''
 
     def __init__(self, cycle_dir, cfg, n_wells):
         '''
@@ -30,7 +24,7 @@ class WellPlate(Cycle):
         n_wells: int
             number of wells in the plate (supported: 96 or 384)
         '''
-        Cycle.__init__(cycle_dir, cfg)
+        super(WellPlate, self).__init__(cycle_dir, cfg)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
         self.n_wells = n_wells
@@ -57,7 +51,7 @@ class WellPlate(Cycle):
         List[Tuple[int]]
             zero-based row, column position of each well in the plate
         '''
-        self._well_positions = set([m.well_position
+        self._well_positions = set([m.plate_coordinates
                                     for m in self.image_metadata])
         return self._well_positions
 
@@ -69,10 +63,11 @@ class WellPlate(Cycle):
         int
             number of wells in plate
         '''
-        self._n_wells = len(set(self._wells))
+        self._n_wells = len(set(self.well_positions))
         return self._n_wells
 
-    def map_well_position_to_id(self, well_id):
+    @staticmethod
+    def well_id_to_position(well_id):
         '''
         Mapping of the identifier string representation to the
         one-based index position, e.g. "A02" -> (1, 2)
@@ -92,8 +87,8 @@ class WellPlate(Cycle):
         col = int(col_name)
         return (row, col)
 
-    @property
-    def map_to_well_id_to_position(self, well_position):
+    @staticmethod
+    def well_position_to_id(well_position):
         '''
         Mapping of the one-based index position to the identifier string
         representation, e.g. (1, 2) -> "A02"
@@ -109,7 +104,7 @@ class WellPlate(Cycle):
             identifier string representation of a well
         '''
         # TODO
-        return self._map_to_well_id
+        pass
 
     @property
     def well_ids(self):
@@ -120,7 +115,8 @@ class WellPlate(Cycle):
             well identifier string: capital letter for row position and
             number for column position
         '''
-        self._well_ids = [self.map_well_position_to_id(w) for w in self.wells]
+        self._well_ids = [self.map_well_position_to_id(w)
+                          for w in self.well_positions]
         return self._well_ids
 
     @property
@@ -220,25 +216,18 @@ class WellPlate(Cycle):
         '''
         Raises
         ------
-        NotImplementedError
+        NotSupportedError
             since brightfield mode is not supported for well plate formats
         '''
-        raise NotImplementedError('Brightfield mode is not supported '
+        raise NotSupportedError('Brightfield mode is not supported '
                                   'for well plates')
 
 
 class Slide(Cycle):
 
-    '''
-    Class that serves as a container for layers.
-
-    A layer represents an acquisition grid, i.e. a continuous image
-    acquisition area.
-    '''
-
     def __init__(self, cycle_dir, cfg):
         '''
-        Initialize an instance of class WellPlate.
+        Initialize an instance of class Slide.
 
         Parameters
         ----------
@@ -247,33 +236,9 @@ class Slide(Cycle):
         cfg: Dict[str, str]
             configuration settings
         '''
-        Cycle.__init__(cycle_dir, cfg)
+        super(Slide, self).__init__(cycle_dir, cfg)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
-
-    @property
-    def channel_layers(self):
-        '''
-        Returns
-        -------
-        List[ChannelLayer]
-            grid of grayscale images for each channel
-
-        See also
-        --------
-        `layers.ChannelLayer`_
-        '''
-        # group images per channel
-        image_data = zip(self.image_files,
-                         self.image_metadata)
-        self._channel_layers = list()
-        for c in self.channels:
-            channel_data = np.array([(f, m) for f, m in image_data
-                                     if m.channel == c])
-            self._channel_layers.append(
-                        ChannelLayer(image_files=channel_data[:, 0],
-                                     metadata=channel_data[:, 1]))
-        return self._channel_layers
 
     @property
     def mask_layers(self):
@@ -333,6 +298,75 @@ class Slide(Cycle):
             self._mask_layers = {}
         return self.mask_layers
 
+
+class FluorescenceSlide(Slide):
+
+    '''
+    Class for a fluorescent slide, which has one or more grayscale layers
+    (channels).
+    '''
+
+    def __init__(self, cycle_dir, cfg):
+        '''
+        Initialize an instance of class FluorescenceSlide.
+
+        Parameters
+        ----------
+        cycle_dir: str
+            absolute path to the cycle directory
+        cfg: Dict[str, str]
+            configuration settings
+        '''
+        super(FluorescenceSlide, self).__init__(cycle_dir, cfg)
+        self.cycle_dir = os.path.abspath(cycle_dir)
+        self.cfg = cfg
+
+    @property
+    def channel_layers(self):
+        '''
+        Returns
+        -------
+        List[ChannelLayer]
+            grid of grayscale images for each channel
+
+        See also
+        --------
+        `layers.ChannelLayer`_
+        '''
+        # group images per channel
+        image_data = zip(self.image_files,
+                         self.image_metadata)
+        self._channel_layers = list()
+        for c in self.channels:
+            channel_data = np.array([(f, m) for f, m in image_data
+                                     if m.channel == c])
+            self._channel_layers.append(
+                        ChannelLayer(image_files=channel_data[:, 0],
+                                     metadata=channel_data[:, 1]))
+        return self._channel_layers
+
+
+class BrightfieldSlide(Slide):
+
+    '''
+    Class for a brightfield slide, which has only one RGB layer.
+    '''
+
+    def __init__(self, cycle_dir, cfg):
+        '''
+        Initialize an instance of class BrightfieldSlide.
+
+        Parameters
+        ----------
+        cycle_dir: str
+            absolute path to the cycle directory
+        cfg: Dict[str, str]
+            configuration settings
+        '''
+        super(BrightfieldSlide, self).__init__(cycle_dir, cfg)
+        self.cycle_dir = os.path.abspath(cycle_dir)
+        self.cfg = cfg
+
     @property
     def brightfield_layer(self):
         '''
@@ -345,6 +379,5 @@ class Slide(Cycle):
         --------
         `layers.BrightfieldLayer`_
         '''
-        # TODO
-        return self._brightfield_layers
-    
+        self._brightfield_layer = BrightfieldLayer(self.image_files[0])
+        return self._brightfield_layer
