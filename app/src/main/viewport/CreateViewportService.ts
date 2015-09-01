@@ -1,3 +1,5 @@
+interface ICreateViewportService extends CreateViewportService {}
+
 class CreateViewportService {
 
     static $inject = ['$http', 'openlayers', '$q', '$controller', '$compile', '$rootScope'];
@@ -67,6 +69,7 @@ class CreateViewportService {
         return deferred.promise;
     }
 }
+
 /**
  * Create a viewport and append it to a given div.
  * This function returns the controller, map, scope, element object

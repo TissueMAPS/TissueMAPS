@@ -1,7 +1,7 @@
 angular.module('tmaps.core.selection')
 .factory('CellSelection',
-         ['selectionColorMap', 'openlayers', 'SelectionLayer', '$rootScope', 'MapPosition',
-         function(selectionColorMap, ol, SelectionLayer, $rootScope, MapPosition) {
+         ['selectionColorMap', 'openlayers', 'SelectionLayer', '$rootScope',
+         function(selectionColorMap, ol, SelectionLayer, $rootScope) {
 
     function CellSelection(map, id) {
         this.map = map;

@@ -1,8 +1,8 @@
 angular.module('tmaps.core.selection')
 .factory('CellSelectionHandler',
-         ['CellSelection', '$q', '_', 'selectionColorMap', '$http', 'MapPosition',
+         ['CellSelection', '$q', '_', 'selectionColorMap', '$http',
              '$rootScope',
-         function(CellSelection, $q, _, selectionColorMap, $http, MapPosition, $rootScope) {
+         function(CellSelection, $q, _, selectionColorMap, $http, $rootScope) {
 
     function CellSelectionHandler(appstate) {
         var self = this;
@@ -51,7 +51,7 @@ angular.module('tmaps.core.selection')
                                 // }
                             // })
                             // .then(function(position) {
-                            var position = new MapPosition({x: x, y: y});
+                            var position = {x: x, y: y};
                                 self.addCellToSelection(position, cellId, selectionId);
                             // });
                         } else {

@@ -1,7 +1,14 @@
 angular.module('tmaps.core')
 .factory('AppInstance',
-         ['CreateViewportService', 'openlayers', '$q', 'CellSelectionHandler', 'CycleLayer', 'OutlineLayer', 'ExperimentFactory', '$http',
-         function(CreateViewportService, ol, $q, CellSelectionHandler, CycleLayer, OutlineLayer, ExperimentFactory, $http) {
+         ['CreateViewportService', 'openlayers', '$q', 'CellSelectionHandler', 'CycleLayerFactory', 'OutlineLayerFactory', 'ExperimentFactory', '$http',
+         function(CreateViewportService,
+                  ol,
+                  $q,
+                  CellSelectionHandler,
+                  CycleLayerFactory,
+                  OutlineLayerFactory,
+                  ExperimentFactory,
+                  $http) {
 
     /**
      * AppInstance is the main class for handling the visualization and
@@ -237,7 +244,7 @@ angular.module('tmaps.core')
      * 2. The layer won't get added to the AppInstance.cycleLayers array.
      */
     AppInstance.prototype.addOutlineLayer = function(opt) {
-        var outlineLayer = new OutlineLayer(opt);
+        var outlineLayer = OutlineLayerFactory.create(opt);
         this.outlineLayers.push(outlineLayer);
 
         return this.map.then(function(map) {
@@ -288,7 +295,7 @@ angular.module('tmaps.core')
      * Always use this smethod when adding new cycles.
      */
     AppInstance.prototype.addCycleLayer = function(opt) {
-        var cycleLayer = new CycleLayer(opt);
+        var cycleLayer = CycleLayerFactory.create(opt);
         if (!window.layers) {
             window.layers = [];
         }
