@@ -58,7 +58,7 @@ angular.module('tmaps.core.layer')
     SelectionLayer.prototype.addCellMarker = function(cellId, position) {
         if (!this.cellMarkers.hasOwnProperty(cellId)) {
             var feat = new ol.Feature({
-                geometry: new ol.geom.Point(position)
+                geometry: new ol.geom.Point([position.x, position.y])
             });
             this.layer.getSource().addFeature(feat);
             this.cellMarkers[cellId] = feat;

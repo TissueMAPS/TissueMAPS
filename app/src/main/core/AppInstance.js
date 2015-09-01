@@ -1,7 +1,7 @@
 angular.module('tmaps.core')
 .factory('AppInstance',
-         ['createViewport', 'openlayers', '$q', 'CellSelectionHandler', 'CycleLayer', 'OutlineLayer', 'Experiment', '$http',
-         function(createViewport, ol, $q, CellSelectionHandler, CycleLayer, OutlineLayer, Experiment, $http) {
+         ['CreateViewportService', 'openlayers', '$q', 'CellSelectionHandler', 'CycleLayer', 'OutlineLayer', 'ExperimentFactory', '$http',
+         function(CreateViewportService, ol, $q, CellSelectionHandler, CycleLayer, OutlineLayer, ExperimentFactory, $http) {
 
     /**
      * AppInstance is the main class for handling the visualization and
@@ -33,11 +33,125 @@ angular.module('tmaps.core')
         // Helper class to manage the differently marker selections
         this.selectionHandler = new CellSelectionHandler(this);
 
-        createViewport(this, 'viewports', '/templates/main/viewport.html')
+        CreateViewportService.createViewport(this, 'viewports', '/templates/main/viewport.html')
         .then(function(viewport) {
             viewportDef.resolve(viewport);
             mapDef.resolve(viewport.map);
         });
+
+        this.map.then(function(map) {
+            var image = new ol.style.Circle({
+                radius: 5,
+                fill: null,
+                stroke: new ol.style.Stroke({color: 'red', width: 1})
+            });
+            var styles = {
+                'Point': [new ol.style.Style({
+                    image: image
+                })],
+                'Polygon': [new ol.style.Style({
+                    stroke: new ol.style.Stroke({
+                        color: 'rgba(0, 0, 255, 1)',
+                        lineDash: [4],
+                        width: 3
+                    }),
+                    fill: new ol.style.Fill({
+                        color: 'rgba(0, 0, 255, 0.5)'
+                    })
+                })]
+            };
+
+            var styleFunction = function(feature, resolution) {
+              return styles[feature.getGeometry().getType()];
+            };
+
+            var geojsonObject = {
+              'type': 'FeatureCollection',
+              'crs': {
+                'type': 'name',
+                'properties': {
+                  'name': 'EPSG:3857'
+                }
+              },
+              'features': [
+                {
+                  'type': 'Feature',
+                  'geometry': {
+                    'type': 'Point',
+                    'coordinates': [0, 0]
+                  }
+                },
+                {
+                  'type': 'Feature',
+                  'geometry': {
+                    'type': 'Point',
+                    'coordinates': [1000, 0]
+                  }
+                },
+                {
+                  'type': 'Feature',
+                  'geometry': {
+                    'type': 'Point',
+                    'coordinates': [0, -1000]
+                  }
+                },
+                {
+                  'type': 'Feature',
+                  'geometry': {
+                    'type': 'Point',
+                    'coordinates': [1000, -1000]
+                  }
+                }
+                // ,
+                // {
+                //   'type': 'Feature',
+                //   'geometry': {
+                //     'type': 'Polygon',
+                //     'coordinates': [[
+                //         [0, 0], [1000, 0], [1000, -1000], [0, -1000], [0, 0]
+                //     ]]
+                //   }
+                // }
+              ]
+            };
+
+            for (var i = 1; i < 10; i++) {
+                geojsonObject.features.push({
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Polygon',
+                        'coordinates': [[
+                            [i * 100, i * 100],
+                            [100 * i + 100, i * 100],
+                            [100 * i + 100, -100 * i - 100],
+                            [i * 100, -100 * i - 100],
+                            [i * 100, i * 100]
+                        ]]
+                    }
+                });
+            }
+
+            var vectorSource = new ol.source.Vector({
+              features: (new ol.format.GeoJSON()).readFeatures(geojsonObject)
+            });
+
+            console.log(geojsonObject);
+
+            // var vectorSource = new ol.source.Vector({
+            //   // features: (new ol.format.GeoJSON()).readFeatures(geojsonObject)
+            // });
+
+            // vectorSource.addFeature(new ol.Feature(new ol.geom.Circle([5e6, 7e6], 1e6)));
+
+            var vectorLayer = new ol.layer.Vector({
+              source: vectorSource,
+              style: styleFunction
+            });
+
+            map.addLayer(vectorLayer);
+
+        });
+
     }
 
     // TODO: Consider throwing everything cell position related into own
@@ -264,7 +378,8 @@ angular.module('tmaps.core')
      * Create and initialize an AppInstance from a blueprint and return it.
      */
     AppInstance.fromBlueprint = function(bp) {
-        var inst = new AppInstance(new Experiment(bp.experiment));
+        var exp = ExperimentFactory.create(bp.experiment);
+        var inst = new AppInstance(exp);
 
         inst.addChannelLayers(bp.channelLayerOptions);
         inst.addMaskLayers(bp.maskLayerOptions);

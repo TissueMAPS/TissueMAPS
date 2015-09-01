@@ -1,6 +1,6 @@
 angular.module('tmaps.core')
-.factory('application', ['$q', 'openlayers', 'AppInstance', '$state', 'Experiment',
-             function($q, ol, AppInstance, $state, Experiment) {
+.factory('application', ['$q', 'openlayers', 'AppInstance', '$state', 'ExperimentFactory',
+             function($q, ol, AppInstance, $state, ExperimentFactory) {
 
     function Application() {
 
@@ -113,7 +113,8 @@ angular.module('tmaps.core')
     };
 
     Application.prototype.addExperiment = function(experiment) {
-        var instance = new AppInstance(new Experiment(experiment));
+        var exp = ExperimentFactory.create(experiment);
+        var instance = new AppInstance(exp);
 
         var layerOpts = _.partition(experiment.layers, function(opt) {
             return /_Mask/.test(opt.name);

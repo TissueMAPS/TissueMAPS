@@ -356,17 +356,21 @@ module.exports = function(grunt) {
         typescript: {
             base: {
                 src: ['app/src/**/*.ts'],
-                dest: '.',
+                // Supplying a single file will result in
+                // all ts files be concatenated first. Interfaces can
+                // therefore be declared in global scope.
+                dest: 'app/build/compiled-ts.js',
                 options: {
                     module: 'commonjs', //or commonjs
                     target: 'es5', //or es3
-                    // basePath: 'path/to/typescript/files',
-                    keepDirectoryHierarchy: true,
+                    // keepDirectoryHierarchy: true,
                     sourceMap: true,
-                    declaration: false,
+                    declaration: true,
                     references: [
+                        'app/typedefs/underscore/underscore.d.ts',
                         'app/typedefs/angularjs/angular.d.ts',
-                        'app/typedefs/angularjs/jquery.d.ts'
+                        'app/typedefs/jquery/jquery.d.ts',
+                        'app/typedefs/openlayers/openlayers.d.ts'
                     ]
                 }
             }
