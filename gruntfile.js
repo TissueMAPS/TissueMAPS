@@ -37,6 +37,7 @@ module.exports = function(grunt) {
     require('load-grunt-tasks')(grunt);
     // Needs to be loaded separately to log execution times
     require('time-grunt')(grunt);
+    grunt.loadNpmTasks('grunt-typescript');
 
     // Project configuration
     grunt.initConfig({
@@ -69,7 +70,7 @@ module.exports = function(grunt) {
         // Where to place the compiled files
         buildDir: '_build',
 
-        olDir: 'ol3',
+        olDir: 'app/assets/libs/ol3',
 
         // TODO: Specify license
         // A banner that will be added to the minified files.
@@ -126,11 +127,6 @@ module.exports = function(grunt) {
                     {'<%= productionDir %>/index.html': 'index.html'},
                     {cwd: 'app', expand: true, src: ['resources/**'], dest: '<%= productionDir %>/'}
                 ]
-            },
-            olSource: {
-                files: {
-                    'app/assets/libs/unmanaged/': '<%= olDir %>/build/ol.js'
-                }
             }
         },
 
@@ -257,19 +253,24 @@ module.exports = function(grunt) {
                 ]
             },
 
+            ts: {
+                files: ['app/src/**/*.ts'],
+                tasks: ['typescript']
+            },
+
+
             // jsTest: {
             //     files: ['test/**/*.js'],
             //     tasks: ['karma:unit:run', 'karma:midway:run']
             // },
 
             // NOTE: Enabling this produces some error messages when running 'watch'
-            // openlayersSource: {
-            //     files: ['<%= olDir %>/**/*.js'],
-            //     tasks: [
-            //         'exec:buildOL',
-            //         'copy:olSource'
-            //     ]
-            // },
+            openlayersSource: {
+                files: ['<%= olDir %>/src/ol/**/*.js'],
+                tasks: [
+                    'exec:buildOL'
+                ]
+            },
 
             // Reload grunt (no tasks need to be specified, this is all that's needed)
             grunt: { files: ['gruntfile.js'] }
@@ -281,7 +282,7 @@ module.exports = function(grunt) {
                     port: 8000, // default
                     base: 'app', // from where to serve files
                     livereload: true, // port
-                    open: 'http://localhost:8000/index.html',
+                    // open: 'http://localhost:8000/index.html',
                     middleware: function(connect, options) {
                         if (!Array.isArray(options.base)) {
                             options.base = [options.base];
@@ -325,7 +326,10 @@ module.exports = function(grunt) {
          * (has to be copied to libs/unmanaged)
          */
         exec: {
-            buildOL: '(cd <%= olDir %> && ./build.py build)' // temporarily change working directory
+            // temporarily change working directory and build openlayers
+            // via its makefile
+            buildOL: '(cd <%= olDir %> && make build)',
+            initOL: '(cd <%= olDir %> && make install)'
         },
 
         /*
@@ -345,6 +349,25 @@ module.exports = function(grunt) {
                     // The style.less file imports all other less files
                     '<%= cssDir %>/style-main.css': '<%= lessDir %>/main/style.less',
                     '<%= cssDir %>/style-tools.css': '<%= lessDir %>/tools/style.less'
+                }
+            }
+        },
+
+        typescript: {
+            base: {
+                src: ['app/src/**/*.ts'],
+                dest: '.',
+                options: {
+                    module: 'commonjs', //or commonjs
+                    target: 'es5', //or es3
+                    // basePath: 'path/to/typescript/files',
+                    keepDirectoryHierarchy: true,
+                    sourceMap: true,
+                    declaration: false,
+                    references: [
+                        'app/typedefs/angularjs/angular.d.ts',
+                        'app/typedefs/angularjs/jquery.d.ts'
+                    ]
                 }
             }
         },
@@ -489,8 +512,8 @@ module.exports = function(grunt) {
     grunt.registerTask('dev', [
         'clean:build',
         'clean:tmp',
-        'copy:olSource',
         'less',
+        'typescript',
         'includeSource',
         'configureProxies:server',
         'connect',
@@ -508,7 +531,6 @@ module.exports = function(grunt) {
     grunt.registerTask('prod', [
         'clean',
         'copy:prod',
-        'copy:olSource',
         'less',
         'includeSource',  // call before useminPrepare
         'useminPrepare',
@@ -522,12 +544,13 @@ module.exports = function(grunt) {
     ]);
 
     grunt.registerTask('init', [
+        'exec:initOL',
         'exec:buildOL',
         'dev'
     ]);
 
     grunt.registerTask('buildOL', [
         'exec:buildOL',
-        'copy:olSource'
+        'dev'
     ]);
 };
