@@ -83,7 +83,7 @@ def create_app(config_object=dev):
     from api import api
     from res import res
 
-    app.register_blueprint(api)
+    app.register_blueprint(api, url_prefix='/api')
     app.register_blueprint(res)
 
     return app
