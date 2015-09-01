@@ -11,7 +11,7 @@ angular.module('tmaps.main.experiment')
     // TODO: error handling
     this.getAvailableExperiments = function() {
         return $http
-        .get('/experiments')
+        .get('/api/experiments')
         .then(function(resp) {
             return resp.data;
         });
@@ -20,7 +20,7 @@ angular.module('tmaps.main.experiment')
     // TODO: error handling
     this.getExperiment = function(id) {
         return $http
-        .get('/experiments/' + id)
+        .get('/api/experiments/' + id)
         .success(function(data, headers) {
             return data;
         });
@@ -28,7 +28,7 @@ angular.module('tmaps.main.experiment')
 
     // TODO: error handling
     this.getFeaturesForExperiment = function(id) {
-        return $http.get('/experiments/' + id + '/features?include=min,max')
+        return $http.get('/api/experiments/' + id + '/features?include=min,max')
         .then(function(resp) {
             return resp.data.features;
         });
@@ -36,7 +36,7 @@ angular.module('tmaps.main.experiment')
 
     // TODO: error handling
     this.getCellsForExperiment = function(experimentId) {
-        return $http.get('/experiments/' + experimentId + '/cells')
+        return $http.get('/api/experiments/' + experimentId + '/cells')
         .then(function(resp) {
             var data = resp.data;
             var cells = [];
@@ -51,7 +51,7 @@ angular.module('tmaps.main.experiment')
             return cells;
         })
         .catch(function(err) {
-            console.log('Errpr while retreiving cells: ', err.status);
+            console.log('Error while retreiving cells: ', err.status);
         });
     };
 

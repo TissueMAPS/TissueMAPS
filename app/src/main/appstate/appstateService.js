@@ -47,7 +47,7 @@ angular.module('tmaps.main.appstate')
      * Get all available app states for the current user.
      */
     this.getStates = function() {
-        return $http.get('/appstates').then(function(resp) {
+        return $http.get('/api/appstates').then(function(resp) {
             var res = {
                 owned: _(resp.data.owned).map(toClientRepresentation),
                 shared: _(resp.data.shared).map(toClientRepresentation)
@@ -66,7 +66,7 @@ angular.module('tmaps.main.appstate')
 
     this.loadStateFromId = function(id) {
         return $http
-        .get('/appstates/' + id).then(function(resp) {
+        .get('/api/appstates/' + id).then(function(resp) {
             return resp.data;
         })
         .then(
@@ -124,7 +124,7 @@ angular.module('tmaps.main.appstate')
             var id = self.currentState.id;
             application.toBlueprint()
             .then(function(bp) {
-                return $http.put('/appstates/' + id, {
+                return $http.put('/api/appstates/' + id, {
                     blueprint: bp
                 });
             })
@@ -165,7 +165,7 @@ angular.module('tmaps.main.appstate')
         }
         return application.toBlueprint()
         .then(function(bp) {
-            return $http.post('/appstates', {
+            return $http.post('/api/appstates', {
                 name: name,
                 description: description,
                 blueprint: bp
@@ -186,7 +186,7 @@ angular.module('tmaps.main.appstate')
         if (self.currentState.isSnapshot) {
             throw new Error('A snapshot can\'t be shared again');
         } else if (self.stateHasBeenSavedAlready()) {
-            var url = '/appstates/' + self.currentState.id + '/snapshots';
+            var url = '/api/appstates/' + self.currentState.id + '/snapshots';
             var instance = $modal.open({
                 templateUrl: '/templates/main/appstate/share-appstate-dialog.html',
                 controller: 'ShareAppstateCtrl',
