@@ -10,7 +10,6 @@ goog.require('goog.events.Event');
 goog.require('ol.Collection');
 goog.require('ol.Coordinate');
 goog.require('ol.Feature');
-goog.require('ol.FeatureOverlay');
 goog.require('ol.MapBrowserEvent');
 goog.require('ol.MapBrowserEvent.EventType');
 goog.require('ol.Object');
@@ -27,8 +26,8 @@ goog.require('ol.geom.Polygon');
 goog.require('ol.geom.SimpleGeometry');
 goog.require('ol.interaction.InteractionProperty');
 goog.require('ol.interaction.Pointer');
+goog.require('ol.layer.Vector');
 goog.require('ol.source.Vector');
-goog.require('ol.style.Style');
 
 
 /**
@@ -80,7 +79,7 @@ goog.inherits(ol.interaction.DrawEvent, goog.events.Event);
 
 /**
  * @classdesc
- * Interaction that allows drawing geometries.
+ * Interaction for drawing feature geometries.
  *
  * @constructor
  * @extends {ol.interaction.Pointer}
@@ -265,14 +264,19 @@ ol.interaction.Draw = function(options) {
    * @type {number}
    * @private
    */
-  this.squaredClickTolerance_ = 4;
+  this.squaredClickTolerance_ = goog.isDef(options.clickTolerance) ?
+      options.clickTolerance * options.clickTolerance : 36;
 
   /**
    * Draw overlay where our sketch features are drawn.
-   * @type {ol.FeatureOverlay}
+   * @type {ol.layer.Vector}
    * @private
    */
-  this.overlay_ = new ol.FeatureOverlay({
+  this.overlay_ = new ol.layer.Vector({
+    source: new ol.source.Vector({
+      useSpatialIndex: false,
+      wrapX: goog.isDef(options.wrapX) ? options.wrapX : false
+    }),
     style: goog.isDef(options.style) ?
         options.style : ol.interaction.Draw.getDefaultStyleFunction()
   });
@@ -393,10 +397,12 @@ ol.interaction.Draw.handleUpEvent_ = function(event) {
     this.handlePointerMove_(event);
     if (goog.isNull(this.finishCoordinate_)) {
       this.startDrawing_(event);
-    } else if ((this.mode_ === ol.interaction.DrawMode.POINT ||
-        this.mode_ === ol.interaction.DrawMode.CIRCLE) &&
-            !goog.isNull(this.finishCoordinate_) ||
-        this.atFinish_(event)) {
+      if (this.mode_ === ol.interaction.DrawMode.POINT) {
+        this.finishDrawing();
+      }
+    } else if (this.mode_ === ol.interaction.DrawMode.CIRCLE) {
+      this.finishDrawing();
+    } else if (this.atFinish_(event)) {
       this.finishDrawing();
     } else {
       this.addToDrawing_(event);
@@ -414,10 +420,7 @@ ol.interaction.Draw.handleUpEvent_ = function(event) {
  * @private
  */
 ol.interaction.Draw.prototype.handlePointerMove_ = function(event) {
-  if (this.mode_ === ol.interaction.DrawMode.POINT &&
-      goog.isNull(this.finishCoordinate_)) {
-    this.startDrawing_(event);
-  } else if (!goog.isNull(this.finishCoordinate_)) {
+  if (!goog.isNull(this.finishCoordinate_)) {
     this.modifyDrawing_(event);
   } else {
     this.createOrUpdateSketchPoint_(event);
@@ -613,6 +616,37 @@ ol.interaction.Draw.prototype.addToDrawing_ = function(event) {
 
 
 /**
+ * Remove last point of the feature currently being drawn.
+ * @api
+ */
+ol.interaction.Draw.prototype.removeLastPoint = function() {
+  var geometry = this.sketchFeature_.getGeometry();
+  goog.asserts.assertInstanceof(geometry, ol.geom.SimpleGeometry,
+      'geometry must be an ol.geom.SimpleGeometry');
+  var coordinates, sketchLineGeom;
+  if (this.mode_ === ol.interaction.DrawMode.LINE_STRING) {
+    coordinates = this.sketchCoords_;
+    coordinates.splice(-2, 1);
+    this.geometryFunction_(coordinates, geometry);
+  } else if (this.mode_ === ol.interaction.DrawMode.POLYGON) {
+    coordinates = this.sketchCoords_[0];
+    coordinates.splice(-2, 1);
+    sketchLineGeom = this.sketchLine_.getGeometry();
+    goog.asserts.assertInstanceof(sketchLineGeom, ol.geom.LineString,
+        'sketchLineGeom must be an ol.geom.LineString');
+    sketchLineGeom.setCoordinates(coordinates);
+    this.geometryFunction_(this.sketchCoords_, geometry);
+  }
+
+  if (coordinates.length === 0) {
+    this.finishCoordinate_ = null;
+  }
+
+  this.updateSketchFeatures_();
+};
+
+
+/**
  * Stop drawing and add the sketch feature to the target layer.
  * The {@link ol.interaction.DrawEventType.DRAWEND} event is dispatched before
  * inserting the feature.
@@ -674,7 +708,7 @@ ol.interaction.Draw.prototype.abortDrawing_ = function() {
     this.sketchFeature_ = null;
     this.sketchPoint_ = null;
     this.sketchLine_ = null;
-    this.overlay_.getFeatures().clear();
+    this.overlay_.getSource().clear(true);
   }
   return sketchFeature;
 };
@@ -701,7 +735,9 @@ ol.interaction.Draw.prototype.updateSketchFeatures_ = function() {
   if (!goog.isNull(this.sketchPoint_)) {
     sketchFeatures.push(this.sketchPoint_);
   }
-  this.overlay_.setFeatures(new ol.Collection(sketchFeatures));
+  var overlaySource = this.overlay_.getSource();
+  overlaySource.clear(true);
+  overlaySource.addFeatures(sketchFeatures);
 };
 
 

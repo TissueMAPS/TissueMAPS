@@ -3,11 +3,11 @@ goog.provide('ol.source.TileVector');
 goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.object');
-goog.require('ol.TileCoord');
 goog.require('ol.TileUrlFunction');
 goog.require('ol.featureloader');
 goog.require('ol.source.State');
 goog.require('ol.source.Vector');
+goog.require('ol.tilecoord');
 goog.require('ol.tilegrid.TileGrid');
 
 
@@ -28,17 +28,15 @@ ol.source.TileVector = function(options) {
     attributions: options.attributions,
     logo: options.logo,
     projection: undefined,
-    state: ol.source.State.READY
+    state: ol.source.State.READY,
+    wrapX: options.wrapX
   });
 
   /**
    * @private
-   * @type {ol.format.Feature}
+   * @type {ol.format.Feature|undefined}
    */
-  this.format_ = options.format;
-
-  goog.asserts.assert(goog.isDefAndNotNull(this.format_),
-      'ol.source.TileVector requires a format');
+  this.format_ = goog.isDef(options.format) ? options.format : null;
 
   /**
    * @private
@@ -54,9 +52,14 @@ ol.source.TileVector = function(options) {
 
   /**
    * @private
-   * @type {ol.TileCoordTransformType}
+   * @type {?ol.TileVectorLoadFunctionType}
    */
-  this.tileCoordTransform_ = this.tileGrid_.createTileCoordTransform();
+  this.tileLoadFunction_ = goog.isDef(options.tileLoadFunction) ?
+      options.tileLoadFunction : null;
+
+  goog.asserts.assert(!goog.isNull(this.format_) ||
+      !goog.isNull(this.tileLoadFunction_),
+      'Either format or tileLoadFunction are required');
 
   /**
    * @private
@@ -238,6 +241,28 @@ ol.source.TileVector.prototype.getFeaturesInExtent = goog.abstractMethod;
 
 
 /**
+ * Handles x-axis wrapping and returns a tile coordinate transformed from the
+ * internal tile scheme to the tile grid's tile scheme. When the tile coordinate
+ * is outside the resolution and extent range of the tile grid, `null` will be
+ * returned.
+ * @param {ol.TileCoord} tileCoord Tile coordinate.
+ * @param {ol.proj.Projection} projection Projection.
+ * @return {ol.TileCoord} Tile coordinate to be passed to the tileUrlFunction or
+ *     null if no tile URL should be created for the passed `tileCoord`.
+ */
+ol.source.TileVector.prototype.getTileCoordForTileUrlFunction =
+    function(tileCoord, projection) {
+  var tileGrid = this.tileGrid_;
+  goog.asserts.assert(!goog.isNull(tileGrid), 'tile grid needed');
+  if (this.getWrapX() && projection.isGlobal()) {
+    tileCoord = ol.tilecoord.wrapX(tileCoord, tileGrid, projection);
+  }
+  return ol.tilecoord.withinExtentAndZ(tileCoord, tileGrid) ?
+      tileCoord : null;
+};
+
+
+/**
  * @param {number} z Z.
  * @param {number} x X.
  * @param {number} y Y.
@@ -254,7 +279,6 @@ ol.source.TileVector.prototype.getTileKeyZXY_ = function(z, x, y) {
  */
 ol.source.TileVector.prototype.loadFeatures =
     function(extent, resolution, projection) {
-  var tileCoordTransform = this.tileCoordTransform_;
   var tileGrid = this.tileGrid_;
   var tileUrlFunction = this.tileUrlFunction_;
   var tiles = this.tiles_;
@@ -275,16 +299,22 @@ ol.source.TileVector.prototype.loadFeatures =
     for (y = tileRange.minY; y <= tileRange.maxY; ++y) {
       var tileKey = this.getTileKeyZXY_(z, x, y);
       if (!(tileKey in tiles)) {
-        tileCoord[0] = z;
         tileCoord[1] = x;
         tileCoord[2] = y;
-        tileCoordTransform(tileCoord, projection, tileCoord);
-        var url = tileUrlFunction(tileCoord, 1, projection);
+        var urlTileCoord = this.getTileCoordForTileUrlFunction(
+            tileCoord, projection);
+        var url = goog.isNull(urlTileCoord) ? undefined :
+            tileUrlFunction(urlTileCoord, 1, projection);
         if (goog.isDef(url)) {
           tiles[tileKey] = [];
-          var loader = ol.featureloader.loadFeaturesXhr(url, this.format_,
-              goog.partial(success, tileKey));
-          loader.call(this, extent, resolution, projection);
+          var tileSuccess = goog.partial(success, tileKey);
+          if (!goog.isNull(this.tileLoadFunction_)) {
+            this.tileLoadFunction_(url, goog.bind(tileSuccess, this));
+          } else {
+            var loader = ol.featureloader.loadFeaturesXhr(url,
+                /** @type {ol.format.Feature} */ (this.format_), tileSuccess);
+            loader.call(this, extent, resolution, projection);
+          }
         }
       }
     }

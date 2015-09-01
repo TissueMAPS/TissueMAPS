@@ -18,7 +18,7 @@ goog.require('ol.style.Style');
  * GeoJSON.
  *
  * Features can be styled individually with `setStyle`; otherwise they use the
- * style of their vector layer or feature overlay.
+ * style of their vector layer.
  *
  * Note that attribute properties are set as {@link ol.Object} properties on
  * the feature object, so they are observable, and have get/set accessors.
@@ -50,8 +50,6 @@ goog.require('ol.style.Style');
  *
  * @constructor
  * @extends {ol.Object}
- * @fires change Triggered when the id, the geometry or the style of the
- *     feature changes.
  * @param {ol.geom.Geometry|Object.<string, *>=} opt_geometryOrProperties
  *     You may pass a Geometry object directly, or an object literal
  *     containing properties.  If you pass an object literal, you may
@@ -153,6 +151,7 @@ ol.Feature.prototype.getGeometry = function() {
 /**
  * @return {number|string|undefined} Id.
  * @api stable
+ * @observable
  */
 ol.Feature.prototype.getId = function() {
   return this.id_;
@@ -177,6 +176,7 @@ ol.Feature.prototype.getGeometryName = function() {
  * @return {ol.style.Style|Array.<ol.style.Style>|
  *     ol.FeatureStyleFunction} The feature style.
  * @api stable
+ * @observable
  */
 ol.Feature.prototype.getStyle = function() {
   return this.style_;
@@ -238,6 +238,7 @@ ol.Feature.prototype.setGeometry = function(geometry) {
  * @param {ol.style.Style|Array.<ol.style.Style>|
  *     ol.FeatureStyleFunction} style Style for this feature.
  * @api stable
+ * @observable
  */
 ol.Feature.prototype.setStyle = function(style) {
   this.style_ = style;
@@ -254,6 +255,7 @@ ol.Feature.prototype.setStyle = function(style) {
  * method.
  * @param {number|string|undefined} id The feature id.
  * @api stable
+ * @observable
  */
 ol.Feature.prototype.setId = function(id) {
   this.id_ = id;
@@ -281,8 +283,9 @@ ol.Feature.prototype.setGeometryName = function(name) {
 
 
 /**
- * A function that returns a style given a resolution. The `this` keyword inside
- * the function references the {@link ol.Feature} to be styled.
+ * A function that returns an array of {@link ol.style.Style styles} given a
+ * resolution. The `this` keyword inside the function references the
+ * {@link ol.Feature} to be styled.
  *
  * @typedef {function(this: ol.Feature, number): Array.<ol.style.Style>}
  * @api stable

@@ -3,7 +3,6 @@ goog.provide('ol.render.webgl.LineStringReplay');
 goog.provide('ol.render.webgl.PolygonReplay');
 goog.provide('ol.render.webgl.ReplayGroup');
 
-goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.functions');
 goog.require('goog.object');
@@ -15,8 +14,14 @@ goog.require('ol.extent');
 goog.require('ol.render.IReplayGroup');
 goog.require('ol.render.VectorContext');
 goog.require('ol.render.webgl.imagereplay.shader.Color');
+goog.require('ol.render.webgl.imagereplay.shader.Color.Locations');
+goog.require('ol.render.webgl.imagereplay.shader.ColorFragment');
+goog.require('ol.render.webgl.imagereplay.shader.ColorVertex');
 goog.require('ol.render.webgl.imagereplay.shader.Default');
 goog.require('ol.render.webgl.polygonreplay.shader.Default');
+goog.require('ol.render.webgl.imagereplay.shader.Default.Locations');
+goog.require('ol.render.webgl.imagereplay.shader.DefaultFragment');
+goog.require('ol.render.webgl.imagereplay.shader.DefaultVertex');
 goog.require('ol.vec.Mat4');
 goog.require('ol.webgl.Buffer');
 goog.require('ol.webgl.Context');
@@ -853,6 +858,7 @@ ol.render.webgl.ImageReplay.prototype.drawHitDetectionReplayOneByOne_ =
       featureUid = goog.getUid(feature).toString();
 
       if (!goog.isDef(skippedFeaturesHash[featureUid]) &&
+          goog.isDefAndNotNull(feature.getGeometry()) &&
           (!goog.isDef(opt_hitExtent) || ol.extent.intersects(
               opt_hitExtent, feature.getGeometry().getExtent()))) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

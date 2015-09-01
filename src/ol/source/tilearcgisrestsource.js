@@ -39,6 +39,7 @@ ol.source.TileArcGISRest = function(opt_options) {
 
   goog.base(this, {
     attributions: options.attributions,
+    crossOrigin: options.crossOrigin,
     logo: options.logo,
     projection: options.projection,
     tileGrid: options.tileGrid,
@@ -111,7 +112,7 @@ ol.source.TileArcGISRest.prototype.getRequestUrl_ =
   params['BBOX'] = tileExtent.join(',');
   params['BBOXSR'] = srid;
   params['IMAGESR'] = srid;
-  params['DPI'] = 90 * pixelRatio;
+  params['DPI'] = Math.round(90 * pixelRatio);
 
   var url;
   if (urls.length == 1) {

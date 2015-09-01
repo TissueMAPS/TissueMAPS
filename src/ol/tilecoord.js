@@ -27,33 +27,6 @@ ol.QuadKeyCharCode = {
 
 
 /**
- * @param {string} quadKey Quad key.
- * @return {ol.TileCoord} Tile coordinate.
- */
-ol.tilecoord.createFromQuadKey = function(quadKey) {
-  var z = quadKey.length, x = 0, y = 0;
-  var mask = 1 << (z - 1);
-  var i;
-  for (i = 0; i < z; ++i) {
-    switch (quadKey.charCodeAt(i)) {
-      case ol.QuadKeyCharCode.ONE:
-        x += mask;
-        break;
-      case ol.QuadKeyCharCode.TWO:
-        y += mask;
-        break;
-      case ol.QuadKeyCharCode.THREE:
-        x += mask;
-        y += mask;
-        break;
-    }
-    mask >>= 1;
-  }
-  return [z, x, y];
-};
-
-
-/**
  * @param {string} str String that follows pattern “z/x/y” where x, y and z are
  *   numbers.
  * @return {ol.TileCoord} Tile coord.
@@ -165,15 +138,15 @@ ol.tilecoord.wrapX = function(tileCoord, tileGrid, projection) {
 /**
  * @param {ol.TileCoord} tileCoord Tile coordinate.
  * @param {!ol.tilegrid.TileGrid} tileGrid Tile grid.
- * @return {ol.TileCoord} Tile coordinate.
+ * @return {boolean} Tile coordinate is within extent and zoom level range.
  */
-ol.tilecoord.restrictByExtentAndZ = function(tileCoord, tileGrid) {
+ol.tilecoord.withinExtentAndZ = function(tileCoord, tileGrid) {
   var z = tileCoord[0];
   var x = tileCoord[1];
   var y = tileCoord[2];
 
   if (tileGrid.getMinZoom() > z || z > tileGrid.getMaxZoom()) {
-    return null;
+    return false;
   }
   var extent = tileGrid.getExtent();
   var tileRange;
@@ -183,8 +156,8 @@ ol.tilecoord.restrictByExtentAndZ = function(tileCoord, tileGrid) {
     tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
   }
   if (goog.isNull(tileRange)) {
-    return tileCoord;
+    return true;
   } else {
-    return tileRange.containsXY(x, y) ? tileCoord : null;
+    return tileRange.containsXY(x, y);
   }
 };

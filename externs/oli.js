@@ -52,6 +52,25 @@ oli.DrawEvent.prototype.feature;
 /**
  * @interface
  */
+oli.ModifyEvent = function() {};
+
+
+/**
+ * @type {ol.Collection.<ol.Feature>}
+ */
+oli.ModifyEvent.prototype.features;
+
+
+/**
+ * @type {ol.MapBrowserPointerEvent}
+ */
+oli.ModifyEvent.prototype.mapBrowserPointerEvent;
+
+
+
+/**
+ * @interface
+ */
 oli.ObjectEvent = function() {};
 
 
@@ -245,6 +264,30 @@ oli.source.ImageEvent = function() {};
  * @type {ol.Image}
  */
 oli.source.ImageEvent.prototype.image;
+
+
+/**
+ * @interface
+ */
+oli.source.RasterEvent = function() {};
+
+
+/**
+ * @type {ol.Extent}
+ */
+oli.source.RasterEvent.prototype.extent;
+
+
+/**
+ * @type {number}
+ */
+oli.source.RasterEvent.prototype.resolution;
+
+
+/**
+ * @type {Object}
+ */
+oli.source.RasterEvent.prototype.data;
 
 
 /**

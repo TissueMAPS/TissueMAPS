@@ -1,5 +1,110 @@
 ## Upgrade notes
 
+### v3.8.0
+
+There should be nothing special required when upgrading from v3.7.0 to v3.8.0.
+
+### v3.7.0
+
+#### Removal of `ol.FeatureOverlay`
+
+Instead of an `ol.FeatureOverlay`, we now use an `ol.layer.Vector` with an
+`ol.source.Vector`. If you previously had:
+```js
+var featureOverlay = new ol.FeatureOverlay({
+  map: map,
+  style: overlayStyle
+});
+featureOverlay.addFeature(feature);
+featureOverlay.removeFeature(feature);
+var collection = featureOverlay.getFeatures();
+```
+you will have to change this to:
+```js
+var collection = new ol.Collection();
+var featureOverlay = new ol.layer.Vector({
+  map: map,
+  source: new ol.source.Vector({
+    features: collection,
+    useSpatialIndex: false // optional, might improve performance
+  }),
+  style: overlayStyle,
+  updateWhileAnimating: true, // optional, for instant visual feedback
+  updateWhileInteracting: true // optional, for instant visual feedback
+});
+featureOverlay.getSource().addFeature(feature);
+featureOverlay.getSource().removeFeature(feature);
+```
+
+With the removal of `ol.FeatureOverlay`, `zIndex` symbolizer properties of overlays are no longer stacked per map, but per layer/overlay. If you previously had multiple feature overlays where you controlled the rendering order of features by using `zIndex` symbolizer properties, you can now achieve the same rendering order only if all overlay features are on the same layer.
+
+Note that `ol.FeatureOverlay#getFeatures()` returned an `{ol.Collection.<ol.Feature>}`, whereas `ol.source.Vector#getFeatures()` returns an `{Array.<ol.Feature>}`.
+
+#### `ol.TileCoord` changes
+
+Until now, the API exposed two different types of `ol.TileCoord` tile coordinates: internal ones that increase left to right and upward, and transformed ones that may increase downward, as defined by a transform function on the tile grid. With this change, the API now only exposes tile coordinates that increase left to right and upward.
+
+Previously, tile grids created by OpenLayers either had their origin at the top-left or at the bottom-left corner of the extent. To make it easier for application developers to transform tile coordinates to the common XYZ tiling scheme, all tile grids that OpenLayers creates internally have their origin now at the top-left corner of the extent.
+
+This change affects applications that configure a custom `tileUrlFunction` for an `ol.source.Tile`. Previously, the `tileUrlFunction` was called with rather unpredictable tile coordinates, depending on whether a tile coordinate transform took place before calling the `tileUrlFunction`. Now it is always called with OpenLayers tile coordinates. To transform these into the common XYZ tiling scheme, a custom `tileUrlFunction` has to change the `y` value (tile row) of the `ol.TileCoord`:
+```js
+function tileUrlFunction = function(tileCoord, pixelRatio, projection) {
+  var urlTemplate = '{z}/{x}/{y}';
+  return urlTemplate
+      .replace('{z}', tileCoord[0].toString())
+      .replace('{x}', tileCoord[1].toString())
+      .replace('{y}', (-tileCoord[2] - 1).toString());
+}
+```
+
+The `ol.tilegrid.TileGrid#createTileCoordTransform()` function which could be used to get the tile grid's tile coordinate transform function has been removed. This function was confusing and should no longer be needed now that application developers get tile coordinates in a known layout.
+
+The code snippets below show how your application code needs to be changed:
+
+Old application code (with `ol.tilegrid.TileGrid#createTileCoordTransform()`):
+```js
+var transform = source.getTileGrid().createTileCoordTransform();
+var tileUrlFunction = function(tileCoord, pixelRatio, projection) {
+  tileCoord = transform(tileCoord, projection);
+  return 'http://mytiles.com/' +
+      tileCoord[0] + '/' + tileCoord[1] + '/' + tileCoord[2] + '.png';
+};
+```
+Old application code (with custom `y` transform):
+```js
+var tileUrlFunction = function(tileCoord, pixelRatio, projection) {
+  var z = tileCoord[0];
+  var yFromBottom = tileCoord[2];
+  var resolution = tileGrid.getResolution(z);
+  var tileHeight = ol.size.toSize(tileSize)[1];
+  var matrixHeight =
+      Math.floor(ol.extent.getHeight(extent) / tileHeight / resolution);
+  return 'http://mytiles.com/' +
+      tileCoord[0] + '/' + tileCoord[1] + '/' +
+      (matrixHeight - yFromBottom - 1) + '.png';
+
+};
+```
+New application code (simple -y - 1 transform):
+```js
+var tileUrlFunction = function(tileCoord, pixelRatio, projection) {
+  return 'http://mytiles.com/' +
+      tileCoord[0] + '/' + tileCoord[1] + '/' + (-tileCoord[2] - 1) + '.png';
+};
+```
+
+#### Removal of `ol.tilegrid.Zoomify`
+
+The replacement of `ol.tilegrid.Zoomify` is a plain `ol.tilegrid.TileGrid`, configured with `extent`, `origin` and `resolutions`. If the `size` passed to the `ol.source.Zoomify` source is `[width, height]`, then the extent for the tile grid will be `[0, -height, width, 0]`, and the origin will be `[0, 0]`.
+
+#### Replace `ol.View.fitExtent()` and `ol.View.fitGeometry()` with `ol.View.fit()`
+* This combines two previously distinct functions into one more flexible call which takes either a geometry or an extent.
+* Rename all calls to `fitExtent` and `fitGeometry` to `fit`.
+
+#### Change to `ol.interaction.Modify`
+
+When single clicking a line or boundary within the `pixelTolerance`, a vertex is now created.
+
 ### v3.6.0
 
 #### `ol.interaction.Draw` changes

@@ -159,7 +159,7 @@ ol.source.WMTS = function(options) {
             var localContext = {
               'TileMatrix': tileGrid.getMatrixId(tileCoord[0]),
               'TileCol': tileCoord[1],
-              'TileRow': tileCoord[2]
+              'TileRow': -tileCoord[2] - 1
             };
             goog.object.extend(localContext, dimensions);
             var url = template;
@@ -179,10 +179,6 @@ ol.source.WMTS = function(options) {
       ol.TileUrlFunction.createFromTileUrlFunctions(
           goog.array.map(this.urls_, createFromWMTSTemplate)) :
       ol.TileUrlFunction.nullTileUrlFunction;
-
-  tileUrlFunction = ol.TileUrlFunction.withTileCoordTransform(
-      ol.tilegrid.createOriginTopLeftTileCoordTransform(tileGrid),
-      tileUrlFunction);
 
   goog.base(this, {
     attributions: options.attributions,
@@ -355,19 +351,25 @@ ol.source.WMTS.optionsFromCapabilities = function(wmtsCap, config) {
 
   goog.asserts.assert(l['TileMatrixSetLink'].length > 0,
       'layer has TileMatrixSetLink');
+  var tileMatrixSets = wmtsCap['Contents']['TileMatrixSet'];
   var idx, matrixSet;
   if (l['TileMatrixSetLink'].length > 1) {
-    idx = goog.array.findIndex(l['TileMatrixSetLink'],
-        function(elt, index, array) {
-          return elt['TileMatrixSet'] == config['matrixSet'];
-        });
-  } else if (goog.isDef(config['projection'])) {
-    idx = goog.array.findIndex(l['TileMatrixSetLink'],
-        function(elt, index, array) {
-          return elt['TileMatrixSet']['SupportedCRS'].replace(
-              /urn:ogc:def:crs:(\w+):(.*:)?(\w+)$/, '$1:$3'
-                 ) == config['projection'];
-        });
+    if (goog.isDef(config['projection'])) {
+      idx = goog.array.findIndex(l['TileMatrixSetLink'],
+          function(elt, index, array) {
+            var tileMatrixSet = goog.array.find(tileMatrixSets, function(el) {
+              return el['Identifier'] == elt['TileMatrixSet'];
+            });
+            return tileMatrixSet['SupportedCRS'].replace(
+                /urn:ogc:def:crs:(\w+):(.*:)?(\w+)$/, '$1:$3'
+                   ) == config['projection'];
+          });
+    } else {
+      idx = goog.array.findIndex(l['TileMatrixSetLink'],
+          function(elt, index, array) {
+            return elt['TileMatrixSet'] == config['matrixSet'];
+          });
+    }
   } else {
     idx = 0;
   }

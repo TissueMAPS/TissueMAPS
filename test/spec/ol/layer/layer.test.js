@@ -63,6 +63,7 @@ describe('ol.layer.Layer', function() {
         opacity: 1,
         saturation: 1,
         visible: true,
+        managed: true,
         sourceState: ol.source.State.READY,
         extent: undefined,
         maxResolution: Infinity,
@@ -107,6 +108,7 @@ describe('ol.layer.Layer', function() {
         opacity: 0.5,
         saturation: 5,
         visible: false,
+        managed: true,
         sourceState: ol.source.State.READY,
         extent: undefined,
         maxResolution: 500,
@@ -200,6 +202,7 @@ describe('ol.layer.Layer', function() {
         opacity: 0.3,
         saturation: 0.3,
         visible: false,
+        managed: true,
         sourceState: ol.source.State.READY,
         extent: undefined,
         maxResolution: 500,
@@ -222,6 +225,7 @@ describe('ol.layer.Layer', function() {
         opacity: 0,
         saturation: 0,
         visible: false,
+        managed: true,
         sourceState: ol.source.State.READY,
         extent: undefined,
         maxResolution: Infinity,
@@ -242,6 +246,7 @@ describe('ol.layer.Layer', function() {
         opacity: 1,
         saturation: 42,
         visible: true,
+        managed: true,
         sourceState: ol.source.State.READY,
         extent: undefined,
         maxResolution: Infinity,
@@ -573,11 +578,66 @@ describe('ol.layer.Layer', function() {
 
   });
 
+  describe('#setMap (unmanaged layer)', function() {
+    var map;
+
+    beforeEach(function() {
+      map = new ol.Map({});
+    });
+
+    describe('with map in constructor options', function() {
+      it('renders the layer', function() {
+        var layer = new ol.layer.Layer({
+          map: map
+        });
+        var frameState = {
+          layerStatesArray: [],
+          layerStates: {}
+        };
+        map.dispatchEvent(new ol.render.Event('precompose', map, null,
+            frameState, null, null));
+        expect(frameState.layerStatesArray.length).to.be(1);
+        var layerState = frameState.layerStatesArray[0];
+        expect(layerState.layer).to.equal(layer);
+        expect(frameState.layerStates[goog.getUid(layer)]).to.equal(layerState);
+      });
+    });
+
+    describe('setMap sequences', function() {
+      var mapRenderSpy;
+
+      beforeEach(function() {
+        mapRenderSpy = sinon.spy(map, 'render');
+      });
+
+      afterEach(function() {
+        mapRenderSpy.restore();
+      });
+
+      it('requests a render frame', function() {
+        var layer = new ol.layer.Layer({});
+
+        layer.setMap(map);
+        expect(mapRenderSpy.callCount).to.be(1);
+
+        layer.setMap(null);
+        expect(mapRenderSpy.callCount).to.be(2);
+
+        layer.setMap(map);
+        expect(mapRenderSpy.callCount).to.be(3);
+      });
+
+    });
+
+  });
+
 });
 
 goog.require('goog.dispose');
+goog.require('ol.Map');
 goog.require('ol.ObjectEventType');
 goog.require('ol.layer.Layer');
 goog.require('ol.proj');
+goog.require('ol.render.Event');
 goog.require('ol.source.Source');
 goog.require('ol.source.State');

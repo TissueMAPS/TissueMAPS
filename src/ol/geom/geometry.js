@@ -50,9 +50,11 @@ ol.geom.GeometryLayout = {
  * instantiated in apps.
  * Base class for vector geometries.
  *
+ * To get notified of changes to the geometry, register a listener for the
+ * generic `change` event on your geometry instance.
+ *
  * @constructor
  * @extends {ol.Object}
- * @fires change Triggered when the geometry changes.
  * @api stable
  */
 ol.geom.Geometry = function() {
@@ -229,6 +231,7 @@ ol.geom.Geometry.prototype.translate = goog.abstractMethod;
  *     string identifier or a {@link ol.proj.Projection} object.
  * @return {ol.geom.Geometry} This geometry.  Note that original geometry is
  *     modified in place.
+ * @api stable
  */
 ol.geom.Geometry.prototype.transform = function(source, destination) {
   this.applyTransform(ol.proj.getTransform(source, destination));

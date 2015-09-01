@@ -5,11 +5,11 @@ goog.require('ol');
 goog.require('ol.ImageTile');
 goog.require('ol.TileCoord');
 goog.require('ol.TileState');
-goog.require('ol.TileUrlFunction');
 goog.require('ol.dom');
+goog.require('ol.extent');
 goog.require('ol.proj');
 goog.require('ol.source.TileImage');
-goog.require('ol.tilegrid.Zoomify');
+goog.require('ol.tilegrid.TileGrid');
 
 
 /**
@@ -87,36 +87,38 @@ ol.source.Zoomify = function(opt_options) {
   }
   resolutions.reverse();
 
-  var tileGrid = new ol.tilegrid.Zoomify({
+  var extent = [0, -size[1], size[0], 0];
+  var tileGrid = new ol.tilegrid.TileGrid({
+    extent: extent,
+    origin: ol.extent.getTopLeft(extent),
     resolutions: resolutions
   });
 
   var url = options.url;
-  var tileUrlFunction = ol.TileUrlFunction.withTileCoordTransform(
-      tileGrid.createTileCoordTransform({extent: [0, 0, size[0], size[1]]}),
-      /**
-       * @this {ol.source.TileImage}
-       * @param {ol.TileCoord} tileCoord Tile Coordinate.
-       * @param {number} pixelRatio Pixel ratio.
-       * @param {ol.proj.Projection} projection Projection.
-       * @return {string|undefined} Tile URL.
-       */
-      function(tileCoord, pixelRatio, projection) {
-        if (goog.isNull(tileCoord)) {
-          return undefined;
-        } else {
-          var tileCoordZ = tileCoord[0];
-          var tileCoordX = tileCoord[1];
-          var tileCoordY = tileCoord[2];
-          var tileIndex =
-              tileCoordX +
-              tileCoordY * tierSizeInTiles[tileCoordZ][0] +
-              tileCountUpToTier[tileCoordZ];
-          var tileGroup = (tileIndex / ol.DEFAULT_TILE_SIZE) | 0;
-          return url + 'TileGroup' + tileGroup + '/' +
-              tileCoordZ + '-' + tileCoordX + '-' + tileCoordY + '.jpg';
-        }
-      });
+
+  /**
+   * @this {ol.source.TileImage}
+   * @param {ol.TileCoord} tileCoord Tile Coordinate.
+   * @param {number} pixelRatio Pixel ratio.
+   * @param {ol.proj.Projection} projection Projection.
+   * @return {string|undefined} Tile URL.
+   */
+  function tileUrlFunction(tileCoord, pixelRatio, projection) {
+    if (goog.isNull(tileCoord)) {
+      return undefined;
+    } else {
+      var tileCoordZ = tileCoord[0];
+      var tileCoordX = tileCoord[1];
+      var tileCoordY = -tileCoord[2] - 1;
+      var tileIndex =
+          tileCoordX +
+          tileCoordY * tierSizeInTiles[tileCoordZ][0] +
+          tileCountUpToTier[tileCoordZ];
+      var tileGroup = (tileIndex / ol.DEFAULT_TILE_SIZE) | 0;
+      return url + 'TileGroup' + tileGroup + '/' +
+          tileCoordZ + '-' + tileCoordX + '-' + tileCoordY + '.jpg';
+    }
+  }
 
   goog.base(this, {
     attributions: options.attributions,

@@ -77,9 +77,9 @@ ol.renderer.canvas.VectorLayer.prototype.composeFrame =
     function(frameState, layerState, context) {
 
   var extent = frameState.extent;
-  var focus = frameState.focus;
   var pixelRatio = frameState.pixelRatio;
-  var skippedFeatureUids = frameState.skippedFeatureUids;
+  var skippedFeatureUids = layerState.managed ?
+      frameState.skippedFeatureUids : {};
   var viewState = frameState.viewState;
   var projection = viewState.projection;
   var rotation = viewState.rotation;
@@ -108,20 +108,11 @@ ol.renderer.canvas.VectorLayer.prototype.composeFrame =
     // see http://jsperf.com/context-save-restore-versus-variable
     var alpha = replayContext.globalAlpha;
     replayContext.globalAlpha = layerState.opacity;
-    var noSkip = {};
-    var focusX = focus[0];
 
+    replayGroup.replay(replayContext, pixelRatio, transform, rotation,
+        skippedFeatureUids);
     if (vectorSource.getWrapX() && projection.canWrapX() &&
         !ol.extent.containsExtent(projectionExtent, extent)) {
-      var projLeft = projectionExtent[0];
-      var projRight = projectionExtent[2];
-      // A feature from skippedFeatureUids will only be skipped in the world
-      // that has the frameState's focus, because this is where a feature
-      // overlay for highlighting or selection would render the skipped
-      // feature.
-      replayGroup.replay(replayContext, pixelRatio, transform, rotation,
-          projLeft <= focusX && focusX <= projRight ?
-              skippedFeatureUids : noSkip);
       var startX = extent[0];
       var worldWidth = ol.extent.getWidth(projectionExtent);
       var world = 0;
@@ -131,8 +122,7 @@ ol.renderer.canvas.VectorLayer.prototype.composeFrame =
         offsetX = worldWidth * world;
         transform = this.getTransform(frameState, offsetX);
         replayGroup.replay(replayContext, pixelRatio, transform, rotation,
-            projLeft + offsetX <= focusX && focusX <= projRight + offsetX ?
-                skippedFeatureUids : noSkip);
+            skippedFeatureUids);
         startX += worldWidth;
       }
       world = 0;
@@ -142,13 +132,11 @@ ol.renderer.canvas.VectorLayer.prototype.composeFrame =
         offsetX = worldWidth * world;
         transform = this.getTransform(frameState, offsetX);
         replayGroup.replay(replayContext, pixelRatio, transform, rotation,
-            projLeft + offsetX <= focusX && focusX <= projRight + offsetX ?
-                skippedFeatureUids : noSkip);
+            skippedFeatureUids);
         startX -= worldWidth;
       }
-    } else {
-      replayGroup.replay(
-          replayContext, pixelRatio, transform, rotation, skippedFeatureUids);
+      // restore original transform for render and compose events
+      transform = this.getTransform(frameState, 0);
     }
 
     if (replayContext != context) {
@@ -174,10 +162,11 @@ ol.renderer.canvas.VectorLayer.prototype.forEachFeatureAtCoordinate =
     var resolution = frameState.viewState.resolution;
     var rotation = frameState.viewState.rotation;
     var layer = this.getLayer();
+    var layerState = frameState.layerStates[goog.getUid(layer)];
     /** @type {Object.<string, boolean>} */
     var features = {};
-    return this.replayGroup_.forEachFeatureAtCoordinate(coordinate,
-        resolution, rotation, frameState.skippedFeatureUids,
+    return this.replayGroup_.forEachFeatureAtCoordinate(coordinate, resolution,
+        rotation, layerState.managed ? frameState.skippedFeatureUids : {},
         /**
          * @param {ol.Feature} feature Feature.
          * @return {?} Callback result.
@@ -249,9 +238,15 @@ ol.renderer.canvas.VectorLayer.prototype.prepareFrame =
 
   if (vectorSource.getWrapX() && viewState.projection.canWrapX() &&
       !ol.extent.containsExtent(projectionExtent, frameState.extent)) {
-    // do not clip when the view crosses the -180° or 180° meridians
-    extent[0] = projectionExtent[0];
-    extent[2] = projectionExtent[2];
+    // For the replay group, we need an extent that intersects the real world
+    // (-180° to +180°). To support geometries in a coordinate range from -540°
+    // to +540°, we add at least 1 world width on each side of the projection
+    // extent. If the viewport is wider than the world, we need to add half of
+    // the viewport width to make sure we cover the whole viewport.
+    var worldWidth = ol.extent.getWidth(projectionExtent);
+    var buffer = Math.max(ol.extent.getWidth(extent) / 2, worldWidth);
+    extent[0] = projectionExtent[0] - buffer;
+    extent[2] = projectionExtent[2] + buffer;
   }
 
   if (!this.dirty_ &&

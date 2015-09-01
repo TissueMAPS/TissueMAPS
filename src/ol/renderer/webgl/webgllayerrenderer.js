@@ -11,7 +11,13 @@ goog.require('ol.renderer.Layer');
 goog.require('ol.renderer.webgl.map.shader.Color');
 goog.require('ol.renderer.webgl.map.shader.ColorNoWhite');
 goog.require('ol.renderer.webgl.map.shader.ColorNoBlack');
+goog.require('ol.renderer.webgl.map.shader.Color.Locations');
+goog.require('ol.renderer.webgl.map.shader.ColorFragment');
+goog.require('ol.renderer.webgl.map.shader.ColorVertex');
 goog.require('ol.renderer.webgl.map.shader.Default');
+goog.require('ol.renderer.webgl.map.shader.Default.Locations');
+goog.require('ol.renderer.webgl.map.shader.DefaultFragment');
+goog.require('ol.renderer.webgl.map.shader.DefaultVertex');
 goog.require('ol.webgl.Buffer');
 goog.require('ol.webgl.Context');
 
@@ -285,7 +291,7 @@ ol.renderer.webgl.Layer.prototype.dispatchComposeEvent_ =
     var render = new ol.render.webgl.Immediate(
         context, center, resolution, rotation, size, extent, pixelRatio);
     var composeEvent = new ol.render.Event(
-        type, layer, render, null, frameState, null, context);
+        type, layer, render, frameState, null, context);
     layer.dispatchEvent(composeEvent);
   }
 };
