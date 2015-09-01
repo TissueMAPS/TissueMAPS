@@ -78,7 +78,7 @@ def create_app(config_object=dev):
     # Initialize Plugins
     jwt.init_app(app)
     db.init_app(app)
-    ws.init_app(app)
+    # ws.init_app(app)
 
     from api import api
     from res import res

@@ -37,4 +37,4 @@ if __name__ == "__main__":
     # application = appfactory.create_app('dev')
     # application.run(debug=True, port=args.port)
 
-    app.run(debug=True, port=8080, gevent=100)
+    app.run(debug=True, port=8080)
