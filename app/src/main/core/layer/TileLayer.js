@@ -51,7 +51,7 @@ angular.module('tmaps.core.layer')
 
         options.source = new ol.source.Zoomify({
             size: options.imageSize,
-            url: pyramidPath,
+            url: '/api' + pyramidPath,
             crossOrigin: 'anonymous'
         });
 
