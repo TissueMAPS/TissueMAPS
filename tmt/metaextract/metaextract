@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from tmt.cli import command_line_call
-from tmt.metaextract.parser import parser
+from tmt.metaextract.argparser import parser
 
 
 if __name__ == '__main__':

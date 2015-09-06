@@ -1,10 +1,14 @@
 import re
-import numpy as np
-from gi.repository import Vips
-from illumstats import illum_correct
+from abc import ABCMeta
+from abc import abstractproperty
+from cached_property import cached_property
+from .pixels import VipsPixels
+from .pixels import NumpyPixels
+from .readers import DatasetReader
+from .metadata import IllumstatsImageMetadata
 
 
-SUPPORTED_IMAGE_FILES = ['png', 'jpg', 'tiff', 'tif', 'jpeg']
+SUPPORTED_IMAGE_FILES = ['png']
 
 # A regexp to detect supported files. Used to filter images in a folder_name.
 _image_regex = re.compile('.*(' + '|'.join(
@@ -22,288 +26,644 @@ def is_image_file(filename):
     return _image_regex.match(filename)
 
 
-class Pixels(object):
+class Image(object):
 
     '''
-    Class for a pixels grid, i.e. a 2D image array object.
+    Abstract base class for an image, which represents a 2D pixels array.
 
     2D means that the image doesn't contain any z-stacks.
     However, the image array may still have more than 2 dimensions.
     The 3rd dimension represents color and is referred to "bands".
+
+    The class provides the image pixel array as well as associated metadata.
+    It makes use of lazy loading so that image objects can be created without
+    the images being loaded into memory.
     '''
 
-    def __init__(self, image):
-        '''
-        Initialize an instance of class Pixels.
-
-        Parameters
-        ----------
-        image: numpy.ndarray or Vips.Image
-            pixel array
-        '''
-        self.image = image
+    __metaclass__ = ABCMeta
 
     @property
-    def dimensions(self):
+    def metadata(self):
         '''
         Returns
         -------
-        Tuple[int]
-            y, x dimensions of the pixels array
+        Metadata
+            metadata object
+
+        See also
+        --------
+        `tmt.metadata.ImageMetadata`_
         '''
-        if isinstance(self.image, Vips.Image):
-            self._dimensions = (self.image.height, self.image.width)
-        else:
-            # All other libraries return numpy arrays
-            self._dimensions = self.image.shape[0:2]
-        return self._dimensions
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value):
+        self._metadata = value
 
     @property
-    def bands(self):
-        '''
-        Bands represent colors. An RGB image has 3 bands while a greyscale
-        image has only one band.
-
-        Returns
-        -------
-        int
-            number of bands of the pixel array
-        '''
-        if isinstance(self.image, Vips.Image):
-            self._bands = self.image.bands
-        else:
-            if len(self.image.shape) > 2:
-                self._bands = self.image.shape[2]
-            else:
-                self._bands = 1
-        return self._bands
-
-    @property
-    def type(self):
+    def filename(self):
         '''
         Returns
         -------
         str
-            type (class) of the pixel array, e.g. "numpy.ndarray"
+            absolute path to the image file
         '''
-        self._type = type(self.image)
-        return self._type
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+    def _get_factory(self, library):
+        if library == 'vips':
+            return VipsPixels.create_from_file
+        elif library == 'numpy':
+            return NumpyPixels.create_from_file
+        else:
+            return None
 
     @property
-    def dtype(self):
-        '''
-        Returns
-        -------
-        str
-            data type of the pixel array elements, e.g. "uint16"
-        '''
-        if isinstance(self.image, Vips.Image):
-            self._type = self.image.get_format()
-        else:
-            # All other libraries return numpy arrays
-            self._type = self.image.dtype
-        return self._type
+    def _factory(self):
+        return self.__factory
 
-    def align(self):
-        '''
-        Align (shift and crop) the image based on pre-calculated shift and
-        overlap values.
+    @_factory.setter
+    def _factory(self, value):
+        self.__factory = value
 
-        .. Warning::
-
-            Alignment may change the dimensions of the image.
-        '''
-        # TODO
+    @abstractproperty
+    def pixels(self):
         pass
 
+    @pixels.setter
+    def pixels(self, value):
+        self._pixels = value
 
-class ChannelImage(Pixels):
-
-    '''
-    Class for a channel image, i.e. a 2D greyscale image with a single band.
-    '''
-
-    def __init__(self, image):
+    def save_as_png(self, filename):
         '''
-        Initialize an instance of class ChannelImage.
+        Write image to disk as PNG file.
 
         Parameters
         ----------
-        image: numpy.ndarray or Vips.Image
-            pixel array of unsigned integer type
+        filename: str
+            absolute path to output file
+        '''
+        self.pixels.save_as_png(filename)
+
+
+class ChannelImage(Image):
+
+    '''
+    Class for a channel image: a 2D greyscale image with a single band.
+    '''
+
+    @staticmethod
+    def create_from_file(filename, metadata, library):
+        '''
+        Create a ChannelImage object from a file on disk.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the image file
+        metadata: ChannelImageMetadata
+            image metadata object
+        library: str
+            image library that should be used, "vips" or "numpy"
+
+        Returns
+        -------
+        ChannelImage
+            image object
+        
+        Raises
+        ------
+        ValueError
+            when `library` is not specified correctly
+        '''
+        if library not in {'vips', 'numpy'}:
+            raise ValueError('Library must be either "vips" or "numpy".')
+        image = ChannelImage()
+        image._factory = image._get_factory(library)
+        image.filename = filename
+        image.metadata = metadata
+        return image
+
+    @cached_property
+    def pixels(self):
+        '''
+        Returns
+        -------
+        Pixels
+            pixels object
 
         Raises
         ------
         ValueError
-            when `image` has more than one band
+            when `pixels` has more than one band
         TypeError
-            when data type of `image` is not an unsigned integer type
+            when `pixels` doesn't have unsigned integer type
 
         See also
         --------
-        `image.Pixels`_
+        `tmt.pixels.Pixels`_
         '''
-        Pixels.__init__(self, image)
-        self.image = image
-        if self.bands > 1:
+        if hasattr(self, '_factory') and hasattr(self, 'filename'):
+            self._pixels = self._factory(self.filename)
+        if self._pixels.bands > 1:
             raise ValueError('A channel image can only have a single band.')
-        if self.type == 'Vips.Image':
-            if not Vips.BandFormat.isuint(self.image.get_format()):
-                raise TypeError('Format of the Vips image must be an '
-                                'unsigned integer type.')
-        else:
-            if not (self.image.dtype == np.uint16
-                    or self.image.dtype == np.uint8):
-                raise TypeError('Data type of the numpy array must be an '
-                                'unsigned integer type.')
+        if not self._pixels.is_uint:
+            raise TypeError('A channel image must have unsigned integer type.')
+        return self._pixels
 
-    def correct(self, mean_mat, std_mat):
+    def correct(self, mean_image, std_image):
         '''
-        Correct the image for illumination artifacts based on pre-calculated
-        illumination statistics.
+        Correct image for illumination artifacts.
 
         Parameters
         ----------
-        mean_mat: numpy.ndarray[numpy.float64] or Vips.Image[Vips.BandFormat.DOUBLE]
-            matrix of mean values (same dimensions and type as the image)
-        std_mat: numpy.ndarray[numpy.float64] or Vips.Image[Vips.BandFormat.DOUBLE]
-            matrix of standard deviation values (same dimensions and type
-            as the image)
+        mean_image: IllumstatsImage
+            mean intensity at each pixel calculated over all images of the
+            same channel
+        std_image: IllumstatsImage
+            standard deviation at each pixel calculated over all images of the
+            same channel
+
+        Returns
+        -------
+        ChannelImage
+            a new image object
 
         Raises
         ------
+        ValueError
+            when "channel" metadata are not the same for `mean_image` or
+            `std_image`
+        '''
+        if (mean_image.metadata.channel != self.metadata.channel
+                or std_image.metadata.channel != self.metadata.channel):
+            raise ValueError('Channel names must match.')
+        if (mean_image.pixels.type != self.pixels.type
+                or std_image.pixels.type != self.pixels.type):
+            raise TypeError('Pixels type must match.')
+        new_object = ChannelImage()
+        new_object.metadata = self.metadata
+        new_object.filename = self.filename
+        new_object.pixels = self.pixels.correct_illumination(
+                                    mean_image.pixels.array,
+                                    std_image.pixels.array)
+        return new_object
+
+    def align(self, shift_description):
+        '''
+        Align, i.e. shift and crop, an image based on calculated shift
+        and overhang values.
+
+        Parameters
+        ----------
+        shift_description: ShiftDescriptor
+            information required for alignment
+
+        Returns
+        -------
+        ChannelImage
+            aligned image
+
+        Warning
+        -------
+        Alignment may change the dimensions of the image.
+        '''
+        self.pixels = self.pixels.align(shift_description)
+        return self
+
+
+class BrightfieldImage(Image):
+
+    '''
+    Class for a brightfield image: a 2D RGB image with three bands.
+    '''
+
+    @staticmethod
+    def create_from_file(filename, metadata, library):
+        '''
+        Create a BrightfieldImage object from a file on disk.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the image file
+        metadata: BrightfieldImageMetadata
+            image metadata object
+        library: str
+            image library that should be used, "vips" or "numpy"
+
+        Returns
+        -------
+        BrightfieldImage
+            image object
+
+        Raises
+        ------
+        ValueError
+            when `library` is not specified correctly
+        '''
+        if library not in {'vips', 'numpy'}:
+            raise ValueError('Library must be either "vips" or "numpy".')
+        image = BrightfieldImage()
+        image._factory = image._get_factory(library)
+        image.filename = filename
+        image.metadata = metadata
+        return image
+
+    @cached_property
+    def pixels(self):
+        '''
+        Returns
+        -------
+        Pixels
+            pixels object
+
+        Raises
+        ------
+        ValueError
+            when `pixels` doesn't have three bands
         TypeError
-            when `mean_mat` and `std_mat` don't have same type as the image
-        ValueError
-            when `mean_mat` and `std_mat` don't have same dimensions
-            as the image
+            when `pixels` doesn't have unsigned integer type
 
         See also
         --------
-        `illumstats`_
+        `tmt.pixels.Pixels`_
         '''
-        statistics_mats = [mean_mat, std_mat]
-        if not all([isinstance(m, self.type) for m in statistics_mats]):
-            raise TypeError('Statistics matrices must have same '
-                            'type as the image')
-        if self.type == 'Vips.Image':
-            if not all([self.dimensions != (m.height, m.width)
-                        for m in statistics_mats]):
-                raise ValueError('Statistics matrices must have same '
-                                 'dimensions as the image')
-        else:
-            if not all([self.dimensions != m.shape for m in statistics_mats]):
-                raise ValueError('Statistics matrices must have same '
-                                 'dimensions as the image')
-
-        corrected_image = illum_correct(self.image, mean_mat, std_mat)
-        return corrected_image
-
-
-class BrightfieldImage(Pixels):
-
-    '''
-    Class for a brightfield image, i.e. a 2D RGB image with three bands.
-    '''
-
-    def __init__(self, image):
-        '''
-        Initialize an instance of class BrightfieldImage.
-
-        Parameters
-        ----------
-        image: numpy.ndarray or Vips.Image
-            pixel array
-
-        Raises
-        ------
-        ValueError
-            when `image` doesn't have three bands
-
-        See also
-        --------
-        `image.Pixels`_
-        '''
-        Pixels.__init__(self, image)
-        if self.bands != 3:
+        if hasattr(self, '_factory') and hasattr(self, 'filename'):
+            self._pixels = self._factory(self.filename)
+        if self._pixels.bands != 3:
             raise ValueError('A brightfield image must have 3 bands.')
-        self.image = image
+        if not self._pixels.is_uint:
+            raise TypeError('A brightfield image must have unsigned integer '
+                            'type.')
+        return self._pixels
 
 
-class MaskImage(Pixels):
+class MaskImage(Image):
 
     '''
-    Class for a mask image, i.e. a 2D binary segmentation image
-    with a single band.
+    Class for a mask image: a 2D binary segmentation image with a single band.
     '''
 
-    def __init__(self, image):
+    @staticmethod
+    def create_from_file(filename, metadata, library):
         '''
-        Initialize an instance of class MaskImage.
-
-        .. Note::
-
-            `image` is converted to a binary image
+        Create a MaskImage object from a file on disk.
 
         Parameters
         ----------
-        image: numpy.ndarray or Vips.Image
-            pixel array
+        filename: str
+            absolute path to the image file
+        metadata: SegmentationImageMetadata
+            image metadata object
+        library: str
+            image library that should be used, "vips" or "numpy"
+
+        Returns
+        -------
+        MaskImage
+            image object
 
         Raises
         ------
         ValueError
-            when `image` has more than one band
+            when `library` is not specified correctly
+        '''
+        if library not in {'vips', 'numpy'}:
+            raise ValueError('Library must be either "vips" or "numpy".')
+        image = MaskImage()
+        image._factory = image._get_factory(library)
+        image.filename = filename
+        image.metadata = metadata
+        return image
+
+    @cached_property
+    def pixels(self):
+        '''
+        Returns
+        -------
+        Pixels
+            pixels object
+
+        Raises
+        ------
+        ValueError
+            when `pixels` has more than one band
+        TypeError
+            when `pixels` doesn't have binary type
 
         See also
         --------
-        `image.Pixels`_
+        `tmt.pixels.Pixels`_
         '''
-        # make the image binary
-        Pixels.__init__(self, image > 0)
-        self.image = image > 0
-        if self.bands > 1:
-            raise ValueError('A mask image can only have a single band.')
+        if hasattr(self, '_factory') and hasattr(self, 'filename'):
+            self._pixels = self._factory(self.filename)
+        if self._pixels.bands > 1:
+            raise ValueError('A channel image can only have a single band.')
+        if not self._pixels.is_binary:
+            raise TypeError('A mask image must have binary type.')
+        return self._pixels
+
+    @property
+    def outlines(self):
+        '''
+        Returns
+        -------
+        MaskImage
+            non-outline pixels values of connected regions are set to background
+        '''
+        self._outlines = LabelImage(self.pixels.get_outlines(keep_ids=False),
+                                    self.metadata)
+        return self._outlines
+
+    def align(self, shift_description):
+        '''
+        Align, i.e. shift and crop, an image based on calculated shift
+        and overhang values.
+
+        Parameters
+        ----------
+        shift_description: ShiftDescriptor
+            information required for alignment
+
+        Returns
+        -------
+        MaskImage
+            aligned image
+
+        Warning
+        -------
+        Alignment may change the dimensions of the image.
+        '''
+        return MaskImage(self.pixels.align(shift_description), self.metadata)
 
 
-class LabelImage(Pixels):
+class LabelImage(Image):
 
     '''
-    Class for a labeled image, i.e. a 2D segmented image,
+    Class for a labeled image: a 2D segmentation image,
     where each object (connected component) is labeled with a unique identifier.
     The labeling can be encoded in a single band or in multiple bands
     (which may become necessary when the number of objects exceeds the depth
      of the image, e.g. a greyscale 16-bit image one only encode 2^16 objects).
     '''
 
-    def __init__(self, image):
+    @staticmethod
+    def create_from_file(filename, metadata, library):
         '''
-        Initialize an instance of class LabelImage.
+        Create a LabelImage object from a file on disk.
 
         Parameters
         ----------
-        image: numpy.ndarray or Vips.Image
-            pixel array
+        filename: str
+            absolute path to the image file
+        metadata: SegmentationImageMetadata
+            image metadata object
+        library: str
+            image library that should be used, "vips" or "numpy"
+
+        Returns
+        -------
+        LabelImage
+            image object
 
         Raises
         ------
         ValueError
-            when `image` doesn't have one or three bands
+            when `library` is not specified correctly
+        '''
+        if library not in {'vips', 'numpy'}:
+            raise ValueError('Library must be either "vips" or "numpy".')
+        image = LabelImage()
+        image._factory = image._get_factory(library)
+        image.filename = filename
+        image.metadata = metadata
+        return image
+
+    @cached_property
+    def pixels(self):
+        '''
+        Returns
+        -------
+        Pixels
+            pixels object
+
+        Raises
+        ------
+        ValueError
+            when `pixels` has not one or three bands
+        TypeError
+            when `pixels` doesn't have unsigned integer type
+        '''
+        self._pixels = self._factory(self.filename)
+        if self._pixels.bands != 1 or self.pixels.bands != 3:
+            raise ValueError('A label image can either have a single band '
+                             'or three bands.')
+        if not self._pixels.is_uint:
+            raise TypeError('A label image must have unsigned integer type.')
+        return self._pixels
+
+    @property
+    def outlines(self):
+        '''
+        Returns
+        -------
+        LabelImage
+            non-outline pixels values of connected regions are set to background
+        '''
+        self._outlines = LabelImage(self.pixels.get_outlines(keep_ids=True),
+                                    self.metadata)
+        return self._outlines
+
+    @property
+    def n_objects(self):
+        '''
+        Returns
+        -------
+        int
+            number of objects in the image
+        '''
+        self.n_objects = self.pixels.n_objects
+        return self._n_objects
+
+    def remove_objects(self, ids):
+        '''
+        Remove individual objects by their Id.
+
+        Parameters
+        ----------
+        ids: List[int]
+            identifier numbers of objects that should be removed
+
+        Returns
+        -------
+        LabelImage
+            image without the specified objects
+        '''
+        return LabelImage(self.pixels.remove_objects(ids), self.metadata)
+
+    def align(self, shift_description):
+        '''
+        Align, i.e. shift and crop, an image based on calculated shift
+        and overhang values.
+
+        Parameters
+        ----------
+        shift_description: ShiftDescriptor
+            information required for alignment
+
+        Returns
+        -------
+        LabelImage
+            aligned image
+
+        Warning
+        -------
+        Alignment may change the dimensions of the image.
+        '''
+        return LabelImage(self.pixels.align(shift_description), self.metadata)
+
+    def local_to_global_ids(self, max_id):
+        '''
+        '''
+        img, new_max_id = self.pixels.local_to_global_ids(max_id)
+        return (LabelImage(img, self.metadata), new_max_id)
+
+
+class IllumstatsImage(object):
+
+    '''
+    Class for a illumination statistics image: a 2D greyscale image with a
+    single band.
+    '''
+
+    def __init__(self, pixels, metadata):
+        '''
+        Initialize an instance of class IllumstatsImage.
+
+        Parameters
+        ----------
+        pixels: Pixel
+            pixel object
+        metadata: IllumstatsMetadata
+            image metadata object
+
+        Returns
+        -------
+        IllumstatsImage
+            image object
+
+        Raises
+        ------
+        ValueError
+            when `pixels` has more than one band
+        TypeError
+            when `pixels` doesn't have float type
+        '''
+        self.pixels = pixels
+        if self.pixels.bands != 1:
+            raise ValueError('An illumination statistics image can only have '
+                             'a single band.')
+        if not self.pixels.is_float:
+            raise TypeError('An illumination statistics image must have '
+                            'float type.')
+        self.metadata = metadata
+
+
+class IllumstatsImages(object):
+
+    '''
+    Class that serves as a container for illumination statistics images.
+
+    It provides the mean and standard deviation matrices for a given
+    channel. The statistics are calculated at each pixel position over all
+    image sites acquired in the same channel [1]_.
+
+    References
+    ----------
+    .. [1] Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L. 2015.
+           Computer vision for image-based transcriptomics. Methods.
+    '''
+
+    @property
+    def std(self):
+        '''
+        Returns
+        -------
+        IllumstatsImage
+            image object
 
         See also
         --------
-        `image.Pixels`_
+        `tmt.image.IllumstatsImage`_ 
         '''
-        # binary pixel array
-        Pixels.__init__(self, image)
-        self.image = image
-        if self.bands != 1 or self.bands != 3:
-            raise ValueError('A mask image can either have a single band '
-                             'or three bands.')
+        return self._std
 
-    def objects(self):
+    @std.setter
+    def std(self, value):
+        self._std = value
+
+    @property
+    def mean(self):
         '''
-        Regionprops elements.
+        Returns
+        -------
+        IllumstatsImage
+            image object
+
+        See also
+        --------
+        `tmt.image.IllumstatsImage`_
         '''
-        # TODO
-        pass
+        return self._mean
+
+    @mean.setter
+    def mean(self, value):
+        self._mean = value
+
+    @staticmethod
+    def create_from_file(filename, library):
+        '''
+        Create an Illumstats object from a file on disk.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the HDF5 file
+        library: str
+            image library that should be used, "vips" or "numpy"
+
+        Returns
+        -------
+        IllumstatsImages
+            container for `IllumstatsImage` objects
+
+        Raises
+        ------
+        ValueError
+            when `library` is not specified correctly
+        '''
+        if library not in {'vips', 'numpy'}:
+            raise ValueError('Library must be either "vips" or "numpy".')
+        metadata = IllumstatsImageMetadata()
+        with DatasetReader(filename) as reader:
+            mean = reader.read_dataset('data/mean')
+            std = reader.read_dataset('data/std')
+            metadata.cycle = reader.read_dataset('metadata/cycle')
+            metadata.channel = reader.read_dataset('metadata/channel')
+
+        if library == 'vips':
+            mean_pxl = VipsPixels.create_from_numpy_array(mean)
+            std_pxl = VipsPixels.create_from_numpy_array(std)
+        elif library == 'numpy':
+            mean_pxl = NumpyPixels(mean)
+            std_pxl = NumpyPixels(std)
+
+        stats = IllumstatsImages()
+        stats.mean = IllumstatsImage(mean_pxl, metadata)
+        stats.std = IllumstatsImage(std_pxl, metadata)
+        return stats

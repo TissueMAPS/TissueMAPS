@@ -1,8 +1,9 @@
 import yaml
+import json
 import os
 import re
 
-'''Utility functions for filename and path routines.'''
+'''Utility functions for standard routines.'''
 
 
 def regex_from_format_string(format_string):
@@ -38,19 +39,51 @@ def regex_from_format_string(format_string):
     return regex
 
 
-def load_config(filename):
+def write_yaml(filename, data):
     '''
-    Load configuration settings from YAML file.
+    Write data to YAML file.
 
     Parameters
     ----------
     filename: str
-        name of the config file
+        name of the YAML file
+    data: list or dict
+        description that should be written to file
+    '''
+    with open(filename, 'w') as f:
+        f.write(yaml.safe_dump(data, default_flow_style=False))
+
+
+def load_yaml(stream):
+    '''
+    Load YAML from open file stream.
+
+    Parameters
+    ----------
+    stream: file object
+        open file as obtained with ``open()``
 
     Returns
     -------
-    dict
-        YAML content
+    dict or list
+        file content
+    '''
+    return yaml.safe_load(stream.read())
+
+
+def read_yaml(filename):
+    '''
+    Read YAML file.
+
+    Parameters
+    ----------
+    filename: str
+        absolute path to the YAML file
+
+    Returns
+    -------
+    dict or list
+        file content
 
     Raises
     ------
@@ -58,58 +91,92 @@ def load_config(filename):
         when `filename` does not exist
     '''
     if not os.path.exists(filename):
-        raise OSError('Configuration file does not exist: %s' % filename)
-    with open(filename) as f:
-        return yaml.load(f.read())
+        raise OSError('File does not exist: %s' % filename)
+    with open(filename, 'r') as f:
+        yaml_content = load_yaml(f)
+    return yaml_content
 
 
-def write_yaml(filename, content):
+def write_json(filename, data):
     '''
-    Write content to YAML file.
+    Write data to JSON file.
 
     Parameters
     ----------
     filename: str
-        name of the YAML file
-    content: list or dict
+        name of the JSON file
+    data: list or dict
         description that should be written to file
     '''
     with open(filename, 'w') as f:
-        f.write(yaml.dump(content, default_flow_style=False))
+        json.dump(data, f, indent=4, separators=(',', ': '), sort_keys=True)
 
 
-def check_config(cfg):
+def read_json(filename):
     '''
-    Check that configuration settings contains all required keys.
+    Read data from JSON file.
 
     Parameters
     ----------
-    cfg: dict
-        configuration settings
+    filename: str
+        name of the JSON file
+
+    Returns
+    -------
+    dict or list
+        content of the JSON file
 
     Raises
     ------
-    KeyError
-        when a required key is missing
+    OSError
+        when `filename` does not exist
     '''
-    required_keys = {
-        'SUBEXPERIMENTS_EXIST',
-        'COORDINATES_IN_FILENAME_ONE_BASED',
-        'USE_VIPS_LIBRARY',
-        'INFO_FROM_FILENAME',
-        'SUBEXPERIMENT_FOLDER_FORMAT',
-        'IMAGE_FOLDER_FORMAT',
-        'IMAGE_FILE_FORMAT',
-        'IMAGE_INFO_FILE_FORMAT',
-        'SEGMENTATION_FOLDER_FORMAT',
-        'SEGMENTATION_FILE_FORMAT',
-        'SEGMENTATION_INFO_FILE_FORMAT',
-        'SHIFT_FOLDER_FORMAT',
-        'SHIFT_FILE_FORMAT',
-        'STATS_FOLDER_FORMAT',
-        'STATS_FILE_FORMAT'
-    }
-    for key in required_keys:
-        if key not in cfg:
-            raise KeyError('Configuration file must contain the key "%s"'
-                           % key)
+    if not os.path.exists(filename):
+        raise OSError('File does not exist: %s' % filename)
+    with open(filename, 'r') as f:
+        file_content = f.read()
+    json_content = json.loads(file_content)
+    return json_content
+
+
+def indices(seq, item):
+    '''
+    Determine all indices of an item in a list.
+
+    Parameters
+    ----------
+    seq: list
+    item:
+        the element whose index position should be determined
+
+    Returns
+    -------
+    list
+        all indices of `item` in `seq`
+    '''
+    start_at = -1
+    locs = []
+    while True:
+        try:
+            loc = seq.index(item, start_at+1)
+        except ValueError:
+            break
+        else:
+            locs.append(loc)
+            start_at = loc
+    return locs
+
+
+def flatten(seq):
+    '''
+    Flatten a list of lists into a list.
+
+    Parameters
+    ----------
+    seq: List[list]
+
+    Returns
+    -------
+    list
+    '''
+    return [item for sublist in seq for item in sublist]

@@ -2,14 +2,12 @@ import os
 import re
 import glob
 import shutil
-import yaml
 from cached_property import cached_property
-from ..format import supported_formats
-from ..utils import flatten
+from ..formats import Formats
 from ..cluster import ClusterRoutine
 
 
-class OmeXmlExtractor(ClusterRoutine):
+class MetadataExtractor(ClusterRoutine):
 
     '''
     Class for extraction of metadata from microscopic image files using the
@@ -21,18 +19,17 @@ class OmeXmlExtractor(ClusterRoutine):
     and written to XML files.
     '''
 
-    def __init__(self, input_dir, output_dir, logging_level='critical'):
+    def __init__(self, cycle, prog_name, logging_level='critical'):
         '''
-        Initialize an instance of class OmeXmlExtractor.
+        Initialize an instance of class MetadataExtractor.
 
         Parameters
         ----------
-        input_dir: str
-            absolute path to the directory that contains the images, from which
-            metadata should be extracted
-        output_dir: str
-            absolute path to the directory where files containing the extracted
-            metadata should be stored
+        cycle: Cycle
+            cycle object that holds information about the content of the cycle
+            directory
+        prog_name: str
+            name of the corresponding command line interface
         logging_level: str, optional
             configuration of GC3Pie logger; either "debug", "info", "warning",
             "error" or "critical" (defaults to ``"critical"``)
@@ -45,40 +42,11 @@ class OmeXmlExtractor(ClusterRoutine):
         --------
         `tmt.cfg`_
         '''
-        super(OmeXmlExtractor, self).__init__(logging_level)
-        self.input_dir = input_dir
-        self.output_dir = output_dir
-        if not os.path.exists(self.output_dir):
-            os.mkdir(self.output_dir)
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the program in lower case letters
-        '''
-        self._name = self.__class__.__name__.lower()
-        return self._name
-
-    def print_supported_formats(self):
-        '''
-        Print supported file formats to standard output in YAML format.
-        '''
-        print yaml.dump(supported_formats, default_flow_style=False)
-
-    @property
-    def supported_extensions(self):
-        '''
-        Returns
-        -------
-        Set[str]
-            file extensions of supported formats
-        '''
-        all_extensions = flatten(supported_formats.values())
-        self._supported_extensions = set(all_extensions)
-        return self._supported_extensions
+        super(MetadataExtractor, self).__init__(prog_name, logging_level)
+        self.cycle = cycle
+        if not os.path.exists(self.cycle.ome_xml_dir):
+            os.mkdir(self.cycle.ome_xml_dir)
+        self.prog_name = prog_name
 
     @cached_property
     def image_files(self):
@@ -98,11 +66,11 @@ class OmeXmlExtractor(ClusterRoutine):
         OSError
             when no image files are found
         '''
-        files = [f for f in os.listdir(self.input_dir)
-                 if os.path.splitext(f)[1] in self.supported_extensions]
+        files = [f for f in os.listdir(self.cycle.image_upload_dir)
+                 if os.path.splitext(f)[1] in Formats().supported_extensions]
         if len(files) == 0:
             raise OSError('No image files founds in folder: %s'
-                          % self.input_dir)
+                          % self.cycle.image_upload_dir)
         self._image_files = files
         return self._image_files
 
@@ -121,7 +89,7 @@ class OmeXmlExtractor(ClusterRoutine):
             self._ome_xml_files.append(filename)
         return self._ome_xml_files
 
-    def create_joblist(self, batch=None):
+    def create_joblist(self, batch_size=None, cfg_file=None):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
@@ -130,15 +98,28 @@ class OmeXmlExtractor(ClusterRoutine):
         ----------
         batch_size: int, optional
             number of files that should be processed together as one job
+        cfg_file: str, optional
+            absolute path to custom configuration file
+
+        Note
+        ----
+        Argument `batch_size` will be ignored.
+        There will be one batch per image file.
         '''
-        input_files = [os.path.join(self.input_dir, f)
+        if batch_size is not None:
+            print 'WARNING: "batch_size" argument is ignored'
+        input_files = [os.path.join(self.cycle.image_upload_dir, f)
                        for f in self.image_files]
-        output_files = [os.path.join(self.output_dir, f)
+        output_files = [os.path.join(self.cycle.ome_xml_dir, f)
                         for f in self.ome_xml_files]
-        joblist = [{'id': i+1,
-                    'input': input_files[i], 'output': output_files[i]}
-                   for i in xrange(len(input_files))]
+        joblist = [{
+                'id': i+1,
+                'cfg_file': cfg_file,
+                'inputs': [input_files[i]],
+                'outputs': [output_files[i]]
+            } for i in xrange(len(input_files))]
         return joblist
+        pass
 
     @property
     def log_dir(self):
@@ -148,9 +129,10 @@ class OmeXmlExtractor(ClusterRoutine):
         str
             path to the directory where log files should be stored
         '''
-        return os.path.join(self.output_dir, '..', 'log_%s' % self.name)
+        return os.path.join(self.cycle.ome_xml_dir, '..',
+                            'log_%s' % self.prog_name)
 
-    def build_command(self, batch=None):
+    def build_command(self, batch):
         '''
         Build a command for GC3Pie submission. For further information on
         the structure of the command see
@@ -158,7 +140,7 @@ class OmeXmlExtractor(ClusterRoutine):
 
         Parameter
         ---------
-        batch: Dict[str, int or List[str]], optional
+        batch: Dict[str, int or List[str]]
             id and specification of input/output of the job that should be
             processed
 
@@ -167,17 +149,20 @@ class OmeXmlExtractor(ClusterRoutine):
         List[str]
             substrings of the command call
         '''
-        input_filename = batch['input']
+        input_filename = batch['inputs'][0]
         command = [
             'showinf', '-omexml-only', '-nopix', '-novalid', '-no-upgrade',
             input_filename
         ]
         return command
 
-    def run(self, batch):
+    def run_job(self, batch):
+        '''
+        Java job.
+        '''
         pass
 
-    def collect_extracted_metadata(self):
+    def collect_job_output(self, joblist):
         '''
         The *showinf* command prints the OME-XML string to standard output.
         GC3Pie redirects the standard output to a log file. Here we copy the
@@ -186,8 +171,10 @@ class OmeXmlExtractor(ClusterRoutine):
 
         The extracted metadata is used to create custom metadata, which will be
         subsequently used by TissueMAPS.
+
+        Parameter
         '''
         output_files = glob.glob(os.path.join(self.log_dir, '*.out'))
         for i, f in enumerate(output_files):
-            shutil.copyfile(f, os.path.join(self.output_dir,
+            shutil.copyfile(f, os.path.join(self.cycle.ome_xml_dir,
                                             self.ome_xml_files[i]))

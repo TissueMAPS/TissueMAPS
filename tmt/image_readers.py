@@ -1,36 +1,121 @@
-from abc import ABCMeta
-from abc import abstractmethod
 import cv2
 from gi.repository import Vips
+import sys
+import traceback
+import bioformats
+import javabridge
+from .readers import ImageReader
+from .readers import SlideReader
+from .errors import NotSupportedError
 
 
-class ImageReader(object):
+class BioformatsImageReader(ImageReader):
 
     '''
-    Abstract base class for reading images from files on disk.
-    '''
+    Class for reading images using the
+    `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
+    library.
 
-    __metaclass__ = ABCMeta
+    Note
+    ----
+    Requires a running Java Virtual Machine (VM). This is achieved via the
+    `javabridge <http://pythonhosted.org/javabridge/start_kill.html>`_
+    package.
+
+    Warning
+    -------
+    Once the VM is killed it cannot be started again. This means that a second
+    call of this class will fail.
+
+    Examples
+    --------
+    >>> filename = '/path/to/image/file'
+    >>> with BioformatsImageReader() as reader:
+    ...     img = reader.read(filename)
+    >>> type(img)
+    numpy.ndarray
+    '''
 
     def __enter__(self):
+        # NOTE: updated "loci_tools.jar" file to latest schema:
+        # http://downloads.openmicroscopy.org/bio-formats/5.1.3
+        javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
         return self
 
-    @abstractmethod
     def read(self, filename):
-        pass
+        '''
+        Read an image from a file on disk.
 
-    @abstractmethod
-    def read_subset(self, filename, series_index=None, plane_index=None):
-        pass
+        For details on reading images via Bio-Format from Python, see
+        `load_image() <http://pythonhosted.org/python-bioformats/#reading-images>`_.
+
+        Unfortunately, the documentation is very sparse and sometimes wrong.
+        If you need additional information, refer to the relevant
+        `source code <https://github.com/CellProfiler/python-bioformats/blob/master/bioformats/formatreader.py>`_.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the image file
+
+        Raises
+        ------
+        NotSupportedError
+            when the file format is not supported by the reader
+
+        Returns
+        -------
+        numpy.ndarray
+            pixel array
+        '''
+        image = bioformats.load_image(filename, rescale=False)
+        return image
+
+    def read_subset(self, filename, series=None, plane=None):
+        '''
+        Read a subset of images from a file on disk.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the image file
+        series: int, optional
+            zero-based series index
+            (only relevant if the file contains more than one *Image* elements)
+        plane: int, optional
+            zero-based plane index within a series
+            (only relevant if *Image* elements within the file contain 
+             more than one *Plane* element)
+
+        Returns
+        -------
+        numpy.ndarray
+            2D pixel array
+
+        Raises
+        ------
+        NotSupportedError
+            when the file format is not supported by the reader
+        '''
+        image = bioformats.load_image(filename, rescale=False,
+                                      series=series, index=plane)
+        return image
 
     def __exit__(self, except_type, except_value, except_trace):
-        pass
+        javabridge.kill_vm()
+        if except_type is javabridge.JavaException:
+            raise NotSupportedError('File format is not supported.')
+        if except_value:
+            sys.stdout.write('The following error occurred:\n%s'
+                             % str(except_value))
+            for tb in traceback.format_tb(except_trace):
+                sys.stdout.write(tb)
 
 
 class OpencvImageReader(ImageReader):
 
     '''
-    Class for reading image using the `OpenCV <http://docs.opencv.org>`_
+    Class for reading images using the `OpenCV <http://docs.opencv.org>`_
     library.
 
     Examples
@@ -62,8 +147,7 @@ class OpencvImageReader(ImageReader):
         image = cv2.imread(filename, cv2.IMREAD_UNCHANGED)
         return image
 
-    def read_subset(self, filename,
-                    series_index=None, plane_index=None):
+    def read_subset(self, filename, series=None, plane=None):
         '''
         If the image file contains more than one plane (band), only the first
         one will be read.
@@ -107,14 +191,14 @@ class VipsImageReader(ImageReader):
         image = Vips.Image.new_from_file(filename)
         return image
 
-    def read_subset(self, filename, series_index=None, plane_index=None):
+    def read_subset(self, filename, series=None, plane=None):
         raise AttributeError('%s doesn\'t have a "read_subset" method. '
                              'If the file contains more than one plane/band, '
                              'only the first one will be read.'
                              % self.__class__.__name__)
 
 
-class OpenslideImageReader(ImageReader):
+class OpenslideSlideReader(SlideReader):
 
     '''
     Class for reading whole slide images and associated metadata using the
@@ -125,16 +209,17 @@ class OpenslideImageReader(ImageReader):
     NotSupportedError
         when the file format is not supported by the reader
 
+    Warning
+    -------
+    `Openslide` doesn't support fluorescence slides.
+
     Examples
     --------
     >>> filename = '/path/to/image/file'
     >>> with OpenslideReader() as reader:
     ...     img = reader.read(filename)
-    ...     metadata = reader.read_metadata(filename)
     >>> type(img)
     Vips.Image
-    >>> type(img)
-    openslide.OpenSlide
     '''
 
     def read(self, filename):
@@ -162,3 +247,4 @@ class OpenslideImageReader(ImageReader):
                              'If the file contains more than one plane/band, '
                              'only the first one will be read.'
                              % self.__class__.__name__)
+

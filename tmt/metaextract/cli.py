@@ -1,6 +1,6 @@
 from . import logo
 from . import __version__
-from .api import OmeXmlExtractor
+from .api import MetadataExtractor
 from ..cli import CommandLineInterface
 from ..cycle import Cycle
 
@@ -20,27 +20,25 @@ class MetaExtract(CommandLineInterface):
         print logo % {'version': __version__}
 
     @property
-    def api_instance(self):
+    def name(self):
         '''
-        Initialize an instance of class OmeXmlExtractor with the parsed command
-        line arguments.
-
         Returns
         -------
-        OmeXmlExtractor
-
-        See also
-        --------
-        `tmt.metaextract.api.OmeXmlExtractor`_
+        str
+            name of the program
         '''
-        cycle = Cycle(self.args.cycle_dir, self.args.cfg)
-        return OmeXmlExtractor(input_dir=cycle.image_upload_dir,
-                               output_dir=cycle.ome_xml_dir)
+        return self.__class__.__name__.lower()
+
+    @property
+    def _api_instance(self):
+        cycle = Cycle(self.args.cycle_dir, self.cfg)
+        return MetadataExtractor(cycle=cycle, prog_name=self.name)
 
     def collect(self):
         print 'COLLECT'
-        api = self.api_instance
-        print '.  copy extracted metadata from standard output'
+        api = self._api_instance
+        print('.  copy extracted OMEXML metadata from standard output '
+              'log files to .ome.xml files')
         api.collect_extracted_metadata()
 
     @staticmethod
@@ -56,7 +54,7 @@ class MetaExtract(CommandLineInterface):
 
         See also
         --------
-        `tmt.metaextract.parser`_
+        `tmt.metaextract.argparser`_
         '''
         cli = MetaExtract(args)
-        getattr(cli, args.name)()
+        getattr(cli, args.subparser_name)()

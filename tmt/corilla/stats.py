@@ -13,7 +13,7 @@ class OnlineStatistics(object):
     https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
     '''
 
-    def __init__(self, dims):
+    def __init__(self, image_dimensions):
         '''
         Initialize class OnlineStatistics.
 
@@ -22,13 +22,13 @@ class OnlineStatistics(object):
 
         Parameters
         ----------
-        dims: Tuple[int]
-            dimensions of the matrix (i.e. shape of the numpy array)
+        image_dimensions: Tuple[int]
+            dimensions of the pixel array
         '''
         self.n = 0
-        self.dims = dims
-        self.mean = np.zeros(dims, dtype=float)
-        self.M2 = np.zeros(dims, dtype=float)
+        self.image_dimensions = image_dimensions
+        self.mean = np.zeros(image_dimensions, dtype=float)
+        self._M2 = np.zeros(image_dimensions, dtype=float)
 
     def update(self, x, log_transform=True):
         '''
@@ -49,7 +49,7 @@ class OnlineStatistics(object):
         self.n = self.n + 1
         delta = x - self.mean
         self.mean = self.mean + delta/self.n
-        self.M2 = self.M2 + delta*(x - self.mean)
+        self._M2 = self._M2 + delta*(x - self.mean)
 
     @property
     def var(self):
@@ -60,7 +60,7 @@ class OnlineStatistics(object):
             variance
         '''
         if self.n < 2:
-            self._var = np.zeros(self.dims, dtype=float)
+            self._var = np.zeros(self.image_dimensions, dtype=float)
             self._var[:] = np.nan
         else:
             self._var = self.M2 / (self.n - 1)

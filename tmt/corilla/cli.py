@@ -1,18 +1,14 @@
 from . import logo
 from . import __version__
-from .api import ImageExtractor
+from .api import IllumstatsCalculator
 from ..cli import CommandLineInterface
 from ..cycle import Cycle
 
 
-class ImExtract(CommandLineInterface):
-
-    '''
-    Command line interface for extraction of images from image files.
-    '''
+class Corilla(CommandLineInterface):
 
     def __init__(self, args):
-        super(ImExtract, self).__init__(args)
+        super(Corilla, self).__init__(args)
         self.args = args
 
     @staticmethod
@@ -32,7 +28,10 @@ class ImExtract(CommandLineInterface):
     @property
     def _api_instance(self):
         cycle = Cycle(self.args.cycle_dir, self.cfg)
-        return ImageExtractor(cycle=cycle, prog_name=self.name)
+        return IllumstatsCalculator(
+                    cycle=cycle,
+                    stats_file_format_string=self.cfg['STATS_FILE'],
+                    prog_name=self.name)
 
     @staticmethod
     def call(args):
@@ -47,7 +46,7 @@ class ImExtract(CommandLineInterface):
 
         See also
         --------
-        `tmt.imextract.argparser`_
+        `tmt.corilla.argparser`_
         '''
-        cli = ImExtract(args)
+        cli = Corilla(args)
         getattr(cli, args.subparser_name)()

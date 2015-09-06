@@ -8,29 +8,32 @@ from abc import abstractproperty
 import gc3libs
 from gc3libs.workflow import ParallelTaskCollection
 import logging
+from . import utils
 
 
-class Cluster(object):
+class ClusterRoutine(object):
 
     '''
-    Abstract base class for APIs of subpackages, i.e. individual command line
-    interfaces for the different TissueMAPS routines.
+    Abstract base class for cluster routines of command line interfaces.
     It provides a common framework for creation, submission and monitoring
     of jobs via `GC3Pie <https://code.google.com/p/gc3pie/>`_.
     '''
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, logging_level='critical'):
+    def __init__(self, prog_name, logging_level='critical'):
         '''
-        Initialize an instance of class Cluster.
+        Initialize an instance of class ClusterRoutine.
 
         Parameters
         ----------
+        prog_name: str
+            name of the corresponding program (command line interface)
         logging_level: str, optional
-            configuration of GC3Pie logger; either "debug" or "critical"
-            (defaults to ``"critical"``)
+            configuration of GC3Pie logger; either "debug", "info", "warning",
+            "error" or "critical" (defaults to ``"critical"``)
         '''
+        self.prog_name = prog_name
         self.configure_logging(logging_level)
 
     @staticmethod
@@ -41,14 +44,31 @@ class Cluster(object):
         Parameters
         ----------
         level: str
-            logging level; either "debug" or "critical"
+            logging level
         '''
         def map_logging_level(level):
             if level == 'debug':
                 return logging.DEBUG
+            elif level == 'info':
+                return logging.INFO
+            elif level == 'warning':
+                return logging.WARNING
+            elif level == 'error':
+                return logging.ERROR
             elif level == 'critical':
                 return logging.CRITICAL
+        logger = logging.getLogger(__name__)
         gc3libs.configure_logger(level=map_logging_level(level))
+
+    @abstractproperty
+    def log_dir(self):
+        '''
+        Returns
+        -------
+        str
+            directory where log files should be stored
+        '''
+        pass
 
     @staticmethod
     def create_datetimestamp():
@@ -76,46 +96,36 @@ class Cluster(object):
         return datetime.datetime.fromtimestamp(t).strftime('%H:%M:%S')
 
     @staticmethod
-    def create_batches(li, n):
-        '''
-        Break a list into several n-sized partitions, i.e. batches.
-
-        Parameters
-        ----------
-        li: list
-        n: int
-            batch size, i.e. number of elements per batch
-
-        Returns
-        -------
-        List[list]
-            batches
-        '''
+    def _create_batches(li, n):
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
 
-    @abstractproperty
-    def name(self):
+    @abstractmethod
+    def run_job(self, batch):
         '''
-        Returns
-        -------
-        str
-            name of the program in lower case letters
-        '''
-        pass
+        Run an individual job.
 
-    @abstractproperty
-    def log_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to the directory where log files should be stored
+        Parameters
+        ----------
+        batch: dict
+            joblist element, i.e. description of a single job 
         '''
         pass
 
     @abstractmethod
-    def build_command(self, batch=None):
+    def collect_job_output(self, joblist):
+        '''
+        Collect the output of jobs and fuse them if necessary.
+
+        Parameters
+        ----------
+        joblist: List[dict]
+            job descriptions
+        '''
+        pass
+
+    @abstractmethod
+    def build_command(self, batch):
         '''
         Build a command for GC3Pie submission. For further information on
         the structure of the command see
@@ -123,9 +133,8 @@ class Cluster(object):
 
         Parameter
         ---------
-        batch: Dict[str, int or List[str]], optional
-            id and specification of input/output of the job that should be
-            processed
+        batch: dict
+            joblist element, i.e. description of a single job
 
         Returns
         -------
@@ -135,26 +144,31 @@ class Cluster(object):
         pass
 
     @abstractmethod
-    def create_joblist(self, batch_size):
+    def create_joblist(self, batch_size=None, cfg_file=None):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
 
+        Each batch (element of the joblist) must provide the following
+        key-value pairs:
+        * "id": one-based job indentifier number (int)
+        * "cfg_file": absolute path to the configuration file (str or None)
+        * "inputs": absolute paths to input files required for the job
+          (List[str] or Dict[str, List[str]])
+        * "outputs": absolute paths to output files required for the job
+          (List[str] or Dict[str, List[str]])
+
         Parameters
         ----------
-        batch_size: int
+        batch_size: int, optional
             number of files that should be processed together as one job
+        cfg_file: str, optional
+            absolute path to custom configuration file
 
         Returns
         -------
-        List[Dict[str, int or List[str]]
-            information for each job
-
-        Note
-        ----
-        Must specify "id" (one-based job indentifier number), "inputs"
-        (absolute paths to input files) and "outputs" (relative paths to output
-        files, relative to *log_dir*!) for each job.
+        List[dict]
+            job descriptions
         '''
         pass
 
@@ -166,8 +180,8 @@ class Cluster(object):
         str
             absolute path to the joblist file
         '''
-        self._joblist_file = os.path.join(self.experiment,
-                                          '%s.jobs' % self.name)
+        self._joblist_file = os.path.join(self.log_dir,
+                                          '%s.jobs' % self.prog_name)
         return self._joblist_file
 
     def read_joblist(self):
@@ -190,14 +204,31 @@ class Cluster(object):
         with open(self.joblist_file, 'r') as f:
             return yaml.load(f.read())
 
-    def write_joblist(self):
+    def write_joblist(self, joblist):
         '''
         Write joblist to file as YAML.
-        '''
-        with open(self.joblist_file, 'w') as f:
-            f.write(yaml.dump(self.joblist, default_flow_style=False))
 
-    def submit(self, jobs):
+        Parameters
+        ----------
+        joblist: List[dict]
+            job descriptions
+
+        Note
+        ----
+        Create log directory if it does not exist.
+        '''
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
+        with open(self.joblist_file, 'w') as f:
+            f.write(yaml.dump(joblist, default_flow_style=False))
+
+    def print_joblist(self, joblist):
+        '''
+        Print joblist to standard output in YAML format.
+        '''
+        print yaml.safe_dump(joblist, default_flow_style=False)
+
+    def submit_jobs(self, jobs):
         '''
         Create a GC3Pie engine that submits jobs to a cluster or cloud
         for parallel processing and monitors their progress.
@@ -206,6 +237,11 @@ class Cluster(object):
         ----------
         jobs: gc3libs.workflow.ParallelTaskCollection[gc3libs.Application]
             collection of "jobs" that should be processed in parallel
+
+        Returns
+        -------
+        bool
+            indicating whether processing of jobs was successful
         '''
         # Create an `Engine` instance for running jobs in parallel
         e = gc3libs.create_engine()
@@ -231,16 +267,20 @@ class Cluster(object):
                 print '%s: Status of job "%s": %s ' % (self.create_timestamp(),
                                                        task.jobname,
                                                        task.execution.state)
-            time.sleep(3)
+            time.sleep(10)
 
+        success = True
         for task in jobs.iter_workflow():
             if(task.execution.returncode != 0
                     or task.execution.exitcode != 0):
                 print 'Job "%s" failed.' % task.jobname
+                success = False
             # TODO: resubmit
 
         print '%s: Jobs "%s" terminated.' % (self.create_timestamp(),
                                              jobs.jobname)
+
+        return success
 
     def create_jobs(self, joblist, shared_network=True, virtual_env='tmaps'):
         '''
@@ -248,8 +288,8 @@ class Cluster(object):
 
         Parameters
         ----------
-        joblist: List[Dict[str, int or List[str]]]
-            id and specification of input/output of each job
+        joblist: List[dict]
+            job descriptions
         shared_network: bool, optional
             whether worker nodes have access to a shared network
             or filesystem (defaults to ``True``)
@@ -271,11 +311,11 @@ class Cluster(object):
         gc3libs.workflow.ParallelTaskCollection
             jobs
         '''
-        jobs = ParallelTaskCollection(jobname='%s_jobs' % self.name)
+        jobs = ParallelTaskCollection(jobname='%s_jobs' % self.prog_name)
 
         for i, batch in enumerate(joblist):
 
-            jobname = '%s_job-%.5d' % (self.name, batch['id'])
+            jobname = '%s_job-%.5d' % (self.prog_name, batch['id'])
             timestamp = self.create_datetimestamp()
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)
@@ -286,9 +326,23 @@ class Cluster(object):
             else:
                 # If no shared network is available, files need to be copied.
                 # They are temporary stored in ~/.gc3pie_jobs.
-                inputs = batch['inputs']
-                outputs = [os.path.relpath(f, self.log_dir)
-                           for f in batch['outputs']]
+                if isinstance(batch['inputs'], dict):
+                    inputs = utils.flatten(batch['inputs'].values())
+                elif isinstance(batch['inputs'], list):
+                    inputs = batch['inputs']
+                else:
+                    raise TypeError('The value of the key "inputs" of the '
+                                    'elements in the joblist '
+                                    'must be of type dict or list.')
+                if isinstance(batch['outputs'], dict):
+                    outputs = utils.flatten(batch['outputs'].values())
+                elif isinstance(batch['outputs'], list):
+                    outputs = batch['inputs']
+                else:
+                    raise TypeError('The value of the key "outputs" of the '
+                                    'elements in the joblist '
+                                    'must be of type dict or list.')
+                outputs = [os.path.relpath(f, self.log_dir) for f in outputs]
 
             # Add individual task to collection
             app = gc3libs.Application(
@@ -305,3 +359,5 @@ class Cluster(object):
             )
             jobs.add(app)
         return jobs
+
+    # TODO: add job for "collect"

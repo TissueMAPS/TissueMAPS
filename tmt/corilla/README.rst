@@ -21,20 +21,20 @@ Output
 ------
 
 Mean and standard deviation matrices are stored in an HDF5 file per channel.
-The name of this file is defined in the configuration settings in `tmt.config`.
+The name of this file is defined in the configuration settings in `tmt.cfg`.
 
 Internally the HDF5 file is structured as follows:
 
 .. code::
 
     /
-    /statistics                         Group
-    /stat_values/mean                   Dataset {p, q}         :: DOUBLE
-    /stat_values/std                    Dataset {p, q}         :: DOUBLE
+    /data                               Group
+    /data/mean                          Dataset {p, q}         :: DOUBLE
+    /data/std                           Dataset {p, q}         :: DOUBLE
+    /metadata                           Group
+    /metadata/channel                   Dataset {1}            :: STRING
+    /metadata/std                       Dataset {1}            :: STRING
 
-.. warning::
-
-    The previous calculations were done in Matlab. Matlab transposes arrays upon writing to and reading from HDF5. Corilla doesn't do this!
 
 References
 ----------

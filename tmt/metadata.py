@@ -2,93 +2,51 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 
-class Metadata(object):
+class ImageMetadata(object):
 
     '''
-    Abstract base class for the metadata of an image, such as its
-    relative position within the acquisition grid.
+    Abstract base class for image metadata, such as the name of the channel or
+    the relative position of the image within the acquisition grid.
     '''
 
     __metaclass__ = ABCMeta
 
-    required_metadata = {
-        'orig_filename', 'name', 'cycle', 'dtype', 'dimensions',
-        'position', 'well'
+    initially_required = {
+        'original_filename', 'original_dtype', 'original_dimensions',
+        'name', 'cycle', 'position', 'well'
     }
 
-    persistent_metadata = {
-        'filename', 'name', 'cycle', 'dtype', 'dimensions',
-        'site', 'row', 'column', 'well'
+    persistent = {
+        'original_filename', 'original_dtype', 'original_dimensions',
+        'original_series', 'name', 'site', 'row', 'column', 'well'
     }
 
     def __init__(self, metadata=None):
         '''
-        Initialize an instance of class Metadata.
+        Initialize an instance of class ImageMetadata.
 
         Parameters
         ----------
-        metadata: Dict[str, int or str or tuple]
-            metadata read from a *.metadata* JSON file
+        metadata: dict
+            metadata for an individual image
         '''
         self.metadata = metadata
         if self.metadata:
             self.set(self.metadata)
 
     @property
-    def cycle(self):
-        '''
-        Returns
-        -------
-        int
-            one-based cycle identifier number
-        '''
-        return self._cycle
-
-    @cycle.setter
-    def cycle(self, value):
-        self._cycle = value
-
-    @property
-    def filename(self):
-        '''
-        Returns
-        -------
-        str
-            name of the corresponding image file
-        '''
-        return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        self._filename = value
-
-    @property
-    def orig_filename(self):
+    def original_filename(self):
         '''
         Returns
         -------
         str
             name of the original image file
         '''
-        return self._orig_filename
+        return self._original_filename
 
-    @orig_filename.setter
-    def orig_filename(self, value):
-        self._orig_filename = value
-
-    @property
-    def series(self):
-        '''
-        Returns
-        -------
-        int
-            identifier number of the series within the original image file
-        '''
-        return self._series
-
-    @series.setter
-    def series(self, value):
-        self._series = value
+    @original_filename.setter
+    def original_filename(self, value):
+        self._original_filename = value
 
     @property
     def name(self):
@@ -96,7 +54,7 @@ class Metadata(object):
         Returns
         -------
         str
-            name of the image (given by the microscope)
+            name of the image
         '''
         return self._name
 
@@ -105,32 +63,91 @@ class Metadata(object):
         self._name = value
 
     @property
-    def dtype(self):
+    def cycle(self):
+        '''
+        Returns
+        -------
+        str
+            name of the corresponding cycle
+        '''
+        return self._cycle
+
+    @cycle.setter
+    def cycle(self, value):
+        self._cycle = value
+
+    @property
+    def cycle_id(self):
+        '''
+        Returns
+        -------
+        str
+            identifier number of the corresponding cycle
+        '''
+        return self._cycle_id
+
+    @cycle_id.setter
+    def cycle_id(self, value):
+        self._cycle_id = value
+
+    @property
+    def original_series(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based index of the image within the original image file
+        '''
+        return self._original_series
+
+    @original_series.setter
+    def original_series(self, value):
+        self._original_series = value
+
+    @property
+    def original_dtype(self):
         '''
         Returns
         -------
         int
             data type of the image pixel array
         '''
-        return self._dtype
+        return self._original_dtype
 
-    @dtype.setter
-    def dtype(self, value):
-        self._dtype = value
+    @original_dtype.setter
+    def original_dtype(self, value):
+        self._original_dtype = value
 
     @property
-    def dimensions(self):
+    def original_dimensions(self):
         '''
         Returns
         -------
         int
-            dimensions of the image pixel array
+            y, x dimensions of the image in pixels
         '''
-        return self._dimensions
+        return self._original_dimensions
 
-    @dimensions.setter
-    def dimensions(self, value):
-        self._dimensions = value
+    @original_dimensions.setter
+    def original_dimensions(self, value):
+        self._original_dimensions = value
+
+    # TODO: Unfortunately, "PhysicalSize" attributes are not implemented
+    # in python-bioformats
+
+    # @property
+    # def physical_dimensions(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     int
+    #         y, x dimensions of the image in micrometer
+    #     '''
+    #     return self._physical_dimensions
+
+    # @physical_dimensions.setter
+    # def physical_dimensions(self, value):
+    #     self._physical_dimensions = value
 
     @property
     def site(self):
@@ -190,7 +207,7 @@ class Metadata(object):
 
     @column.setter
     def column(self, value):
-        self._row = value
+        self._column = value
 
     @property
     def grid_coordinates(self):
@@ -208,25 +225,14 @@ class Metadata(object):
         '''
         Returns
         -------
-        Tuple[int] or None
-            one-based row, column indices of the well in the plate
+        str
+            well identifier string, e.g. "A01"
         '''
         return self._well
 
     @well.setter
     def well(self, value):
         self._well = value
-
-    @property
-    def plate_coordinates(self):
-        '''
-        Returns
-        -------
-        Tuple[int]
-            zero-based row, column indices of the well in the plate
-        '''
-        self._well_coordinates = (self.well[0]-1, self.well[1]-1)
-        return self._well_coordinates
 
     @abstractmethod
     def serialize(self):
@@ -235,59 +241,44 @@ class Metadata(object):
         '''
         pass
 
+    @staticmethod
     @abstractmethod
-    def set(self, metadata):
+    def set(metadata):
         '''
         Set attributes from key-value pairs in dictionary.
         '''
         pass
 
 
-class ChannelMetadata(Metadata):
+class ChannelImageMetadata(ImageMetadata):
 
     '''
     Class for metadata specific to channel images.
     '''
 
-    required_metadata = Metadata.required_metadata.union({
-                            'channel', 'channel_name'
-    })
+    persistent = ImageMetadata.persistent.union({'channel', 'original_planes'})
 
     def __init__(self, metadata=None):
         '''
-        Initialize an instance of class ChannelMetadata.
+        Initialize an instance of class ChannelImageMetadata.
 
         Parameters
         ----------
         metadata: Dict[str, int or str]
             image metadata read from the *.metadata* JSON file
         '''
-        super(ChannelMetadata, self).__init__(metadata)
+        super(ChannelImageMetadata, self).__init__(metadata)
         self.metadata = metadata
         if self.metadata:
             self.set(self.metadata)
-
-    @property
-    def channel_name(self):
-        '''
-        Returns
-        -------
-        str
-            name given to the channel
-        '''
-        return self._channel_name
-
-    @channel_name.setter
-    def channel_name(self, value):
-        self._channel_name = value
 
     @property
     def channel(self):
         '''
         Returns
         -------
-        int
-            one-based channel identifier number
+        str
+            name given to the channel
         '''
         return self._channel
 
@@ -296,27 +287,28 @@ class ChannelMetadata(Metadata):
         self._channel = value
 
     @property
-    def channel_planes(self):
+    def original_planes(self):
         '''
         Returns
         -------
-        List[]
+        List[int]
+            zero-based index of channel planes within the image element
         '''
-        return self._channel_planes
+        return self._original_planes
 
-    @channel_planes.setter
-    def channel_planes(self, value):
-        self._channel_planes = value
+    @original_planes.setter
+    def original_planes(self, value):
+        self._original_planes = value
 
     def serialize(self):
         '''
-        Serialize persistent metadata attributes to key-value pairs.
+        Serialize attributes to key-value pairs.
 
         Returns
         -------
-        Dict[str, str or int or tuple]
+        dict
             metadata as key-value pairs
-        
+
         Raises
         ------
         AttributeError
@@ -324,20 +316,17 @@ class ChannelMetadata(Metadata):
         '''
         serialized_metadata = dict()
         for a in dir(self):
-            if a in ChannelMetadata.persistent_metadata:
-                if not hasattr(self, a):
-                    raise AttributeError('Object "%s" has no attribute "%s"'
-                                         % (self.__name__, a))
+            if a in ChannelImageMetadata.persistent:
                 serialized_metadata[a] = getattr(self, a)
         return serialized_metadata
 
     def set(self, metadata):
         '''
-        Set attributes based on values in dictionary.
+        Set attributes based on key-value pairs in dictionary.
 
         Parameters
         ----------
-        metadata: Dict[str, str or int or tuple]
+        metadata: dict
             metadata as key-value pairs
 
         Raises
@@ -347,38 +336,38 @@ class ChannelMetadata(Metadata):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in ChannelMetadata.persistent_metadata
+        missing_keys = [a for a in ChannelImageMetadata.persistent
                         if a not in metadata.keys()]
         if len(missing_keys) > 0:
             raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
-        for k, v in metadata:
-            if k not in ChannelMetadata.persistent_metadata:
-                raise AttributeError('Object "%s" has no attribute "%s"'
-                                     % (self.__name__, k))
+        for k, v in metadata.iteritems():
+            if k not in ChannelImageMetadata.persistent:
+                raise AttributeError('Class "%s" has no attribute "%s"'
+                                     % (ChannelImageMetadata.__class__.__name__, k))
             setattr(self, k, v)
 
 
-class SegmentationMetadata(Metadata):
+class SegmentationImageMetadata(ImageMetadata):
 
     '''
     Class for metadata specific to segmentation images.
     '''
 
-    required_metadata = Metadata.required_metadata.union({'objects'})
+    persistent = ImageMetadata.persistent.union({'objects'})
 
     def __init__(self, metadata=None):
         '''
-        Initialize an instance of class SegmentationMetadata.
+        Initialize an instance of class SegmentationImageMetadata.
 
         Parameters
         ----------
         metadata: Dict[str, int or str]
             image metadata read from the *.metadata* JSON file
         '''
-        super(SegmentationMetadata, self).__init__(metadata)
+        super(SegmentationImageMetadata, self).__init__(metadata)
         self.metadata = metadata
         if self.metadata:
-            self._objects = self.metadata['objects']
+            self.set(self.metadata)
 
     @property
     def objects(self):
@@ -402,7 +391,7 @@ class SegmentationMetadata(Metadata):
         Returns
         -------
         Dict[str, str or int or tuple]
-            required metadata as key-value pairs
+            metadata as key-value pairs
         
         Raises
         ------
@@ -411,7 +400,7 @@ class SegmentationMetadata(Metadata):
         '''
         serialized_metadata = dict()
         for a in dir(self):
-            if a in SegmentationMetadata.required_metadata:
+            if a in SegmentationImageMetadata.persistent:
                 if not hasattr(self, a):
                     raise AttributeError('Object "%s" has no attribute "%s"'
                                          % (self.__name__, a))
@@ -434,12 +423,68 @@ class SegmentationMetadata(Metadata):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in SegmentationMetadata.required_metadata
+        missing_keys = [a for a in SegmentationImageMetadata.persistent
                         if a not in metadata.keys()]
         if len(missing_keys) > 0:
             raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in metadata:
-            if k not in SegmentationMetadata.required_metadata:
+            if k not in SegmentationImageMetadata.persistent:
                 raise AttributeError('Object "%s" has no attribute "%s"'
                                      % (self.__name__, k))
             setattr(self, k, v)
+
+
+class IllumstatsImageMetadata(object):
+
+    '''
+    Class for metadata specific to illumination statistics images.
+    '''
+
+    persistent = {'channel', 'cycle'}
+
+    def __init__(self):
+        '''
+        Initialize an instance of class IllumstatsMetadata.
+        '''
+
+    @property
+    def channel(self):
+        '''
+        Returns
+        -------
+        str
+            name of the corresponding channel
+        '''
+        return self._channel
+
+    @channel.setter
+    def channel(self, value):
+        self._channel = value
+
+    @property
+    def cycle(self):
+        '''
+        Returns
+        -------
+        str
+            name of the corresponding cycle
+        '''
+        return self._cycle
+
+    @cycle.setter
+    def cycle(self, value):
+        self._cycle = value
+
+    @property
+    def filename(self):
+        '''
+        Returns
+        -------
+        str
+            name of the statistics file
+        '''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value

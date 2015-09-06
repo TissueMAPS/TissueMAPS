@@ -64,7 +64,7 @@ def save_image_png_numpy(im, filename, bitdepth=16):
         w.write(f, im.astype(np.uint16))
 
 
-def save_image(im, filename):
+def save_image_png(im, filename):
     '''
     Save image to file in 16-bit PNG format.
 
@@ -149,8 +149,12 @@ def vips_image_to_np_array(vips_image):
     }
     nptype = vips_to_nptype_format[vips_image.get_format()]
     mem_string = vips_image.write_to_memory()
-    array = np.fromstring(mem_string, dtype=nptype).reshape(vips_image.width,
-                                                            vips_image.height)
+    if vips_image.bands > 1:
+        array = np.fromstring(mem_string, dtype=nptype).reshape(
+                    vips_image.width, vips_image.height, vips_image.bands)
+    else:
+        array = np.fromstring(mem_string, dtype=nptype).reshape(
+                    vips_image.width, vips_image.height)
     # TODO: 3D RGB images
     return array
 
