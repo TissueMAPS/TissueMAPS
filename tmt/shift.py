@@ -127,17 +127,17 @@ class ShiftDescription(object):
     persistent = {
         'x_shift', 'y_shift', 'lower_overhang', 'upper_overhang',
         'left_overhang', 'right_overhang', 'dont_shift', 'cycle', 'filename',
-        'well', 'site'
+        'site'
     }
 
-    def __init__(self, description):
+    def __init__(self, description=None):
         '''
         Initialize an instance of class ShiftDescription.
 
         Parameters
         ----------
         description: Dict[str, int or str or bool]
-            content of the shift description file
+            shift description for an image acquisition site
 
         See also
         --------
@@ -258,8 +258,8 @@ class ShiftDescription(object):
         '''
         Returns
         -------
-        int
-            one-based cycle identifier number
+        str
+            name of the corresponding cycle
         '''
         return self._cycle
 
@@ -286,7 +286,7 @@ class ShiftDescription(object):
         '''
         Returns
         -------
-        int
+        str
             well identifier string, e.g. "A01"
         '''
         return self._well
@@ -325,7 +325,7 @@ class ShiftDescription(object):
         '''
         serialized_description = dict()
         for a in dir(self):
-            if a in ShiftDescriptor.persistent:
+            if a in ShiftDescription.persistent:
                 serialized_description[a] = getattr(self, a)
         return serialized_description
 
@@ -345,7 +345,7 @@ class ShiftDescription(object):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in ShiftDescriptor.persistent_metadata
+        missing_keys = [a for a in ShiftDescription.persistent_metadata
                         if a not in description.keys()]
         if len(missing_keys) > 0:
             raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
