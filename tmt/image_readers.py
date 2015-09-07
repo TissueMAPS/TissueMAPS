@@ -1,3 +1,4 @@
+import os
 import cv2
 from gi.repository import Vips
 import sys
@@ -60,6 +61,8 @@ class BioformatsImageReader(ImageReader):
 
         Raises
         ------
+        OSError
+            when `filename` does not exist
         NotSupportedError
             when the file format is not supported by the reader
 
@@ -68,6 +71,8 @@ class BioformatsImageReader(ImageReader):
         numpy.ndarray
             pixel array
         '''
+        if not os.path.exists(filename):
+            raise OSError('Image file does not exist: %s' % filename)
         image = bioformats.load_image(filename, rescale=False)
         return image
 
@@ -94,9 +99,13 @@ class BioformatsImageReader(ImageReader):
 
         Raises
         ------
+        OSError
+            when `filename` does not exist
         NotSupportedError
             when the file format is not supported by the reader
         '''
+        if not os.path.exists(filename):
+            raise OSError('Image file does not exist: %s' % filename)
         image = bioformats.load_image(filename, rescale=False,
                                       series=series, index=plane)
         return image
@@ -143,7 +152,14 @@ class OpencvImageReader(ImageReader):
         -------
         numpy.array
             image pixel array
+
+        Raises
+        ------
+        OSError
+            when `filename` does not exist
         '''
+        if not os.path.exists(filename):
+            raise OSError('Image file does not exist: %s' % filename)
         image = cv2.imread(filename, cv2.IMREAD_UNCHANGED)
         return image
 
@@ -187,7 +203,14 @@ class VipsImageReader(ImageReader):
         -------
         Vips.Image
             image pixel array
+
+        Raises
+        ------
+        OSError
+            when `filename` does not exist
         '''
+        if not os.path.exists(filename):
+            raise OSError('Image file does not exist: %s' % filename)
         image = Vips.Image.new_from_file(filename)
         return image
 
