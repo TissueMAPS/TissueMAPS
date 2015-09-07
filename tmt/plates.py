@@ -11,7 +11,7 @@ from .cycle import Cycle
 
 class WellPlate(Cycle):
 
-    def __init__(self, cycle_dir, cfg, n_wells):
+    def __init__(self, cycle_dir, cfg, plate_format):
         '''
         Initialize an instance of class WellPlate.
 
@@ -21,13 +21,13 @@ class WellPlate(Cycle):
             absolute path to the cycle directory
         cfg: Dict[str, str]
             configuration settings
-        n_wells: int
+        plate_format: int
             number of wells in the plate (supported: 96 or 384)
         '''
         super(WellPlate, self).__init__(cycle_dir, cfg)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
-        self.n_wells = n_wells
+        self.plate_format = plate_format
 
     @property
     def dimensions(self):
@@ -37,9 +37,9 @@ class WellPlate(Cycle):
         Tuple[int]
             total number of rows and columns in the plate
         '''
-        if self.n_wells == 96:
+        if self.plate_format == 96:
             self._dimensions = (8, 12)
-        elif self.n_wells == 384:
+        elif self.plate_format == 384:
             self._dimensions = (16, 24)
         return self._dimensions
 
