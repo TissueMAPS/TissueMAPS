@@ -155,7 +155,8 @@ class ImageMetadata(object):
         Returns
         -------
         int
-            one-based unique position index
+            one-based unique position identifier, sorted row-wise over all
+            image acquisition sites
 
         Note
         ----
