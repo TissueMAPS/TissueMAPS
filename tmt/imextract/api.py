@@ -161,5 +161,9 @@ class ImageExtractor(ClusterRoutine):
                 filename = batch['outputs'][i]
                 imageutils.save_image_png(img, filename)
 
-    def collect_job_output(self, joblist):
+    def collect_job_output(self, joblist, **kwargs):
+        pass
+
+    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
+                         **kwargs):
         pass

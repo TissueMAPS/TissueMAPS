@@ -143,9 +143,6 @@ class MetadataConverter(ClusterRoutine):
                     meta, self.image_file_format_string)
         self.write_metadata_to_file(meta)
 
-    def collect_job_output(self, joblist):
-        pass
-
     @property
     def log_dir(self):
         '''
@@ -179,3 +176,10 @@ class MetadataConverter(ClusterRoutine):
             command += ['-f', self.file_format]
         command += ['run', '-j', str(job_id), self.cycle.cycle_dir]
         return command
+
+    def collect_job_output(self, joblist, **kwargs):
+        pass
+
+    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
+                         **kwargs):
+        pass

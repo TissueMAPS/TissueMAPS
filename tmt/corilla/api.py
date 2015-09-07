@@ -59,23 +59,15 @@ class IllumstatsCalculator(ClusterRoutine):
                                      'log_%s' % self.prog_name)
         return self._log_dir
 
-    def create_joblist(self, batch_size=None, cfg_file=None):
+    def create_joblist(self, **kwargs):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
 
         Parameters
         ----------
-        batch_size: int, optional
-            number of files that should be processed together as one job
-        cfg_file: str, optional
-            absolute path to custom configuration file
-
-        Note
-        ----
-        Argument `batch_size` is not used. The number of batches is fixed to
-        the number of channels, because all images belonging to a channel have
-        to be processed together.
+        **kwargs: dict
+            empty - no additional arguments
         '''
         image_metadata = self.cycle.image_metadata
         channels = list(set([md.channel for md in image_metadata]))
@@ -86,7 +78,6 @@ class IllumstatsCalculator(ClusterRoutine):
 
         joblist = [{
                 'id': i+1,
-                'cfg_file': cfg_file,
                 'inputs': {
                     'image_files':
                         [os.path.join(self.cycle.image_dir, f) for f in batch]
@@ -120,8 +111,6 @@ class IllumstatsCalculator(ClusterRoutine):
         '''
         job_id = batch['id']
         command = ['corilla']
-        if batch['cfg_file']:
-            command += ['--cfg', batch['cfg_file']]
         command += ['run', '-j', str(job_id), self.cycle.dir]
         return command
 
@@ -148,22 +137,25 @@ class IllumstatsCalculator(ClusterRoutine):
             writer.write_dataset('/metadata/cycle', data=self.cycle.name)
             writer.write_dataset('/metadata/channel', data=batch['channel'])
 
-    def apply_statistics(self, joblist, channels, sites, wells, output_dir):
+    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
+                         **kwargs):
         '''
         Apply calculated statistics to images in order to correct illumination
         artifacts.
 
         Parameters
         ----------
-        channels: List[str]
-            channel names of images that should be corrected
-        sites: List[int]
-            one-based site indices of images that should be corrected
         wells: List[str]
             well identifiers of images that should be corrected
+        sites: List[int]
+            one-based site indices of images that should be corrected
+        channels: List[str]
+            channel names of images that should be corrected
         output_dir: str
             absolute path to directory where the corrected images should be
             stored
+        **kwargs: dict
+            empty - no additional arguments
         '''
         batches = [b for b in joblist if b['channel'] in channels]
         for b in batches:

@@ -144,13 +144,7 @@ class MetadataExtractor(ClusterRoutine):
         ]
         return command
 
-    def run_job(self, batch):
-        '''
-        Java job.
-        '''
-        pass
-
-    def collect_job_output(self, joblist):
+    def collect_job_output(self, joblist, **kwargs):
         '''
         The *showinf* command prints the OME-XML string to standard output.
         GC3Pie redirects the standard output to a log file. Here we copy the
@@ -160,9 +154,24 @@ class MetadataExtractor(ClusterRoutine):
         The extracted metadata is used to create custom metadata, which will be
         subsequently used by TissueMAPS.
 
-        Parameter
+        Parameters
+        ----------
+        joblist: List[dict]
+            job descriptions
+        **kwargs: dict
+            additional variable input arguments as key-value pairs
         '''
         output_files = glob.glob(os.path.join(self.log_dir, '*.out'))
         for i, f in enumerate(output_files):
             shutil.copyfile(f, os.path.join(self.cycle.ome_xml_dir,
                                             self.ome_xml_files[i]))
+
+    def run_job(self, batch):
+        '''
+        Java job.
+        '''
+        pass
+
+    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
+                         **kwargs):
+        pass
