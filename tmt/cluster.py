@@ -114,7 +114,7 @@ class ClusterRoutine(object):
         pass
 
     @abstractmethod
-    def collect_job_output(self, joblist):
+    def collect_job_output(self, joblist, **kwargs):
         '''
         Collect the output of jobs and fuse them if necessary.
 
@@ -122,6 +122,8 @@ class ClusterRoutine(object):
         ----------
         joblist: List[dict]
             job descriptions
+        **kwargs: dict
+            additional variable input arguments as key-value pairs
         '''
         pass
 
@@ -172,6 +174,29 @@ class ClusterRoutine(object):
         ----
         In case there is no shared network available to worker nodes,
         *inputs* are copied to and *outputs* back from the remote cluster.
+        '''
+        pass
+
+    @abstractmethod
+    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
+                         **kwargs):
+        '''
+        Apply the calculated statistics to images.
+
+        Parameters
+        ----------
+        wells: List[str]
+            well identifiers of images that should be processed
+        sites: List[int]
+            one-based site indices of images that should be processed
+        channels: List[str]
+            channel names of images that should be processed
+        output_dir: str
+            absolute path to directory where the processed images should be
+            stored
+        **kwargs: dict
+            additional variable input arguments as key-value pairs:
+            * "illumcorr": correct for illumination artifacts (*bool*)
         '''
         pass
 

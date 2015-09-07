@@ -188,5 +188,3 @@ class Experiment(object):
                                             experiment_dir=self.experiment_dir,
                                             sep=os.path.sep)
         return self._registration_dir
-    
-    

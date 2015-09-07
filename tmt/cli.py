@@ -176,6 +176,11 @@ class CommandLineInterface(object):
         print '.  submit and monitor jobs'
         api.submit_jobs(jobs)
 
+    @property
+    def _variable_apply_args(self):
+        kwargs = dict()
+        return kwargs
+
     def apply(self):
         '''
         Initialize an instance of the API class corresponding to the specific
@@ -186,9 +191,16 @@ class CommandLineInterface(object):
         print '.  read jobist'
         joblist = api.read_joblist()
         print '.  apply statistics'
+        kwargs = self._variable_apply_args
         api.apply_statistics(
-            joblist, self.args.channels, self.args.sites, self.args.wells,
-            self.args.output_dir)
+            joblist, wells=self.args.wells, sites=self.args.sites,
+            channels=self.args.channels, output_dir=self.args.output_dir,
+            **kwargs)
+
+    @property
+    def _variable_collect_args(self):
+        kwargs = dict()
+        return kwargs
 
     def collect(self):
         '''
@@ -199,7 +211,11 @@ class CommandLineInterface(object):
         api = self._api_instance
         print '.  read jobist'
         joblist = api.read_joblist()
-        api.collect_job_output(joblist)
+        kwargs = self._variable_collect_args
+        api.collect_job_output(joblist, **kwargs)
+
+    def workflow(self):
+        print 'TODO'
 
     @staticmethod
     def get_parser_and_subparsers(subparser_names=['run', 'joblist', 'submit'],
@@ -312,6 +328,14 @@ class CommandLineInterface(object):
             collect_parser.add_argument(
                 '-o', '--output_dir', type=str,
                 help='path to output directory')
+            collect_parser.add_argument(directory, help=directory_help_message)
+
+        if 'workflow' in subparser_names:
+            workflow_parser = subparsers.add_parser('workflow')
+            workflow_parser.description = '''
+                Create joblist, submit jobs and collect outputs.
+            '''
+            # TODO: how to set default parameters?
             collect_parser.add_argument(directory, help=directory_help_message)
 
         return (parser, subparsers)
