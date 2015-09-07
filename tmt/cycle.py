@@ -103,9 +103,9 @@ class Cycle(object):
         m = re.search(regexp, self.name)
         if not m:
             raise RegexpError('Can\'t determine cycle id number from '
-                             'subexperiment folder "%s" '
-                             'using provided format "%s".\n'
-                             'Check your configuration settings!'
+                              'subexperiment folder "%s" '
+                              'using provided format "%s".\n'
+                              'Check your configuration settings!'
                               % (self.name, self.cfg['CYCLE_DIR']))
         self._id = int(m.group('cycle_id'))
         return self._id
