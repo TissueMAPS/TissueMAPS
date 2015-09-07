@@ -1,9 +1,9 @@
 import re
 import os
 from natsort import natsorted
-from utils import regex_from_format_string
-from plates import WellPlate
-from plates import Slide
+from . import utils
+from .plates import WellPlate
+from .plates import Slide
 
 
 class Experiment(object):
@@ -29,8 +29,8 @@ class Experiment(object):
     the directory tree could be structured as follows::
 
         myExperiment           # experiment folder
-            myExperiment_1     # subexperiment folder of cycle #1
-            myExperiment_2     # subexperiment folder of cycle #2
+            myExperiment-1     # subexperiment folder of cycle #1
+            myExperiment-2     # subexperiment folder of cycle #2
             ...
 
     See also
@@ -48,15 +48,37 @@ class Experiment(object):
         ----------
         experiment_dir: str
             absolute path to experiment folder
-        cfg: Configuration
-            configuration settings provided via config file
-
-        See also
-        --------
-        `configuration.Configuration`_
+        cfg: dict
+            configuration settings
         '''
         self.experiment_dir = os.path.abspath(experiment_dir)
         self.cfg = cfg
+
+    @property
+    def user_cfg_file(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to experiment-specific user configuration file
+        '''
+        self._user_cfg_file = self.cfg['USER_CFG_FILE'].format(
+                                            experiment_dir=self.dir,
+                                            experiment=self.name,
+                                            sep=os.path.sep)
+        return self._user_cfg_file
+
+    @property
+    def user_cfg(self):
+        '''
+        Returns
+        -------
+        dict
+            experiment-specific configuration settings provided by the user
+        '''
+        # TODO: shall we do this via the database instead?
+        self._user_cfg = utils.read_yaml(self.user_cfg_file)
+        return self._user_cfg
 
     @property
     def name(self):
@@ -80,9 +102,8 @@ class Experiment(object):
         return self.experiment_dir
 
     def _is_cycle(self, folder):
-        regexp = regex_from_format_string(self.cfg['CYCLE_DIR'])
-        return(re.match(regexp, folder)
-               and os.path.isdir(os.path.join(self.experiment_dir, folder)))
+        regexp = utils.regex_from_format_string(self.cfg['CYCLE_DIR'])
+        return True if re.match(regexp, folder) else False
 
     @property
     def cycles(self):
@@ -98,18 +119,17 @@ class Experiment(object):
         `plates.Slide`_
         `tmt.cfg`_
         '''
-        subexperiment_folders = os.listdir(self.experiment_dir)
-        # sort subexperiment folders
-        subexperiment_folders = natsorted(subexperiment_folders)
-        cycle_dirs = [os.path.join(self.experiment_folder, f)
-                      for f in subexperiment_folders if self._is_cycle(f)]
+        cycle_dirs = [os.path.join(self.dir, f) for f in os.listdir(self.dir)
+                      if os.path.isdir(os.path.join(self.dir, f))
+                      and self._is_cycle(f)]
+        cycle_dirs = natsorted(cycle_dirs)
         if not cycle_dirs:
             # in this case, the *cycle* directory is the same as the
             # the experiment directory
             cycle_dirs = self.experiment_dir
-        if self.cfg['WELLPLATE_FORMAT']:  # TODO
-            n_wells = self.cfg['NUMBER_OF_WELLS']
-            cycles = [WellPlate(c, self.cfg, n_wells) for c in cycle_dirs]
+        if self.user_cfg['WELLPLATE_FORMAT']:
+            plate_format = self.user_cfg['NUMBER_OF_WELLS']
+            cycles = [WellPlate(c, self.cfg, plate_format) for c in cycle_dirs]
         else:
             cycles = [Slide(c, self.cfg) for c in cycle_dirs]
         self._cycles = cycles
@@ -168,4 +188,5 @@ class Experiment(object):
                                             experiment_dir=self.experiment_dir,
                                             sep=os.path.sep)
         return self._registration_dir
+    
     
