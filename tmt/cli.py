@@ -8,7 +8,6 @@ from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
 from . import cfg
-from . import utils
 
 
 def command_line_call(parser):
@@ -30,9 +29,9 @@ def command_line_call(parser):
             parser.print_help()
     except Exception as error:
         sys.stdout.write('😞  Failed!\n')
-        sys.stdout.write('Error message: "%s"\n' % str(error))
+        sys.stderr.write('Error message: "%s"\n' % str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):
-            sys.stdout.write(tb)
+            sys.stderr.write(tb)
 
 
 class CommandLineInterface(object):
@@ -65,10 +64,6 @@ class CommandLineInterface(object):
         self.args = args
         self.print_logo()
 
-    @staticmethod
-    def _read_cfg_file(filename):
-        return utils.read_yaml(filename)
-
     @property
     def cfg(self):
         '''
@@ -77,10 +72,7 @@ class CommandLineInterface(object):
         Dict[str, str]
             configuration settings
         '''
-        if self.args.cfg_file:
-            self._cfg = self.read_cfg_file(self.args.cfg_file)
-        else:
-            self._cfg = cfg
+        self._cfg = cfg
         return self._cfg
 
     @abstractproperty
@@ -120,6 +112,17 @@ class CommandLineInterface(object):
     def print_logo():
         pass
 
+    @property
+    def _variable_joblist_args(self):
+        # Since "joblist" requires more flexibility with respect to the number
+        # of parsed arguments, we use a separate property, which can be
+        # overwritten by subclasses to handle custom use cases
+        kwargs = dict()
+        # One example, which is used by several programs:
+        if hasattr(self.args, 'batch_size'):
+            kwargs['batch_size'] = self.args.batch_size
+        return kwargs
+
     def joblist(self):
         '''
         Initialize an instance of the API class corresponding to the specific
@@ -128,11 +131,7 @@ class CommandLineInterface(object):
         print 'JOBLIST'
         api = self._api_instance
         print '.  create joblist'
-        kwargs = dict()
-        kwargs['cfg_file'] = self.args.cfg_file
-        if hasattr(self.args, 'batch_size'):
-            kwargs['batch_size'] = self.args.batch_size
-        # TODO: parse all args
+        kwargs = self._variable_joblist_args
         joblist = api.create_joblist(**kwargs)
         if self.args.print_joblist:
             print '.  joblist:'
@@ -231,9 +230,6 @@ class CommandLineInterface(object):
         parser = argparse.ArgumentParser()
         parser.add_argument(
             '-v', '--version', action='version')
-        parser.add_argument(
-            '--cfg', dest='cfg_file', type=str,
-            help='path to a custom configuration file')
 
         if not subparser_names:
             raise ValueError('At least one subparser has to specified')
@@ -269,7 +265,10 @@ class CommandLineInterface(object):
             joblist_parser.add_argument(
                 '--backup', action='store_true',
                 help='create a backup of the output of a previous submission')
-            # NOTE: `batch_size` can be parsed as an additional argument
+            # NOTE: when additional arguments are provided, the property
+            # `_variable_joblist_args` has to be overwritten
+            # (with the exception of "batch_size", which is already added to
+            # as a variable input argument by default)
             joblist_parser.add_argument(directory, help=directory_help_message)
 
         if 'submit' in subparser_names:

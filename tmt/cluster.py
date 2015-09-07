@@ -97,6 +97,7 @@ class ClusterRoutine(object):
 
     @staticmethod
     def _create_batches(li, n):
+        # Create a list of lists from a list, where each sublist has length n
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
 
@@ -144,31 +145,33 @@ class ClusterRoutine(object):
         pass
 
     @abstractmethod
-    def create_joblist(self, batch_size=None, cfg_file=None):
+    def create_joblist(self, **kwargs):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
 
         Each batch (element of the joblist) must provide the following
         key-value pairs:
-        * "id": one-based job indentifier number (int)
-        * "cfg_file": absolute path to the configuration file (str or None)
+        * "id": one-based job indentifier number (*int*)
         * "inputs": absolute paths to input files required for the job
-          (List[str] or Dict[str, List[str]])
+          (List[*str*] or Dict[*str*, List[*str*]])
         * "outputs": absolute paths to output files required for the job
-          (List[str] or Dict[str, List[str]])
+          (List[*str*] or Dict[*str*, List[*str*]])
 
         Parameters
         ----------
-        batch_size: int, optional
-            number of files that should be processed together as one job
-        cfg_file: str, optional
-            absolute path to custom configuration file
+        **kwargs: dict
+            additional variable input arguments as key-value pairs
 
         Returns
         -------
         List[dict]
             job descriptions
+
+        Note
+        ----
+        In case there is no shared network available to worker nodes,
+        *inputs* are copied to and *outputs* back from the remote cluster.
         '''
         pass
 
@@ -351,7 +354,6 @@ class ClusterRoutine(object):
                     outputs=outputs,
                     output_dir=self.log_dir,
                     jobname=jobname,
-                    # write STDOUT and STDERR combined into a single log file
                     stdout=log_out_file,
                     stderr=log_err_file,
                     # activate the virtual environment
