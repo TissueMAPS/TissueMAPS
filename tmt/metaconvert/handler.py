@@ -543,14 +543,17 @@ class MetadataHandler(object):
             positions = {i: md.position for i, md in enumerate(metadata)}
             all_positions.append(positions)
 
+        # All positional indices are one-based!
         for p in all_positions:
             index, positions = p.keys(), p.values()
             coordinates = self._calculate_coordinates(positions)
             for i in xrange(len(index)):
-                # All positional indices are one-based!
-                complemented_metadata[index[i]].site = i+1  # TODO: sorting?
                 complemented_metadata[index[i]].row = coordinates[i][0]
                 complemented_metadata[index[i]].column = coordinates[i][1]
+        pos = [(md.well, md.row, md.column) for md in complemented_metadata]
+        sites = [sorted(list(set(pos))).index(s) for s in pos]
+        for i, s in enumerate(sites):
+            complemented_metadata[i].site = s+1
 
         return complemented_metadata
 

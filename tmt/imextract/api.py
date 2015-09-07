@@ -86,26 +86,24 @@ class ImageExtractor(ClusterRoutine):
                                      'log_{name}'.format(name=self.prog_name))
         return self._log_dir
 
-    def create_joblist(self, batch_size=None, cfg_file=None):
+    def create_joblist(self, **kwargs):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
 
         Parameters
         ----------
-        batch_size: int, optional
-            number of files that should be processed together as one job
-        cfg_file: str, optional
-            absolute path to custom configuration file
+        **kwargs: dict
+            additional input arguments as key-value pairs:
+            * "batch_size": number of images per job (*int*)
         '''
-        md_batches = self._create_batches(self.metadata, batch_size)
+        md_batches = self._create_batches(self.metadata, kwargs['batch_size'])
         joblist = [{
                 'id': i+1,
-                'cfg_file': cfg_file,
                 'inputs': [os.path.join(self.cycle.image_upload_dir,
                                         md.original_filename) for md in batch],
                 'outputs': [os.path.join(self.cycle.image_dir,
-                                         md.filename) for md in batch],
+                                         md.name) for md in batch],
                 'metadata': [md.serialize() for md in batch]
 
             } for i, batch in enumerate(md_batches)]
@@ -131,8 +129,6 @@ class ImageExtractor(ClusterRoutine):
         '''
         job_id = batch['id']
         command = ['imextract']
-        if batch['cfg_file']:
-            command += ['--cfg', batch['cfg_file']]
         command += ['run', '--job', str(job_id), self.cycle.cycle_dir]
         return command
 
@@ -164,3 +160,6 @@ class ImageExtractor(ClusterRoutine):
                 # Write plane (2D single-channel image) to file
                 filename = batch['outputs'][i]
                 imageutils.save_image_png(img, filename)
+
+    def collect_job_output(self, joblist):
+        pass

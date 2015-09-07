@@ -34,13 +34,6 @@ class MetaExtract(CommandLineInterface):
         cycle = Cycle(self.args.cycle_dir, self.cfg)
         return MetadataExtractor(cycle=cycle, prog_name=self.name)
 
-    def collect(self):
-        print 'COLLECT'
-        api = self._api_instance
-        print('.  copy extracted OMEXML metadata from standard output '
-              'log files to .ome.xml files')
-        api.collect_extracted_metadata()
-
     @staticmethod
     def call(args):
         '''

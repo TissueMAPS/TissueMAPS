@@ -64,6 +64,8 @@ class MetadataConverter(ClusterRoutine):
                 raise NotSupportedError('Additional metadata files are not '
                                         'supported for the provided format')
         self.image_file_format_string = image_file_format_string
+        if not os.path.exists(self.cycle.metadata_dir):
+            os.mkdir(self.cycle.metadata_dir)
 
     def write_metadata_to_file(self, metadata):
         '''
@@ -81,40 +83,32 @@ class MetadataConverter(ClusterRoutine):
                                 self.cycle.image_metadata_file)
         utils.write_json(filename, data)
 
-    def create_joblist(self, batch_size=None, cfg_file=None):
+    def create_joblist(self, **kwargs):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
 
         Parameters
         ----------
-        batch_size: int, optional
-            number of files that should be processed together as one job
-        cfg_file: str, optional
-            absolute path to custom configuration file
-
-        Note
-        ----
-        Argument `batch_size` is not used. There will only be one batch,
-        because all files have to be processed together.
+        **kwargs: dict
+            empty - no additional arguments
         '''
         joblist = [{
-                'id': 1,
-                'cfg_file': cfg_file,
-                'inputs': {
-                    'uploaded_image_files':
-                        glob.glob(self.cycle.image_upload_dir),
-                    'uploaded_additional_files':
-                        glob.glob(self.cycle.additional_upload_dir),
-                    'ome_xml_files':
-                        glob.glob(self.cycle.ome_xml_dir)
-                },
-                'outputs': {
-                    'metadata_file':
-                        os.path.join(self.cycle.metadata_dir,
-                                     self.cycle.image_metadata_file)
-                }
-            }]
+            'id': 1,
+            'inputs': {
+                'uploaded_image_files':
+                    glob.glob(os.path.join(self.cycle.image_upload_dir, '*')),
+                'uploaded_additional_files':
+                    glob.glob(os.path.join(self.cycle.additional_upload_dir, '*')),
+                'ome_xml_files':
+                    glob.glob(os.path.join(self.cycle.ome_xml_dir, '*'))
+            },
+            'outputs': {
+                'metadata_file':
+                    os.path.join(self.cycle.metadata_dir,
+                                 self.cycle.image_metadata_file)
+            }
+        }]
         return joblist
 
     def run_job(self, batch):
@@ -149,6 +143,9 @@ class MetadataConverter(ClusterRoutine):
                     meta, self.image_file_format_string)
         self.write_metadata_to_file(meta)
 
+    def collect_job_output(self, joblist):
+        pass
+
     @property
     def log_dir(self):
         '''
@@ -178,8 +175,6 @@ class MetadataConverter(ClusterRoutine):
         '''
         job_id = batch['id']
         command = ['metaconvert']
-        if batch['cfg_file']:
-            command += ['--cfg', batch['cfg_file']]
         if self.file_format:
             command += ['-f', self.file_format]
         command += ['run', '-j', str(job_id), self.cycle.cycle_dir]

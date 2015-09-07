@@ -34,10 +34,6 @@ class MetadataExtractor(ClusterRoutine):
             configuration of GC3Pie logger; either "debug", "info", "warning",
             "error" or "critical" (defaults to ``"critical"``)
 
-        Note
-        ----
-        `output_dir` will be created if it doesn't exist.
-
         See also
         --------
         `tmt.cfg`_
@@ -89,32 +85,24 @@ class MetadataExtractor(ClusterRoutine):
             self._ome_xml_files.append(filename)
         return self._ome_xml_files
 
-    def create_joblist(self, batch_size=None, cfg_file=None):
+    def create_joblist(self, **kwargs):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
 
         Parameters
         ----------
-        batch_size: int, optional
-            number of files that should be processed together as one job
-        cfg_file: str, optional
+        cfg_file: str
             absolute path to custom configuration file
-
-        Note
-        ----
-        Argument `batch_size` will be ignored.
-        There will be one batch per image file.
+        **kwargs: dict
+            empty - no additional arguments
         '''
-        if batch_size is not None:
-            print 'WARNING: "batch_size" argument is ignored'
         input_files = [os.path.join(self.cycle.image_upload_dir, f)
                        for f in self.image_files]
         output_files = [os.path.join(self.cycle.ome_xml_dir, f)
                         for f in self.ome_xml_files]
         joblist = [{
                 'id': i+1,
-                'cfg_file': cfg_file,
                 'inputs': [input_files[i]],
                 'outputs': [output_files[i]]
             } for i in xrange(len(input_files))]
