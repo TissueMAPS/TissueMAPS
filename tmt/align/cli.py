@@ -1,14 +1,14 @@
 from . import logo
 from . import __version__
-from .api import IllumstatsCalculator
+from .api import ImageRegistration
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
 
-class Corilla(CommandLineInterface):
+class Align(CommandLineInterface):
 
     def __init__(self, args):
-        super(Corilla, self).__init__(args)
+        super(Align, self).__init__(args)
         self.args = args
 
     @staticmethod
@@ -28,10 +28,24 @@ class Corilla(CommandLineInterface):
     @property
     def _api_instance(self):
         experiment = Experiment(self.args.experiment_dir, self.cfg)
-        return IllumstatsCalculator(
+        return ImageRegistration(
                     experiment=experiment,
-                    stats_file_format_string=self.cfg['STATS_FILE'],
+                    shift_file_format_string=self.cfg['SHIFT_FILE'],
                     prog_name=self.name)
+
+    @property
+    def _variable_joblist_args(self):
+        kwargs = dict()
+        kwargs['batch_size'] = self.args.batch_size
+        kwargs['ref_cycle'] = self.args.ref_cycle
+        kwargs['ref_channel'] = self.args.ref_channel
+        return kwargs
+
+    @property
+    def _variable_collect_args(self):
+        kwargs = dict()
+        kwargs['max_shift'] = self.args.max_shift
+        return kwargs
 
     @staticmethod
     def call(args):
@@ -46,7 +60,7 @@ class Corilla(CommandLineInterface):
 
         See also
         --------
-        `tmt.corilla.argparser`_
+        `tmt.align.argparser`_
         '''
-        cli = Corilla(args)
+        cli = Align(args)
         getattr(cli, args.subparser_name)()

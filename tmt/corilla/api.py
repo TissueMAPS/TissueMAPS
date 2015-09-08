@@ -1,5 +1,6 @@
 import os
 import re
+from cached_property import cached_property
 from .stats import OnlineStatistics
 from ..writers import DatasetWriter
 from ..image import ChannelImage
@@ -13,16 +14,16 @@ class IllumstatsCalculator(ClusterRoutine):
     Class for calculating illumination statistics .
     '''
 
-    def __init__(self, cycle, stats_file_format_string, prog_name,
+    def __init__(self, experiment, stats_file_format_string, prog_name,
                  logging_level='critical'):
         '''
         Initialize an instance of class IllumstatsCalculator.
 
         Parameters
         ----------
-        cycle: Cycle
-            cycle object that holds information about the content of the cycle
-            directory
+        experiment: Experiment
+            cycle object that holds information about the content of the
+            experiment directory
         image_file_format_string: str
             format string that specifies how the names of the statistics files
             should be formatted
@@ -38,9 +39,7 @@ class IllumstatsCalculator(ClusterRoutine):
         doesn't exist.
         '''
         super(IllumstatsCalculator, self).__init__(prog_name, logging_level)
-        self.cycle = cycle
-        if not os.path.exists(self.cycle.stats_dir):
-            os.mkdir(self.cycle.stats_dir)
+        self.experiment = experiment
         self.stats_file_format_string = stats_file_format_string
 
     @property
@@ -50,14 +49,21 @@ class IllumstatsCalculator(ClusterRoutine):
         -------
         str
             directory where log files should be stored
-
-        Note
-        ----
-        The directory will be sibling to the output directory.
         '''
-        self._log_dir = os.path.join(os.path.dirname(self.cycle.stats_dir),
+        self._log_dir = os.path.join(self.experiment.dir,
                                      'log_%s' % self.prog_name)
         return self._log_dir
+
+    @cached_property
+    def cycles(self):
+        '''
+        Returns
+        -------
+        List[Wellplate or Slide]
+            cycle objects
+        '''
+        self._cycles = self.experiment.cycles
+        return self._cycles
 
     def create_joblist(self, **kwargs):
         '''
@@ -69,49 +75,41 @@ class IllumstatsCalculator(ClusterRoutine):
         **kwargs: dict
             empty - no additional arguments
         '''
-        image_metadata = self.cycle.image_metadata
-        channels = list(set([md.channel for md in image_metadata]))
-        img_batches = list()
-        for c in channels:
-            image_files = [md.name for md in image_metadata if md.channel == c]
-            img_batches.append(image_files)
+        joblist = list()
+        count = 0
+        for i, cycle in enumerate(self.cycles):
+            channels = list(set([md.channel for md in cycle.image_metadata]))
+            img_batches = list()
+            for c in channels:
+                image_files = [md.name for md in cycle.image_metadata
+                               if md.channel == c]
+                img_batches.append(image_files)
 
-        joblist = [{
-                'id': i+1,
-                'inputs': {
-                    'image_files':
-                        [os.path.join(self.cycle.image_dir, f) for f in batch]
-                },
-                'outputs': {
-                    'stats_file':
-                        os.path.join(self.cycle.stats_dir,
-                                     self.stats_file_format_string.format(
-                                            cycle=self.cycle.name,
-                                            channel=channels[i]))
-                },
-                'channel': channels[i],
-            } for i, batch in enumerate(img_batches)]
+            for j, batch in enumerate(img_batches):
+                count += 1
+                joblist.append({
+                    'id': count,
+                    'inputs': {
+                        'image_files':
+                            [os.path.join(cycle.image_dir, f) for f in batch]
+                    },
+                    'outputs': {
+                        'stats_file':
+                            os.path.join(cycle.stats_dir,
+                                         self.stats_file_format_string.format(
+                                                cycle=cycle.name,
+                                                channel=channels[j]))
+                    },
+                    'channel': channels[j],
+                    'cycle': cycle.name
+                })
         return joblist
 
-    def build_command(self, batch):
-        '''
-        Build a command for GC3Pie submission. For further information on
-        the structure of the command see
-        `subprocess <https://docs.python.org/2/library/subprocess.html>`_.
-
-        Parameter
-        ---------
-        batch: Dict[str, int or List[str]]
-            joblist element
-
-        Returns
-        -------
-        List[str]
-            substrings of the command call
-        '''
+    def _build_command(self, batch):
         job_id = batch['id']
         command = ['corilla']
-        command += ['run', '-j', str(job_id), self.cycle.dir]
+        command.append(self.experiment.dir)
+        command.extend(['run', '-j', str(job_id)])
         return command
 
     def run_job(self, batch):
@@ -158,21 +156,23 @@ class IllumstatsCalculator(ClusterRoutine):
             empty - no additional arguments
         '''
         batches = [b for b in joblist if b['channel'] in channels]
+        # TODO: check whether channel names are valid
         for b in batches:
             image_files = [f for f in b['inputs']['image_files']]
             stats_file = b['outputs']['stats_file']
-            stats = IllumstatsImages.create_from_file(stats_file, 'numpy')
-            # TODO: an additional factory
+            stats = IllumstatsImages.create_from_file(stats_file)
             for f in image_files:
-                metadata = [md for md in self.cycle.image_metadata
-                            if md.name == os.path.basename(f)][0]
+                metadata = [cycle.image_metadata for cycle in self.cycles
+                            if cycle.name == b['cycle']][0]
+                image = [ChannelImage.create_from_file(f, md)
+                         for md in metadata
+                         if md.name == os.path.basename(f)][0]
                 if sites:
-                    if metadata.site not in sites:
+                    if image.metadata.site not in sites:
                         continue
-                if wells and metadata.well:  # may not be a well plate
-                    if metadata.well not in wells:
+                if wells and image.metadata.well:  # may not be a well plate
+                    if image.metadata.well not in wells:
                         continue
-                image = ChannelImage.create_from_file(f, metadata, 'numpy')
                 corrected_image = image.correct(stats.mean, stats.std)
                 suffix = os.path.splitext(image.metadata.name)[1]
                 output_filename = re.sub(r'\%s$' % suffix,
@@ -180,3 +180,6 @@ class IllumstatsCalculator(ClusterRoutine):
                                          image.metadata.name)
                 output_filename = os.path.join(output_dir, output_filename)
                 corrected_image.save_as_png(output_filename)
+
+    def collect_job_output(self, joblist, **kwargs):
+        pass

@@ -2,7 +2,7 @@ from . import logo
 from . import __version__
 from .api import MetadataConverter
 from ..cli import CommandLineInterface
-from ..cycle import Cycle
+from ..experiment import Experiment
 
 
 class MetaConvert(CommandLineInterface):
@@ -39,9 +39,9 @@ class MetaConvert(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        cycle = Cycle(self.args.cycle_dir, self.cfg)
+        experiment = Experiment(self.args.experiment_dir, self.cfg)
         return MetadataConverter(
-                    cycle=cycle,
+                    experiment=experiment,
                     file_format=self.args.format,
                     image_file_format_string=self.cfg['IMAGE_FILE'],
                     prog_name=self.name)

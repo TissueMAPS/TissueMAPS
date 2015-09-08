@@ -143,6 +143,8 @@ class Cycle(object):
         self._image_upload_dir = self.cfg['IMAGE_UPLOAD_DIR'].format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
+        if not os.path.exists(self._image_upload_dir):
+            os.mkdir(self._image_upload_dir)
         return self._image_upload_dir
 
     @property
@@ -157,6 +159,8 @@ class Cycle(object):
         self._additional_upload_dir = self.cfg['ADDITIONAL_UPLOAD_DIR'].format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
+        if not os.path.exists(self._additional_upload_dir):
+            os.mkdir(self._additional_upload_dir)
         return self._additional_upload_dir
 
     @property
@@ -170,7 +174,34 @@ class Cycle(object):
         self._ome_xml_dir = self.cfg['OME_XML_DIR'].format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
+        if not os.path.exists(self._ome_xml_dir):
+            os.mkdir(self._ome_xml_dir)
         return self._ome_xml_dir
+
+    @cached_property
+    def ome_xml_files(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names of XML files in `ome_xml_dir`
+
+        Raises
+        ------
+        OSError
+            when `ome_xml_dir` does not exist or when no XML files are found
+            in `ome_xml_dir`
+        '''
+        if not os.path.exists(self.ome_xml_dir):
+            raise OSError('OMEXML directory does not exist: %s'
+                          % self.image_dir)
+        files = [f for f in os.listdir(self.ome_xml_dir)
+                 if f.endswith('.ome.xml')]
+        files = natsorted(files)
+        if not files:
+            raise OSError('No XML files found in "%s"' % self.ome_xml_dir)
+        self._ome_xml_files = files
+        return self._ome_xml_files
 
     @property
     def metadata_dir(self):
@@ -183,6 +214,8 @@ class Cycle(object):
         self._image_metadata_dir = self.cfg['METADATA_DIR'].format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
+        if not os.path.exists(self._image_metadata_dir):
+            os.mkdir(self._image_metadata_dir)
         return self._image_metadata_dir
 
     @property
@@ -193,9 +226,11 @@ class Cycle(object):
         str
             path to the folder holding the image files
         '''
-        folder = self.cfg['IMAGE_DIR'].format(cycle_dir=self.dir,
-                                              sep=os.path.sep)
-        self._image_dir = folder
+        self._image_dir = self.cfg['IMAGE_DIR'].format(
+                                                cycle_dir=self.dir,
+                                                sep=os.path.sep)
+        if not os.path.exists(self._image_dir):
+            os.mkdir(self._image_dir)
         return self._image_dir
 
     @cached_property
@@ -209,9 +244,8 @@ class Cycle(object):
         Raises
         ------
         OSError
-            when `image_dir` does not exist
-        IOError
-            when no image files are found in `image_dir`
+            when `image_dir` does not exist or when no image files are found
+            in `image_dir`
 
         See also
         --------
@@ -223,7 +257,7 @@ class Cycle(object):
         files = [f for f in os.listdir(self.image_dir) if is_image_file(f)]
         files = natsorted(files)
         if not files:
-            raise IOError('No image files found in "%s"' % self.image_dir)
+            raise OSError('No image files found in "%s"' % self.image_dir)
         self._image_files = files
         return self._image_files
 
@@ -263,9 +297,8 @@ class Cycle(object):
         if not os.path.exists(filename):
             raise OSError('Metadata file "%s" does not exists.' % filename)
         metadata = utils.read_json(filename)
-        self._image_metadata = list()
-        for f in self.image_files:
-            self._image_metadata.append(ChannelImageMetadata(metadata[f]))
+        self._image_metadata = [ChannelImageMetadata(md)
+                                for md in metadata.values()]
         return self._image_metadata
 
     @property
@@ -279,6 +312,8 @@ class Cycle(object):
         self._stats_dir = self.cfg['STATS_DIR'].format(
                                             cycle_dir=self.dir,
                                             sep=os.path.sep)
+        if not os.path.exists(self._stats_dir):
+            os.mkdir(self._stats_dir)
         return self._stats_dir
 
     @cached_property
@@ -292,9 +327,8 @@ class Cycle(object):
         Raises
         ------
         OSError
-            when `stats_dir` does not exist
-        IOError
-            when no illumination statistic files are found in `stats_dir`
+            when `stats_dir` does not exist or when no illumination statistic
+            files are found in `stats_dir`
         '''
         stats_pattern = self.cfg['STATS_FILE'].format(
                                             cycle=self.name,
@@ -307,7 +341,7 @@ class Cycle(object):
                  if re.search(stats_pattern, f)]
         files = natsorted(files)
         if not files:
-            raise IOError('No illumination statistic files found in "%s"'
+            raise OSError('No illumination statistic files found in "%s"'
                           % self.stats_dir)
         self._stats_files = files
         return self._stats_files
@@ -359,6 +393,8 @@ class Cycle(object):
         self._shift_dir = self.cfg['SHIFT_DIR'].format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
+        if not os.path.exists(self._shift_dir):
+            os.mkdir(self._shift_dir)
         return self._shift_dir
 
     @cached_property
@@ -386,10 +422,11 @@ class Cycle(object):
         # there should only be one file
         files = natsorted(files)
         if len(files) == 0:
-            raise ValueError('No shift descriptor file found in "%s" '
-                             'that matches the provided pattern "%s".\n'
-                             'Check your configuration settings!'
-                             % (self.shift_dir, self.cfg['SHIFT_FILE']))
+            raise OSError('''
+                No shift descriptor file found in "%s"
+                that matches the provided pattern "%s".\n
+                Check your configuration settings!
+                ''' % (self.shift_dir, self.cfg['SHIFT_FILE']))
         if len(files) > 1:
             raise ValueError('More than one shift descriptor files found in '
                              '"%s".\n' % self.shift_dir)
@@ -452,11 +489,9 @@ class Cycle(object):
         Raises
         ------
         OSError
-            when cycle is the reference cycle,
-            but `segmentation_dir` does not exist
-        IOError
-            when cycle is the reference cycle,
-            but no image files are found in `segmentation_dir`
+            when cycle is the reference cycle, but `segmentation_dir` does not
+            exist or when cycle is the reference cycle, but no image files are
+            found in `segmentation_dir`
 
         See also
         --------
@@ -470,7 +505,7 @@ class Cycle(object):
                      if is_image_file(f)]
             files = natsorted(files)
             if not files:
-                raise IOError('No supported image files found in "%s"'
+                raise OSError('No supported image files found in "%s"'
                               % self.segmentation_dir)
             self._segmentation_files = files
         else:
@@ -558,36 +593,6 @@ class Cycle(object):
         else:
             self._object_types = set()
         return self._object_types
-
-    @property
-    def data_file(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the HDF5 file holding the complete dataset
-        
-        See also
-        --------
-        `dafu`_
-        '''
-        self._data_filename = self.cfg['DATA_FILE'].format(
-                                            experiment_dir=self.experiment_dir,
-                                            sep=os.path.sep)
-        return self._data_filename
-
-    @property
-    def layers_dir(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the folder holding the layers (pyramids)
-        '''
-        self._layers_dir = self.cfg['LAYERS_DIR'].format(
-                                            experiment_dir=self.experiment_dir,
-                                            sep=os.path.sep)
-        return self._layers_dir
 
     def __str__(self):
         return('experiment "%s" - cycle #%s: "%s"'

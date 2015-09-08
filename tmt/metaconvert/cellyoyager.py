@@ -154,50 +154,35 @@ class CellvoyagerMetadataHandler(MetadataHandler):
 
     formats = {'.mlf', '.mrf'}
 
-    def __init__(self, image_upload_dir, additional_upload_dir, ome_xml_dir,
+    def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
         '''
         Initialize an instance of class MetadataHandler.
 
         Parameters
         ----------
-        image_upload_dir: str
-            directory where image files were uploaded to
-        additional_upload_dir: str
-            directory where additional microscope-specific metadata files
-            may have been uploaded to
-        ome_xml_dir: str
-            directory where OMEXML metadata files were stored upon extraction
-            of metadata from the image files in `image_upload_dir`
+        image_upload_files: List[str]
+            full paths to image files
+        additional_files: List[str]
+            full paths to additional microscope-specific metadata files
+        ome_xml_files: List[str]
+            full paths to the XML files that contain the extracted OMEXML data
         cycle_name: str
             name of the cycle, i.e. the name of the folder of the corresponding
             experiment or subexperiment
         '''
         super(CellvoyagerMetadataHandler, self).__init__(
-            image_upload_dir, additional_upload_dir, ome_xml_dir, cycle_name)
-        self.image_upload_dir = image_upload_dir
-        self.additional_upload_dir = additional_upload_dir
-        self.ome_xml_dir = ome_xml_dir
+                image_files, additional_files, ome_xml_files, cycle_name)
+        self.image_files = image_files
+        self.additional_files = additional_files
+        self.ome_xml_files = ome_xml_files
         self.cycle_name = cycle_name
 
     @property
-    def additional_files(self):
-        '''
-        Returns
-        -------
-        Dict[str, str] or None
-            names of Yokogawa metadata files
-
-        Raises
-        ------
-        OSError
-            when no or an incorrect number of metadata files are found
-        '''
-        files = [f for f in os.listdir(self.additional_upload_dir)
+    def updated_additional_files(self):
+        files = [f for f in self.additional_files
                  if os.path.splitext(f)[1] in self.formats]
-        if len(files) == 0:
-            raise OSError('No metadata files found.')
-        elif (len(files) > len(self.formats)
+        if (len(files) > len(self.formats) or len(files) == 0
                 or (len(files) < len(self.formats) and len(files) > 0)):
             raise OSError('%d metadata files are required: "%s"'
                           % (len(self.formats), '", "'.join(self.formats)))
@@ -221,10 +206,8 @@ class CellvoyagerMetadataHandler(MetadataHandler):
         `CellvoyagerMetadataReader`_
         '''
         with CellvoyagerMetadataReader() as reader:
-            mlf_path = os.path.join(self.additional_upload_dir,
-                                    self.additional_files['.mlf'][0])
-            mrf_path = os.path.join(self.additional_upload_dir,
-                                    self.additional_files['.mrf'][0])
+            mlf_path = self.updated_additional_files['.mlf'][0]
+            mrf_path = self.updated_additional_files['.mrf'][0]
             self._ome_additional_metadata = reader.read(mlf_path, mrf_path)
         return self._ome_additional_metadata
 

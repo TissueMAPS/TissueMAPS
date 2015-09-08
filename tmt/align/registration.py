@@ -1,13 +1,12 @@
 import os
-import natsort
-import h5py
 import numpy as np
-from scipy import misc
-import cluster
 import image_registration
+from ..readers import DatasetReader
+from ..writers import DatasetWriter
+from ..image_readers import OpencvImageReader
 
 
-def calculate_shift(filename, ref_filename):
+def calculate_shift(target_filename, reference_filename):
     '''
     Calculate shift between two images based on fast Fourier transform.
 
@@ -15,10 +14,10 @@ def calculate_shift(filename, ref_filename):
 
     Parameters
     ----------
-    filename: str
-        path to image that should be registered
-    ref_filename: str
-        path to image that should be used as a reference
+    target_filename: str
+        absolute path to the image that should be registered
+    reference_filename: str
+        absolute path to image that should be used as a reference
 
     Returns
     -------
@@ -29,16 +28,17 @@ def calculate_shift(filename, ref_filename):
     ----------
     .. [1] http://image-registration.readthedocs.org/en/latest/
     '''
-    # Load image that should be registered
-    im = np.array(misc.imread(filename), dtype='float64')
-    # Load reference image
-    ref_im = np.array(misc.imread(ref_filename), dtype='float64')
+    with OpencvImageReader() as reader:
+        # Load image that should be registered
+        target_image = reader.read(target_filename)
+        # Load reference image
+        reference_image = reader.read(reference_filename)
     # Calculate shift between images
-    x, y, a, b = image_registration.chi2_shift(im, ref_im)
+    x, y, a, b = image_registration.chi2_shift(target_image, reference_image)
     return (x, y)
 
 
-def register_images(sites, registration_files, reference_files, output_file):
+def register_images(sites, target_files, reference_files, output_file):
     '''
     Calculate shift between a set of two images (image to register and
     reference image) from two different acquisition cycles
@@ -65,44 +65,45 @@ def register_images(sites, registration_files, reference_files, output_file):
     ----------
     sites: List[int]
         acquisition sites (numbers in the acquisition sequence)
-    registration_files: List[Dict[str, List[str]]]
-        path to the image files that should be registered
+    target_files: List[Dict[str, List[str]]]
+        path to the image files from the cycles that should be registered
     reference_files: List[str]
-        path to the image files used as reference for registration
+        path to the image files from the cycle that is used as reference for
+        registration
     output_file: str
         path to the HDF5 file, where calculated values will be stored
     '''
     out = dict()
-    for cycle, files in registration_files.iteritems():
+    for cycle, files in target_files.iteritems():
         print '.. "%s"' % cycle
         out[cycle] = dict()
-        out[cycle]['x_shift'] = []
-        out[cycle]['y_shift'] = []
-        out[cycle]['filename'] = []
+        out[cycle]['x_shift'] = list()
+        out[cycle]['y_shift'] = list()
+        out[cycle]['filename'] = list()
+        out[cycle]['site'] = list()
         for i in xrange(len(files)):
-            reg_filename = files[i]
-            print '... registration: %s' % reg_filename
+            target_filename = files[i]
+            print '... registration: %s' % target_filename
             ref_filename = reference_files[i]
             print '... reference: %s' % ref_filename
 
             # Calculate shift between images
-            x, y = calculate_shift(reg_filename, ref_filename)
+            x, y = calculate_shift(target_filename, ref_filename)
 
             # Store shift values and name of the registered image
             out[cycle]['x_shift'].append(int(x))
             out[cycle]['y_shift'].append(int(y))
-            out[cycle]['filename'].append(os.path.basename(reg_filename))
+            out[cycle]['filename'].append(os.path.basename(target_filename))
             out[cycle]['site'].append(sites[i])
 
     print '. Store registration in file: %s' % output_file
-    f = h5py.File(output_file, 'w')
-    for cycle, data in out.iteritems():
-        for feature, values in data.iteritems():
-            # The calculated features will be stored
-            # in separate datasets grouped by cycle
-            hdf5_location = '%s/%s' % (cycle, feature)
-            f.create_dataset(hdf5_location, data=values)
-    f.close()
+    with DatasetWriter(output_file) as writer:
+        for cycle, data in out.iteritems():
+            for feature, values in data.iteritems():
+                # The calculated features will be stored
+                # in separate datasets grouped by cycle
+                hdf5_location = '%s/%s' % (cycle, feature)
+                writer.write_dataset(hdf5_location, data=values)
 
 
 def calculate_local_overhang(x_shift, y_shift):
@@ -178,30 +179,29 @@ def fuse_registration(output_files, cycle_names):
     Returns
     -------
     List[List[Dict[str, str or int]]]
-        "x_shift", "y_shift", and "filename" of each registered image and
-        each cycle
+        "x_shift", "y_shift", "filename", "site" and "cycle" of each
+        registered image and each cycle
     '''
-    descriptor = list()
-    # Combine output from different output files
-    for output in output_files:
-        f = h5py.File(output, 'r')
+    shift_descriptor = [list() for name in cycle_names]
+    for f in output_files:
         for i, key in enumerate(cycle_names):
-            descriptor.append(list())
-            filenames = f[key]['filename'][()]
-            x_shifts = f[key]['x_shift'][()]
-            y_shifts = f[key]['y_shift'][()]
-            sites = f[key]['site'][()]
-            for j in xrange(len(filenames)):
-                descriptor[i].append(dict())
-                descriptor[i][j]['filename'] = filenames[j]
-                descriptor[i][j]['x_shift'] = x_shifts[j]
-                descriptor[i][j]['y_shift'] = y_shifts[j]
-                descriptor[i][j]['site'] = sites[j]
-        f.close()
-    return descriptor
+            with DatasetReader(f) as reader:
+                filenames = reader.read_dataset(os.path.join(key, 'filename'))
+                x_shifts = reader.read_dataset(os.path.join(key, 'x_shift'))
+                y_shifts = reader.read_dataset(os.path.join(key, 'y_shift'))
+                sites = reader.read_dataset(os.path.join(key, 'site'))
+                for j in xrange(len(filenames)):
+                    shift_descriptor[i].append({
+                        'filename': filenames[j],
+                        'x_shift': x_shifts[j],
+                        'y_shift': y_shifts[j],
+                        'site': sites[j],
+                        'cycle': key
+                    })
+    return shift_descriptor
 
 
-def calculate_overhang(descriptor, max_shift):
+def calculate_overhang(shift_descriptor, max_shift):
     '''
     Calculate the maximum overhang of images across all sites and
     across all acquisition cycles. The images will later be cropped according
@@ -210,7 +210,7 @@ def calculate_overhang(descriptor, max_shift):
 
     Parameters
     ----------
-    descriptor: List[Dict[str, List[str or int]]]
+    shift_descriptor: List[List[Dict[str, str or int]]]
         calculated shift values (and names) of registered images for
         each acquisition cycle
     max_shift: int
@@ -218,23 +218,23 @@ def calculate_overhang(descriptor, max_shift):
 
     Returns
     -------
-    Tuple[List[int]]
+    Tuple[List[int or bool]]
         upper, lower, right, and left overhang per site (in pixels)
-        and indices of sites were shift exceeds maximally tolerated value
+        and boolean indices of sites were shift exceeds maximally tolerated
+        value (``True`` if no shift should be performed for that site)
     '''
-    top_ol = []
-    bottom_ol = []
-    right_ol = []
-    left_ol = []
-    no_shift = []
-    number_of_sites = len(descriptor[0]['x_shift'])
-    print '. number of sites: %d' % number_of_sites
+    top_ol = list()
+    bottom_ol = list()
+    right_ol = list()
+    left_ol = list()
+    no_shift = list()
+    number_of_sites = len(shift_descriptor[0])
     for site in xrange(number_of_sites):
-        x_shift = np.array([c['x_shift'][site] for c in descriptor])
-        y_shift = np.array([c['y_shift'][site] for c in descriptor])
+        x_shift = np.array([c[site]['x_shift'] for c in shift_descriptor])
+        y_shift = np.array([c[site]['y_shift'] for c in shift_descriptor])
         no_shift.append(any(abs(x_shift) > max_shift) or
                         any(abs(y_shift) > max_shift))
-        (top, bottom, right, left) = calculate_local_overhang(x_shift, y_shift)
+        top, bottom, right, left = calculate_local_overhang(x_shift, y_shift)
         top_ol.append(top)
         bottom_ol.append(bottom)
         right_ol.append(right)
@@ -257,146 +257,3 @@ def calculate_overhang(descriptor, max_shift):
         left_ol = max_shift
 
     return (top_ol, bottom_ol, right_ol, left_ol, no_shift)
-
-
-class Registration(object):
-
-    '''
-    Class for registration of images from different acquisition cycles.
-    '''
-
-    def __init__(self, cycles, reference_cycle=None, reference_channel=None):
-        '''
-        Initialize an instance of class Registration.
-
-        Parameters
-        ----------
-        cycles: List[Subexperiment]
-        reference_cycle: int
-            cycle that should be used as reference for image registration
-        reference_channel: int
-            channel from which images should be used for registration
-        '''
-        self.cycles = cycles
-        self.ref_cycle = reference_cycle
-        self.ref_channel = reference_channel
-        self.experiment_dir = os.path.dirname(self.cycles[0].directory)
-        self.experiment = self.cycles[0].experiment
-        self.registration_dir = os.path.join(self.experiment_dir,
-                                             'registration')
-        self.joblist_file = os.path.join(self.experiment_dir,
-                                         'align_%s.jobs' % self.experiment)
-        self._image_files = None
-
-    @property
-    def image_files(self):
-        '''
-        Returns
-        -------
-        List[List[str]]
-            image files of the reference channel grouped by cycle
-        '''
-        if self._image_files is None:
-            image_filenames = []
-            if not self.ref_channel:
-                raise IOError('Parameter "reference_channel" is required '
-                              'to list image files')
-            for c in self.cycles:
-                # extract files of reference channel
-                files = [f.filename for f in c.project.image_files
-                         if f.channel == self.ref_channel]
-                files = natsort.natsorted(files)  # ensure correct order
-                image_filenames.append(files)
-            self._image_files = image_filenames
-        return self._image_files
-
-    def create_output_dir(self):
-        '''
-        Create "registration" folder that will hold the HDF5 files,
-        where the calculated shift values will be stored.
-        There will be one HDF5 file per job (i.e. batch).
-        '''
-        if not os.path.exists(self.registration_dir):
-            os.mkdir(self.registration_dir)
-
-    def create_joblist(self, batch_size):
-        '''
-        Create list of jobs for parallel processing.
-
-        A joblist has the following structure (YAML)::
-
-            - id: int
-              registration_files: Dict[str, List[str]]
-              reference_files:  List[str]
-              aquisition_sites: List[int]
-              output_file: str
-              output_dir: str
-
-            ...
-
-        Parameters
-        ----------
-        batch_size: int
-            number of batches
-
-        Returns
-        -------
-        List[Dict[str, List[str] or str]]
-            job description
-
-        Raises
-        ------
-        IOError
-            when argument `reference_cycle` is not specified
-        '''
-        if not self.ref_cycle:
-            raise IOError('Parameter "reference_cycle" is required '
-                          'for joblist creation')
-
-        joblist = list()
-        ref_files = cluster.create_batches(self.image_files[self.ref_cycle],
-                                           batch_size)
-        n_batches = len(ref_files)
-        # Create a list of dictionaries holding the image filenames per batch
-        # segregated for the different cycles
-        n_cycles = len(self.image_files)
-        reg_files = [dict() for x in xrange(n_batches)]
-        for x in xrange(n_cycles):
-            batches = cluster.create_batches(self.image_files[x], batch_size)
-            for i, batch in enumerate(batches):
-                reg_files[i][self.cycles[x].name] = batch
-                sites[i]
-
-        for i in xrange(n_batches):
-            output_filename = os.path.join(self.registration_dir,
-                                           'align_%.5d.registration' % i)
-            # output paths should be relative to output directory
-            output_filename = os.path.relpath(output_filename,
-                                              self.experiment_dir)
-            joblist.append({
-                'id': i+1,
-                'registration_files': reg_files[i],
-                'reference_files': ref_files[i],
-                'acquisition_sites': self.image_files[i].channel
-                'output_file': output_filename,
-                'output_dir': self.experiment_dir
-            })
-        self.joblist = joblist
-        return joblist
-
-    def write_joblist(self):
-        '''
-        Write joblist to file as YAML.
-        '''
-        cluster.write_joblist(self.joblist_file, self.joblist)
-
-    def read_joblist(self):
-        '''
-        Read joblist from YAML file.
-
-        Returns
-        -------
-        List[dict[str, list[str] or str]]
-            job description
-        '''
-        return cluster.read_joblist(self.joblist_file)

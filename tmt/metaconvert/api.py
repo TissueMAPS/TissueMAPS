@@ -1,5 +1,6 @@
 import os
-import glob
+from glob import glob
+from cached_property import cached_property
 from .default import DefaultMetadataHandler
 from .cellyoyager import CellvoyagerMetadataHandler
 from .metamorph import MetamorphMetadataHandler
@@ -29,16 +30,16 @@ class MetadataConverter(ClusterRoutine):
     separate JSON file based to a custom schema.
     '''
 
-    def __init__(self, cycle, file_format, image_file_format_string,
+    def __init__(self, experiment, file_format, image_file_format_string,
                  prog_name, logging_level='critical'):
         '''
         Initialize an instance of class MetadataConverter.
 
         Parameters
         ----------
-        cycle: Cycle
-            cycle object that holds information about the content of the cycle
-            directory
+        experiment: Experiment
+            cycle object that holds information about the content of the
+            experiment directory
         file_format: str
             name of the microscope file format for which additional files
             are provided, e.g. "metamorph"
@@ -57,31 +58,40 @@ class MetadataConverter(ClusterRoutine):
             when `file_format` is not supported
         '''
         super(MetadataConverter, self).__init__(prog_name, logging_level)
-        self.cycle = cycle
+        self.experiment = experiment
         self.file_format = file_format
         if self.file_format:
             if self.file_format not in Formats.support_for_additional_files:
                 raise NotSupportedError('Additional metadata files are not '
                                         'supported for the provided format')
         self.image_file_format_string = image_file_format_string
-        if not os.path.exists(self.cycle.metadata_dir):
-            os.mkdir(self.cycle.metadata_dir)
 
-    def write_metadata_to_file(self, metadata):
+    @property
+    def log_dir(self):
         '''
-        Write serialized metadata to JSON file.
+        Returns
+        -------
+        str
+            directory where log files should be stored
 
-        Parameters
-        ----------
-        metadata: List[ChannelImageMetadata]
-            complete metadata
+        Note
+        ----
+        The directory will be sibling to the output directory.
         '''
-        data = dict()
-        for md in metadata:
-            data[md.name] = md.serialize()
-        filename = os.path.join(self.cycle.metadata_dir,
-                                self.cycle.image_metadata_file)
-        utils.write_json(filename, data)
+        self._log_dir = os.path.join(self.experiment.dir,
+                                     'log_%s' % self.prog_name)
+        return self._log_dir
+
+    @cached_property
+    def cycles(self):
+        '''
+        Returns
+        -------
+        List[Wellplate or Slide]
+            cycle objects
+        '''
+        self._cycles = self.experiment.cycles
+        return self._cycles
 
     def create_joblist(self, **kwargs):
         '''
@@ -93,22 +103,25 @@ class MetadataConverter(ClusterRoutine):
         **kwargs: dict
             empty - no additional arguments
         '''
-        joblist = [{
-            'id': 1,
-            'inputs': {
-                'uploaded_image_files':
-                    glob.glob(os.path.join(self.cycle.image_upload_dir, '*')),
-                'uploaded_additional_files':
-                    glob.glob(os.path.join(self.cycle.additional_upload_dir, '*')),
-                'ome_xml_files':
-                    glob.glob(os.path.join(self.cycle.ome_xml_dir, '*'))
-            },
-            'outputs': {
-                'metadata_file':
-                    os.path.join(self.cycle.metadata_dir,
-                                 self.cycle.image_metadata_file)
-            }
-        }]
+        joblist = list()
+        for i, cycle in enumerate(self.cycles):
+            joblist.extend([{
+                'id': i+1,
+                'inputs': {
+                    'uploaded_image_files':
+                        glob(os.path.join(cycle.image_upload_dir, '*')),
+                    'uploaded_additional_files':
+                        glob(os.path.join(cycle.additional_upload_dir, '*')),
+                    'ome_xml_files':
+                        glob(os.path.join(cycle.ome_xml_dir, '*'))
+                },
+                'outputs': {
+                    'metadata_file':
+                        os.path.join(cycle.metadata_dir,
+                                     cycle.image_metadata_file)
+                },
+                'cycle': cycle.name
+            }])
         return joblist
 
     def run_job(self, batch):
@@ -119,63 +132,45 @@ class MetadataConverter(ClusterRoutine):
         '''
         if self.file_format == 'metamorph':
             handler = MetamorphMetadataHandler(
-                            self.cycle.image_upload_dir,
-                            self.cycle.additional_upload_dir,
-                            self.cycle.ome_xml_dir,
-                            self.cycle.name)
+                            batch['inputs']['uploaded_image_files'],
+                            batch['inputs']['uploaded_additional_files'],
+                            batch['inputs']['ome_xml_files'],
+                            batch['cycle'])
         elif self.file_format == 'cellvoyager':
             handler = CellvoyagerMetadataHandler(
-                            self.cycle.image_upload_dir,
-                            self.cycle.additional_upload_dir,
-                            self.cycle.ome_xml_dir,
-                            self.cycle.name)
+                            batch['inputs']['uploaded_image_files'],
+                            batch['inputs']['uploaded_additional_files'],
+                            batch['inputs']['ome_xml_files'],
+                            batch['cycle'])
         else:
             handler = DefaultMetadataHandler(
-                            self.cycle.image_upload_dir,
-                            self.cycle.additional_upload_dir,
-                            self.cycle.ome_xml_dir,
-                            self.cycle.name)
+                            batch['inputs']['uploaded_image_files'],
+                            batch['inputs']['uploaded_additional_files'],
+                            batch['inputs']['ome_xml_files'],
+                            batch['cycle'])
         meta = handler.format_image_metadata()
         meta = handler.add_additional_metadata(meta)
         # TODO: how shall we deal with user input?
         meta = handler.determine_grid_coordinates(meta)
         meta = handler.build_filenames_for_extracted_images(
                     meta, self.image_file_format_string)
-        self.write_metadata_to_file(meta)
+        self._write_metadata_to_file(batch['outputs']['metadata_file'], meta)
 
-    @property
-    def log_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to the directory where log files should be stored
-        '''
-        return os.path.join(self.cycle.cycle_dir, 'log_%s' % self.prog_name)
-
-    def build_command(self, batch):
-        '''
-        Build a command for GC3Pie submission. For further information on
-        the structure of the command see
-        `subprocess <https://docs.python.org/2/library/subprocess.html>`_.
-
-        Parameter
-        ---------
-        batch: Dict[str, int or List[str]]
-            id and specification of input/output of the job that should be
-            processed
-
-        Returns
-        -------
-        List[str]
-            substrings of the command call
-        '''
+    def _build_command(self, batch):
         job_id = batch['id']
         command = ['metaconvert']
         if self.file_format:
-            command += ['-f', self.file_format]
-        command += ['run', '-j', str(job_id), self.cycle.cycle_dir]
+            command.extend(['-f', self.file_format])
+        command.append(self.experiment.dir)
+        command.extend(['run', '-j', str(job_id)])
         return command
+
+    @staticmethod
+    def _write_metadata_to_file(filename, metadata):
+        data = dict()
+        for md in metadata:
+            data[md.name] = md.serialize()
+        utils.write_json(filename, data)
 
     def collect_job_output(self, joblist, **kwargs):
         pass

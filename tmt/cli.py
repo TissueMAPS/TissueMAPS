@@ -188,7 +188,7 @@ class CommandLineInterface(object):
         '''
         print 'APPLY'
         api = self._api_instance
-        print '.  read jobist'
+        print '.  read joblist'
         joblist = api.read_joblist()
         print '.  apply statistics'
         kwargs = self._variable_apply_args
@@ -209,17 +209,13 @@ class CommandLineInterface(object):
         '''
         print 'COLLECT'
         api = self._api_instance
-        print '.  read jobist'
+        print '.  read joblist'
         joblist = api.read_joblist()
         kwargs = self._variable_collect_args
         api.collect_job_output(joblist, **kwargs)
 
-    def workflow(self):
-        print 'TODO'
-
     @staticmethod
-    def get_parser_and_subparsers(subparser_names=['run', 'joblist', 'submit'],
-                                  level='cycle'):
+    def get_parser_and_subparsers(subparser_names=['run', 'joblist', 'submit']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -245,17 +241,12 @@ class CommandLineInterface(object):
         '''
         parser = argparse.ArgumentParser()
         parser.add_argument(
+            'experiment_dir', help='path to experiment directory')
+        parser.add_argument(
             '-v', '--version', action='version')
 
         if not subparser_names:
             raise ValueError('At least one subparser has to specified')
-
-        if level == 'cycle':
-            directory = 'cycle_dir'
-            directory_help_message = 'path to cycle directory'
-        elif level == 'experiment':
-            directory = 'experiment_dir'
-            directory_help_message = 'path to experiment directory'
 
         subparsers = parser.add_subparsers(dest='subparser_name')
 
@@ -267,13 +258,15 @@ class CommandLineInterface(object):
             run_parser.add_argument(
                 '-j', '--job', type=int, required=True,
                 help='id of the job that should be processed')
-            run_parser.add_argument(directory, help=directory_help_message)
 
         if 'joblist' in subparser_names:
             joblist_parser = subparsers.add_parser('joblist')
             joblist_parser.description = '''
                 Create a list of job descriptions (batches) for parallel
-                processing and write it to a file in YAML format.
+                processing and write it to a file in YAML format. Note that in
+                case of existing previous submissions, the log output will be
+                overwritten unless either the "--backup" or "--print" argument
+                is specified.
             '''
             joblist_parser.add_argument(
                 '-p', '--print', action='store_true', dest='print_joblist',
@@ -285,7 +278,6 @@ class CommandLineInterface(object):
             # `_variable_joblist_args` has to be overwritten
             # (with the exception of "batch_size", which is already added to
             # as a variable input argument by default)
-            joblist_parser.add_argument(directory, help=directory_help_message)
 
         if 'submit' in subparser_names:
             submit_parser = subparsers.add_parser('submit')
@@ -296,7 +288,6 @@ class CommandLineInterface(object):
                 '--no_shared_network', dest='shared_network',
                 action='store_false', help='when worker nodes don\'t have \
                 access to a shared network')
-            submit_parser.add_argument(directory, help=directory_help_message)
 
         if 'apply' in subparser_names:
             apply_parser = subparsers.add_parser('apply')
@@ -318,7 +309,6 @@ class CommandLineInterface(object):
             apply_parser.add_argument(
                 '-o', '--output_dir', type=str, required=True,
                 help='path to output directory')
-            apply_parser.add_argument(directory, help=directory_help_message)
 
         if 'collect' in subparser_names:
             collect_parser = subparsers.add_parser('collect')
@@ -328,14 +318,5 @@ class CommandLineInterface(object):
             collect_parser.add_argument(
                 '-o', '--output_dir', type=str,
                 help='path to output directory')
-            collect_parser.add_argument(directory, help=directory_help_message)
-
-        if 'workflow' in subparser_names:
-            workflow_parser = subparsers.add_parser('workflow')
-            workflow_parser.description = '''
-                Create joblist, submit jobs and collect outputs.
-            '''
-            # TODO: how to set default parameters?
-            collect_parser.add_argument(directory, help=directory_help_message)
 
         return (parser, subparsers)

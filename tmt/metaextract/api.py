@@ -1,7 +1,8 @@
 import os
 import re
-import glob
 import shutil
+from glob import glob
+from natsort import natsorted
 from cached_property import cached_property
 from ..formats import Formats
 from ..cluster import ClusterRoutine
@@ -19,15 +20,15 @@ class MetadataExtractor(ClusterRoutine):
     and written to XML files.
     '''
 
-    def __init__(self, cycle, prog_name, logging_level='critical'):
+    def __init__(self, experiment, prog_name, logging_level='critical'):
         '''
         Initialize an instance of class MetadataExtractor.
 
         Parameters
         ----------
-        cycle: Cycle
-            cycle object that holds information about the content of the cycle
-            directory
+        experiment: Experiment
+            cycle object that holds information about the content of the
+            experiment directory
         prog_name: str
             name of the corresponding command line interface
         logging_level: str, optional
@@ -39,51 +40,40 @@ class MetadataExtractor(ClusterRoutine):
         `tmt.cfg`_
         '''
         super(MetadataExtractor, self).__init__(prog_name, logging_level)
-        self.cycle = cycle
-        if not os.path.exists(self.cycle.ome_xml_dir):
-            os.mkdir(self.cycle.ome_xml_dir)
+        self.experiment = experiment
         self.prog_name = prog_name
 
-    @cached_property
-    def image_files(self):
+    @property
+    def log_dir(self):
         '''
         Returns
         -------
-        List[str]
-            names of image files
+        str
+            directory where log files should be stored
 
         Note
         ----
-        To be recognized as an image file, a file must have one of the
-        supported file extensions.
-
-        Raises
-        ------
-        OSError
-            when no image files are found
+        The directory will be sibling to the output directory.
         '''
-        files = [f for f in os.listdir(self.cycle.image_upload_dir)
-                 if os.path.splitext(f)[1] in Formats().supported_extensions]
-        if len(files) == 0:
-            raise OSError('No image files founds in folder: %s'
-                          % self.cycle.image_upload_dir)
-        self._image_files = files
-        return self._image_files
+        self._log_dir = os.path.join(self.experiment.dir,
+                                     'log_%s' % self.prog_name)
+        return self._log_dir
 
-    @property
-    def ome_xml_files(self):
+    @cached_property
+    def cycles(self):
         '''
         Returns
         -------
-        List[str]
-            names of the XML files that contain the extracted OME-XML data
-            (same basename as the image file, but with *.ome.xml* extension)
+        List[Wellplate or Slide]
+            cycle objects
         '''
-        self._ome_xml_files = list()
-        for f in self.image_files:
-            filename = re.sub(r'\.\w+$', '.ome.xml', f)
-            self._ome_xml_files.append(filename)
-        return self._ome_xml_files
+        self._cycles = self.experiment.cycles
+        return self._cycles
+
+    @staticmethod
+    def _get_ome_xml_filename(image_filename):
+        return re.sub(r'(%s)$' % os.path.splitext(image_filename)[1],
+                      '.ome.xml', image_filename)
 
     def create_joblist(self, **kwargs):
         '''
@@ -97,46 +87,28 @@ class MetadataExtractor(ClusterRoutine):
         **kwargs: dict
             empty - no additional arguments
         '''
-        input_files = [os.path.join(self.cycle.image_upload_dir, f)
-                       for f in self.image_files]
-        output_files = [os.path.join(self.cycle.ome_xml_dir, f)
-                        for f in self.ome_xml_files]
-        joblist = [{
-                'id': i+1,
-                'inputs': [input_files[i]],
-                'outputs': [output_files[i]]
-            } for i in xrange(len(input_files))]
+        joblist = list()
+        for i, cycle in enumerate(self.cycles):
+            image_filenames = [f for f in os.listdir(cycle.image_upload_dir)
+                               if os.path.splitext(f)[1]
+                               in Formats().supported_extensions]
+            input_files = [os.path.join(cycle.image_upload_dir, f)
+                           for f in image_filenames]
+            if not input_files:
+                raise IOError('No image files of supported formats '
+                              'found in upload directory.')
+            output_files = [os.path.join(cycle.ome_xml_dir,
+                                         self._get_ome_xml_filename(f))
+                            for f in image_filenames]
+            joblist.extend([{
+                'id': i * (len(input_files)-1) + (j+1),
+                'inputs': [input_files[j]],
+                'outputs': [output_files[j]],
+                'cycle': cycle.name
+            } for j in xrange(len(input_files))])
         return joblist
-        pass
 
-    @property
-    def log_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to the directory where log files should be stored
-        '''
-        return os.path.join(self.cycle.ome_xml_dir, '..',
-                            'log_%s' % self.prog_name)
-
-    def build_command(self, batch):
-        '''
-        Build a command for GC3Pie submission. For further information on
-        the structure of the command see
-        `subprocess <https://docs.python.org/2/library/subprocess.html>`_.
-
-        Parameter
-        ---------
-        batch: Dict[str, int or List[str]]
-            id and specification of input/output of the job that should be
-            processed
-
-        Returns
-        -------
-        List[str]
-            substrings of the command call
-        '''
+    def _build_command(self, batch):
         input_filename = batch['inputs'][0]
         command = [
             'showinf', '-omexml-only', '-nopix', '-novalid', '-no-upgrade',
@@ -161,10 +133,13 @@ class MetadataExtractor(ClusterRoutine):
         **kwargs: dict
             additional variable input arguments as key-value pairs
         '''
-        output_files = glob.glob(os.path.join(self.log_dir, '*.out'))
-        for i, f in enumerate(output_files):
-            shutil.copyfile(f, os.path.join(self.cycle.ome_xml_dir,
-                                            self.ome_xml_files[i]))
+        for batch in joblist:
+            output_files = glob(os.path.join(
+                                self.log_dir, '*_job-%.5d*.out' % batch['id']))
+            # Take the most recent one, in case there are outputs of previous
+            # submissions
+            output_files = natsorted(output_files)
+            shutil.copyfile(output_files[0], batch['outputs'][0])
 
     def run_job(self, batch):
         '''

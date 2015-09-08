@@ -2,7 +2,7 @@ from . import logo
 from . import __version__
 from .api import MetadataExtractor
 from ..cli import CommandLineInterface
-from ..cycle import Cycle
+from ..experiment import Experiment
 
 
 class MetaExtract(CommandLineInterface):
@@ -31,8 +31,8 @@ class MetaExtract(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        cycle = Cycle(self.args.cycle_dir, self.cfg)
-        return MetadataExtractor(cycle=cycle, prog_name=self.name)
+        experiment = Experiment(self.args.experiment_dir, self.cfg)
+        return MetadataExtractor(experiment=experiment, prog_name=self.name)
 
     @staticmethod
     def call(args):

@@ -113,6 +113,11 @@ class Experiment(object):
         List[WellPlate or Slide]
             cycle objects
 
+        Raises
+        ------
+        OSError
+            when no cycle directories are found
+
         See also
         --------
         `plates.WellPlate`_
@@ -124,9 +129,10 @@ class Experiment(object):
                       and self._is_cycle(f)]
         cycle_dirs = natsorted(cycle_dirs)
         if not cycle_dirs:
-            # in this case, the *cycle* directory is the same as the
-            # the experiment directory
-            cycle_dirs = self.experiment_dir
+            raise OSError('Experiment has no cycles.')
+            # # in this case, the *cycle* directory is the same as the
+            # # the experiment directory
+            # cycle_dirs = self.experiment_dir
         if self.user_cfg['WELLPLATE_FORMAT']:
             plate_format = self.user_cfg['NUMBER_OF_WELLS']
             cycles = [WellPlate(c, self.cfg, plate_format) for c in cycle_dirs]
@@ -173,6 +179,8 @@ class Experiment(object):
         self._layers_dir = self.cfg['LAYERS_DIR'].format(
                                             experiment_dir=self.experiment_dir,
                                             sep=os.path.sep)
+        if not os.path.exists(self._layers_dir):
+            os.mkdir(self._layers_dir)
         return self._layers_dir
 
     @property
@@ -187,4 +195,6 @@ class Experiment(object):
         self._registration_dir = self.cfg['REGISTRATION_DIR'].format(
                                             experiment_dir=self.experiment_dir,
                                             sep=os.path.sep)
+        if not os.path.exists(self._registration_dir):
+            os.mkdir(self._registration_dir)
         return self._registration_dir

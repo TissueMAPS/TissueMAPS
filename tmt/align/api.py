@@ -1,151 +1,204 @@
 import os
-import glob
-import h5py
 import re
-import sys
 import numpy as np
-import gc3libs
-import gc3libs.workflow
 from natsort import natsorted
-import tmt
-import imageutil
-from align import registration as reg
-from experiment import Experiment
-import cluster
-import utils
+from cached_property import cached_property
+from . import registration as reg
+from .. import utils
+from ..cluster import ClusterRoutine
+from ..shift import ShiftDescription
+from ..image import ChannelImage
+from ..image import IllumstatsImages
 
 
-class Align(object):
-    '''
-    Class for alignment (registration) of images.
-    '''
+class ImageRegistration(ClusterRoutine):
 
-    def __init__(self, experiment_dir, cfg):
+    def __init__(self, experiment, shift_file_format_string,
+                 prog_name, logging_level='critical'):
         '''
         Initialize an instance of class Align.
 
         Parameters
         ----------
-        experiment_dir: str
-            path to the experiment directory
-        cfg: Dict[str, str]
-            configuration settings
+        experiment: Experiment
+            experiment object that holds information about the content of
+            one or more cycle directories
+        shift_file_format_string: str
+            format string that specifies how the name of the shift file
+            should be formatted
+        prog_name: str
+            name of the corresponding program (command line interface)
+        logging_level: str, optional
+            configuration of GC3Pie logger; either "debug", "info", "warning",
+            "error" or "critical" (defaults to ``"critical"``)
 
         See also
         --------
-        `tmt.config`_
+        `tmt.cfg`_
         '''
-        self.experiment_dir = os.path.abspath(experiment_dir)
-        self.cfg = cfg
-        self.print_logo_and_prompt()
-        self.cycles = Experiment(self.experiment_dir, self.cfg).subexperiments
+        super(ImageRegistration, self).__init__(logging_level)
+        self.experiment = experiment
+        self.prog_name = prog_name
+        if not os.path.exists(self.experiment.registration_dir):
+            os.mkdir(self.experiment.registration_dir)
+        self.shift_file_format_string = shift_file_format_string
 
-    def print_logo_and_prompt(self):
-        print tmt.align.logo % {'version': tmt.align.__version__}
-
-    def joblist(self, batch_size, ref_channel, ref_cycle=None):
+    @property
+    def log_dir(self):
         '''
-        Create a joblist in YAML format for parallel computing
-        and write it to disk as `.jobs` file.
+        Returns
+        -------
+        str
+            directory where log files should be stored
+
+        Note
+        ----
+        The directory will be sibling to the output directory.
+        '''
+        self._log_dir = os.path.join(self.experiment.dir,
+                                     'log_%s' % self.prog_name)
+        return self._log_dir
+
+    @cached_property
+    def cycles(self):
+        '''
+        Returns
+        -------
+        List[Wellplate or Slide]
+            cycle objects
+        '''
+        self._cycles = self.experiment.cycles
+        return self._cycles
+
+    @property
+    def shift_dirs(self):
+        '''
+        Returns
+        -------
+        List[str]
+            name of directories, where shift descriptor files are stored
+        '''
+        self._shift_dirs = [c.shift_dir for c in self.cycles]
+        return self._shift_dirs
+
+    @property
+    def shift_files(self):
+        '''
+        Returns
+        -------
+        List[str]
+            absolute paths to the shift descriptor files
+        '''
+        self._shift_files = [os.path.join(c.shift_dir,
+                                          self.shift_file_format_string.format(
+                                                cycle=c.name))
+                             for c in self.cycles]
+        return self._shift_files
+
+    @property
+    def registration_file_format_string(self):
+        '''
+        Returns
+        -------
+        str
+            format string for names of HDF5 files, where registration outputs
+            are stored
+        '''
+        self._registration_file_format_string = '{experiment}_{job}.reg'
+        return self._registration_file_format_string
+
+    def _build_command(self, batch):
+        job_id = batch['id']
+        command = ['align']
+        command.append(self.experiment.dir)
+        command.extend(['run', '--job', str(job_id)])
+        return command
+
+    def create_joblist(self, **kwargs):
+        '''
+        Create a joblist in YAML format for parallel computing.
 
         Parameters
         ----------
-        batch_size: int
-            number of image files per job
-        ref_channel: int
-            number of the image channel that should be used as a reference for
-            image registration
-        ref_cycle: int
-            number of the cycle that should be used as a reference for
-            image registration
+        cfg_file: str
+            absolute path to custom configuration file
+        **kwargs: dict
+            additional input arguments as key-value pairs:
+            * "batch_size": number of image acquisition sites per job (*int*)
+            * "ref_channel": number of the image channel that should be used as
+              a reference for image registration (*int*)
+            * "ref_cycle": number of the image channel that should be used as a
+              reference for image registration (*int*)
+
+        Returns
+        -------
+        List[dict]
+            job descriptions
         '''
-        print '. found %d cycles' % len(self.cycles)
+        def get_refs(x):
+            return [f for i, f in enumerate(x.image_files)
+                    if x.image_metadata[i].channel == kwargs['ref_channel']]
+        im_batches = [self._create_batches(get_refs(c), kwargs['batch_size'])
+                      for c in self.cycles]
+        sites = [md.site for md in self.cycles[0].image_metadata
+                 if md.channel == kwargs['ref_channel']]
+        site_batches = self._create_batches(sites, kwargs['batch_size'])
+        registration_batches = list()
+        for i in xrange(len(im_batches[0])):
+            if any([i >= len(b) for b in im_batches]):
+                continue
+            registration_batches.append({
+                'targets':
+                    {c.name: [os.path.join(c.image_dir, b)
+                              for b in im_batches[j][i]]
+                     for j, c in enumerate(self.cycles)},
+                'references':
+                    [os.path.join(c.image_dir, b)
+                     for j, c in enumerate(self.cycles)
+                     if c.name == kwargs['ref_cycle']
+                     for b in im_batches[j][i]]
+            })
 
-        if ref_cycle:
-            ref_cycle = ref_cycle - 1  # for zero-based indexing!
-        else:
-            # By default use last cycle as reference
-            ref_cycle = len(self.cycles) - 1  # for zero-based indexing
-        print '. reference cycle: %d' % (ref_cycle + 1)
+        joblist = [{
+            'id': i+1,
+            'inputs': {
+                'image_files': batch
+            },
+            'outputs': {
+                'registration_file':
+                    os.path.join(self.experiment.registration_dir,
+                                 self.registration_file_format_string.format(
+                                    experiment=self.experiment.name, job=i+1))
+            },
+            'sites': site_batches[i]
+        } for i, batch in enumerate(registration_batches)]
 
-        print '. reference channel: %d' % ref_channel
+        return joblist
 
-        shift = reg.Registration(self.cycles, ref_cycle, ref_channel)
-
-        shift.create_output_dir()
-        shift.create_joblist(batch_size)
-        shift.write_joblist()
-
-    def run(self, job_id=None, ref_channel=None, ref_cycle=None):
+    def run_job(self, batch):
         '''
-        Run shift and overhang calculation.
+        Run shift and overhang calculation for a single job.
 
-        Creates for each *batch* a `.registration` HDF5 file, where calculated
+        Creates for a `.registration` HDF5 file, where calculated
         shift and overhang values are stored.
 
         Parameters
         ----------
-        job_id: int, optional
-            one-based job index
-        ref_channel: int, optional
-            number of the image channel that should be used as a reference for
-            image registration (required if `job_id` is not provided)
-        ref_cycle: int, optional
-            number of the cycle that should be used as a reference for
-            image registration (required if `job_id` is not provided)
+        batch: dict
+            joblist element, i.e. description of a single job
 
         See also
         --------
-        `align.registration.calculate_shift`_
-        `align.registration.calculate_overhang`_
+        `align.registration.register_images`_
         '''
+        reg.register_images(batch['sites'],
+                            batch['inputs']['image_files']['targets'],
+                            batch['inputs']['image_files']['references'],
+                            batch['outputs']['registration_file'])
 
-        if job_id:
-
-            job_ix = job_id-1  # job ids are one-based!
-
-            shift = reg.Registration(self.cycles)
-            print '. Reading joblist from file'
-            joblist = shift.read_joblist()
-
-            batch = joblist[job_ix]
-            print '. Processing job #%d' % job_id
-            reg.register_images(batch['acquisition_sites'],
-                                batch['registration_files'],
-                                batch['reference_files'],
-                                os.path.join(batch['output_dir'],
-                                             batch['output_file']))
-
-        else:
-            if not ref_channel or not ref_cycle:
-                raise ValueError('If "job_id" is not specified, you need to '
-                                 'provide the "ref_channel" and "ref_cycle" '
-                                 'arguments')
-
-            if ref_cycle:
-                ref_cycle = ref_cycle - 1  # for zero-based indexing!
-            else:
-                # By default use last cycle as reference
-                ref_cycle = len(self.cycles) - 1  # for zero-based indexing!
-            print '. Reference cycle: %d' % (ref_cycle + 1)
-
-            print '. Reference channel: %d' % ref_channel
-
-            shift = reg.Registration(self.cycles, ref_cycle, ref_channel)
-            shift.create_output_dir()
-            joblist = shift.create_joblist(batch_size=1)
-
-            for job, batch in enumerate(joblist):
-                print '. Processing job #%d' % (job+1)
-                reg.register_images(batch['acquisition_sites'],
-                                    batch['registration_files'],
-                                    batch['reference_files'],
-                                    os.path.join(batch['output_dir'],
-                                                 batch['output_file']))
-
-    def fuse(self, max_shift, ref_cycle=None, segm_dir=None):
+    def collect_job_output(self, joblist, **kwargs):
         '''
-        Fuse shift calculations and create shift descriptor file.
+        Collect and fuse shift calculations and create shift description file.
 
         Reads the `.registration` HDF5 file created in the `run` step,
         concatenates the calculated shift values, calculates global overhang
@@ -154,209 +207,117 @@ class Align(object):
 
         Parameters
         ----------
-        max_shift: int
-            shift value in pixels that is maximally tolerated (sites with
-            larger shift values will be ignored)
+        joblist: List[dict]
+            job descriptions
+        **kwargs: dict
+            additional variable input arguments as key-value pairs:
+            * "max_shift": shift value in pixels that is maximally tolerated,
+              sites with larger shift values will be ignored (*int*)
 
         See also
         --------
         `align.registration.fuse_registration`_
         '''
-        shift = reg.Registration(self.cycles)
+        output_files = [b['outputs']['registration_file'] for b in joblist]
+        cycle_names = [c.name for c in self.cycles]
 
-        output_files = glob.glob(os.path.join(shift.registration_dir,
-                                              '*.registration'))
-        # Preallocate final output
-        f = h5py.File(output_files[0], 'r')
-        cycle_names = f.keys()
-        f.close()
+        shift_descriptions = reg.fuse_registration(output_files, cycle_names)
 
-        descriptor = reg.fuse_registration(output_files, cycle_names)
+        # Calculate overhang between cycles
+        top, bottom, right, left, no_shift = \
+            reg.calculate_overhang(shift_descriptions, kwargs['max_shift'])
 
-        # Calculate overhang at each site
-        print '. calculate overhang between sites'
-        top, bottom, right, left, no_shift_index = \
-            reg.calculate_overhang(descriptor, self.args.max_shift)
-
-        # Write shiftDescriptor.json files
         for i, cycle_name in enumerate(cycle_names):
-            print cycle_name
-            current_cycle = [c for c in self.cycles
-                             if c.name == cycle_name][0]
-            aligncycles_dir = current_cycle.project.shift_dir
-            if not os.path.exists(aligncycles_dir):
-                os.mkdir(aligncycles_dir)
-            descriptor_filename = self.cfg['SHIFT_FILE_FORMAT']
-            descriptor_filename = os.path.join(aligncycles_dir,
-                                               descriptor_filename)
-            print '. create shift descriptor file: %s' % descriptor_filename
+            shift_dir = self.shift_dirs[i]
+            if not os.path.exists(shift_dir):
+                os.mkdir(shift_dir)
+            shift_file = self.shift_files[i]
 
-            for j in xrange(len(no_shift_index)):
+            description = list()
+            for j in xrange(len(no_shift)):
 
-                descriptor[i][j]['lower_overhang'] = bottom
-                descriptor[i][j]['upper_overhang'] = top
-                descriptor[i][j]['right_overhang'] = right
-                descriptor[i][j]['left_overhang'] = left
-                descriptor[i][j]['max_shift'] = max_shift
-                descriptor[i][j]['dont_shift'] = no_shift_index[j]
-                descriptor[i][j]['cycle'] = current_cycle.cycle
+                shift = ShiftDescription()
+                shift.lower_overhang = bottom
+                shift.upper_overhang = top
+                shift.right_overhang = right
+                shift.left_overhang = left
+                shift.max_shift = kwargs['max_shift']
+                shift.omit = bool(no_shift[j])
+                shift.cycle = self.cycles[i].name
+                shift.filename = shift_descriptions[i][j]['filename']
+                shift.x_shift = shift_descriptions[i][j]['x_shift']
+                shift.y_shift = shift_descriptions[i][j]['y_shift']
+                shift.site = shift_descriptions[i][j]['site']
 
-            # Sort entries according to filenames
-            sorted_filenames = natsorted([(d['filename'], j)
-                                          for j, d in enumerate(descriptor[i])])
-            descriptor[i] = [descriptor[i][j] for f, j in sorted_filenames]
+                description.append(shift.serialize())
 
-            utils.write_yaml(descriptor_filename, descriptor)
+            # Sort entries according to site
+            sites = [(d['site'], j) for j, d in enumerate(description)]
+            order = np.array(natsorted(sites))
+            description = [description[j] for j in order[:, 1]]
 
-    def submit(self, shared_network=True):
+            utils.write_json(os.path.join(shift_dir, shift_file), description)
+
+    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
+                         **kwargs):
         '''
-        Submit jobs to cluster or cloud to run in parallel. Requires prior
-        creation of a `joblist`.
+        Apply calculated statistics (shift and overhang values) to images
+        in order to align them between cycles.
 
         Parameters
         ----------
-        shared_network: bool, optional
-            whether worker nodes have access to a shared network
-            or filesystem (defaults to True)
+        wells: List[str]
+            well identifiers of images that should be aligned
+        sites: List[int]
+            one-based site indices of images that should be aligned
+        channels: List[str]
+            channel names of images that should be aligned
+        output_dir: str
+            absolute path to directory where the aligned images should be
+            stored
+        **kwargs: dict
+            additional variable input arguments as key-value pairs:
+            * "illumcorr": also correct illumination artifacts (*bool*)
         '''
-        self.build_jobs(shared_network=shared_network)
-        cluster.submit_jobs_gc3pie(self.jobs)
+        for cycle in self.cycles:
+            cycle.image_files
+            cycle.image_metadata
+            cycle.image_shifts
+            for channel in channels:
+                channel_index = [i for i, md in enumerate(cycle.image_metadata)
+                                 if md.channel == channel]
+                if not channel_index:
+                    raise ValueError('Channel name is not valid: %s' % channel)
+                channel_images = [ChannelImage.create_from_file(
+                                    os.path.join(cycle.image_dir,
+                                                 cycle.image_files[ix]))
+                                  for ix in channel_index]
+                shifts = [cycle.image_shifts[ix] for ix in channel_index]
+                if kwargs['illumcorr']:
+                    ix = [i for i, md in enumerate(cycle.stats_metadata)
+                          if md.channel == channel]
+                    stats = IllumstatsImages.create_from_file(
+                                cycle.stats_files[ix])
 
-    def build_jobs(self, shared_network=True):
-        '''
-        Build a GC3Pie parallel task collection of "jobs"
-        as specified by the `joblist`.
-
-        Parameters
-        ----------
-        shared_network: bool, optional
-            whether worker nodes have access to a shared network
-            or filesystem (defaults to True)
-
-        Returns
-        -------
-        gc3libs.workflow.ParallelTaskCollection
-            jobs
-        '''
-        shift = reg.Registration(self.cycles)
-
-        self.jobs = gc3libs.workflow.ParallelTaskCollection(
-                        jobname='align_%s_jobs' % shift.experiment
-        )
-        # TODO: use a SequentialTaskCollection or StagedTaskCollection
-        # and include the fusion step as an additional job
-
-        try:
-            joblist = shift.read_joblist()
-        except OSError as e:
-            sys.stderr.write(str(e))
-            sys.stderr.write('Create a joblist first!\n'
-                             'For help call "align joblist -h"')
-            sys.exit(0)
-
-        for j in joblist:
-
-            jobname = 'align_%s_job-%.5d' % (shift.experiment, j['id'])
-            timestamp = cluster.create_datetimestamp()
-            log_file = '%s_%s.log' % (jobname, timestamp)
-            # NOTE: There is a GDC3Pie bug that prevents the use of relative
-            # paths for `stdout` and `stderr` to bundle log files
-            # in a subdirectory of the `output_dir`
-
-            command = [
-                'align', 'run', '--job', str(j['id']),
-                self.experiment_dir
-            ]
-
-            if shared_network:
-                # This prevents files from being copied into ~/.gc3pie_jobs.
-                # Instead they will be directly read from or written to disk,
-                # which will dramatically speed up the processing time.
-                # However, this only works if a shared network is available
-                # on your resource!
-                inputs = []
-                outputs = []
-            else:
-                inputs = j['registration_files']
-                inputs.extend(j['reference_files'])
-                inputs.append(shift.joblist_file)
-                outputs = j['output_file']
-
-            # Add individual task to collection
-            app = gc3libs.Application(
-                    arguments=command,
-                    inputs=inputs,
-                    outputs=outputs,
-                    output_dir=j['output_dir'],
-                    jobname=jobname,
-                    # write STDOUT and STDERR combined into a single log file
-                    stdout=log_file,
-                    join=True,
-                    # activate the virtual environment
-                    application_name='tmaps'
-            )
-            self.jobs.add(app)
-        return self.jobs
-
-    def apply(self):
-        '''
-        Apply calculated shift and overhang values in order to align images.
-        '''
-        for c in self.cycles:
-            print '\n. Processing images of cycle #%d' % c.cycle
-            project = c.project
-            channels = np.unique([i.channel for i in project.image_files])
-            print '. Found %d channels' % len(channels)
-            if self.args.channels:
-                channels = [c for c in channels if c in self.args.channels]
-            for c in channels:
-                print '.. Align images of channel #%d' % c
-                if self.args.sites:
-                    images = [i for i in project.image_files
-                              if i.channel == c and i.site in self.args.sites]
-                else:
-                    images = [i for i in project.image_files if i.channel == c]
-                if not self.args.no_illcorr:
-                    print '.. Correct images for illumination artifact'
-                    stats = [f for f in project.stats_files
-                             if f.channel == c][0]
-                shift = project.shift_file
-                for im in images:
-                    img = im.image.copy()
-                    if not self.args.no_illcorr:
-                        img = stats.correct(img)
-                    print '... Shift and crop "%s"' % im.name
-                    aligned_im = shift.align(img, im.name)
-                    suffix = os.path.splitext(im.filename)[1]
-                    output_filename = re.sub(r'\%s$' % suffix,
-                                             '_aligned_corrected%s' % suffix,
-                                             im.filename)
-                    output_filename = os.path.basename(output_filename)
-                    output_filename = os.path.join(self.args.output_dir,
-                                                   output_filename)
-                    imageutil.save_image(aligned_im, output_filename)
-
-    @staticmethod
-    def process_cli_commands(args, subparser):
-        '''
-        Initialize Corilla class with parsed command line arguments.
-
-        Parameters
-        ----------
-        args: argparse.Namespace
-            arguments parsed by command line interface
-        subparser: argparse.ArgumentParser
-        '''
-        cli = Align(args.experiment_dir, args.config)
-        if subparser.prog == 'align run':
-            cli.run(args.job, args.ref_channel, args.ref_cycle)
-        elif subparser.prog == 'align joblist':
-            cli.joblist(args.batch_size, args.ref_channel, args.ref_cycle)
-        elif subparser.prog == 'align fuse':
-            cli.fuse(args.max_shift, args.ref_cycle, args.segm_dir)
-        elif subparser.prog == 'align submit':
-            cli.submit(args.shared_network)
-        elif subparser.prog == 'align apply':
-            cli.apply(args.shared_network)
-        else:
-            subparser.print_help()
+                for i, image in enumerate(channel_images):
+                    if sites:
+                        if image.metadata.site not in sites:
+                            continue
+                    if wells:
+                        if not image.metadata.well:  # may not be a well plate
+                            continue
+                        if image.metadata.well not in wells:
+                            continue
+                    suffix = os.path.splitext(image.metadata.name)[1]
+                    if kwargs['illumcorr']:
+                        image = image.correct(stats.mean, stats.std)
+                        output_filename = re.sub(r'\%s$' % suffix,
+                                                 '_corrected_aligned%s' % suffix,
+                                                 image.metadata.name)
+                    else:
+                        output_filename = re.sub(r'\%s$' % suffix,
+                                                 '_aligned%s' % suffix,
+                                                 image.metadata.name)
+                    aligned_image = image.align(shifts[i])
+                    output_filename = os.path.join(output_dir, output_filename)
+                    aligned_image.save_as_png(output_filename)

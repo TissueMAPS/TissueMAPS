@@ -31,28 +31,26 @@ class MetadataHandler(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, image_upload_dir, additional_upload_dir, ome_xml_dir,
+    def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
         '''
         Initialize an instance of class MetadataHandler.
 
         Parameters
         ----------
-        image_upload_dir: str
-            directory where image files were uploaded to
-        additional_upload_dir: str
-            directory where additional microscope-specific metadata files
-            may have been uploaded to
-        ome_xml_dir: str
-            directory where OMEXML metadata files were stored upon extraction
-            of metadata from the image files in `image_upload_dir`
+        image_upload_files: List[str]
+            full paths to image files
+        additional_files: List[str]
+            full paths to additional microscope-specific metadata files
+        ome_xml_files: List[str]
+            full paths to the XML files that contain the extracted OMEXML data
         cycle_name: str
             name of the cycle, i.e. the name of the folder of the corresponding
             experiment or subexperiment
         '''
-        self.image_upload_dir = image_upload_dir
-        self.additional_upload_dir = additional_upload_dir
-        self.ome_xml_dir = ome_xml_dir
+        self.image_files = image_files
+        self.additional_files = additional_files
+        self.ome_xml_files = ome_xml_files
         self.cycle_name = cycle_name
 
     @property
@@ -65,58 +63,6 @@ class MetadataHandler(object):
         '''
         self._supported_extensions = Formats().supported_extensions
         return self._supported_extensions
-
-    @cached_property
-    def image_files(self):
-        '''
-        Returns
-        -------
-        List[str]
-            names of image files
-
-        Note
-        ----
-        To be recognized as an image file, a file must have one of the
-        supported file extensions.
-
-        Raises
-        ------
-        OSError
-            when no image files are found
-        '''
-        files = [f for f in os.listdir(self.image_upload_dir)
-                 if os.path.splitext(f)[1] in self.supported_extensions]
-        if len(files) == 0:
-            raise OSError('No image files founds in folder: %s'
-                          % self.image_upload_dir)
-        self._image_files = files
-        return self._image_files
-
-    @cached_property
-    def ome_xml_files(self):
-        '''
-        Returns
-        -------
-        List[str]
-            names of the XML files that contain the extracted OMEXML data
-
-        Raises
-        ------
-        OSError
-            when no ome-xml files are found
-
-        Note
-        ----
-        Files are supposed to have the same basename as the image file from
-        which the metadata was extracted, but with *.ome.xml* extension.
-        '''
-        files = [f for f in os.listdir(self.ome_xml_dir)
-                 if f.endswith('.ome.xml')]
-        if len(files) == 0:
-            raise OSError('No OMEXML files founds in folder: %s'
-                          % self.ome_xml_dir)
-        self._ome_xml_files = files
-        return self._ome_xml_files
 
     @property
     def ome_image_metadata(self):
@@ -135,9 +81,8 @@ class MetadataHandler(object):
         self._ome_image_metadata = dict()
         with BioformatsMetadataReader() as reader:
             for i, f in enumerate(self.ome_xml_files):
-                filename = os.path.join(self.ome_xml_dir, f)
-                k = self.image_files[i]
-                self._ome_image_metadata[k] = reader.read(filename)
+                k = os.path.basename(self.image_files[i])
+                self._ome_image_metadata[k] = reader.read(f)
         return self._ome_image_metadata
 
     @staticmethod
@@ -299,16 +244,6 @@ class MetadataHandler(object):
                 formatted_metadata.extend(md)
 
         return formatted_metadata
-
-    @abstractproperty
-    def additional_files(self):
-        '''
-        Returns
-        -------
-        List[str] or None
-            names of additional microscope-specific metadata files
-        '''
-        pass
 
     @abstractproperty
     def ome_additional_metadata(self):

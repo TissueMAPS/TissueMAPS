@@ -2,8 +2,6 @@ import os
 import numpy as np
 from cached_property import cached_property
 from .. import imageutils
-from .. import utils
-from ..metadata import ChannelImageMetadata
 from ..image_readers import BioformatsImageReader
 from ..cluster import ClusterRoutine
 
@@ -20,15 +18,15 @@ class ImageExtractor(ClusterRoutine):
     formats (often extended TIFF formats).
     '''
 
-    def __init__(self, cycle, prog_name, logging_level='critical'):
+    def __init__(self, experiment, prog_name, logging_level='critical'):
         '''
         Initialize an instance of class ImageExtractor.
 
         Parameters
         ----------
-        cycle: Cycle
-            cycle object that holds information about the content of the cycle
-            directory
+        experiment: Experiment
+            cycle object that holds information about the content of the
+            experiment directory
         prog_name: str
             name of the corresponding program (command line interface)
         logging_level: str, optional
@@ -45,30 +43,18 @@ class ImageExtractor(ClusterRoutine):
             when `metadata_file` does not exist
         '''
         super(ImageExtractor, self).__init__(prog_name, logging_level)
-        self.cycle = cycle
-        if not os.path.exists(self.cycle.image_dir):
-            os.mkdir(self.cycle.image_dir)
-        if not os.path.exists(os.path.join(self.cycle.metadata_dir,
-                                           self.cycle.image_metadata_file)):
-            raise OSError('Metadata file does not exist. You can create it '
-                          'using the "format" package.')
+        self.experiment = experiment
         self.prog_name = prog_name
+        for cycle in self.cycles:
+            if not os.path.exists(os.path.join(cycle.metadata_dir,
+                                               cycle.image_metadata_file)):
+                raise OSError('Metadata file does not exist. '
+                              'Use the "metaconvert" package to create it.')
 
-    @cached_property
-    def metadata(self):
-        '''
-        Read metadata information from file and cache it.
-
-        Returns
-        -------
-        List[ChannelImageMetadata]
-            metadata for each output image
-        '''
-        filename = os.path.join(self.cycle.metadata_dir,
-                                self.cycle.image_metadata_file)
-        metadata = utils.read_json(filename)
-        self._metadata = [ChannelImageMetadata(md) for md in metadata.values()]
-        return self._metadata
+    def _create_output_dirs(self):
+        for cycle in self.cycles:
+            if not os.path.exists(cycle.image_dir):
+                os.mkdir(cycle.image_dir)
 
     @property
     def log_dir(self):
@@ -82,9 +68,20 @@ class ImageExtractor(ClusterRoutine):
         ----
         The directory will be sibling to the output directory.
         '''
-        self._log_dir = os.path.join(os.path.dirname(self.cycle.image_dir),
-                                     'log_{name}'.format(name=self.prog_name))
+        self._log_dir = os.path.join(self.experiment.dir,
+                                     'log_%s' % self.prog_name)
         return self._log_dir
+
+    @cached_property
+    def cycles(self):
+        '''
+        Returns
+        -------
+        List[Wellplate or Slide]
+            cycle objects
+        '''
+        self._cycles = self.experiment.cycles
+        return self._cycles
 
     def create_joblist(self, **kwargs):
         '''
@@ -97,39 +94,31 @@ class ImageExtractor(ClusterRoutine):
             additional input arguments as key-value pairs:
             * "batch_size": number of images per job (*int*)
         '''
-        md_batches = self._create_batches(self.metadata, kwargs['batch_size'])
-        joblist = [{
-                'id': i+1,
-                'inputs': [os.path.join(self.cycle.image_upload_dir,
-                                        md.original_filename) for md in batch],
-                'outputs': [os.path.join(self.cycle.image_dir,
-                                         md.name) for md in batch],
-                'metadata': [md.serialize() for md in batch]
+        joblist = list()
+        count = 0
+        for cycle in self.cycles:
+            md_batches = self._create_batches(cycle.image_metadata,
+                                              kwargs['batch_size'])
+            for batch in md_batches:
+                count += 1
+                joblist.append({
+                    'id': count,
+                    'inputs': [os.path.join(cycle.image_upload_dir,
+                                            md.original_filename)
+                               for md in batch],
+                    'outputs': [os.path.join(cycle.image_dir, md.name)
+                                for md in batch],
+                    'metadata': [md.serialize() for md in batch],
+                    'cycle': cycle.name
 
-            } for i, batch in enumerate(md_batches)]
+                })
         return joblist
 
-    def build_command(self, batch):
-        '''
-        Build a command for GC3Pie submission. For further information on
-        the structure of the command see
-        `subprocess <https://docs.python.org/2/library/subprocess.html>`_.
-
-        Parameter
-        ---------
-        batch: Dict[str, int or List[str]]
-            joblist element
-        cfg_file: str
-            absolute path to configuration file
-
-        Returns
-        -------
-        List[str]
-            substrings of the command call
-        '''
+    def _build_command(self, batch):
         job_id = batch['id']
         command = ['imextract']
-        command += ['run', '--job', str(job_id), self.cycle.cycle_dir]
+        command.append(self.experiment.dir)
+        command.extend(['run', '--job', str(job_id)])
         return command
 
     def run_job(self, batch):

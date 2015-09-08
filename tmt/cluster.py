@@ -109,7 +109,7 @@ class ClusterRoutine(object):
         Parameters
         ----------
         batch: dict
-            joblist element, i.e. description of a single job 
+            joblist element, i.e. description of a single job
         '''
         pass
 
@@ -128,22 +128,10 @@ class ClusterRoutine(object):
         pass
 
     @abstractmethod
-    def build_command(self, batch):
-        '''
-        Build a command for GC3Pie submission. For further information on
-        the structure of the command see
-        `subprocess <https://docs.python.org/2/library/subprocess.html>`_.
-
-        Parameter
-        ---------
-        batch: dict
-            joblist element, i.e. description of a single job
-
-        Returns
-        -------
-        List[str]
-            substrings of the command call
-        '''
+    def _build_command(self, batch):
+        # Build a command for GC3Pie submission. For further information on
+        # the structure of the command see documentation of subprocess package:
+        # https://docs.python.org/2/library/subprocess.html.
         pass
 
     @abstractmethod
@@ -374,7 +362,7 @@ class ClusterRoutine(object):
 
             # Add individual task to collection
             app = gc3libs.Application(
-                    arguments=self.build_command(batch),
+                    arguments=self._build_command(batch),
                     inputs=inputs,
                     outputs=outputs,
                     output_dir=self.log_dir,
