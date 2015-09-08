@@ -243,7 +243,7 @@ class VipsPixels(Pixels):
                     self.array, y=sd.y_shift, x=sd.x_shift,
                     upper=sd.upper_overhang, lower=sd.lower_overhang,
                     left=sd.left_overhang, right=sd.right_overhang,
-                    shift=not(sd.dont_shift)))
+                    shift=not(sd.omit)))
 
     def correct_illumination(self, mean, std):
         '''

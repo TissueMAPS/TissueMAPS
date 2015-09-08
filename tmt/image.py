@@ -117,7 +117,7 @@ class ChannelImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library):
+    def create_from_file(filename, metadata, library='numpy'):
         '''
         Create a ChannelImage object from a file on disk.
 
@@ -127,14 +127,15 @@ class ChannelImage(Image):
             absolute path to the image file
         metadata: ChannelImageMetadata
             image metadata object
-        library: str
+        library: str, optional
             image library that should be used, "vips" or "numpy"
+            (defaults to "numpy")
 
         Returns
         -------
         ChannelImage
             image object
-        
+
         Raises
         ------
         ValueError
@@ -243,7 +244,7 @@ class BrightfieldImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library):
+    def create_from_file(filename, metadata, library='numpy'):
         '''
         Create a BrightfieldImage object from a file on disk.
 
@@ -253,8 +254,9 @@ class BrightfieldImage(Image):
             absolute path to the image file
         metadata: BrightfieldImageMetadata
             image metadata object
-        library: str
+        library: str, optional
             image library that should be used, "vips" or "numpy"
+            (defaults to "numpy")
 
         Returns
         -------
@@ -310,7 +312,7 @@ class MaskImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library):
+    def create_from_file(filename, metadata, library='numpy'):
         '''
         Create a MaskImage object from a file on disk.
 
@@ -320,8 +322,9 @@ class MaskImage(Image):
             absolute path to the image file
         metadata: SegmentationImageMetadata
             image metadata object
-        library: str
+        library: str, optional
             image library that should be used, "vips" or "numpy"
+            (defaults to "numpy")
 
         Returns
         -------
@@ -413,7 +416,7 @@ class LabelImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library):
+    def create_from_file(filename, metadata, library='numpy'):
         '''
         Create a LabelImage object from a file on disk.
 
@@ -423,8 +426,9 @@ class LabelImage(Image):
             absolute path to the image file
         metadata: SegmentationImageMetadata
             image metadata object
-        library: str
+        library: str, optional
             image library that should be used, "vips" or "numpy"
+            (defaults to "numpy")
 
         Returns
         -------
@@ -626,7 +630,7 @@ class IllumstatsImages(object):
         self._mean = value
 
     @staticmethod
-    def create_from_file(filename, library):
+    def create_from_file(filename, library='numpy'):
         '''
         Create an Illumstats object from a file on disk.
 
@@ -634,8 +638,9 @@ class IllumstatsImages(object):
         ----------
         filename: str
             absolute path to the HDF5 file
-        library: str
+        library: str, optional
             image library that should be used, "vips" or "numpy"
+            (defaults to "numpy")
 
         Returns
         -------
