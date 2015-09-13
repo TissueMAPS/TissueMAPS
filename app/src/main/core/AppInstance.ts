@@ -61,6 +61,44 @@ class AppInstance implements Serializable<AppInstance> {
 
         // Load tools
         this.tools = ToolLoader.loadTools(this);
+
+
+        var createDemoRectangles = function(startx, starty) {
+            var side = 100;
+            var nRect = 100;
+            var cells = [];
+            for (var i = startx; i <  side * nRect + startx; i += side) {
+                for (var j = starty; j < side * nRect + starty; j += side) {
+                    var coords = [[
+                        [i, -j],
+                        [i + side, -j],
+                        [i + side, -j - side],
+                        [i, -j - side],
+                        [i, -j]
+                    ]];
+                    var c = new Cell('bla', {x: i, y: -j}, coords);
+                    cells.push(c);
+                }
+            }
+            return cells;
+        }
+
+        var cellsA = createDemoRectangles(0, 0);
+        var cellsB = createDemoRectangles(10000, 0);
+
+        var objLayerA = ObjectLayerFactory.create('Cells A', {
+            objects: cellsA,
+            fillColor: 'rgba(0, 0, 255, 0.5)',
+            strokeColor: 'rgba(0, 0, 255, 1)'
+        });
+        var objLayerB = ObjectLayerFactory.create('Cells B', {
+            objects: cellsB,
+            fillColor: 'rgba(255, 0, 0, 0.5)',
+            strokeColor: 'rgba(255, 0, 0, 1)'
+        });
+
+        this.addObjectLayer(objLayerA);
+        this.addObjectLayer(objLayerB);
     }
 
     addObjectLayer(objLayer: ObjectLayer) {
