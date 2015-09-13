@@ -1,8 +1,12 @@
+interface ObjectLayerArgs {
+    objects?: MapObject[];
+}
+
 class ObjectLayer extends Layer {
     olLayer: ol.layer.Vector;
     styles: any;
 
-    constructor(private ol, name: string) {
+    constructor(private ol, name: string, opt: ObjectLayerArgs = {}) {
         super(name)
 
         var vectorSource = new ol.source.Vector({
@@ -17,6 +21,11 @@ class ObjectLayer extends Layer {
             source: vectorSource,
             style: styleFunction
         });
+
+        if (opt.objects !== undefined) {
+            var features = _(opt.objects).map((o) => { return o.getOLFeature(); });
+            this.olLayer.getSource().addFeatures(features);
+        }
 
         this.styles = {
             'Point': [new this.ol.style.Style({
@@ -54,21 +63,6 @@ class ObjectLayer extends Layer {
         var source = this.olLayer.getSource();
         source.addFeatures(feats);
     }
-
-    /*
-     * Draw the layer on the given openlayers map object
-     */
-    addToMap(olMap: ol.Map) {
-        olMap.addLayer(this.olLayer);
-    }
-
-    /*
-     * Remove the layer from the given openlayers map object
-     */
-    removeFromMap(olMap: ol.Map) {
-        olMap.removeLayer(this.olLayer);
-    }
-
 }
 
 class ObjectLayerFactory {

@@ -1,0 +1,36 @@
+<div class="object-settings">
+
+  <tm-multi-selection-box items="objCtrl.layers" by-name="'layer'">
+    <tm-selectable-tabs>
+        <tm-selectable-tab>
+
+        <tm-selectable-tab-popup>
+        </tm-selectable-tab-popup>
+
+        <tm-selectable-tab-content>
+          <span class="inline-layer-control" tm-stop-click>
+              <i ng-show="layer.visible()" ng-click="layer.visible(false)" class="fa fa-eye"></i>
+              <i ng-hide="layer.visible()" ng-click="layer.visible(true)" class="fa fa-circle-thin"></i>
+          </span>
+
+          <!-- <input type="text" ng-model="layer.name" tm-stop-click></input> -->
+          <span contenteditable strip-br="true" ng-model="layer.name"
+               select-non-editable="true">
+          </span>
+
+        </tm-selectable-tab-content>
+
+      </tm-selectable-tab>
+
+    </tm-selectable-tabs>
+
+    <tm-multi-selection-controls ng-controller="ObjectsControlsCtrl as controlsCtrl">
+      <button ng-click="controlsCtrl.removeSelectedLayers()"
+              ng-show="selectionBox.hasSelectedItems()">
+        <i class="fa fa-trash"></i>
+      </button>
+    </tm-multi-selection-controls>
+
+  </tm-multi-selection-box>
+
+</div>

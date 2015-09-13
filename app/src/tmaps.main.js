@@ -30,6 +30,7 @@
     angular.module('tmaps.main.layerprops.channels', ['tmaps.main.layerprops']);
     angular.module('tmaps.main.layerprops.masks', ['tmaps.main.layerprops']);
     angular.module('tmaps.main.layerprops.selections', ['tmaps.main.layerprops']);
+    angular.module('tmaps.main.layerprops.objects', ['tmaps.main.layerprops']);
 
     angular.module('tmaps.main.experiment', [
         'tmaps.shared.thirdpartymodules',
@@ -96,6 +97,7 @@
         'tmaps.main.layerprops.channels',
         'tmaps.main.layerprops.masks',
         'tmaps.main.layerprops.selections',
+        'tmaps.main.layerprops.objects',
 
         // 'tmaps.main.auth',
 

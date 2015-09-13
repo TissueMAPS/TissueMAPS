@@ -74,116 +74,93 @@ class TileLayer extends Layer {
         this.olLayer = new this.ol.layer.Tile(olLayerArgs);
     }
 
-    /*
-     * Draw the layer on the given openlayers map object
-     */
-     addToMap(olMap: ol.Map) {
-         olMap.addLayer(this.olLayer);
-     }
+    color(val?: Color): Color {
+        if (angular.isDefined(val)) {
+            this.olLayer.setColor(val);
+            return val;
+        } else {
+            return this.olLayer.getColor();
+        }
+    }
 
-     /*
-      * Remove the layer from the given openlayers map object
-      */
-      removeFromMap(olMap: ol.Map) {
-          olMap.removeLayer(this.olLayer);
-      }
+    opacity(val?: number): number {
+        if (angular.isDefined(val)) {
+            this.olLayer.setOpacity(val);
+            return val;
+        } else {
+            return this.olLayer.getOpacity();
+        }
+    }
 
-      color(val?: Color): Color {
-          if (angular.isDefined(val)) {
-              this.olLayer.setColor(val);
-              return val;
-          } else {
-              return this.olLayer.getColor();
-          }
-      }
+    min(val?: number): number {
+        if (angular.isDefined(val)) {
+            this.olLayer.setMin(val);
+            return val;
+        } else {
+            return this.olLayer.getMin();
+        }
+    }
 
-      opacity(val?: number): number {
-          if (angular.isDefined(val)) {
-              this.olLayer.setOpacity(val);
-              return val;
-          } else {
-              return this.olLayer.getOpacity();
-          }
-      }
+    max(val?: number): number {
+        if (angular.isDefined(val)) {
+            this.olLayer.setMax(val);
+            return val;
+        } else {
+            return this.olLayer.getMax();
+        }
+    }
 
-      min(val?: number): number {
-          if (angular.isDefined(val)) {
-              this.olLayer.setMin(val);
-              return val;
-          } else {
-              return this.olLayer.getMin();
-          }
-      }
+    brightness(val?: number): number {
+        if (angular.isDefined(val)) {
+            this.olLayer.setBrightness(val);
+            return val;
+        } else {
+            return this.olLayer.getBrightness();
+        }
+    }
 
-      max(val?: number): number {
-          if (angular.isDefined(val)) {
-              this.olLayer.setMax(val);
-              return val;
-          } else {
-              return this.olLayer.getMax();
-          }
-      }
+    additiveBlend(val?: boolean): boolean {
+        if (angular.isDefined(val)) {
+            this.olLayer.setAdditiveBlend(val);
+            return val;
+        } else {
+            return this.olLayer.getAdditiveBlend();
+        }
+    }
 
-      brightness(val?: number): number {
-          if (angular.isDefined(val)) {
-              this.olLayer.setBrightness(val);
-              return val;
-          } else {
-              return this.olLayer.getBrightness();
-          }
-      }
+    drawBlackPixels(val?: boolean): boolean {
+        if (angular.isDefined(val)) {
+            this.olLayer.setDrawBlackPixels(val);
+            return val;
+        } else {
+            return this.olLayer.getDrawBlackPixels();
+        }
+    }
 
-      visible(val?: boolean): boolean {
-          if (angular.isDefined(val)) {
-              this.olLayer.setVisible(val);
-              return val;
-          } else {
-              return this.olLayer.getVisible();
-          }
-      }
+    drawWhitePixels(val?: boolean): boolean {
+        if (angular.isDefined(val)) {
+            this.olLayer.setDrawWhitePixels(val);
+            return val;
+        } else {
+            return this.olLayer.getDrawWhitePixels();
+        }
+    }
 
-      additiveBlend(val?: boolean): boolean {
-          if (angular.isDefined(val)) {
-              this.olLayer.setAdditiveBlend(val);
-              return val;
-          } else {
-              return this.olLayer.getAdditiveBlend();
-          }
-      }
-
-      drawBlackPixels(val?: boolean): boolean {
-          if (angular.isDefined(val)) {
-              this.olLayer.setDrawBlackPixels(val);
-              return val;
-          } else {
-              return this.olLayer.getDrawBlackPixels();
-          }
-      }
-
-      drawWhitePixels(val?: boolean): boolean {
-          if (angular.isDefined(val)) {
-              this.olLayer.setDrawWhitePixels(val);
-              return val;
-          } else {
-              return this.olLayer.getDrawWhitePixels();
-          }
-      }
-
-      toBlueprint(): SerializedTileLayer {
-          return {
-              name: this.name,
-              pyramidPath: this.pyramidPath,
-              imageSize: this.imageSize,
-              color: this.color(),
-              additiveBlend: this.additiveBlend(),
-              drawBlackPixels: this.drawBlackPixels(),
-              drawWhitePixels: this.drawWhitePixels(),
-              visible: this.visible(),
-              brightness: this.brightness(),
-              min: this.min(),
-              max: this.max(),
-              opacity: this.opacity()
-          };
-      }
+    toBlueprint(): SerializedTileLayer {
+        return {
+            name: this.name,
+            pyramidPath: this.pyramidPath,
+            imageSize: this.imageSize,
+            color: this.color(),
+            additiveBlend: this.additiveBlend(),
+            drawBlackPixels: this.drawBlackPixels(),
+            drawWhitePixels: this.drawWhitePixels(),
+            visible: this.visible(),
+            brightness: this.brightness(),
+            min: this.min(),
+            max: this.max(),
+            opacity: this.opacity()
+        };
+    }
 
 }

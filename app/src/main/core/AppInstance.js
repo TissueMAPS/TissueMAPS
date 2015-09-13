@@ -54,6 +54,7 @@ angular.module('tmaps.core')
         // Load tools
         this.tools = ToolLoader.loadTools(this);
 
+        var self = this;
         this.map.then(function(map) {
             var geojsonObject = {
               'type': 'FeatureCollection',
@@ -107,21 +108,25 @@ angular.module('tmaps.core')
 
             var side = 500;
             var nRect = 100;
+            var cells = [];
             for (var i = 1; i <  side * nRect; i += side) {
                 for (var j = 1; j < side * nRect; j += side) {
-                    geojsonObject.features.push({
-                        'type': 'Feature',
-                        'geometry': {
-                            'type': 'Polygon',
-                            'coordinates': [[
-                                [i, -j],
-                                [i + side, -j],
-                                [i + side, -j - side],
-                                [i, -j - side],
-                                [i, -j]
-                            ]]
-                        }
-                    });
+                    var coords = [[
+                        [i, -j],
+                        [i + side, -j],
+                        [i + side, -j - side],
+                        [i, -j - side],
+                        [i, -j]
+                    ]];
+                    var c = new Cell('bla', {x: i, y: -j}, coords);
+                    cells.push(c);
+                    // geojsonObject.features.push({
+                    //     'type': 'Feature',
+                    //     'geometry': {
+                    //         'type': 'Polygon',
+                    //         'coordinates': coords
+                    //     }
+                    // });
                 }
             }
 
@@ -137,20 +142,42 @@ angular.module('tmaps.core')
             // });
 
             // map.addLayer(vectorLayer);
-            var c = new Cell('bla', {
-                x: 1231,
-                y: -1000
+            // var c = new Cell('bla', {
+            //     x: 1231,
+            //     y: -1000
+            // });
+            var objLayer = ObjectLayerFactory.create('Bla', {
+                objects: cells
             });
-            var objLayer = ObjectLayerFactory.create('Bla');
-            objLayer.addToMap(map);
-            // objLayer.addFeaturesFromGeoJSON(geojsonObject);
-            objLayer.addObject(c);
+
+            window.inst = self;
+
+            cells.forEach(function(c) {
+                objLayer.addObject(c);
+            });
+            self.addObjectLayer(objLayer);
 
         });
     }
 
     // TODO
-    // AppInstance.prototype.addObjectLayer ...
+    AppInstance.prototype.addObjectLayer = function(objLayer) {
+        this.objectLayers.push(objLayer);
+        this.map.then(function(map) {
+            objLayer.addToMap(map);
+        });
+    };
+
+    // TODO
+    AppInstance.prototype.removeObjectLayer = function(objLayer) {
+        var idx = this.objectLayers.indexOf(objLayer)
+        if (idx !== -1) {
+            this.map.then(function(map) {
+                objLayer.removeFromMap(map);
+                this.objectLayers.splice(idx, 1);
+            });
+        }
+    };
 
     // TODO: Consider throwing everything cell position related into own
     // CellPositionHandler or something like that.

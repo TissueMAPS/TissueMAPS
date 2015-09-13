@@ -15,7 +15,7 @@
     outline: 0;
 }
 
-.channel-section, .mask-section, .selection-section {
+.channel-section, .mask-section, .selection-section, .object-section {
     .tm-selectable-tab-content {
         white-space: nowrap;
         input[type=text] {
@@ -219,3 +219,22 @@
     border: 1px solid black;
 }
 
+
+/******************************************************************************
+ *                              OBJECT SETTNGS                               *
+ ******************************************************************************/
+.object-section {
+
+    height: @object-section-height;
+
+    .object-settings {
+        height: 100%;
+    }
+
+    .tm-selectable-tabs {
+        li {
+            height: @object-settings-li-height;
+            line-height: @object-settings-li-height;
+        }
+    }
+}
