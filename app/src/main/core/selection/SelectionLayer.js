@@ -1,4 +1,4 @@
-angular.module('tmaps.core.layer')
+angular.module('tmaps.core.selection')
 .factory('SelectionLayer',
          ['openlayers', '_',
          function(ol, _) {

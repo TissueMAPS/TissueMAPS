@@ -1,52 +1,45 @@
-interface ITileLayer extends TileLayer {}
-interface ICycleLayer extends ITileLayer {}
-interface ICycleLayerFactory extends CycleLayerFactory {}
-interface IOutlineLayer extends ITileLayer {}
-interface IOutlineLayerFactory extends OutlineLayerFactory {}
+/// <reference path='Layer.ts'/>
+/// <reference path='typedefs.ts'/>
 
-type ImageSize = [number, number];
-
-interface IModifiedOlTileLayer extends ol.layer.Tile {
-    getMin(): number;
-    setMin(val: number);
-    getMax(): number;
-    setMax(val: number);
-    setColor(c: IColor);
-    getColor(): IColor;
-    setAdditiveBlend(b: boolean);
-    getAdditiveBlend(): boolean;
-    getDrawWhitePixels(): boolean;
-    setDrawWhitePixels(b: boolean);
-    getDrawBlackPixels(): boolean;
-    setDrawBlackPixels(b: boolean);
+interface SerializedTileLayer {
+      name: string;
+      pyramidPath: string;
+      imageSize: ImageSize;
+      color: Color;
+      additiveBlend: boolean;
+      drawBlackPixels: boolean;
+      drawWhitePixels: boolean;
+      visible: boolean;
+      brightness: number;
+      min: number;
+      max: number;
+      opacity: number;
 }
 
-interface ITileLayerArgs {
+interface TileLayerArgs {
     name: string;
     imageSize: ImageSize;
     pyramidPath: string;
-    color: IColor;
-    additiveBlend: string;
 
+    color: Color;
+    additiveBlend: string;
     drawBlackPixels: boolean;
     drawWhitePixels: boolean;
     visible: boolean;
-
     brightness?: number;
     opacity?: number;
     min?: number;
     max?: number;
 }
 
-class TileLayer {
-    name: string;
+class TileLayer extends Layer {
     pyramidPath: string;
     imageSize: ImageSize;
     blendMode: string;
-    olLayer: IModifiedOlTileLayer;
+    olLayer: ModifiedOlTileLayer;
 
-    constructor(protected ol, opt: ITileLayerArgs) {
-        this.name = opt.name;
+    constructor(protected ol, opt: TileLayerArgs) {
+        super(opt.name);
 
         // Add trailing slash if not already present
         var pyramidPath = opt.pyramidPath;
@@ -64,7 +57,7 @@ class TileLayer {
         }
 
         // Some default properties
-        var olLayerArgs: any = _.defaults(opt, {
+        var olLayerArgs: ModifiedOlTileLayerArgs = _.defaults(opt, {
             brightness: 0,
             opacity: 1,
             min: 0,
@@ -95,57 +88,102 @@ class TileLayer {
           olMap.removeLayer(this.olLayer);
       }
 
-      color(val?: IColor) {
-          return angular.isDefined(val) ?
-          this.olLayer.setColor(val) : this.olLayer.getColor();
+      color(val?: Color): Color {
+          if (angular.isDefined(val)) {
+              this.olLayer.setColor(val);
+              return val;
+          } else {
+              return this.olLayer.getColor();
+          }
       }
 
-      opacity(val?: number) {
-          return angular.isDefined(val) ?
-          this.olLayer.setOpacity(val) : this.olLayer.getOpacity();
+      opacity(val?: number): number {
+          if (angular.isDefined(val)) {
+              this.olLayer.setOpacity(val);
+              return val;
+          } else {
+              return this.olLayer.getOpacity();
+          }
       }
 
-      min(val?: number) {
-          return angular.isDefined(val) ?
-          this.olLayer.setMin(val) : this.olLayer.getMin();
+      min(val?: number): number {
+          if (angular.isDefined(val)) {
+              this.olLayer.setMin(val);
+              return val;
+          } else {
+              return this.olLayer.getMin();
+          }
       }
 
-      max(val?: number) {
-          return angular.isDefined(val) ?
-          this.olLayer.setMax(val) : this.olLayer.getMax();
+      max(val?: number): number {
+          if (angular.isDefined(val)) {
+              this.olLayer.setMax(val);
+              return val;
+          } else {
+              return this.olLayer.getMax();
+          }
       }
 
-      brightness(val?: number) {
-          return angular.isDefined(val) ?
-          this.olLayer.setBrightness(val) : this.olLayer.getBrightness();
+      brightness(val?: number): number {
+          if (angular.isDefined(val)) {
+              this.olLayer.setBrightness(val);
+              return val;
+          } else {
+              return this.olLayer.getBrightness();
+          }
       }
 
-      visible(val?: boolean) {
-          return angular.isDefined(val) ?
-          this.olLayer.setVisible(val) : this.olLayer.getVisible();
+      visible(val?: boolean): boolean {
+          if (angular.isDefined(val)) {
+              this.olLayer.setVisible(val);
+              return val;
+          } else {
+              return this.olLayer.getVisible();
+          }
       }
 
-      additiveBlend(val?: boolean) {
-          return angular.isDefined(val) ?
-          this.olLayer.setAdditiveBlend(val) : this.olLayer.getAdditiveBlend();
+      additiveBlend(val?: boolean): boolean {
+          if (angular.isDefined(val)) {
+              this.olLayer.setAdditiveBlend(val);
+              return val;
+          } else {
+              return this.olLayer.getAdditiveBlend();
+          }
       }
 
-      drawBlackPixels(val?: boolean) {
-          return angular.isDefined(val) ?
-          this.olLayer.setDrawBlackPixels(val) : this.olLayer.getDrawBlackPixels();
+      drawBlackPixels(val?: boolean): boolean {
+          if (angular.isDefined(val)) {
+              this.olLayer.setDrawBlackPixels(val);
+              return val;
+          } else {
+              return this.olLayer.getDrawBlackPixels();
+          }
       }
 
-      drawWhitePixels(val?: boolean) {
-          return angular.isDefined(val) ?
-          this.olLayer.setDrawWhitePixels(val) : this.olLayer.getDrawWhitePixels();
+      drawWhitePixels(val?: boolean): boolean {
+          if (angular.isDefined(val)) {
+              this.olLayer.setDrawWhitePixels(val);
+              return val;
+          } else {
+              return this.olLayer.getDrawWhitePixels();
+          }
       }
+
+      toBlueprint(): SerializedTileLayer {
+          return {
+              name: this.name,
+              pyramidPath: this.pyramidPath,
+              imageSize: this.imageSize,
+              color: this.color(),
+              additiveBlend: this.additiveBlend(),
+              drawBlackPixels: this.drawBlackPixels(),
+              drawWhitePixels: this.drawWhitePixels(),
+              visible: this.visible(),
+              brightness: this.brightness(),
+              min: this.min(),
+              max: this.max(),
+              opacity: this.opacity()
+          };
+      }
+
 }
-
-class TileLayerFactory {
-    static $inject = ['openlayers'];
-    constructor(private ol) {}
-    create(opt: ITileLayerArgs) {
-        return new TileLayer(this.ol, opt);
-    }
-}
-

@@ -268,7 +268,7 @@ module.exports = function(grunt) {
             openlayersSource: {
                 files: ['<%= olDir %>/src/ol/**/*.js'],
                 tasks: [
-                    'exec:buildOL'
+                    'exec:buildOLDebug'
                 ]
             },
 
@@ -328,7 +328,8 @@ module.exports = function(grunt) {
         exec: {
             // temporarily change working directory and build openlayers
             // via its makefile
-            buildOL: '(cd <%= olDir %> && make build)',
+            buildOLDebug: '(cd <%= olDir %> && node tasks/build.js config/ol-debug.json build/ol-debug.js)',
+            buildOL: '(cd <%= olDir %> && node tasks/build.js config/ol.json build/ol.js)',
             initOL: '(cd <%= olDir %> && make install)'
         },
 
@@ -367,10 +368,10 @@ module.exports = function(grunt) {
                     sourceMap: true,
                     declaration: true,
                     references: [
-                        'app/typedefs/underscore/underscore.d.ts',
-                        'app/typedefs/angularjs/angular.d.ts',
-                        'app/typedefs/jquery/jquery.d.ts',
-                        'app/typedefs/openlayers/openlayers.d.ts'
+                        'app/typedefs/DefinitelyTyped/underscore/underscore.d.ts',
+                        'app/typedefs/DefinitelyTyped/angularjs/angular.d.ts',
+                        'app/typedefs/DefinitelyTyped/jquery/jquery.d.ts',
+                        'app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts'
                     ]
                 }
             }
@@ -553,8 +554,12 @@ module.exports = function(grunt) {
         'dev'
     ]);
 
-    grunt.registerTask('buildOL', [
-        'exec:buildOL',
+    grunt.registerTask('buildOLDebug', [
+        'exec:buildOLDebug',
         'dev'
+    ]);
+
+    grunt.registerTask('buildOL', [
+        'exec:buildOL'
     ]);
 };

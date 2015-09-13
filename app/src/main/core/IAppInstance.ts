@@ -1,6 +1,6 @@
-interface IAppInstance {
-    experiment: IExperiment;
-    viewport: IViewport;
+interface AppInstance {
+    experiment: Experiment;
+    viewport: Viewport;
     map: ng.IPromise<ol.Map>;
 
     cycleLayers: any[];

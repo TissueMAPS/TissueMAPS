@@ -5,13 +5,14 @@ angular.module('tmaps.main.tools')
  * what happens when such a button is pressed.
  */
 .controller('ToolbarCtrl',
-            ['$scope', 'toolConfigs', 'toolService', 'appstateService',
-            function($scope, toolConfigs, toolService, appstateService) {
+            ['$scope', 'application', 'appstateService',
+            function($scope, application, appstateService) {
 
     // Add the tools to scope as soon as they are ready
     $scope.tools = [];
-    toolConfigs.configs.then(function(configs) {
-        $scope.tools = configs;
+    application.getActiveInstance().tools.then(function(tools) {
+        $scope.tools = tools;
+        window.tools = tools;
     });
 
     /**
@@ -21,9 +22,7 @@ angular.module('tmaps.main.tools')
         if (appstateService.stateHasBeenSavedAlready()) {
             var appstate = appstateService.currentState;
             var experimentId = $scope.appInstance.experiment.id;
-            toolService.openWindow(
-                tool, $scope.appInstance, appstate.id, experimentId
-            );
+            tool.openWindow(appstate);
         } else {
             throw new Error('Can\'t open window when appstate hasn\'t been saved');
         }

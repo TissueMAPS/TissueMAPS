@@ -1,5 +1,3 @@
-interface ICreateViewportService extends CreateViewportService {}
-
 class CreateViewportService {
 
     static $inject = ['$http', 'openlayers', '$q', '$controller', '$compile', '$rootScope'];
@@ -19,9 +17,9 @@ class CreateViewportService {
         return deferred.promise;
     }
 
-    private createViewportSync(appInstance: IAppInstance,
+    private createViewportSync(appInstance: AppInstance,
                                appendToId: string,
-                               templateString: string): IViewport {
+                               templateString: string): Viewport {
         var newScope = this.$rootScope.$new();
         newScope.appInstance = appInstance;
         var ctrl = this.$controller('ViewportCtrl', {
@@ -60,7 +58,7 @@ class CreateViewportService {
         };
     }
 
-    createViewport(appInstance, appendToId, templateUrl): ng.IPromise<IViewport> {
+    createViewport(appInstance, appendToId, templateUrl): ng.IPromise<Viewport> {
         var deferred = this.$q.defer();
         this.getTemplate(templateUrl).then((templateString) => {
             var viewportObj = this.createViewportSync(appInstance, appendToId, templateString);

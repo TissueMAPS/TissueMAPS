@@ -1,9 +1,9 @@
-class ExperimentService implements IExperimentService {
+class ExperimentService {
     static $inject = ['$modal', '$http'];
 
     constructor(private $modal, private $http: ng.IHttpService) {}
 
-    getAvailableExperiments(): ng.IPromise<IExperiment[]> {
+    getAvailableExperiments(): ng.IPromise<Experiment[]> {
         return this.$http
         .get('/api/experiments')
         .then(function(resp) {
@@ -12,7 +12,7 @@ class ExperimentService implements IExperimentService {
     }
 
     // TODO: error handling
-    getExperiment(id: ExperimentId): ng.IPromise<IExperiment> {
+    getExperiment(id: ExperimentId): ng.IPromise<Experiment> {
         return this.$http
         .get('/api/experiments/' + id)
         .success(function(data, headers) {
@@ -21,7 +21,7 @@ class ExperimentService implements IExperimentService {
     }
 
     // TODO: error handling
-    getFeaturesForExperiment(id: ExperimentId): ng.IPromise<IFeature[]> {
+    getFeaturesForExperiment(id: ExperimentId): ng.IPromise<Feature[]> {
         return this.$http.get('/api/experiments/' + id + '/features?include=min,max')
         .then(function(resp: any) {
             return resp.data.features;
@@ -29,7 +29,7 @@ class ExperimentService implements IExperimentService {
     }
 
     // TODO: error handling
-    getCellsForExperiment(id: ExperimentId): ng.IPromise<ICell[]> {
+    getCellsForExperiment(id: ExperimentId): ng.IPromise<Cell[]> {
         return this.$http.get('/api/experiments/' + id + '/cells')
         .success(function(data) {
             var cells = [];

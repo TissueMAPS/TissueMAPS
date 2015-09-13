@@ -1,41 +1,30 @@
-interface ISerializable {
+interface Serializable {
     toBlueprint(): Object;
 }
 
-interface IWithFromBlueprint {
-    fromBlueprint(): ISerializable;
+interface WithFromBlueprint {
+    fromBlueprint(): Serializable;
 }
 
-interface IFeature {}
-
-interface IExperimentService {
-    getFeaturesForExperiment(e: ExperimentId): ng.IPromise<IFeature[]>;
-    getCellsForExperiment(e: ExperimentId): ng.IPromise<ICell[]>;
-}
+interface Feature {}
 
 type ExperimentId = string;
 
-interface IExperimentArgs {
+interface ExperimentArgs {
     id: string;
     name: string;
     description: string;
 }
 
-interface IExperiment {
+class Experiment {
     id: ExperimentId;
     name: string;
     description: string;
-}
-
-class Experiment implements IExperiment {
-    id: ExperimentId;
-    name: string;
-    description: string;
-    cells: ng.IPromise<{ [cellId: string]: IMapPosition }>;
+    cells: ng.IPromise<{ [cellId: string]: MapPosition }>;
     features: ng.IPromise<any>;
 
-    constructor(opt: IExperimentArgs,
-                private experimentService: IExperimentService,
+    constructor(opt: ExperimentArgs,
+                private experimentService: ExperimentService,
                 private $q: ng.IQService) {
         this.id = opt.id;
         this.name = opt.name;
@@ -64,15 +53,3 @@ class Experiment implements IExperiment {
         };
     }
 }
-
-class ExperimentFactory {
-    static $inject = ['experimentService', '$q'];
-    constructor(private experimentService, private $q) {}
-
-    create(opt: IExperimentArgs): IExperiment {
-        return new Experiment(opt, this.experimentService, this.$q);
-    }
-}
-
-angular.module('tmaps.main.experiment')
-.service('ExperimentFactory', ExperimentFactory);

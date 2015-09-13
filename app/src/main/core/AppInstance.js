@@ -1,6 +1,8 @@
 angular.module('tmaps.core')
 .factory('AppInstance',
-         ['CreateViewportService', 'openlayers', '$q', 'CellSelectionHandler', 'CycleLayerFactory', 'OutlineLayerFactory', 'ExperimentFactory', '$http',
+         ['CreateViewportService', 'openlayers', '$q', 'CellSelectionHandler', 'CycleLayerFactory', 'OutlineLayerFactory', 'ExperimentFactory', '$http', 'Cell',
+        'ObjectLayerFactory', 'ToolLoader',
+
          function(CreateViewportService,
                   ol,
                   $q,
@@ -8,7 +10,9 @@ angular.module('tmaps.core')
                   CycleLayerFactory,
                   OutlineLayerFactory,
                   ExperimentFactory,
-                  $http) {
+                  $http, Cell,
+                  ObjectLayerFactory,
+                  ToolLoader) {
 
     /**
      * AppInstance is the main class for handling the visualization and
@@ -32,6 +36,7 @@ angular.module('tmaps.core')
         // Internal representation of map state
         this.cycleLayers = [];
         this.outlineLayers = [];
+        this.objectLayers = [];
 
         // Keep track of the click listeners that were added to the map
         // s.t. they can be removed later
@@ -46,32 +51,10 @@ angular.module('tmaps.core')
             mapDef.resolve(viewport.map);
         });
 
+        // Load tools
+        this.tools = ToolLoader.loadTools(this);
+
         this.map.then(function(map) {
-            var image = new ol.style.Circle({
-                radius: 5,
-                fill: null,
-                stroke: new ol.style.Stroke({color: 'red', width: 1})
-            });
-            var styles = {
-                'Point': [new ol.style.Style({
-                    image: image
-                })],
-                'Polygon': [new ol.style.Style({
-                    stroke: new ol.style.Stroke({
-                        color: 'rgba(0, 0, 255, 1)',
-                        lineDash: [4],
-                        width: 3
-                    }),
-                    fill: new ol.style.Fill({
-                        color: 'rgba(0, 0, 255, 0.5)'
-                    })
-                })]
-            };
-
-            var styleFunction = function(feature, resolution) {
-              return styles[feature.getGeometry().getType()];
-            };
-
             var geojsonObject = {
               'type': 'FeatureCollection',
               'crs': {
@@ -122,27 +105,25 @@ angular.module('tmaps.core')
               ]
             };
 
-            for (var i = 1; i < 10; i++) {
-                geojsonObject.features.push({
-                    'type': 'Feature',
-                    'geometry': {
-                        'type': 'Polygon',
-                        'coordinates': [[
-                            [i * 100, i * 100],
-                            [100 * i + 100, i * 100],
-                            [100 * i + 100, -100 * i - 100],
-                            [i * 100, -100 * i - 100],
-                            [i * 100, i * 100]
-                        ]]
-                    }
-                });
+            var side = 500;
+            var nRect = 100;
+            for (var i = 1; i <  side * nRect; i += side) {
+                for (var j = 1; j < side * nRect; j += side) {
+                    geojsonObject.features.push({
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'Polygon',
+                            'coordinates': [[
+                                [i, -j],
+                                [i + side, -j],
+                                [i + side, -j - side],
+                                [i, -j - side],
+                                [i, -j]
+                            ]]
+                        }
+                    });
+                }
             }
-
-            var vectorSource = new ol.source.Vector({
-              features: (new ol.format.GeoJSON()).readFeatures(geojsonObject)
-            });
-
-            console.log(geojsonObject);
 
             // var vectorSource = new ol.source.Vector({
             //   // features: (new ol.format.GeoJSON()).readFeatures(geojsonObject)
@@ -150,16 +131,26 @@ angular.module('tmaps.core')
 
             // vectorSource.addFeature(new ol.Feature(new ol.geom.Circle([5e6, 7e6], 1e6)));
 
-            var vectorLayer = new ol.layer.Vector({
-              source: vectorSource,
-              style: styleFunction
-            });
+            // var vectorLayer = new ol.layer.Vector({
+            //   source: vectorSource,
+            //   style: styleFunction
+            // });
 
-            map.addLayer(vectorLayer);
+            // map.addLayer(vectorLayer);
+            var c = new Cell('bla', {
+                x: 1231,
+                y: -1000
+            });
+            var objLayer = ObjectLayerFactory.create('Bla');
+            objLayer.addToMap(map);
+            // objLayer.addFeaturesFromGeoJSON(geojsonObject);
+            objLayer.addObject(c);
 
         });
-
     }
+
+    // TODO
+    // AppInstance.prototype.addObjectLayer ...
 
     // TODO: Consider throwing everything cell position related into own
     // CellPositionHandler or something like that.

@@ -4,4 +4,7 @@ angular.module('tmaps.shared.thirdpartymodules')
 })
 .factory('_', function() {
     return window._;
+})
+.factory('$', function() {
+    return window.$;
 });
