@@ -1,5 +1,5 @@
 interface Viewport {
-    element: Element;
+    element: JQuery;
     scope: ng.IScope;
     controller: any;
     map: ol.Map;

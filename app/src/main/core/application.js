@@ -1,6 +1,7 @@
 angular.module('tmaps.core')
-.factory('application', ['$q', 'openlayers', 'AppInstance', '$state', 'ExperimentFactory',
-             function($q, ol, AppInstance, $state, ExperimentFactory) {
+.factory('application', ['$q', 'openlayers', 'AppInstanceFactory', '$state', 'ExperimentFactory',
+    'AppInstanceDeserializer',
+             function($q, ol, AppInstanceFactory, $state, ExperimentFactory, AppInstanceDeserializer) {
 
     function Application() {
 
@@ -87,7 +88,7 @@ angular.module('tmaps.core')
 
     Application.prototype.getInstanceByExpName = function(expName) {
         return _.find(this.appInstances, function(inst) {
-            return inst.getExperimentName() === expName;
+            return inst.experiment.name === expName;
         });
     };
 
@@ -114,7 +115,7 @@ angular.module('tmaps.core')
 
     Application.prototype.addExperiment = function(experiment) {
         var exp = ExperimentFactory.create(experiment);
-        var instance = new AppInstance(exp);
+        var instance = AppInstanceFactory.create(exp);
 
         var layerOpts = _.partition(experiment.layers, function(opt) {
             return /_Mask/.test(opt.name);
@@ -162,12 +163,16 @@ angular.module('tmaps.core')
         this.destroyAllInstances();
 
         var self = this;
-        bp.appInstances.forEach(function(bp) {
-            var inst = AppInstance.fromBlueprint(bp);
-            inst.setInactive();
-            self.appInstances.push(inst);
+        var appInstancePromises = _(bp.appInstances).map(function(bp) {
+            return AppInstanceDeserializer.deserialize(bp).then(function(inst) {
+                inst.setInactive();
+                self.appInstances.push(inst);
+                return inst;
+            });
         });
-        self.setActiveInstanceByNumber(bp.activeInstanceNumber);
+        $q.all(appInstancePromises).then(function(instances) {
+            self.setActiveInstanceByNumber(bp.activeInstanceNumber);
+        });
     };
 
     var app = new Application();

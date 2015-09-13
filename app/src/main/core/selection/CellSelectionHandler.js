@@ -4,12 +4,12 @@ angular.module('tmaps.core.selection')
              '$rootScope',
          function(CellSelection, $q, _, selectionColorMap, $http, $rootScope) {
 
-    function CellSelectionHandler(appstate) {
+    function CellSelectionHandler(appInstance) {
         var self = this;
 
         this.selections = [];
-        this.map = appstate.map;
-        this.appstate = appstate;
+        this.map = appInstance.map;
+        this.appInstance = appInstance;
 
         window.cell = this;
 
@@ -31,7 +31,7 @@ angular.module('tmaps.core.selection')
                 if (angular.isDefined(selectionId)) {
                     var selection = self.getSelectionById(selectionId);
                     // Try to get the cell id for
-                    self.appstate.getCellAtPos(x, y)
+                    self.appInstance.getCellAtPos(x, y)
                     .then(function(cellId) {
                         if (cellId) {
                             $rootScope.$broadcast('clickedOnCell', {

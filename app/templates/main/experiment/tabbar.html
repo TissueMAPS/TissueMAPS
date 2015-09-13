@@ -5,7 +5,7 @@
           ng-click="tabsCtrl.clickTab($index)"
           ng-class="{active: app.isActiveInstanceByIndex($index)}">
           <a>
-            {{ appInstance.getExperimentName() }}
+            {{ appInstance.experiment.name }}
 
             <span ng-click="tabsCtrl.removeTab($index)">
               <i class="fa fa-times"></i>

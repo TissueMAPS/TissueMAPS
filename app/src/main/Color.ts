@@ -1,6 +1,7 @@
-interface Color {
-    r: number;
-    g: number;
-    b: number;
-    a: number;
+class Color {
+    constructor(public r: number,
+                public g: number,
+                public b: number,
+                public a: number = 1.0) {}
+
 }

@@ -43,8 +43,8 @@ class ObjectLayer extends Layer {
             'Polygon': [new this.ol.style.Style({
                 stroke: new this.ol.style.Stroke({
                     color: opt.strokeColor || this.defaultStrokeColor,
-                    lineDash: [4],
-                    width: 2
+                    lineDash: [1],
+                    width: 1
                 }),
                 fill: new this.ol.style.Fill({
                     color: opt.fillColor || this.defaultFillColor

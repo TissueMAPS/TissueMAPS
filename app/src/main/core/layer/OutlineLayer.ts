@@ -1,13 +1,16 @@
 /// <reference path='TileLayer.ts'/>
 class OutlineLayer extends TileLayer {
-    constructor(ol, opt: TileLayerArgs) {
-        super(ol, opt);
+    constructor(ol, $q, opt: TileLayerArgs) {
+        super(ol, $q, opt);
     }
 }
 
 class OutlineLayerFactory {
-    static $inject = ['openlayers']
-    constructor(private ol) {}
+    static $inject = ['openlayers', '$q']
+
+    constructor(private ol,
+                private $q) {}
+
     create(opt: TileLayerArgs) {
         var tileLayerOptions = _.defaults(opt, {
             additiveBlend: false,
@@ -15,7 +18,7 @@ class OutlineLayerFactory {
             drawWhitePixels: true
         });
 
-        return new OutlineLayer(this.ol, tileLayerOptions);
+        return new OutlineLayer(this.ol, this.$q, tileLayerOptions);
     }
 }
 

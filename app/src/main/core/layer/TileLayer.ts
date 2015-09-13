@@ -1,7 +1,7 @@
 /// <reference path='Layer.ts'/>
 /// <reference path='typedefs.ts'/>
 
-interface SerializedTileLayer {
+interface SerializedTileLayer extends Serialized<TileLayer> {
       name: string;
       pyramidPath: string;
       imageSize: ImageSize;
@@ -32,13 +32,15 @@ interface TileLayerArgs {
     max?: number;
 }
 
-class TileLayer extends Layer {
+class TileLayer extends Layer implements Serializable<TileLayer> {
     pyramidPath: string;
     imageSize: ImageSize;
     blendMode: string;
     olLayer: ModifiedOlTileLayer;
 
-    constructor(protected ol, opt: TileLayerArgs) {
+    constructor(protected ol,
+                protected $q: ng.IQService,
+                opt: TileLayerArgs) {
         super(opt.name);
 
         // Add trailing slash if not already present
@@ -146,8 +148,8 @@ class TileLayer extends Layer {
         }
     }
 
-    toBlueprint(): SerializedTileLayer {
-        return {
+    serialize() {
+        return this.$q.when({
             name: this.name,
             pyramidPath: this.pyramidPath,
             imageSize: this.imageSize,
@@ -160,7 +162,7 @@ class TileLayer extends Layer {
             min: this.min(),
             max: this.max(),
             opacity: this.opacity()
-        };
+        });
     }
 
 }

@@ -1,11 +1,3 @@
-interface Serializable {
-    toBlueprint(): Object;
-}
-
-interface WithFromBlueprint {
-    fromBlueprint(): Serializable;
-}
-
 interface Feature {}
 
 type ExperimentId = string;
@@ -16,7 +8,13 @@ interface ExperimentArgs {
     description: string;
 }
 
-class Experiment {
+interface SerializedExperiment extends Serialized<Experiment> {
+    id: ExperimentId;
+    name: string;
+    description: string;
+}
+
+class Experiment implements Serializable<Experiment> {
     id: ExperimentId;
     name: string;
     description: string;
@@ -45,11 +43,11 @@ class Experiment {
         this.cells = cellsDef.promise;
     }
 
-    toBlueprint() {
-        return {
+    serialize() {
+        return this.$q.when({
             id: this.id,
             name: this.name,
             description: this.description
-        };
+        });
     }
 }

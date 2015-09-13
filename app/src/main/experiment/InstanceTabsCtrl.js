@@ -3,7 +3,7 @@ angular.module('tmaps.main.experiment')
 
     this.clickTab = function(index) {
         application.setActiveInstanceByNumber(index);
-        var name = application.getActiveInstance().getExperimentName();
+        var name = application.getActiveInstance().experiment.name;
     };
 
     // TODO: Add dialog "Are you sure?"
