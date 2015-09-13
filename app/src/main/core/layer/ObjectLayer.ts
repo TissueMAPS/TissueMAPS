@@ -1,13 +1,18 @@
 interface ObjectLayerArgs {
     objects?: MapObject[];
+    strokeColor?: string;
+    fillColor?: string;
 }
 
 class ObjectLayer extends Layer {
     olLayer: ol.layer.Vector;
     styles: any;
 
+    defaultStrokeColor = 'rgba(0, 0, 255, 1)';
+    defaultFillColor = 'rgba(0, 0, 255, 0.5)';
+
     constructor(private ol, name: string, opt: ObjectLayerArgs = {}) {
-        super(name)
+        super(name);
 
         var vectorSource = new ol.source.Vector({
             features: []
@@ -22,9 +27,9 @@ class ObjectLayer extends Layer {
             style: styleFunction
         });
 
+        console.log(opt);
         if (opt.objects !== undefined) {
-            var features = _(opt.objects).map((o) => { return o.getOLFeature(); });
-            this.olLayer.getSource().addFeatures(features);
+            this.addObjects(opt.objects);
         }
 
         this.styles = {
@@ -37,15 +42,17 @@ class ObjectLayer extends Layer {
             })],
             'Polygon': [new this.ol.style.Style({
                 stroke: new this.ol.style.Stroke({
-                    color: 'rgba(0, 0, 255, 1)',
+                    color: opt.strokeColor || this.defaultStrokeColor,
                     lineDash: [4],
-                    width: 3
+                    width: 2
                 }),
                 fill: new this.ol.style.Fill({
-                    color: 'rgba(0, 0, 255, 0.5)'
+                    color: opt.fillColor || this.defaultFillColor
                 })
             })]
         };
+
+        console.log(this.styles);
     }
 
     addObject(obj: MapObject) {
@@ -53,9 +60,9 @@ class ObjectLayer extends Layer {
     }
 
     addObjects(objs: MapObject[]) {
-        _(objs).each((obj) => {
-            this.addObject(obj);
-        });
+        console.log('bla');
+        var features = _(objs).map((o) => { return o.getOLFeature(); });
+        this.olLayer.getSource().addFeatures(features);
     }
 
     addFeaturesFromGeoJSON(obj: JSON) {
@@ -68,8 +75,8 @@ class ObjectLayer extends Layer {
 class ObjectLayerFactory {
     static $inject = ['openlayers'];
     constructor(private ol) {}
-    create(name: string) {
-        return new ObjectLayer(this.ol, name);
+    create(name: string, opt: ObjectLayerArgs = {}) {
+        return new ObjectLayer(this.ol, name, opt);
     }
 }
 

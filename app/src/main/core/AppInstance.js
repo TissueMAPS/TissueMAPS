@@ -106,56 +106,49 @@ angular.module('tmaps.core')
               ]
             };
 
-            var side = 500;
-            var nRect = 100;
-            var cells = [];
-            for (var i = 1; i <  side * nRect; i += side) {
-                for (var j = 1; j < side * nRect; j += side) {
-                    var coords = [[
-                        [i, -j],
-                        [i + side, -j],
-                        [i + side, -j - side],
-                        [i, -j - side],
-                        [i, -j]
-                    ]];
-                    var c = new Cell('bla', {x: i, y: -j}, coords);
-                    cells.push(c);
-                    // geojsonObject.features.push({
-                    //     'type': 'Feature',
-                    //     'geometry': {
-                    //         'type': 'Polygon',
-                    //         'coordinates': coords
-                    //     }
-                    // });
+            var createDemoRectangles = function(startx, starty) {
+                var side = 100;
+                var nRect = 100;
+                var cells = [];
+                for (var i = startx; i <  side * nRect + startx; i += side) {
+                    for (var j = starty; j < side * nRect + starty; j += side) {
+                        var coords = [[
+                            [i, -j],
+                            [i + side, -j],
+                            [i + side, -j - side],
+                            [i, -j - side],
+                            [i, -j]
+                        ]];
+                        var c = new Cell('bla', {x: i, y: -j}, coords);
+                        cells.push(c);
+                        // geojsonObject.features.push({
+                        //     'type': 'Feature',
+                        //     'geometry': {
+                        //         'type': 'Polygon',
+                        //         'coordinates': coords
+                        //     }
+                        // });
+                    }
                 }
+                return cells;
             }
 
-            // var vectorSource = new ol.source.Vector({
-            //   // features: (new ol.format.GeoJSON()).readFeatures(geojsonObject)
-            // });
+            var cellsA = createDemoRectangles(0, 0);
+            var cellsB = createDemoRectangles(10000, 0);
 
-            // vectorSource.addFeature(new ol.Feature(new ol.geom.Circle([5e6, 7e6], 1e6)));
-
-            // var vectorLayer = new ol.layer.Vector({
-            //   source: vectorSource,
-            //   style: styleFunction
-            // });
-
-            // map.addLayer(vectorLayer);
-            // var c = new Cell('bla', {
-            //     x: 1231,
-            //     y: -1000
-            // });
-            var objLayer = ObjectLayerFactory.create('Bla', {
-                objects: cells
+            var objLayerA = ObjectLayerFactory.create('Cells A', {
+                objects: cellsA,
+                fillColor: 'rgba(0, 0, 255, 0.5)',
+                strokeColor: 'rgba(0, 0, 255, 1)'
+            });
+            var objLayerB = ObjectLayerFactory.create('Cells B', {
+                objects: cellsB,
+                fillColor: 'rgba(255, 0, 0, 0.5)',
+                strokeColor: 'rgba(255, 0, 0, 1)'
             });
 
-            window.inst = self;
-
-            cells.forEach(function(c) {
-                objLayer.addObject(c);
-            });
-            self.addObjectLayer(objLayer);
+            self.addObjectLayer(objLayerA);
+            self.addObjectLayer(objLayerB);
 
         });
     }
