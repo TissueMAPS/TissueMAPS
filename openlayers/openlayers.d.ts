@@ -3401,6 +3401,10 @@ declare module ol {
           getExtent(): ol.Extent;
 
           getFeaturesInExtent(extent: ol.Extent): ol.Feature[];
+
+          addFeatures(features: ol.Feature[]);
+
+          addFeature(feature: ol.Feature);
         }
 
         class VectorEvent {
