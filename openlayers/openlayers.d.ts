@@ -2788,6 +2788,7 @@ declare module ol {
         }
 
         class Polygon {
+            constructor(coordinates: Array<Array<ol.Coordinate>>, opt_layout?: geom.GeometryLayout);
         }
 
         class SimpleGeometry extends Geometry {
