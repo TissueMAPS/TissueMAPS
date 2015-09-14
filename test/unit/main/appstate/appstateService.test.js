@@ -56,7 +56,7 @@ describe('appstateService:', function() {
         var resp = makeFakeResponse(false);
 
         beforeEach(function() {
-            $httpBackend.expectPOST('/appstates').respond(200, resp);
+            $httpBackend.expectPOST('/api/appstates').respond(200, resp);
             appstateService.saveStateAs('some name', 'some description');
             $httpBackend.flush(); // perform all requests registered on the backend
         });
@@ -79,7 +79,7 @@ describe('appstateService:', function() {
         var resp = makeFakeResponse(false); // create fake appstate
 
         beforeEach(function() {
-            requestHandler = $httpBackend.expectGET('/appstates/' + fakeHash)
+            requestHandler = $httpBackend.expectGET('/api/appstates/' + fakeHash)
                                          .respond(200, resp);
         });
 
@@ -170,7 +170,7 @@ describe('appstateService:', function() {
         resp = makeFakeResponse(true);
 
         it('can\'t be saved in any way', function() {
-            $httpBackend.expectGET('/appstates/' + fakeHash).respond(200, resp);
+            $httpBackend.expectGET('/api/appstates/' + fakeHash).respond(200, resp);
 
             appstateService.loadStateFromId(fakeHash);
             $httpBackend.flush(); // perform all requests registered on the backend
@@ -207,7 +207,7 @@ describe('appstateService:', function() {
 
         it('opens a modal and calls the server', function() {
             resp = makeFakeResponse(false); // create fake appstate
-            $httpBackend.expectGET('/appstates/' + fakeHash).respond(200, resp);
+            $httpBackend.expectGET('/api/appstates/' + fakeHash).respond(200, resp);
 
             appstateService.loadStateFromId(fakeHash);
             $httpBackend.flush();
@@ -217,7 +217,7 @@ describe('appstateService:', function() {
                 '/templates/main/appstate/share-appstate-dialog.html'
             ).respond(200, ''); // respond with empty template
             $httpBackend.expectPOST(
-                '/appstates/' + fakeHash + '/snapshots'
+                '/api/appstates/' + fakeHash + '/snapshots'
             ).respond(200, snapshot); // respond with fake app state
 
             appstateService.shareState();

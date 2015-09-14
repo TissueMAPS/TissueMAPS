@@ -418,7 +418,7 @@ module.exports = function(grunt) {
                     'app/assets/libs/unmanaged/jquery-ui.min.js',
                     'app/assets/libs/bower_components/underscore/underscore.js',
 
-                    'app/assets/libs/unmanaged/ol3/build/ol.js',
+                    'app/assets/libs/ol3/build/ol-debug.js',
 
                     'app/assets/libs/bower_components/angular/angular.js',
                     'app/assets/libs/bower_components/angular-mocks/angular-mocks.js',
@@ -429,10 +429,14 @@ module.exports = function(grunt) {
                     'app/assets/libs/bower_components/angular-ui-sortable/sortable.min.js',
                     'app/assets/libs/bower_components/angular-ui-slider/src/slider.js',
                     'app/assets/libs/bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js',
-                    'app/assets/libs/bower_components/ng-color-picker/color-picker.js',
+                    'app/assets/libs/unmanaged/ng-color-picker/color-picker.js',
                     'app/assets/libs/bower_components/perfect-scrollbar/js/perfect-scrollbar.jquery.js',
                     'app/assets/libs/unmanaged/angular-perfect-scrollbar.js',
+                    'app/assets/libs/bower_components/momentjs/moment.js',
+
                     'app/assets/libs/bower_components/ng-websocket/ng-websocket.js',
+
+                    'app/assets/libs/bower_components/tmauth/dist/tmauth.js',
 
                     // Module declarations
                     'app/src/tmaps.shared.js',
@@ -528,6 +532,7 @@ module.exports = function(grunt) {
     grunt.registerTask('default', 'dev');
 
     grunt.registerTask('test:unit', ['karma:unit']);
+    grunt.registerTask('test', ['karma:unit']);
     grunt.registerTask('test:midway', ['karma:midway']);
     grunt.registerTask('test:e2e', ['protractor:all']);
     grunt.registerTask('test:all', ['test:unit', 'test:midway', 'test:e2e']);
