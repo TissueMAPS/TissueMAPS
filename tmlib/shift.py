@@ -126,7 +126,7 @@ class ShiftDescription(object):
 
     persistent = {
         'x_shift', 'y_shift', 'lower_overhang', 'upper_overhang',
-        'left_overhang', 'right_overhang', 'dont_shift', 'cycle', 'filename',
+        'left_overhang', 'right_overhang', 'omit', 'cycle', 'filename',
         'site'
     }
 
@@ -141,7 +141,7 @@ class ShiftDescription(object):
 
         See also
         --------
-        `tmt.cfg`_
+        `tmlib.cfg`_
         '''
         self.description = description
         if self.description:
@@ -239,19 +239,19 @@ class ShiftDescription(object):
         self._left_overhang = value
 
     @property
-    def dont_shift(self):
+    def omit(self):
         '''
         Returns
         -------
         bool
-            whether the image should be shifted (``False`` means that the
+            whether the image should not be shifted (``True`` means that the
             shift values for this site exceed the maximally tolerated shift)
         '''
-        return self._dont_shift
+        return self._omit
 
-    @dont_shift.setter
-    def dont_shift(self, value):
-        self._dont_shift = value
+    @omit.setter
+    def omit(self, value):
+        self._omit = value
 
     @property
     def cycle(self):

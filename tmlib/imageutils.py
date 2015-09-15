@@ -81,6 +81,54 @@ def save_image_png(im, filename):
         save_image_png_vips(im, filename)
 
 
+def np_dtype_to_vips_format(np_dtype):
+    '''
+    Map numpy data types to VIPS data formats.
+
+    Parameters
+    ----------
+    np_dtype: numpy.dtype
+
+    Returns
+    -------
+    Vips.BandFormat
+    '''
+    lookup = {
+        np.dtype('int8'): Vips.BandFormat.CHAR,
+        np.dtype('uint8'): Vips.BandFormat.UCHAR,
+        np.dtype('int16'): Vips.BandFormat.SHORT,
+        np.dtype('uint16'): Vips.BandFormat.USHORT,
+        np.dtype('int32'): Vips.BandFormat.INT,
+        np.dtype('float32'): Vips.BandFormat.FLOAT,
+        np.dtype('float64'): Vips.BandFormat.DOUBLE
+    }
+    return lookup[np_dtype]
+
+
+def vips_format_to_np_dtype(vips_format):
+    '''
+    Map VIPS data formats to numpy data types.
+
+    Parameters
+    ----------
+    format: Vips.BandFormat
+
+    Returns
+    -------
+    numpy.dtype
+    '''
+    lookup = {
+        Vips.BandFormat.CHAR: np.dtype('int8'),
+        Vips.BandFormat.UCHAR: np.dtype('uint8'),
+        Vips.BandFormat.SHORT: np.dtype('int16'),
+        Vips.BandFormat.USHORT: np.dtype('uint16'),
+        Vips.BandFormat.INT: np.dtype('int32'),
+        Vips.BandFormat.FLOAT: np.dtype('float32'),
+        Vips.BandFormat.DOUBLE: np.dtype('float64')
+    }
+    return lookup[vips_format]
+
+
 def np_array_to_vips_image(nparray):
     '''
     Convert a `numpy` array to a `Vips` image object.
@@ -93,18 +141,8 @@ def np_array_to_vips_image(nparray):
     -------
     Vips.image
     '''
-    # Dictionary to map VIPS data formats to numpy data types
-    nptype_to_vips_format = {
-        np.dtype('int8'): Vips.BandFormat.CHAR,
-        np.dtype('uint8'): Vips.BandFormat.UCHAR,
-        np.dtype('int16'): Vips.BandFormat.SHORT,
-        np.dtype('uint16'): Vips.BandFormat.USHORT,
-        np.dtype('int32'): Vips.BandFormat.INT,
-        np.dtype('float32'): Vips.BandFormat.FLOAT,
-        np.dtype('float64'): Vips.BandFormat.DOUBLE
-    }
     # Look up what VIPS format corresponds to the type of this np array
-    vips_format = nptype_to_vips_format[nparray.dtype]
+    vips_format = np_dtype_to_vips_format(nparray.dtype)
 
     # VIPS reads the buffer as if the data is saved column by column (column major)
     # but numpy saves it in row major order.
@@ -137,17 +175,7 @@ def vips_image_to_np_array(vips_image):
     -------
     Vips.image
     '''
-    # Dictionary to map numpy data types to VIPS data formats
-    vips_to_nptype_format = {
-        Vips.BandFormat.CHAR: np.dtype('int8'),
-        Vips.BandFormat.UCHAR: np.dtype('uint8'),
-        Vips.BandFormat.SHORT: np.dtype('int16'),
-        Vips.BandFormat.USHORT: np.dtype('uint16'),
-        Vips.BandFormat.INT: np.dtype('int32'),
-        Vips.BandFormat.FLOAT: np.dtype('float32'),
-        Vips.BandFormat.DOUBLE: np.dtype('float64')
-    }
-    nptype = vips_to_nptype_format[vips_image.get_format()]
+    nptype = vips_format_to_np_dtype(vips_image.get_format())
     mem_string = vips_image.write_to_memory()
     if vips_image.bands > 1:
         array = np.fromstring(mem_string, dtype=nptype).reshape(
@@ -157,6 +185,44 @@ def vips_image_to_np_array(vips_image):
                     vips_image.width, vips_image.height)
     # TODO: 3D RGB images
     return array
+
+
+def create_spacer_image(dimensions, dtype, bands, direction):
+    '''
+    Create a black image that can be inserted as a spacer between
+    channel images.
+
+    Parameters
+    ----------
+    dimensions: Tuple[int]
+        y, x dimensions of the image
+    dtype: Vips.BandFormat
+        data type (format) of the image
+    bands: int
+        number of color dimensions (``1`` for grayscale and ``3`` for RGB)
+    direction: str
+        either ``"horizontal"`` or ``"vertical"``
+
+    Returns
+    -------
+    Vips.Image
+        black spacer image of specified `dtype`, where one dimension is reduced
+        to 1% of `dimensions`, depending on the specified `direction`
+
+    Raises
+    ------
+    ValueError
+        when `direction` is not specified correctly
+    '''
+    if direction == 'vertical':
+        spacer = Vips.Image.black(int(dimensions[0]/100), dimensions[1],
+                                  bands=bands).cast(dtype)
+    elif direction == 'horizontal':
+        spacer = Vips.Image.black(dimensions[0], int(dimensions[1]/100),
+                                  bands=bands).cast(dtype)
+    else:
+        raise ValueError('Direction must be either "horizontal" or "vertical"')
+    return spacer
 
 
 def hist_sample_from_sites(filenames, nr_to_sample=5):

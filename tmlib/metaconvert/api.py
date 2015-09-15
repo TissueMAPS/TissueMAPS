@@ -4,13 +4,13 @@ from cached_property import cached_property
 from .default import DefaultMetadataHandler
 from .cellyoyager import CellvoyagerMetadataHandler
 from .metamorph import MetamorphMetadataHandler
-from ..cluster import ClusterRoutine
+from ..cluster import ClusterRoutines
 from .. import utils
 from ..errors import NotSupportedError
 from ..formats import Formats
 
 
-class MetadataConverter(ClusterRoutine):
+class MetadataConverter(ClusterRoutines):
 
     '''
     Abstract base class for the handling of image metadata.
@@ -103,9 +103,10 @@ class MetadataConverter(ClusterRoutine):
         **kwargs: dict
             empty - no additional arguments
         '''
-        joblist = list()
+        joblist = dict()
+        joblist['run'] = list()
         for i, cycle in enumerate(self.cycles):
-            joblist.extend([{
+            joblist['run'].extend([{
                 'id': i+1,
                 'inputs': {
                     'uploaded_image_files':
@@ -123,6 +124,15 @@ class MetadataConverter(ClusterRoutine):
                 'cycle': cycle.name
             }])
         return joblist
+
+    def _build_run_command(self, batch):
+        job_id = batch['id']
+        command = [self.prog_name]
+        if self.file_format:
+            command.extend(['-f', self.file_format])
+        command.append(self.experiment.dir)
+        command.extend(['run', '-j', str(job_id)])
+        return command
 
     def run_job(self, batch):
         '''
@@ -156,15 +166,6 @@ class MetadataConverter(ClusterRoutine):
                     meta, self.image_file_format_string)
         self._write_metadata_to_file(batch['outputs']['metadata_file'], meta)
 
-    def _build_command(self, batch):
-        job_id = batch['id']
-        command = ['metaconvert']
-        if self.file_format:
-            command.extend(['-f', self.file_format])
-        command.append(self.experiment.dir)
-        command.extend(['run', '-j', str(job_id)])
-        return command
-
     @staticmethod
     def _write_metadata_to_file(filename, metadata):
         data = dict()
@@ -172,9 +173,15 @@ class MetadataConverter(ClusterRoutine):
             data[md.name] = md.serialize()
         utils.write_json(filename, data)
 
+    def _build_collect_command(self):
+        raise AttributeError('"%s" step has no "collect" routine'
+                             % self.prog_name)
+
     def collect_job_output(self, joblist, **kwargs):
-        pass
+        raise AttributeError('"%s" step has no "collect" routine'
+                             % self.prog_name)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
-        pass
+        raise AttributeError('"%s" step has no "apply" routine'
+                             % self.prog_name)

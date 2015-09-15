@@ -1,14 +1,14 @@
 from . import logo
 from . import __version__
-from .api import ImageRegistration
+from .api import PyramidCreation
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
 
-class Align(CommandLineInterface):
+class Illuminati(CommandLineInterface):
 
     def __init__(self, args):
-        super(Align, self).__init__(args)
+        super(Illuminati, self).__init__(args)
         self.args = args
 
     @staticmethod
@@ -28,23 +28,18 @@ class Align(CommandLineInterface):
     @property
     def _api_instance(self):
         experiment = Experiment(self.args.experiment_dir, self.cfg)
-        return ImageRegistration(
+        return PyramidCreation(
                     experiment=experiment,
-                    shift_file_format_string=self.cfg['SHIFT_FILE'],
                     prog_name=self.name)
 
     @property
     def _variable_joblist_args(self):
         kwargs = dict()
-        kwargs['batch_size'] = self.args.batch_size
-        kwargs['ref_cycle'] = self.args.ref_cycle
-        kwargs['ref_channel'] = self.args.ref_channel
-        return kwargs
-
-    @property
-    def _variable_collect_args(self):
-        kwargs = dict()
-        kwargs['max_shift'] = self.args.max_shift
+        kwargs['shift'] = self.args.shift
+        kwargs['illumcorr'] = self.args.illumcorr
+        kwargs['thresh'] = self.args.thresh
+        kwargs['thresh_value'] = self.args.thresh_value
+        kwargs['thresh_percent'] = self.args.thresh_percent
         return kwargs
 
     @staticmethod
@@ -60,7 +55,7 @@ class Align(CommandLineInterface):
 
         See also
         --------
-        `tmlib.align.argparser`_
+        `tmlib.illuminati.argparser`_
         '''
-        cli = Align(args)
+        cli = Illuminati(args)
         getattr(cli, args.subparser_name)()

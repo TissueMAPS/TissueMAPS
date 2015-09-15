@@ -27,7 +27,7 @@ class CellvoyagerMetadataReader(MetadataReader):
     The OME schema doesn't provide information about wells at the individual
     *Image* level: see `OME data model <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
     Instead, it provides a *Plate* element, which contains *Well* elements.
-    The *Well* elements contain the positional information, such as row and
+    *Well* elements contain the positional information, such as row and
     column index of each well within the plate. The *WellSample* elements
     represent individual image acquisition sites within a well and can hold
     metadata, such as the x and y stage positions. In addition, there is an

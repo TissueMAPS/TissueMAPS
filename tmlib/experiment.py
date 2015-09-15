@@ -36,7 +36,7 @@ class Experiment(object):
     See also
     --------
     `cycle.Cycle`_
-    `tmt.cfg`_
+    `tmlib.cfg`_
     `user.cfg`_
     '''
 
@@ -64,7 +64,6 @@ class Experiment(object):
         '''
         self._user_cfg_file = self.cfg['USER_CFG_FILE'].format(
                                             experiment_dir=self.dir,
-                                            experiment=self.name,
                                             sep=os.path.sep)
         return self._user_cfg_file
 
@@ -122,7 +121,7 @@ class Experiment(object):
         --------
         `plates.WellPlate`_
         `plates.Slide`_
-        `tmt.cfg`_
+        `tmlib.cfg`_
         '''
         cycle_dirs = [os.path.join(self.dir, f) for f in os.listdir(self.dir)
                       if os.path.isdir(os.path.join(self.dir, f))

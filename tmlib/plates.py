@@ -1,12 +1,6 @@
 import os
 import re
-# import numpy as np
 from .cycle import Cycle
-# from .layers import ChannelLayer
-# from .layers import MaskLayer
-# from .layers import LabelLayer
-# from .layers import BrightfieldLayer
-# from .errors import NotSupportedError
 
 
 class WellPlate(Cycle):
@@ -44,28 +38,27 @@ class WellPlate(Cycle):
         return self._dimensions
 
     @property
-    def well_positions(self):
+    def plate_coordinates(self):
         '''
         Returns
         -------
         List[Tuple[int]]
             one-based row, column position of each well in the plate
         '''
-        self._well_positions = set([self.id_to_position(w)
-                                    for w in self.well_ids])
-        return self._well_positions
+        self._plate_coordinates = [self.id_to_position(w) for w in self.wells]
+        return self._plate_coordinates
 
     @property
-    def well_ids(self):
+    def wells(self):
         '''
         Returns
         -------
-        str
+        List[str]
             well identifier string: capital letter for row position and
             number for column position
         '''
-        self._well_ids = [md.well for md in self.image_metadata]
-        return self._well_ids
+        self._wells = [md.well for md in self.image_metadata]
+        return self._wells
 
     @property
     def n_wells(self):
@@ -73,7 +66,7 @@ class WellPlate(Cycle):
         Returns
         -------
         int
-            number of wells in plate
+            number of used wells in plate
         '''
         self._n_wells = len(set(self.well_positions))
         return self._n_wells
@@ -163,108 +156,6 @@ class WellPlate(Cycle):
         row_name = WellPlate.index_to_name(row_index)
         return '%s%.2d' % (row_name, col_index)
 
-    # @property
-    # def channel_layers(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     Dict[Tuple, List[ChannelLayer]]
-    #         grid of grayscale images for each channel at each well position
-
-    #     See also
-    #     --------
-    #     `layers.ChannelLayer`_
-    #     '''
-    #     # group images per well
-    #     image_data = zip(self.image_files, self.image_metadata)
-    #     self._channel_layers = dict()
-    #     for w in self.wells:
-    #         well_data = [(f, m) for f, m in image_data if m.well == w]
-    #         self._channel_layers[w] = list()
-    #         # further subgroup images per channel
-    #         for c in self.channels:
-    #             channel_data = np.array([(f, m) for f, m in well_data
-    #                                      if m.channel == c])
-    #             self._channel_layers[w].append(
-    #                             ChannelLayer(image_files=channel_data[:, 0],
-    #                                          metadata=channel_data[:, 1]))
-    #     return self._channel_layers
-
-    # @property
-    # def mask_layers(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     Dict[Tuple, List[MaskLayer]]
-    #         grid of binary images for each object type at each well position
-
-    #     See also
-    #     --------
-    #     `layers.MaskLayer`_
-    #     '''
-    #     if self.segmentation_files:
-    #         # group images per well
-    #         segm_data = zip(self.segmentation_files,
-    #                         self.segmentation_metadata)
-    #         self._mask_layers = dict()
-    #         for w in self.wells:
-    #             well_data = [(f, m) for f, m in segm_data if m.well == w]
-    #             self._mask_layers[w] = list()
-    #             # further subgroup images per object type
-    #             for o in self.objects:
-    #                 object_data = np.array([(f, m) for f, m in well_data
-    #                                         if m.objects == o])
-    #                 self._mask_layers[w].append(
-    #                             MaskLayer(image_files=object_data[:, 0],
-    #                                       metadata=object_data[:, 1],
-    #                                       data_file=self.data_file))
-    #     else:
-    #         self._mask_layers = {}
-    #     return self._mask_layers
-
-    # @property
-    # def label_layers(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     Dict[Tuple, List[LabelLayer]]
-    #         grid of RGB images for each object type at each well position
-
-    #     See also
-    #     --------
-    #     `layers.LabelLayer`_
-    #     '''
-    #     if self.segmentation_files:
-    #         # group images per well
-    #         segm_data = zip(self.segmentation_files,
-    #                         self.segmentation_metadata)
-    #         self._label_layers = dict()
-    #         for w in self.wells:
-    #             well_data = [(f, m) for f, m in segm_data if m.well == w]
-    #             self._label_layers[w] = list()
-    #             # further subgroup images per object type
-    #             for o in self.objects:
-    #                 object_data = np.array([(f, m) for f, m in well_data
-    #                                         if m.objects == o])
-    #                 self._label_layers[w].append(
-    #                             LabelLayer(image_files=object_data[:, 0],
-    #                                        metadata=object_data[:, 1],
-    #                                        data_file=self.data_file))
-    #     else:
-    #         self._label_layers = {}
-    #     return self._label_layers
-
-    # @property
-    # def brightfield_layers(self):
-    #     '''
-    #     Raises
-    #     ------
-    #     NotSupportedError
-    #         since brightfield mode is not supported for well plate formats
-    #     '''
-    #     raise NotSupportedError('Brightfield mode is not supported '
-    #                             'for well plates')
-
 
 class Slide(Cycle):
 
@@ -283,144 +174,13 @@ class Slide(Cycle):
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
 
-    # @property
-    # def mask_layers(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[MaskLayer]
-    #         grid of binary images for each object type
-
-    #     See also
-    #     --------
-    #     `layers.MaskLayer`_
-    #     '''
-    #     if self.segmentation_files:
-    #         # group images per object type
-    #         segm_data = zip(self.segmentation_files,
-    #                         self.segmentation_metadata)
-    #         self.mask_layers = list()
-    #         # further subgroup images per object type
-    #         for o in self.objects:
-    #             object_data = np.array([(f, m) for f, m in segm_data
-    #                                     if m.objects == o])
-    #             self.mask_layers.append(
-    #                         MaskLayer(image_files=object_data[:, 0],
-    #                                   metadata=object_data[:, 1],
-    #                                   data_file=self.data_file))
-    #     else:
-    #         self._mask_layers = {}
-    #     return self.mask_layers
-
-    # @property
-    # def label_layers(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[LabelLayer]
-    #         grid of RGB images for each object type
-
-    #     See also
-    #     --------
-    #     `layers.LabelLayer`_
-    #     '''
-    #     if self.segmentation_files:
-    #         # group images per object type
-    #         segm_data = zip(self.segmentation_files,
-    #                         self.segmentation_metadata)
-    #         self.mask_layers = list()
-    #         # further subgroup images per object type
-    #         for o in self.objects:
-    #             object_data = np.array([(f, m) for f, m in segm_data
-    #                                     if m.objects == o])
-    #             self.mask_layers.append(
-    #                         LabelLayer(image_files=object_data[:, 0],
-    #                                    metadata=object_data[:, 1],
-    #                                    data_file=self.data_file))
-    #     else:
-    #         self._mask_layers = {}
-    #     return self.mask_layers
-
-
-class FluorescenceSlide(Slide):
-
-    '''
-    Class for a fluorescent slide, which has one or more grayscale layers
-    (channels).
-    '''
-
-    def __init__(self, cycle_dir, cfg):
+    @property
+    def dimensions(self):
         '''
-        Initialize an instance of class FluorescenceSlide.
-
-        Parameters
-        ----------
-        cycle_dir: str
-            absolute path to the cycle directory
-        cfg: Dict[str, str]
-            configuration settings
+        Returns
+        -------
+        Tuple[int]
+            total number of rows and columns in the plate
         '''
-        super(FluorescenceSlide, self).__init__(cycle_dir, cfg)
-        self.cycle_dir = os.path.abspath(cycle_dir)
-        self.cfg = cfg
-
-    # @property
-    # def channel_layers(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[ChannelLayer]
-    #         grid of grayscale images for each channel
-
-    #     See also
-    #     --------
-    #     `layers.ChannelLayer`_
-    #     '''
-    #     # group images per channel
-    #     image_data = zip(self.image_files,
-    #                      self.image_metadata)
-    #     self._channel_layers = list()
-    #     for c in self.channels:
-    #         channel_data = np.array([(f, m) for f, m in image_data
-    #                                  if m.channel == c])
-    #         self._channel_layers.append(
-    #                     ChannelLayer(image_files=channel_data[:, 0],
-    #                                  metadata=channel_data[:, 1]))
-    #     return self._channel_layers
-
-
-class BrightfieldSlide(Slide):
-
-    '''
-    Class for a brightfield slide, which has only one RGB layer.
-    '''
-
-    def __init__(self, cycle_dir, cfg):
-        '''
-        Initialize an instance of class BrightfieldSlide.
-
-        Parameters
-        ----------
-        cycle_dir: str
-            absolute path to the cycle directory
-        cfg: Dict[str, str]
-            configuration settings
-        '''
-        super(BrightfieldSlide, self).__init__(cycle_dir, cfg)
-        self.cycle_dir = os.path.abspath(cycle_dir)
-        self.cfg = cfg
-
-    # @property
-    # def brightfield_layer(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     BrightfieldLayer
-    #         grid of RGB images
-
-    #     See also
-    #     --------
-    #     `layers.BrightfieldLayer`_
-    #     '''
-    #     self._brightfield_layer = BrightfieldLayer(self.image_files[0])
-    #     return self._brightfield_layer
+        self._dimensions = (1, 1)
+        return self._dimensions

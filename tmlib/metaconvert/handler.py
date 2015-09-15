@@ -1,6 +1,5 @@
 import os
 import re
-from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from ..formats import Formats
@@ -76,7 +75,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        `tmt.metadata_readers.BioformatsMetadataReader`_
+        `tmlib.metadata_readers.BioformatsMetadataReader`_
         '''
         self._ome_image_metadata = dict()
         with BioformatsMetadataReader() as reader:
@@ -311,7 +310,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        `tmt.metadata.ChannelImageMetadata`_
+        `tmlib.metadata.ChannelImageMetadata`_
         '''
         if self.ome_additional_metadata is None:
             raise MetadataError('No additional metadata available')
@@ -397,7 +396,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        `tmt.metadata.ChannelImageMetadata`_
+        `tmlib.metadata.ChannelImageMetadata`_
         '''
         missing = {i: k for i, md in enumerate(metadata)
                    for k, v in md.iteritems()
@@ -514,7 +513,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        `tmt.cfg`_
+        `tmlib.cfg`_
         '''
         complemented_metadata = list(metadata)
         required_attributes = {'well', 'site', 'row', 'column', 'channel'}

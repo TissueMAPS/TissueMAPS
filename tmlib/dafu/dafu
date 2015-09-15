@@ -6,12 +6,12 @@ import pandas as pd
 import h5py
 import glob
 import re
-import tmt
+import tmlib
 import dafu
 import cluster
 import utils
-from tmt.image import Image
-from tmt.experiment import Experiment
+from tmlib.image import Image
+from tmlib.experiment import Experiment
 
 
 header_mapper = dafu.config['CHANNEL_MAPPER']
@@ -93,7 +93,7 @@ def fuse_datasets(data_files, names, joblist):
                 obj_name = ids.group(1)
                 # Get positional information from filename
                 im_file = utils.image_name_from_joblist(joblist, filename)
-                image = Image(im_file, tmt.config)
+                image = Image(im_file, tmlib.config)
                 (row, column) = image.coordinates  # returns 0-based indices
                 site = image.site
                 # Store information about the site-specific information
@@ -143,26 +143,26 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--config', dest='config',
                         help='use custom yaml configuration file \
-                             (defaults to "tmt" configuration)')
+                             (defaults to "tmlib" configuration)')
 
     args = parser.parse_args()
 
     if args.config:
-        # Overwrite default "tmt" configuration
+        # Overwrite default "tmlib" configuration
         print '. Using configuration file "%s"' % args.config
-        args.config = tmt.utils.load_config(args.config)
-        tmt.utils.check_config(args.config)
+        args.config = tmlib.utils.load_config(args.config)
+        tmlib.utils.check_config(args.config)
     else:
-        args.config = tmt.config
+        args.config = tmlib.config
 
     if 'dafu_config' in args:
         if args.dafu_config:
             # Overwrite default "dafu" configuration
             print '. Using configuration file "%s"' % args.dafu_config
             args.config_file = args.config.copy()
-            dafu_configuration = tmt.utils.load_config(args.dafu_config)
+            dafu_configuration = tmlib.utils.load_config(args.dafu_config)
             print '. Checking configuration file'
-            # tmt.dafu.utils.check_dafu_config(dafu_configuration)
+            # tmlib.dafu.utils.check_dafu_config(dafu_configuration)
         else:
             dafu_configuration = dafu.config
             args.config_file = ''
@@ -170,7 +170,7 @@ if __name__ == '__main__':
         dafu_configuration = dafu.config
         args.config_file = ''
 
-    # Add "dafu" to "tmt" configuration
+    # Add "dafu" to "tmlib" configuration
     args.config.update(dafu_configuration)
 
     exp_dir = args.experiment_dir[0]

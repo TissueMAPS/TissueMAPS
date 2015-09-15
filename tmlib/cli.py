@@ -118,9 +118,6 @@ class CommandLineInterface(object):
         # of parsed arguments, we use a separate property, which can be
         # overwritten by subclasses to handle custom use cases
         kwargs = dict()
-        # One example, which is used by several programs:
-        if hasattr(self.args, 'batch_size'):
-            kwargs['batch_size'] = self.args.batch_size
         return kwargs
 
     def joblist(self):
@@ -159,7 +156,7 @@ class CommandLineInterface(object):
         print '.  read joblist'
         joblist = api.read_joblist()
         print '.  run job'
-        batch = joblist[self.args.job-1]
+        batch = joblist['run'][self.args.job-1]
         api.run_job(batch)
 
     def submit(self):
@@ -172,7 +169,9 @@ class CommandLineInterface(object):
         print '.  read joblist'
         joblist = api.read_joblist()
         print '.  create jobs'
-        jobs = api.create_jobs(joblist)
+        jobs = api.create_jobs(joblist,
+                               shared_network=self.args.shared_network,
+                               virtualenv=self.args.virtualenv)
         print '.  submit and monitor jobs'
         api.submit_jobs(jobs)
 
@@ -212,22 +211,22 @@ class CommandLineInterface(object):
         print '.  read joblist'
         joblist = api.read_joblist()
         kwargs = self._variable_collect_args
-        api.collect_job_output(joblist, **kwargs)
+        api.collect_job_output(joblist['collect'], **kwargs)
 
     @staticmethod
-    def get_parser_and_subparsers(subparser_names=['run', 'joblist', 'submit']):
+    def get_parser_and_subparsers(
+            required_subparsers=['joblist', 'run', 'submit']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
         The subparsers objects can be extended with additional subparsers and
-        additional arguments can be added to each individual subparser
-        (see example).
+        additional arguments can be added to each individual subparser.
 
         Parameters
         ----------
-        subparser_names: List[str]
-            subparsers that should be returned (by default returns
-            "run", "joblist", and "submit" subparsers)
+        required_subparsers: List[str]
+            subparsers that should be returned (defaults to
+            ``["joblist", "run", "submit"]``)
         level: str
             level of the directory tree at which the command line interface
             operates; "cycle" when processing data at the level of an individual
@@ -245,21 +244,12 @@ class CommandLineInterface(object):
         parser.add_argument(
             '-v', '--version', action='version')
 
-        if not subparser_names:
+        if not required_subparsers:
             raise ValueError('At least one subparser has to specified')
 
         subparsers = parser.add_subparsers(dest='subparser_name')
 
-        if 'run' in subparser_names:
-            run_parser = subparsers.add_parser('run')
-            run_parser.description = '''
-                Run an individual job.
-            '''
-            run_parser.add_argument(
-                '-j', '--job', type=int, required=True,
-                help='id of the job that should be processed')
-
-        if 'joblist' in subparser_names:
+        if 'joblist' in required_subparsers:
             joblist_parser = subparsers.add_parser('joblist')
             joblist_parser.description = '''
                 Create a list of job descriptions (batches) for parallel
@@ -276,20 +266,40 @@ class CommandLineInterface(object):
                 help='create a backup of the output of a previous submission')
             # NOTE: when additional arguments are provided, the property
             # `_variable_joblist_args` has to be overwritten
-            # (with the exception of "batch_size", which is already added to
-            # as a variable input argument by default)
 
-        if 'submit' in subparser_names:
+        if 'run' in required_subparsers:
+            run_parser = subparsers.add_parser('run')
+            run_parser.description = '''
+                Run an individual job.
+            '''
+            run_parser.add_argument(
+                '-j', '--job', type=int, required=True,
+                help='id of the job that should be processed')
+
+        if 'collect' in required_subparsers:
+            collect_parser = subparsers.add_parser('collect')
+            collect_parser.description = '''
+                Collect outputs of processed jobs and fuse them.
+            '''
+            collect_parser.add_argument(
+                '-o', '--output_dir', type=str,
+                help='path to output directory')
+
+        if 'submit' in required_subparsers:
             submit_parser = subparsers.add_parser('submit')
             submit_parser.description = '''
-                Submit jobs to the cluster and monitor their processing.
+                Create jobs, submit them to the cluster, monitor their
+                processing and collect their outputs.
             '''
             submit_parser.add_argument(
                 '--no_shared_network', dest='shared_network',
                 action='store_false', help='when worker nodes don\'t have \
                 access to a shared network')
+            submit_parser.add_argument(
+                '--virtualenv', type=str, default='tmaps',
+                help='name of a virtual environment that should be activated')
 
-        if 'apply' in subparser_names:
+        if 'apply' in required_subparsers:
             apply_parser = subparsers.add_parser('apply')
             apply_parser.description = '''
                 Apply calculated statistics to images.
@@ -308,15 +318,6 @@ class CommandLineInterface(object):
                 help='when all images should be processed')
             apply_parser.add_argument(
                 '-o', '--output_dir', type=str, required=True,
-                help='path to output directory')
-
-        if 'collect' in subparser_names:
-            collect_parser = subparsers.add_parser('collect')
-            collect_parser.description = '''
-                Collect outputs of individual jobs and fuse them.
-            '''
-            collect_parser.add_argument(
-                '-o', '--output_dir', type=str,
                 help='path to output directory')
 
         return (parser, subparsers)

@@ -3,10 +3,10 @@ import numpy as np
 from cached_property import cached_property
 from .. import imageutils
 from ..image_readers import BioformatsImageReader
-from ..cluster import ClusterRoutine
+from ..cluster import ClusterRoutines
 
 
-class ImageExtractor(ClusterRoutine):
+class ImageExtractor(ClusterRoutines):
 
     '''
     Class for extraction of pixel arrays (planes) stored in image files using
@@ -93,15 +93,21 @@ class ImageExtractor(ClusterRoutine):
         **kwargs: dict
             additional input arguments as key-value pairs:
             * "batch_size": number of images per job (*int*)
+
+        Returns
+        -------
+        Dict[str, List[dict] or dict]
+            job descriptions
         '''
-        joblist = list()
+        joblist = dict()
+        joblist['run'] = list()
         count = 0
         for cycle in self.cycles:
             md_batches = self._create_batches(cycle.image_metadata,
                                               kwargs['batch_size'])
             for batch in md_batches:
                 count += 1
-                joblist.append({
+                joblist['run'].append({
                     'id': count,
                     'inputs': [os.path.join(cycle.image_upload_dir,
                                             md.original_filename)
@@ -114,9 +120,9 @@ class ImageExtractor(ClusterRoutine):
                 })
         return joblist
 
-    def _build_command(self, batch):
+    def _build_run_command(self, batch):
         job_id = batch['id']
-        command = ['imextract']
+        command = [self.prog_name]
         command.append(self.experiment.dir)
         command.extend(['run', '--job', str(job_id)])
         return command
@@ -150,9 +156,15 @@ class ImageExtractor(ClusterRoutine):
                 filename = batch['outputs'][i]
                 imageutils.save_image_png(img, filename)
 
+    def _build_collect_command(self):
+        raise AttributeError('"%s" step has no "collect" routine'
+                             % self.prog_name)
+
     def collect_job_output(self, joblist, **kwargs):
-        pass
+        raise AttributeError('"%s" step has no "collect" routine'
+                             % self.prog_name)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
-        pass
+        raise AttributeError('"%s" step has no "apply" routine'
+                             % self.prog_name)

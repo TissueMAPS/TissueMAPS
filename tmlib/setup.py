@@ -9,12 +9,12 @@ from setuptools import setup, find_packages
 def get_version():
     src_path = os.path.abspath(__file__)
     sys.path.append(src_path)
-    import tmt
-    return tmt.__version__
+    import tmlib
+    return tmlib.__version__
 
 
 setup(
-    name='tmt',
+    name='tmlib',
     version=get_version(),
     description='TissueMAPS toolbox. Image processing and data analysis '
                 'routines for TissueMAPS.',
@@ -33,7 +33,7 @@ setup(
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS'
     ],
-    scripts=['tmt'],
+    scripts=['tmlib'],
     packages=find_packages(),
     package_dir={''},
     package_data={'': ['*.rst']},

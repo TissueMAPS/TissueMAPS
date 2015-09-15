@@ -1,18 +1,5 @@
-[ ] create class for parsed arguments: keys -> attributes
-    (consider doing the same for configuration settings?)
-[ ] popcon: implement population context measurement in python
-[-] ConfigParser class for tmt.config file?
-[ ] ShiftParser class for shiftDescriptor.json file
-[ ] autocreate gc3pie config file
-[ ] Preprocessing steps in `dafu` package:
-    [ ] handle segmentation masks stored in HDF5 files
-[ ] refactor Experiment class
-    [ ] where should segmentation files be part of Experiment or a particular cycle?
-[ ] refactor Mosaic class
-    [ ] each grid has one or more sites, i.e. tiles with positional information
-    [ ] each site has multiple channels and timepoints (cycles are timepointswith special property of shift in x,y)
-[ ] refactor Image class
-    [ ] add methods correct/align
-[ ] refactor APIs
-    [ ] main API parent class from which all others inherit
+[ ] create a class for configuration settings with setter??
+[ ] logger for each command line program
+[ ] implement workflow: calling a command line interface without subparser does the full shizzle with default argument values, i.e. creating joblist, submitting, collecting
+[ ] segmentations only exists as outline values stored in HDF5 files
 

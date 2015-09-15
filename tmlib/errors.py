@@ -27,3 +27,10 @@ class RegexpError(Exception):
     '''
     Error class that is raised when a regular expression pattern didn't match.
     '''
+
+
+class StitchError(Exception):
+    '''
+    Error class that is raised when a problem arises upon stitching of
+    individual images to a mosaic.
+    '''

@@ -4,8 +4,9 @@ from natsort import natsorted
 from cached_property import cached_property
 from . import utils
 from .image import is_image_file
+from .image import ChannelImage
 from .metadata import ChannelImageMetadata
-from .metadata import SegmentationImageMetadata
+# from .metadata import SegmentationImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .shift import ShiftDescription
 from .errors import RegexpError
@@ -275,13 +276,11 @@ class Cycle(object):
     @cached_property
     def image_metadata(self):
         '''
-        The `.metadata` YAML file contains a sequence of mappings
-        (key-value pairs).
-
         Returns
         -------
         List[ChannelImageMetadata]
-            metadata for each image file in `image_dir`
+            metadata for each image file in `image_dir` (the `.metadata` YAML
+            file maps each image file to its corresponding metadata)
 
         Raises
         ------
@@ -300,6 +299,28 @@ class Cycle(object):
         self._image_metadata = [ChannelImageMetadata(md)
                                 for md in metadata.values()]
         return self._image_metadata
+
+    @property
+    def images(self):
+        '''
+        Returns
+        -------
+        List[ChannelImage]
+            image object for each image file in `image_dir`
+
+        Note
+        ----
+        Image objects have lazy loading functionality, i.e. the actual image
+        pixel array is only loaded into memory once the corresponding attribute
+        (property) is accessed.
+        '''
+        self._images = list()
+        for i, f in enumerate(self.image_files):
+            img = ChannelImage.create_from_file(
+                    os.path.join(self.image_dir, f), self.image_metadata[i],
+                    library='vips')
+            self._images.append(img)
+        return self._images
 
     @property
     def stats_dir(self):
@@ -456,143 +477,143 @@ class Cycle(object):
             self._shift_description.append(ShiftDescription(content[ix]))
         return self._shift_description
 
-    @property
-    def segmentation_dir(self):
-        '''
-        Segmentations are stored as image files in a single folder per
-        experiment. The corresponding cycles is referred to as "reference"
-        cycle, because its images are used as references for registration.
-        The format of the folder name is defined by the key
-        *SEGMENTATION_DIR* in the configuration settings file.
+    # @property
+    # def segmentation_dir(self):
+    #     '''
+    #     Segmentations are stored as image files in a single folder per
+    #     experiment. The corresponding cycles is referred to as "reference"
+    #     cycle, because its images are used as references for registration.
+    #     The format of the folder name is defined by the key
+    #     *SEGMENTATION_DIR* in the configuration settings file.
 
-        Returns
-        -------
-        str
-            absolute path to the folder containing the segmentation image files
-        '''
-        if self.reference:
-            self._segmentation_dir = self.cfg['SEGMENTATION_DIR'].format(
-                                            cycle_dir=self.dir,
-                                            sep=os.path.sep)
-        else:
-            self._segmentation_dir = None
-        return self._segmentation_dir
+    #     Returns
+    #     -------
+    #     str
+    #         absolute path to the folder containing the segmentation image files
+    #     '''
+    #     if self.reference:
+    #         self._segmentation_dir = self.cfg['SEGMENTATION_DIR'].format(
+    #                                         cycle_dir=self.dir,
+    #                                         sep=os.path.sep)
+    #     else:
+    #         self._segmentation_dir = None
+    #     return self._segmentation_dir
 
-    @cached_property
-    def segmentation_files(self):
-        '''
-        Returns
-        -------
-        List[str]
-            names of segmentation files in `segmentation_dir`
+    # @cached_property
+    # def segmentation_files(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     List[str]
+    #         names of segmentation files in `segmentation_dir`
 
-        Raises
-        ------
-        OSError
-            when cycle is the reference cycle, but `segmentation_dir` does not
-            exist or when cycle is the reference cycle, but no image files are
-            found in `segmentation_dir`
+    #     Raises
+    #     ------
+    #     OSError
+    #         when cycle is the reference cycle, but `segmentation_dir` does not
+    #         exist or when cycle is the reference cycle, but no image files are
+    #         found in `segmentation_dir`
 
-        See also
-        --------
-        `image.is_image_file`_
-        '''
-        if self.reference:
-            if not os.path.exists(self.segmentation_dir):
-                raise OSError('Segmentation directory does not exist: %s'
-                              % self.segmentation_dir)
-            files = [f for f in os.listdir(self.segmentation_dir)
-                     if is_image_file(f)]
-            files = natsorted(files)
-            if not files:
-                raise OSError('No supported image files found in "%s"'
-                              % self.segmentation_dir)
-            self._segmentation_files = files
-        else:
-            self._segmentation_files = list()
+    #     See also
+    #     --------
+    #     `image.is_image_file`_
+    #     '''
+    #     if self.reference:
+    #         if not os.path.exists(self.segmentation_dir):
+    #             raise OSError('Segmentation directory does not exist: %s'
+    #                           % self.segmentation_dir)
+    #         files = [f for f in os.listdir(self.segmentation_dir)
+    #                  if is_image_file(f)]
+    #         files = natsorted(files)
+    #         if not files:
+    #             raise OSError('No supported image files found in "%s"'
+    #                           % self.segmentation_dir)
+    #         self._segmentation_files = files
+    #     else:
+    #         self._segmentation_files = list()
 
-        return self._segmentation_files
+    #     return self._segmentation_files
 
-    @property
-    def segmentation_metadata_file(self):
-        '''
-        The `.metadata` YAML file contains a sequence of mappings
-        (key-value pairs).
+    # @property
+    # def segmentation_metadata_file(self):
+    #     '''
+    #     The `.metadata` YAML file contains a sequence of mappings
+    #     (key-value pairs).
 
-        Returns
-        -------
-        str
-            name of YAML file containing the metadata for each segmentation
-            file (returns ``None`` if cycle is not the reference cycle)
-        '''
-        if self.reference:
-            self._segmentation_metadata_file = \
-                                    self.cfg['SEGMENTATION_METADATA_FILE']
-        else:
-            self._segmentation_metadata_file = None
-        return self._segmentation_metadata_file
+    #     Returns
+    #     -------
+    #     str
+    #         name of YAML file containing the metadata for each segmentation
+    #         file (returns ``None`` if cycle is not the reference cycle)
+    #     '''
+    #     if self.reference:
+    #         self._segmentation_metadata_file = \
+    #                                 self.cfg['SEGMENTATION_METADATA_FILE']
+    #     else:
+    #         self._segmentation_metadata_file = None
+    #     return self._segmentation_metadata_file
 
-    @cached_property
-    def segmentation_metadata(self):
-        '''
-        Returns
-        -------
-        List[SegmentationImageMetadata]
-            metadata for each segmentation image file in `segmentation_dir`
+    # @cached_property
+    # def segmentation_metadata(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     List[SegmentationImageMetadata]
+    #         metadata for each segmentation image file in `segmentation_dir`
 
-        See also
-        --------
-        `metadata.SegmentationImageMetadata`_
-        '''
-        filename = os.path.join(self.metadata_dir,
-                                self.segmentation_metadata_file)
-        if self.reference:
-            content = utils.read_json(filename)
-            metadata = list()
-            for f in self.segmentation_files:
-                metadata.append(SegmentationImageMetadata(content[f]))
-            self._segmentation_metadata = metadata
-        else:
-            self._segmentation_metadata = list()
-        return self._segmentation_metadata
+    #     See also
+    #     --------
+    #     `metadata.SegmentationImageMetadata`_
+    #     '''
+    #     filename = os.path.join(self.metadata_dir,
+    #                             self.segmentation_metadata_file)
+    #     if self.reference:
+    #         content = utils.read_json(filename)
+    #         metadata = list()
+    #         for f in self.segmentation_files:
+    #             metadata.append(SegmentationImageMetadata(content[f]))
+    #         self._segmentation_metadata = metadata
+    #     else:
+    #         self._segmentation_metadata = list()
+    #     return self._segmentation_metadata
 
-    @property
-    def segmentation_shifts(self):
-        '''
-        Returns
-        -------
-        List[ShiftDescription]
-            shift description for each image file in `segmentation_dir`
+    # @property
+    # def segmentation_shifts(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     List[ShiftDescription]
+    #         shift description for each image file in `segmentation_dir`
 
-        See also
-        --------
-        `shift.ShiftDescription`_
-        '''
-        filename = os.path.join(self.shift_dir, self.shift_file)
-        content = utils.read_yaml(filename)
-        self._shift_description = list()
-        # by matching the sites, we ensure that the correct shift description
-        # is assigned to each image
-        sites = [e.site for e in content]
-        for m in self.segmentation_metadata:
-            ix = sites.index(m.site)
-            self._shift_description.append(ShiftDescription(content[ix]))
-        return self._shift_description
+    #     See also
+    #     --------
+    #     `shift.ShiftDescription`_
+    #     '''
+    #     filename = os.path.join(self.shift_dir, self.shift_file)
+    #     content = utils.read_yaml(filename)
+    #     self._shift_description = list()
+    #     # by matching the sites, we ensure that the correct shift description
+    #     # is assigned to each image
+    #     sites = [e.site for e in content]
+    #     for m in self.segmentation_metadata:
+    #         ix = sites.index(m.site)
+    #         self._shift_description.append(ShiftDescription(content[ix]))
+    #     return self._shift_description
 
-    @property
-    def object_types(self):
-        '''
-        Returns
-        -------
-        Set[str]
-            unique objects names, e.g. ``{"Cells", "Nuclei"}``
-        '''
-        if self.segmentation_files:
-            self._object_types = set([m.objects
-                                      for m in self.segmentation_metadata])
-        else:
-            self._object_types = set()
-        return self._object_types
+    # @property
+    # def object_types(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     Set[str]
+    #         unique objects names, e.g. ``{"Cells", "Nuclei"}``
+    #     '''
+    #     if self.segmentation_files:
+    #         self._object_types = set([m.objects
+    #                                   for m in self.segmentation_metadata])
+    #     else:
+    #         self._object_types = set()
+    #     return self._object_types
 
     def __str__(self):
         return('experiment "%s" - cycle #%s: "%s"'

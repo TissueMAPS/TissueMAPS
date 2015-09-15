@@ -4,5 +4,5 @@ logo = u'''
    .
    I        illuminati (%(version)s)
   LLU       Create pyramid images.
- MINATI     https://github.com/HackerMD/TissueMAPSToolbox
+ MINATI     https://github.com/TissueMAPS/TmLibrary
 '''

@@ -4,10 +4,10 @@ import h5py
 import scipy
 import os
 import re
-from tmt import imageutil
-import dafu
 from gi.repository import Vips
 from skimage.measure import find_contours, approximate_polygon
+from .. import imageutils
+from ..dafu.utils import extract_ids
 
 
 def local_to_global_ids_vips(im, offset_id):
@@ -78,7 +78,7 @@ def create_and_save_lookup_tables(image_grid, data_file, output_dir):
 
     Parameters
     ----------
-    image_grid: List[List[tmt.image.SegmentationImage]]
+    image_grid: List[List[tmlib.image.SegmentationImage]]
         image files
     data_file: str
         path to the `data.h5` file containing the object id datasets
@@ -87,7 +87,7 @@ def create_and_save_lookup_tables(image_grid, data_file, output_dir):
     '''
     current_obj = image_grid[0][0].objects.lower()
 
-    current, parent = dafu.util.extract_ids(data_file, current_obj)
+    current, parent = extract_ids(data_file, current_obj)
 
     max_id = 0
     for i in range(len(image_grid)):
@@ -111,7 +111,7 @@ def create_and_save_lookup_tables(image_grid, data_file, output_dir):
             # removed from the images for the creation of masks
             ids_nodisplay = ids_border + ids_nodata
 
-            im = remove_objects(im, ids_nodisplay)
+            im = remove_objects_numpy(im, ids_nodisplay)
 
             im, max_id = create_id_lookup_matrices(im, max_id)
             fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
@@ -122,14 +122,14 @@ def create_and_save_lookup_tables(image_grid, data_file, output_dir):
                 np.save(f, im)
 
 
-def remove_border_objects(site_matrix):
+def remove_border_objects_numpy(im):
     '''
     Given a matrix of a site image, set all pixels with
     ids belonging to border objects to zero.
 
     Parameters
     ----------
-    site_matrix: numpy.ndarray
+    im: numpy.ndarray
         image matrix with values corresponding to object ids
 
     Returns
@@ -137,8 +137,8 @@ def remove_border_objects(site_matrix):
     numpy.ndarray
         modified image matrix with pixel values of border objects set to 0
     '''
-    is_border_object = imageutil.find_border_objects(site_matrix)
-    mat = site_matrix.copy()
+    is_border_object = imageutils.find_border_objects(im)
+    mat = im.copy()
     mat[is_border_object] = 0
     return mat
 
@@ -150,7 +150,7 @@ def remove_border_objects_vips(im, is_source_uint16=True):
 
     Parameters
     ----------
-    site_matrix: Vips.Image
+    im: Vips.Image
         image matrix with values corresponding to object ids
     is_source_uint16: bool, optional
         indicating if the source band format is uin16 (defaults to uint8)
@@ -177,14 +177,14 @@ def remove_border_objects_vips(im, is_source_uint16=True):
     return im
 
 
-def remove_objects(site_matrix, ids):
+def remove_objects_numpy(im, ids):
     '''
     Given a matrix of a site image, set all pixels whose values
     are in "ids" to zero.
 
     Parameters
     ----------
-    site_matrix: numpy.ndarray
+    im: numpy.ndarray
         image matrix with values corresponding to object ids
     ids: List[int]
         unique object ids
@@ -194,7 +194,7 @@ def remove_objects(site_matrix, ids):
     numpy.ndarray
         modified image matrix with pixel values in `ids` set to 0
     '''
-    mat = site_matrix.copy()  # Copy since we don't update in place
+    mat = im.copy()  # Copy since we don't update in place
     remove_ix = np.in1d(mat, ids).reshape(mat.shape)
     mat[remove_ix] = 0
     return mat
@@ -207,7 +207,7 @@ def remove_objects_vips(im, ids, is_source_uint16=True):
 
     Parameters
     ----------
-    site_matrix: Vips.Image
+    im: Vips.Image
         image matrix with values corresponding to object ids
     ids: List[int]
         unique object ids
@@ -223,7 +223,6 @@ def remove_objects_vips(im, ids, is_source_uint16=True):
     for i in ids:
         id_lut = (id_lut == i).ifthenelse(0, id_lut)
     im = im.maplut(id_lut)
-
     return im
 
 
@@ -278,7 +277,7 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
     return centroids, np.max(global_ids)
 
 
-def compute_outline_polygons(site_matrix, contour_level=0.5, poly_tol=0.95):
+def compute_outline_polygons(im, contour_level=0.5, poly_tol=0.95):
     '''
     Given a matrix of a site image with border cells removed,
     get a list of lists, each consisting of local
@@ -286,7 +285,7 @@ def compute_outline_polygons(site_matrix, contour_level=0.5, poly_tol=0.95):
 
     Parameters
     ----------
-    site_matrix: numpy.ndarray
+    im: numpy.ndarray
         image matrix where pixel values encode cell ids (background is 0)
 
     Returns
@@ -296,27 +295,27 @@ def compute_outline_polygons(site_matrix, contour_level=0.5, poly_tol=0.95):
         (local i-j coordinates)
     '''
     outlines = {}
-    cell_ids = set(np.unique(site_matrix)).difference({0})
+    cell_ids = set(np.unique(im)).difference({0})
     print '* Computing outlines ....'
     for i, cell_id in enumerate(cell_ids):
         print '|_ cell {:0>5} / {}'.format(i + 1, len(cell_ids))
 
         # Create a bounding box around the cell id of interest
         # The bounding box should have a frame of thickness 1 matrix cell
-        i, j = (site_matrix == cell_id).nonzero()
+        i, j = (im == cell_id).nonzero()
         mini = np.min(i) - 1
         maxi = np.max(i) + 2
         minj = np.min(j) - 1
         maxj = np.max(j) + 2
 
-        nrow, ncol = site_matrix.shape
+        nrow, ncol = im.shape
 
         if mini < 0 or mini > nrow + 1 or minj < 0 or minj > ncol + 1:
             # If this is the case, this is a border cell and should
             # not be considered
             continue
 
-        submat = site_matrix[mini:maxi, minj:maxj].copy()
+        submat = im[mini:maxi, minj:maxj].copy()
         submat[submat != cell_id] = 0
 
         # find_contours needs arrays that are at least 2x2 big, skip otherwise
@@ -357,11 +356,11 @@ def save_outline_polygons(outlines, filename):
         f.close()
 
 
-def outlines(labels, keep_ids=False):
+def compute_outlines_numpy(labels, keep_ids=False):
     '''
     Given a label matrix, return a matrix of the outlines of labeled objects.
     If `keep_ids` is True, the outlines will still consist of their cell's id,
-    otherwise all outlines will be 255.
+    otherwise the outlines will be ``True`` and all other pixels ``False``.
     Note that in the case of keeping the ids,
     the output matrix will have the original bit depth!
 
@@ -393,21 +392,20 @@ def outlines(labels, keep_ids=False):
     if keep_ids:
         return different * labels
     else:
-        output = np.zeros(labels.shape, np.uint8)
-        output[different] = 255
-
+        output = np.zeros(labels.shape, np.bool)
+        output[different] = True
         return output
 
 
-def outlines_vips(im):
+def compute_outlines_vips(im):
     '''
     Given a label matrix, return a matrix of the outlines of labeled objects.
 
     If a pixel is not zero and has at least one neighbor with a different
     value, then it is part of the outline.
 
-    For more info about how this works, see here:
-    http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/libvips-morphology.html
+    For more info about how this works, see
+    `libvips-morphology <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/libvips-morphology.html>`_
     '''
     # Since the images are sometimes not square, they can't be rotated at all times.
     # Normally you would define one mask and apply it repeatedly to the image while rotating it.
@@ -457,13 +455,15 @@ def outlines_vips(im):
     ]
 
     results = []
-    nonbg = im > 0
+    nonbg = im > 0  # how can we preserve ids?
     # Apply all the masks and save each result
     for i, mask in enumerate(masks):
         img = nonbg.morph(mask, 'erode')
         results.append(img)
 
-    # OR all the images
+    import ipdb; ipdb.set_trace()
+
+    # Combine all the images
     images_disj = reduce(op.or_, results)
     return images_disj
 

@@ -3,8 +3,9 @@ from .cli import Align
 
 
 parser, subparsers = Align.get_parser_and_subparsers(
-                        subparser_names=[
-                            'run', 'joblist', 'submit', 'apply', 'collect'
+                        required_subparsers=[
+                            'run', 'joblist', 'submit', 'apply', 'collect',
+                            'workflow'
                         ])
 
 parser.description = '''
@@ -20,10 +21,10 @@ joblist_parser.add_argument(
     help='number of image files that should be processed per job')
 joblist_parser.add_argument(
         '--ref_cycle', type=str, required=True,
-        help='reference cycle number (defaults to number of last cycle)')
+        help='name of the reference cycle')
 joblist_parser.add_argument(
         '--ref_channel', type=str, required=True,
-        help='reference channel number (defaults to 1)')
+        help='name of the reference channel')
 
 collect_parser = subparsers.choices['collect']
 collect_parser.add_argument(

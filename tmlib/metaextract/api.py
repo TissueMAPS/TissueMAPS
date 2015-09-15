@@ -5,10 +5,10 @@ from glob import glob
 from natsort import natsorted
 from cached_property import cached_property
 from ..formats import Formats
-from ..cluster import ClusterRoutine
+from ..cluster import ClusterRoutines
 
 
-class MetadataExtractor(ClusterRoutine):
+class MetadataExtractor(ClusterRoutines):
 
     '''
     Class for extraction of metadata from microscopic image files using the
@@ -37,7 +37,7 @@ class MetadataExtractor(ClusterRoutine):
 
         See also
         --------
-        `tmt.cfg`_
+        `tmlib.cfg`_
         '''
         super(MetadataExtractor, self).__init__(prog_name, logging_level)
         self.experiment = experiment
@@ -87,7 +87,10 @@ class MetadataExtractor(ClusterRoutine):
         **kwargs: dict
             empty - no additional arguments
         '''
-        joblist = list()
+        joblist = dict()
+        joblist['run'] = list()
+        output_files = list()
+        count = 0
         for i, cycle in enumerate(self.cycles):
             image_filenames = [f for f in os.listdir(cycle.image_upload_dir)
                                if os.path.splitext(f)[1]
@@ -97,18 +100,26 @@ class MetadataExtractor(ClusterRoutine):
             if not input_files:
                 raise IOError('No image files of supported formats '
                               'found in upload directory.')
-            output_files = [os.path.join(cycle.ome_xml_dir,
-                                         self._get_ome_xml_filename(f))
-                            for f in image_filenames]
-            joblist.extend([{
-                'id': i * (len(input_files)-1) + (j+1),
-                'inputs': [input_files[j]],
-                'outputs': [output_files[j]],
-                'cycle': cycle.name
-            } for j in xrange(len(input_files))])
+            output_files.extend([os.path.join(cycle.ome_xml_dir,
+                                              self._get_ome_xml_filename(f))
+                                 for f in image_filenames])
+
+            for j in xrange(len(input_files)):
+                count += 1
+                joblist['run'].append({
+                    'id': count,
+                    'inputs': [input_files[j]],
+                    'outputs': list(),
+                    'cycle': cycle.name
+                })
+
+        joblist['collect'] = {
+            'inputs': list(),
+            'outputs': output_files
+        }
         return joblist
 
-    def _build_command(self, batch):
+    def _build_run_command(self, batch):
         input_filename = batch['inputs'][0]
         command = [
             'showinf', '-omexml-only', '-nopix', '-novalid', '-no-upgrade',
@@ -116,7 +127,18 @@ class MetadataExtractor(ClusterRoutine):
         ]
         return command
 
-    def collect_job_output(self, joblist, **kwargs):
+    def run_job(self, batch):
+        # Java job
+        raise AttributeError('"%s" step has no "run" routine'
+                             % self.prog_name)
+
+    def _build_collect_command(self):
+        command = [self.prog_name]
+        command.append(self.experiment.dir)
+        command.extend(['collect'])
+        return command
+
+    def collect_job_output(self, batch, **kwargs):
         '''
         The *showinf* command prints the OME-XML string to standard output.
         GC3Pie redirects the standard output to a log file. Here we copy the
@@ -128,25 +150,20 @@ class MetadataExtractor(ClusterRoutine):
 
         Parameters
         ----------
-        joblist: List[dict]
-            job descriptions
+        batch: dict
+            description of the *collect* job
         **kwargs: dict
             additional variable input arguments as key-value pairs
         '''
-        for batch in joblist:
+        for i, f in enumerate(batch['outputs']):
             output_files = glob(os.path.join(
-                                self.log_dir, '*_job-%.5d*.out' % batch['id']))
+                                self.log_dir, '*_job-%.5d*.out' % (i+1)))
             # Take the most recent one, in case there are outputs of previous
             # submissions
             output_files = natsorted(output_files)
-            shutil.copyfile(output_files[0], batch['outputs'][0])
-
-    def run_job(self, batch):
-        '''
-        Java job.
-        '''
-        pass
+            shutil.copyfile(output_files[0], f)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
-        pass
+        raise AttributeError('"%s" step has no "apply" routine'
+                             % self.prog_name)

@@ -21,7 +21,7 @@ Output
 ------
 
 Mean and standard deviation matrices are stored in an HDF5 file per channel.
-The name of this file is defined in the configuration settings in `tmt.cfg`.
+The name of this file is defined in the configuration settings in `tmlib.cfg`.
 
 Internally the HDF5 file is structured as follows:
 

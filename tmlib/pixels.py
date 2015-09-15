@@ -18,8 +18,8 @@ class Pixels(object):
 
     See also
     --------
-    `tmt.pixels.VipsPixels`_
-    `tmt.pixels.NumpyPixels`_
+    `tmlib.pixels.VipsPixels`_
+    `tmlib.pixels.NumpyPixels`_
     '''
 
     __metaclass__ = ABCMeta
@@ -132,7 +132,7 @@ class VipsPixels(Pixels):
         str
             data type (format) of the pixel array elements
         '''
-        self._type = self.array.get_format()
+        self._dtype = self.array.get_format()
         return self._dtype
 
     @property
@@ -282,7 +282,7 @@ class VipsPixels(Pixels):
 
         See also
         --------
-        `tmt.image_readers.VipsImageReader`_
+        `tmlib.image_readers.VipsImageReader`_
         '''
         with VipsImageReader() as reader:
             return VipsPixels(reader.read(filename))
@@ -369,8 +369,8 @@ class NumpyPixels(Pixels):
         str
             data type of the pixel array elements
         '''
-        self._type = self.array.dtype
-        return self._type
+        self._dtype = self.array.dtype
+        return self._dtype
 
     @property
     def is_float(self):
@@ -513,7 +513,7 @@ class NumpyPixels(Pixels):
 
         See also
         --------
-        `tmt.image_readers.OpencvImageReader`_
+        `tmlib.image_readers.OpencvImageReader`_
         '''
         with OpencvImageReader() as reader:
             return NumpyPixels(reader.read(filename))

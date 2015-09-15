@@ -69,7 +69,7 @@ def calc_stitch_dimensions(stage_positions):
 
     Parameters
     ----------
-    stage_positions: Tuple[float]
+    stage_positions: List[Tuple[float]]
         stage positions in row (x) and column (y) direction
 
     Returns
@@ -109,6 +109,7 @@ def calc_stitch_layout(stitch_dims, stage_positions):
     '''
     n_rows = stitch_dims[0]
     n_cols = stitch_dims[1]
+
     row_positions = [p[0] for p in stage_positions]
     col_positions = [p[1] for p in stage_positions]
 
@@ -159,7 +160,7 @@ def calc_image_position(stitch_dims, stitch_layout):
 
     Returns
     -------
-    Tuple[int]
+    List[Tuple[int]]
         pair of one-based "row" (y) and "column" (x) position indices for each
         individual image in the stitched mosaic image in the order of
         acquisition, i.e. sorted according to image *site*
@@ -204,3 +205,67 @@ def calc_image_position(stitch_dims, stitch_layout):
                 rows += range(1, stitch_dims[0]+1, 1)
             cols += [i+1 for x in range(stitch_dims[0])]
     return zip(rows, cols)
+
+
+def calc_image_coordinates(stage_positions,
+                           reverse_rows=False, reverse_columns=False):
+    '''
+    Calculate the relative position of each image within the acquisition grid.
+    The coordinates are one-based to be consistent with the OME data model.
+
+    Parameters
+    ----------
+    stage_positions: List[Tuple[float]]
+        absolute microscope stage positions
+    reverse_rows: bool, optional
+        sort positions along row dimension in descending order
+    reverse_columns: bool, optional
+        sort positions along column dimension in descending order
+
+    Note
+    ----
+    Since stage positions may not be identical for different channels acquired
+    at the same site, the values are divided by 10 and then rounded (converted
+    to integers).
+
+    Returns
+    -------
+    List[Tuple[int]]
+        relative positions (one-based coordinates) within the grid
+
+    TODO
+    ----
+    How to deal with reversing of axes in an automated way?
+    '''
+    # The stage positions may not be identical between different
+    # channels acquired at the same site, so we round them.
+    rounded_positions = [(int(p[0]/10), int(p[1]/10)) for p in stage_positions]
+
+    # Determine unique stage positions.
+    unique_positions = list(set(rounded_positions))
+    unique_indices = [unique_positions.index(p) for p in rounded_positions]
+
+    # Calculate the relative coordinates for each unique stage position.
+    positions = np.array(unique_positions)
+    row_positions = np.unique(positions[:, 0])
+    col_positions = np.unique(positions[:, 1])
+
+    if reverse_rows:
+        row_positions = row_positions[::-1]
+    if reverse_columns:
+        col_positions = col_positions[::-1]
+
+    unique_coordinates = [tuple() for x in xrange(len(unique_positions))]
+    for i, r in enumerate(row_positions):
+        for j, c in enumerate(col_positions):
+            pos = np.array((r, c))
+            pos_index = np.where(np.all(positions == pos, axis=1))
+            for ix in pos_index:
+                if len(ix) == 0:
+                    continue
+                unique_coordinates[ix[0]] = (i+1, j+1)  # one-based!
+
+    # Map the unique coordinates back.
+    coordinates = [unique_coordinates[i] for i in unique_indices]
+
+    return coordinates

@@ -52,7 +52,7 @@ class Image(object):
 
         See also
         --------
-        `tmt.metadata.ImageMetadata`_
+        `tmlib.metadata.ImageMetadata`_
         '''
         return self._metadata
 
@@ -117,7 +117,7 @@ class ChannelImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library='numpy'):
+    def create_from_file(filename, metadata, library='vips'):
         '''
         Create a ChannelImage object from a file on disk.
 
@@ -129,7 +129,7 @@ class ChannelImage(Image):
             image metadata object
         library: str, optional
             image library that should be used, "vips" or "numpy"
-            (defaults to "numpy")
+            (defaults to "vips")
 
         Returns
         -------
@@ -166,7 +166,7 @@ class ChannelImage(Image):
 
         See also
         --------
-        `tmt.pixels.Pixels`_
+        `tmlib.pixels.Pixels`_
         '''
         if hasattr(self, '_factory') and hasattr(self, 'filename'):
             self._pixels = self._factory(self.filename)
@@ -244,7 +244,7 @@ class BrightfieldImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library='numpy'):
+    def create_from_file(filename, metadata, library='vips'):
         '''
         Create a BrightfieldImage object from a file on disk.
 
@@ -256,7 +256,7 @@ class BrightfieldImage(Image):
             image metadata object
         library: str, optional
             image library that should be used, "vips" or "numpy"
-            (defaults to "numpy")
+            (defaults to "vips")
 
         Returns
         -------
@@ -293,7 +293,7 @@ class BrightfieldImage(Image):
 
         See also
         --------
-        `tmt.pixels.Pixels`_
+        `tmlib.pixels.Pixels`_
         '''
         if hasattr(self, '_factory') and hasattr(self, 'filename'):
             self._pixels = self._factory(self.filename)
@@ -312,7 +312,7 @@ class MaskImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library='numpy'):
+    def create_from_file(filename, metadata, library='vips'):
         '''
         Create a MaskImage object from a file on disk.
 
@@ -324,7 +324,7 @@ class MaskImage(Image):
             image metadata object
         library: str, optional
             image library that should be used, "vips" or "numpy"
-            (defaults to "numpy")
+            (defaults to "vips")
 
         Returns
         -------
@@ -361,7 +361,7 @@ class MaskImage(Image):
 
         See also
         --------
-        `tmt.pixels.Pixels`_
+        `tmlib.pixels.Pixels`_
         '''
         if hasattr(self, '_factory') and hasattr(self, 'filename'):
             self._pixels = self._factory(self.filename)
@@ -416,7 +416,7 @@ class LabelImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library='numpy'):
+    def create_from_file(filename, metadata, library='vips'):
         '''
         Create a LabelImage object from a file on disk.
 
@@ -428,7 +428,7 @@ class LabelImage(Image):
             image metadata object
         library: str, optional
             image library that should be used, "vips" or "numpy"
-            (defaults to "numpy")
+            (defaults to "vips")
 
         Returns
         -------
@@ -603,7 +603,7 @@ class IllumstatsImages(object):
 
         See also
         --------
-        `tmt.image.IllumstatsImage`_ 
+        `tmlib.image.IllumstatsImage`_ 
         '''
         return self._std
 
@@ -621,7 +621,7 @@ class IllumstatsImages(object):
 
         See also
         --------
-        `tmt.image.IllumstatsImage`_
+        `tmlib.image.IllumstatsImage`_
         '''
         return self._mean
 
@@ -630,7 +630,7 @@ class IllumstatsImages(object):
         self._mean = value
 
     @staticmethod
-    def create_from_file(filename, library='numpy'):
+    def create_from_file(filename, library='vips'):
         '''
         Create an Illumstats object from a file on disk.
 
@@ -640,7 +640,7 @@ class IllumstatsImages(object):
             absolute path to the HDF5 file
         library: str, optional
             image library that should be used, "vips" or "numpy"
-            (defaults to "numpy")
+            (defaults to "vips")
 
         Returns
         -------

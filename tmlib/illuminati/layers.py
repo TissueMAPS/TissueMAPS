@@ -2,12 +2,12 @@ import os
 import numpy as np
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
-from abc import ABCMeta
-from abc import abstractmethod
-from . import segment
+from .mosaic import Mosaic
+from .mosaic import MosaicMetadata
 from .. import imageutils
-from .. import dafu
 from ..image_reader import OpenslideImageReader
+from ..errors import NotSupportedError
+from ..errors import StitchError
 
 
 class Layer(object):
@@ -19,37 +19,22 @@ class Layer(object):
     several individual images.
     '''
 
-    __metaclass__ = ABCMeta
-
-    def __init__(self, mosaic):
+    def __init__(self, mosaic, metadata):
         '''
         Initialize an instance of class Layer.
 
         Parameters
         ----------
-        mosaic: Vips.Image
+        mosaic: Mosaic
             stitched mosaic image
+        metadata: MosaicMetadata
+            metadata corresponding to the mosaic image
         '''
         self.mosaic = mosaic
-
-    # TODO: add metadata
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the layer
-        '''
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
+        self.metadata = metadata
 
     @staticmethod
-    def _build_grid(images):
+    def _build_image_grid(images):
         coordinates = [im.metadata.coordinates for im in images]
         height, width = np.max(coordinates, axis=0)
         grid = np.empty((height, width))
@@ -57,26 +42,7 @@ class Layer(object):
             grid[c[0], c[1]] = images[i]
         return grid
 
-    @abstractmethod
-    def create_from_images(images, dx=0, dy=0, **kwargs):
-        '''
-        Load individual image pixel arrays and stitch them together according
-        to the grid layout defined by the image metadata.
-
-        Parameters
-        ----------
-        images: List[Image]
-            image objects
-        dx: int, optional
-            displacement in x direction
-        dy: int, optional
-            displacement in y direction
-        **kwargs: dict
-            additional arguments as key-value pairs
-        '''
-        pass
-
-    def align(self, shift_descriptions, cycle_id):
+    def align(self, shift_descriptions):
         '''
         Align mosaic according to pre-calculated shift values.
 
@@ -89,8 +55,8 @@ class Layer(object):
 
         Parameters
         ----------
-        shift_descriptions: List[ShiftDescription]
-            shift description for each cycle
+        shift_descriptions: List[List[ShiftDescription]]
+            shift description for each image of different cycles
 
         Returns
         -------
@@ -102,7 +68,7 @@ class Layer(object):
         The mosaic image might have different dimensions after alignment.
         '''
         cycle_nrs = [d[0].cycle for d in shift_descriptions]
-        current_cycle_ix = cycle_nrs.index(cycle_id)
+        current_cycle_ix = cycle_nrs.index(self.metadata.cycle)
 
         # TODO: global shifts could already be stored upon shift calculation!
         x_shifts = list()
@@ -154,19 +120,6 @@ class Layer(object):
         scaled_mosaic = self.mosaic.scale()
         return scaled_mosaic
 
-    def save(self, output_filename, quality):
-        '''
-        Write mosaic to file as JPEG.
-
-        Parameters
-        ----------
-        output_filaname: str
-            full path to the location were the image should be saved
-        quality: int
-            quality of the JPEG image (defaults to 75)
-        '''
-        imageutils.save_vips_image_jpg(self.mosaic, output_filename, quality)
-
     def create_pyramid(self, layer_dir):
         '''
         Create zoomify pyramid (8-bit grayscale JPEG images) of mosaic.
@@ -191,37 +144,72 @@ class ChannelLayer(Layer):
 
     '''
     Class for a channel layer, i.e. a mosaic layer that can be displayed
-    in TissueMAPS as a single grayscale channel or combined with other channels
+    in TissueMAPS as a single grayscale channel or blended with other channels
     to RGB (additive color blending).
     '''
 
-    def __init__(self, mosaic):
+    def __init__(self, mosaic, metadata):
         '''
         Initialize an instance of class Layer.
 
         Parameters
         ----------
-        mosaic: Vips.Image
+        mosaic: Mosaic
             stitched mosaic image
+        metadata: MosaicMetadata
+            metadata corresponding to the mosaic image
         '''
-        super(ChannelLayer, self).__init__(mosaic)
+        super(ChannelLayer, self).__init__(mosaic, metadata)
         self.mosaic = mosaic
+        self.metadata = metadata
+
+    def _create_mosaic_from_images(self, images, stats):
+        grid = self._build_image_grid(images)
+        rows = list()
+        for i in xrange(grid.shape[0]):
+            current_row = list()
+            for j in xrange(grid.shape[1]):
+                img = grid[i, j]
+                if stats:
+                    img = img.correct(stats.mean, stats.std)
+                current_row.append(img.pixels.array)
+            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', dx, 0),
+                               current_row))
+        img = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
+        mosaic = Mosaic(img)
+        return mosaic
+
+    def _create_metadata_from_images(self, images):
+        metadata = MosaicMetadata()
+        metadata.name = ''  # TODO: user configuration settings
+        metadata.sites = [im.site for im in images]
+        cycles = [im.cycle for im in images]
+        if len(cycles) > 1:
+            raise StitchError('All images must be of the same cycle')
+        metadata.cycle = cycles[0]
+        channels = [im.channel for im in images]
+        if len(channels) > 1:
+            raise StitchError('All images must be of the same channel')
+        metadata.channel = channels[0]
+        return metadata
 
     @staticmethod
-    def create_from_images(images, dx=0, dy=0, **kwargs):
+    def create_from_files(self, cycle, channel, dx=0, dy=0, **kwargs):
         '''
-        Load individual images and stitch them together according to the grid
-        layout defined by `metadata`.
+        Load individual images and stitch them together.
 
         The following additional arguments can be set:
-
-        * "stats": Dict[str, IllumstatsImages] - to correct images for
-          illumination artifacts
+        * "stats": illumination statistics to correct images for
+          illumination artifacts (*IllumstatsImages*)
+        * "shifts": shift descriptions to align individual wells between
+          different cycles (*List[List[ShiftDescription]]*)
 
         Parameters
         ----------
-        images: List[ChannelImage]
-            image objects
+        cycle: Slide or WellPlate
+            cycle object
+        channel: str
+            name of the channel for which a layer should be created
         dx: int, optional
             displacement in x direction
         dy: int, optional
@@ -233,21 +221,78 @@ class ChannelLayer(Layer):
         -------
         ChannelLayer
             stitched mosaic image
+
+        Raises
+        ------
+        StitchError
+            when images are not all of the same cycle, channel, or well
         '''
-        grid = ChannelLayer._build_grid(images)
+        if isinstance(cycle, 'Slide'):
+            layer = ChannelLayer._create_from_slide(
+                        cycle, channel, kwargs['stats'], kwargs['shifts'])
+        elif isinstance(cycle, 'WellPlate'):
+            layer = ChannelLayer._create_from_wellplate(
+                        cycle, channel, kwargs['stats'], kwargs['shifts'])
+        return layer
+
+    @staticmethod
+    def _create_from_slide(slide, channel, stats, shifts):
+        images = [im for im in slide.images
+                  if im.metadata.channel == channel]
+        mosaic = ChannelLayer._create_mosaic_from_images(images)
+        metadata = ChannelLayer._create_metadata_from_images(images)
+        layer = ChannelLayer(mosaic, metadata)
+
+        if shifts:
+            layer = layer.align(shifts)
+
+        return layer
+
+    @staticmethod
+    def _build_plate_grid(wellplate):
+        plate_cooridinates = wellplate.plate_cooridinates
+        height, width = np.max(wellplate.dimensions, axis=0)
+        plate_grid = np.empty((height, width))
+        for i, c in enumerate(plate_cooridinates):
+            plate_grid[c[0], c[1]] = wellplate.wells[i]
+        return plate_grid
+
+    @staticmethod
+    def _create_from_wellplate(wellplate, channel, stats, shifts):
+        plate_grid = ChannelLayer._build_plate_grid(wellplate)
         rows = list()
-        for i in xrange(grid.shape[0]):
+        for i in xrange(plate_grid.shape[0]):
             current_row = list()
-            for j in xrange(grid.shape[1]):
-                img = grid[i, j]
-                if kwargs['stats']:
-                    img = img.correct(kwargs['stats']['mean'],
-                                      kwargs['stats']['std'])
-                current_row.append(img.pixels.array)
-            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', dx, 0),
+            for j in xrange(plate_grid.shape[1]):
+                well = plate_grid[i, j]
+                # TODO: handle gaps (empty wells)
+                images = [img for img in wellplate.images
+                          if img.metadata.channel == channel
+                          and img.metadata.well == well]
+                mosaic = ChannelLayer._create_mosaic_from_images(images, stats)
+                metadata = ChannelLayer._create_metadata_from_images(images)
+                layer = ChannelLayer(mosaic, metadata)
+                if shifts:
+                    layer.align(shifts)
+
+                current_row.append(layer.mosaic.array)
+                if not j == plate_grid.shape[1]:
+                    spacer = imageutils.create_spacer_image(
+                                layer.pixels.dimensions, layer.pixels.dtype,
+                                'horizontal')
+                    current_row.append(spacer)
+            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', 0, 0),
                                current_row))
-        mosaic = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
-        layer = ChannelLayer(mosaic)
+            if not i == plate_grid.shape[0]:
+                spacer = imageutils.create_spacer_image(
+                            layer.pixels.dimensions, layer.pixels.dtype,
+                            'vertical')
+                rows.append(spacer)
+
+        img = reduce(lambda x, y: x.merge(y, 'vertical', 0, 0), rows)
+        mosaic = Mosaic(img)
+        metadata = ChannelLayer._create_metadata_from_images(images)
+        layer = ChannelLayer(mosaic, metadata)
         return layer
 
     def clip(self, thresh_value=None, thresh_percent=None):
@@ -276,125 +321,16 @@ class ChannelLayer(Layer):
         return clipped_mosaic
 
 
-class MaskLayer(Layer):
-
-    '''
-    Class for a mask layer, i.e. a mosaic layer that can be displayed
-    in TissueMAPS as a mask (overlay ontop of grayscale or RGB).
-    '''
-
-    def __init__(self, mosaic, cycle_id, name):
-        '''
-        Initialize an instance of class MaskLayer.
-
-        Parameters
-        ----------
-        mosaic: Vips.Image
-            stitched mosaic image
-        cycle_id: int
-            identifier number of the corresponding cycle
-        '''
-        super(MaskLayer, self).__init__(mosaic, cycle_id)
-        self.mosaic = mosaic
-        self.cycle_id = cycle_id
-
-    @staticmethod
-    def create_from_image_files(image_files, metadata, dx=0, dy=0, **kwargs):
-        '''
-        Load individual images and stitch them together according to the grid
-        layout defined by `metadata`.
-
-        The following additional arguments can be set:
-
-        * "data_file": str - absolute path to the HDF5 data file
-        * "use_outlines": bool - whether only the outlines of objects should
-          be used
-
-        Parameters
-        ----------
-        image_files: List[str]
-            absolute paths to of the image files
-        metadata: List[dict]
-            metadata for each image in `image_files`
-        dx: int, optional
-            displacement in x direction
-        dy: int, optional
-            displacement in y direction
-        **kwargs: dict
-            additional arguments as key-value pairs
-
-        Returns
-        -------
-        MaskLayer
-            mosaic image
-
-        Note
-        ----
-        Mask layers are used in TissueMAPS to visualize the position of
-        segmented objects. In addition, these objects can be selected
-        (i.e. one can click on them) and use the corresponding measured
-        features for further analysis. There may be objects in the images,
-        that we don't want to display, either because there are no data points
-        for them available in the dataset (for example due to alignment)
-        or because they lie at the border of individual images, which
-        would result in incomplete and biased measurements for these objects.
-        Therefore, we remove these objects from the images before stitching,
-        i.e. we set the corresponding pixel values to zero.
-
-        To this end, certain measurements are required for the objects, such
-        as their ids and their hierarchical relation to other types of objects,
-        and these measurements are retrieved from a pre-generated dataset
-        (stored in HDF5 format).
-
-        Note that removal of objects is based on the parent objects (e.g. cells)
-        and that all children objects (e.g. nuclei) are removed, too.
-
-        See also
-        --------
-        `dafu`_
-        '''
-        grid = MaskLayer._build_grid(image_files, metadata)
-        obj_name = metadata[0].objects.lower()
-        # Get ids for current objects from dataset (pandas data frames)
-        obj, parent = dafu.utils.extract_ids(kwargs['data_file'], obj_name)
-        with VipsImageReader() as reader:
-            rows = list()
-            for i in xrange(grid.shape[0]):
-                current_row = list()
-                for j in xrange(grid.shape[1]):
-                    # Objects without data points
-                    current_metadata = [m for m in metadata
-                                        if m.filename == grid[i, j]]
-                    site = current_metadata.site
-                    ids_image = obj.ids
-                    ids_data = np.unique(obj['ID_parent'][obj.ID_site == site])
-                    ids_nodata = [o for o in ids_data if o not in ids_image]
-                    # Border objects
-                    ids_border = parent['ID_object'][(parent.IX_border > 0) &
-                                                     (parent.ID_site == site)]
-                    ids_border = ids_border.tolist()
-                    ids_remove = ids_border + ids_nodata
-                    img = LabelImage(reader.read_image(grid[i, j]))
-                    img = img.remove_objects(ids_remove)
-                    if kwargs['use_outlines']:
-                        img = img.outlines
-                    current_row.append(img.pixels.array > 0)  # work with binary image
-                rows.append(reduce(lambda x, y: x.merge(y, 'horizontal',
-                            dx, 0), current_row))
-        mosaic = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
-        layer = MaskLayer(mosaic)
-        return layer
-
-
 class BrightfieldLayer(object):
 
     '''
     Class for a brightfield layer, i.e. a mosaic that can be displayed
     in TissueMAPS as RGB.
 
-    Currently, brightfield mode is only supported for virtual slide formats
-    that can be read via `Openslide <http://openslide.org/formats>`_.
-    For compatibility with TissueMAPS they are converted to *zoomify* format.
+    Currently, brightfield mode is only available for virtual slide formats
+    supported by the `Openslide <http://openslide.org/formats>`_ library.
+    For compatibility with TissueMAPS the virtual slides are converted to
+    *zoomify* format.
     '''
 
     def __init__(self, image_file):
@@ -473,112 +409,221 @@ class BrightfieldLayer(object):
         # TODO
         print('TODO')
 
+# class MaskLayer(Layer):
 
-class LabelLayer(Layer):
+#     '''
+#     Class for a mask layer, i.e. a mosaic layer that can be displayed
+#     in TissueMAPS as a mask (overlay ontop of grayscale or RGB).
+#     '''
 
-    '''
-    Class for a label layer, i.e. a labeled mask layer that encodes the
-    global unique ids of objects (connected components). It is used in
-    TissueMAPS to map pixel positions to objects ids.
-    '''
+#     def __init__(self, mosaic, cycle_id, name):
+#         '''
+#         Initialize an instance of class MaskLayer.
 
-    def __init__(self, mosaic, cycle_id):
-        '''
-        Initialize an instance of class LabelLayer.
+#         Parameters
+#         ----------
+#         mosaic: Vips.Image
+#             stitched mosaic image
+#         cycle_id: int
+#             identifier number of the corresponding cycle
+#         '''
+#         super(MaskLayer, self).__init__(mosaic, cycle_id)
+#         self.mosaic = mosaic
+#         self.cycle_id = cycle_id
 
-        Parameters
-        ----------
-        mosaic: Vips.Image
-            stitched mosaic image
-        cycle_id: int
-            identifier number of the corresponding cycle
-        '''
-        super(LabelLayer, self).__init__(mosaic, cycle_id)
-        self.mosaic = mosaic
-        self.cycle_id = cycle_id
+#     @staticmethod
+#     def create_from_image_files(image_files, metadata, dx=0, dy=0, **kwargs):
+#         '''
+#         Load individual images and stitch them together according to the grid
+#         layout defined by `metadata`.
 
-    def create_from_image_files(image_files, metadata, dx=0, dy=0, **kwargs):
-        '''
-        Load individual images and stitch them together according to the grid
-        layout defined by `metadata`.
+#         The following additional arguments can be set:
 
-        Parameters
-        ----------
-        image_files: List[str]
-            absolute paths to of the image files
-        metadata: List[dict]
-            metadata for each image in `image_files`
-        dx: int, optional
-            displacement in x direction
-        dy: int, optional
-            displacement in y direction
-        **kwargs: dict
-            additional arguments as key-value pairs
+#         * "data_file": str - absolute path to the HDF5 data file
+#         * "use_outlines": bool - whether only the outlines of objects should
+#           be used
 
-        Returns
-        -------
-        LabelLayer
-            stitched mosaic image
+#         Parameters
+#         ----------
+#         image_files: List[str]
+#             absolute paths to of the image files
+#         metadata: List[dict]
+#             metadata for each image in `image_files`
+#         dx: int, optional
+#             displacement in x direction
+#         dy: int, optional
+#             displacement in y direction
+#         **kwargs: dict
+#             additional arguments as key-value pairs
 
-        Note
-        ----
-        Label layers are used in TissueMAPS to visualize measured features or
-        analysis results on the segmented objects by dynamically colorizing
-        them according the calculated values.
-        To this end, the pixel belonging to each object must be identifiable
-        by a unique value. This global id is encoded by three digits,
-        which allows 3^(2^16) different objects to be encoded in a 16-bit RGB
-        image.
+#         Returns
+#         -------
+#         MaskLayer
+#             mosaic image
 
-        See also
-        --------
-        `illuminati.segment.local_to_global_ids_vips`_
-        '''
-        grid = LabelLayer._build_grid(image_files, metadata)
-        max_id = 0
-        with VipsImageReader() as reader:
-            rows = list()
-            for i in xrange(grid.shape[0]):
-                current_row = list()
-                for j in xrange(grid.shape[1]):
-                    img = LabelImage.create(
-                            image=reader.read(grid[i, j]['image']),
-                            metadata=grid[i, j]['metadata'])
-                    img, max_id = img.local_to_global_ids(max_id)
-                    max_id += 1
-                    if kwargs['use_outlines']:
-                        img = img.outlines
-                    current_row.append(img.pixels.array)
-                rows.append(reduce(lambda x, y: x.merge(y, 'horizontal',
-                            dx, 0), current_row))
-        mosaic = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
-        layer = LabelLayer(mosaic)
-        return layer
+#         Note
+#         ----
+#         Mask layers are used in TissueMAPS to visualize the position of
+#         segmented objects. In addition, these objects can be selected
+#         (i.e. one can click on them) and use the corresponding measured
+#         features for further analysis. There may be objects in the images,
+#         that we don't want to display, either because there are no data points
+#         for them available in the dataset (for example due to alignment)
+#         or because they lie at the border of individual images, which
+#         would result in incomplete and biased measurements for these objects.
+#         Therefore, we remove these objects from the images before stitching,
+#         i.e. we set the corresponding pixel values to zero.
 
-    def create_pyramid(self, layer_dir):
-        '''
-        Create zoomify pyramid (16-bit RGB PNG images) of mosaic.
+#         To this end, certain measurements are required for the objects, such
+#         as their ids and their hierarchical relation to other types of objects,
+#         and these measurements are retrieved from a pre-generated dataset
+#         (stored in HDF5 format).
 
-        Parameters
-        ----------
-        layer_dir: str
-            absolute path to the directory where pyramid should be saved
+#         Note that removal of objects is based on the parent objects (e.g. cells)
+#         and that all children objects (e.g. nuclei) are removed, too.
 
-        Raises
-        ------
-        AttributeError
-            when `name` is not set
-        '''
-        if not hasattr(self, 'name'):
-            raise AttributeError('Attribute "name" not set.')
-        pyramid_dir = os.path.join(layer_dir, self.name)
-        self.mosaic.dzsave(pyramid_dir, layout='zoomify', suffix='.png')
+#         See also
+#         --------
+#         `dafu`_
+#         '''
+#         grid = MaskLayer._build_grid(image_files, metadata)
+#         obj_name = metadata[0].objects.lower()
+#         # Get ids for current objects from dataset (pandas data frames)
+#         obj, parent = dafu.utils.extract_ids(kwargs['data_file'], obj_name)
+#         with VipsImageReader() as reader:
+#             rows = list()
+#             for i in xrange(grid.shape[0]):
+#                 current_row = list()
+#                 for j in xrange(grid.shape[1]):
+#                     # Objects without data points
+#                     current_metadata = [m for m in metadata
+#                                         if m.filename == grid[i, j]]
+#                     site = current_metadata.site
+#                     ids_image = obj.ids
+#                     ids_data = np.unique(obj['ID_parent'][obj.ID_site == site])
+#                     ids_nodata = [o for o in ids_data if o not in ids_image]
+#                     # Border objects
+#                     ids_border = parent['ID_object'][(parent.IX_border > 0) &
+#                                                      (parent.ID_site == site)]
+#                     ids_border = ids_border.tolist()
+#                     ids_remove = ids_border + ids_nodata
+#                     img = LabelImage(reader.read_image(grid[i, j]))
+#                     img = img.remove_objects(ids_remove)
+#                     if kwargs['use_outlines']:
+#                         img = img.outlines
+#                     current_row.append(img.pixels.array > 0)  # work with binary image
+#                 rows.append(reduce(lambda x, y: x.merge(y, 'horizontal',
+#                             dx, 0), current_row))
+#         mosaic = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
+#         layer = MaskLayer(mosaic)
+#         return layer
 
-    def scale(self):
-        '''
-        Raises
-        ------
-        AttributeError
-            label layers should not be rescaled to 8-bit
-        '''
-        raise AttributeError('"LabelLayers" object has no method "scale"')
+
+# class LabelLayer(Layer):
+
+#     '''
+#     Class for a label layer, i.e. a labeled mask layer that encodes the
+#     global unique ids of objects (connected components). It is used in
+#     TissueMAPS to map pixel positions to objects ids.
+#     '''
+
+#     def __init__(self, mosaic, cycle_id):
+#         '''
+#         Initialize an instance of class LabelLayer.
+
+#         Parameters
+#         ----------
+#         mosaic: Vips.Image
+#             stitched mosaic image
+#         cycle_id: int
+#             identifier number of the corresponding cycle
+#         '''
+#         super(LabelLayer, self).__init__(mosaic, cycle_id)
+#         self.mosaic = mosaic
+#         self.cycle_id = cycle_id
+
+#     def create_from_image_files(image_files, metadata, dx=0, dy=0, **kwargs):
+#         '''
+#         Load individual images and stitch them together according to the grid
+#         layout defined by `metadata`.
+
+#         Parameters
+#         ----------
+#         image_files: List[str]
+#             absolute paths to of the image files
+#         metadata: List[dict]
+#             metadata for each image in `image_files`
+#         dx: int, optional
+#             displacement in x direction
+#         dy: int, optional
+#             displacement in y direction
+#         **kwargs: dict
+#             additional arguments as key-value pairs
+
+#         Returns
+#         -------
+#         LabelLayer
+#             stitched mosaic image
+
+#         Note
+#         ----
+#         Label layers are used in TissueMAPS to visualize measured features or
+#         analysis results on the segmented objects by dynamically colorizing
+#         them according the calculated values.
+#         To this end, the pixel belonging to each object must be identifiable
+#         by a unique value. This global id is encoded by three digits,
+#         which allows 3^(2^16) different objects to be encoded in a 16-bit RGB
+#         image.
+
+#         See also
+#         --------
+#         `illuminati.segment.local_to_global_ids_vips`_
+#         '''
+#         grid = LabelLayer._build_grid(image_files, metadata)
+#         max_id = 0
+#         with VipsImageReader() as reader:
+#             rows = list()
+#             for i in xrange(grid.shape[0]):
+#                 current_row = list()
+#                 for j in xrange(grid.shape[1]):
+#                     img = LabelImage.create(
+#                             image=reader.read(grid[i, j]['image']),
+#                             metadata=grid[i, j]['metadata'])
+#                     img, max_id = img.local_to_global_ids(max_id)
+#                     max_id += 1
+#                     if kwargs['use_outlines']:
+#                         img = img.outlines
+#                     current_row.append(img.pixels.array)
+#                 rows.append(reduce(lambda x, y: x.merge(y, 'horizontal',
+#                             dx, 0), current_row))
+#         mosaic = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
+#         layer = LabelLayer(mosaic)
+#         return layer
+
+#     def create_pyramid(self, layer_dir):
+#         '''
+#         Create zoomify pyramid (16-bit RGB PNG images) of mosaic.
+
+#         Parameters
+#         ----------
+#         layer_dir: str
+#             absolute path to the directory where pyramid should be saved
+
+#         Raises
+#         ------
+#         AttributeError
+#             when `name` is not set
+#         '''
+#         if not hasattr(self, 'name'):
+#             raise AttributeError('Attribute "name" not set.')
+#         pyramid_dir = os.path.join(layer_dir, self.name)
+#         self.mosaic.dzsave(pyramid_dir, layout='zoomify', suffix='.png')
+
+#     def scale(self):
+#         '''
+#         Raises
+#         ------
+#         AttributeError
+#             label layers should not be rescaled to 8-bit
+#         '''
+#             raise AttributeError('"LabelLayers" object has no method "scale"')

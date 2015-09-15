@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from tmt.cli import command_line_call
-from tmt.corilla.argparser import parser
+from tmlib.cli import command_line_call
+from tmlib.corilla.argparser import parser
 
 
 if __name__ == '__main__':

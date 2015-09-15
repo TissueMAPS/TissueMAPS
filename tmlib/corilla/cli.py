@@ -1,6 +1,6 @@
 from . import logo
 from . import __version__
-from .api import IllumstatsCalculator
+from .api import IllumstatsGenerator
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
@@ -28,7 +28,7 @@ class Corilla(CommandLineInterface):
     @property
     def _api_instance(self):
         experiment = Experiment(self.args.experiment_dir, self.cfg)
-        return IllumstatsCalculator(
+        return IllumstatsGenerator(
                     experiment=experiment,
                     stats_file_format_string=self.cfg['STATS_FILE'],
                     prog_name=self.name)
@@ -46,7 +46,7 @@ class Corilla(CommandLineInterface):
 
         See also
         --------
-        `tmt.corilla.argparser`_
+        `tmlib.corilla.argparser`_
         '''
         cli = Corilla(args)
         getattr(cli, args.subparser_name)()

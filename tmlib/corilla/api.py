@@ -6,18 +6,18 @@ from ..writers import DatasetWriter
 from ..image import ChannelImage
 from ..image_readers import OpencvImageReader
 from ..image import IllumstatsImages
-from ..cluster import ClusterRoutine
+from ..cluster import ClusterRoutines
 
 
-class IllumstatsCalculator(ClusterRoutine):
+class IllumstatsGenerator(ClusterRoutines):
     '''
-    Class for calculating illumination statistics .
+    Class for calculating illumination statistics.
     '''
 
     def __init__(self, experiment, stats_file_format_string, prog_name,
                  logging_level='critical'):
         '''
-        Initialize an instance of class IllumstatsCalculator.
+        Initialize an instance of class IllumstatsGenerator.
 
         Parameters
         ----------
@@ -38,7 +38,7 @@ class IllumstatsCalculator(ClusterRoutine):
         Creates directory where statistics files will be stored in case it
         doesn't exist.
         '''
-        super(IllumstatsCalculator, self).__init__(prog_name, logging_level)
+        super(IllumstatsGenerator, self).__init__(prog_name, logging_level)
         self.experiment = experiment
         self.stats_file_format_string = stats_file_format_string
 
@@ -67,15 +67,21 @@ class IllumstatsCalculator(ClusterRoutine):
 
     def create_joblist(self, **kwargs):
         '''
-        Create a list of information required for the creation and processing
+        Create a list with information required for the creation and processing
         of individual jobs.
 
         Parameters
         ----------
         **kwargs: dict
             empty - no additional arguments
+
+        Returns
+        -------
+        Dict[str, List[dict] or dict]
+            job descriptions
         '''
-        joblist = list()
+        joblist = dict()
+        joblist['run'] = list()
         count = 0
         for i, cycle in enumerate(self.cycles):
             channels = list(set([md.channel for md in cycle.image_metadata]))
@@ -87,7 +93,7 @@ class IllumstatsCalculator(ClusterRoutine):
 
             for j, batch in enumerate(img_batches):
                 count += 1
-                joblist.append({
+                joblist['run'].append({
                     'id': count,
                     'inputs': {
                         'image_files':
@@ -105,11 +111,11 @@ class IllumstatsCalculator(ClusterRoutine):
                 })
         return joblist
 
-    def _build_command(self, batch):
+    def _build_run_command(self, batch):
         job_id = batch['id']
-        command = ['corilla']
+        command = [self.prog_name]
         command.append(self.experiment.dir)
-        command.extend(['run', '-j', str(job_id)])
+        command.extend(['run', '--job', str(job_id)])
         return command
 
     def run_job(self, batch):
@@ -181,5 +187,10 @@ class IllumstatsCalculator(ClusterRoutine):
                 output_filename = os.path.join(output_dir, output_filename)
                 corrected_image.save_as_png(output_filename)
 
+    def _build_collect_command(self):
+        raise AttributeError('"%s" step has no "collect" routine'
+                             % self.prog_name)
+
     def collect_job_output(self, joblist, **kwargs):
-        pass
+        raise AttributeError('"%s" step has no "collect" routine'
+                             % self.prog_name)

@@ -5,18 +5,18 @@ from natsort import natsorted
 from cached_property import cached_property
 from . import registration as reg
 from .. import utils
-from ..cluster import ClusterRoutine
+from ..cluster import ClusterRoutines
 from ..shift import ShiftDescription
 from ..image import ChannelImage
 from ..image import IllumstatsImages
 
 
-class ImageRegistration(ClusterRoutine):
+class ImageRegistration(ClusterRoutines):
 
     def __init__(self, experiment, shift_file_format_string,
                  prog_name, logging_level='critical'):
         '''
-        Initialize an instance of class Align.
+        Initialize an instance of class ImageRegistration.
 
         Parameters
         ----------
@@ -34,7 +34,7 @@ class ImageRegistration(ClusterRoutine):
 
         See also
         --------
-        `tmt.cfg`_
+        `tmlib.cfg`_
         '''
         super(ImageRegistration, self).__init__(logging_level)
         self.experiment = experiment
@@ -71,17 +71,6 @@ class ImageRegistration(ClusterRoutine):
         return self._cycles
 
     @property
-    def shift_dirs(self):
-        '''
-        Returns
-        -------
-        List[str]
-            name of directories, where shift descriptor files are stored
-        '''
-        self._shift_dirs = [c.shift_dir for c in self.cycles]
-        return self._shift_dirs
-
-    @property
     def shift_files(self):
         '''
         Returns
@@ -96,7 +85,7 @@ class ImageRegistration(ClusterRoutine):
         return self._shift_files
 
     @property
-    def registration_file_format_string(self):
+    def reg_file_format_string(self):
         '''
         Returns
         -------
@@ -104,24 +93,15 @@ class ImageRegistration(ClusterRoutine):
             format string for names of HDF5 files, where registration outputs
             are stored
         '''
-        self._registration_file_format_string = '{experiment}_{job}.reg'
-        return self._registration_file_format_string
-
-    def _build_command(self, batch):
-        job_id = batch['id']
-        command = ['align']
-        command.append(self.experiment.dir)
-        command.extend(['run', '--job', str(job_id)])
-        return command
+        self._reg_file_format_string = '{experiment}_{job}.reg'
+        return self._reg_file_format_string
 
     def create_joblist(self, **kwargs):
         '''
-        Create a joblist in YAML format for parallel computing.
+        Create a joblist for parallel computing.
 
         Parameters
         ----------
-        cfg_file: str
-            absolute path to custom configuration file
         **kwargs: dict
             additional input arguments as key-value pairs:
             * "batch_size": number of image acquisition sites per job (*int*)
@@ -132,7 +112,7 @@ class ImageRegistration(ClusterRoutine):
 
         Returns
         -------
-        List[dict]
+        Dict[str, List[dict] or dict]
             job descriptions
         '''
         def get_refs(x):
@@ -159,21 +139,41 @@ class ImageRegistration(ClusterRoutine):
                      for b in im_batches[j][i]]
             })
 
-        joblist = [{
-            'id': i+1,
-            'inputs': {
-                'image_files': batch
-            },
-            'outputs': {
-                'registration_file':
-                    os.path.join(self.experiment.registration_dir,
-                                 self.registration_file_format_string.format(
-                                    experiment=self.experiment.name, job=i+1))
-            },
-            'sites': site_batches[i]
-        } for i, batch in enumerate(registration_batches)]
+        registration_files = [os.path.join(self.experiment.registration_dir,
+                                           self.reg_file_format_string.format(
+                                            experiment=self.experiment.name,
+                                            job=i+1))
+                              for i in xrange(len(registration_batches))]
+
+        joblist = {
+            'run': [{
+                'id': i+1,
+                'inputs': {
+                    'image_files': batch
+                },
+                'outputs': {
+                    'registration_file': registration_files[i]
+                },
+                'sites': site_batches[i]
+            } for i, batch in enumerate(registration_batches)],
+            'collect': {
+                'inputs': {
+                    'registration_files': registration_files
+                },
+                'outputs': {
+                    'shift_descriptor_files': self.shift_files
+                }
+            }
+        }
 
         return joblist
+
+    def _build_run_command(self, batch):
+        job_id = batch['id']
+        command = ['align']
+        command.append(self.experiment.dir)
+        command.extend(['run', '--job', str(job_id)])
+        return command
 
     def run_job(self, batch):
         '''
@@ -185,7 +185,7 @@ class ImageRegistration(ClusterRoutine):
         Parameters
         ----------
         batch: dict
-            joblist element, i.e. description of a single job
+            description of the *run* job
 
         See also
         --------
@@ -196,7 +196,13 @@ class ImageRegistration(ClusterRoutine):
                             batch['inputs']['image_files']['references'],
                             batch['outputs']['registration_file'])
 
-    def collect_job_output(self, joblist, **kwargs):
+    def _build_collect_command(self):
+        command = [self.prog_name]
+        command.append(self.experiment.dir)
+        command.extend(['collect'])
+        return command
+
+    def collect_job_output(self, batch, **kwargs):
         '''
         Collect and fuse shift calculations and create shift description file.
 
@@ -207,8 +213,8 @@ class ImageRegistration(ClusterRoutine):
 
         Parameters
         ----------
-        joblist: List[dict]
-            job descriptions
+        batch: dict
+            description of the *collect* job
         **kwargs: dict
             additional variable input arguments as key-value pairs:
             * "max_shift": shift value in pixels that is maximally tolerated,
@@ -218,7 +224,7 @@ class ImageRegistration(ClusterRoutine):
         --------
         `align.registration.fuse_registration`_
         '''
-        output_files = [b['outputs']['registration_file'] for b in joblist]
+        output_files = batch['inputs']['registration_files']
         cycle_names = [c.name for c in self.cycles]
 
         shift_descriptions = reg.fuse_registration(output_files, cycle_names)
@@ -228,10 +234,6 @@ class ImageRegistration(ClusterRoutine):
             reg.calculate_overhang(shift_descriptions, kwargs['max_shift'])
 
         for i, cycle_name in enumerate(cycle_names):
-            shift_dir = self.shift_dirs[i]
-            if not os.path.exists(shift_dir):
-                os.mkdir(shift_dir)
-            shift_file = self.shift_files[i]
 
             description = list()
             for j in xrange(len(no_shift)):
@@ -256,7 +258,8 @@ class ImageRegistration(ClusterRoutine):
             order = np.array(natsorted(sites))
             description = [description[j] for j in order[:, 1]]
 
-            utils.write_json(os.path.join(shift_dir, shift_file), description)
+            shift_file = batch['outputs']['shift_descriptor_files'][i]
+            utils.write_json(shift_file, description)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):

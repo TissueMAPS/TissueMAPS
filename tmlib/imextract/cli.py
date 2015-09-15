@@ -47,7 +47,7 @@ class ImExtract(CommandLineInterface):
 
         See also
         --------
-        `tmt.imextract.argparser`_
+        `tmlib.imextract.argparser`_
         '''
         cli = ImExtract(args)
         getattr(cli, args.subparser_name)()

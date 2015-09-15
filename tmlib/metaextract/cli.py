@@ -47,7 +47,7 @@ class MetaExtract(CommandLineInterface):
 
         See also
         --------
-        `tmt.metaextract.argparser`_
+        `tmlib.metaextract.argparser`_
         '''
         cli = MetaExtract(args)
         getattr(cli, args.subparser_name)()
