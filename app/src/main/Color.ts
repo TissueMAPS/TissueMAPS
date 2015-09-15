@@ -1,11 +1,12 @@
-class Color {
+class Color implements Serializable<Color> {
 
     private rgbComponentToHex(c: number): string {
         var hex = c.toString(16);
         return hex.length == 1 ? "0" + hex : hex;
     }
 
-    constructor(public r: number,
+    constructor(private $q: ng.IQService,
+                public r: number,
                 public g: number,
                 public b: number,
                 public a: number = 1.0) {}
@@ -27,9 +28,19 @@ class Color {
     toNormalizedRGBArray(): number[] {
         return [this.r / 255, this.g / 255, this.b / 255];
     }
+
+    serialize() {
+        return this.$q.when({
+            r: this.r, g: this.g, b: this.b, a: this.a
+        });
+    }
+
 }
 
 class ColorFactory {
+
+    static $inject = ['$q'];
+    constructor(private $q: ng.IQService) {}
 
     /*
      * Convert a hex string like '#ffffff' to a RGB
@@ -43,7 +54,7 @@ class ColorFactory {
         });
         var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         if (result) {
-            return new Color(
+            return this.create(
                 parseInt(result[1], 16),
                 parseInt(result[2], 16),
                 parseInt(result[3], 16)
@@ -57,11 +68,11 @@ class ColorFactory {
         var denorm = _.map(arr, function(component) {
             return Math.floor(component * 255);
         });
-        return new Color(denorm[0], denorm[1], denorm[2], 1.0);
+        return this.create(denorm[0], denorm[1], denorm[2], 1.0);
     }
 
     create(r: number, g: number, b: number, a: number = 1.0): Color {
-        return new Color(r, g, b, a)
+        return new Color(this.$q, r, g, b, a)
     }
 
     createFromRGBString(rgb: string) {

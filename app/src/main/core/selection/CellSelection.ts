@@ -1,6 +1,6 @@
 type CellSelectionId = number;
 
-class CellSelection {
+class CellSelection implements Serializable<CellSelection> {
 
     name: string;
     id: CellSelectionId;
@@ -8,7 +8,8 @@ class CellSelection {
     layer: SelectionLayer;
     cells: { [cellId: string]: MapPosition; } = {};
 
-    constructor(private ol,
+    constructor(private $q: ng.IQService,
+                private ol,
                 private selectionLayerFactory: SelectionLayerFactory,
                 private $rootScope: ng.IScope,
 
@@ -74,6 +75,15 @@ class CellSelection {
         return this.cells[cell.id] !== undefined;
     }
 
+    serialize() {
+        var ser = {
+            id: this.id,
+            cells: this.cells,
+            color: this.color.serialize()
+        }
+        return this.$q.when(ser);
+    }
+
 }
 
 
@@ -87,19 +97,20 @@ interface SerializedCellSelection extends Serialized<CellSelection> {
 class CellSelectionFactory {
 
     static $inject = [
+        '$q',
         'openlayers',
         'SelectionLayerFactory',
-        '$rootScope',
-        '$q'
+        '$rootScope'
     ];
 
-    constructor(private ol,
+    constructor(private $q: ng.IQService,
+                private ol,
                 private selectionLayerFactory: SelectionLayerFactory,
-                private $rootScope: ng.IScope,
-                private $q: ng.IQService) {}
+                private $rootScope: ng.IScope) {}
 
     create(id: CellSelectionId, color: Color) {
         return new CellSelection(
+            this.$q,
             this.ol,
             this.selectionLayerFactory,
             this.$rootScope,
