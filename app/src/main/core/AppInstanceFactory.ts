@@ -3,7 +3,7 @@ class AppInstanceFactory {
         'CreateViewportService',
         'openlayers',
         '$q',
-        'CellSelectionHandler',
+        'CellSelectionHandlerFactory',
         'CycleLayerFactory',
         'OutlineLayerFactory',
         'ExperimentFactory',
@@ -13,31 +13,31 @@ class AppInstanceFactory {
         'ToolLoader'
     ];
 
-    constructor(private CreateViewportService,
+    constructor(private createViewportService: CreateViewportService,
                 private ol,
-                private $q,
-                private CellSelectionHandler,
-                private CycleLayerFactory,
-                private OutlineLayerFactory,
-                private ExperimentFactory,
-                private $http,
+                private $q: ng.IQService,
+                private cellSelectionHandlerFty: CellSelectionHandlerFactory,
+                private cycleLayerFactory: CycleLayerFactory,
+                private outlineLayerFactory: OutlineLayerFactory,
+                private experimentFactory: ExperimentFactory,
+                private $http: ng.IHttpService,
                 private Cell,
-                private ObjectLayerFactory,
-                private ToolLoader) {}
+                private objectLayerFty: ObjectLayerFactory,
+                private toolLoader: ToolLoader) {}
 
     create(experiment: Experiment): AppInstance {
         return new AppInstance(
-            this.CreateViewportService,
+            this.createViewportService,
             this.ol,
             this.$q,
-            this.CellSelectionHandler,
-            this.CycleLayerFactory,
-            this.OutlineLayerFactory,
-            this.ExperimentFactory,
+            this.cellSelectionHandlerFty,
+            this.cycleLayerFactory,
+            this.outlineLayerFactory,
+            this.experimentFactory,
             this.$http,
             this.Cell,
-            this.ObjectLayerFactory,
-            this.ToolLoader,
+            this.objectLayerFty,
+            this.toolLoader,
 
             experiment
         );

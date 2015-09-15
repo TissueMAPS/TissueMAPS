@@ -4,7 +4,7 @@ class ToolLoader {
     constructor(private $http, private $q, private ToolFactory) {
     }
 
-    private loadTools(appInstance: AppInstance) {
+    loadTools(appInstance: AppInstance) {
         var toolsDef = this.$q.defer();
         this.$http.get('/src/tools/tools.json').then((resp) => {
             var configs = resp.data;

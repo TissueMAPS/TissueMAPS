@@ -27,17 +27,17 @@ class AppInstance implements Serializable<AppInstance> {
 
     tools: ng.IPromise<Tool[]>;
 
-    constructor(private CreateViewportService,
+    constructor(private createViewportService: CreateViewportService,
                 private ol,
-                private $q,
-                private CellSelectionHandler,
-                private CycleLayerFactory,
-                private OutlineLayerFactory,
-                private ExperimentFactory,
-                private $http,
+                private $q: ng.IQService,
+                private cellSelectionHandlerFty: CellSelectionHandlerFactory,
+                private cycleLayerFactory: CycleLayerFactory,
+                private outlineLayerFactory: OutlineLayerFactory,
+                private experimentFactory: ExperimentFactory,
+                private $http: ng.IHttpService,
                 private Cell,
-                private ObjectLayerFactory,
-                private ToolLoader,
+                private objectLayerFactory: ObjectLayerFactory,
+                private toolLoader: ToolLoader,
 
                 experiment: Experiment) {
 
@@ -50,9 +50,9 @@ class AppInstance implements Serializable<AppInstance> {
         this.viewport = viewportDef.promise;
 
         // Helper class to manage the differently marker selections
-        this.selectionHandler = new CellSelectionHandler(this);
+        this.selectionHandler = this.cellSelectionHandlerFty.create(this);
 
-        CreateViewportService.createViewport(
+        createViewportService.createViewport(
             this, 'viewports', '/templates/main/viewport.html'
         ).then(function(viewport) {
             viewportDef.resolve(viewport);
@@ -60,7 +60,7 @@ class AppInstance implements Serializable<AppInstance> {
         });
 
         // Load tools
-        this.tools = ToolLoader.loadTools(this);
+        this.tools = this.toolLoader.loadTools(this);
 
 
         var createDemoRectangles = function(startx, starty) {
@@ -76,7 +76,7 @@ class AppInstance implements Serializable<AppInstance> {
                         [i, -j - side],
                         [i, -j]
                     ]];
-                    var c = new Cell('bla', {x: i, y: -j}, coords);
+                    var c = new this.Cell('bla', {x: i, y: -j}, coords);
                     cells.push(c);
                 }
             }
@@ -86,12 +86,12 @@ class AppInstance implements Serializable<AppInstance> {
         var cellsA = createDemoRectangles(0, 0);
         var cellsB = createDemoRectangles(10000, 0);
 
-        var objLayerA = ObjectLayerFactory.create('Cells A', {
+        var objLayerA = this.objectLayerFactory.create('Cells A', {
             objects: cellsA,
             fillColor: 'rgba(0, 0, 255, 0.5)',
             strokeColor: 'rgba(0, 0, 255, 1)'
         });
-        var objLayerB = ObjectLayerFactory.create('Cells B', {
+        var objLayerB = this.objectLayerFactory.create('Cells B', {
             objects: cellsB,
             fillColor: 'rgba(255, 0, 0, 0.5)',
             strokeColor: 'rgba(255, 0, 0, 1)'
@@ -146,7 +146,7 @@ class AppInstance implements Serializable<AppInstance> {
      * Always use this smethod when adding new cycles.
      */
     addCycleLayer(opt) {
-        var cycleLayer = this.CycleLayerFactory.create(opt);
+        var cycleLayer = this.cycleLayerFactory.create(opt);
         var alreadyHasLayers = this.cycleLayers.length !== 0;
 
         // If this is the first time a layer is added, create a view and add it to the map.
@@ -156,9 +156,9 @@ class AppInstance implements Serializable<AppInstance> {
             var width = opt.imageSize[0];
             var height = opt.imageSize[1];
             var center = [width / 2, - height / 2];
-            var view = new ol.View({
+            var view = new this.ol.View({
                 // We create a custom (dummy) projection that is based on pixels
-                projection: new ol.proj.Projection({
+                projection: new this.ol.proj.Projection({
                     code: 'ZOOMIFY',
                     units: 'pixels',
                     extent: [0, 0, width, height]
@@ -218,7 +218,7 @@ class AppInstance implements Serializable<AppInstance> {
      * 2. The layer won't get added to the AppInstance.cycleLayers array.
      */
     addOutlineLayer(opt) {
-        var outlineLayer = this.OutlineLayerFactory.create(opt);
+        var outlineLayer = this.outlineLayerFactory.create(opt);
         this.outlineLayers.push(outlineLayer);
 
         return this.map.then(function(map) {
@@ -308,28 +308,3 @@ class AppInstance implements Serializable<AppInstance> {
         return bpPromise;
     }
 }
-
-
-
-    // /**
-    //  * Create and initialize an AppInstance from a blueprint and return it.
-    //  */
-    // static fromBlueprint(bp: SerializedAppInstance) {
-    //     var exp = this.ExperimentFactory.create(bp.experiment);
-    //     var inst = new AppInstance(exp);
-
-    //     inst.addChannelLayers(bp.channelLayerOptions);
-    //     inst.addMaskLayers(bp.maskLayerOptions);
-
-    //     inst.map.then(function(map) {
-    //         var v = map.getView();
-    //         v.setZoom(bp.mapState.zoom);
-    //         v.setCenter(bp.mapState.center);
-    //         v.setResolution(bp.mapState.resolution);
-    //         v.setRotation(bp.mapState.rotation);
-    //     });
-
-    //     inst.selectionHandler.initFromBlueprint(bp.selectionHandler);
-
-    //     return inst;
-    // }

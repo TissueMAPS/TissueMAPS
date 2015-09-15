@@ -1,22 +1,45 @@
 class AppInstanceDeserializer implements Deserializer<AppInstance> {
 
-    static $inject = ['AppInstanceFactory', 'ExperimentDeserializer', '$q'];
+    static $inject = [
+        'CellSelectionDeserializer', 'CellSelectionHandlerFactory',
+        'AppInstanceFactory', 'ExperimentDeserializer', '$q'
+    ];
 
-    constructor(private appInstanceFty: AppInstanceFactory,
+    constructor(private cellSelectionDeserializer: CellSelectionDeserializer,
+                private cellSelectionHandlerFty: CellSelectionHandlerFactory,
+                private appInstanceFty: AppInstanceFactory,
                 private experimentDeserializer: ExperimentDeserializer,
                 private $q: ng.IQService) {}
 
     deserialize(ser: SerializedAppInstance) {
-        var instDef = this.$q.defer();
-        var expPromise = this.experimentDeserializer.deserialize(ser.experiment);
-        var exp = expPromise.then((exp) => {
-            console.log(this);
-            var inst = this.appInstanceFty.create(exp);
-            console.log('Inst:', inst);
 
+        var instDef = this.$q.defer();
+
+        // Deserialize the experiment object related to this app instance first.
+        var expPromise = this.experimentDeserializer.deserialize(ser.experiment);
+
+        var exp = expPromise.then((exp) => {
+            var inst = this.appInstanceFty.create(exp);
+
+            // Create and initialize the selection handler
+            var selHandler = this.cellSelectionHandlerFty.create(inst);
+            var activeSelId = ser.selectionHandler.activeSelectionId;
+            var selections = ser.selectionHandler.selections;
+            selections.forEach((serializedSelection) => {
+                var newSel = this.cellSelectionDeserializer.deserialize(serializedSelection);
+                newSel.then((sel) => {
+                    selHandler.addSelection(sel);
+                })
+            });
+            if (activeSelId !== undefined) {
+                selHandler.activeSelectionId = activeSelId;
+            }
+
+            // Add layers
             inst.addChannelLayers(ser.channelLayerOptions);
             inst.addMaskLayers(ser.maskLayerOptions);
 
+            // Recover map state
             inst.map.then(function(map) {
                 var v = map.getView();
                 v.setZoom(ser.mapState.zoom);
