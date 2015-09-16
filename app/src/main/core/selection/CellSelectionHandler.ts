@@ -24,9 +24,10 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
             'rgb(255,127,0)','rgb(255,255,51)','rgb(166,86,40)','rgb(247,129,191)',
             'rgb(153,153,153)'
         ];
-        this.availableColors = _(colorsRGBString).map((rgb) => {
+        var availableColors = _(colorsRGBString).map((rgb) => {
             return this.colorFactory.createFromRGBString(rgb);
         });
+        this.availableColors = availableColors;
 
     }
 
@@ -89,8 +90,10 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
     removeSelectionById = function(id) {
         var sel = this.getSelectionById(id);
         if (sel) {
-            sel.removeFromMap(this.appInstance.map);
-            this.selections.splice(this.selections.indexOf(sel), 1);
+            this.appInstance.map.then((map: ol.Map) => {
+                sel.removeFromMap(map);
+                this.selections.splice(this.selections.indexOf(sel), 1);
+            });
         } else {
             console.log('Trying to delete nonexistant selection with id ' + id);
         }

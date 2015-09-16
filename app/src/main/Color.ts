@@ -76,13 +76,13 @@ class ColorFactory {
     }
 
     createFromRGBString(rgb: string) {
-        var res = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(rgb);
-        if (res === null) {
+        var res = /^\s*rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)\s*$/.exec(rgb);
+        if (res === null || res.length != 4) {
             return undefined;
         } else {
-            return this.create(parseInt(res[0]),
-                               parseInt(res[1]),
-                               parseInt(res[2]));
+            return this.create(parseInt(res[1]),
+                               parseInt(res[2]),
+                               parseInt(res[3]));
         }
     }
 }

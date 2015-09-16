@@ -2,7 +2,6 @@ class SelectionLayer extends Layer {
 
     color: Color;
     cellMarkers = {};
-    layer: ol.layer.Vector;
 
     constructor(private ol,
                 name: string,
@@ -30,7 +29,7 @@ class SelectionLayer extends Layer {
             return [style];
         };
 
-        this.layer = new ol.layer.Vector({
+        this.olLayer = new ol.layer.Vector({
             source: new ol.source.Vector(),
             style: styleFunc
         });
@@ -41,7 +40,8 @@ class SelectionLayer extends Layer {
             var feat = new this.ol.Feature({
                 geometry: new this.ol.geom.Point([position.x, position.y])
             });
-            this.layer.getSource().addFeature(feat);
+            var src = <ol.source.Vector> this.olLayer.getSource();
+            src.addFeature(feat);
             this.cellMarkers[cellId] = feat;
         }
     }
@@ -49,7 +49,8 @@ class SelectionLayer extends Layer {
     removeCellMarker(cellId: CellId) {
         var feat = this.cellMarkers[cellId];
         if (feat) {
-            this.layer.getSource().removeFeature(feat);
+            var src = <ol.source.Vector> this.olLayer.getSource();
+            src.removeFeature(feat);
             delete this.cellMarkers[cellId];
         }
     }
