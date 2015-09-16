@@ -50,7 +50,7 @@ angular.module('tmaps.main')
     };
 
     this.isActiveInstanceByIndex = function(index) {
-        return application.isActiveInstanceByIndex(index);
+        return application.activeInstanceNumber == index;
     };
 
     this.isViewportEmpty = function() {
