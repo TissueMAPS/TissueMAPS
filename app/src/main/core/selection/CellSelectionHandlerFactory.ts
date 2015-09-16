@@ -1,7 +1,7 @@
 class CellSelectionHandlerFactory {
     static $inject = [
-        'ColorFactory',
-        'CellSelectionFactory',
+        'colorFactory',
+        'cellSelectionFactory',
         '$q',
         '$http',
         '$rootScope'
@@ -9,8 +9,8 @@ class CellSelectionHandlerFactory {
     constructor(private colorFty: ColorFactory,
                 private cellSelectionFty: CellSelectionFactory,
                 private $q,
-                private $http,
-                private $rootScope) {}
+                private $http: ng.IHttpService,
+                private $rootScope: ng.IRootScopeService) {}
 
     create(appInstance: AppInstance) {
         return new CellSelectionHandler(
@@ -25,4 +25,4 @@ class CellSelectionHandlerFactory {
 }
 
 angular.module('tmaps.core.selection')
-.service('CellSelectionHandlerFactory', CellSelectionHandlerFactory);
+.service('cellSelectionHandlerFactory', CellSelectionHandlerFactory);

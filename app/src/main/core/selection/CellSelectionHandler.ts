@@ -10,11 +10,11 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
     selections: CellSelection[] = [];
     availableColors: Color[];
 
-    constructor(private ColorFactory,
+    constructor(private colorFactory: ColorFactory,
                 private cellSelectionFty: CellSelectionFactory,
                 private $q: ng.IQService,
                 private $http: ng.IHttpService,
-                private $rootScope: ng.IScope,
+                private $rootScope: ng.IRootScopeService,
                 appInstance) {
 
         this.appInstance = appInstance;
@@ -24,8 +24,8 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
             'rgb(255,127,0)','rgb(255,255,51)','rgb(166,86,40)','rgb(247,129,191)',
             'rgb(153,153,153)'
         ];
-        this.availableColors = _(colorsRGBString).map(function(rgb) {
-            return ColorFactory.createFromRGBString(rgb);
+        this.availableColors = _(colorsRGBString).map((rgb) => {
+            return this.colorFactory.createFromRGBString(rgb);
         });
 
     }

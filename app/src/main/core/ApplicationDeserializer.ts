@@ -1,7 +1,7 @@
 class ApplicationDeserializer implements Deserializer<Application> {
 
     static $inject = [
-        'Application', 'AppInstanceDeserializer', '$q'
+        'application', 'appInstanceDeserializer', '$q'
     ];
 
     constructor(private application: Application,

@@ -2,8 +2,12 @@ class CreateViewportService {
 
     static $inject = ['$http', 'openlayers', '$q', '$controller', '$compile', '$rootScope'];
 
-    constructor(private $http, private openlayers, private $q, private $controller,
-                private $compile, private $rootScope) {}
+    constructor(private $http: ng.IHttpService,
+                private openlayers,
+                private $q: ng.IQService,
+                private $controller: ng.IControllerService,
+                private $compile: ng.ICompileService,
+                private $rootScope: ng.IRootScopeService) {}
 
     private getTemplate(templateUrl): ng.IPromise<string> {
         var deferred = this.$q.defer();
@@ -20,7 +24,7 @@ class CreateViewportService {
     private createViewportSync(appInstance: AppInstance,
                                appendToId: string,
                                templateString: string): Viewport {
-        var newScope = this.$rootScope.$new();
+        var newScope = <ViewportScope> this.$rootScope.$new();
         newScope.appInstance = appInstance;
         var ctrl = this.$controller('ViewportCtrl', {
             '$scope': newScope,
@@ -76,4 +80,4 @@ class CreateViewportService {
  * process got somewhat complicated when the map canvas got resized
  * etc. This approach is less angulary but it works.
  */
-angular.module('tmaps.main.viewport').service('CreateViewportService', CreateViewportService);
+angular.module('tmaps.main.viewport').service('createViewportService', CreateViewportService);

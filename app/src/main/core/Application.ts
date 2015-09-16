@@ -8,18 +8,17 @@ class Application {
         '$q',
         '$',
         'openlayers',
-        'ExperimentFactory',
-        'AppInstanceFactory',
-        'AppInstanceDeserializer'
+        'experimentFactory',
+        'appInstanceFactory',
+        'appInstanceDeserializer'
     ];
 
-    constructor(
-            private $q: ng.IQService,
-            private $: JQueryStatic,
-            private ol,
-            private experimentFty: ExperimentFactory,
-            private appInstFty: AppInstanceFactory,
-            private appInstDeserializer: AppInstanceDeserializer) {
+    constructor(private $q: ng.IQService,
+                private $: JQueryStatic,
+                private ol,
+                private experimentFty: ExperimentFactory,
+                private appInstFty: AppInstanceFactory,
+                private appInstDeserializer: AppInstanceDeserializer) {
 
         // Check if the executing browser is PhantomJS (= code runs in
         // testing mode.
@@ -136,6 +135,8 @@ class Application {
         });
     }
 }
+
+angular.module('tmaps.core').service('application', Application);
 
 interface SerializedApplication extends Serialized<Application> {
     activeInstanceNumber: number;

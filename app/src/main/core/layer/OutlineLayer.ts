@@ -1,6 +1,6 @@
 /// <reference path='TileLayer.ts'/>
 class OutlineLayer extends TileLayer {
-    constructor(ol, $q, opt: TileLayerArgs) {
+    constructor(ol, $q: ng.IQService, opt: TileLayerArgs) {
         super(ol, $q, opt);
     }
 }
@@ -9,7 +9,7 @@ class OutlineLayerFactory {
     static $inject = ['openlayers', '$q']
 
     constructor(private ol,
-                private $q) {}
+                private $q: ng.IQService) {}
 
     create(opt: TileLayerArgs) {
         var tileLayerOptions = _.defaults(opt, {
@@ -22,5 +22,5 @@ class OutlineLayerFactory {
     }
 }
 
-angular.module('tmaps.core.layer').service('OutlineLayerFactory', OutlineLayerFactory);
+angular.module('tmaps.core.layer').service('outlineLayerFactory', OutlineLayerFactory);
 

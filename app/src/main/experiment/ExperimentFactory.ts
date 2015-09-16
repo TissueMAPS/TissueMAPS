@@ -16,4 +16,4 @@ class ExperimentFactory {
 }
 
 angular.module('tmaps.main.experiment')
-.service('ExperimentFactory', ExperimentFactory);
+.service('experimentFactory', ExperimentFactory);

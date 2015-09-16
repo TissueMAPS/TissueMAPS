@@ -3,7 +3,7 @@ class ToolFactory {
     constructor(private $: JQueryStatic,
                 private $http: ng.IHttpService,
                 private $window: Window,
-                private $rootScope: ng.IScope) {}
+                private $rootScope: ng.IRootScopeService) {}
 
     create(appInstance: AppInstance,
            id: string,
@@ -31,4 +31,4 @@ class ToolFactory {
    }
 }
 
-angular.module('tmaps.main.tools').service('ToolFactory', ToolFactory);
+angular.module('tmaps.main.tools').service('toolFactory', ToolFactory);

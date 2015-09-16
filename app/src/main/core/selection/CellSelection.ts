@@ -11,7 +11,7 @@ class CellSelection implements Serializable<CellSelection> {
     constructor(private $q: ng.IQService,
                 private ol,
                 private selectionLayerFactory: SelectionLayerFactory,
-                private $rootScope: ng.IScope,
+                private $rootScope: ng.IRootScopeService,
 
                 id: CellSelectionId,
                 color: Color) {
@@ -99,14 +99,14 @@ class CellSelectionFactory {
     static $inject = [
         '$q',
         'openlayers',
-        'SelectionLayerFactory',
+        'selectionLayerFactory',
         '$rootScope'
     ];
 
     constructor(private $q: ng.IQService,
                 private ol,
                 private selectionLayerFactory: SelectionLayerFactory,
-                private $rootScope: ng.IScope) {}
+                private $rootScope: ng.IRootScopeService) {}
 
     create(id: CellSelectionId, color: Color) {
         return new CellSelection(
@@ -120,4 +120,4 @@ class CellSelectionFactory {
     }
 }
 
-angular.module('tmaps.core.selection').service('CellSelectionFactory', CellSelectionFactory);
+angular.module('tmaps.core.selection').service('cellSelectionFactory', CellSelectionFactory);

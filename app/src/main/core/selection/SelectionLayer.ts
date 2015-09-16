@@ -66,4 +66,4 @@ class SelectionLayerFactory {
     }
 }
 
-angular.module('tmaps.core.selection').service('SelectionLayerFactory', SelectionLayerFactory);
+angular.module('tmaps.core.selection').service('selectionLayerFactory', SelectionLayerFactory);

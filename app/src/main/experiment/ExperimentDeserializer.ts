@@ -1,6 +1,6 @@
 class ExperimentDeserializer implements Deserializer<Experiment> {
 
-    static $inject = ['ExperimentFactory', '$q'];
+    static $inject = ['experimentFactory', '$q'];
 
     constructor(private experimentFactory: ExperimentFactory,
                 private $q: ng.IQService) {}
@@ -16,5 +16,5 @@ class ExperimentDeserializer implements Deserializer<Experiment> {
 }
 
 angular.module('tmaps.main.experiment').service(
-    'ExperimentDeserializer', ExperimentDeserializer
+    'experimentDeserializer', ExperimentDeserializer
 );

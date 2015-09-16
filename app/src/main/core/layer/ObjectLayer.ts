@@ -80,4 +80,4 @@ class ObjectLayerFactory {
     }
 }
 
-angular.module('tmaps.core.layer').service('ObjectLayerFactory', ObjectLayerFactory);
+angular.module('tmaps.core.layer').service('objectLayerFactory', ObjectLayerFactory);

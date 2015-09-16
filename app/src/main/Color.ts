@@ -87,7 +87,7 @@ class ColorFactory {
     }
 }
 
-angular.module('tmaps.core').service('ColorFactory', ColorFactory);
+angular.module('tmaps.core').service('colorFactory', ColorFactory);
 
 interface SerializedColor extends Serialized<Color> {
     r: number;
@@ -97,7 +97,7 @@ interface SerializedColor extends Serialized<Color> {
 }
 
 class ColorDeserializer implements Deserializer<Color> {
-    static $inject = ['ColorFactory', '$q'];
+    static $inject = ['colorFactory', '$q'];
     constructor(private colorFty: ColorFactory, private $q: ng.IQService) {}
     deserialize(col: SerializedColor) {
         var color = this.colorFty.create(col.r, col.g, col.b, col.a);
@@ -105,4 +105,4 @@ class ColorDeserializer implements Deserializer<Color> {
     }
 }
 
-angular.module('tmaps.core').service('ColorDeserializer', ColorDeserializer);
+angular.module('tmaps.core').service('colorDeserializer', ColorDeserializer);

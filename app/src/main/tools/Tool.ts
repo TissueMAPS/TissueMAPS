@@ -16,7 +16,7 @@ class Tool {
     constructor(private $: JQueryStatic,
                 private $http: ng.IHttpService,
                 private $window: Window,
-                private $rootScope: ng.IScope,
+                private $rootScope: ng.IRootScopeService,
                 public appInstance: AppInstance,
                 public id: string,
                 public name: string,

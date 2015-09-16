@@ -1,5 +1,5 @@
 class CellSelectionDeserializer implements Deserializer<CellSelection> {
-    static $inject = ['ColorDeserializer', 'CellSelectionFactory', '$q'];
+    static $inject = ['colorDeserializer', 'cellSelectionFactory', '$q'];
     constructor(private colorDeserializer: ColorDeserializer,
                 private fty: CellSelectionFactory,
                 private $q: ng.IQService) {}
@@ -17,4 +17,4 @@ class CellSelectionDeserializer implements Deserializer<CellSelection> {
     }
 }
 
-angular.module('tmaps.core.selection').service('CellSelectionDeserializer', CellSelectionDeserializer);
+angular.module('tmaps.core.selection').service('cellSelectionDeserializer', CellSelectionDeserializer);

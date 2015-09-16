@@ -1,8 +1,8 @@
 class AppInstanceDeserializer implements Deserializer<AppInstance> {
 
     static $inject = [
-        'CellSelectionDeserializer', 'CellSelectionHandlerFactory',
-        'AppInstanceFactory', 'ExperimentDeserializer', '$q'
+        'cellSelectionDeserializer', 'cellSelectionHandlerFactory',
+        'appInstanceFactory', 'experimentDeserializer', '$q'
     ];
 
     constructor(private cellSelectionDeserializer: CellSelectionDeserializer,
@@ -57,4 +57,4 @@ class AppInstanceDeserializer implements Deserializer<AppInstance> {
     }
 }
 
-angular.module('tmaps.core').service('AppInstanceDeserializer', AppInstanceDeserializer);
+angular.module('tmaps.core').service('appInstanceDeserializer', AppInstanceDeserializer);

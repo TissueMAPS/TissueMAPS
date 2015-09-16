@@ -1,16 +1,16 @@
 class AppInstanceFactory {
     static $inject = [
-        'CreateViewportService',
+        'createViewportService',
         'openlayers',
         '$q',
-        'CellSelectionHandlerFactory',
-        'CycleLayerFactory',
-        'OutlineLayerFactory',
-        'ExperimentFactory',
+        'cellSelectionHandlerFactory',
+        'cycleLayerFactory',
+        'outlineLayerFactory',
+        'experimentFactory',
         '$http',
         'Cell',
-        'ObjectLayerFactory',
-        'ToolLoader'
+        'objectLayerFactory',
+        'toolLoader'
     ];
 
     constructor(private createViewportService: CreateViewportService,
@@ -43,5 +43,5 @@ class AppInstanceFactory {
         );
     }
 }
-angular.module('tmaps.core').service('AppInstanceFactory', AppInstanceFactory);
+angular.module('tmaps.core').service('appInstanceFactory', AppInstanceFactory);
 
