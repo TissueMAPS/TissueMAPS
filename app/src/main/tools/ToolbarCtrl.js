@@ -10,7 +10,7 @@ angular.module('tmaps.main.tools')
 
     // Add the tools to scope as soon as they are ready
     $scope.tools = [];
-    application.getActiveInstance().tools.then(function(tools) {
+    $scope.appInstance.tools.then(function(tools) {
         $scope.tools = tools;
         window.tools = tools;
     });

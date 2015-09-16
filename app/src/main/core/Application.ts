@@ -128,10 +128,12 @@ class Application {
             return inst.serialize();
         });
         return this.$q.all(instPromises).then((serInstances) => {
-            return {
+            var serApp =  {
                 activeInstanceNumber: this.activeInstanceNumber,
                 appInstances: serInstances
             };
+            console.log(serApp);
+            return serApp;
         });
     }
 }

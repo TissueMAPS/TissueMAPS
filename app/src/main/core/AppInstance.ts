@@ -43,10 +43,10 @@ class AppInstance implements Serializable<AppInstance> {
 
         this.experiment = experiment;
 
-        var mapDef = $q.defer();
+        var mapDef = this.$q.defer();
         this.map = mapDef.promise;
 
-        var viewportDef = $q.defer();
+        var viewportDef = this.$q.defer();
         this.viewport = viewportDef.promise;
 
         // Helper class to manage the differently marker selections
@@ -289,20 +289,29 @@ class AppInstance implements Serializable<AppInstance> {
                 rotation: v.getRotation()
             };
 
-            var channelOpts = _(this.cycleLayers).map(function(l) {
+            var channelOptsPr = this.$q.all(_(this.cycleLayers).map(function(l) {
                 return l.serialize();
-            });
-            var maskOpts = _(this.outlineLayers).map(function(l) {
+            }));
+            var maskOptsPr = this.$q.all(_(this.outlineLayers).map(function(l) {
                 return l.serialize();
-            });
-
-            return {
-                experiment: this.experiment.serialize(),
-                selectionHandler: this.selectionHandler.serialize(),
-                channelLayerOptions: channelOpts,
-                maskLayerOptions: maskOpts,
-                mapState: mapState
+            }));
+            var experimentPr =  this.experiment.serialize();
+            var selectionHandlerPr = this.selectionHandler.serialize();
+            var bundledPromises: any = {
+                channels: channelOptsPr,
+                masks: maskOptsPr,
+                exp: experimentPr,
+                selHandler: selectionHandlerPr
             };
+            return this.$q.all(bundledPromises).then((res: any) => {
+                return {
+                    channelLayerOptions: res.channels,
+                    maskLayerOptions: res.masks,
+                    mapState: mapState,
+                    experiment: res.exp,
+                    selectionHandler: res.selHandler
+                };
+            });
         });
 
         return bpPromise;

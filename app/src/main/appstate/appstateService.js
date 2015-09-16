@@ -6,7 +6,9 @@ angular.module('tmaps.main.appstate')
  */
 .service('appstateService',
          ['application', '$modal', '$http', '$q', '$location', '$state',
-             function(application, $modal, $http, $q, $location, $state) {
+             'applicatioDeserializer',
+             function(application, $modal, $http, $q, $location, $state,
+                 applicatioDeserializer) {
 
     var self = this;
 
@@ -61,7 +63,8 @@ angular.module('tmaps.main.appstate')
      */
     this.loadState = function(state) {
         setCurrentState(state);
-        application.initFromBlueprint(state.blueprint);
+        console.log('deser called');
+        applicatioDeserializer.deserialize(state.blueprint);
     };
 
     this.loadStateFromId = function(id) {
@@ -122,7 +125,7 @@ angular.module('tmaps.main.appstate')
             self.promptForSaveAs();
         } else {
             var id = self.currentState.id;
-            application.toBlueprint()
+            application.serialize()
             .then(function(bp) {
                 return $http.put('/api/appstates/' + id, {
                     blueprint: bp
@@ -163,7 +166,7 @@ angular.module('tmaps.main.appstate')
         if (self.currentState.isSnapshot) {
             throw new Error('A snapshot can\'t be saved under a different name');
         }
-        return application.toBlueprint()
+        return application.serialize()
         .then(function(bp) {
             return $http.post('/api/appstates', {
                 name: name,

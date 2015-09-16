@@ -35,11 +35,14 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
     }
 
     serialize() {
-        var ser = {
-            activeSelectionId: this.activeSelectionId,
-            selections: _(this.selections).map((sel) => { return sel.serialize(); })
-        };
-        return this.$q.when(ser);
+        var selectionsPr = _(this.selections).map((sel) => { return sel.serialize(); });
+        return this.$q.all(selectionsPr).then((selections) => {
+            var ser = {
+                activeSelectionId: this.activeSelectionId,
+                selections: selections
+            };
+            return ser;
+        })
     }
 
     addCellToSelection(markerPosition: MapPosition,

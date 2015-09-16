@@ -76,12 +76,14 @@ class CellSelection implements Serializable<CellSelection> {
     }
 
     serialize() {
-        var ser = {
-            id: this.id,
-            cells: this.cells,
-            color: this.color.serialize()
-        }
-        return this.$q.when(ser);
+        return this.color.serialize().then((serColor) => {
+            var ser = {
+                id: this.id,
+                cells: this.cells,
+                color: serColor
+            };
+            return ser;
+        });
     }
 
 }
