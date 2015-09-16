@@ -35,8 +35,11 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
     }
 
     serialize() {
-        var obj = <Serializable<CellSelectionHandler>> {};
-        return this.$q.when(obj);
+        var ser = {
+            activeSelectionId: this.activeSelectionId,
+            selections: _(this.selections).map((sel) => { return sel.serialize(); })
+        };
+        return this.$q.when(ser);
     }
 
     addCellToSelection(markerPosition: MapPosition,
