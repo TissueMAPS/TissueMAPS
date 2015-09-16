@@ -56,6 +56,10 @@ class MetadataConverter(ClusterRoutines):
         ------
         NotSupportedError
             when `file_format` is not supported
+
+        See also
+        --------
+        `tmlib.cfg`_
         '''
         super(MetadataConverter, self).__init__(prog_name, logging_level)
         self.experiment = experiment
@@ -67,20 +71,16 @@ class MetadataConverter(ClusterRoutines):
         self.image_file_format_string = image_file_format_string
 
     @property
-    def log_dir(self):
+    def project_dir(self):
         '''
         Returns
         -------
         str
-            directory where log files should be stored
-
-        Note
-        ----
-        The directory will be sibling to the output directory.
+            directory where joblist file and log output will be stored
         '''
-        self._log_dir = os.path.join(self.experiment.dir,
-                                     'log_%s' % self.prog_name)
-        return self._log_dir
+        self._project_dir = os.path.join(self.experiment.dir,
+                                         'tmaps_%s' % self.prog_name)
+        return self._project_dir
 
     @cached_property
     def cycles(self):

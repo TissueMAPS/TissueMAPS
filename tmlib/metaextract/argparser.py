@@ -4,7 +4,7 @@ from .cli import MetaExtract
 
 parser, subparsers = MetaExtract.get_parser_and_subparsers(
                         required_subparsers=[
-                            'joblist', 'submit', 'collect', 'workflow'])
+                            'joblist', 'submit', 'collect'])
 
 parser.description = '''
         Extract metadata from heterogeneous microscopic image file formats

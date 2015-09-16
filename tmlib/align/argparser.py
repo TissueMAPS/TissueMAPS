@@ -4,9 +4,7 @@ from .cli import Align
 
 parser, subparsers = Align.get_parser_and_subparsers(
                         required_subparsers=[
-                            'run', 'joblist', 'submit', 'apply', 'collect',
-                            'workflow'
-                        ])
+                            'run', 'joblist', 'submit', 'apply', 'collect'])
 
 parser.description = '''
         Calculate shift in y,x direction for images, which were

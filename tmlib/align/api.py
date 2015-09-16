@@ -2,7 +2,6 @@ import os
 import re
 import numpy as np
 from natsort import natsorted
-from cached_property import cached_property
 from . import registration as reg
 from .. import utils
 from ..cluster import ClusterRoutines
@@ -36,39 +35,13 @@ class ImageRegistration(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageRegistration, self).__init__(logging_level)
+        super(ImageRegistration, self).__init__(
+            experiment, prog_name, logging_level)
         self.experiment = experiment
         self.prog_name = prog_name
         if not os.path.exists(self.experiment.registration_dir):
             os.mkdir(self.experiment.registration_dir)
         self.shift_file_format_string = shift_file_format_string
-
-    @property
-    def log_dir(self):
-        '''
-        Returns
-        -------
-        str
-            directory where log files should be stored
-
-        Note
-        ----
-        The directory will be sibling to the output directory.
-        '''
-        self._log_dir = os.path.join(self.experiment.dir,
-                                     'log_%s' % self.prog_name)
-        return self._log_dir
-
-    @cached_property
-    def cycles(self):
-        '''
-        Returns
-        -------
-        List[Wellplate or Slide]
-            cycle objects
-        '''
-        self._cycles = self.experiment.cycles
-        return self._cycles
 
     @property
     def shift_files(self):
@@ -168,13 +141,6 @@ class ImageRegistration(ClusterRoutines):
 
         return joblist
 
-    def _build_run_command(self, batch):
-        job_id = batch['id']
-        command = ['align']
-        command.append(self.experiment.dir)
-        command.extend(['run', '--job', str(job_id)])
-        return command
-
     def run_job(self, batch):
         '''
         Run shift and overhang calculation for a single job.
@@ -195,12 +161,6 @@ class ImageRegistration(ClusterRoutines):
                             batch['inputs']['image_files']['targets'],
                             batch['inputs']['image_files']['references'],
                             batch['outputs']['registration_file'])
-
-    def _build_collect_command(self):
-        command = [self.prog_name]
-        command.append(self.experiment.dir)
-        command.extend(['collect'])
-        return command
 
     def collect_job_output(self, batch, **kwargs):
         '''

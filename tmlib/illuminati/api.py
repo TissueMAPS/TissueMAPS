@@ -1,8 +1,4 @@
-# encoding: utf-8
 import os
-import sys
-import numpy as np
-from cached_property import cached_property
 from .layer import ChannelLayer
 from ..cluster import ClusterRoutines
 from ..image import IllumstatsImages
@@ -29,38 +25,12 @@ class PyramidCreation(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(PyramidCreation, self).__init__(logging_level)
+        super(PyramidCreation, self).__init__(
+            experiment, prog_name, logging_level)
         self.experiment = experiment
         self.prog_name = prog_name
         if not os.path.exists(self.experiment.layers_dir):
             os.mkdir(self.experiment.layers_dir)
-
-    @property
-    def log_dir(self):
-        '''
-        Returns
-        -------
-        str
-            directory where log files should be stored
-
-        Note
-        ----
-        The directory will be sibling to the output directory.
-        '''
-        self._log_dir = os.path.join(self.experiment.dir,
-                                     'log_%s' % self.prog_name)
-        return self._log_dir
-
-    @cached_property
-    def cycles(self):
-        '''
-        Returns
-        -------
-        List[Wellplate or Slide]
-            cycle objects
-        '''
-        self._cycles = self.experiment.cycles
-        return self._cycles
 
     @property
     def shift_dirs(self):
@@ -86,13 +56,6 @@ class PyramidCreation(ClusterRoutines):
                                                 cycle=c.name))
                              for c in self.cycles]
         return self._shift_files
-
-    def _build_run_command(self, batch):
-        job_id = batch['id']
-        command = [self.prog_name]
-        command.append(self.experiment.dir)
-        command.extend(['run', '--job', str(job_id)])
-        return command
 
     def create_joblist(self, **kwargs):
         '''
@@ -192,10 +155,6 @@ class PyramidCreation(ClusterRoutines):
             os.makedirs(output_dir)
 
         layer.create_pyramid(output_dir)
-
-    def _build_collect_command(self):
-        raise AttributeError('"%s" step has no "collect" routine'
-                             % self.prog_name)
 
     def collect_job_output(self, joblist, **kwargs):
         raise AttributeError('"%s" step has no "collect" routine'

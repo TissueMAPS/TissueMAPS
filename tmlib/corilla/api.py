@@ -38,21 +38,10 @@ class IllumstatsGenerator(ClusterRoutines):
         Creates directory where statistics files will be stored in case it
         doesn't exist.
         '''
-        super(IllumstatsGenerator, self).__init__(prog_name, logging_level)
+        super(IllumstatsGenerator, self).__init__(
+            experiment, prog_name, logging_level)
         self.experiment = experiment
         self.stats_file_format_string = stats_file_format_string
-
-    @property
-    def log_dir(self):
-        '''
-        Returns
-        -------
-        str
-            directory where log files should be stored
-        '''
-        self._log_dir = os.path.join(self.experiment.dir,
-                                     'log_%s' % self.prog_name)
-        return self._log_dir
 
     @cached_property
     def cycles(self):
@@ -110,13 +99,6 @@ class IllumstatsGenerator(ClusterRoutines):
                     'cycle': cycle.name
                 })
         return joblist
-
-    def _build_run_command(self, batch):
-        job_id = batch['id']
-        command = [self.prog_name]
-        command.append(self.experiment.dir)
-        command.extend(['run', '--job', str(job_id)])
-        return command
 
     def run_job(self, batch):
         '''
@@ -186,10 +168,6 @@ class IllumstatsGenerator(ClusterRoutines):
                                          image.metadata.name)
                 output_filename = os.path.join(output_dir, output_filename)
                 corrected_image.save_as_png(output_filename)
-
-    def _build_collect_command(self):
-        raise AttributeError('"%s" step has no "collect" routine'
-                             % self.prog_name)
 
     def collect_job_output(self, joblist, **kwargs):
         raise AttributeError('"%s" step has no "collect" routine'

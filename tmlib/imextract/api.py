@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from cached_property import cached_property
 from .. import imageutils
 from ..image_readers import BioformatsImageReader
 from ..cluster import ClusterRoutines
@@ -33,16 +32,12 @@ class ImageExtractor(ClusterRoutines):
             configuration of GC3Pie logger; either "debug", "info", "warning",
             "error" or "critical" (defaults to ``"critical"``)
 
-        Note
-        ----
-        `output_dir` will be created if it doesn't exist.
-
-        Raises
-        ------
-        OSError
-            when `metadata_file` does not exist
+        See also
+        --------
+        `tmlib.cfg`_
         '''
-        super(ImageExtractor, self).__init__(prog_name, logging_level)
+        super(ImageExtractor, self).__init__(
+            experiment, prog_name, logging_level)
         self.experiment = experiment
         self.prog_name = prog_name
         for cycle in self.cycles:
@@ -55,33 +50,6 @@ class ImageExtractor(ClusterRoutines):
         for cycle in self.cycles:
             if not os.path.exists(cycle.image_dir):
                 os.mkdir(cycle.image_dir)
-
-    @property
-    def log_dir(self):
-        '''
-        Returns
-        -------
-        str
-            directory where log files should be stored
-
-        Note
-        ----
-        The directory will be sibling to the output directory.
-        '''
-        self._log_dir = os.path.join(self.experiment.dir,
-                                     'log_%s' % self.prog_name)
-        return self._log_dir
-
-    @cached_property
-    def cycles(self):
-        '''
-        Returns
-        -------
-        List[Wellplate or Slide]
-            cycle objects
-        '''
-        self._cycles = self.experiment.cycles
-        return self._cycles
 
     def create_joblist(self, **kwargs):
         '''
@@ -120,13 +88,6 @@ class ImageExtractor(ClusterRoutines):
                 })
         return joblist
 
-    def _build_run_command(self, batch):
-        job_id = batch['id']
-        command = [self.prog_name]
-        command.append(self.experiment.dir)
-        command.extend(['run', '--job', str(job_id)])
-        return command
-
     def run_job(self, batch):
         '''
         For each channel, extract all corresponding planes, perform maximum
@@ -155,10 +116,6 @@ class ImageExtractor(ClusterRoutines):
                 # Write plane (2D single-channel image) to file
                 filename = batch['outputs'][i]
                 imageutils.save_image_png(img, filename)
-
-    def _build_collect_command(self):
-        raise AttributeError('"%s" step has no "collect" routine'
-                             % self.prog_name)
 
     def collect_job_output(self, joblist, **kwargs):
         raise AttributeError('"%s" step has no "collect" routine'

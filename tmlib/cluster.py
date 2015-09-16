@@ -5,6 +5,7 @@ import datetime
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
+from cached_property import cached_property
 import gc3libs
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
@@ -22,18 +23,21 @@ class ClusterRoutines(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, prog_name, logging_level='critical'):
+    def __init__(self, experiment, prog_name, logging_level='critical'):
         '''
         Initialize an instance of class ClusterRoutines.
 
         Parameters
         ----------
+        experiment: Experiment
+            experiment object
         prog_name: str
             name of the corresponding program (command line interface)
         logging_level: str, optional
             configuration of GC3Pie logger; either "debug", "info", "warning",
             "error" or "critical" (defaults to ``"critical"``)
         '''
+        self.experiment = experiment
         self.prog_name = prog_name
         self.configure_logging(logging_level)
 
@@ -59,17 +63,42 @@ class ClusterRoutines(object):
             elif level == 'critical':
                 return logging.CRITICAL
         logger = logging.getLogger(__name__)
+        # TODO: create logger for program
         gc3libs.configure_logger(level=map_logging_level(level))
 
-    @abstractproperty
+    @cached_property
+    def cycles(self):
+        '''
+        Returns
+        -------
+        List[Wellplate or Slide]
+            cycle objects
+        '''
+        self._cycles = self.experiment.cycles
+        return self._cycles
+
+    @property
+    def project_dir(self):
+        '''
+        Returns
+        -------
+        str
+            directory where joblist file and log output will be stored
+        '''
+        self._project_dir = os.path.join(self.experiment.dir,
+                                         'tm_%s' % self.prog_name)
+        return self._project_dir
+
+    @property
     def log_dir(self):
         '''
         Returns
         -------
         str
-            directory where log files should be stored
+            directory where log files are stored
         '''
-        pass
+        self._log_dir = os.path.join(self.project_dir, 'log')
+        return self._log_dir
 
     @staticmethod
     def create_datetimestamp():
@@ -102,19 +131,21 @@ class ClusterRoutines(object):
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
 
-    @abstractmethod
     def _build_run_command(self, batch):
         # Build a command for GC3Pie submission. For further information on
         # the structure of the command see documentation of subprocess package:
         # https://docs.python.org/2/library/subprocess.html.
-        pass
+        job_id = batch['id']
+        command = [self.prog_name]
+        command.append(self.experiment.dir)
+        command.extend(['run', '--job', str(job_id)])
+        return command
 
-    @abstractmethod
     def _build_collect_command(self):
-        # Build a command for GC3Pie submission. For further information on
-        # the structure of the command see documentation of subprocess package:
-        # https://docs.python.org/2/library/subprocess.html.
-        pass
+        command = [self.prog_name]
+        command.append(self.experiment.dir)
+        command.extend(['collect'])
+        return command
 
     @abstractmethod
     def run_job(self, batch):
@@ -229,7 +260,7 @@ class ClusterRoutines(object):
         str
             absolute path to the joblist file
         '''
-        self._joblist_file = os.path.join(self.log_dir,
+        self._joblist_file = os.path.join(self.project_dir,
                                           '%s.jobs' % self.prog_name)
         return self._joblist_file
 
@@ -269,7 +300,7 @@ class ClusterRoutines(object):
         Create log directory if it does not exist.
         '''
         if not os.path.exists(self.log_dir):
-            os.mkdir(self.log_dir)
+            os.makedirs(self.log_dir)
         # TODO: check structure of joblist
         with open(self.joblist_file, 'w') as f:
             f.write(yaml.dump(joblist, default_flow_style=False))
@@ -355,8 +386,16 @@ class ClusterRoutines(object):
         -------
         gc3libs.workflow.SequentialTaskCollection
             jobs
+
+        Note
+        ----
+        A `SequentialTaskCollection` is returned even if there is only one
+        parallel task (a collection of jobs that are processed in parallel).
+        This is done for consistency so that jobs from different steps can
+        be treated the same way and easily be combined into larger workflows.
         '''
-        run_jobs = ParallelTaskCollection(jobname='%s_run_jobs' % self.prog_name)
+        run_jobs = ParallelTaskCollection(
+                        jobname='%s_run_jobs' % self.prog_name)
         for i, batch in enumerate(joblist['run']):
 
             jobname = '%s_run_job-%.5d' % (self.prog_name, batch['id'])
@@ -444,19 +483,3 @@ class ClusterRoutines(object):
                         jobname='%s_workflow' % self.prog_name)
 
         return jobs
-
-
-
-class Workflow(object):
-
-    def __init__(self):
-        pass
-
-    def metaextract(self):
-        pass
-
-    def metaconvert(self):
-        pass
-
-    def imextract(self):
-        pass
