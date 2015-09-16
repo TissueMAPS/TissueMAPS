@@ -187,7 +187,7 @@ def vips_image_to_np_array(vips_image):
     return array
 
 
-def create_spacer_image(dimensions, dtype, bands, direction):
+def create_spacer_image(dimensions, dtype, bands, direction=None):
     '''
     Create a black image that can be inserted as a spacer between
     channel images.
@@ -200,7 +200,7 @@ def create_spacer_image(dimensions, dtype, bands, direction):
         data type (format) of the image
     bands: int
         number of color dimensions (``1`` for grayscale and ``3`` for RGB)
-    direction: str
+    direction: str, optional
         either ``"horizontal"`` or ``"vertical"``
 
     Returns
@@ -214,14 +214,18 @@ def create_spacer_image(dimensions, dtype, bands, direction):
     ValueError
         when `direction` is not specified correctly
     '''
-    if direction == 'vertical':
-        spacer = Vips.Image.black(int(dimensions[0]/100), dimensions[1],
-                                  bands=bands).cast(dtype)
-    elif direction == 'horizontal':
-        spacer = Vips.Image.black(dimensions[0], int(dimensions[1]/100),
+    if not direction:
+        spacer = Vips.Image.black(dimensions[0], dimensions[1],
                                   bands=bands).cast(dtype)
     else:
-        raise ValueError('Direction must be either "horizontal" or "vertical"')
+        if direction == 'vertical':
+            spacer = Vips.Image.black(int(dimensions[0]/100), dimensions[1],
+                                      bands=bands).cast(dtype)
+        elif direction == 'horizontal':
+            spacer = Vips.Image.black(dimensions[0], int(dimensions[1]/100),
+                                      bands=bands).cast(dtype)
+        else:
+            raise ValueError('Direction must be "horizontal" or "vertical"')
     return spacer
 
 

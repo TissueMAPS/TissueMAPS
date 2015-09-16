@@ -163,7 +163,139 @@ class ChannelLayer(Layer):
         self.mosaic = mosaic
         self.metadata = metadata
 
-    def _create_mosaic_from_images(self, images, stats):
+    @staticmethod
+    def create_from_files(self, cycle, channel, dx=0, dy=0, **kwargs):
+        '''
+        Load individual images and stitch them together.
+
+        The following additional arguments can be set:
+        * "stats": illumination statistics to correct images for
+          illumination artifacts (*IllumstatsImages*)
+        * "shifts": shift descriptions to align individual wells between
+          different cycles (*List[List[ShiftDescription]]*)
+
+        Parameters
+        ----------
+        cycle: Slide or WellPlate
+            cycle object
+        channel: str
+            name of the channel for which a layer should be created
+        dx: int, optional
+            displacement in x direction in pixels; useful when images are
+            acquired with an overlap in x direction (negative integer value)
+        dy: int, optional
+            displacement in y direction in pixels; useful when images are
+            acquired with an overlap in y direction (negative integer value)
+        **kwargs: dict
+            additional arguments as key-value pairs
+
+        Returns
+        -------
+        ChannelLayer
+            stitched mosaic image
+
+        Note
+        ----
+        In case `cycle` is of type `WellPlate`, an overview of the whole well
+        plate is created. To this end, individual wells are stitched together
+        and background pixels are inserted between wells to visually separate
+        them from each other. Empty wells will also be filled with background.
+
+        Raises
+        ------
+        StitchError
+            when images are not all of the same cycle, channel, or well
+        '''
+        if isinstance(cycle, 'Slide'):
+            layer = ChannelLayer._create_from_slide(
+                        cycle, channel, kwargs['stats'], kwargs['shifts'])
+        elif isinstance(cycle, 'WellPlate'):
+            layer = ChannelLayer._create_from_wellplate(
+                        cycle, channel, kwargs['stats'], kwargs['shifts'])
+        return layer
+
+    @staticmethod
+    def _create_from_slide(slide, channel, dx, dy, stats, shifts):
+        images = [im for im in slide.images
+                  if im.metadata.channel == channel]
+        mosaic = ChannelLayer._create_mosaic_from_images(
+                    images, dx, dy, stats)
+        metadata = ChannelLayer._create_metadata_from_images(images)
+        layer = ChannelLayer(mosaic, metadata)
+
+        if shifts:
+            layer = layer.align(shifts)
+
+        return layer
+
+    @staticmethod
+    def _create_from_wellplate(wellplate, channel, dx, dy, stats, shifts):
+        # Determine the dimensions of each well from one well (they should all
+        # have the same dimensions) in order to create spacer images, which can
+        # be used to fill gaps in the well plate (i.e. empty wells) and to
+        # visually separate wells from each other
+        images = [img for img in wellplate.images
+                  if img.metadata.channel == channel
+                  and img.metadata.well == wellplate.wells[0]]
+        mosaic = ChannelLayer._create_mosaic_from_images(
+                    images, dx, dy, stats)
+        column_spacer = imageutils.create_spacer_image(
+                            mosaic.dimensions, mosaic.dtype, 'horizontal')
+        row_spacer = imageutils.create_spacer_image(
+                            mosaic.dimensions, mosaic.dtype, 'vertical')
+        empty_well_spacer = imageutils.create_spacer_image(
+                            mosaic.dimensions, mosaic.dtype)
+
+        plate_grid = ChannelLayer._build_plate_grid(wellplate)
+        rows = list()
+        for i in xrange(plate_grid.shape[0]):
+            current_row = list()
+            for j in xrange(plate_grid.shape[1]):
+                well = plate_grid[i, j]
+                if not well:
+                    # NOTE: An empty background image takes less space on disk.
+                    #       Comparison: 8bit JPEG image with 100x100 pixels:
+                    #       img = Vips.Image.black(100, 100)
+                    #       img.write_to_file('', Q=75, optimize_coding=True)
+                    #       => 357 bytes
+                    #       img = Vips.Image.gaussnoise(100, 100).cast('uchar')
+                    #       img.write_to_file('', Q=75, optimize_coding=True)
+                    #       => 4300 bytes
+                    current_row.append(empty_well_spacer)
+                images = [img for img in wellplate.images
+                          if img.metadata.channel == channel
+                          and img.metadata.well == well]
+                mosaic = ChannelLayer._create_mosaic_from_images(
+                            images, dx, dy, stats)
+                metadata = ChannelLayer._create_metadata_from_images(images)
+                layer = ChannelLayer(mosaic, metadata)
+                if shifts:
+                    layer.align(shifts)
+                current_row.append(layer.mosaic.array)
+                if not j == plate_grid.shape[1]:
+                    current_row.append(column_spacer)
+
+            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', 0, 0),
+                               current_row))
+            if not i == plate_grid.shape[0]:
+                rows.append(row_spacer)
+
+        img = reduce(lambda x, y: x.merge(y, 'vertical', 0, 0), rows)
+        mosaic = Mosaic(img)
+        metadata = ChannelLayer._create_metadata_from_images(images)
+        layer = ChannelLayer(mosaic, metadata)
+        return layer
+
+    @staticmethod
+    def _build_plate_grid(wellplate):
+        plate_cooridinates = wellplate.plate_cooridinates
+        height, width = np.max(wellplate.dimensions, axis=0)
+        plate_grid = np.empty((height, width))
+        for i, c in enumerate(plate_cooridinates):
+            plate_grid[c[0], c[1]] = wellplate.wells[i]
+        return plate_grid
+
+    def _create_mosaic_from_images(self, images, dx, dy, stats):
         grid = self._build_image_grid(images)
         rows = list()
         for i in xrange(grid.shape[0]):
@@ -192,108 +324,6 @@ class ChannelLayer(Layer):
             raise StitchError('All images must be of the same channel')
         metadata.channel = channels[0]
         return metadata
-
-    @staticmethod
-    def create_from_files(self, cycle, channel, dx=0, dy=0, **kwargs):
-        '''
-        Load individual images and stitch them together.
-
-        The following additional arguments can be set:
-        * "stats": illumination statistics to correct images for
-          illumination artifacts (*IllumstatsImages*)
-        * "shifts": shift descriptions to align individual wells between
-          different cycles (*List[List[ShiftDescription]]*)
-
-        Parameters
-        ----------
-        cycle: Slide or WellPlate
-            cycle object
-        channel: str
-            name of the channel for which a layer should be created
-        dx: int, optional
-            displacement in x direction
-        dy: int, optional
-            displacement in y direction
-        **kwargs: dict
-            additional arguments as key-value pairs
-
-        Returns
-        -------
-        ChannelLayer
-            stitched mosaic image
-
-        Raises
-        ------
-        StitchError
-            when images are not all of the same cycle, channel, or well
-        '''
-        if isinstance(cycle, 'Slide'):
-            layer = ChannelLayer._create_from_slide(
-                        cycle, channel, kwargs['stats'], kwargs['shifts'])
-        elif isinstance(cycle, 'WellPlate'):
-            layer = ChannelLayer._create_from_wellplate(
-                        cycle, channel, kwargs['stats'], kwargs['shifts'])
-        return layer
-
-    @staticmethod
-    def _create_from_slide(slide, channel, stats, shifts):
-        images = [im for im in slide.images
-                  if im.metadata.channel == channel]
-        mosaic = ChannelLayer._create_mosaic_from_images(images)
-        metadata = ChannelLayer._create_metadata_from_images(images)
-        layer = ChannelLayer(mosaic, metadata)
-
-        if shifts:
-            layer = layer.align(shifts)
-
-        return layer
-
-    @staticmethod
-    def _build_plate_grid(wellplate):
-        plate_cooridinates = wellplate.plate_cooridinates
-        height, width = np.max(wellplate.dimensions, axis=0)
-        plate_grid = np.empty((height, width))
-        for i, c in enumerate(plate_cooridinates):
-            plate_grid[c[0], c[1]] = wellplate.wells[i]
-        return plate_grid
-
-    @staticmethod
-    def _create_from_wellplate(wellplate, channel, stats, shifts):
-        plate_grid = ChannelLayer._build_plate_grid(wellplate)
-        rows = list()
-        for i in xrange(plate_grid.shape[0]):
-            current_row = list()
-            for j in xrange(plate_grid.shape[1]):
-                well = plate_grid[i, j]
-                # TODO: handle gaps (empty wells)
-                images = [img for img in wellplate.images
-                          if img.metadata.channel == channel
-                          and img.metadata.well == well]
-                mosaic = ChannelLayer._create_mosaic_from_images(images, stats)
-                metadata = ChannelLayer._create_metadata_from_images(images)
-                layer = ChannelLayer(mosaic, metadata)
-                if shifts:
-                    layer.align(shifts)
-
-                current_row.append(layer.mosaic.array)
-                if not j == plate_grid.shape[1]:
-                    spacer = imageutils.create_spacer_image(
-                                layer.pixels.dimensions, layer.pixels.dtype,
-                                'horizontal')
-                    current_row.append(spacer)
-            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', 0, 0),
-                               current_row))
-            if not i == plate_grid.shape[0]:
-                spacer = imageutils.create_spacer_image(
-                            layer.pixels.dimensions, layer.pixels.dtype,
-                            'vertical')
-                rows.append(spacer)
-
-        img = reduce(lambda x, y: x.merge(y, 'vertical', 0, 0), rows)
-        mosaic = Mosaic(img)
-        metadata = ChannelLayer._create_metadata_from_images(images)
-        layer = ChannelLayer(mosaic, metadata)
-        return layer
 
     def clip(self, thresh_value=None, thresh_percent=None):
         '''

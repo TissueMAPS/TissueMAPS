@@ -157,10 +157,10 @@ class PyramidCreation(ClusterRoutines):
         layer.create_pyramid(output_dir)
 
     def collect_job_output(self, joblist, **kwargs):
-        raise AttributeError('"%s" step has no "collect" routine'
-                             % self.prog_name)
+        raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
+                             ' method' % self.__class__.__name__)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
-        raise AttributeError('"%s" step has no "apply" routine'
-                             % self.prog_name)
+        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
+                             ' method' % self.__class__.__name__)

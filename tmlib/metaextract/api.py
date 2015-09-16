@@ -27,7 +27,7 @@ class MetadataExtractor(ClusterRoutines):
         Parameters
         ----------
         experiment: Experiment
-            cycle object that holds information about the content of the
+            experiment object that holds information about the content of the
             experiment directory
         prog_name: str
             name of the corresponding command line interface
@@ -161,5 +161,5 @@ class MetadataExtractor(ClusterRoutines):
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
-        raise AttributeError('"%s" step has no "apply" routine'
-                             % self.prog_name)
+        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
+                             ' method' % self.__class__.__name__)

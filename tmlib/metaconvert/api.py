@@ -38,7 +38,7 @@ class MetadataConverter(ClusterRoutines):
         Parameters
         ----------
         experiment: Experiment
-            cycle object that holds information about the content of the
+            experiment object that holds information about the content of the
             experiment directory
         file_format: str
             name of the microscope file format for which additional files
@@ -173,15 +173,11 @@ class MetadataConverter(ClusterRoutines):
             data[md.name] = md.serialize()
         utils.write_json(filename, data)
 
-    def _build_collect_command(self):
-        raise AttributeError('"%s" step has no "collect" routine'
-                             % self.prog_name)
-
     def collect_job_output(self, joblist, **kwargs):
-        raise AttributeError('"%s" step has no "collect" routine'
-                             % self.prog_name)
+        raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
+                             ' method' % self.__class__.__name__)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
-        raise AttributeError('"%s" step has no "apply" routine'
-                             % self.prog_name)
+        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
+                             ' method' % self.__class__.__name__)

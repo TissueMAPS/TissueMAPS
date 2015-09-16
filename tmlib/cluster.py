@@ -30,7 +30,8 @@ class ClusterRoutines(object):
         Parameters
         ----------
         experiment: Experiment
-            experiment object
+            experiment object that holds information about the content of the
+            experiment directory
         prog_name: str
             name of the corresponding program (command line interface)
         logging_level: str, optional

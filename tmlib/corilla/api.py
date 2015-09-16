@@ -22,7 +22,7 @@ class IllumstatsGenerator(ClusterRoutines):
         Parameters
         ----------
         experiment: Experiment
-            cycle object that holds information about the content of the
+            experiment object that holds information about the content of the
             experiment directory
         image_file_format_string: str
             format string that specifies how the names of the statistics files
@@ -170,5 +170,5 @@ class IllumstatsGenerator(ClusterRoutines):
                 corrected_image.save_as_png(output_filename)
 
     def collect_job_output(self, joblist, **kwargs):
-        raise AttributeError('"%s" step has no "collect" routine'
-                             % self.prog_name)
+        raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
+                             ' method' % self.__class__.__name__)
