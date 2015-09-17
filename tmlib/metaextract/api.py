@@ -88,17 +88,21 @@ class MetadataExtractor(ClusterRoutines):
         output_files = list()
         count = 0
         for i, cycle in enumerate(self.cycles):
-            image_filenames = [f for f in os.listdir(cycle.image_upload_dir)
-                               if os.path.splitext(f)[1]
-                               in Formats().supported_extensions]
-            input_files = [os.path.join(cycle.image_upload_dir, f)
-                           for f in image_filenames]
+            image_filenames = [
+                f for f in os.listdir(cycle.image_upload_dir)
+                if os.path.splitext(f)[1] in Formats().supported_extensions
+            ]
+            input_files = [
+                os.path.join(cycle.image_upload_dir, f)
+                for f in image_filenames
+            ]
             if not input_files:
                 raise IOError('No image files of supported formats '
                               'found in upload directory.')
-            output_files.extend([os.path.join(cycle.ome_xml_dir,
-                                              self._get_ome_xml_filename(f))
-                                 for f in image_filenames])
+            output_files.extend([
+                os.path.join(cycle.ome_xml_dir, self._get_ome_xml_filename(f))
+                for f in image_filenames
+            ])
 
             for j in xrange(len(input_files)):
                 count += 1

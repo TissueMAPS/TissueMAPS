@@ -259,7 +259,7 @@ class CommandLineInterface(object):
                 is specified.
             '''
             joblist_parser.add_argument(
-                '-p', '--print', action='store_true', dest='print_joblist',
+                '--show', action='store_true', dest='print_joblist',
                 help='print joblist to standard output (don\'t write to file)')
             joblist_parser.add_argument(
                 '--backup', action='store_true',
@@ -276,15 +276,6 @@ class CommandLineInterface(object):
                 '-j', '--job', type=int, required=True,
                 help='id of the job that should be processed')
 
-        if 'collect' in required_subparsers:
-            collect_parser = subparsers.add_parser('collect')
-            collect_parser.description = '''
-                Collect outputs of processed jobs and fuse them.
-            '''
-            collect_parser.add_argument(
-                '-o', '--output_dir', type=str,
-                help='path to output directory')
-
         if 'submit' in required_subparsers:
             submit_parser = subparsers.add_parser('submit')
             submit_parser.description = '''
@@ -298,6 +289,15 @@ class CommandLineInterface(object):
             submit_parser.add_argument(
                 '--virtualenv', type=str, default='tmaps',
                 help='name of a virtual environment that should be activated')
+
+        if 'collect' in required_subparsers:
+            collect_parser = subparsers.add_parser('collect')
+            collect_parser.description = '''
+                Collect outputs of processed jobs and fuse them.
+            '''
+            collect_parser.add_argument(
+                '-o', '--output_dir', type=str,
+                help='path to output directory')
 
         if 'apply' in required_subparsers:
             apply_parser = subparsers.add_parser('apply')

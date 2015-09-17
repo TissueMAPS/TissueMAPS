@@ -12,7 +12,7 @@ class DatasetWriter(object):
         self.filename = filename
 
     def __enter__(self):
-        self._stream = h5py.File(self.filename, 'w')
+        self._stream = h5py.File(self.filename, 'a')
         return self
 
     def write_dataset(self, path, data):

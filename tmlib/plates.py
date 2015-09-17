@@ -5,7 +5,7 @@ from .cycle import Cycle
 
 class WellPlate(Cycle):
 
-    def __init__(self, cycle_dir, cfg, plate_format):
+    def __init__(self, cycle_dir, cfg, user_cfg, plate_format):
         '''
         Initialize an instance of class WellPlate.
 
@@ -15,12 +15,15 @@ class WellPlate(Cycle):
             absolute path to the cycle directory
         cfg: Dict[str, str]
             configuration settings
+        user_cfg: Dict[str, str]
+            additional user configuration settings
         plate_format: int
             number of wells in the plate (supported: 96 or 384)
         '''
-        super(WellPlate, self).__init__(cycle_dir, cfg)
+        super(WellPlate, self).__init__(cycle_dir, cfg, user_cfg)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
+        self.user_cfg = user_cfg
         self.plate_format = plate_format
 
     @property
@@ -159,7 +162,7 @@ class WellPlate(Cycle):
 
 class Slide(Cycle):
 
-    def __init__(self, cycle_dir, cfg):
+    def __init__(self, cycle_dir, cfg, user_cfg):
         '''
         Initialize an instance of class Slide.
 
@@ -169,10 +172,13 @@ class Slide(Cycle):
             absolute path to the cycle directory
         cfg: Dict[str, str]
             configuration settings
+        user_cfg: Dict[str, str]
+            additional user configuration settings
         '''
-        super(Slide, self).__init__(cycle_dir, cfg)
+        super(Slide, self).__init__(cycle_dir, cfg, user_cfg)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
+        self.user_cfg = user_cfg
 
     @property
     def dimensions(self):

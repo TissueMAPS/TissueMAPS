@@ -379,8 +379,9 @@ class MaskImage(Image):
         MaskImage
             non-outline pixels values of connected regions are set to background
         '''
-        self._outlines = LabelImage(self.pixels.get_outlines(keep_ids=False),
-                                    self.metadata)
+        self._outlines = SegmentationImage(
+                            self.pixels.get_outlines(keep_ids=False),
+                            self.metadata)
         return self._outlines
 
     def align(self, shift_description):
@@ -405,7 +406,7 @@ class MaskImage(Image):
         return MaskImage(self.pixels.align(shift_description), self.metadata)
 
 
-class LabelImage(Image):
+class SegmentationImage(Image):
 
     '''
     Class for a labeled image: a 2D segmentation image,
@@ -418,7 +419,7 @@ class LabelImage(Image):
     @staticmethod
     def create_from_file(filename, metadata, library='vips'):
         '''
-        Create a LabelImage object from a file on disk.
+        Create a SegmentationImage object from a file on disk.
 
         Parameters
         ----------
@@ -432,7 +433,7 @@ class LabelImage(Image):
 
         Returns
         -------
-        LabelImage
+        SegmentationImage
             image object
 
         Raises
@@ -442,7 +443,7 @@ class LabelImage(Image):
         '''
         if library not in {'vips', 'numpy'}:
             raise ValueError('Library must be either "vips" or "numpy".')
-        image = LabelImage()
+        image = SegmentationImage()
         image._factory = image._get_factory(library)
         image.filename = filename
         image.metadata = metadata
@@ -476,11 +477,12 @@ class LabelImage(Image):
         '''
         Returns
         -------
-        LabelImage
+        SegmentationImage
             non-outline pixels values of connected regions are set to background
         '''
-        self._outlines = LabelImage(self.pixels.get_outlines(keep_ids=True),
-                                    self.metadata)
+        self._outlines = SegmentationImage(
+                            self.pixels.get_outlines(keep_ids=True),
+                            self.metadata)
         return self._outlines
 
     @property
@@ -505,10 +507,11 @@ class LabelImage(Image):
 
         Returns
         -------
-        LabelImage
+        SegmentationImage
             image without the specified objects
         '''
-        return LabelImage(self.pixels.remove_objects(ids), self.metadata)
+        return SegmentationImage(
+                    self.pixels.remove_objects(ids), self.metadata)
 
     def align(self, shift_description):
         '''
@@ -522,20 +525,21 @@ class LabelImage(Image):
 
         Returns
         -------
-        LabelImage
+        SegmentationImage
             aligned image
 
         Warning
         -------
         Alignment may change the dimensions of the image.
         '''
-        return LabelImage(self.pixels.align(shift_description), self.metadata)
+        return SegmentationImage(
+                    self.pixels.align(shift_description), self.metadata)
 
     def local_to_global_ids(self, max_id):
         '''
         '''
         img, new_max_id = self.pixels.local_to_global_ids(max_id)
-        return (LabelImage(img, self.metadata), new_max_id)
+        return (SegmentationImage(img, self.metadata), new_max_id)
 
 
 class IllumstatsImage(object):

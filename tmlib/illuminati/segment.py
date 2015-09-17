@@ -277,7 +277,8 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
     return centroids, np.max(global_ids)
 
 
-def compute_outline_polygons(im, contour_level=0.5, poly_tol=0.95):
+def compute_outline_polygons(im, offset_y=0, offset_x=0,
+                             contour_level=0.5, poly_tol=0.95,):
     '''
     Given a matrix of a site image with border cells removed,
     get a list of lists, each consisting of local
@@ -287,12 +288,20 @@ def compute_outline_polygons(im, contour_level=0.5, poly_tol=0.95):
     ----------
     im: numpy.ndarray
         image matrix where pixel values encode cell ids (background is 0)
+    offset_y: int, optional
+        offset in y direction, which is added to each polygons y coordinate
+    offset_x: int, optional
+        offset in x direction, which is added to each polygons x coordinate
 
     Returns
     -------
     Dict
         a hash that maps each cell id to a list of polygon vertices
         (local i-j coordinates)
+
+    Note
+    ----
+    Objects at the border of the image are automatically discarded.
     '''
     outlines = {}
     cell_ids = set(np.unique(im)).difference({0})
@@ -343,6 +352,7 @@ def compute_outline_polygons(im, contour_level=0.5, poly_tol=0.95):
 
         # Add the offset of this subimage to all coordinates
         poly += (mini, minj)
+        poly += (offset_y, offset_x)
         outlines[cell_id] = poly
     return outlines
 
@@ -460,8 +470,6 @@ def compute_outlines_vips(im):
     for i, mask in enumerate(masks):
         img = nonbg.morph(mask, 'erode')
         results.append(img)
-
-    import ipdb; ipdb.set_trace()
 
     # Combine all the images
     images_disj = reduce(op.or_, results)

@@ -31,6 +31,27 @@ class RegexpError(Exception):
 
 class StitchError(Exception):
     '''
-    Error class that is raised when a problem arises upon stitching of
-    individual images to a mosaic.
+    Error class that is raised when an error occurs upon stitching of
+    images for the generation of a mosaic.
+    '''
+
+
+class PipelineRunError(Exception):
+    '''
+    Error class that is raised when an error occurs upon running a jterator
+    pipeline.
+    '''
+
+
+class PipelineDescriptionError(Exception):
+    '''
+    Error class that is raised when information in pipeline description is
+    missing or incorrect.
+    '''
+
+
+class PipelineOSError(Exception):
+    '''
+    Error class that is raised when pipeline related files do not exist
+    on disk.
     '''

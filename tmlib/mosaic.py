@@ -1,4 +1,6 @@
+import numpy as np
 from gi.repository import Vips
+from ..errors import MetadataError
 
 
 class Mosaic(object):
@@ -90,52 +92,59 @@ class Mosaic(object):
         self._is_binary = self.dtype == Vips.BandFormat.UCHAR
         return self._is_binary
 
+    @staticmethod
+    def _build_image_grid(images):
+        coordinates = [im.metadata.coordinates for im in images]
+        height, width = np.max(coordinates, axis=0)
+        grid = np.empty((height, width))
+        for i, c in enumerate(coordinates):
+            grid[c[0], c[1]] = images[i]
+        return grid
 
-class MosaicMetadata(object):
-
-    '''
-    Class for mosaic image metadata, such as the name of the channel or
-    the relative position of the mosaic within a well plate.
-    '''
-
-    @property
-    def name(self):
+    @staticmethod
+    def create_from_images(images, dx, dy, stats=None):
         '''
+        Create a Mosaic object from image objects.
+
+        Parameters
+        ----------
+        images: List[ChannelImage]
+            set of images that are all of the same *cycle* and *channel*
+        dx: int, optional
+            displacement in x direction in pixels; useful when images are
+            acquired with an overlap in x direction (negative integer value)
+        dy: int, optional
+            displacement in y direction in pixels; useful when images are
+            acquired with an overlap in y direction (negative integer value)
+        stats: IllumstatsImages, optional
+            illumination statistics to correct images for
+            illumination artifacts
+
         Returns
         -------
-        str
-            name of the corresponding layer
-        '''
-        return self._name
+        Mosaic
 
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    @property
-    def cycle(self):
+        Raises
+        ------
+        MetadataError
+            when `images` are not of same *cycle* or *channel*
         '''
-        Returns
-        -------
-        str
-            name of the corresponding cycle
-        '''
-        return self._cycle
-
-    @cycle.setter
-    def cycle(self, value):
-        self._cycle = value
-
-    @property
-    def sites(self):
-        '''
-        Returns
-        -------
-        List[int]
-            site identifier numbers of images contained in the mosaic
-        '''
-        return self._sites
-
-    @sites.setter
-    def sites(self, value):
-        self._sites = value
+        cycles = [im.cycle for im in images]
+        if len(cycles) > 1:
+            raise MetadataError('All images must be of the same cycle')
+        channels = [im.channel for im in images]
+        if len(channels) > 1:
+            raise MetadataError('All images must be of the same channel')
+        grid = Mosaic._build_image_grid(images)
+        rows = list()
+        for i in xrange(grid.shape[0]):
+            current_row = list()
+            for j in xrange(grid.shape[1]):
+                img = grid[i, j]
+                if stats:
+                    img = img.correct(stats.mean, stats.std)
+                current_row.append(img.pixels.array)
+            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', dx, 0),
+                               current_row))
+        img = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
+        return Mosaic(img)

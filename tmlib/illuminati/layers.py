@@ -2,12 +2,11 @@ import os
 import numpy as np
 from shapely.geometry import box
 from shapely.geometry.polygon import Polygon
-from .mosaic import Mosaic
-from .mosaic import MosaicMetadata
+from ..mosaic import Mosaic
+from ..metadata import MosaicMetadata
 from .. import imageutils
 from ..image_reader import OpenslideImageReader
 from ..errors import NotSupportedError
-from ..errors import StitchError
 
 
 class Layer(object):
@@ -32,15 +31,6 @@ class Layer(object):
         '''
         self.mosaic = mosaic
         self.metadata = metadata
-
-    @staticmethod
-    def _build_image_grid(images):
-        coordinates = [im.metadata.coordinates for im in images]
-        height, width = np.max(coordinates, axis=0)
-        grid = np.empty((height, width))
-        for i, c in enumerate(coordinates):
-            grid[c[0], c[1]] = images[i]
-        return grid
 
     def align(self, shift_descriptions):
         '''
@@ -203,7 +193,7 @@ class ChannelLayer(Layer):
 
         Raises
         ------
-        StitchError
+        MetadataError
             when images are not all of the same cycle, channel, or well
         '''
         if isinstance(cycle, 'Slide'):
@@ -218,15 +208,24 @@ class ChannelLayer(Layer):
     def _create_from_slide(slide, channel, dx, dy, stats, shifts):
         images = [im for im in slide.images
                   if im.metadata.channel == channel]
-        mosaic = ChannelLayer._create_mosaic_from_images(
-                    images, dx, dy, stats)
-        metadata = ChannelLayer._create_metadata_from_images(images)
+        layer_name = slide.layer_names[channel]
+        mosaic = Mosaic.create_from_images(images, dx, dy, stats)
+        metadata = MosaicMetadata.create_from_images(images, layer_name)
         layer = ChannelLayer(mosaic, metadata)
 
         if shifts:
             layer = layer.align(shifts)
 
         return layer
+
+    @staticmethod
+    def _build_plate_grid(wellplate):
+        plate_cooridinates = wellplate.plate_cooridinates
+        height, width = np.max(wellplate.dimensions, axis=0)
+        plate_grid = np.empty((height, width))
+        for i, c in enumerate(plate_cooridinates):
+            plate_grid[c[0], c[1]] = wellplate.wells[i]
+        return plate_grid
 
     @staticmethod
     def _create_from_wellplate(wellplate, channel, dx, dy, stats, shifts):
@@ -237,8 +236,8 @@ class ChannelLayer(Layer):
         images = [img for img in wellplate.images
                   if img.metadata.channel == channel
                   and img.metadata.well == wellplate.wells[0]]
-        mosaic = ChannelLayer._create_mosaic_from_images(
-                    images, dx, dy, stats)
+        layer_name = wellplate.layer_names[channel]
+        mosaic = Mosaic.create_from_images(images, dx, dy, stats)
         column_spacer = imageutils.create_spacer_image(
                             mosaic.dimensions, mosaic.dtype, 'horizontal')
         row_spacer = imageutils.create_spacer_image(
@@ -265,9 +264,8 @@ class ChannelLayer(Layer):
                 images = [img for img in wellplate.images
                           if img.metadata.channel == channel
                           and img.metadata.well == well]
-                mosaic = ChannelLayer._create_mosaic_from_images(
-                            images, dx, dy, stats)
-                metadata = ChannelLayer._create_metadata_from_images(images)
+                mosaic = Mosaic.create_from_images(images, dx, dy, stats)
+                metadata = MosaicMetadata.create_from_images(images, layer_name)
                 layer = ChannelLayer(mosaic, metadata)
                 if shifts:
                     layer.align(shifts)
@@ -282,48 +280,9 @@ class ChannelLayer(Layer):
 
         img = reduce(lambda x, y: x.merge(y, 'vertical', 0, 0), rows)
         mosaic = Mosaic(img)
-        metadata = ChannelLayer._create_metadata_from_images(images)
+        metadata = MosaicMetadata.create_from_images(images, layer_name)
         layer = ChannelLayer(mosaic, metadata)
         return layer
-
-    @staticmethod
-    def _build_plate_grid(wellplate):
-        plate_cooridinates = wellplate.plate_cooridinates
-        height, width = np.max(wellplate.dimensions, axis=0)
-        plate_grid = np.empty((height, width))
-        for i, c in enumerate(plate_cooridinates):
-            plate_grid[c[0], c[1]] = wellplate.wells[i]
-        return plate_grid
-
-    def _create_mosaic_from_images(self, images, dx, dy, stats):
-        grid = self._build_image_grid(images)
-        rows = list()
-        for i in xrange(grid.shape[0]):
-            current_row = list()
-            for j in xrange(grid.shape[1]):
-                img = grid[i, j]
-                if stats:
-                    img = img.correct(stats.mean, stats.std)
-                current_row.append(img.pixels.array)
-            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', dx, 0),
-                               current_row))
-        img = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
-        mosaic = Mosaic(img)
-        return mosaic
-
-    def _create_metadata_from_images(self, images):
-        metadata = MosaicMetadata()
-        metadata.name = ''  # TODO: user configuration settings
-        metadata.sites = [im.site for im in images]
-        cycles = [im.cycle for im in images]
-        if len(cycles) > 1:
-            raise StitchError('All images must be of the same cycle')
-        metadata.cycle = cycles[0]
-        channels = [im.channel for im in images]
-        if len(channels) > 1:
-            raise StitchError('All images must be of the same channel')
-        metadata.channel = channels[0]
-        return metadata
 
     def clip(self, thresh_value=None, thresh_percent=None):
         '''

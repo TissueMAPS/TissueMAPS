@@ -39,8 +39,6 @@ class ImageRegistration(ClusterRoutines):
             experiment, prog_name, logging_level)
         self.experiment = experiment
         self.prog_name = prog_name
-        if not os.path.exists(self.experiment.registration_dir):
-            os.mkdir(self.experiment.registration_dir)
         self.shift_file_format_string = shift_file_format_string
 
     @property
@@ -112,11 +110,12 @@ class ImageRegistration(ClusterRoutines):
                      for b in im_batches[j][i]]
             })
 
-        registration_files = [os.path.join(self.experiment.registration_dir,
-                                           self.reg_file_format_string.format(
-                                            experiment=self.experiment.name,
-                                            job=i+1))
-                              for i in xrange(len(registration_batches))]
+        registration_files = [
+            os.path.join(self.experiment.registration_dir,
+                         self.reg_file_format_string.format(
+                            experiment=self.experiment.name, job=i+1))
+            for i in xrange(len(registration_batches))
+        ]
 
         joblist = {
             'run': [{
@@ -274,13 +273,13 @@ class ImageRegistration(ClusterRoutines):
                     suffix = os.path.splitext(image.metadata.name)[1]
                     if kwargs['illumcorr']:
                         image = image.correct(stats.mean, stats.std)
-                        output_filename = re.sub(r'\%s$' % suffix,
-                                                 '_corrected_aligned%s' % suffix,
-                                                 image.metadata.name)
+                        output_filename = re.sub(
+                            r'\%s$' % suffix, '_corrected_aligned%s' % suffix,
+                            image.metadata.name)
                     else:
-                        output_filename = re.sub(r'\%s$' % suffix,
-                                                 '_aligned%s' % suffix,
-                                                 image.metadata.name)
+                        output_filename = re.sub(
+                            r'\%s$' % suffix, '_aligned%s' % suffix,
+                            image.metadata.name)
                     aligned_image = image.align(shifts[i])
                     output_filename = os.path.join(output_dir, output_filename)
                     aligned_image.save_as_png(output_filename)

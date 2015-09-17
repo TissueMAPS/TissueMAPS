@@ -1,6 +1,7 @@
 import re
 import os
 from natsort import natsorted
+from cached_property import cached_property
 from . import utils
 from .plates import WellPlate
 from .plates import Slide
@@ -51,7 +52,9 @@ class Experiment(object):
         cfg: dict
             configuration settings
         '''
-        self.experiment_dir = os.path.abspath(experiment_dir)
+        self.experiment_dir = os.path.expandvars(experiment_dir)
+        self.experiment_dir = os.path.expanduser(self.experiment_dir)
+        self.experiment_dir = os.path.abspath(self.experiment_dir)
         self.cfg = cfg
 
     @property
@@ -67,7 +70,7 @@ class Experiment(object):
                                             sep=os.path.sep)
         return self._user_cfg_file
 
-    @property
+    @cached_property
     def user_cfg(self):
         '''
         Returns
@@ -134,9 +137,15 @@ class Experiment(object):
             # cycle_dirs = self.experiment_dir
         if self.user_cfg['WELLPLATE_FORMAT']:
             plate_format = self.user_cfg['NUMBER_OF_WELLS']
-            cycles = [WellPlate(c, self.cfg, plate_format) for c in cycle_dirs]
+            cycles = [
+                WellPlate(d, self.cfg, plate_format, self.user_cfg)
+                for d in cycle_dirs
+            ]
         else:
-            cycles = [Slide(c, self.cfg) for c in cycle_dirs]
+            cycles = [
+                Slide(d, self.cfg, self.user_cfg)
+                for d in cycle_dirs
+            ]
         self._cycles = cycles
         return self._cycles
 
@@ -147,8 +156,35 @@ class Experiment(object):
         -------
         str
             name of the reference cycle
+
+        Note
+        ----
+        If the attribute is not set, it will be attempted to retrieve the
+        information from the user configuration file. If the information is
+        not available via the file, a default reference is assigned, which is
+        the last cycle after sorting according to cycle names.
         '''
-        return self.cfg['REFERENCE_CYCLE']
+        if 'REFERENCE_CYCLE' in self.user_cfg.keys():
+            self._reference_cycle = self.user_cfg['REFERENCE_CYCLE']
+        else:
+            cycle_names = natsorted([cycle.name for cycle in self.cycles])
+            self._reference_cycle = cycle_names[-1]
+        return self._reference_cycle
+
+    @cached_property
+    def layers_dir(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the folder holding the layers (image pyramids)
+        '''
+        self._layers_dir = self.cfg['LAYERS_DIR'].format(
+                                            experiment_dir=self.experiment_dir,
+                                            sep=os.path.sep)
+        if not os.path.exists(self._layers_dir):
+            os.mkdir(self._layers_dir)
+        return self._layers_dir
 
     @property
     def data_file(self):
@@ -167,22 +203,7 @@ class Experiment(object):
                                             sep=os.path.sep)
         return self._data_filename
 
-    @property
-    def layers_dir(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the folder holding the layers (image pyramids)
-        '''
-        self._layers_dir = self.cfg['LAYERS_DIR'].format(
-                                            experiment_dir=self.experiment_dir,
-                                            sep=os.path.sep)
-        if not os.path.exists(self._layers_dir):
-            os.mkdir(self._layers_dir)
-        return self._layers_dir
-
-    @property
+    @cached_property
     def registration_dir(self):
         '''
         Returns

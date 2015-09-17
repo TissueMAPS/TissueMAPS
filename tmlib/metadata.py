@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from abc import abstractmethod
+from .errors import MetadataError
 
 
 class ImageMetadata(object):
@@ -242,7 +243,6 @@ class ImageMetadata(object):
         '''
         pass
 
-    @staticmethod
     @abstractmethod
     def set(metadata):
         '''
@@ -393,7 +393,7 @@ class SegmentationImageMetadata(ImageMetadata):
         -------
         Dict[str, str or int or tuple]
             metadata as key-value pairs
-        
+
         Raises
         ------
         AttributeError
@@ -489,3 +489,100 @@ class IllumstatsImageMetadata(object):
     @filename.setter
     def filename(self, value):
         self._filename = value
+
+
+class MosaicMetadata(object):
+
+    '''
+    Class for mosaic image metadata, such as the name of the channel or
+    the relative position of the mosaic within a well plate.
+    '''
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the corresponding layer
+        '''
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def cycle(self):
+        '''
+        Returns
+        -------
+        str
+            name of the corresponding cycle
+        '''
+        return self._cycle
+
+    @cycle.setter
+    def cycle(self, value):
+        self._cycle = value
+
+    @property
+    def sites(self):
+        '''
+        Returns
+        -------
+        List[int]
+            site identifier numbers of images contained in the mosaic
+        '''
+        return self._sites
+
+    @sites.setter
+    def sites(self, value):
+        self._sites = value
+
+    @property
+    def files(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names of the individual image files, which make up the mosaic
+        '''
+        return self._files
+
+    @files.setter
+    def files(self, value):
+        self._files = value
+
+    @staticmethod
+    def create_from_images(images, layer_name):
+        '''
+        Create a MosaicMetadata object from image objects.
+
+        Parameters
+        ----------
+        images: List[ChannelImage]
+            set of images that are all of the same *cycle* and *channel*
+
+        Returns
+        -------
+        MosaicMetadata
+
+        Raises
+        ------
+        MetadataError
+            when `images` are not of same *cycle* or *channel*
+        '''
+        cycles = [im.cycle for im in images]
+        if len(cycles) > 1:
+            raise MetadataError('All images must be of the same cycle')
+        channels = [im.channel for im in images]
+        if len(channels) > 1:
+            raise MetadataError('All images must be of the same channel')
+        metadata = MosaicMetadata()
+        metadata.name = layer_name
+        metadata.channel = channels[0]
+        metadata.sites = [im.site for im in images]
+        metadata.cycle = cycles[0]
+        metadata.files = [im.name for im in images]
+        return metadata

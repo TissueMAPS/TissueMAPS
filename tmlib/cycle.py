@@ -6,6 +6,7 @@ from . import utils
 from .image import is_image_file
 from .image import ChannelImage
 from .metadata import ChannelImageMetadata
+from .metadata import MosaicMetadata
 # from .metadata import SegmentationImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .shift import ShiftDescription
@@ -34,7 +35,7 @@ class Cycle(object):
     `plates.Slide`_
     '''
 
-    def __init__(self, cycle_dir, cfg, reference=False):
+    def __init__(self, cycle_dir, cfg, user_cfg, reference=False):
         '''
         Initialize an instance of class Cycle.
 
@@ -44,6 +45,8 @@ class Cycle(object):
             absolute path to the cycle directory
         cfg: Dict[str, str]
             configuration settings
+        user_cfg: Dict[str, str]
+            additional user configuration settings
         reference: bool, optional
             whether the cycle is the reference cycle
 
@@ -56,6 +59,7 @@ class Cycle(object):
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
         self.cfg = cfg
+        self.user_cfg
 
     @property
     def name(self):
@@ -133,13 +137,17 @@ class Cycle(object):
         self._experiment = os.path.basename(os.path.dirname(self.dir))
         return self._experiment
 
-    @property
+    @cached_property
     def image_upload_dir(self):
         '''
         Returns
         -------
         str
             absolute path to directory that contains the uploaded images
+
+        Note
+        ----
+        Creates the directory if it doesn't exist.
         '''
         self._image_upload_dir = self.cfg['IMAGE_UPLOAD_DIR'].format(
                                                 cycle_dir=self.dir,
@@ -148,7 +156,7 @@ class Cycle(object):
             os.mkdir(self._image_upload_dir)
         return self._image_upload_dir
 
-    @property
+    @cached_property
     def additional_upload_dir(self):
         '''
         Returns
@@ -156,6 +164,10 @@ class Cycle(object):
         str
             absolute path to directory that contains the uploaded
             additional, microscope-specific metadata files
+
+        Note
+        ----
+        Creates the directory if it doesn't exist.
         '''
         self._additional_upload_dir = self.cfg['ADDITIONAL_UPLOAD_DIR'].format(
                                                 cycle_dir=self.dir,
@@ -164,13 +176,17 @@ class Cycle(object):
             os.mkdir(self._additional_upload_dir)
         return self._additional_upload_dir
 
-    @property
+    @cached_property
     def ome_xml_dir(self):
         '''
         Returns
         -------
         str
             absolute path to directory that contains the extracted OMEXML files
+
+        Note
+        ----
+        Creates the directory if it doesn't exist.
         '''
         self._ome_xml_dir = self.cfg['OME_XML_DIR'].format(
                                                 cycle_dir=self.dir,
@@ -204,13 +220,17 @@ class Cycle(object):
         self._ome_xml_files = files
         return self._ome_xml_files
 
-    @property
+    @cached_property
     def metadata_dir(self):
         '''
         Returns
         -------
         str
             absolute path to directory that contains the metadata file
+
+        Note
+        ----
+        Creates the directory if it doesn't exist.
         '''
         self._image_metadata_dir = self.cfg['METADATA_DIR'].format(
                                                 cycle_dir=self.dir,
@@ -219,13 +239,17 @@ class Cycle(object):
             os.mkdir(self._image_metadata_dir)
         return self._image_metadata_dir
 
-    @property
+    @cached_property
     def image_dir(self):
         '''
         Returns
         -------
         str
             path to the folder holding the image files
+
+        Note
+        ----
+        Creates the directory if it doesn't exist.
         '''
         self._image_dir = self.cfg['IMAGE_DIR'].format(
                                                 cycle_dir=self.dir,
@@ -300,7 +324,7 @@ class Cycle(object):
                                 for md in metadata.values()]
         return self._image_metadata
 
-    @property
+    @cached_property
     def images(self):
         '''
         Returns
@@ -322,13 +346,17 @@ class Cycle(object):
             self._images.append(img)
         return self._images
 
-    @property
+    @cached_property
     def stats_dir(self):
         '''
         Returns
         -------
         str
             path to the directory holding illumination statistic files
+
+        Note
+        ----
+        Creates the directory if it doesn't exist.
         '''
         self._stats_dir = self.cfg['STATS_DIR'].format(
                                             cycle_dir=self.dir,
@@ -403,13 +431,17 @@ class Cycle(object):
         self._stats_metadata.append(md)
         return self._stats_metadata
 
-    @property
+    @cached_property
     def shift_dir(self):
         '''
         Returns
         -------
         str
             path to directory holding shift descriptor file
+
+        Note
+        ----
+        Creates the directory if it doesn't exist.
         '''
         self._shift_dir = self.cfg['SHIFT_DIR'].format(
                                                 cycle_dir=self.dir,
@@ -476,6 +508,53 @@ class Cycle(object):
             ix = sites.index(m.site)
             self._shift_description.append(ShiftDescription(content[ix]))
         return self._shift_description
+
+    @property
+    def layer_names(self):
+        '''
+        Returns
+        -------
+        Dict[Tuple[str], str]
+            unique name for each layer of this cycle, i.e. the set of images
+            of the same *channel*
+
+        Note
+        ----
+        If the attribute is not set, it will be attempted to retrieve the
+        information from the user configuration. If the information is
+        not available, default names are created, which are a unique
+        combination of *cycle* and *channel* names.
+        '''
+        if 'LAYER_NAMES' in self.user_cfg.keys():
+            self._layer_names = self.user_cfg['LAYER_NAMES']
+        else:
+            self._layer_names = {
+                img.metadata.channel:
+                    self.cfg['LAYER_NAME'].format(
+                        cycle=img.metadata.cycle,
+                        channel=img.metadata.channel)
+                for img in self.images
+            }
+        return self._layer_names
+
+    @property
+    def layer_metadata(self):
+        '''
+        Returns
+        -------
+        List[MosaicMetadata]
+            metadata for each layer
+        '''
+        self._layer_metadata = list()
+        channels = list(set([md.channel for md in self.image_metadata]))
+        for c in channels:
+            layer_name = self.layer_names[c]
+            images = list()
+            images.extend([img for img in self.images
+                           if img.metadata.channel == c])
+            self._layer_metadata.append(
+                MosaicMetadata.create_from_images(images, layer_name))
+        return self._layer_metadata
 
     # @property
     # def segmentation_dir(self):

@@ -1,5 +1,7 @@
-[ ] create a class for configuration settings with setter??
+[ ] create a class for configuration settings??
 [ ] logger for each command line program
-[ ] implement workflow: calling a command line interface without subparser does the full shizzle with default argument values, i.e. creating joblist, submitting, collecting
+[ ] implement workflow
+[ ] make jterator a subpackage of tmlib
 [ ] segmentations only exists as outline values stored in HDF5 files
+[ ] update documentation
 

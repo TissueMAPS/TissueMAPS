@@ -78,7 +78,7 @@ class ClusterRoutines(object):
         self._cycles = self.experiment.cycles
         return self._cycles
 
-    @property
+    @cached_property
     def project_dir(self):
         '''
         Returns
@@ -88,9 +88,11 @@ class ClusterRoutines(object):
         '''
         self._project_dir = os.path.join(self.experiment.dir,
                                          'tm_%s' % self.prog_name)
+        if not os.path.exists(self._project_dir):
+            os.mkdir(self._project_dir)
         return self._project_dir
 
-    @property
+    @cached_property
     def log_dir(self):
         '''
         Returns
@@ -99,6 +101,8 @@ class ClusterRoutines(object):
             directory where log files are stored
         '''
         self._log_dir = os.path.join(self.project_dir, 'log')
+        if not os.path.exists(self._log_dir):
+            os.mkdir(self._log_dir)
         return self._log_dir
 
     @staticmethod

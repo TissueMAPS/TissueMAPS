@@ -77,11 +77,15 @@ class ImageExtractor(ClusterRoutines):
                 count += 1
                 joblist['run'].append({
                     'id': count,
-                    'inputs': [os.path.join(cycle.image_upload_dir,
-                                            md.original_filename)
-                               for md in batch],
-                    'outputs': [os.path.join(cycle.image_dir, md.name)
-                                for md in batch],
+                    'inputs': [
+                        os.path.join(cycle.image_upload_dir,
+                                     md.original_filename)
+                        for md in batch
+                    ],
+                    'outputs': [
+                        os.path.join(cycle.image_dir, md.name)
+                        for md in batch
+                    ],
                     'metadata': [md.serialize() for md in batch],
                     'cycle': cycle.name
 
