@@ -194,12 +194,14 @@ def get_cell_at_pos(experiment_id):
         cell_id = posmapper.get_cell_at_pos(ex, x, y)
         return jsonify(cell_id=cell_id)
     else:
-        arr = ex.dataset['/objects/cells/centroids'][()]
-        ids = map(int, arr[:, 0])
-        xy = arr[:, 1:3].tolist()
-        centroids = dict(zip(ids, xy))
+        # arr = ex.dataset['/objects/cells/centroids'][()]
+        loc = os.path.join(ex.location, 'outlines.json')
+        return send_file(loc)
+        # ids = map(int, arr[:, 0])
+        # xy = arr[:, 1:3].tolist()
+        # centroids = dict(zip(ids, xy))
 
-        return jsonify(centroids)
+        # return jsonify(centroids)
 
 
 
