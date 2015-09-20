@@ -14,7 +14,7 @@ angular.module('tmaps.main.viewport').controller(
     };
 
     this.isUserViewingSnapshot = function() {
-        return appstateService.currentState.isSnapshot;
+        return appstateService.hasCurrentState() && appstateService.getCurrentState().isSnapshot;
     };
 
 }]);

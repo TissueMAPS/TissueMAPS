@@ -25,5 +25,5 @@ class ApplicationDeserializer implements Deserializer<Application> {
     }
 }
 
-angular.module('tmaps.core').service('applicatioDeserializer', ApplicationDeserializer);
+angular.module('tmaps.core').service('applicationDeserializer', ApplicationDeserializer);
 

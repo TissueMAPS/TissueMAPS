@@ -34,8 +34,8 @@ class Tool {
                       .replace(/(^-|-$)/g, '');
     }
 
-    createNewWindow(appstate: AppState) {
-        this.createToolWindowOnServer(appstate).then((inst) => {
+    createNewWindow(appstate: Appstate, exp: Experiment) {
+        this.createToolWindowOnServer(appstate, exp).then((inst) => {
             this.openWindow(inst);
         });
     }
@@ -58,10 +58,10 @@ class Tool {
         });
     }
 
-    private createToolWindowOnServer(appstate: AppState): ng.IPromise<ServerToolWindow> {
+    private createToolWindowOnServer(appstate: Appstate, experiment: Experiment): ng.IPromise<ServerToolWindow> {
         return this.$http.post('/tools/' + this.id + '/instances', {
             'appstate_id': appstate.id,
-            'experiment_id': appstate.experiment.id
+            'experiment_id': experiment.id
         }).then((resp) => {
             console.log('Successfully created a tool instance.');
             return resp.data;

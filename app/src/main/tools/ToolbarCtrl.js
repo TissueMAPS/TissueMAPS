@@ -19,7 +19,7 @@ angular.module('tmaps.main.tools')
      * This function is called when the Tool's button is pressed.
      */
     $scope.openTool = function(tool) {
-        if (appstateService.stateHasBeenSavedAlready()) {
+        if (appstateService.hasCurrentState()) {
             var appstate = appstateService.currentState;
             var experimentId = $scope.appInstance.experiment.id;
             tool.openWindow(appstate);

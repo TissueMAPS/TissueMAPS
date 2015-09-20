@@ -43,7 +43,7 @@ angular.module('tmaps.main.user')
              .value();
     });
 
-    this.loadAppState = function(st) {
+    this.loadAppstate = function(st) {
         appstateService.loadState(st);
         $scope.close();
     };

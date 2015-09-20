@@ -7,7 +7,8 @@
      * (i.e. never call an already declared module with an array argument).
      */
     angular.module('tmaps.core', [
-        'tmaps.main.viewport'
+        'tmaps.main.viewport',
+        'tmaps.main.experiment'
     ]);
     angular.module('tmaps.mock.core', []);
     angular.module('tmaps.core.layer', []);
@@ -47,8 +48,12 @@
     angular.module('tmaps.mock.main.experiment', []);
 
     angular.module('tmaps.main.appstate', [
+        'tmaps.core',
+        'tmaps.main.viewport',
+        'tmaps.main.tools',
         'ui.router',
-        'tmaps.main.dialog'
+        'tmaps.main.dialog',
+        'tmaps.main.experiment',
     ]);
     angular.module('tmaps.mock.main.appstate', []);
 
