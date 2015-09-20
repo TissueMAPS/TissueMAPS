@@ -18,7 +18,7 @@ class Experiment implements Serializable<Experiment> {
     id: ExperimentId;
     name: string;
     description: string;
-    cells: ng.IPromise<{ [cellId: string]: MapPosition }>;
+    cells: ng.IPromise<Cell[]>;
     features: ng.IPromise<any>;
 
     constructor(opt: ExperimentArgs,
@@ -35,12 +35,7 @@ class Experiment implements Serializable<Experiment> {
         });
         this.features = featuresDef.promise;
 
-        var cellsDef = $q.defer();
-        experimentService.getCellsForExperiment(this.id)
-        .then(function(cells) {
-            cellsDef.resolve(cells);
-        });
-        this.cells = cellsDef.promise;
+        this.cells = experimentService.getCellsForExperiment(this.id);
     }
 
     serialize() {

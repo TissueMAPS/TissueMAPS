@@ -1,4 +1,5 @@
-type PolygonCoordinates = Array<Array<ol.Coordinate>>;
+type PolygonCoordinates = Array<ol.Coordinate>;
+type PolygonCoordinatesOL = Array<Array<ol.Coordinate>>;
 type CellId = string;
 
 class Cell implements MapObject {
@@ -17,9 +18,10 @@ class Cell implements MapObject {
                 name: this.id
             });
         } else {
-            var polyOutline: PolygonCoordinates = <PolygonCoordinates> this.outline;
+            var outl = [this.outline];
+            // var polyOutline = <PolygonCoordinates> outl;
             return new ol.Feature({
-                geometry: new ol.geom.Polygon(polyOutline),
+                geometry: new ol.geom.Polygon(outl),
                 labelPoint: new ol.geom.Point(coord),
                 name: this.id
             });

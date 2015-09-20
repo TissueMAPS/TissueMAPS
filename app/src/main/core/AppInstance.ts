@@ -99,6 +99,16 @@ class AppInstance implements Serializable<AppInstance> {
 
         // this.addObjectLayer(objLayerA);
         // this.addObjectLayer(objLayerB);
+
+        this.experiment.cells.then((cells) => {
+            // cells = [cells[0], cells[1], cells[2]];
+            var cellLayer = this.objectLayerFactory.create('Cells', {
+                objects: cells,
+                fillColor: 'rgba(255, 0, 0, 0)',
+                strokeColor: 'rgba(255, 0, 0, 1)'
+            });
+            this.addObjectLayer(cellLayer);
+        });
     }
 
     addObjectLayer(objLayer: ObjectLayer) {
