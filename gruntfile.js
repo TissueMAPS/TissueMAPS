@@ -441,10 +441,12 @@ module.exports = function(grunt) {
                     // Module declarations
                     'app/src/tmaps.shared.js',
                     'app/src/tmaps.main.js',
+                    'app/src/tmaps.main.routes.js',
                     'app/src/tmaps.tools.js',
 
                     // Source
                     'app/src/shared/**/*.js',
+                    'app/build/compiled-ts.js',
                     'app/src/main/**/*.js',
                     'app/src/tools/**/*.js'
                 ]

@@ -90,7 +90,7 @@ class AppstateService {
      * If no app state is active, a 'Save as'-dialog will appear.
      */
     saveState() {
-        if (this.currentState.isSnapshot) {
+        if (this.hasCurrentState() && this.currentState.isSnapshot) {
             throw new Error('Can\'t save snapshots!');
         } else if (!this.hasCurrentState()) {
             this.promptForSaveAs();
@@ -134,7 +134,7 @@ class AppstateService {
      * Ask the server to save an appstate under a new name.
      */
     saveStateAs(name: string, description: string) {
-        if (this.currentState !== undefined && this.currentState.isSnapshot) {
+        if (this.hasCurrentState() && this.currentState.isSnapshot) {
             throw new Error('A snapshot can\'t be saved under a different name');
         }
         return this.application.serialize()
@@ -157,7 +157,7 @@ class AppstateService {
     // TODO: Currently only snapshot-sharing is enabled,
     // Split this function into one for normal sharing and one for snapshot sharing
     shareState() {
-        if (this.currentState.isSnapshot) {
+        if (this.hasCurrentState() && this.currentState.isSnapshot) {
             throw new Error('A snapshot can\'t be shared again');
         } else if (this.hasCurrentState()) {
             var url = '/api/appstates/' + this.currentState.id + '/snapshots';
@@ -179,10 +179,7 @@ class AppstateService {
     }
 
     getLinkForSnapshot(snapshot) {
-        var link = 'http://' + this.$location.absUrl();
-        if (this.$location.port() !== 80) {
-            link += ':' + this.$location.port();
-        }
+        var link = this.$location.protocol() + "://" + this.$location.host() + ":" + this.$location.port();
         link += '/#/viewport?snapshot=' + snapshot.id;
         return link;
     }

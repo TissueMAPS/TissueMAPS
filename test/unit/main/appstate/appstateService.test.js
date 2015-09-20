@@ -21,6 +21,14 @@ var appstate = {
     owner: 'testuser',
     blueprint: serializedApp
 };
+var appstateSnapshot = {
+    id: appstateHash,
+    name: 'fakeAppState',
+    isSnapshot: true,
+    owner: 'testuser',
+    blueprint: serializedApp
+};
+
 
 
 describe('appstateService:', function() {
@@ -55,6 +63,7 @@ describe('appstateService:', function() {
         spyOn(appstateService, 'promptForSaveAs');
         // callThrough: the dummy/spy function should actually call the
         // implementation
+        spyOn(appstateService, 'getLinkForSnapshot').and.callThrough();
         spyOn(appstateService, 'setCurrentState').and.callThrough();
         spyOn(appstateService, 'loadState').and.callThrough();
         spyOn(appstateService, 'loadStateFromId').and.callThrough();
@@ -104,22 +113,19 @@ describe('appstateService:', function() {
 
     describe('loadState', function() {
 
-        it('should set the current state ', function() {
+        beforeEach(function() {
             appstateService.loadState(appstate);
+        });
 
+        it('should set the current state ', function() {
             expect(appstateService.setCurrentState).toHaveBeenCalledWith(appstate);
         });
 
         it('should load the state', function() {
-            appstateService.loadState(appstate);
-
             expect(applicationDeserializer.deserialize).toHaveBeenCalledWith(appstate.blueprint);
         });
 
         it('should update the url bar', function() {
-            appstateService.loadStateFromId(appstateHash);
-            $httpBackend.flush();
-
             expect($location.search().state).toEqual(appstateHash);
         });
 
@@ -133,8 +139,6 @@ describe('appstateService:', function() {
         });
 
         it('should load the requested state', function() {
-            appstateService.loadState(appstate);
-
             appstateService.loadStateFromId(appstateHash);
             $httpBackend.flush();
 
@@ -150,6 +154,13 @@ describe('appstateService:', function() {
             };
 
             expect(call).toThrowError(/error/);
+        });
+
+        it('should update the url bar', function() {
+            appstateService.loadStateFromId(appstateHash);
+            $httpBackend.flush();
+
+            expect($location.search().state).toEqual(appstateHash);
         });
 
     });
@@ -169,186 +180,128 @@ describe('appstateService:', function() {
             appstateService.saveStateAs('some name', 'some description');
             $httpBackend.flush();
 
-            expect(appstateService.currentState.id).toEqual(appstateServerResponse.id);
+            expect(appstateService.getCurrentState().id).toEqual(appstateServerResponse.id);
         });
 
         it('should update the current location', function() {
             appstateService.saveStateAs('some name', 'some description');
-
-            $rootScope.$apply();
+            $httpBackend.flush();
 
             expect($location.search().state).toEqual(appstateServerResponse.id);
         });
 
-        it('set the current state', function() {
+        it('should set the current state', function() {
             appstateService.saveStateAs('some name', 'some description');
             $httpBackend.flush();
 
-            expect(appstateService.setCurrentState).toHaveBeenCalled();
+            expect(appstateService.getCurrentState().id).toEqual(appstateServerResponse.id);
         });
 
-        it('set the last saved at date ', function() {
+        it('should set the last saved at date ', function() {
             appstateService.saveStateAs('some name', 'some description');
             $httpBackend.flush();
 
             expect(appstateService.currentState).toBeDefined();
         });
+
+        it('should throw an error if the user tries to resave a snapshot', function() {
+            appstateService.loadState(appstateSnapshot);
+
+            var call = function() {
+                appstateService.saveStateAs('some name', 'some description');
+                $httpBackend.flush();
+            };
+
+            expect(call).toThrowError(/A snapshot can't be saved/);
+        });
     });
 
-//     describe('loading appstates from ids:', function() {
-//         var requestHandler;
-//         var resp = makeFakeResponse(false); // create fake appstate
+    describe('saveState', function() {
 
-//         beforeEach(function() {
-//             requestHandler = $httpBackend.expectGET('/api/appstates/' + fakeHash)
-//                                          .respond(200, resp);
-//         });
+        var handler;
 
-//         it('states are loaded if response is positive', function() {
-//             appstateService.loadStateFromId(fakeHash);
-//             $httpBackend.flush();
+        beforeEach(function() {
+            handler = $httpBackend.expectPUT('/api/appstates/' + appstate.id)
+            .respond(200, appstateServerResponse);
+        });
 
-//             expect(appstateService.loadState).toHaveBeenCalled();
-//         });
+        it('should save the state', function() {
+            appstateService.loadState(appstate);
+            appstateService.saveState();
+            $httpBackend.flush();
 
-//         it('when a state is loaded, the url bar is updated', function() {
-//             appstateService.loadStateFromId(fakeHash);
-//             $httpBackend.flush();
+            expect(appstateService.getCurrentState().id).toEqual(appstateServerResponse.id);
+        });
 
-//             expect($location.search().state).toEqual(fakeHash);
-//         });
+        it('should throw en error if the user tries to resave a snapshot', function() {
+            var call = function() {
+                appstateService.loadState(appstateSnapshot);
+                appstateService.saveState();
+                $httpBackend.flush();
+            };
 
-//         it('error is thrown if response is negative', function() {
-//             requestHandler.respond(404, 'asdf');
-
-//             expect(function() {
-//                 appstateService.loadStateFromId(fakeHash);
-//                 $httpBackend.flush();
-//             }).toThrow();
-//         });
-//     });
+            expect(call).toThrowError(/Can't save snapshots!/);
+        });
+    });
 
 
+    describe('shareState', function() {
+
+        beforeEach(function() {
+            $httpBackend.whenGET(
+                '/api/appstates/' + appstateHash + '/snapshots'
+            ).respond(200, appstateSnapshot)
+
+            $httpBackend.whenGET(
+                '/templates/main/appstate/share-appstate-dialog.html'
+            ).respond(200, ''); // respond with empty template
+        });
+
+        it('should throw an error if the user tries to reshare a snapshot', function() {
+            var call = function() {
+                appstateService.loadState(appstateSnapshot);
+                appstateService.shareState();
+            };
+            expect(call).toThrowError(/snapshot/);
+        });
+
+        it('should throw an error if the user tries to share a nonexisting appstate', function() {
+            var call = function() {
+                appstateService.shareState();
+            };
+            expect(call).toThrowError(/Appstate needs to be saved/);
+        });
+
+        it('should make a GET request to the server', function() {
+            $httpBackend.expectGET('/api/appstates/' + appstateHash).respond(200, appstate);
+            appstateService.loadState(appstate);
+
+            appstateService.shareState();
+        });
+
+        it('should open a modal', function() {
+            appstateService.loadState(appstate);
+            appstateService.shareState();
+            $httpBackend.flush();
+
+            expect($modal.open).toHaveBeenCalled();
+        });
+
+        it('should generate the snapshot URL', function() {
+            appstateService.loadState(appstate);
+            appstateService.shareState();
+            $httpBackend.flush();
+
+            expect(appstateService.getLinkForSnapshot).toHaveBeenCalled();
+        });
+    });
 
 
-//     describe('loading snapshots from ids:', function() {
-//         var requestHandler;
-//         var resp = makeFakeResponse(true); // create fake snapshot
+    describe('getLinkForSnapshot', function() {
+        it('should generate a snapshot URL given a snapshot', function() {
+            var link = appstateService.getLinkForSnapshot(appstateSnapshot);
+            expect(link).toEqual('http://server:80/#/viewport?snapshot=' + appstateSnapshot.id);
+        });
 
-//         beforeEach(function() {
-//             requestHandler = $httpBackend.expectGET('/snapshots/' + fakeHash)
-//                                          .respond(200, resp);
-//         });
-
-//         it('snapshots are loaded if response is positive', function() {
-//             appstateService.loadSnapshotFromId(fakeHash);
-//             $httpBackend.flush();
-
-//             expect(appstateService.loadState).toHaveBeenCalled();
-//         });
-
-//         it('when a snapshot is loaded the location bar is updated', function() {
-//             appstateService.loadSnapshotFromId(fakeHash);
-//             $httpBackend.flush();
-
-//             expect($location.search().snapshot).toEqual(fakeHash);
-//         });
-
-//         it('error is thrown if response is negative', function() {
-//             requestHandler.respond(404, 'asdf');
-
-//             expect(function() {
-//                 appstateService.loadSnapshotFromId(fakeHash);
-//                 $httpBackend.flush();
-//             }).toThrow();
-//         });
-//     });
-
-
-
-//     describe('if the appstate hasn\'t been saved yet', function() {
-
-//         it('"stateHasBeenSavedAlready" should return false',
-//            function() {
-//             expect(appstateService.stateHasBeenSavedAlready()).toBe(false);
-//         });
-
-//         it('calling the save function should trigger a "Save As" dialog', function() {
-//             appstateService.saveState();
-
-//             expect(appstateService.promptForSaveAs).toHaveBeenCalled();
-//         });
-
-//         it('trying to share the state throws an error', function() {
-//             expect(appstateService.shareState).toThrowError(/saved/);
-//         });
-//     });
-
-
-
-//     describe('if the current appstate is a snapshot', function() {
-//         // Create a fake snapshot
-//         var response = $.extend(true, {}, appstate);
-//         response.is_snapshot = true;
-
-//         it('can\'t be saved in any way', function() {
-//             $httpBackend.expectGET('/api/appstates/' + appstateHash)
-//             .respond(200, response);
-
-//             appstateService.loadStateFromId(appstateHash);
-//             $httpBackend.flush(); // perform all requests registered on the backend
-
-//             var clientSideReprOfState = {
-//                 id: response.id,
-//                 name: response.name,
-//                 isSnapshot: response.is_snapshot,
-//                 owner: response.owner,
-//                 blueprint: response.blueprint
-//             };
-
-//             // The snapshot should be loaded
-//             expect(appstateService.loadState).toHaveBeenCalledWith(clientSideReprOfState);
-//             expect(applicationDeserializer.initFromBlueprint)
-//             .toHaveBeenCalledWith(response.blueprint);
-
-//             // But trying to save it again should throw an error
-//             // -- if done through 'save'
-//             expect(appstateService.saveState).toThrowError(/snapshot/);
-//             // -- and if done through 'save as'
-//             expect(function() {
-//                 appstateService.saveStateAs('some name', 'some desc');
-//             }).toThrowError(/snapshot/);
-//         });
-
-//     });
-
-
-
-    // describe('sharing appstates:', function() {
-    //     it('can\'t be done when the state is not saved', function() {
-    //         expect(appstateService.shareState).toThrowError(/saved/);
-    //     });
-
-    //     it('opens a modal and calls the server', function() {
-    //         resp = makeFakeResponse(false); // create fake appstate
-    //         $httpBackend.expectGET('/api/appstates/' + fakeHash).respond(200, resp);
-
-    //         appstateService.loadStateFromId(fakeHash);
-    //         $httpBackend.flush();
-
-    //         snapshot = makeFakeResponse(true); // create fake snapshot
-    //         $httpBackend.expectGET(
-    //             '/templates/main/appstate/share-appstate-dialog.html'
-    //         ).respond(200, ''); // respond with empty template
-    //         $httpBackend.expectPOST(
-    //             '/api/appstates/' + fakeHash + '/snapshots'
-    //         ).respond(200, snapshot); // respond with fake app state
-
-    //         appstateService.shareState();
-    //         $httpBackend.flush();
-
-    //         expect($modal.open).toHaveBeenCalled();
-    //     });
-    // });
-
+    });
 });
