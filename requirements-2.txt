@@ -56,4 +56,4 @@ SQLAlchemy==1.0.6
 tifffile==0.6.2
 subprocess32==3.2.6
 rpy2==2.6.0
-ruamel.yaml==0.8
+ruamel.yaml==0.10.11
