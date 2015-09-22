@@ -35,7 +35,7 @@ class Cycle(object):
     `plates.Slide`_
     '''
 
-    def __init__(self, cycle_dir, cfg, user_cfg, reference=False):
+    def __init__(self, cycle_dir, cfg, user_cfg, library='vips'):
         '''
         Initialize an instance of class Cycle.
 
@@ -47,8 +47,9 @@ class Cycle(object):
             configuration settings
         user_cfg: Dict[str, str]
             additional user configuration settings
-        reference: bool, optional
-            whether the cycle is the reference cycle
+        library: str, optional
+            image library that should be used
+            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
 
         Raises
         ------
@@ -59,7 +60,7 @@ class Cycle(object):
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
         self.cfg = cfg
-        self.user_cfg
+        self.user_cfg = user_cfg
 
     @property
     def name(self):
@@ -320,8 +321,9 @@ class Cycle(object):
         if not os.path.exists(filename):
             raise OSError('Metadata file "%s" does not exists.' % filename)
         metadata = utils.read_json(filename)
-        self._image_metadata = [ChannelImageMetadata(md)
-                                for md in metadata.values()]
+        self._image_metadata = list()
+        for f in natsorted(metadata.keys()):
+            self._image_metadata.append(ChannelImageMetadata(metadata[f]))
         return self._image_metadata
 
     @cached_property
@@ -342,7 +344,7 @@ class Cycle(object):
         for i, f in enumerate(self.image_files):
             img = ChannelImage.create_from_file(
                     os.path.join(self.image_dir, f), self.image_metadata[i],
-                    library='vips')
+                    library=self.library)
             self._images.append(img)
         return self._images
 
@@ -428,7 +430,7 @@ class Cycle(object):
                                   'using provided format "%s".\n'
                                   'Check your configuration settings!'
                                   % (f, self.cfg['STATS_FILE']))
-        self._stats_metadata.append(md)
+            self._stats_metadata.append(md)
         return self._stats_metadata
 
     @cached_property
@@ -461,33 +463,23 @@ class Cycle(object):
         Raises
         ------
         OSError
-            when `shift_dir` does not exist
-        ValueError
-            when no or more than one shift descriptor files are found
+            when `shift_dir` does not exist or when no
+            shift descriptor file is found
         '''
-        shift_pattern = self.cfg['SHIFT_FILE']
-        shift_pattern = re.compile(shift_pattern)
+        shift_pattern = self.cfg['SHIFT_FILE'].format(cycle=self.name)
         if not os.path.exists(self.shift_dir):
             raise OSError('Shift directory does not exist: %s'
                           % self.shift_dir)
         files = [f for f in os.listdir(self.shift_dir)
                  if re.search(shift_pattern, f)]
-        # there should only be one file
-        files = natsorted(files)
         if len(files) == 0:
-            raise OSError('''
-                No shift descriptor file found in "%s"
-                that matches the provided pattern "%s".\n
-                Check your configuration settings!
-                ''' % (self.shift_dir, self.cfg['SHIFT_FILE']))
-        if len(files) > 1:
-            raise ValueError('More than one shift descriptor files found in '
-                             '"%s".\n' % self.shift_dir)
-        self._shift_file = files[0]
+            raise OSError(
+                'No shift descriptor file found in "%s"' % self.shift_dir)
+        self._shift_file = natsorted(files)[-1]
         return self._shift_file
 
     @property
-    def image_shifts(self):
+    def shift_descriptions(self):
         '''
         Returns
         -------
@@ -500,14 +492,14 @@ class Cycle(object):
         '''
         filename = os.path.join(self.shift_dir, self.shift_file)
         content = utils.read_json(filename)
-        self._shift_description = list()
+        self._shift_descriptions = list()
         # by matching the sites and wells, we ensure that the correct shift
         # description is assigned to each image
-        sites = [e.site for e in content]
+        sites = [e['site'] for e in content]
         for m in self.image_metadata:
             ix = sites.index(m.site)
-            self._shift_description.append(ShiftDescription(content[ix]))
-        return self._shift_description
+            self._shift_descriptions.append(ShiftDescription(content[ix]))
+        return self._shift_descriptions
 
     @property
     def layer_names(self):
@@ -670,14 +662,14 @@ class Cycle(object):
     #     '''
     #     filename = os.path.join(self.shift_dir, self.shift_file)
     #     content = utils.read_yaml(filename)
-    #     self._shift_description = list()
+    #     self._shift_descriptions = list()
     #     # by matching the sites, we ensure that the correct shift description
     #     # is assigned to each image
     #     sites = [e.site for e in content]
     #     for m in self.segmentation_metadata:
     #         ix = sites.index(m.site)
-    #         self._shift_description.append(ShiftDescription(content[ix]))
-    #     return self._shift_description
+    #         self._shift_descriptions.append(ShiftDescription(content[ix]))
+    #     return self._shift_descriptions
 
     # @property
     # def object_types(self):

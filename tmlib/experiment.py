@@ -41,7 +41,7 @@ class Experiment(object):
     `user.cfg`_
     '''
 
-    def __init__(self, experiment_dir, cfg):
+    def __init__(self, experiment_dir, cfg, library='vips'):
         '''
         Initialize an instance of class Experiment.
 
@@ -51,11 +51,15 @@ class Experiment(object):
             absolute path to experiment folder
         cfg: dict
             configuration settings
+        library: str, optional
+            image library that should be used
+            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
         '''
         self.experiment_dir = os.path.expandvars(experiment_dir)
         self.experiment_dir = os.path.expanduser(self.experiment_dir)
         self.experiment_dir = os.path.abspath(self.experiment_dir)
         self.cfg = cfg
+        self.library = library
 
     @property
     def user_cfg_file(self):
@@ -138,12 +142,13 @@ class Experiment(object):
         if self.user_cfg['WELLPLATE_FORMAT']:
             plate_format = self.user_cfg['NUMBER_OF_WELLS']
             cycles = [
-                WellPlate(d, self.cfg, plate_format, self.user_cfg)
+                WellPlate(d, self.cfg, self.user_cfg, self.library,
+                          plate_format)
                 for d in cycle_dirs
             ]
         else:
             cycles = [
-                Slide(d, self.cfg, self.user_cfg)
+                Slide(d, self.cfg, self.user_cfg, self.library)
                 for d in cycle_dirs
             ]
         self._cycles = cycles

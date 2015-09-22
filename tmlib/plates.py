@@ -5,7 +5,7 @@ from .cycle import Cycle
 
 class WellPlate(Cycle):
 
-    def __init__(self, cycle_dir, cfg, user_cfg, plate_format):
+    def __init__(self, cycle_dir, cfg, user_cfg, library, plate_format):
         '''
         Initialize an instance of class WellPlate.
 
@@ -17,13 +17,17 @@ class WellPlate(Cycle):
             configuration settings
         user_cfg: Dict[str, str]
             additional user configuration settings
+        library: str, optional
+            image library that should be used
+            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
         plate_format: int
             number of wells in the plate (supported: 96 or 384)
         '''
-        super(WellPlate, self).__init__(cycle_dir, cfg, user_cfg)
+        super(WellPlate, self).__init__(cycle_dir, cfg, user_cfg, library)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
         self.user_cfg = user_cfg
+        self.library = library
         self.plate_format = plate_format
 
     @property
@@ -46,9 +50,12 @@ class WellPlate(Cycle):
         Returns
         -------
         List[Tuple[int]]
-            one-based row, column position of each well in the plate
+            zero-based row, column position of each well in the plate
         '''
-        self._plate_coordinates = [self.id_to_position(w) for w in self.wells]
+        self._plate_coordinates = [
+            (self.well_id_to_position(w)[0]-1, self.well_id_to_position(w)[1]-1)
+            for w in self.wells
+        ]
         return self._plate_coordinates
 
     @property
@@ -119,7 +126,7 @@ class WellPlate(Cycle):
         return chr(index+64)
 
     @staticmethod
-    def well_id_to_position(self, well_id):
+    def well_id_to_position(well_id):
         '''
         Mapping of the identifier string representation to the
         one-based index position, e.g. "A02" -> (1, 2)
@@ -162,7 +169,7 @@ class WellPlate(Cycle):
 
 class Slide(Cycle):
 
-    def __init__(self, cycle_dir, cfg, user_cfg):
+    def __init__(self, cycle_dir, cfg, user_cfg, library):
         '''
         Initialize an instance of class Slide.
 
@@ -174,11 +181,15 @@ class Slide(Cycle):
             configuration settings
         user_cfg: Dict[str, str]
             additional user configuration settings
+        library: str, optional
+            image library that should be used
+            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
         '''
-        super(Slide, self).__init__(cycle_dir, cfg, user_cfg)
+        super(Slide, self).__init__(cycle_dir, cfg, user_cfg, library)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
         self.user_cfg = user_cfg
+        self.library = library
 
     @property
     def dimensions(self):
