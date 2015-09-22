@@ -1289,6 +1289,12 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
   this.startIndices_ = [];
 
   /**
+   * Start index per feature (the index).
+   * @type {Array.<number>}
+   * @private
+   */
+  this.endIndices_ = [];
+  /**
    * Start index per feature (the feature).
    * @type {Array.<ol.Feature>}
    * @private
@@ -1360,6 +1366,8 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   this.startIndices_.push(this.indices_.length);
   this.startIndicesFeature_.push(feature);
   this.drawCoordinates_(coordinates);
+  var endIndex = this.indices_.length;
+  this.endIndices_.push(endIndex);
 
   if (!goog.isNull(this.lineStringReplay_.strokeColor_)) {
     var linearRings = polygonGeometry.getLinearRings();
@@ -1500,6 +1508,41 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
     this.drawReplay_(gl, context, skippedFeaturesHash);
   } else {
     // TODO: draw feature by feature for the hit-detection
+    var elementType = context.hasOESElementIndexUint ?
+        goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
+
+    console.log(center);
+    var feature, dontSkipFeature, featureIntersectsHitExtent, featureUid, end, start;
+    var featureIndex = this.startIndices_.length - 1;
+    var elementSize = context.hasOESElementIndexUint ? 4 : 2;
+
+    while (featureIndex >= 0) {
+
+      feature = this.startIndicesFeature_[featureIndex];
+
+      featureUid = goog.getUid(feature).toString();
+      dontSkipFeature = !goog.isDef(skippedFeaturesHash[featureUid]);
+      featureHasGeometry = goog.isDefAndNotNull(feature.getGeometry());
+      featureIntersectsHitExtent = !goog.isDef(opt_hitExtent) || ol.extent.intersects(
+          opt_hitExtent, feature.getGeometry().getExtent());
+
+      if (dontSkipFeature && featureHasGeometry && featureIntersectsHitExtent) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        start = this.startIndices_[featureIndex];
+        end = this.endIndices_[featureIndex];
+
+        var numItems = end - start;
+        var offsetInBytes = start * elementSize;
+        gl.drawElements(goog.webgl.TRIANGLES, numItems, elementType, offsetInBytes);
+
+        result = featureCallback(feature);
+        if (result) {
+          return result;
+        }
+      }
+      featureIndex--;
+    }
   }
 
   // disable the vertex attrib arrays
