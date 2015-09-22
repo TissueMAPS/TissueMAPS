@@ -3406,6 +3406,8 @@ declare module ol {
           addFeatures(features: ol.Feature[]);
 
           addFeature(feature: ol.Feature);
+
+          removeFeature(feature: ol.Feature);
         }
 
         class VectorEvent {
