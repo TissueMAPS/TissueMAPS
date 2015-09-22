@@ -1,0 +1,15 @@
+input:
+
+    - name: label_image
+      class: pipeline
+      value: Nuclei
+      help: Image that contains the objects.
+
+    - name: objects_name
+      class: parameter
+      value: Nuclei
+      help: Name of should be given to the objects.
+
+output:
+
+plot: No

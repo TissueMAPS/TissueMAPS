@@ -1,0 +1,27 @@
+---
+project:
+  description: ''
+  lib: /Users/mdh/jtlib/modules
+images:
+  layers:
+  - name: 150820-Testset-CV-1-1
+  - name: 150820-Testset-CV-2-1
+pipeline:
+- handles: handles/load_image.handles
+  module:  '{lib}/load_image.py'
+  active: Yes
+- handles: handles/threshold_image.handles
+  module:  '{lib}/threshold_image.py'
+  active: Yes
+- handles: handles/fill_mask.handles
+  module:  '{lib}/fill_mask.py'
+  active: Yes
+- handles: handles/filter_mask.handles
+  module:  '{lib}/filter_mask.py'
+  active: Yes
+- handles: handles/label_mask.handles
+  module:  '{lib}/label_mask.py'
+  active: Yes
+- handles: handles/save_objects.handles
+  module:  '{lib}/save_objects.py'
+  active: Yes

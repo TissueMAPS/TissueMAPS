@@ -1,0 +1,8 @@
+Package: jtapi
+Title: Jterator API
+Version: 0.1
+Authors@R: "Markus Herrmann <markus.herrmann@gmail.com> [aut, cre]"
+Description: Provides functions for handling input/output in Jterator modules.
+Depends: R (>= 3.1.2)
+License: MIT
+LazyData: true

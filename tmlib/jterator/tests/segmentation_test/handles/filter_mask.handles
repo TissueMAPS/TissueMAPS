@@ -1,0 +1,31 @@
+input:
+
+    - name: mask
+      class: pipeline
+      value: 150820-Testset-CV-1-1.filled
+      help: Binary image in which connected components should be filtered.
+
+    - name: feature
+      class: parameter
+      value: area
+      help: >
+        Name of the region property based on which the image should be filtered.
+
+    - name: threshold
+      class: parameter
+      value: 500
+      help: Threshold level.
+
+    - name: keep
+      class: parameter
+      value: above
+      help: Whether values "above" or "below" threshold level should be kept.
+
+output:
+
+    - name: filtered_mask
+      class: pipeline
+      value: 150820-Testset-CV-1-1.filtered
+      help: Filtered binary image.
+
+plot: Yes

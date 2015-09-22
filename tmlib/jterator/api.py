@@ -2,16 +2,19 @@ import os
 import sys
 import h5py
 import collections
+import logging
 import matlab_wrapper as matlab
 from cached_property import cached_property
-from . import pathutils
+from . import path_utils
+from . import fusion
 from .project import JtProject
 from .module import ImageProcessingModule
-from .checker import PipelineChecker
+from .checkers import PipelineChecker
 from .. import utils
 from ..cluster import ClusterRoutines
 from ..errors import PipelineDescriptionError
 from ..errors import PipelineOSError
+from ..writers import DatasetWriter
 
 
 class ImageProcessingPipeline(ClusterRoutines):
@@ -21,8 +24,7 @@ class ImageProcessingPipeline(ClusterRoutines):
     '''
 
     def __init__(self, experiment, pipe_name, prog_name,
-                 pipe=None, handles=None,
-                 logging_level='critical'):
+                 pipe=None, handles=None, verbosity=0):
         '''
         Initialize an instance of class ImageProcessingPipeline.
 
@@ -40,9 +42,8 @@ class ImageProcessingPipeline(ClusterRoutines):
             paths to module code and descriptor files
         handles: List[dict], optional
             name of each module and the description of its input/output
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            logging level (default: ``0``)
 
         Note
         ----
@@ -62,12 +63,23 @@ class ImageProcessingPipeline(ClusterRoutines):
         `tmlib.cfg`_
         '''
         super(ImageProcessingPipeline, self).__init__(
-            experiment, prog_name, logging_level)
+            experiment, prog_name, verbosity)
         self.experiment = experiment
         self.pipe_name = pipe_name
         self.prog_name = prog_name
         self._pipe = pipe
         self._handles = handles
+        self.logger = self.configure_logger(verbosity)
+
+    def configure_logger(self, verbosity):
+        logger = logging.getLogger(self.prog_name)
+        logger.setLevel(verbosity)
+        err = logging.StreamHandler(stream=sys.stderr)
+        err.setLevel(verbosity)
+        formatter = logging.Formatter('%(name)s - %(levelname)s: %(message)s')
+        err.setFormatter(formatter)
+        logger.addHandler(err)
+        return logger
 
     @cached_property
     def project_dir(self):
@@ -79,8 +91,8 @@ class ImageProcessingPipeline(ClusterRoutines):
             log output, figures and data will be stored
         '''
         self._project_dir = os.path.join(self.experiment.dir,
-                                         'tm_%s_%s' % (self.prog_name,
-                                                       self.pipe_name))
+                                         'tmaps_%s_%s' % (self.prog_name,
+                                                          self.pipe_name))
         return self._project_dir
 
     @property
@@ -122,7 +134,7 @@ class ImageProcessingPipeline(ClusterRoutines):
             else:
                 self._handles = list()
                 for element in self.pipe['description']['pipeline']:
-                    handles_file = element.handles
+                    handles_file = element['handles']
                     if not os.path.isabs(handles_file):
                         handles_file = os.path.join(self.project_dir,
                                                     handles_file)
@@ -132,7 +144,7 @@ class ImageProcessingPipeline(ClusterRoutines):
                                 % handles_file)
                     handles_description = dict()
                     handles_description['description'] = \
-                        self._read_handles_file(handles_file)
+                        utils.read_yaml(handles_file)
                     handles_description['name'] = \
                         os.path.splitext(os.path.basename(handles_file))[0]
                     self._handles.append(handles_description)
@@ -159,14 +171,29 @@ class ImageProcessingPipeline(ClusterRoutines):
                     pipe=self.pipe, handles=self.handles)
         project.create(repo_dir, skel_dir)
 
+    def remove_project(self):
+        '''
+        Remove a project on disk.
+
+        See also
+        --------
+        `tmlib.jterator.project.JtProject`_
+        '''
+        project = JtProject(
+                    project_dir=self.project_dir, pipe_name=self.pipe_name,
+                    pipe=self.pipe, handles=self.handles)
+        project.remove()
+
     def check_pipeline(self):
         try:
             self.pipe
         except OSError:
             raise PipelineOSError('Pipe file does not exist.')
         checker = PipelineChecker(
-                    project_dir=self.project_dir,
-                    pipe=self.pipe, handles=self.handles)
+                project_dir=self.project_dir,
+                pipe_description=self.pipe['description'],
+                handles_descriptions=[h['description'] for h in self.handles]
+        )
         checker.check_all()
 
     @cached_property
@@ -238,10 +265,8 @@ class ImageProcessingPipeline(ClusterRoutines):
     def _read_pipe_file(self):
         content = utils.read_yaml(self.pipe_file)
         # Make paths absolute
-        content['project']['libpath'] = pathutils.complete_path(
-                    content['project']['libpath'], self.project_dir)
-        content['jobs']['folder'] = pathutils.complete_path(
-                    content['jobs']['folder'], self.project_dir)
+        content['project']['lib'] = path_utils.complete_path(
+                    content['project']['lib'], self.project_dir)
         return content
 
     @cached_property
@@ -258,32 +283,30 @@ class ImageProcessingPipeline(ClusterRoutines):
         PipelineDescriptionError
             when information in *pipe* description is missing or incorrect
         '''
-        libpath = self.pipe['project']['libpath']
-        self._modules = list()
-        for i, element in self.pipe['pipeline']:
+        libpath = self.pipe['description']['project']['lib']
+        self._pipeline = list()
+        for i, element in enumerate(self.pipe['description']['pipeline']):
             if not element['active']:
                 continue
             module_path = element['module']
-            module_path = pathutils.complete_module_path(
+            module_path = path_utils.complete_module_path(
                             module_path, libpath, self.project_dir)
             if not os.path.isabs(module_path):
                 module_path = os.path.join(self.project_dir, module_path)
             if not os.path.exists(module_path):
                 raise PipelineDescriptionError(
                         'Missing module file: %s' % module_path)
-                module_name = self.handles[i]['name']
+            module_name = self.handles[i]['name']
             handles_description = self.handles[i]['description']
             module = ImageProcessingModule(
                         name=module_name, module_file=module_path,
                         handles_description=handles_description,
-                        project_dir=self.project_dir,
-                        logging_level=self.logging_level,
-                        headless=self.headless)
-            self._modules.append(module)
-        if not self._modules:
+                        experiment_dir=self.experiment.dir)
+            self._pipeline.append(module)
+        if not self._pipeline:
             raise PipelineDescriptionError(
                         'No pipeline description: "%s"' % self.pipe_filename)
-        return self._modules
+        return self._pipeline
 
     def start_engines(self):
         '''
@@ -292,7 +315,7 @@ class ImageProcessingPipeline(ClusterRoutines):
         would slow down the execution of the pipeline, if we would have to do
         it repeatedly for each module.
         '''
-        languages = [m.language for m in self.modules]
+        languages = [m.language for m in self.pipeline]
         self.engines = dict()
         self.engines['Python'] = None
         self.engines['R'] = None
@@ -315,71 +338,92 @@ class ImageProcessingPipeline(ClusterRoutines):
         #     print 'jt - Starting Julia engine'
         #     self.engines['Julia'] = julia.Julia()
 
-    def create_data_file(self, job_id):
+    def build_data_filename(self, job_id):
         '''
-        Create an HDF5 file on disk for storage of data of the current job.
-
-        Parameters
-        ----------
-        job_id: int
-            one-based job identifier number
-
-        Returns
-        -------
-        str
-            name of the `.data` HDF5 file
+        Build name of the HDF5 file where pipeline data will be stored.
         '''
         data_file = os.path.join(self.data_dir,
                                  '%s_%.5d.data' % (self.pipe_name, job_id))
-        h5py.File(data_file, 'w').close()
         return data_file
 
-    def create_joblist(self, **kwargs):
+    def _create_data_file(self, data_file):
+        # TODO: add some metadata, such as the name of the image file
+        h5py.File(data_file, 'w').close()
+
+    def create_job_descriptions(self, **kwargs):
         '''
-        Create a joblist for parallel computing.
+        Create job descriptions for parallel computing.
 
         Parameters
         ----------
         **kwargs: dict
-            additional input arguments as key-value pairs:
-            * "batch_size": number of image acquisition sites per job (*int*)
+            no additional input arguments required
 
         Returns
         -------
         Dict[str, List[dict] or dict]
             job descriptions
         '''
+        self.check_pipeline()
         joblist = dict()
         joblist['run'] = list()
         layer_names = [
             layer['name']
-            for layer in self.pipe['images']['layers']
+            for layer in self.pipe['description']['images']['layers']
         ]
-        metadata = list()
+        image_files = dict()
         for cycle in self.cycles:
-            metadata.extend([
-                md for md in cycle.layer_metadata if md.name in layer_names
-            ])
-        md_batches = self._create_batches(metadata, kwargs['batch_size'])
+            # image files for each layer
+            image_files.update({
+                md.name: [os.path.join(cycle.image_dir, f) for f in md.files]
+                for md in cycle.layer_metadata if md.name in layer_names
+            })
+
+        batches = [
+            {k: v[i] for k, v in image_files.iteritems()}
+            for i in xrange(len(image_files.values()[0]))
+        ]
+
         joblist['run'] = [{
-                'id': i+1,
-                'inputs': {
-                    md.name: md.files for md in batch
-                },
-                'outputs': {
-                    'data_file': self.create_data_file(i+1),
-                    'figure_files': [
-                        module.build_figure_filename(
-                            self.figures_dir, i+1)
-                        for module in self.pipeline
-                    ],
-                    'log_files': [
-                        module.build_log_filenames(
-                            self.module_log_dir, i+1).values()
-                        for module in self.pipeline
-                    ]
-                }
-            } for i, batch in enumerate(md_batches)]
+            'id': i+1,
+            'inputs': {
+                'image_files': batch
+            },
+            'outputs': {
+                'data_file': self.build_data_filename(i+1),
+                'figure_files': [
+                    module.build_figure_filename(
+                        self.figures_dir, i+1)
+                    for module in self.pipeline
+                ],
+                'log_files': utils.flatten([
+                    module.build_log_filenames(
+                        self.module_log_dir, i+1).values()
+                    for module in self.pipeline
+                ])
+            }
+        } for i, batch in enumerate(batches)]
+
+        joblist['collect'] = {
+            'inputs': {
+                'data_files': [
+                    self.build_data_filename(i+1) for i in xrange(len(batches))
+                ]
+            },
+            'outputs': {
+                'data_file': [self.experiment.data_file]
+            }
+        }
+
+        return joblist
+
+    def _build_run_command(self, batch):
+        # Overwrite method to account for additional "--pipeline" argument
+        command = [self.prog_name]
+        command.extend(['-p', self.pipe_name])
+        command.append(self.experiment.dir)
+        command.extend(['run', '-j', str(batch['id'])])
+        return command
 
     def run_job(self, batch):
         '''
@@ -392,22 +436,25 @@ class ImageProcessingPipeline(ClusterRoutines):
             description of the *run* job
         '''
         checker = PipelineChecker(
-                            project_dir=self.project_dir,
-                            pipe=self.pipe,
-                            handles=self.handles)
+                project_dir=self.project_dir,
+                pipe_description=self.pipe['description'],
+                handles_descriptions=[h['description'] for h in self.handles]
+        )
         checker.check_all()
         self.start_engines()
         job_id = batch['id']
-        self.create_data_file(job_id-1)
+        data_file = self.build_data_filename(job_id)
+        self._create_data_file(data_file)
         outputs = collections.defaultdict(dict)
         outputs['data'] = dict()
         for module in self.pipeline:
-            log_files = module.build_log_filenames(self.logs_dir, job_id)
+            log_files = module.build_log_filenames(self.module_log_dir, job_id)
             figure_file = module.build_figure_filename(self.figures_dir, job_id)
-            data_file = self.build_data_filename(job_id)
             inputs = module.prepare_inputs(
-                        job_description=batch, upstream_output=outputs['data'],
-                        data_file=data_file, figure_file=figure_file)
+                        layers=batch['inputs']['image_files'],
+                        upstream_output=outputs['data'],
+                        data_file=data_file, figure_file=figure_file,
+                        job_id=job_id)
             out = module.run(inputs, self.engines[module.language])
             module.write_output_and_errors(log_files['stdout'], out['stdout'],
                                            log_files['stderr'], out['stderr'])
@@ -419,19 +466,28 @@ class ImageProcessingPipeline(ClusterRoutines):
                 else:
                     outputs[k][module.name] = out[k]
 
-    def collect_job_output(self, batch, **kwargs):
+    def _build_collect_command(self):
+        command = [self.prog_name]
+        command.extend(['-p', self.pipe_name])
+        command.append(self.experiment.dir)
+        command.extend(['collect'])
+        return command
+
+    def collect_job_output(self, batch):
         '''
-        Collect and fuse *data* created by pipelines.
+        Collect the data stored across individual HDF5 files, fuse them and
+        store them in a single, separate HDF5 file.
 
         Parameters
         ----------
         batch: dict
-            description of the *collect* job
-        **kwargs: dict
-            additional variable input arguments as key-value pairs
+            job description  
         '''
-        # TODO: dafu
-        pass
+        # NOTE: the job id should correspond to the site number
+        datasets = fusion.fuse_datasets(batch['inputs']['data_files'])
+        with DatasetWriter(batch['outputs']['data_file'][0]) as f:
+            for path, data in datasets.iteritems():
+                f.write(path, data)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):

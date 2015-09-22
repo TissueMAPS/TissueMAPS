@@ -1,0 +1,17 @@
+# module input arguments
+input:
+
+    - name: InputImage
+      value: InitialPythonModule.OutputImage
+      class: pipeline
+      help: Input image.
+
+# module output arguments
+output:
+
+    - name: OutputImage
+      class: pipeline
+      value: MatlabModule.OutputImage
+      help: Output image.
+
+plot: false

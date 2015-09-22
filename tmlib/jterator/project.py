@@ -94,24 +94,29 @@ class JtProject(object):
     def handles(self, value):
         self._handles = value
 
-    def _get_pipe_file(self):
-        pipe_files = glob.glob(os.path.join(self.project_dir, '*.pipe'))
+    def _get_pipe_file(self, directory=None):
+        if not directory:
+            directory = self.project_dir
+        pipe_files = glob.glob(os.path.join(directory, '*.pipe'))
         if len(pipe_files) == 1:
             return pipe_files[0]
         elif len(pipe_files) > 1:
             raise PipelineOSError(
-                    'More than more .pipe file found in directory.')
+                    'More than more .pipe file found: %s' % directory)
         if not pipe_files:
             raise PipelineOSError(
-                    'No .pipe file found in directory: %s.' % self.project_dir)
+                    'No .pipe file found: %s' % directory)
 
-    def _get_handles_files(self):
-        handles_files = glob.glob(os.path.join(self.project_dir, 'handles',
-                                  '*.handles'))
+    def _get_handles_files(self, directory=None):
+        if not directory:
+            directory = os.path.join(self.project_dir, 'handles')
+        else:
+            directory = os.path.join(directory, 'handles')
+        handles_files = glob.glob(os.path.join(directory, '*.handles'))
         if not handles_files:
             # We don't raise an exception, because an empty handles folder
             # can occur, for example upon creation of a new project
-            print('No .handles files found in directory.')
+            print('No .handles files found: %s' % directory)
         return handles_files
 
     @staticmethod
@@ -184,26 +189,38 @@ class JtProject(object):
                 handles.append(h)
         return handles
 
-    def _create_pipe_file(self, lib_dir):
-        pipe_file = os.path.join(
-                        self.project_dir,
-                        '%s.pipe' % os.path.basename(self.project_dir))
+    def _create_pipe_file(self, repo_dir):
+        pipe_file = os.path.join(self.project_dir, '%s.pipe' % self.pipe_name)
         pipe_skeleton = {
             'project': {
-                'libpath': lib_dir,
-                'description': None
+                'lib': repo_dir,
+                'description': str()
             },
             'images': {
                 'layers': list()
             },
             'pipeline': list()
         }
-        utils.write_yaml(pipe_file, pipe_skeleton)
+
+        utils.write_yaml(pipe_file, pipe_skeleton, use_ruamel=True)
 
     def _create_handles_folder(self):
         handles_dir = os.path.join(self.project_dir, 'handles')
         if not os.path.exists(handles_dir):
             os.mkdir(handles_dir)
+
+    def _create_project_from_skeleton(self, skel_dir, repo_dir=None):
+        pipe_file = self._get_pipe_file(skel_dir)
+        if not repo_dir:
+            shutil.copy(pipe_file, self.project_dir)
+        else:
+            pipe_content = utils.read_yaml(pipe_file, use_ruamel=True)
+            pipe_content['project']['lib'] = repo_dir
+            new_pipe_file = os.path.join(self.project_dir,
+                                         '%s.pipe' % self.pipe_name)
+            utils.write_yaml(new_pipe_file, pipe_content, use_ruamel=True)
+        shutil.copytree(os.path.join(skel_dir, 'handles'),
+                        os.path.join(self.project_dir, 'handles'))
 
     def _remove_pipe_file(self, name):
         pipe_file = os.path.join(self.project_dir, '%s.pipe' % name)
@@ -215,15 +232,15 @@ class JtProject(object):
 
     def _modify_pipe(self):
         pipe_file = self._get_pipe_file()
-        # TODO: ruyaml?
-        old_pipe_content = utils.read_yaml(pipe_file)
+        # Use ruamel.yaml to preserve comments in the pipe file
+        old_pipe_content = utils.read_yaml(pipe_file, use_ruamel=True)
         new_pipe_content = self.pipe['description']
-        # Remove module 'name' from pipeline (only used in interface)
+        # Remove module 'name' from pipeline (only used internally)
         for i, module in enumerate(new_pipe_content['pipeline']):
             new_pipe_content['pipeline'][i].pop('name', None)
         mod_pipe_content = self._replace_values(old_pipe_content,
                                                 new_pipe_content)
-        utils.write_yaml(pipe_file, mod_pipe_content)
+        utils.write_yaml(pipe_file, mod_pipe_content, use_ruamel=True)
 
     def _modify_handles(self):
         handles_files = []
@@ -239,7 +256,7 @@ class JtProject(object):
                 new_handles_content = self.handles[i]['description']
                 mod_handles_content = self.replace_values(old_handles_content,
                                                           new_handles_content)
-            # If file doesn't yet exist, create its content
+            # If file doesn't yet exist, create it and add content
             else:
                 mod_handles_content = self.handles[i]['description']
             utils.write_yaml(mod_handles_content, handles_file)
@@ -252,7 +269,7 @@ class JtProject(object):
 
     def serialize(self):
         '''
-        Provide information in the format required by server::
+        Serialize the attributes of the class in the format::
 
             {
                 "experiment": str,
@@ -290,28 +307,39 @@ class JtProject(object):
         self._modify_pipe()
         self._modify_handles()
 
-    def create(self, repo_dir, skel_dir):
+    def create(self, repo_dir=None, skel_dir=None):
         '''
         Create a Jterator project:
         Create the project folder and an empty "handles" subfolder as well as
-        a skeleton `.pipe` file, i.e. a pipeline descriptor file with all
+        a skeleton *.pipe* file, i.e. a pipeline descriptor file with all
         required main keys but an empty module list.
+        When `skel_dir` is provided, the *.pipe* and *.handles* files are
+        copied.
 
         Parameters
         ----------
-        repo_dir: str
-            absolute path to a repository location that contains a project
-            skeleton
-
-        See also
-        --------
-        `create_pipe_file`
+        repo_dir: str, optional
+            path to repository directory where module files are located
+        skel_dir: str, optional
+            path to repository directory that represents a project skeleton,
+            i.e. contains a *.pipe* and one or more *.handles* files in a
+            *handles* directory.
         '''
+        if repo_dir:
+            repo_dir = os.path.expandvars(repo_dir)
+            repo_dir = os.path.expanduser(repo_dir)
+            repo_dir = os.path.abspath(repo_dir)
+        if skel_dir:
+            skel_dir = os.path.expandvars(skel_dir)
+            skel_dir = os.path.expanduser(skel_dir)
+            skel_dir = os.path.abspath(skel_dir)
         if not os.path.exists(self.project_dir):
             os.mkdir(self.project_dir)
-        # TODO: create from skeleton in skel_dir
-        self._create_pipe_file(repo_dir)
-        self._create_handles_folder()
+        if skel_dir:
+            self._create_project_from_skeleton(skel_dir, repo_dir)
+        else:
+            self._create_pipe_file(repo_dir)
+            self._create_handles_folder()
 
     def remove(self):
         '''

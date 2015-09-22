@@ -33,12 +33,6 @@ class Jterator(CommandLineInterface):
                     pipe_name=self.args.pipeline,
                     prog_name=self.name)
 
-    @property
-    def _variable_joblist_args(self):
-        kwargs = dict()
-        kwargs['batch_size'] = self.args.batch_size
-        return kwargs
-
     def create(self):
         '''
         Initialize an instance of the API class corresponding to the specific
@@ -47,6 +41,15 @@ class Jterator(CommandLineInterface):
         print 'CREATE'
         api = self._api_instance
         api.create_project(self.args.repo_dir, self.args.skel_dir)
+
+    def remove(self):
+        '''
+        Initialize an instance of the API class corresponding to the specific
+        command line interface and process arguments of the "remove" subparser.
+        '''
+        print 'REMOVE'
+        api = self._api_instance
+        api.remove_project()
 
     def check(self):
         '''

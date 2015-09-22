@@ -6,7 +6,8 @@ import re
 from os.path import splitext, basename, exists, dirname
 from collections import Counter
 import warnings
-from . import pathutils
+from . import path_utils
+from .. import utils
 from ..errors import PipelineDescriptionError
 
 
@@ -24,7 +25,8 @@ class PipelineChecker(object):
     Class for checking pipeline and module descriptions.
     '''
 
-    def __init__(self, project_dir, pipe, handles=None):
+    def __init__(self, project_dir, pipe_description,
+                 handles_descriptions=None):
         '''
         Initialize an instance of class JtChecker.
 
@@ -35,8 +37,8 @@ class PipelineChecker(object):
         handles_descriptions: dict, optional
             list of module descriptions (module input/output)
         '''
-        self.pipe = pipe
-        self.handles = handles
+        self.pipe_description = pipe_description
+        self.handles_descriptions = handles_descriptions
         self.project_dir = project_dir
 
     def check_pipeline(self):
@@ -73,56 +75,48 @@ class PipelineChecker(object):
             }
         '''
         # Check "project" section
-        if 'project' not in self.pipe:
+        if 'project' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
                     'Pipeline file must contain the key "project".')
-        if 'libpath' in self.pipe['project']:
-            libpath = self.pipe['project']['libpath']
-            libpath = pathutils.complete_path(libpath, self.project_dir)
+        if 'lib' in self.pipe_description['project'].keys():
+            libpath = self.pipe_description['project']['lib']
+            libpath = path_utils.complete_path(libpath, self.project_dir)
             if not exists(libpath):
                 raise PipelineDescriptionError(
-                        'The path defined by "libpath" in your '
+                        'The path defined by "lib" in your '
                         'pipeline description is not valid.')
         # Check "jobs" section
-        if 'jobs' not in self.pipe:
+        if 'images' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
-                    'Pipe file must contain the key "jobs".')
-        if 'folder' not in self.pipe['jobs']:
+                    'Pipe file must contain the key "images".')
+        if 'layers' not in self.pipe_description['images'].keys():
             raise PipelineDescriptionError(
-                    'Pipe file must contain the key "%s" '
-                    'as a subkey of "%s".' % ('folder', 'jobs'))
-        if not isinstance(self.pipe['jobs']['folder'], basestring):
+                    'Pipe file must contain the key "layers" '
+                    'as a subkey of "images".')
+        if not isinstance(self.pipe_description['images']['layers'], list):
             raise PipelineDescriptionError(
-                    'The value of "folder" in the "jobs" section '
-                    'of the pipe file must be a string.')
-        if 'pattern' not in self.pipe['jobs']:
-            raise PipelineDescriptionError(
-                    'Pipeline file must contain the key "%s" '
-                    'as a subkey of "%s".' % ('pattern', 'jobs'))
-        if not isinstance(self.pipe['jobs']['pattern'], list):
-            raise PipelineDescriptionError(
-                    'The value of "pattern" in the "jobs" section '
+                    'The value of "layers" in the "images" section '
                     'of the pipe file must be a list.')
 
         # Check for presence of required keys
-        required_subkeys = ['name', 'expression']
-        for pattern_description in self.pipe['jobs']['pattern']:
+        required_subkeys = ['name']
+        for pattern_description in self.pipe_description['images']['layers']:
             for key in required_subkeys:
                 if key not in pattern_description:
                     raise PipelineDescriptionError(
-                            'Each element in "pattern" '
-                            'in the pipe file needs a key "%s".' % key)
+                            'Each element of "layers" in the "images" section '
+                            'in the pipe file requires a key "%s".' % key)
 
         # Check "pipeline" section
-        if 'pipeline' not in self.pipe:
+        if 'pipeline' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
                     'Pipeline file must contain the key "pipeline".')
-        if not isinstance(self.pipe['pipeline'], list):
+        if not isinstance(self.pipe_description['pipeline'], list):
             raise PipelineDescriptionError(
                     'The value of "pipeline" in the pipe file must be a list.')
 
         required_subkeys = ['handles', 'module', 'active']
-        for module_description in self.pipe['pipeline']:
+        for module_description in self.pipe_description['pipeline']:
             for key in required_subkeys:
                 if key not in module_description:
                     raise PipelineDescriptionError(
@@ -143,12 +137,12 @@ class PipelineChecker(object):
 
         # Ensure that handles filenames are unique
         n = Counter([splitext(basename(m['handles']))[0]
-                    for m in self.pipe['pipeline']])
+                    for m in self.pipe_description['pipeline']])
         repeated = [x for x in n.values() if x > 1]
         if repeated:
             raise PipelineDescriptionError('Handles files need to be unique.')
 
-        print('🍺   Pipeline description check successful!')
+        print('🍺  Pipe description check successful!')
 
     def check_handles(self):
         '''
@@ -182,21 +176,21 @@ class PipelineChecker(object):
                 'plot': bool
             }
         '''
-        self.libpath = self.pipe['project']['libpath']
-        self.libpath = pathutils.complete_path(self.libpath, self.project_dir)
-        for i, module in enumerate(self.pipe['pipeline']):
+        self.libpath = self.pipe_description['project']['lib']
+        self.libpath = path_utils.complete_path(self.libpath, self.project_dir)
+        for i, module in enumerate(self.pipe_description['pipeline']):
             # Check whether executable files exist
-            module_path = pathutils.complete_module_path(
+            module_path = path_utils.complete_module_path(
                             module['module'], self.libpath, self.project_dir)
             if not exists(module_path):
                 raise PipelineDescriptionError(
                         'Module file "%s" does not exist.' % module_path)
 
             # Check whether descriptor files exist
-            handles_path = pathutils.complete_module_path(
+            handles_path = path_utils.complete_module_path(
                             module['handles'], self.libpath, self.project_dir)
 
-            if not self.handles:
+            if not self.handles_descriptions:
                 # A description could also be provided from the user interface.
                 # In this case .handles files may not exist.
                 if not exists(handles_path):
@@ -227,11 +221,7 @@ class PipelineChecker(object):
                             'Error message:\n%s' % (module['handles'], str(e)))
 
             else:
-                # Extract the description of the currently checked module.
-                # The order of the list may be screwed up.
-                name = splitext(basename(handles_path))[0]
-                handles = [h['description'] for h in self.handles
-                           if h['name'] == name][0]
+                handles = self.handles_descriptions[i]
 
             # Check "input" section
             required_keys = ['input', 'output', 'plot']
@@ -308,22 +298,20 @@ class PipelineChecker(object):
                         'Plot argument in handles file '
                         '"%s" needs to be boolean.' % handles_path)
 
-        print('🍺   Module descriptions check successful!')
+        print('🍺  Handles descriptions check successful!')
 
     def check_pipeline_io(self):
         '''
         Ensure that module inputs have been produced upstream in the pipeline.
         '''
         outputs = list()
-        for i, module in enumerate(self.pipe['pipeline']):
-            handles_path = pathutils.complete_module_path(
+        for i, module in enumerate(self.pipe_description['pipeline']):
+            handles_path = path_utils.complete_module_path(
                             module['handles'], self.libpath, self.project_dir)
-            if self.handles is None:
-                handles = yaml.load(open(handles_path).read())
+            if self.handles_descriptions is None:
+                handles = utils.read_yaml(handles_path)
             else:
-                name = splitext(basename(handles_path))[0]
-                handles = [h['description'] for h in self.handles
-                           if h['name'] == name][0]
+                handles = self.handles_descriptions[i]
 
             # Ensure that argument names are unique
             n = Counter([arg['name'] for arg in handles['input']])
@@ -342,24 +330,19 @@ class PipelineChecker(object):
                         'have to be unique.' % handles_path)
 
             # Check pipeline logic:
-            # Store all upstream output arguments
-            module_name = splitext(basename(module['module']))[0]
-            for output_arg in handles['output']:
-                output = output_arg['value']
-                # TODO: shall we use namespaces?
-                # output = '%s.%s' % (module_name, output)
-                outputs.append(output)
             # Check whether input arguments for current module were produced
             # upstream in the pipeline
             for input_arg in handles['input']:
-                if (input_arg['class'] != 'pipeline' or
-                        input_arg['value'] is None):
+                if (input_arg['class'] != 'pipeline'
+                        or input_arg['value'] is None):
                     # We only check for non-empty data passed via the HDF5 file
                     continue
-                name = basename(input_arg['value'])
-                pattern = [p['name']
-                           for p in self.pipe['jobs']['pattern']]
-                if name in pattern:
+                name = input_arg['value']
+                layer_names = [
+                    layer['name']
+                    for layer in self.pipe_description['images']['layers']
+                ]
+                if name in layer_names:
                     # These names are written into the HDF5 file by Jterator
                     # and are therefore not created in the pipeline.
                     # So there is no need to check them here.
@@ -369,7 +352,12 @@ class PipelineChecker(object):
                             'Input "%s" of module "%s" is not '
                             'created upstream in the pipeline.'
                             % (input_arg['name'], module['handles']))
-        print('🍺   Module input/output check successful!')
+
+            # Store all upstream output arguments
+            for output_arg in handles['output']:
+                output = output_arg['value']
+                outputs.append(output)
+        print('🍺  Module input/output check successful!')
 
     def check_all(self):
         self.check_pipeline()
