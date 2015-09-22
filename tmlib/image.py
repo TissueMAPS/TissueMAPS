@@ -176,18 +176,15 @@ class ChannelImage(Image):
             raise TypeError('A channel image must have unsigned integer type.')
         return self._pixels
 
-    def correct(self, mean_image, std_image):
+    def correct(self, stats):
         '''
         Correct image for illumination artifacts.
 
         Parameters
         ----------
-        mean_image: IllumstatsImage
-            mean intensity at each pixel calculated over all images of the
-            same channel
-        std_image: IllumstatsImage
-            standard deviation at each pixel calculated over all images of the
-            same channel
+        stats: IllumstatsImages
+            mean and standard deviation statistics for at each pixel
+            calculated over all images of the same channel
 
         Returns
         -------
@@ -197,21 +194,21 @@ class ChannelImage(Image):
         Raises
         ------
         ValueError
-            when "channel" metadata are not the same for `mean_image` or
-            `std_image`
+            when metadata of illumination statistic images and channel image
+            do not match
         '''
-        if (mean_image.metadata.channel != self.metadata.channel
-                or std_image.metadata.channel != self.metadata.channel):
+        if (stats.mean.metadata.channel != self.metadata.channel
+                or stats.std.metadata.channel != self.metadata.channel):
             raise ValueError('Channel names must match.')
-        if (mean_image.pixels.type != self.pixels.type
-                or std_image.pixels.type != self.pixels.type):
+        if (stats.mean.pixels.type != self.pixels.type
+                or stats.std.pixels.type != self.pixels.type):
             raise TypeError('Pixels type must match.')
         new_object = ChannelImage()
         new_object.metadata = self.metadata
         new_object.filename = self.filename
         new_object.pixels = self.pixels.correct_illumination(
-                                    mean_image.pixels.array,
-                                    std_image.pixels.array)
+                                    stats.mean.pixels.array,
+                                    stats.std.pixels.array)
         return new_object
 
     def align(self, shift_description):
@@ -660,10 +657,10 @@ class IllumstatsImages(object):
             raise ValueError('Library must be either "vips" or "numpy".')
         metadata = IllumstatsImageMetadata()
         with DatasetReader(filename) as reader:
-            mean = reader.read_dataset('data/mean')
-            std = reader.read_dataset('data/std')
-            metadata.cycle = reader.read_dataset('metadata/cycle')
-            metadata.channel = reader.read_dataset('metadata/channel')
+            mean = reader.read('images/mean')
+            std = reader.read('images/std')
+            metadata.cycle = reader.read('metadata/cycle')
+            metadata.channel = reader.read('metadata/channel')
 
         if library == 'vips':
             mean_pxl = VipsPixels.create_from_numpy_array(mean)

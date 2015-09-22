@@ -19,7 +19,7 @@ class ImageMetadata(object):
 
     persistent = {
         'original_filename', 'original_dtype', 'original_dimensions',
-        'original_series', 'name', 'site', 'row', 'column', 'well'
+        'original_series', 'cycle', 'name', 'site', 'row', 'column', 'well'
     }
 
     def __init__(self, metadata=None):
@@ -573,16 +573,20 @@ class MosaicMetadata(object):
         MetadataError
             when `images` are not of same *cycle* or *channel*
         '''
-        cycles = [im.cycle for im in images]
+        cycles = list(set([im.metadata.cycle for im in images]))
         if len(cycles) > 1:
             raise MetadataError('All images must be of the same cycle')
-        channels = [im.channel for im in images]
+        channels = list(set([im.metadata.channel for im in images]))
         if len(channels) > 1:
             raise MetadataError('All images must be of the same channel')
         metadata = MosaicMetadata()
         metadata.name = layer_name
         metadata.channel = channels[0]
-        metadata.sites = [im.site for im in images]
+        # sort files according to sites
+        sites = [im.metadata.site for im in images]
+        sort_order = [sites.index(s) for s in sorted(sites)]
+        metadata.sites = sorted(sites)
         metadata.cycle = cycles[0]
-        metadata.files = [im.name for im in images]
+        files = [im.metadata.name for im in images]
+        metadata.files = [files[ix] for ix in sort_order]
         return metadata

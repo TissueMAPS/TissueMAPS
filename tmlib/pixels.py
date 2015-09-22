@@ -3,7 +3,7 @@ from gi.repository import Vips
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
-from . import imageutils
+from . import image_utils
 from . import shift
 from . import illumstats
 from .illuminati import segment
@@ -199,7 +199,7 @@ class VipsPixels(Pixels):
         int
             number of objects (labeled connected components) in the image
         '''
-        img_numpy = imageutils.vips_image_to_np_array(self.array)
+        img_numpy = image_utils.vips_image_to_np_array(self.array)
         self._n_objects = len(np.unique(img_numpy[img_numpy > 0]))
         # TODO: obtain the number of unique pixel values in Vips?
         return self._n_objects
@@ -312,7 +312,7 @@ class VipsPixels(Pixels):
         filename: str
             absolute path to output file
         '''
-        imageutils.save_image_png_vips(self.array, filename)
+        image_utils.save_image_png_vips(self.array, filename)
 
 
 class NumpyPixels(Pixels):
@@ -474,7 +474,7 @@ class NumpyPixels(Pixels):
                     self.array, y=sd.y_shift, x=sd.x_shift,
                     upper=sd.upper_overhang, lower=sd.lower_overhang,
                     left=sd.left_overhang, right=sd.right_overhang,
-                    shift=not(sd.dont_shift)))
+                    shift=not(sd.omit)))
 
     def correct_illumination(self, mean_image, std_image):
         '''
@@ -527,4 +527,4 @@ class NumpyPixels(Pixels):
         filename: str
             absolute path to output file
         '''
-        imageutils.save_image_png_numpy(self.array, filename)
+        image_utils.save_image_png_numpy(self.array, filename)

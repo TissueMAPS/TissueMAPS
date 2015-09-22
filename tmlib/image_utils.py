@@ -195,7 +195,7 @@ def create_spacer_image(dimensions, dtype, bands, direction=None):
     Parameters
     ----------
     dimensions: Tuple[int]
-        y, x dimensions of the image
+        y, x dimensions (height, width) of the image
     dtype: Vips.BandFormat
         data type (format) of the image
     bands: int
@@ -207,7 +207,7 @@ def create_spacer_image(dimensions, dtype, bands, direction=None):
     -------
     Vips.Image
         black spacer image of specified `dtype`, where one dimension is reduced
-        to 1% of `dimensions`, depending on the specified `direction`
+        to 500 pixels, depending on the specified `direction`
 
     Raises
     ------
@@ -215,14 +215,14 @@ def create_spacer_image(dimensions, dtype, bands, direction=None):
         when `direction` is not specified correctly
     '''
     if not direction:
-        spacer = Vips.Image.black(dimensions[0], dimensions[1],
+        spacer = Vips.Image.black(dimensions[1], dimensions[0],
                                   bands=bands).cast(dtype)
     else:
-        if direction == 'vertical':
-            spacer = Vips.Image.black(int(dimensions[0]/100), dimensions[1],
+        if direction == 'horizontal':
+            spacer = Vips.Image.black(500, dimensions[0],
                                       bands=bands).cast(dtype)
-        elif direction == 'horizontal':
-            spacer = Vips.Image.black(dimensions[0], int(dimensions[1]/100),
+        elif direction == 'vertical':
+            spacer = Vips.Image.black(dimensions[1], 500,
                                       bands=bands).cast(dtype)
         else:
             raise ValueError('Direction must be "horizontal" or "vertical"')
@@ -287,12 +287,12 @@ def save_hist_to_txt_file(hist, filename):
     np.savetxt(filename, hist, fmt='%d')
 
 
-def calc_threshold_level(sample_images, threshold_top_percent=0.1):
+def calc_threshold_level(sample_images, percent=99.9):
     '''
     Calculate threshold level for a particular quantile across a set of
     sample images.
 
-    A top threshold percentage of 0.1 would mean that 0.1% of the
+    A top threshold percentage of 99.9 would mean that 0.1% of the
     pixels with the largest value should be set to their lowest value.
 
     The quantile above `threshold_top_percent` pixels is computed for each
@@ -303,8 +303,8 @@ def calc_threshold_level(sample_images, threshold_top_percent=0.1):
     sample_images: List[Vips.Image[Vips.BandFormat.USHORT]]
         images that are representative of the images that are to be thresholded
 
-    threshold_top_percent: float, optional
-        quantile (defaults to 0.1)
+    top_percent: float, optional
+        quantile (default: 99.9)
 
     Returns
     -------
@@ -313,15 +313,13 @@ def calc_threshold_level(sample_images, threshold_top_percent=0.1):
     '''
 
     # `percent` % of all pixels lie below `thresh`
-    # i.e. `1 - percent` % lie above it.
-    percent = 100 - threshold_top_percent
     thresholds = map(lambda img: img.percent(percent), sample_images)
     avg_thresh = int(float(sum(thresholds)) / len(thresholds))
     print '   ... values above %d will be thresholded' % avg_thresh
     return avg_thresh
 
 
-def create_thresholding_LUT(avg_thresh):
+def create_thresholding_LUT(threshold):
     '''
     Construct a 16 bit color lookup table that can be used to threshold images.
 
@@ -330,8 +328,8 @@ def create_thresholding_LUT(avg_thresh):
 
     Parameters
     ----------
-    sample_images: List[Vips.Image[Vips.BandFormat.USHORT]]
-        images that are representative of the images that are to be thresholded
+    threshold: int
+        threshold level
 
     Returns
     -------
@@ -350,11 +348,11 @@ def create_thresholding_LUT(avg_thresh):
     # to new ones. So if a the original gray value for some pixel was 20,
     # then the new pixel value would correspond to the value at position 20
     # in the LUT.
-    id_lut = Vips.Image.identity(ushort=True)
+    identity_image = Vips.Image.identity(ushort=True)
 
     # Transform the LUT in such a way that pixels with values above the
     # threshold get the same value (= threshold).
-    cond_image = (id_lut >= avg_thresh)
-    lut = cond_image.ifthenelse(avg_thresh, id_lut)
+    condition_image = (identity_image >= threshold)
+    lut = condition_image.ifthenelse(threshold, identity_image)
 
     return lut

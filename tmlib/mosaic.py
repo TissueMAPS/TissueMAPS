@@ -1,6 +1,6 @@
 import numpy as np
 from gi.repository import Vips
-from ..errors import MetadataError
+from .errors import MetadataError
 
 
 class Mosaic(object):
@@ -94,9 +94,9 @@ class Mosaic(object):
 
     @staticmethod
     def _build_image_grid(images):
-        coordinates = [im.metadata.coordinates for im in images]
-        height, width = np.max(coordinates, axis=0)
-        grid = np.empty((height, width))
+        coordinates = [im.metadata.grid_coordinates for im in images]
+        height, width = np.max(coordinates, axis=0)  # zero-based
+        grid = np.empty((height+1, width+1), dtype=object)
         for i, c in enumerate(coordinates):
             grid[c[0], c[1]] = images[i]
         return grid
@@ -126,13 +126,20 @@ class Mosaic(object):
 
         Raises
         ------
+        ValueError
+            when `dx` or `dy` are positive
         MetadataError
             when `images` are not of same *cycle* or *channel*
         '''
-        cycles = [im.cycle for im in images]
+        if dx > 0:
+            raise ValueError('"dx" has to be a negative integer value')
+        if dy > 0:
+            raise ValueError('"dy" has to be a negative integer value')
+
+        cycles = set([im.metadata.cycle for im in images])
         if len(cycles) > 1:
             raise MetadataError('All images must be of the same cycle')
-        channels = [im.channel for im in images]
+        channels = set([im.metadata.channel for im in images])
         if len(channels) > 1:
             raise MetadataError('All images must be of the same channel')
         grid = Mosaic._build_image_grid(images)
@@ -142,9 +149,10 @@ class Mosaic(object):
             for j in xrange(grid.shape[1]):
                 img = grid[i, j]
                 if stats:
-                    img = img.correct(stats.mean, stats.std)
+                    img = img.correct(stats)
                 current_row.append(img.pixels.array)
-            rows.append(reduce(lambda x, y: x.merge(y, 'horizontal', dx, 0),
-                               current_row))
-        img = reduce(lambda x, y: x.merge(y, 'vertical', 0, dy), rows)
+            rows.append(reduce(lambda x, y:
+                        x.merge(y, 'horizontal', -x.width-dx, 0), current_row))
+        img = reduce(lambda x, y:
+                     x.merge(y, 'vertical', 0, -x.height-dy), rows)
         return Mosaic(img)
