@@ -1,4 +1,5 @@
 import yaml
+import ruamel.yaml
 import json
 import os
 import re
@@ -39,7 +40,7 @@ def regex_from_format_string(format_string):
     return regex
 
 
-def write_yaml(filename, data):
+def write_yaml(filename, data, use_ruamel=False):
     '''
     Write data to YAML file.
 
@@ -49,12 +50,23 @@ def write_yaml(filename, data):
         name of the YAML file
     data: list or dict
         description that should be written to file
+    use_ruamel: bool, optional
+        when the `ruamel.yaml` library should be used (defaults to ``False``)
+
+    Note
+    ----
+    `filename` will be overwritten in case it already exists.
     '''
     with open(filename, 'w') as f:
-        f.write(yaml.safe_dump(data, default_flow_style=False))
+        if use_ruamel:
+            f.write(ruamel.yaml.dump(data,
+                    Dumper=ruamel.yaml.RoundTripDumper, explicit_start=True))
+        else:
+            f.write(yaml.dump(data,
+                    default_flow_style=False, explicit_start=True))
 
 
-def load_yaml(stream):
+def load_yaml(stream, use_ruamel=False):
     '''
     Load YAML from open file stream.
 
@@ -62,16 +74,22 @@ def load_yaml(stream):
     ----------
     stream: file object
         open file as obtained with ``open()``
+    use_ruamel: bool, optional
+        when the `ruamel.yaml` library should be used (defaults to ``False``)
 
     Returns
     -------
     dict or list
         file content
     '''
-    return yaml.safe_load(stream.read())
+    if use_ruamel:
+        return ruamel.yaml.load(stream.read(),
+                                ruamel.yaml.RoundTripLoader)
+    else:
+        return yaml.load(stream.read())
 
 
-def read_yaml(filename):
+def read_yaml(filename, use_ruamel=False):
     '''
     Read YAML file.
 
@@ -79,6 +97,8 @@ def read_yaml(filename):
     ----------
     filename: str
         absolute path to the YAML file
+    use_ruamel: bool, optional
+        when the `ruamel.yaml` library should be used (defaults to ``False``)
 
     Returns
     -------
@@ -93,11 +113,11 @@ def read_yaml(filename):
     if not os.path.exists(filename):
         raise OSError('File does not exist: %s' % filename)
     with open(filename, 'r') as f:
-        yaml_content = load_yaml(f)
+        yaml_content = load_yaml(f, use_ruamel)
     return yaml_content
 
 
-def write_json(filename, data):
+def write_json(filename, data, naicify=False):
     '''
     Write data to JSON file.
 
@@ -107,9 +127,20 @@ def write_json(filename, data):
         name of the JSON file
     data: list or dict
         description that should be written to file
+    naicify: bool, optional
+        whether `data` should be naicely formatted (default: ``False``);
+        note that this will increase the size of the output file significantly
+
+    Note
+    ----
+    `filename` will be overwritten in case it already exists.
     '''
     with open(filename, 'w') as f:
-        json.dump(data, f, indent=4, separators=(',', ': '), sort_keys=True)
+        if naicify:
+            json.dump(data, f, sort_keys=True,
+                      indent=4, separators=(',', ': '))
+        else:
+            json.dump(data, f, sort_keys=True)
 
 
 def read_json(filename):

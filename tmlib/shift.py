@@ -345,12 +345,13 @@ class ShiftDescription(object):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in ShiftDescription.persistent_metadata
+        missing_keys = [a for a in ShiftDescription.persistent
                         if a not in description.keys()]
         if len(missing_keys) > 0:
             raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
-        for k, v in description:
-            if k not in ShiftDescriptor.persistent:
-                raise AttributeError('Class "%s" has no attribute "%s"'
-                                     % (ShiftDescriptor.__class__.__name__, k))
+        for k, v in description.iteritems():
+            if k not in ShiftDescription.persistent:
+                raise AttributeError(
+                        'Class "%s" has no attribute "%s"'
+                        % (ShiftDescription.__class__.__name__, k))
             setattr(self, k, v)
