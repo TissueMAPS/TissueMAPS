@@ -12,8 +12,8 @@ from ..image import IllumstatsImages
 
 class ImageRegistration(ClusterRoutines):
 
-    def __init__(self, experiment, shift_file_format_string,
-                 prog_name, logging_level='critical'):
+    def __init__(self, experiment, shift_file_format_string, prog_name,
+                 verbosity=0):
         '''
         Initialize an instance of class ImageRegistration.
 
@@ -27,16 +27,15 @@ class ImageRegistration(ClusterRoutines):
             should be formatted
         prog_name: str
             name of the corresponding program (command line interface)
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
         '''
         super(ImageRegistration, self).__init__(
-            experiment, prog_name, logging_level)
+            experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
         self.shift_file_format_string = shift_file_format_string
@@ -49,10 +48,11 @@ class ImageRegistration(ClusterRoutines):
         List[str]
             absolute paths to the shift descriptor files
         '''
-        self._shift_files = [os.path.join(c.shift_dir,
-                                          self.shift_file_format_string.format(
-                                                cycle=c.name))
-                             for c in self.cycles]
+        self._shift_files = [
+            os.path.join(c.shift_dir,
+                         self.shift_file_format_string.format(cycle=c.name))
+            for c in self.cycles
+        ]
         return self._shift_files
 
     @property
@@ -67,9 +67,9 @@ class ImageRegistration(ClusterRoutines):
         self._reg_file_format_string = '{experiment}_{job}.reg'
         return self._reg_file_format_string
 
-    def create_joblist(self, **kwargs):
+    def create_job_descriptions(self, **kwargs):
         '''
-        Create a joblist for parallel computing.
+        Create job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -129,6 +129,7 @@ class ImageRegistration(ClusterRoutines):
                 'sites': site_batches[i]
             } for i, batch in enumerate(registration_batches)],
             'collect': {
+                'max_shift': kwargs['max_shift'],
                 'inputs': {
                     'registration_files': registration_files
                 },
@@ -161,7 +162,7 @@ class ImageRegistration(ClusterRoutines):
                             batch['inputs']['image_files']['references'],
                             batch['outputs']['registration_file'])
 
-    def collect_job_output(self, batch, **kwargs):
+    def collect_job_output(self, batch):
         '''
         Collect and fuse shift calculations and create shift description file.
 
@@ -174,11 +175,7 @@ class ImageRegistration(ClusterRoutines):
         ----------
         batch: dict
             description of the *collect* job
-        **kwargs: dict
-            additional variable input arguments as key-value pairs:
-            * "max_shift": shift value in pixels that is maximally tolerated,
-              sites with larger shift values will be ignored (*int*)
-
+        
         See also
         --------
         `align.registration.fuse_registration`_
@@ -190,7 +187,7 @@ class ImageRegistration(ClusterRoutines):
 
         # Calculate overhang between cycles
         top, bottom, right, left, no_shift = \
-            reg.calculate_overhang(shift_descriptions, kwargs['max_shift'])
+            reg.calculate_overhang(shift_descriptions, batch['max_shift'])
 
         for i, cycle_name in enumerate(cycle_names):
 
@@ -202,7 +199,7 @@ class ImageRegistration(ClusterRoutines):
                 shift.upper_overhang = top
                 shift.right_overhang = right
                 shift.left_overhang = left
-                shift.max_shift = kwargs['max_shift']
+                shift.max_shift = batch['max_shift']
                 shift.omit = bool(no_shift[j])
                 shift.cycle = self.cycles[i].name
                 shift.filename = shift_descriptions[i][j]['filename']
@@ -242,22 +239,24 @@ class ImageRegistration(ClusterRoutines):
             * "illumcorr": also correct illumination artifacts (*bool*)
         '''
         for cycle in self.cycles:
-            cycle.image_files
-            cycle.image_metadata
-            cycle.image_shifts
             for channel in channels:
-                channel_index = [i for i, md in enumerate(cycle.image_metadata)
-                                 if md.channel == channel]
+                channel_index = [
+                    i for i, md in enumerate(cycle.image_metadata)
+                    if md.channel == channel
+                ]
                 if not channel_index:
                     raise ValueError('Channel name is not valid: %s' % channel)
-                channel_images = [ChannelImage.create_from_file(
-                                    os.path.join(cycle.image_dir,
-                                                 cycle.image_files[ix]))
-                                  for ix in channel_index]
-                shifts = [cycle.image_shifts[ix] for ix in channel_index]
+                channel_images = [
+                    ChannelImage.create_from_file(
+                        os.path.join(cycle.image_dir, cycle.image_files[ix]))
+                    for ix in channel_index
+                ]
+                shifts = [cycle.shift_descriptions[ix] for ix in channel_index]
                 if kwargs['illumcorr']:
-                    ix = [i for i, md in enumerate(cycle.stats_metadata)
-                          if md.channel == channel]
+                    ix = [
+                        i for i, md in enumerate(cycle.stats_metadata)
+                        if md.channel == channel
+                    ]
                     stats = IllumstatsImages.create_from_file(
                                 cycle.stats_files[ix])
 

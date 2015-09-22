@@ -97,13 +97,13 @@ def register_images(sites, target_files, reference_files, output_file):
             out[cycle]['site'].append(sites[i])
 
     print '. Store registration in file: %s' % output_file
-    with DatasetWriter(output_file) as writer:
+    with DatasetWriter(output_file, new=True) as writer:
         for cycle, data in out.iteritems():
             for feature, values in data.iteritems():
                 # The calculated features will be stored
                 # in separate datasets grouped by cycle
                 hdf5_location = '%s/%s' % (cycle, feature)
-                writer.write_dataset(hdf5_location, data=values)
+                writer.write(hdf5_location, data=values)
 
 
 def calculate_local_overhang(x_shift, y_shift):
@@ -186,10 +186,10 @@ def fuse_registration(output_files, cycle_names):
     for f in output_files:
         for i, key in enumerate(cycle_names):
             with DatasetReader(f) as reader:
-                filenames = reader.read_dataset(os.path.join(key, 'filename'))
-                x_shifts = reader.read_dataset(os.path.join(key, 'x_shift'))
-                y_shifts = reader.read_dataset(os.path.join(key, 'y_shift'))
-                sites = reader.read_dataset(os.path.join(key, 'site'))
+                filenames = reader.read(os.path.join(key, 'filename'))
+                x_shifts = reader.read(os.path.join(key, 'x_shift'))
+                y_shifts = reader.read(os.path.join(key, 'y_shift'))
+                sites = reader.read(os.path.join(key, 'site'))
                 for j in xrange(len(filenames)):
                     shift_descriptor[i].append({
                         'filename': filenames[j],

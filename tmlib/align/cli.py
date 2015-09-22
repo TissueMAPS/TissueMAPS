@@ -34,16 +34,11 @@ class Align(CommandLineInterface):
                     prog_name=self.name)
 
     @property
-    def _variable_joblist_args(self):
+    def _variable_init_args(self):
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         kwargs['ref_cycle'] = self.args.ref_cycle
         kwargs['ref_channel'] = self.args.ref_channel
-        return kwargs
-
-    @property
-    def _variable_collect_args(self):
-        kwargs = dict()
         kwargs['max_shift'] = self.args.max_shift
         return kwargs
 

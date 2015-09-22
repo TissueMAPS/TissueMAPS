@@ -34,6 +34,12 @@ class ImExtract(CommandLineInterface):
         experiment = Experiment(self.args.experiment_dir, self.cfg)
         return ImageExtractor(experiment=experiment, prog_name=self.name)
 
+    @property
+    def _variable_init_args(self):
+        kwargs = dict()
+        kwargs['batch_size'] = self.args.batch_size
+        return kwargs
+
     @staticmethod
     def call(args):
         '''

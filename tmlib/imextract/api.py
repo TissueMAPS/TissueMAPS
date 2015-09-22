@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from .. import imageutils
+from .. import image_utils
 from ..image_readers import BioformatsImageReader
 from ..cluster import ClusterRoutines
 
@@ -17,7 +17,7 @@ class ImageExtractor(ClusterRoutines):
     formats (often extended TIFF formats).
     '''
 
-    def __init__(self, experiment, prog_name, logging_level='critical'):
+    def __init__(self, experiment, prog_name, verbosity=0):
         '''
         Initialize an instance of class ImageExtractor.
 
@@ -28,30 +28,28 @@ class ImageExtractor(ClusterRoutines):
             experiment directory
         prog_name: str
             name of the corresponding program (command line interface)
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
         '''
         super(ImageExtractor, self).__init__(
-            experiment, prog_name, logging_level)
+            experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
         for cycle in self.cycles:
             if not os.path.exists(os.path.join(cycle.metadata_dir,
                                                cycle.image_metadata_file)):
-                raise OSError('Metadata file does not exist. '
-                              'Use the "metaconvert" package to create it.')
+                raise OSError('Metadata file does not exist.')
 
     def _create_output_dirs(self):
         for cycle in self.cycles:
             if not os.path.exists(cycle.image_dir):
                 os.mkdir(cycle.image_dir)
 
-    def create_joblist(self, **kwargs):
+    def create_job_descriptions(self, **kwargs):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
@@ -77,15 +75,19 @@ class ImageExtractor(ClusterRoutines):
                 count += 1
                 joblist['run'].append({
                     'id': count,
-                    'inputs': [
-                        os.path.join(cycle.image_upload_dir,
-                                     md.original_filename)
-                        for md in batch
-                    ],
-                    'outputs': [
-                        os.path.join(cycle.image_dir, md.name)
-                        for md in batch
-                    ],
+                    'inputs': {
+                        'image_files': [
+                            os.path.join(cycle.image_upload_dir,
+                                         md.original_filename)
+                            for md in batch
+                        ]
+                    },
+                    'outputs': {
+                        'image_files': [
+                            os.path.join(cycle.image_dir, md.name)
+                            for md in batch
+                        ]
+                    },
                     'metadata': [md.serialize() for md in batch],
                     'cycle': cycle.name
 
@@ -112,16 +114,16 @@ class ImageExtractor(ClusterRoutines):
                                   len(md['original_planes'])),
                                  dtype=md['original_dtype'])
                 for z in md['original_planes']:
-                    filename = batch['inputs'][i]
+                    filename = batch['inputs']['image_files'][i]
                     stack[:, :, z] = reader.read_subset(
                                         filename, plane=z,
                                         series=md['original_series'])
                 img = np.max(stack, axis=2)
                 # Write plane (2D single-channel image) to file
-                filename = batch['outputs'][i]
-                imageutils.save_image_png(img, filename)
+                filename = batch['outputs']['image_files'][i]
+                image_utils.save_image_png(img, filename)
 
-    def collect_job_output(self, joblist, **kwargs):
+    def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
                              ' method' % self.__class__.__name__)
 

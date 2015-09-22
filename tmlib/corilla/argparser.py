@@ -4,7 +4,7 @@ from .cli import Corilla
 
 parser, subparsers = Corilla.get_parser_and_subparsers(
                         required_subparsers=[
-                            'run', 'joblist', 'submit', 'apply'])
+                            'init', 'run', 'submit', 'apply'])
 
 parser.description = '''
         Calculate illumination statistics over a set of images of the same

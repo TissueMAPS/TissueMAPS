@@ -20,7 +20,7 @@ class MetadataExtractor(ClusterRoutines):
     and written to XML files.
     '''
 
-    def __init__(self, experiment, prog_name, logging_level='critical'):
+    def __init__(self, experiment, prog_name, verbosity=0):
         '''
         Initialize an instance of class MetadataExtractor.
 
@@ -31,50 +31,26 @@ class MetadataExtractor(ClusterRoutines):
             experiment directory
         prog_name: str
             name of the corresponding command line interface
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataExtractor, self).__init__(prog_name, logging_level)
+        super(MetadataExtractor, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
-
-    @property
-    def project_dir(self):
-        '''
-        Returns
-        -------
-        str
-            directory where joblist file and log output will be stored
-        '''
-        self._project_dir = os.path.join(self.experiment.dir,
-                                         'tmaps_%s' % self.prog_name)
-        return self._project_dir
-
-    @cached_property
-    def cycles(self):
-        '''
-        Returns
-        -------
-        List[Wellplate or Slide]
-            cycle objects
-        '''
-        self._cycles = self.experiment.cycles
-        return self._cycles
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):
         return re.sub(r'(%s)$' % os.path.splitext(image_filename)[1],
                       '.ome.xml', image_filename)
 
-    def create_joblist(self, **kwargs):
+    def create_job_descriptions(self, **kwargs):
         '''
-        Create a list of information required for the creation and processing
-        of individual jobs.
+        Create job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -82,6 +58,11 @@ class MetadataExtractor(ClusterRoutines):
             absolute path to custom configuration file
         **kwargs: dict
             empty - no additional arguments
+
+        Returns
+        -------
+        Dict[str, List[dict] or dict]
+            job descriptions
         '''
         joblist = dict()
         joblist['run'] = list()
@@ -108,19 +89,21 @@ class MetadataExtractor(ClusterRoutines):
                 count += 1
                 joblist['run'].append({
                     'id': count,
-                    'inputs': [input_files[j]],
+                    'inputs': {
+                        'image_files': [input_files[j]]
+                    },
                     'outputs': list(),
                     'cycle': cycle.name
                 })
 
         joblist['collect'] = {
-            'inputs': list(),
+            'inputs': {},
             'outputs': output_files
         }
         return joblist
 
     def _build_run_command(self, batch):
-        input_filename = batch['inputs'][0]
+        input_filename = batch['inputs']['image_files'][0]
         command = [
             'showinf', '-omexml-only', '-nopix', '-novalid', '-no-upgrade',
             input_filename
@@ -138,7 +121,7 @@ class MetadataExtractor(ClusterRoutines):
         command.extend(['collect'])
         return command
 
-    def collect_job_output(self, batch, **kwargs):
+    def collect_job_output(self, batch):
         '''
         The *showinf* command prints the OME-XML string to standard output.
         GC3Pie redirects the standard output to a log file. Here we copy the

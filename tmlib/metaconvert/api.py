@@ -1,6 +1,5 @@
 import os
 from glob import glob
-from cached_property import cached_property
 from .default import DefaultMetadataHandler
 from .cellyoyager import CellvoyagerMetadataHandler
 from .metamorph import MetamorphMetadataHandler
@@ -31,7 +30,7 @@ class MetadataConverter(ClusterRoutines):
     '''
 
     def __init__(self, experiment, file_format, image_file_format_string,
-                 prog_name, logging_level='critical'):
+                 prog_name, verbosity=0):
         '''
         Initialize an instance of class MetadataConverter.
 
@@ -48,9 +47,8 @@ class MetadataConverter(ClusterRoutines):
             files should be formatted
         prog_name: str
             name of the corresponding program (command line interface)
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            logging level (default: ``0``)
 
         Raises
         ------
@@ -61,7 +59,8 @@ class MetadataConverter(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataConverter, self).__init__(prog_name, logging_level)
+        super(MetadataConverter, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.file_format = file_format
         if self.file_format:
@@ -70,38 +69,19 @@ class MetadataConverter(ClusterRoutines):
                                         'supported for the provided format')
         self.image_file_format_string = image_file_format_string
 
-    @property
-    def project_dir(self):
+    def create_job_descriptions(self, **kwargs):
         '''
-        Returns
-        -------
-        str
-            directory where joblist file and log output will be stored
-        '''
-        self._project_dir = os.path.join(self.experiment.dir,
-                                         'tmaps_%s' % self.prog_name)
-        return self._project_dir
-
-    @cached_property
-    def cycles(self):
-        '''
-        Returns
-        -------
-        List[Wellplate or Slide]
-            cycle objects
-        '''
-        self._cycles = self.experiment.cycles
-        return self._cycles
-
-    def create_joblist(self, **kwargs):
-        '''
-        Create a list of information required for the creation and processing
-        of individual jobs.
+        Create job descriptions for parallel computing.
 
         Parameters
         ----------
         **kwargs: dict
             empty - no additional arguments
+
+        Returns
+        -------
+        Dict[str, List[dict] or dict]
+            job descriptions
         '''
         joblist = dict()
         joblist['run'] = list()
@@ -173,7 +153,7 @@ class MetadataConverter(ClusterRoutines):
             data[md.name] = md.serialize()
         utils.write_json(filename, data)
 
-    def collect_job_output(self, joblist, **kwargs):
+    def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
                              ' method' % self.__class__.__name__)
 

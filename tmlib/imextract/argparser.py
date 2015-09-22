@@ -10,10 +10,11 @@ parser.description = '''
     '''
 parser.version = __version__
 
-joblist_parser = subparsers.choices['joblist']
-joblist_parser.add_argument(
+init_parser = subparsers.choices['init']
+init_parser.add_argument(
     '-b', '--batch_size', dest='batch_size', type=int, default=10,
-    help='number of image files that should be processed per job')
+    help='number of image files that should be processed per job'
+         '(default: 10)')
 
 for name in subparsers.choices:
     subparsers.choices[name].set_defaults(handler=ImExtract.call)

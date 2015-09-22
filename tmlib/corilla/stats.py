@@ -63,7 +63,7 @@ class OnlineStatistics(object):
             self._var = np.zeros(self.image_dimensions, dtype=float)
             self._var[:] = np.nan
         else:
-            self._var = self.M2 / (self.n - 1)
+            self._var = self._M2 / (self.n - 1)
         return self._var
 
     @property

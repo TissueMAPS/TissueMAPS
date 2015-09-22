@@ -1,6 +1,5 @@
 import os
 import re
-from cached_property import cached_property
 from .stats import OnlineStatistics
 from ..writers import DatasetWriter
 from ..image import ChannelImage
@@ -15,7 +14,7 @@ class IllumstatsGenerator(ClusterRoutines):
     '''
 
     def __init__(self, experiment, stats_file_format_string, prog_name,
-                 logging_level='critical'):
+                 verbosity=0):
         '''
         Initialize an instance of class IllumstatsGenerator.
 
@@ -29,9 +28,8 @@ class IllumstatsGenerator(ClusterRoutines):
             should be formatted
         prog_name: str
             name of the corresponding program (command line interface)
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            logging level (default: ``0``)
 
         Note
         ----
@@ -39,26 +37,14 @@ class IllumstatsGenerator(ClusterRoutines):
         doesn't exist.
         '''
         super(IllumstatsGenerator, self).__init__(
-            experiment, prog_name, logging_level)
+            experiment, prog_name, verbosity)
         self.experiment = experiment
         self.stats_file_format_string = stats_file_format_string
 
-    @cached_property
-    def cycles(self):
+    def create_job_descriptions(self, **kwargs):
         '''
-        Returns
-        -------
-        List[Wellplate or Slide]
-            cycle objects
-        '''
-        self._cycles = self.experiment.cycles
-        return self._cycles
-
-    def create_joblist(self, **kwargs):
-        '''
-        Create a list with information required for the creation and processing
-        of individual jobs.
-
+        Create job descriptions for parallel computing.
+        
         Parameters
         ----------
         **kwargs: dict
@@ -85,8 +71,9 @@ class IllumstatsGenerator(ClusterRoutines):
                 joblist['run'].append({
                     'id': count,
                     'inputs': {
-                        'image_files':
-                            [os.path.join(cycle.image_dir, f) for f in batch]
+                        'image_files': [
+                            os.path.join(cycle.image_dir, f) for f in batch
+                        ]
                     },
                     'outputs': {
                         'stats_file':
@@ -116,12 +103,11 @@ class IllumstatsGenerator(ClusterRoutines):
             for f in image_files:
                 img = reader.read(f)
                 stats.update(img)
-
-        with DatasetWriter(batch['outputs']['stats_file']) as writer:
-            writer.write_dataset('/data/mean', data=stats.mean)
-            writer.write_dataset('/data/std', data=stats.std)
-            writer.write_dataset('/metadata/cycle', data=self.cycle.name)
-            writer.write_dataset('/metadata/channel', data=batch['channel'])
+        with DatasetWriter(batch['outputs']['stats_file'], new=True) as writer:
+            writer.write('/images/mean', data=stats.mean)
+            writer.write('/images/std', data=stats.std)
+            writer.write('/metadata/cycle', data=batch['cycle'])
+            writer.write('/metadata/channel', data=batch['channel'])
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
@@ -169,6 +155,6 @@ class IllumstatsGenerator(ClusterRoutines):
                 output_filename = os.path.join(output_dir, output_filename)
                 corrected_image.save_as_png(output_filename)
 
-    def collect_job_output(self, joblist, **kwargs):
+    def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
                              ' method' % self.__class__.__name__)

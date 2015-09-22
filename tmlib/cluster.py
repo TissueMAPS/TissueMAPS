@@ -1,5 +1,6 @@
 import os
 import yaml
+import glob
 import time
 import datetime
 from abc import ABCMeta
@@ -23,7 +24,7 @@ class ClusterRoutines(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment, prog_name, logging_level='critical'):
+    def __init__(self, experiment, prog_name, verbosity=0):
         '''
         Initialize an instance of class ClusterRoutines.
 
@@ -34,38 +35,13 @@ class ClusterRoutines(object):
             experiment directory
         prog_name: str
             name of the corresponding program (command line interface)
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            verbosity of logging level (default: ``0``)
         '''
         self.experiment = experiment
         self.prog_name = prog_name
-        self.configure_logging(logging_level)
-
-    @staticmethod
-    def configure_logging(level):
-        '''
-        Configure logging for GC3Pie.
-
-        Parameters
-        ----------
-        level: str
-            logging level
-        '''
-        def map_logging_level(level):
-            if level == 'debug':
-                return logging.DEBUG
-            elif level == 'info':
-                return logging.INFO
-            elif level == 'warning':
-                return logging.WARNING
-            elif level == 'error':
-                return logging.ERROR
-            elif level == 'critical':
-                return logging.CRITICAL
-        logger = logging.getLogger(__name__)
-        # TODO: create logger for program
-        gc3libs.configure_logger(level=map_logging_level(level))
+        gc3libs.configure_logger(level=logging.CRITICAL)
+        self.verbosity = verbosity
 
     @cached_property
     def cycles(self):
@@ -87,7 +63,7 @@ class ClusterRoutines(object):
             directory where joblist file and log output will be stored
         '''
         self._project_dir = os.path.join(self.experiment.dir,
-                                         'tm_%s' % self.prog_name)
+                                         'tmaps_%s' % self.prog_name)
         if not os.path.exists(self._project_dir):
             os.mkdir(self._project_dir)
         return self._project_dir
@@ -104,6 +80,20 @@ class ClusterRoutines(object):
         if not os.path.exists(self._log_dir):
             os.mkdir(self._log_dir)
         return self._log_dir
+
+    @cached_property
+    def job_descriptions_dir(self):
+        '''
+        Returns
+        -------
+        str
+            directory where job description files are stored
+        '''
+        self._job_descriptions_dir = os.path.join(self.project_dir,
+                                                  'job_descriptions')
+        if not os.path.exists(self._job_descriptions_dir):
+            os.mkdir(self._job_descriptions_dir)
+        return self._job_descriptions_dir
 
     @staticmethod
     def create_datetimestamp():
@@ -165,7 +155,7 @@ class ClusterRoutines(object):
         pass
 
     @abstractmethod
-    def collect_job_output(self, joblist, **kwargs):
+    def collect_job_output(self, batch):
         '''
         Collect the output of jobs and fuse them if necessary.
 
@@ -179,10 +169,10 @@ class ClusterRoutines(object):
         pass
 
     @abstractmethod
-    def create_joblist(self, **kwargs):
+    def create_job_descriptions(self, **kwargs):
         '''
-        Create a list with information required for the creation and processing
-        of individual jobs.
+        Create job descriptions with information required for the creation and
+        processing of individual jobs.
 
         There are two kinds of jobs:
         * *run* jobs: tasks that are processed in parallel
@@ -192,32 +182,32 @@ class ClusterRoutines(object):
         Each batch (element of the *run* joblist) must provide the following
         key-value pairs:
         * "id": one-based job indentifier number (*int*)
-        * "inputs": absolute paths to input files required for the job
-          (List[*str*] or Dict[*str*, List[*str*]])
-        * "outputs": absolute paths to output files required for the job
-          (List[*str*] or Dict[*str*, List[*str*]])
+        * "inputs": absolute paths to input files required to run the job
+          (Dict[*str*, List[*str*]])
+        * "outputs": absolute paths to output files produced the job
+          (Dict[*str*, List[*str*]])
 
         In case a *collect* job is required, the corresponding batch must
         provide the following key-value pairs:
-        * "inputs": absolute paths to input files required for the job
-          (List[*str*] or Dict[*str*, List[*str*]])
-        * "outputs": absolute paths to output files required for the job
-          (List[*str*] or Dict[*str*, List[*str*]])
+        * "inputs": absolute paths to input files required to collect job
+          output of the *run* step (Dict[*str*, List[*str*]])
+        * "outputs": absolute paths to output files produced by the job
+          (Dict[*str*, List[*str*]])
 
         A complete joblist has the following structure::
 
             {
                 'run': [
                     {
-                        'id': int
-                        'inputs': list or dict
-                        'outputs': list or dict
+                        'id': int,
+                        'inputs': list or dict,
+                        'outputs': list or dict,
                     },
                     ...
                     ]
                 'collect':
                     {
-                        'inputs': list or dict
+                        'inputs': list or dict,
                         'outputs': list or dict
                     }
             }
@@ -257,43 +247,61 @@ class ClusterRoutines(object):
         '''
         pass
 
-    @property
-    def joblist_file(self):
+    def build_run_job_filename(self, job_id):
+        '''
+        Parameters
+        ----------
+        job_id: int
+            one-based job identifier number
+
+        Returns
+        -------
+        str
+            absolute path to the file that holds the description of the
+            job with the given `job_id`
+        '''
+        filename = os.path.join(self.job_descriptions_dir,
+                                '%s_run_%.5d.job' % (self.prog_name, job_id))
+        return filename
+
+    def build_collect_job_filename(self):
         '''
         Returns
         -------
         str
-            absolute path to the joblist file
+            absolute path to the file that holds the description of the
+            job with the given `job_id`
         '''
-        self._joblist_file = os.path.join(self.project_dir,
-                                          '%s.jobs' % self.prog_name)
-        return self._joblist_file
+        filename = os.path.join(self.job_descriptions_dir,
+                                '%s_collect.job' % self.prog_name)
+        return filename
 
-    def read_joblist(self):
+    def read_job_file(self, filename):
         '''
-        Read joblist from YAML file.
+        Read job description from JSON file.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the *.job* file that contains the description
+            of a single job
 
         Returns
         -------
-        List[dict]
-            job descriptions
+        dict
+            job description (batch)
 
         Raises
         ------
         OSError
-            when `joblist_file` does not exist
+            when file does not exist
         '''
-        if not os.path.exists(self.joblist_file):
-            raise OSError('Joblist file does not exist: %s'
-                          % self.joblist_file)
-        with open(self.joblist_file, 'r') as f:
-            joblist = yaml.load(f.read())
-        # TODO: check structure of joblist
-        return joblist
+        batch = utils.read_json(filename)
+        return batch
 
-    def write_joblist(self, joblist):
+    def write_job_files(self, joblist):
         '''
-        Write joblist to file as YAML.
+        Write job descriptions to files as JSON.
 
         Parameters
         ----------
@@ -302,13 +310,42 @@ class ClusterRoutines(object):
 
         Note
         ----
-        Create log directory if it does not exist.
+        Creates log directory if it does not exist and adds the job filename
+        to "inputs" (required in case no shared network is available).
         '''
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-        # TODO: check structure of joblist
-        with open(self.joblist_file, 'w') as f:
-            f.write(yaml.dump(joblist, default_flow_style=False))
+        for batch in joblist['run']:
+            job_file = self.build_run_job_filename(batch['id'])
+            batch['inputs']['job_file'] = job_file
+            utils.write_json(job_file, batch)
+        if 'collect' in joblist.keys():
+            job_file = self.build_collect_job_filename()
+            joblist['collect']['inputs']['job_file'] = job_file
+            utils.write_json(job_file, joblist['collect'])
+
+    def get_job_descriptions_from_files(self):
+        '''
+        Get job descriptions from individual *.job* files and combine them into
+        the format required by the `build_jobs()` method.
+
+        Returns
+        -------
+        dict
+            job descriptions
+        '''
+        joblist = dict()
+        joblist['run'] = list()
+        run_job_files = glob.glob(os.path.join(self.job_descriptions_dir,
+                                  '*_run_*.job'))
+        collect_job_files = glob.glob(os.path.join(self.job_descriptions_dir,
+                                      '*_collect.job'))
+        for f in run_job_files:
+            batch = self.read_job_file(f)
+            joblist['run'].append(batch)
+        if collect_job_files:
+            joblist['collect'] = self.read_job_file(collect_job_files[0])
+        return joblist
 
     def print_joblist(self, joblist):
         '''
@@ -372,7 +409,7 @@ class ClusterRoutines(object):
 
         return success
 
-    def create_jobs(self, joblist, shared_network=True, virtualenv='tmaps'):
+    def create_jobs(self, joblist, no_shared_network=False, virtualenv='tmaps'):
         '''
         Create a GC3Pie task collection of "jobs".
 
@@ -380,9 +417,9 @@ class ClusterRoutines(object):
         ----------
         joblist: Dict[List[dict]]
             job descriptions
-        shared_network: bool, optional
+        no_shared_network: bool, optional
             whether worker nodes have access to a shared network
-            or filesystem (defaults to ``True``)
+            or filesystem (defaults to ``False``)
         virtualenv: str, optional
             name of a virtual environment that should be activated
             (defaults to ``"tmaps"``)
@@ -408,22 +445,22 @@ class ClusterRoutines(object):
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)
 
-            if shared_network:
-                inputs = []
-                outputs = []
-            else:
+            if no_shared_network:
                 # If no shared network is available, files need to be copied.
                 # They are temporary stored in ~/.gc3pie_jobs.
-                if isinstance(batch['inputs'], dict):
+                if isinstance(batch['inputs'].values()[0], list):
                     inputs = utils.flatten(batch['inputs'].values())
                 else:
-                    inputs = batch['inputs']
+                    inputs = batch['inputs'].values()
 
-                if isinstance(batch['outputs'], dict):
+                if isinstance(batch['outputs'].values()[0], list):
                     outputs = utils.flatten(batch['outputs'].values())
                 else:
-                    outputs = batch['inputs']
+                    outputs = batch['outputs'].values()
                 outputs = [os.path.relpath(f, self.log_dir) for f in outputs]
+            else:
+                inputs = list()
+                outputs = list()
 
             # Add individual task to collection
             job = gc3libs.Application(
@@ -448,10 +485,7 @@ class ClusterRoutines(object):
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)
 
-            if shared_network:
-                inputs = []
-                outputs = []
-            else:
+            if no_shared_network:
                 # If no shared network is available, files need to be copied.
                 # They are temporary stored in ~/.gc3pie_jobs.
                 if isinstance(batch['inputs'], dict):
@@ -464,6 +498,9 @@ class ClusterRoutines(object):
                 else:
                     outputs = batch['inputs']
                 outputs = [os.path.relpath(f, self.log_dir) for f in outputs]
+            else:
+                inputs = list()
+                outputs = list()
 
             collect_job = gc3libs.Application(
                     arguments=self._build_collect_command(),
