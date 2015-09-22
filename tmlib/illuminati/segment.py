@@ -6,7 +6,7 @@ import os
 import re
 from gi.repository import Vips
 from skimage.measure import find_contours, approximate_polygon
-from .. import imageutils
+from .. import image_utils
 from ..dafu.utils import extract_ids
 
 
@@ -137,7 +137,7 @@ def remove_border_objects_numpy(im):
     numpy.ndarray
         modified image matrix with pixel values of border objects set to 0
     '''
-    is_border_object = imageutils.find_border_objects(im)
+    is_border_object = image_utils.find_border_objects(im)
     mat = im.copy()
     mat[is_border_object] = 0
     return mat

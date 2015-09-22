@@ -1,8 +1,10 @@
+import logging
 from . import logo
 from . import __version__
 from .api import PyramidCreation
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
+from .. import logging_utils
 
 
 class Illuminati(CommandLineInterface):
@@ -10,6 +12,18 @@ class Illuminati(CommandLineInterface):
     def __init__(self, args):
         super(Illuminati, self).__init__(args)
         self.args = args
+        self.configure_logging()
+
+    def configure_logging(self):
+        self.logger = logging.getLogger(self.name)
+        logging.basicConfig(
+            level=logging_utils.map_log_verbosity(self.args.verbosity),
+            format='%(asctime)s %(name)-5s %(levelname)-5s %(message)s',
+            datefmt='%m-%d %H:%M')
+        # TODO: dependent on `verbosity`
+        for handler in logging.root.handlers:
+            handler.addFilter(logging_utils.Whitelist(self.__class__.__name__,
+                              'PyramidCreation', 'ChannelLayer'))
 
     @staticmethod
     def print_logo():
@@ -27,13 +41,14 @@ class Illuminati(CommandLineInterface):
 
     @property
     def _api_instance(self):
+        self.logger.info('%s' % self.name.upper())
         experiment = Experiment(self.args.experiment_dir, self.cfg)
         return PyramidCreation(
                     experiment=experiment,
                     prog_name=self.name)
 
     @property
-    def _variable_joblist_args(self):
+    def _variable_init_args(self):
         kwargs = dict()
         kwargs['shift'] = self.args.shift
         kwargs['illumcorr'] = self.args.illumcorr

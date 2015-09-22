@@ -1,12 +1,13 @@
 import os
-from .layer import ChannelLayer
+from .layers import ChannelLayer
 from ..cluster import ClusterRoutines
 from ..image import IllumstatsImages
+import logging
 
 
 class PyramidCreation(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name, logging_level='critical'):
+    def __init__(self, experiment, prog_name, verbosity=0):
         '''
         Initialize an instance of class PyramidCreation.
 
@@ -17,20 +18,20 @@ class PyramidCreation(ClusterRoutines):
             one or more cycle directories
         prog_name: str
             name of the corresponding program (command line interface)
-        logging_level: str, optional
-            configuration of GC3Pie logger; either "debug", "info", "warning",
-            "error" or "critical" (defaults to ``"critical"``)
+        verbosity: int, optional
+            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
         '''
-        super(PyramidCreation, self).__init__(
-            experiment, prog_name, logging_level)
+        super(PyramidCreation, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.prog_name = prog_name
         if not os.path.exists(self.experiment.layers_dir):
             os.mkdir(self.experiment.layers_dir)
+        self.verbosity = verbosity
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     @property
     def shift_dirs(self):
@@ -57,9 +58,9 @@ class PyramidCreation(ClusterRoutines):
                              for c in self.cycles]
         return self._shift_files
 
-    def create_joblist(self, **kwargs):
+    def create_job_descriptions(self, **kwargs):
         '''
-        Create a joblist for parallel computing.
+        Create job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -97,12 +98,12 @@ class PyramidCreation(ClusterRoutines):
                 joblist['run'].append({
                     'id': count,
                     'inputs': {
-                        'image_files':
-                            [os.path.join(cycle.image_dir, f) for f in batch]
+                        'image_files': [
+                            os.path.join(cycle.image_dir, f) for f in batch
+                        ]
                     },
                     'outputs': {
                         'pyramid_dir':
-                        # TODO
                             os.path.join(self.experiment.layers_dir,
                                          '{cycle}_{channel}'.format(
                                                 cycle=cycle.name,
@@ -126,29 +127,33 @@ class PyramidCreation(ClusterRoutines):
         --------
         `illuminati.layers.ChannelLayer`_
         '''
+        self.logger.info('run job #%d' % batch['id'])
         cycle = [c for c in self.cycles if c.name == batch['cycle']][0]
 
         if batch['illumcorr']:
-            stats_file = [md.filename for md in cycle.stats_metadata
-                          if md.channel == batch['channel']][0]
+            stats_file = [
+                os.path.join(cycle.stats_dir, md.filename)
+                for md in cycle.stats_metadata
+                if md.channel == batch['channel']
+            ][0]
             stats = IllumstatsImages.create_from_file(stats_file)
         else:
             stats = None
 
         if batch['shift']:
-            shifts = [c.image_shifts for c in self.cycles]
+            shifts = [c.shift_descriptions for c in self.cycles]
         else:
             shifts = None
 
         layer = ChannelLayer.create_from_files(
                     cycle=cycle, channel=batch['channel'],
-                    kwargs={'stats': stats, 'shifts': shifts})
+                    stats=stats, shifts=shifts)
 
         if batch['thresh']:
-            layer.clip(thresh_value=batch['thresh_value'],
-                       thresh_percent=batch['thresh_percent'])
+            layer = layer.clip(thresh_value=batch['thresh_value'],
+                               thresh_percent=batch['thresh_percent'])
 
-        layer.scale()
+        layer = layer.scale()
 
         output_dir = batch['outputs']['pyramid_dir']
         if not os.path.exists(output_dir):
@@ -156,7 +161,7 @@ class PyramidCreation(ClusterRoutines):
 
         layer.create_pyramid(output_dir)
 
-    def collect_job_output(self, joblist, **kwargs):
+    def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
                              ' method' % self.__class__.__name__)
 
