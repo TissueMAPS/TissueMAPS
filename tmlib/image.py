@@ -33,11 +33,11 @@ class Image(object):
 
     2D means that the image doesn't contain any z-stacks.
     However, the image array may still have more than 2 dimensions.
-    The 3rd dimension represents color and is referred to "bands".
+    The 3rd dimension represents color and is referred to as "bands".
 
     The class provides the image pixel array as well as associated metadata.
     It makes use of lazy loading so that image objects can be created without
-    the images being loaded into memory.
+    the pixels arrays being immediately loaded into memory.
     '''
 
     __metaclass__ = ABCMeta
@@ -211,7 +211,7 @@ class ChannelImage(Image):
                                     stats.std.pixels.array)
         return new_object
 
-    def align(self, shift_description):
+    def align(self, shift_description, crop=True):
         '''
         Align, i.e. shift and crop, an image based on calculated shift
         and overhang values.
@@ -220,6 +220,9 @@ class ChannelImage(Image):
         ----------
         shift_description: ShiftDescriptor
             information required for alignment
+        crop: bool, optional
+            whether images should cropped or rather padded
+            with zero valued pixels (default: ``True``)
 
         Returns
         -------
@@ -228,9 +231,10 @@ class ChannelImage(Image):
 
         Warning
         -------
-        Alignment may change the dimensions of the image.
+        Alignment may change the dimensions of the image when `crop` is
+        ``True``.
         '''
-        self.pixels = self.pixels.align(shift_description)
+        self.pixels = self.pixels.align(shift_description, crop=crop)
         return self
 
 

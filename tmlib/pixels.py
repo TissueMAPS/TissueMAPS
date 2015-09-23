@@ -220,7 +220,7 @@ class VipsPixels(Pixels):
         '''
         return VipsPixels(segment.remove_objects_vips(self.array, ids))
 
-    def align(self, shift_description):
+    def align(self, shift_description, crop=True):
         '''
         Align the image based on prior registration.
 
@@ -228,6 +228,9 @@ class VipsPixels(Pixels):
         ----------
         shift_description: dict
             shift and overlap values
+        crop: bool, optional
+            whether images should cropped or rather padded
+            with zero valued pixels (default: ``True``)
 
         Returns
         -------
@@ -239,11 +242,12 @@ class VipsPixels(Pixels):
         The aligned image may have different dimensions.
         '''
         sd = shift_description
+        # TODO
         return VipsPixels(shift.shift_and_crop_vips(
                     self.array, y=sd.y_shift, x=sd.x_shift,
-                    upper=sd.upper_overhang, lower=sd.lower_overhang,
-                    left=sd.left_overhang, right=sd.right_overhang,
-                    shift=not(sd.omit)))
+                    bottom=sd.upper_overhang, top=sd.lower_overhang,
+                    right=sd.left_overhang, left=sd.right_overhang,
+                    shift=not(sd.omit), crop=crop))
 
     def correct_illumination(self, mean, std):
         '''
@@ -451,7 +455,7 @@ class NumpyPixels(Pixels):
         '''
         return NumpyPixels(segment.remove_objects_numpy(self.array, ids))
 
-    def align(self, shift_description):
+    def align(self, shift_description, crop=True):
         '''
         Align the image based on prior registration.
 
@@ -459,6 +463,9 @@ class NumpyPixels(Pixels):
         ----------
         shift_description: dict
             shift and overlap values
+        crop: bool, optional
+            whether images should cropped or rather padded
+            with zero valued pixels (default: ``True``)
 
         Returns
         -------
@@ -472,9 +479,9 @@ class NumpyPixels(Pixels):
         sd = shift_description
         return NumpyPixels(shift.shift_and_crop_numpy(
                     self.array, y=sd.y_shift, x=sd.x_shift,
-                    upper=sd.upper_overhang, lower=sd.lower_overhang,
-                    left=sd.left_overhang, right=sd.right_overhang,
-                    shift=not(sd.omit)))
+                    bottom=sd.upper_overhang, top=sd.lower_overhang,
+                    right=sd.left_overhang, left=sd.right_overhang,
+                    shift=not(sd.omit), crop=crop))
 
     def correct_illumination(self, mean_image, std_image):
         '''

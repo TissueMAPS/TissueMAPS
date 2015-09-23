@@ -1,7 +1,5 @@
 import os
 import numpy as np
-from shapely.geometry import box
-from shapely.geometry.polygon import Polygon
 from ..mosaic import Mosaic
 from ..metadata import MosaicMetadata
 from .. import image_utils
@@ -34,87 +32,6 @@ class Layer(object):
         '''
         self.mosaic = mosaic
         self.metadata = metadata
-
-    def align(self, shift_descriptions):
-        '''
-        Align mosaic according to pre-calculated shift values.
-
-        To this end, the information stored in shift descriptor files is used.
-        These files contain the shift between each pair of images from the
-        obj_meta and the reference cycle in x and y direction. For the global
-        alignment we use the median of the individual shift values. Based on
-        those values, the intersection of mosaic images from different cycles
-        is computed and the respective area is extracted form each image.
-
-        Parameters
-        ----------
-        shift_descriptions: List[List[ShiftDescription]]
-            shift description for each image of different cycles
-
-        Returns
-        -------
-        Vips.Image
-            aligned mosaic image
-
-        Warning
-        -------
-        The mosaic image might have different dimensions after alignment.
-        '''
-        cycle_nrs = [d[0].cycle for d in shift_descriptions]
-        current_cycle_ix = cycle_nrs.index(self.metadata.cycle)
-
-        # TODO: global shifts could already be stored upon shift calculation!
-        x_shifts = list()
-        y_shifts = list()
-        for d in shift_descriptions:
-            x_shifts.append(np.median([s.x_shift for s in d]))
-            y_shifts.append(np.median([s.y_shift for s in d]))
-
-        # Create a Shapely rectangle for each image
-        boxes = [
-            box(x, y,
-                x + self.mosaic.dimensions[1], y + self.mosaic.dimensions[0])
-            for x, y in zip(x_shifts, y_shifts)
-        ]
-
-        # Compute the intersection of all those rectangles
-        intersection = reduce(Polygon.intersection, boxes)
-        min_x, min_y, max_x, max_y = intersection.bounds
-
-        # How much to cut from the left side and from the top
-        this_box = boxes[current_cycle_ix].bounds
-        offset_left = min_x - this_box[0]
-        offset_top = min_y - this_box[1]
-
-        # How large is the extracted area (dimensions of the intersection)
-        intersection_width = max_x - min_x
-        intersection_height = max_y - min_y
-
-        aligned_mosaic = self.mosaic.array.extract_area(
-            offset_left, offset_top, intersection_width, intersection_height)
-
-        return aligned_mosaic
-
-    def scale(self):
-        '''
-        Scale mosaic.
-
-        Searches the image for the maximum and minimum value,
-        then returns the image as unsigned 8-bit, scaled such that the maximum
-        value is 255 and the minimum is zero.
-
-        Returns
-        -------
-        ChannelLayer
-            scaled mosaic image
-
-        Raises
-        ------
-        AttributeError
-            when mosaic does not exist
-        '''
-        scaled_image = self.mosaic.array.scale()
-        return ChannelLayer(Mosaic(scaled_image), self.metadata)
 
     def create_pyramid(self, pyramid_dir):
         '''
@@ -155,7 +72,7 @@ class ChannelLayer(Layer):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @staticmethod
-    def create_from_files(cycle, channel, dx=0, dy=0, stats=None, shifts=None):
+    def create_from_files(cycle, channel, dx=0, dy=0, stats=None, shift=None):
         '''
         Load individual images and stitch them together.
 
@@ -174,7 +91,7 @@ class ChannelLayer(Layer):
         stats: IllumstatsImages, optional
             illumination statistics, when provided images are corrected for
             illumination artifacts
-        shifts: List[List[ShiftDescription]], optional
+        shift: List[ShiftDescription], optional
             shift descriptions, when provided images are aligned between
             cycles
 
@@ -197,23 +114,20 @@ class ChannelLayer(Layer):
         '''
         if isinstance(cycle, Slide):
             layer = ChannelLayer._create_from_slide(
-                        cycle, channel, dx, dy, stats, shifts)
+                        cycle, channel, dx, dy, stats, shift)
         elif isinstance(cycle, WellPlate):
             layer = ChannelLayer._create_from_wellplate(
-                        cycle, channel, dx, dy, stats, shifts)
+                        cycle, channel, dx, dy, stats, shift)
         return layer
 
     @staticmethod
-    def _create_from_slide(slide, channel, dx, dy, stats, shifts):
+    def _create_from_slide(slide, channel, dx, dy, stats, shift):
         images = [im for im in slide.images
                   if im.metadata.channel == channel]
         layer_name = slide.layer_names[channel]
-        mosaic = Mosaic.create_from_images(images, dx, dy, stats)
+        mosaic = Mosaic.create_from_images(images, dx, dy, stats, shift)
         metadata = MosaicMetadata.create_from_images(images, layer_name)
         layer = ChannelLayer(mosaic, metadata)
-
-        if shifts:
-            layer = layer.align(shifts)
 
         return layer
 
@@ -227,7 +141,7 @@ class ChannelLayer(Layer):
         return plate_grid
 
     @staticmethod
-    def _create_from_wellplate(wellplate, channel, dx, dy, stats, shifts):
+    def _create_from_wellplate(wellplate, channel, dx, dy, stats, shift):
         # Determine the dimensions of each well from one well (they should all
         # have the same dimensions) in order to create spacer images, which can
         # be used to fill gaps in the well plate (i.e. empty wells) and to
@@ -251,17 +165,18 @@ class ChannelLayer(Layer):
                   if img.metadata.channel == channel
                   and img.metadata.well == wellplate.wells[0]]
         mosaic = Mosaic.create_from_images(images, dx, dy, stats)
+        gap_size = 750
         empty_well_spacer = image_utils.create_spacer_image(
-                mosaic.dimensions,
+                mosaic.dimensions[0], mosaic.dimensions[1],
                 dtype=mosaic.dtype, bands=1)
         column_spacer = image_utils.create_spacer_image(
-                mosaic.dimensions,
-                dtype=mosaic.dtype, bands=1, direction='horizontal')
+                mosaic.dimensions[0], gap_size,
+                dtype=mosaic.dtype, bands=1)
         row_spacer = image_utils.create_spacer_image(
-                (mosaic.dimensions[0],
-                 mosaic.dimensions[1]*plate_grid.shape[1] +
-                 column_spacer.width*(plate_grid.shape[1]-1)),
-                dtype=mosaic.dtype, bands=1, direction='vertical')
+                gap_size,
+                mosaic.dimensions[1]*plate_grid.shape[1] +
+                column_spacer.width*(plate_grid.shape[1]-1),
+                dtype=mosaic.dtype, bands=1)
 
         rows = list()
         for i in xrange(plate_grid.shape[0]):
@@ -287,12 +202,10 @@ class ChannelLayer(Layer):
                               if img.metadata.channel == channel
                               and img.metadata.well == well]
                     mosaic = Mosaic.create_from_images(
-                                    images, dx, dy, stats)
+                                    images, dx, dy, stats, shift)
                     metadata = MosaicMetadata.create_from_images(
                                     images, layer_name)
                     layer = ChannelLayer(mosaic, metadata)
-                    if shifts:
-                        layer.align(shifts)
                     current_row.append(layer.mosaic.array)
 
                 if not j == plate_grid.shape[1]:
@@ -311,6 +224,27 @@ class ChannelLayer(Layer):
         metadata = MosaicMetadata.create_from_images(images, layer_name)
         layer = ChannelLayer(mosaic, metadata)
         return layer
+
+    def scale(self):
+        '''
+        Scale mosaic.
+
+        Searches the image for the maximum and minimum value,
+        then returns the image as unsigned 8-bit, scaled such that the maximum
+        value is 255 and the minimum is zero.
+
+        Returns
+        -------
+        ChannelLayer
+            scaled mosaic image
+
+        Raises
+        ------
+        AttributeError
+            when mosaic does not exist
+        '''
+        scaled_image = self.mosaic.array.scale()
+        return ChannelLayer(Mosaic(scaled_image), self.metadata)
 
     def clip(self, thresh_value=None, thresh_percent=None):
         '''

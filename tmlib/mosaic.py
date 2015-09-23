@@ -102,7 +102,7 @@ class Mosaic(object):
         return grid
 
     @staticmethod
-    def create_from_images(images, dx, dy, stats=None):
+    def create_from_images(images, dx, dy, stats=None, shift=None):
         '''
         Create a Mosaic object from image objects.
 
@@ -119,6 +119,9 @@ class Mosaic(object):
         stats: IllumstatsImages, optional
             illumination statistics to correct images for
             illumination artifacts
+        shift: List[ShiftDescription], optional
+            shift descriptions, when provided images are aligned between
+            cycles
 
         Returns
         -------
@@ -150,6 +153,11 @@ class Mosaic(object):
                 img = grid[i, j]
                 if stats:
                     img = img.correct(stats)
+                if shift:
+                    shift_description = [
+                        s for s in shift if s.site == img.metadata.site
+                    ][0]
+                    img = img.align(shift_description, crop=False)
                 current_row.append(img.pixels.array)
             rows.append(reduce(lambda x, y:
                         x.merge(y, 'horizontal', -x.width-dx, 0), current_row))

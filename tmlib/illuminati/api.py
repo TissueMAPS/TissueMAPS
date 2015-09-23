@@ -141,13 +141,13 @@ class PyramidCreation(ClusterRoutines):
             stats = None
 
         if batch['shift']:
-            shifts = [c.shift_descriptions for c in self.cycles]
+            shift = cycle.shift_descriptions
         else:
-            shifts = None
+            shift = None
 
         layer = ChannelLayer.create_from_files(
                     cycle=cycle, channel=batch['channel'],
-                    stats=stats, shifts=shifts)
+                    stats=stats, shift=shift)
 
         if batch['thresh']:
             layer = layer.clip(thresh_value=batch['thresh_value'],
