@@ -10,6 +10,7 @@ Main TissueMAPS website
 User has to login with a username and password. Consider using gmail or facebook usernames.
 
 Tools:
+
 - `Flask-JWT <https://pythonhosted.org/Flask-JWT/>`_
 
 IlUI app
@@ -29,10 +30,11 @@ The information provided by the user is stored in the database.
 User can upload channel images, i.e. the images acquired on the microscope.
 
 Potentially useful tools:
+
 - `angular-file-upload <https://github.com/nervgh/angular-file-upload>`_
+
 - `Flask-Uploads <https://pythonhosted.org/Flask-Uploads/>`_, see also `uploading files with flask <http://flask.pocoo.org/docs/0.10/patterns/fileuploads/>`_
 
-Can we handle the upload as a GC3Pie job?
 
 4. Get file metadata
 --------------------
@@ -78,7 +80,7 @@ GC3Pie
 
 We differentiate between temporary and persistent computational jobs:
 
-- **temporary** jobs are all computational requests coming from the main TissueMAPS app, such as clustering or classification tasks, or running a pipeline for an individual *job* via the JtUI app. These tasks fall under the umbrella terms exploratory data analysis and testing. The corresponding jobs are only monitored while the user is logged in and their status is returned to the user via an open websocket connection. If the user logs out while the job is still running he won't be able to retrieve the output at a later time (and the job can be killed).
+- **temporary** jobs are all computational requests coming from the main TissueMAPS app, such as clustering or classification tasks, or running a pipeline for an individual *job* via the JtUI app. These tasks fall under the umbrella terms exploratory data analysis and testing. The corresponding jobs are only monitored while the user is logged in and their status is returned to the user via an open websocket connection. If the user logs out while the job is still running he won't be able to retrieve the output at a later time (and the job can be killed). These jobs represent a single *Application* or *ParallelTaskCollection* instance and are thus simple to handle.
 
-- **persistent** jobs are computational requests coming from the IlUI app, such as pyramid creation, as well as submission of pipelines via the JtUI app (note the difference to running a pipeline for one or more individual jobs). These jobs should be monitored even if the user logs out and their status should be saved in the database. The user should be able to retrieve the output of the job at any time when he logs in again (and he should be notified via email and provided a link once the job is terminated).
+- **persistent** jobs are computational requests coming from the IlUI app, such as pyramid creation, as well as submission of pipelines via the JtUI app (note the difference to running a pipeline for one or more individual jobs). These jobs should be monitored even if the user logs out and their status should be saved in the database. The user should be able to retrieve the output of the job at any time when he logs in again (and he should be notified via email and provided a link once the job is terminated). These jobs can be bundeled as a *SequentialTaskCollection* (steps 5-7: preprocessing, data generation via *JtUI*, postprocessing, and pyramid creation via *illuminati*) with dependencies and are thus more complicated to handle. These workflows should in the future be handled by *brainy* and the *brainyUI* app.
 
