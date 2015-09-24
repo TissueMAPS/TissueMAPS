@@ -3,7 +3,7 @@ import scipy.ndimage as ndi
 
 
 def illum_correct_vips(orig_image, mean_mat, std_mat,
-                       log_transform=True, smooth=False, sigma=5):
+                       log_transform=True, smooth=True, sigma=5):
     '''
     Correct fluorescence microscopy image for illumination artifacts
     using the image processing library Vips.
