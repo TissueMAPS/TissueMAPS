@@ -42,6 +42,12 @@ class Align(CommandLineInterface):
         kwargs['max_shift'] = self.args.max_shift
         return kwargs
 
+    @property
+    def _variable_apply_args(self):
+        kwargs = dict()
+        kwargs['illumcorr'] = self.args.illumcorr
+        return kwargs
+
     @staticmethod
     def call(args):
         '''

@@ -248,7 +248,8 @@ class ImageRegistration(ClusterRoutines):
                     raise ValueError('Channel name is not valid: %s' % channel)
                 channel_images = [
                     ChannelImage.create_from_file(
-                        os.path.join(cycle.image_dir, cycle.image_files[ix]))
+                        os.path.join(cycle.image_dir, cycle.image_files[ix]),
+                        cycle.image_metadata[ix])
                     for ix in channel_index
                 ]
                 shifts = [cycle.shift_descriptions[ix] for ix in channel_index]
@@ -256,9 +257,11 @@ class ImageRegistration(ClusterRoutines):
                     ix = [
                         i for i, md in enumerate(cycle.stats_metadata)
                         if md.channel == channel
-                    ]
-                    stats = IllumstatsImages.create_from_file(
-                                cycle.stats_files[ix])
+                    ][0]
+                    stats = [
+                        stats for stats in cycle.stats_images
+                        if stats.metadata.channel == channel
+                    ][0]
 
                 for i, image in enumerate(channel_images):
                     if sites:
@@ -271,7 +274,7 @@ class ImageRegistration(ClusterRoutines):
                             continue
                     suffix = os.path.splitext(image.metadata.name)[1]
                     if kwargs['illumcorr']:
-                        image = image.correct(stats.mean, stats.std)
+                        image = image.correct(stats)
                         output_filename = re.sub(
                             r'\%s$' % suffix, '_corrected_aligned%s' % suffix,
                             image.metadata.name)

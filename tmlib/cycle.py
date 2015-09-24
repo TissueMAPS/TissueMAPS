@@ -5,10 +5,10 @@ from cached_property import cached_property
 from . import utils
 from .image import is_image_file
 from .image import ChannelImage
+from .image import IllumstatsImages
 from .metadata import ChannelImageMetadata
-from .metadata import MosaicMetadata
-# from .metadata import SegmentationImageMetadata
 from .metadata import IllumstatsImageMetadata
+from .metadata import MosaicMetadata
 from .shift import ShiftDescription
 from .errors import RegexpError
 
@@ -326,7 +326,7 @@ class Cycle(object):
             self._image_metadata.append(ChannelImageMetadata(metadata[f]))
         return self._image_metadata
 
-    @cached_property
+    @property
     def images(self):
         '''
         Returns
@@ -432,6 +432,29 @@ class Cycle(object):
                                   % (f, self.cfg['STATS_FILE']))
             self._stats_metadata.append(md)
         return self._stats_metadata
+
+    @property
+    def stats_images(self):
+        '''
+        Returns
+        -------
+        IllumstatsImages
+            illumination statistics images object for each image file in
+            `stats_dir`
+
+        Note
+        ----
+        Image objects have lazy loading functionality, i.e. the actual image
+        pixel array is only loaded into memory once the corresponding attribute
+        (property) is accessed.
+        '''
+        self._images = list()
+        for i, f in enumerate(self.stats_files):
+            img = IllumstatsImages.create_from_file(
+                    os.path.join(self.stats_dir, f), self.stats_metadata[i],
+                    library=self.library)
+            self._images.append(img)
+        return self._images
 
     @cached_property
     def shift_dir(self):

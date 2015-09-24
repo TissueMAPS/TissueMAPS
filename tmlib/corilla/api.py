@@ -103,11 +103,11 @@ class IllumstatsGenerator(ClusterRoutines):
             for f in image_files:
                 img = reader.read(f)
                 stats.update(img)
-        with DatasetWriter(batch['outputs']['stats_file'], new=True) as writer:
-            writer.write('/images/mean', data=stats.mean)
-            writer.write('/images/std', data=stats.std)
-            writer.write('/metadata/cycle', data=batch['cycle'])
-            writer.write('/metadata/channel', data=batch['channel'])
+        with DatasetWriter(batch['outputs']['stats_file'], new=True) as f:
+            f.write('/images/mean', data=stats.mean)
+            f.write('/images/std', data=stats.std)
+            f.write('/metadata/cycle', data=batch['cycle'])
+            f.write('/metadata/channel', data=batch['channel'])
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
@@ -129,25 +129,30 @@ class IllumstatsGenerator(ClusterRoutines):
         **kwargs: dict
             empty - no additional arguments
         '''
-        batches = [b for b in joblist if b['channel'] in channels]
+        batches = [b for b in joblist['run'] if b['channel'] in channels]
         # TODO: check whether channel names are valid
         for b in batches:
             image_files = [f for f in b['inputs']['image_files']]
-            stats_file = b['outputs']['stats_file']
-            stats = IllumstatsImages.create_from_file(stats_file)
+            cycle = [
+                cycle for cycle in self.cycles
+                if cycle.name == b['cycle']
+            ][0]
+            stats = [
+                stats for stats in cycle.stats_images
+                if stats.metadata.channel == b['channel']
+            ][0]
             for f in image_files:
-                metadata = [cycle.image_metadata for cycle in self.cycles
-                            if cycle.name == b['cycle']][0]
-                image = [ChannelImage.create_from_file(f, md)
-                         for md in metadata
-                         if md.name == os.path.basename(f)][0]
+                image = [
+                    img for img in cycle.images
+                    if img.metadata.name == os.path.basename(f)
+                ][0]
                 if sites:
                     if image.metadata.site not in sites:
                         continue
                 if wells and image.metadata.well:  # may not be a well plate
                     if image.metadata.well not in wells:
                         continue
-                corrected_image = image.correct(stats.mean, stats.std)
+                corrected_image = image.correct(stats)
                 suffix = os.path.splitext(image.metadata.name)[1]
                 output_filename = re.sub(r'\%s$' % suffix,
                                          '_corrected%s' % suffix,

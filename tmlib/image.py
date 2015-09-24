@@ -1,11 +1,12 @@
 import re
 from abc import ABCMeta
 from abc import abstractproperty
+from abc import abstractmethod
 from cached_property import cached_property
 from .pixels import VipsPixels
 from .pixels import NumpyPixels
 from .readers import DatasetReader
-from .metadata import IllumstatsImageMetadata
+from .errors import MetadataError
 
 
 SUPPORTED_IMAGE_FILES = ['png']
@@ -41,6 +42,7 @@ class Image(object):
     '''
 
     __metaclass__ = ABCMeta
+
 
     @property
     def metadata(self):
@@ -94,6 +96,7 @@ class Image(object):
     def pixels(self):
         pass
 
+    @abstractmethod
     @pixels.setter
     def pixels(self, value):
         self._pixels = value
@@ -149,7 +152,7 @@ class ChannelImage(Image):
         image.metadata = metadata
         return image
 
-    @cached_property
+    @property
     def pixels(self):
         '''
         Returns
@@ -175,6 +178,10 @@ class ChannelImage(Image):
         if not self._pixels.is_uint:
             raise TypeError('A channel image must have unsigned integer type.')
         return self._pixels
+
+    @pixels.setter
+    def pixels(self, value):
+        self._pixels = value
 
     def correct(self, stats):
         '''
@@ -234,7 +241,10 @@ class ChannelImage(Image):
         Alignment may change the dimensions of the image when `crop` is
         ``True``.
         '''
-        self.pixels = self.pixels.align(shift_description, crop=crop)
+        new_object = ChannelImage()
+        new_object.metadata = self.metadata
+        new_object.filename = self.filename
+        new_object.pixels = self.pixels.align(shift_description, crop=crop)
         return self
 
 
@@ -277,7 +287,7 @@ class BrightfieldImage(Image):
         image.metadata = metadata
         return image
 
-    @cached_property
+    @property
     def pixels(self):
         '''
         Returns
@@ -304,6 +314,10 @@ class BrightfieldImage(Image):
             raise TypeError('A brightfield image must have unsigned integer '
                             'type.')
         return self._pixels
+
+    @pixels.setter
+    def pixels(self, value):
+        self._pixels = value
 
 
 class MaskImage(Image):
@@ -345,7 +359,7 @@ class MaskImage(Image):
         image.metadata = metadata
         return image
 
-    @cached_property
+    @property
     def pixels(self):
         '''
         Returns
@@ -371,6 +385,10 @@ class MaskImage(Image):
         if not self._pixels.is_binary:
             raise TypeError('A mask image must have binary type.')
         return self._pixels
+
+    @pixels.setter
+    def pixels(self, value):
+        self._pixels = value
 
     @property
     def outlines(self):
@@ -450,7 +468,7 @@ class SegmentationImage(Image):
         image.metadata = metadata
         return image
 
-    @cached_property
+    @property
     def pixels(self):
         '''
         Returns
@@ -472,6 +490,10 @@ class SegmentationImage(Image):
         if not self._pixels.is_uint:
             raise TypeError('A label image must have unsigned integer type.')
         return self._pixels
+
+    @pixels.setter
+    def pixels(self, value):
+        self._pixels = value
 
     @property
     def outlines(self):
@@ -597,6 +619,35 @@ class IllumstatsImages(object):
     .. [1] Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L. 2015.
            Computer vision for image-based transcriptomics. Methods.
     '''
+    @property
+    def filename(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the HDF5 file
+        '''
+        return self._filename
+
+    @filename.setter
+    def filename(self, value):
+        self._filename = value
+
+    def _get_factory(self, library):
+        if library == 'vips':
+            return VipsPixels.create_from_numpy_array
+        elif library == 'numpy':
+            return NumpyPixels
+        else:
+            return None
+
+    @property
+    def _factory(self):
+        return self.__factory
+
+    @_factory.setter
+    def _factory(self, value):
+        self.__factory = value
 
     @property
     def std(self):
@@ -604,17 +655,14 @@ class IllumstatsImages(object):
         Returns
         -------
         IllumstatsImage
-            image object
+            image object for calculated standard deviation values
 
         See also
         --------
         `tmlib.image.IllumstatsImage`_ 
         '''
+        self._std = self._stats['std']
         return self._std
-
-    @std.setter
-    def std(self, value):
-        self._std = value
 
     @property
     def mean(self):
@@ -622,20 +670,51 @@ class IllumstatsImages(object):
         Returns
         -------
         IllumstatsImage
-            image object
+            image object for calculated mean values
 
         See also
         --------
         `tmlib.image.IllumstatsImage`_
         '''
+        self._mean = self._stats['mean']
         return self._mean
 
-    @mean.setter
-    def mean(self, value):
-        self._mean = value
+    @property
+    def metadata(self):
+        '''
+        Returns
+        -------
+        IllumstatsMetadata
+            metadata object
+
+        See also
+        --------
+        `tmlib.metadata.IllumstatsMetadata`_
+        '''
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value):
+        self._metadata = value
+
+    @cached_property
+    def _stats(self):
+        with DatasetReader(self.filename) as reader:
+            mean = self._factory(reader.read('images/mean'))
+            std = self._factory(reader.read('images/std'))
+            cycle_name = reader.read('metadata/cycle')
+            channel_name = reader.read('metadata/channel')
+        if cycle_name != self.metadata.cycle:
+            raise MetadataError('"cycle" metadata is incorrect')
+        if channel_name != self.metadata.channel:
+            raise MetadataError('"channel" metadata is incorrect')
+        return {
+            'mean': IllumstatsImage(pixels=mean, metadata=self.metadata),
+            'std': IllumstatsImage(pixels=std, metadata=self.metadata)
+        }
 
     @staticmethod
-    def create_from_file(filename, library='vips'):
+    def create_from_file(filename, metadata, library='vips'):
         '''
         Create an Illumstats object from a file on disk.
 
@@ -643,6 +722,8 @@ class IllumstatsImages(object):
         ----------
         filename: str
             absolute path to the HDF5 file
+        metadata: IllumstatsMetadata
+            metadata object
         library: str, optional
             image library that should be used, "vips" or "numpy"
             (defaults to "vips")
@@ -659,21 +740,8 @@ class IllumstatsImages(object):
         '''
         if library not in {'vips', 'numpy'}:
             raise ValueError('Library must be either "vips" or "numpy".')
-        metadata = IllumstatsImageMetadata()
-        with DatasetReader(filename) as reader:
-            mean = reader.read('images/mean')
-            std = reader.read('images/std')
-            metadata.cycle = reader.read('metadata/cycle')
-            metadata.channel = reader.read('metadata/channel')
-
-        if library == 'vips':
-            mean_pxl = VipsPixels.create_from_numpy_array(mean)
-            std_pxl = VipsPixels.create_from_numpy_array(std)
-        elif library == 'numpy':
-            mean_pxl = NumpyPixels(mean)
-            std_pxl = NumpyPixels(std)
-
         stats = IllumstatsImages()
-        stats.mean = IllumstatsImage(mean_pxl, metadata)
-        stats.std = IllumstatsImage(std_pxl, metadata)
+        stats.filename = filename
+        stats.metadata = metadata
+        stats._factory = stats._get_factory(library)
         return stats
