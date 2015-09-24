@@ -50,7 +50,8 @@ class DatasetWriter(object):
         '''
         if isinstance(data, basestring):
             data = np.string_(data)
-        if any([isinstance(d, basestring) for d in data]):
+        if ((isinstance(data, np.ndarray) or isinstance(data, list))
+                and all([isinstance(d, basestring) for d in data])):
             data = [np.string_(d) for d in data]
         if isinstance(data, list):
             data = np.array(data)
