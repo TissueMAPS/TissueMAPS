@@ -1,0 +1,24 @@
+---
+
+no_shared_network: No
+virtualenv: tmaps
+verbosity: 2
+steps:
+- prog_name: metaextract
+  prog_args:
+  init_args:
+- prog_name: metaconvert
+  prog_args:
+    format: metamorph
+  init_args:
+- prog_name: imextract
+  prog_args:
+  init_args:
+    batch_size: 5
+- prog_name: align
+  prog_args:
+  init_args:
+    batch_size: 5
+- prog_name: corilla
+  prog_args:
+  init_args:

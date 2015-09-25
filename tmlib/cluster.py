@@ -13,18 +13,14 @@ from gc3libs.workflow import SequentialTaskCollection
 import logging
 from . import utils
 
+logger = logging.getLogger(__name__)
 
-class ClusterRoutines(object):
 
-    '''
-    Abstract base class for cluster routines.
-    It provides a common framework for creation, submission and monitoring
-    of jobs via `GC3Pie <https://code.google.com/p/gc3pie/>`_.
-    '''
+class BasicClusterRoutines(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment, prog_name, verbosity=0):
+    def __init__(self, experiment):
         '''
         Initialize an instance of class ClusterRoutines.
 
@@ -33,15 +29,9 @@ class ClusterRoutines(object):
         experiment: Experiment
             experiment object that holds information about the content of the
             experiment directory
-        prog_name: str
-            name of the corresponding program (command line interface)
-        verbosity: int, optional
-            verbosity of logging level (default: ``0``)
         '''
         self.experiment = experiment
-        self.prog_name = prog_name
         gc3libs.configure_logger(level=logging.CRITICAL)
-        self.verbosity = verbosity
 
     @cached_property
     def cycles(self):
@@ -54,13 +44,156 @@ class ClusterRoutines(object):
         self._cycles = self.experiment.cycles
         return self._cycles
 
+    @abstractproperty
+    def project_dir(self):
+        pass
+
+    @staticmethod
+    def create_datetimestamp():
+        '''
+        Create datetimestamp in the form "year-month-day_hour:minute:second".
+        Returns
+        -------
+        str
+            datetimestamp
+        '''
+        t = time.time()
+        return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
+
+    @staticmethod
+    def create_timestamp():
+        '''
+        Create timestamp in the form "hour:minute:second".
+
+        Returns
+        -------
+        str
+            timestamp
+        '''
+        t = time.time()
+        return datetime.datetime.fromtimestamp(t).strftime('%H:%M:%S')
+
+    @staticmethod
+    def _create_batches(li, n):
+        # Create a list of lists from a list, where each sublist has length n
+        n = max(1, n)
+        return [li[i:i + n] for i in range(0, len(li), n)]
+
+    def submit_jobs(self, jobs, monitoring_interval):
+        '''
+        Create a GC3Pie engine that submits jobs to a cluster
+        for parallel and/or sequential processing and monitors their progress.
+
+        Parameters
+        ----------
+        jobs: gc3libs.workflow.SequentialTaskCollection
+            GC3Pie task collection of "jobs" that should be submitted
+        monitoring_interval: int
+            monitoring interval in seconds
+
+        Returns
+        -------
+        bool
+            indicating whether processing of jobs was successful
+        '''
+        logger.debug('monitoring interval: %ds' % monitoring_interval)
+        # Create an `Engine` instance for running jobs in parallel
+        e = gc3libs.create_engine()
+        # Put all output files in the same directory
+        e.retrieve_overwrites = True
+        # Add tasks to engine instance
+        e.add(jobs)
+
+        # Periodically check the status of submitted jobs
+        while jobs.execution.state != gc3libs.Run.State.TERMINATED:
+            print '%s' % self.create_timestamp()
+            print '"%s": %s ' % (jobs.jobname, jobs.execution.state)
+            logger.info('"%s": %s ' % (jobs.jobname, jobs.execution.state))
+            # `progess` will do the GC3Pie magic:
+            # submit new jobs, update status of submitted jobs, get
+            # results of terminating jobs etc...
+            e.progress()
+
+            for task in jobs.iter_tasks():
+                if task.jobname == jobs.jobname:
+                    continue
+                print '"%s": %s ' % (task.jobname, task.execution.state)
+                logger.info('"%s": %s ' % (task.jobname, task.execution.state))
+
+            terminated_count = 0
+            total_count = 0
+            for task in jobs.iter_workflow():
+                if task.jobname == jobs.jobname:
+                    continue
+                if task.execution.state == gc3libs.Run.State.TERMINATED:
+                    terminated_count += 1
+                total_count += 1
+            print 'terminated: %d of %d jobs\n' % (terminated_count, total_count)
+            logger.info('terminated: %d of %d jobs\n'
+                        % (terminated_count, total_count))
+            time.sleep(monitoring_interval)
+
+        success = True
+        for task in jobs.iter_workflow():
+            if(task.execution.returncode != 0
+                    or task.execution.exitcode != 0):
+                logger.error('job "%s" failed.' % task.jobname)
+                success = False
+
+        return success
+
+    def kill_jobs(self, jobs):
+        '''
+        Kill all currently active jobs and set their status to "terminated".
+
+        Parameters
+        ----------
+        jobs: gc3libs.workflow.SequentialTaskCollection
+            GC3Pie task collection of "jobs" that should be killed
+        '''
+        logger.info('killing jobs')
+        jobs.kill()
+
+    @abstractmethod
+    def create_jobs(self, job_descriptions, no_shared_network=False,
+                    virtualenv='tmaps'):
+        pass
+
+
+class ClusterRoutines(BasicClusterRoutines):
+
+    '''
+    Abstract base class for cluster routines.
+    It provides a common framework for creation, submission and monitoring
+    of jobs via `GC3Pie <https://code.google.com/p/gc3pie/>`_.
+    '''
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, experiment, prog_name):
+        '''
+        Initialize an instance of class ClusterRoutines.
+
+        Parameters
+        ----------
+        experiment: Experiment
+            experiment object that holds information about the content of the
+            experiment directory
+        prog_name: str
+            name of the corresponding program (command line interface)
+        '''
+        super(ClusterRoutines, self).__init__(experiment)
+        self.experiment = experiment
+        self.prog_name = prog_name
+        gc3libs.configure_logger(level=logging.CRITICAL)
+
     @cached_property
     def project_dir(self):
         '''
         Returns
         -------
         str
-            directory where joblist file and log output will be stored
+            directory where *.job* files and log output will be stored
         '''
         self._project_dir = os.path.join(self.experiment.dir,
                                          'tmaps_%s' % self.prog_name)
@@ -95,157 +228,27 @@ class ClusterRoutines(object):
             os.mkdir(self._job_descriptions_dir)
         return self._job_descriptions_dir
 
-    @staticmethod
-    def create_datetimestamp():
+    def get_job_descriptions(self):
         '''
-        Create datetimestamp in the form "year-month-day_hour:minute:second".
-        Returns
-        -------
-        str
-            datetimestamp
-        '''
-        t = time.time()
-        return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
-
-    @staticmethod
-    def create_timestamp():
-        '''
-        Create timestamp in the form "hour:minute:second".
+        Get job descriptions from individual *.job* files and combine them into
+        the format required by the `build_jobs()` method.
 
         Returns
         -------
-        str
-            timestamp
-        '''
-        t = time.time()
-        return datetime.datetime.fromtimestamp(t).strftime('%H:%M:%S')
-
-    @staticmethod
-    def _create_batches(li, n):
-        # Create a list of lists from a list, where each sublist has length n
-        n = max(1, n)
-        return [li[i:i + n] for i in range(0, len(li), n)]
-
-    def _build_run_command(self, batch):
-        # Build a command for GC3Pie submission. For further information on
-        # the structure of the command see documentation of subprocess package:
-        # https://docs.python.org/2/library/subprocess.html.
-        job_id = batch['id']
-        command = [self.prog_name]
-        command.append(self.experiment.dir)
-        command.extend(['run', '--job', str(job_id)])
-        return command
-
-    def _build_collect_command(self):
-        command = [self.prog_name]
-        command.append(self.experiment.dir)
-        command.extend(['collect'])
-        return command
-
-    @abstractmethod
-    def run_job(self, batch):
-        '''
-        Run an individual job.
-
-        Parameters
-        ----------
-        batch: dict
-            joblist element, i.e. description of a single job
-        '''
-        pass
-
-    @abstractmethod
-    def collect_job_output(self, batch):
-        '''
-        Collect the output of jobs and fuse them if necessary.
-
-        Parameters
-        ----------
-        joblist: List[dict]
-            job descriptions
-        **kwargs: dict
-            additional variable input arguments as key-value pairs
-        '''
-        pass
-
-    @abstractmethod
-    def create_job_descriptions(self, **kwargs):
-        '''
-        Create job descriptions with information required for the creation and
-        processing of individual jobs.
-
-        There are two kinds of jobs:
-        * *run* jobs: tasks that are processed in parallel
-        * *collect* job: a single task that is processed after *run* jobs
-          are terminated, i.e. successfully completed
-
-        Each batch (element of the *run* joblist) must provide the following
-        key-value pairs:
-        * "id": one-based job indentifier number (*int*)
-        * "inputs": absolute paths to input files required to run the job
-          (Dict[*str*, List[*str*]])
-        * "outputs": absolute paths to output files produced the job
-          (Dict[*str*, List[*str*]])
-
-        In case a *collect* job is required, the corresponding batch must
-        provide the following key-value pairs:
-        * "inputs": absolute paths to input files required to collect job
-          output of the *run* step (Dict[*str*, List[*str*]])
-        * "outputs": absolute paths to output files produced by the job
-          (Dict[*str*, List[*str*]])
-
-        A complete joblist has the following structure::
-
-            {
-                'run': [
-                    {
-                        'id': int,
-                        'inputs': list or dict,
-                        'outputs': list or dict,
-                    },
-                    ...
-                    ]
-                'collect':
-                    {
-                        'inputs': list or dict,
-                        'outputs': list or dict
-                    }
-            }
-
-        Parameters
-        ----------
-        **kwargs: dict
-            additional variable input arguments as key-value pairs
-
-        Returns
-        -------
-        Dict[str, List[dict] or dict]
+        dict
             job descriptions
         '''
-        pass
-
-    @abstractmethod
-    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
-                         **kwargs):
-        '''
-        Apply the calculated statistics to images.
-
-        Parameters
-        ----------
-        wells: List[str]
-            well identifiers of images that should be processed
-        sites: List[int]
-            one-based site indices of images that should be processed
-        channels: List[str]
-            channel names of images that should be processed
-        output_dir: str
-            absolute path to directory where the processed images should be
-            stored
-        **kwargs: dict
-            additional variable input arguments as key-value pairs:
-            * "illumcorr": correct for illumination artifacts (*bool*)
-        '''
-        pass
+        directory = self.job_descriptions_dir
+        job_descriptions = dict()
+        job_descriptions['run'] = list()
+        run_job_files = glob.glob(os.path.join(directory, '*_run_*.job'))
+        collect_job_files = glob.glob(os.path.join(directory, '*_collect.job'))
+        for f in run_job_files:
+            batch = utils.read_json(f)
+            job_descriptions['run'].append(batch)
+        if collect_job_files:
+            job_descriptions['collect'] = utils.read_json(collect_job_files[0])
+        return job_descriptions
 
     def build_run_job_filename(self, job_id):
         '''
@@ -299,13 +302,13 @@ class ClusterRoutines(object):
         batch = utils.read_json(filename)
         return batch
 
-    def write_job_files(self, joblist):
+    def write_job_files(self, job_descriptions):
         '''
         Write job descriptions to files as JSON.
 
         Parameters
         ----------
-        joblist: List[dict]
+        job_descriptions: List[dict]
             job descriptions
 
         Note
@@ -315,108 +318,151 @@ class ClusterRoutines(object):
         '''
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-        for batch in joblist['run']:
+        for batch in job_descriptions['run']:
             job_file = self.build_run_job_filename(batch['id'])
             batch['inputs']['job_file'] = job_file
             utils.write_json(job_file, batch)
-        if 'collect' in joblist.keys():
+        if 'collect' in job_descriptions.keys():
             job_file = self.build_collect_job_filename()
-            joblist['collect']['inputs']['job_file'] = job_file
-            utils.write_json(job_file, joblist['collect'])
+            job_descriptions['collect']['inputs']['job_file'] = job_file
+            utils.write_json(job_file, job_descriptions['collect'])
 
-    def get_job_descriptions_from_files(self):
-        '''
-        Get job descriptions from individual *.job* files and combine them into
-        the format required by the `build_jobs()` method.
+    def _build_run_command(self, batch):
+        # Build a command for GC3Pie submission. For further information on
+        # the structure of the command see documentation of subprocess package:
+        # https://docs.python.org/2/library/subprocess.html.
+        job_id = batch['id']
+        command = [self.prog_name]
+        command.append(self.experiment.dir)
+        command.extend(['run', '--job', str(job_id)])
+        return command
 
-        Returns
-        -------
-        dict
-            job descriptions
-        '''
-        joblist = dict()
-        joblist['run'] = list()
-        run_job_files = glob.glob(os.path.join(self.job_descriptions_dir,
-                                  '*_run_*.job'))
-        collect_job_files = glob.glob(os.path.join(self.job_descriptions_dir,
-                                      '*_collect.job'))
-        for f in run_job_files:
-            batch = self.read_job_file(f)
-            joblist['run'].append(batch)
-        if collect_job_files:
-            joblist['collect'] = self.read_job_file(collect_job_files[0])
-        return joblist
+    def _build_collect_command(self):
+        command = [self.prog_name]
+        command.append(self.experiment.dir)
+        command.extend(['collect'])
+        return command
 
-    def print_joblist(self, joblist):
+    @abstractmethod
+    def run_job(self, batch):
         '''
-        Print joblist to standard output in YAML format.
-        '''
-        print yaml.safe_dump(joblist, default_flow_style=False)
-
-    def submit_jobs(self, jobs):
-        '''
-        Create a GC3Pie engine that submits jobs to a cluster or cloud
-        for parallel and/or sequential processing and monitors their progress.
+        Run an individual job.
 
         Parameters
         ----------
-        jobs: gc3libs.workflow.DependentTaskCollection
-            GC3Pie task collection of "jobs" that should be processed
+        batch: dict
+            job_descriptions element, i.e. description of a single job
+        '''
+        pass
+
+    @abstractmethod
+    def collect_job_output(self, batch):
+        '''
+        Collect the output of jobs and fuse them if necessary.
+
+        Parameters
+        ----------
+        job_descriptions: List[dict]
+            job descriptions
+        **kwargs: dict
+            additional variable input arguments as key-value pairs
+        '''
+        pass
+
+    @abstractmethod
+    def create_job_descriptions(self, **kwargs):
+        '''
+        Create job descriptions with information required for the creation and
+        processing of individual jobs.
+
+        There are two kinds of jobs:
+        * *run* jobs: tasks that are processed in parallel
+        * *collect* job: a single task that is processed after *run* jobs
+          are terminated, i.e. successfully completed
+
+        Each batch (element of the *run* job_descriptions) must provide the following
+        key-value pairs:
+        * "id": one-based job indentifier number (*int*)
+        * "inputs": absolute paths to input files required to run the job
+          (Dict[*str*, List[*str*]])
+        * "outputs": absolute paths to output files produced the job
+          (Dict[*str*, List[*str*]])
+
+        In case a *collect* job is required, the corresponding batch must
+        provide the following key-value pairs:
+        * "inputs": absolute paths to input files required to collect job
+          output of the *run* step (Dict[*str*, List[*str*]])
+        * "outputs": absolute paths to output files produced by the job
+          (Dict[*str*, List[*str*]])
+
+        A complete job_descriptions has the following structure::
+
+            {
+                'run': [
+                    {
+                        'id': int,
+                        'inputs': list or dict,
+                        'outputs': list or dict,
+                    },
+                    ...
+                    ]
+                'collect':
+                    {
+                        'inputs': list or dict,
+                        'outputs': list or dict
+                    }
+            }
+
+        Parameters
+        ----------
+        **kwargs: dict
+            additional variable input arguments as key-value pairs
 
         Returns
         -------
-        bool
-            indicating whether processing of jobs was successful
+        Dict[str, List[dict] or dict]
+            job descriptions
         '''
-        # Create an `Engine` instance for running jobs in parallel
-        e = gc3libs.create_engine()
-        # Put all output files in the same directory
-        e.retrieve_overwrites = True
-        # Add tasks to engine instance
-        e.add(jobs)
+        pass
 
-        # Periodically check the status of submitted jobs
-        while jobs.execution.state != gc3libs.Run.State.TERMINATED:
-            print '\n%s' % self.create_timestamp()
-            print '"%s": %s ' % (jobs.jobname, jobs.execution.state)
-            # `progess` will do the GC3Pie magic:
-            # submit new jobs, update status of submitted jobs, get
-            # results of terminating jobs etc...
-            e.progress()
+    @abstractmethod
+    def apply_statistics(self, job_descriptions, wells, sites, channels,
+                         output_dir, **kwargs):
+        '''
+        Apply the calculated statistics to images.
 
-            for task in jobs.iter_tasks():
-                if task.jobname == jobs.jobname:
-                    continue
-                print '"%s": %s ' % (task.jobname, task.execution.state)
+        Parameters
+        ----------
+        wells: List[str]
+            well identifiers of images that should be processed
+        sites: List[int]
+            one-based site indices of images that should be processed
+        channels: List[str]
+            channel names of images that should be processed
+        output_dir: str
+            absolute path to directory where the processed images should be
+            stored
+        **kwargs: dict
+            additional variable input arguments as key-value pairs:
+            * "illumcorr": correct for illumination artifacts (*bool*)
+        '''
+        pass
 
-            terminated_count = 0
-            total_count = 0
-            for task in jobs.iter_workflow():
-                if task.jobname == jobs.jobname:
-                    continue
-                if task.execution.state == gc3libs.Run.State.TERMINATED:
-                    terminated_count += 1
-                total_count += 1
-            print 'terminated: %d of %d jobs' % (terminated_count, total_count)
-            time.sleep(5)
+    def print_joblist(self, job_descriptions):
+        '''
+        Print job_descriptions to standard output in YAML format.
+        '''
+        print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
-        success = True
-        for task in jobs.iter_workflow():
-            if(task.execution.returncode != 0
-                    or task.execution.exitcode != 0):
-                print 'job "%s" failed.' % task.jobname
-                success = False
-
-        return success
-
-    def create_jobs(self, joblist, no_shared_network=False, virtualenv='tmaps'):
+    def create_jobs(self, job_descriptions, no_shared_network=False,
+                    virtualenv='tmaps'):
         '''
         Create a GC3Pie task collection of "jobs".
 
         Parameters
         ----------
-        joblist: Dict[List[dict]]
-            job descriptions
+        job_descriptions: Dict[List[dict]]
+            description of inputs and outputs or individual jobs
         no_shared_network: bool, optional
             whether worker nodes have access to a shared network
             or filesystem (defaults to ``False``)
@@ -434,13 +480,13 @@ class ClusterRoutines(object):
         A `SequentialTaskCollection` is returned even if there is only one
         parallel task (a collection of jobs that are processed in parallel).
         This is done for consistency so that jobs from different steps can
-        be treated the same way and easily be combined into larger workflows.
+        be handled the same way and easily be combined into a larger workflow.
         '''
         run_jobs = ParallelTaskCollection(
-                        jobname='%s_run_jobs' % self.prog_name)
-        for i, batch in enumerate(joblist['run']):
+                        jobname='tmaps_%s_run' % self.prog_name)
+        for i, batch in enumerate(job_descriptions['run']):
 
-            jobname = '%s_run_job-%.5d' % (self.prog_name, batch['id'])
+            jobname = 'tmaps_%s_run_%.5d' % (self.prog_name, batch['id'])
             timestamp = self.create_datetimestamp()
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)
@@ -476,11 +522,11 @@ class ClusterRoutines(object):
             )
             run_jobs.add(job)
 
-        if 'collect' in joblist.keys():
+        if 'collect' in job_descriptions.keys():
 
-            batch = joblist['collect']
+            batch = job_descriptions['collect']
 
-            jobname = '%s_collect_job' % self.prog_name
+            jobname = '%s_collect' % self.prog_name
             timestamp = self.create_datetimestamp()
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)
@@ -516,12 +562,12 @@ class ClusterRoutines(object):
 
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs, collect_job],
-                        jobname='%s_workflow' % self.prog_name)
+                        jobname='tmaps_%s' % self.prog_name)
 
         else:
 
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs],
-                        jobname='%s_workflow' % self.prog_name)
+                        jobname='tmaps_%s' % self.prog_name)
 
         return jobs
