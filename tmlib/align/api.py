@@ -7,13 +7,11 @@ from .. import utils
 from ..cluster import ClusterRoutines
 from ..shift import ShiftDescription
 from ..image import ChannelImage
-from ..image import IllumstatsImages
 
 
 class ImageRegistration(ClusterRoutines):
 
-    def __init__(self, experiment, shift_file_format_string, prog_name,
-                 verbosity=0):
+    def __init__(self, experiment, shift_file_format_string, prog_name):
         '''
         Initialize an instance of class ImageRegistration.
 
@@ -27,15 +25,12 @@ class ImageRegistration(ClusterRoutines):
             should be formatted
         prog_name: str
             name of the corresponding program (command line interface)
-        verbosity: int, optional
-            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
         '''
-        super(ImageRegistration, self).__init__(
-            experiment, prog_name, verbosity)
+        super(ImageRegistration, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.prog_name = prog_name
         self.shift_file_format_string = shift_file_format_string
@@ -54,6 +49,20 @@ class ImageRegistration(ClusterRoutines):
             for c in self.cycles
         ]
         return self._shift_files
+
+    @property
+    def registration_dir(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the folder holding the calculated shift values
+            of the image registration step
+        '''
+        self._registration_dir = os.path.join(self.project_dir, 'registration')
+        if not os.path.exists(self._registration_dir):
+            os.mkdir(self._registration_dir)
+        return self._registration_dir
 
     @property
     def reg_file_format_string(self):
@@ -111,7 +120,7 @@ class ImageRegistration(ClusterRoutines):
             })
 
         registration_files = [
-            os.path.join(self.experiment.registration_dir,
+            os.path.join(self.registration_dir,
                          self.reg_file_format_string.format(
                             experiment=self.experiment.name, job=i+1))
             for i in xrange(len(registration_batches))

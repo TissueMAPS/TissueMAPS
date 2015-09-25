@@ -207,19 +207,3 @@ class Experiment(object):
                                             experiment_dir=self.experiment_dir,
                                             sep=os.path.sep)
         return self._data_filename
-
-    @cached_property
-    def registration_dir(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the folder holding the calculated shift values
-            of the image registration step
-        '''
-        self._registration_dir = self.cfg['REGISTRATION_DIR'].format(
-                                            experiment_dir=self.experiment_dir,
-                                            sep=os.path.sep)
-        if not os.path.exists(self._registration_dir):
-            os.mkdir(self._registration_dir)
-        return self._registration_dir
