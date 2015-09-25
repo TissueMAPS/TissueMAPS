@@ -184,7 +184,8 @@ class ClusterWorkflowManager(object):
         self._workflow_description = utils.read_yaml(self.workflow_file_name)
         for i, step in enumerate(self._workflow_description['steps']):
             self._workflow_description['steps'][i]['prog_args'] = \
-                self.format_args(step['prog_args'])
+                self.format_args(step['prog_args']) + \
+                ['-v' for x in xrange(self._workflow_description['verbosity'])]
             self._workflow_description['steps'][i]['init_args'] = \
                 self.format_args(step['init_args'])
         return self._workflow_description

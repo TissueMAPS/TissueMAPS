@@ -2,12 +2,14 @@ import os
 from .layers import ChannelLayer
 from ..cluster import ClusterRoutines
 from ..image import IllumstatsImages
+
 import logging
+logger = logging.getLogger(__name__)
 
 
 class PyramidCreation(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name, verbosity=0):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class PyramidCreation.
 
@@ -18,20 +20,22 @@ class PyramidCreation(ClusterRoutines):
             one or more cycle directories
         prog_name: str
             name of the corresponding program (command line interface)
-        verbosity: int, optional
-            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
+
+        Note
+        ----
+        Creates directory for `layers` if it doesn't exist.
         '''
         super(PyramidCreation, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.prog_name = prog_name
         if not os.path.exists(self.experiment.layers_dir):
+            logger.debug(
+                'create "layers" directory: %s' % self.experiment.layers_dir)
             os.mkdir(self.experiment.layers_dir)
-        self.verbosity = verbosity
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     @property
     def shift_dirs(self):
@@ -82,15 +86,22 @@ class PyramidCreation(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
+        logger.debug('create descriptions for "run" jobs')
         joblist = dict()
         joblist['run'] = list()
         count = 0
         for i, cycle in enumerate(self.cycles):
+            logger.debug('process cycle "%s"' % cycle)
             channels = list(set([md.channel for md in cycle.image_metadata]))
             img_batches = list()
             for c in channels:
+                logger.debug('process channel "%s"' % c)
                 image_files = [md.name for md in cycle.image_metadata
                                if md.channel == c]
+                if len(image_files) == 0:
+                    logger.warn(
+                        'No image files found for cycle "%s" and channel "%s"'
+                        % (cycle, c))
                 img_batches.append(image_files)
 
             for j, batch in enumerate(img_batches):
@@ -127,29 +138,33 @@ class PyramidCreation(ClusterRoutines):
         --------
         `illuminati.layers.ChannelLayer`_
         '''
-        self.logger.info('run job #%d' % batch['id'])
         cycle = [c for c in self.cycles if c.name == batch['cycle']][0]
 
         if batch['illumcorr']:
-            stats_file = [
-                os.path.join(cycle.stats_dir, md.filename)
+            logger.info('correct images for illumination artifacts')
+            stats_file, stats_metadata = [
+                (os.path.join(cycle.stats_dir, md.filename), md)
                 for md in cycle.stats_metadata
                 if md.channel == batch['channel']
             ][0]
-            stats = IllumstatsImages.create_from_file(stats_file)
+            stats = IllumstatsImages.create_from_file(
+                        stats_file, stats_metadata)
         else:
             stats = None
 
         if batch['shift']:
+            logger.info('align images between cycles')
             shift = cycle.shift_descriptions
         else:
             shift = None
 
+        logger.debug('create channel layer')
         layer = ChannelLayer.create_from_files(
                     cycle=cycle, channel=batch['channel'],
                     stats=stats, shift=shift)
 
         if batch['thresh']:
+            logger.info('threshold intensities')
             layer = layer.clip(thresh_value=batch['thresh_value'],
                                thresh_percent=batch['thresh_percent'])
 
@@ -159,6 +174,7 @@ class PyramidCreation(ClusterRoutines):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
+        logger.info('create image pyramid: %s' % output_dir)
         layer.create_pyramid(output_dir)
 
     def collect_job_output(self, batch):

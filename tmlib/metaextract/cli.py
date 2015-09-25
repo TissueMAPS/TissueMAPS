@@ -5,14 +5,14 @@ from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
 
-class MetaExtract(CommandLineInterface):
+class Metaextract(CommandLineInterface):
 
     '''
     Command line interface for extraction of metadata from image files.
     '''
 
     def __init__(self, args):
-        super(MetaExtract, self).__init__(args)
+        super(Metaextract, self).__init__(args)
         self.args = args
 
     @staticmethod
@@ -49,5 +49,5 @@ class MetaExtract(CommandLineInterface):
         --------
         `tmlib.metaextract.argparser`_
         '''
-        cli = MetaExtract(args)
+        cli = Metaextract(args)
         getattr(cli, args.subparser_name)()

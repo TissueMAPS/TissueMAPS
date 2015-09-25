@@ -2,6 +2,7 @@
 import os
 import sys
 import traceback
+import logging
 import shutil
 import argparse
 from abc import ABCMeta
@@ -9,17 +10,31 @@ from abc import abstractproperty
 from abc import abstractmethod
 from . import cfg
 
+logger = logging.getLogger(__name__)
+
 
 def command_line_call(parser):
     '''
-    Call a program via the command line.
+    Main entry point for command line interfaces.
 
     Parameters
     ----------
     parser: argparse.ArgumentParser
         argument parser object
+
+    Note
+    ----
+    Does some logging configuration, in particular adds a new stream handler
+    to the root logger.
+
+    Warning
+    -------
+    Don't do any other logging configuration anywhere else.
     '''
     args = parser.parse_args()
+
+    # logging_utils.configure_logging(
+    #                     'tmlib.%s' % parser.prog, args.verbosity)
 
     try:
         if args.handler:
@@ -62,7 +77,6 @@ class CommandLineInterface(object):
         configuration file is provided via the command line.
         '''
         self.args = args
-        self.print_logo()
 
     @property
     def cfg(self):
@@ -92,9 +106,10 @@ class CommandLineInterface(object):
     @abstractmethod
     def call(args):
         '''
-        Handler function that can be called by an argparse subparser.
-        Initializes an instance of the class and calls the method corresponding
-        to the specified subparser with the parsed command line arguments.
+        Handler function that can be called by a subparser.
+
+        Initializes an instance of the class and calls the method matching the
+        name of the specified subparser with the parsed arguments.
 
         Parameters
         ----------
@@ -122,60 +137,95 @@ class CommandLineInterface(object):
 
     def init(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "init" subparser.
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "init" subparser.
+
+        Returns
+        -------
+        dict
+            job descriptions
         '''
-        print 'JOBLIST'
+        self.print_logo()
         api = self._api_instance
-        print '.  create joblist'
+        logger.info('create job descriptions')
         kwargs = self._variable_init_args
-        joblist = api.create_job_descriptions(**kwargs)
+        job_descriptions = api.create_job_descriptions(**kwargs)
         if self.args.print_joblist:
-            print '.  joblist:'
-            api.print_joblist(joblist)
+            api.print_joblist(job_descriptions)
         else:
             # TODO: clean-up output of previous job
+            job_descriptions = api.get_job_descriptions()
+            output_files = api.list_all_output_files(job_descriptions)
+            logger.debug('remove output files of previous submission')
+            # [os.remove(f) for f in output_files]
+            logger.debug('remove job descriptions of previous submission')
+            # shutil.rmtree(api.job_descriptions_dir)
             if os.path.exists(api.log_dir):
                 if self.args.backup:
-                    print '.  create backup of previous submission'
+                    logger.info('backup log reports of previous submission')
                     shutil.move(api.log_dir, '{name}_backup_{time}'.format(
                                             name=api.log_dir,
                                             time=api.create_datetimestamp()))
                 else:
-                    print '.  overwrite output of previous submission'
+                    logger.info('overwrite log reports of previous submission')
                     shutil.rmtree(api.log_dir)
-            print '.  write job descriptions to files'
-            api.write_job_files(joblist)
+            logger.info('write job descriptions to files')
+            api.write_job_files(job_descriptions)
+        return job_descriptions
 
     def run(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "run" subparser.
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "run" subparser.
         '''
-        print 'RUN'
+        self.print_logo()
         api = self._api_instance
-        print '.  read job description from file'
+        logger.info('read job description from file')
         job_file = api.build_run_job_filename(self.args.job)
         batch = api.read_job_file(job_file)
-        print '.  run job'
+        logger.info('run job #%d' % batch['id'])
         api.run_job(batch)
+
+    def get_jobs(self):
+        '''
+        Read the job descriptions from the *.job* files and build GCPie "jobs".
+
+        Returns
+        -------
+        gc3libs.workflow.SequentialTaskCollection
+            jobs
+        '''
+        api = self._api_instance
+        logger.info('read job descriptions from files')
+        job_descriptions = api.get_job_descriptions()
+        logger.info('create jobs')
+        jobs = api.create_jobs(
+                job_descriptions=job_descriptions,
+                no_shared_network=self.args.no_shared_network,
+                virtualenv=self.args.virtualenv)
+        return jobs
 
     def submit(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "submit" subparser.
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "submit" subparser.
         '''
-        print 'SUBMIT'
+        self.print_logo()
         api = self._api_instance
-        print '.  read job descriptions from files'
-        joblist = api.get_job_descriptions_from_files()
-        print '.  create jobs'
-        jobs = api.create_jobs(
-                joblist=joblist,
-                no_shared_network=self.args.no_shared_network,
-                virtualenv=self.args.virtualenv)
-        print '.  submit and monitor jobs'
-        api.submit_jobs(jobs)
+        jobs = self.get_jobs()
+        logger.info('submit and monitor jobs')
+        api.submit_jobs(jobs, self.args.interval)
+
+    def kill(self):
+        '''
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "kill" subparser.
+        '''
+        self.print_logo()
+        api = self._api_instance
+        jobs = self.get_jobs()
+        logger.info('kill jobs')
+        api.kill_jobs(jobs)
 
     @property
     def _variable_apply_args(self):
@@ -184,36 +234,37 @@ class CommandLineInterface(object):
 
     def apply(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "apply" subparser.
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "apply" subparser.
         '''
-        print 'APPLY'
+        self.print_logo()
         api = self._api_instance
-        print '.  read job descriptions from files'
-        joblist = api.get_job_descriptions_from_files()
-        print '.  apply statistics'
+        logger.info('read job descriptions from files')
+        job_descriptions = api.get_job_descriptions_from_files()
+        logger.info('apply statistics')
         kwargs = self._variable_apply_args
         api.apply_statistics(
-                joblist=joblist, wells=self.args.wells, sites=self.args.sites,
+                job_descriptions=job_descriptions,
+                wells=self.args.wells, sites=self.args.sites,
                 channels=self.args.channels, output_dir=self.args.output_dir,
                 **kwargs)
 
     def collect(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "collect" subparser.
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "collect" subparser.
         '''
-        print 'COLLECT'
+        self.print_logo()
         api = self._api_instance
-        print '.  read job description from file'
+        logger.info('read job description from file')
         job_file = api.build_collect_job_filename()
         batch = api.read_job_file(job_file)
-        print '.  collect job output'
+        logger.info('collect job output')
         api.collect_job_output(batch)
 
     @staticmethod
     def get_parser_and_subparsers(
-            required_subparsers=['init', 'run', 'submit']):
+            required_subparsers=['init', 'run', 'submit', 'kill']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -241,7 +292,7 @@ class CommandLineInterface(object):
             'experiment_dir', help='path to experiment directory')
         parser.add_argument(
             '-v', '--verbosity', action='count', default=0,
-            help='increase logging verbosity, e.g. "-v" or -vvv"')
+            help='increase logging verbosity, e.g. "-v" or -vv"')
         parser.add_argument(
             '--version', action='version')
 
@@ -291,10 +342,30 @@ class CommandLineInterface(object):
                 processing and collect their outputs.
             '''
             submit_parser.add_argument(
+                '--interval', type=int, default=5,
+                help='monitoring interval in seconds'
+            )
+            submit_parser.add_argument(
                 '--no_shared_network', dest='no_shared_network',
                 action='store_true', help='when worker nodes don\'t have \
                 access to a shared network; triggers copying of files')
             submit_parser.add_argument(
+                '--virtualenv', type=str, default='tmaps',
+                help='name of a virtual environment that should be activated '
+                     '(default: tmaps')
+
+        if 'kill' in required_subparsers:
+            kill_parser = subparsers.add_parser(
+                'kill',
+                help='kill submitted jobs')
+            kill_parser.description = '''
+                Stop submitted jobs and set their status to "terminated".
+            '''
+            kill_parser.add_argument(
+                '--no_shared_network', dest='no_shared_network',
+                action='store_true', help='when worker nodes don\'t have \
+                access to a shared network; triggers copying of files')
+            kill_parser.add_argument(
                 '--virtualenv', type=str, default='tmaps',
                 help='name of a virtual environment that should be activated '
                      '(default: tmaps')

@@ -5,7 +5,7 @@ from abc import abstractmethod
 from abc import abstractproperty
 from . import image_utils
 from . import shift
-from . import illumstats
+from .corilla import illumcorr
 from .illuminati import segment
 from .image_readers import VipsImageReader
 from .image_readers import OpencvImageReader
@@ -266,7 +266,7 @@ class VipsPixels(Pixels):
         VipsPixels
             corrected pixel object
         '''
-        return VipsPixels(illumstats.illum_correct_vips(
+        return VipsPixels(illumcorr.illum_correct_vips(
                     self.array, mean, std))
 
     @staticmethod
@@ -500,7 +500,7 @@ class NumpyPixels(Pixels):
         NumpyPixels
             corrected pixel object
         '''
-        return NumpyPixels(illumstats.illum_correct_numpy(
+        return NumpyPixels(illumcorr.illum_correct_numpy(
                     self.array, mean_image, std_image))
 
     @staticmethod

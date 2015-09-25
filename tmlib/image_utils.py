@@ -2,10 +2,10 @@ import random as rand
 from scipy.misc import imread, bytescale
 import numpy as np
 import png
-try:
-    from gi.repository import Vips
-except ImportError as error:
-    print 'Vips could not be imported.\nReason: %s' % str(error)
+import logging
+from gi.repository import Vips
+
+logger = logging.getLogger(__name__)
 
 
 '''Utility functions for common image processing routines.'''
@@ -187,45 +187,29 @@ def vips_image_to_np_array(vips_image):
     return array
 
 
-def create_spacer_image(dimensions, dtype, bands, direction=None):
+def create_spacer_image(height, width, dtype, bands):
     '''
     Create a black image that can be inserted as a spacer between
     channel images.
 
     Parameters
     ----------
-    dimensions: Tuple[int]
-        y, x dimensions (height, width) of the image
+    height: int
+        dimension of the image in y dimension
+    width: int
+        dimension of the image in x dimension
     dtype: Vips.BandFormat
         data type (format) of the image
     bands: int
         number of color dimensions (``1`` for grayscale and ``3`` for RGB)
-    direction: str, optional
-        either ``"horizontal"`` or ``"vertical"``
 
     Returns
     -------
     Vips.Image
-        black spacer image of specified `dtype`, where one dimension is reduced
-        to 500 pixels, depending on the specified `direction`
+        black image of specified `dtype`
 
-    Raises
-    ------
-    ValueError
-        when `direction` is not specified correctly
     '''
-    if not direction:
-        spacer = Vips.Image.black(dimensions[1], dimensions[0],
-                                  bands=bands).cast(dtype)
-    else:
-        if direction == 'horizontal':
-            spacer = Vips.Image.black(500, dimensions[0],
-                                      bands=bands).cast(dtype)
-        elif direction == 'vertical':
-            spacer = Vips.Image.black(dimensions[1], 500,
-                                      bands=bands).cast(dtype)
-        else:
-            raise ValueError('Direction must be "horizontal" or "vertical"')
+    spacer = Vips.Image.black(width, height, bands=bands).cast(dtype)
     return spacer
 
 

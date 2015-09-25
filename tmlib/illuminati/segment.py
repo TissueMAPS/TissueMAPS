@@ -1,13 +1,16 @@
+import os
+import re
 import operator as op
 import numpy as np
 import h5py
 import scipy
-import os
-import re
+import logging
 from gi.repository import Vips
 from skimage.measure import find_contours, approximate_polygon
 from .. import image_utils
 from ..dafu.utils import extract_ids
+
+logger = logging.getLogger(__name__)
 
 
 def local_to_global_ids_vips(im, offset_id):

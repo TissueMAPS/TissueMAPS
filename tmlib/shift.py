@@ -1,5 +1,8 @@
 import numpy as np
+import logging
 from gi.repository import Vips
+
+logger = logging.getLogger(__name__)
 
 
 def shift_and_crop_numpy(im, y, x, bottom, top, right, left,

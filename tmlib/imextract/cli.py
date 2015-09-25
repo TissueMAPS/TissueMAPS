@@ -5,14 +5,14 @@ from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
 
-class ImExtract(CommandLineInterface):
+class Imextract(CommandLineInterface):
 
     '''
     Command line interface for extraction of images from image files.
     '''
 
     def __init__(self, args):
-        super(ImExtract, self).__init__(args)
+        super(Imextract, self).__init__(args)
         self.args = args
 
     @staticmethod
@@ -55,5 +55,5 @@ class ImExtract(CommandLineInterface):
         --------
         `tmlib.imextract.argparser`_
         '''
-        cli = ImExtract(args)
+        cli = Imextract(args)
         getattr(cli, args.subparser_name)()

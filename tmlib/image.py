@@ -43,7 +43,6 @@ class Image(object):
 
     __metaclass__ = ABCMeta
 
-
     @property
     def metadata(self):
         '''

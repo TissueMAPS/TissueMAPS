@@ -2,7 +2,6 @@ import os
 import sys
 import h5py
 import collections
-import logging
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from . import path_utils
@@ -24,7 +23,7 @@ class ImageProcessingPipeline(ClusterRoutines):
     '''
 
     def __init__(self, experiment, pipe_name, prog_name,
-                 pipe=None, handles=None, verbosity=0):
+                 pipe=None, handles=None):
         '''
         Initialize an instance of class ImageProcessingPipeline.
 
@@ -42,8 +41,6 @@ class ImageProcessingPipeline(ClusterRoutines):
             paths to module code and descriptor files
         handles: List[dict], optional
             name of each module and the description of its input/output
-        verbosity: int, optional
-            logging level (default: ``0``)
 
         Note
         ----
@@ -62,24 +59,22 @@ class ImageProcessingPipeline(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageProcessingPipeline, self).__init__(
-            experiment, prog_name, verbosity)
+        super(ImageProcessingPipeline, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.pipe_name = pipe_name
         self.prog_name = prog_name
         self._pipe = pipe
         self._handles = handles
-        self.logger = self.configure_logger(verbosity)
 
-    def configure_logger(self, verbosity):
-        logger = logging.getLogger(self.prog_name)
-        logger.setLevel(verbosity)
-        err = logging.StreamHandler(stream=sys.stderr)
-        err.setLevel(verbosity)
-        formatter = logging.Formatter('%(name)s - %(levelname)s: %(message)s')
-        err.setFormatter(formatter)
-        logger.addHandler(err)
-        return logger
+    # def configure_logger(self, verbosity):
+    #     logger = logging.getLogger(self.prog_name)
+    #     logger.setLevel(verbosity)
+    #     err = logging.StreamHandler(stream=sys.stderr)
+    #     err.setLevel(verbosity)
+    #     formatter = logging.Formatter('%(name)s - %(levelname)s: %(message)s')
+    #     err.setFormatter(formatter)
+    #     logger.addHandler(err)
+    #     return logger
 
     @cached_property
     def project_dir(self):

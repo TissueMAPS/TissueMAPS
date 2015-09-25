@@ -1,8 +1,8 @@
 from . import __version__
-from .cli import ImExtract
+from .cli import Imextract
 
 
-parser, subparsers = ImExtract.get_parser_and_subparsers()
+parser, subparsers = Imextract.get_parser_and_subparsers()
 
 parser.description = '''
         Extract images from heterogeneous microscopic image file formats
@@ -17,4 +17,4 @@ init_parser.add_argument(
          '(default: 10)')
 
 for name in subparsers.choices:
-    subparsers.choices[name].set_defaults(handler=ImExtract.call)
+    subparsers.choices[name].set_defaults(handler=Imextract.call)

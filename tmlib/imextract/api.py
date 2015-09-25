@@ -17,7 +17,7 @@ class ImageExtractor(ClusterRoutines):
     formats (often extended TIFF formats).
     '''
 
-    def __init__(self, experiment, prog_name, verbosity=0):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class ImageExtractor.
 
@@ -28,15 +28,12 @@ class ImageExtractor(ClusterRoutines):
             experiment directory
         prog_name: str
             name of the corresponding program (command line interface)
-        verbosity: int, optional
-            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
         '''
-        super(ImageExtractor, self).__init__(
-            experiment, prog_name, verbosity)
+        super(ImageExtractor, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.prog_name = prog_name
         for cycle in self.cycles:

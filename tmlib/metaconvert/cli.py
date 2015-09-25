@@ -5,7 +5,7 @@ from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
 
-class MetaConvert(CommandLineInterface):
+class Metaconvert(CommandLineInterface):
 
     '''
     Command line interface for metadata conversion.
@@ -13,14 +13,14 @@ class MetaConvert(CommandLineInterface):
 
     def __init__(self, args):
         '''
-        Initialize an instance of class MetaConvert.
+        Initialize an instance of class Metaconvert.
 
         Parameters
         ----------
         args: arparse.Namespace
             parsed command line arguments
         '''
-        super(MetaConvert, self).__init__(args)
+        super(Metaconvert, self).__init__(args)
         self.args = args
 
     @staticmethod
@@ -49,7 +49,7 @@ class MetaConvert(CommandLineInterface):
     @staticmethod
     def call(args):
         '''
-        Initializes an instance of class MetaConvert and calls the method
+        Initializes an instance of class Metaconvert and calls the method
         that matches the name of the subparser with the parsed command
         line arguments.
 
@@ -58,5 +58,5 @@ class MetaConvert(CommandLineInterface):
         args: arparse.Namespace
             parsed command line arguments
         '''
-        cli = MetaConvert(args)
+        cli = Metaconvert(args)
         getattr(cli, args.subparser_name)()

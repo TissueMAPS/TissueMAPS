@@ -3,7 +3,6 @@ import re
 import shutil
 from glob import glob
 from natsort import natsorted
-from cached_property import cached_property
 from ..formats import Formats
 from ..cluster import ClusterRoutines
 
@@ -20,7 +19,7 @@ class MetadataExtractor(ClusterRoutines):
     and written to XML files.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity=0):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class MetadataExtractor.
 
@@ -31,15 +30,12 @@ class MetadataExtractor(ClusterRoutines):
             experiment directory
         prog_name: str
             name of the corresponding command line interface
-        verbosity: int, optional
-            logging level (default: ``0``)
 
         See also
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataExtractor, self).__init__(
-                experiment, prog_name, verbosity)
+        super(MetadataExtractor, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.prog_name = prog_name
 
@@ -140,7 +136,7 @@ class MetadataExtractor(ClusterRoutines):
         '''
         for i, f in enumerate(batch['outputs']):
             output_files = glob(os.path.join(
-                                self.log_dir, '*_job-%.5d*.out' % (i+1)))
+                                self.log_dir, '*_%.5d*.out' % (i+1)))
             # Take the most recent one, in case there are outputs of previous
             # submissions
             output_files = natsorted(output_files)

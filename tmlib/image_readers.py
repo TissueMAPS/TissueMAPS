@@ -5,9 +5,12 @@ import sys
 import traceback
 import bioformats
 import javabridge
+import logging
 from .readers import ImageReader
 from .readers import SlideReader
 from .errors import NotSupportedError
+
+logger = logging.getLogger(__name__)
 
 
 class BioformatsImageReader(ImageReader):

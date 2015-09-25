@@ -250,6 +250,27 @@ class ClusterRoutines(BasicClusterRoutines):
             job_descriptions['collect'] = utils.read_json(collect_job_files[0])
         return job_descriptions
 
+    def list_all_output_files(self, job_descriptions):
+        '''
+        Provide a list of all output files that should be created by the
+        program.
+
+        Parameters
+        ----------
+        job_descriptions: List[dict]
+            job descriptions
+
+        See also
+        --------
+        `get_job_descriptions`_
+        '''
+        files = list()
+        if job_descriptions['run']:
+            files.append(job_descriptions['run']['outputs'].values())
+        if 'collect' in job_descriptions.keys():
+            files.append(job_descriptions['collect']['outputs'].values())
+        return files
+
     def build_run_job_filename(self, job_id):
         '''
         Parameters
@@ -315,6 +336,10 @@ class ClusterRoutines(BasicClusterRoutines):
         ----
         Creates log directory if it does not exist and adds the job filename
         to "inputs" (required in case no shared network is available).
+
+        See also
+        --------
+        `get_job_descriptions`_
         '''
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -445,12 +470,20 @@ class ClusterRoutines(BasicClusterRoutines):
         **kwargs: dict
             additional variable input arguments as key-value pairs:
             * "illumcorr": correct for illumination artifacts (*bool*)
+
+        See also
+        --------
+        `get_job_descriptions`_
         '''
         pass
 
     def print_joblist(self, job_descriptions):
         '''
         Print job_descriptions to standard output in YAML format.
+
+        See also
+        --------
+        `get_job_descriptions`_
         '''
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
@@ -481,6 +514,10 @@ class ClusterRoutines(BasicClusterRoutines):
         parallel task (a collection of jobs that are processed in parallel).
         This is done for consistency so that jobs from different steps can
         be handled the same way and easily be combined into a larger workflow.
+
+        See also
+        --------
+        `get_job_descriptions`_
         '''
         run_jobs = ParallelTaskCollection(
                         jobname='tmaps_%s_run' % self.prog_name)

@@ -1,10 +1,9 @@
 from . import __version__
-from .cli import MetaExtract
+from .cli import Metaextract
 
 
-parser, subparsers = MetaExtract.get_parser_and_subparsers(
-                        required_subparsers=[
-                            'init', 'submit', 'collect'])
+parser, subparsers = Metaextract.get_parser_and_subparsers(
+    required_subparsers=['init', 'submit', 'kill', 'collect'])
 
 parser.description = '''
         Extract metadata from heterogeneous microscopic image file formats
@@ -13,4 +12,4 @@ parser.description = '''
 parser.version = __version__
 
 for name in subparsers.choices:
-    subparsers.choices[name].set_defaults(handler=MetaExtract.call)
+    subparsers.choices[name].set_defaults(handler=Metaextract.call)

@@ -38,7 +38,8 @@ class Tmaps(CommandLineInterface):
         self.__api_instance = ClusterWorkflow(
                     experiment=experiment,
                     no_shared_network=self.args.no_shared_network,
-                    virtualenv=self.args.virtualenv)
+                    virtualenv=self.args.virtualenv,
+                    verbosity=self.args.verbosity)
         logger.debug(
             'created an instance of API class "%s" and initialized it with '
             'the parsed command line arguments'

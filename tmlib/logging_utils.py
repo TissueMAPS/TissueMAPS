@@ -1,12 +1,12 @@
+import sys
 import logging
 
 
 VERBOSITY_LEVELS = {
-    0: None,  # Equivalent to no logging.
-    1: logging.WARN,  # For simplicity. Includes ERROR, CRITICAL
-    2: logging.INFO,
-    3: logging.DEBUG,
-    4: logging.NOTSET,  # Equivalent to no filtering. Everything is logged.
+    0: logging.WARN,  # For simplicity. Includes ERROR, CRITICAL
+    1: logging.INFO,
+    2: logging.DEBUG,
+    3: logging.NOTSET,  # Equivalent to no filtering. Everything is logged.
 }
 LOGGING_LEVELS = {
     'NONE': None,
@@ -43,9 +43,38 @@ def map_log_verbosity(verbosity):
     return VERBOSITY_LEVELS.get(verbosity, logging.NOTSET)
 
 
+def configure_logging(name, verbosity):
+
+    fmt = '%(asctime)s %(name)-40s %(levelname)-8s %(message)s'
+    datefmt = '%Y-%m-%d %H:%M:%S'
+    formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(map_log_verbosity(verbosity))
+
+    stderr_handler = logging.StreamHandler(stream=sys.stderr)
+    stderr_handler.name = 'err'
+    stderr_handler.setLevel(logging.WARN)
+    stderr_handler.setFormatter(formatter)
+    logger.addHandler(stderr_handler)
+
+    stdout_handler = logging.StreamHandler(stream=sys.stdout)
+    stdout_handler.name = 'out'
+    stdout_handler.setFormatter(formatter)
+    stdout_handler.setLevel(0)
+    stdout_handler.addFilter(InfoFilter())
+    logger.addHandler(stdout_handler)
+    return logger
+
+
+class InfoFilter(logging.Filter):
+    def filter(self, rec):
+        return rec.levelno in (logging.DEBUG, logging.INFO)
+
+
 class Whitelist(logging.Filter):
     def __init__(self, *whitelist):
         self.whitelist = [logging.Filter(name) for name in whitelist]
 
     def filter(self, record):
-        return any(f.filter(record) for f in self.whitelist)
+        return any([f.filter(record) for f in self.whitelist])

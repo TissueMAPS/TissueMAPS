@@ -1,8 +1,8 @@
 from . import __version__
-from .cli import MetaConvert
+from .cli import Metaconvert
 
 
-parser, subparsers = MetaConvert.get_parser_and_subparsers()
+parser, subparsers = Metaconvert.get_parser_and_subparsers()
 
 parser.description = '''
         Convert OMEXML metadata extracted from image files to a custom format
@@ -15,4 +15,4 @@ parser.add_argument(
     help='microscope-specific file format')
 
 for name in subparsers.choices:
-    subparsers.choices[name].set_defaults(handler=MetaConvert.call)
+    subparsers.choices[name].set_defaults(handler=Metaconvert.call)

@@ -1,5 +1,6 @@
 from os.path import join, dirname, realpath
-import utils
+from . import utils
+# import logging
 
 # Create configuration dictionary that defines default parameters
 cfg_filename = join(dirname(realpath(__file__)), 'tmlib.cfg')

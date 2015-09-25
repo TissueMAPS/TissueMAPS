@@ -30,7 +30,7 @@ class MetadataConverter(ClusterRoutines):
     '''
 
     def __init__(self, experiment, file_format, image_file_format_string,
-                 prog_name, verbosity=0):
+                 prog_name):
         '''
         Initialize an instance of class MetadataConverter.
 
@@ -47,8 +47,6 @@ class MetadataConverter(ClusterRoutines):
             files should be formatted
         prog_name: str
             name of the corresponding program (command line interface)
-        verbosity: int, optional
-            logging level (default: ``0``)
 
         Raises
         ------
@@ -59,8 +57,7 @@ class MetadataConverter(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataConverter, self).__init__(
-                experiment, prog_name, verbosity)
+        super(MetadataConverter, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.file_format = file_format
         if self.file_format:
