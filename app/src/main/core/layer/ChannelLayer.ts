@@ -1,11 +1,11 @@
 /// <reference path='TileLayer.ts'/>
-class CycleLayer extends TileLayer {
+class ChannelLayer extends TileLayer {
     constructor(ol, $q: ng.IQService, opt: TileLayerArgs) {
         super(ol, $q, opt);
     }
 }
 
-class CycleLayerFactory {
+class ChannelLayerFactory {
     static $inject = ['openlayers', '$q'];
     constructor(private ol,
                 private $q: ng.IQService) {}
@@ -16,9 +16,9 @@ class CycleLayerFactory {
             drawWhitePixels: true
         });
 
-        return new CycleLayer(this.ol, this.$q, tileLayerOptions);
+        return new ChannelLayer(this.ol, this.$q, tileLayerOptions);
     }
 }
 
-angular.module('tmaps.core.layer').service('cycleLayerFactory', CycleLayerFactory);
+angular.module('tmaps.core.layer').service('channelLayerFactory', ChannelLayerFactory);
 

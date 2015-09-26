@@ -12,7 +12,7 @@ angular.module('tmaps.main.layerprops')
                 }
             }
         });
-    };
+    }
 
     this.removeMasksAfterPrompt = function(layers) {
         removeAfterPrompt(layers, function(l) {
@@ -22,7 +22,7 @@ angular.module('tmaps.main.layerprops')
 
     this.removeChannelsAfterPrompt = function(layers) {
         removeAfterPrompt(layers, function(l) {
-            app.getActiveInstance().removeCycleLayer(l);
+            app.getActiveInstance().removeChannelLayer(l);
         });
     };
 }]);

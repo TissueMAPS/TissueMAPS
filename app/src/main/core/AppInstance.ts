@@ -8,8 +8,8 @@ interface MapState {
 interface SerializedAppInstance extends Serialized<AppInstance> {
     experiment: SerializedExperiment;
     selectionHandler: SerializedSelectionHandler;
-    channelLayerOptions: TileLayerArgs;
-    maskLayerOptions: TileLayerArgs;
+    channelLayerOptions: TileLayerArgs[];
+    maskLayerOptions: TileLayerArgs[];
     mapState: MapState;
 }
 
@@ -19,7 +19,7 @@ class AppInstance implements Serializable<AppInstance> {
     viewport: ng.IPromise<Viewport>;
     map: ng.IPromise<ol.Map>;
 
-    cycleLayers: CycleLayer[] = [];
+    channelLayers: ChannelLayer[] = [];
     outlineLayers: OutlineLayer[] = [];
     objectLayers: ObjectLayer[] = [];
 
@@ -31,7 +31,7 @@ class AppInstance implements Serializable<AppInstance> {
                 private ol,
                 private $q: ng.IQService,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
-                private cycleLayerFactory: CycleLayerFactory,
+                private channelLayerFactory: ChannelLayerFactory,
                 private outlineLayerFactory: OutlineLayerFactory,
                 private experimentFactory: ExperimentFactory,
                 private $http: ng.IHttpService,
@@ -147,17 +147,13 @@ class AppInstance implements Serializable<AppInstance> {
                 visible: i === 0,
                 color: [1, 1, 1]
             });
-            this.addCycleLayer(opt);
+            this.addChannelLayer(opt);
         });
     }
 
-    /*
-     * Add a cycle layer to the underlying map object
-     * Always use this smethod when adding new cycles.
-     */
-    addCycleLayer(opt) {
-        var cycleLayer = this.cycleLayerFactory.create(opt);
-        var alreadyHasLayers = this.cycleLayers.length !== 0;
+    addChannelLayer(opt) {
+        var channelLayer = this.channelLayerFactory.create(opt);
+        var alreadyHasLayers = this.channelLayers.length !== 0;
 
         // If this is the first time a layer is added, create a view and add it to the map.
         if (!alreadyHasLayers) {
@@ -188,26 +184,26 @@ class AppInstance implements Serializable<AppInstance> {
         // Add the layer as soon as the map is created (i.e. resolved after
         // viewport injection)
         this.map.then(function(map) {
-            cycleLayer.addToMap(map);
+            channelLayer.addToMap(map);
         });
-        this.cycleLayers.push(cycleLayer);
+        this.channelLayers.push(channelLayer);
     }
 
     /**
-     * Remove a cycleLayer from the map.
+     * Remove a channelLayer from the map.
      * Use this method whenever a layer should be removed since it also updates
      * the app instance's internal state.
      */
-    removeCycleLayer(cycleLayer) {
+    removeChannelLayer(channelLayer: ChannelLayer) {
         this.map.then(function(map) {
-            cycleLayer.removeFromMap(map);
+            channelLayer.removeFromMap(map);
         });
-        var idx = this.cycleLayers.indexOf(cycleLayer);
-        this.cycleLayers.splice(idx, 1);
+        var idx = this.channelLayers.indexOf(channelLayer);
+        this.channelLayers.splice(idx, 1);
     }
 
 
-    addMaskLayers(layerOptions) {
+    addMaskLayers(layerOptions: TileLayerArgs[]) {
         // Add the layers that are flagged as masking layers
         // If there are multiple such layers, the first will be
         // initially visible and the others invisible.
@@ -222,12 +218,12 @@ class AppInstance implements Serializable<AppInstance> {
 
     /*
      * Add a segmentation layer for this experiment
-     * The main difference to setting a cycle layer is that
+     * The main difference to setting a channel layer is that
      * 1. The created class is a OutlineLayer and as such it is not blended
      *    additively but black parts of the image aren't drawn anyway.
-     * 2. The layer won't get added to the AppInstance.cycleLayers array.
+     * 2. The layer won't get added to the AppInstance.channelLayers array.
      */
-    addOutlineLayer(opt) {
+    addOutlineLayer(opt: TileLayerArgs) {
         var outlineLayer = this.outlineLayerFactory.create(opt);
         this.outlineLayers.push(outlineLayer);
 
@@ -299,7 +295,7 @@ class AppInstance implements Serializable<AppInstance> {
                 rotation: v.getRotation()
             };
 
-            var channelOptsPr = this.$q.all(_(this.cycleLayers).map(function(l) {
+            var channelOptsPr = this.$q.all(_(this.channelLayers).map(function(l) {
                 return l.serialize();
             }));
             var maskOptsPr = this.$q.all(_(this.outlineLayers).map(function(l) {
