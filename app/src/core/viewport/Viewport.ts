@@ -111,7 +111,6 @@ class Viewport implements Serializable<Viewport> {
         // this.addObjectLayer(objLayerB);
 
         this.experiment.cells.then((cells) => {
-            // cells = [cells[0], cells[1], cells[2]];
             var cellLayer = this.objectLayerFactory.create('Cells', {
                 objects: cells,
                 fillColor: 'rgba(255, 0, 0, 0)',
@@ -119,6 +118,19 @@ class Viewport implements Serializable<Viewport> {
             });
             this.addObjectLayer(cellLayer);
         });
+    }
+
+    initialize() {
+        var layerOpts = _(this.experiment.channels).map((ch) => {
+            return {
+                name: ch.name,
+                imageSize: ch.imageSize,
+                pyramidPath: ch.pyramidPath
+            };
+        });
+        console.log(layerOpts);
+        console.log(this.experiment);
+        this.addChannelLayers(layerOpts);
     }
 
     addObjectLayer(objLayer: ObjectLayer) {
@@ -138,8 +150,7 @@ class Viewport implements Serializable<Viewport> {
         }
     }
 
-    // TODO: Consider throwing everything cell position related into own
-    // CellPositionHandler or something like that.
+    // TODO: Handle this via mapobjects.
     getCellAtPos(pos: MapPosition) {
         return this.$http.get(
             '/experiments/' + this.experiment.id +
@@ -157,6 +168,7 @@ class Viewport implements Serializable<Viewport> {
                 visible: i === 0,
                 color: [1, 1, 1]
             });
+            console.log('sdf');
             this.addChannelLayer(opt);
         });
     }
@@ -271,13 +283,7 @@ class Viewport implements Serializable<Viewport> {
         });
     }
 
-    /**
-     * Set this instance active: display the map container and handle the case
-     * when the browser window was resized.
-     * NOTE: Always call the setActiveInstance method on the application global
-     * object since that function will also deactivate other instances.
-     */
-    setActive() {
+    show() {
         this.element.then((element) => {
             element.show();
             this.map.then((map) => {
@@ -286,17 +292,11 @@ class Viewport implements Serializable<Viewport> {
         });
     }
 
-    /**
-     * Hide the openlayers canvas.
-     * As with setInactive: the Application object should call this function
-     * and make sure that exactly one Viewport is set active at all times.
-     */
-    setInactive() {
-        this.element.then(function(element) {
+    hide() {
+        this.element.then((element) => {
             element.hide();
         });
     }
-
 
     serialize() {
         var bpPromise = this.map.then((map) => {

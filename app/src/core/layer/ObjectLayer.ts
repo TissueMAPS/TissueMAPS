@@ -27,7 +27,6 @@ class ObjectLayer extends Layer {
             style: styleFunction
         });
 
-        console.log(opt);
         if (opt.objects !== undefined) {
             this.addObjects(opt.objects);
         }
@@ -51,8 +50,6 @@ class ObjectLayer extends Layer {
                 })
             })]
         };
-
-        console.log(this.styles);
     }
 
     addObject(obj: MapObject) {
@@ -60,7 +57,6 @@ class ObjectLayer extends Layer {
     }
 
     addObjects(objs: MapObject[]) {
-        console.log('bla');
         var features = _(objs).map((o) => { return o.getOLFeature(); });
         this.olLayer.getSource().addFeatures(features);
     }

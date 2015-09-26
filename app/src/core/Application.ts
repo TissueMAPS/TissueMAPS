@@ -81,9 +81,17 @@ class Application {
         var newActive = this.getActiveViewport();
         if (oldActive) {
             // If the vp wasn't deleted
-            oldActive.setInactive();
+            this.setViewportInactive(oldActive);
         }
-        newActive.setActive();
+        this.setViewportActive(newActive);
+    }
+
+    private setViewportInactive(vp: Viewport) {
+        vp.hide();
+    }
+
+    private setViewportActive(vp: Viewport) {
+        vp.show();
     }
 
     setActiveViewport(vp: Viewport) {
@@ -91,29 +99,18 @@ class Application {
         this.setActiveViewportByNumber(nr);
     }
 
-    getByExpName(expName: string): Viewport {
-        return _.find(this.viewports, function(vp) {
-            return vp.experiment.name === expName;
-        });
-    }
-
+    // TODO: Remove as many dependencies on this function as possible!
+    // Widgets etc. should know the viewport they belong to.
     getActiveViewport(): Viewport {
         return this.viewports[this.activeViewportNumber];
     }
 
     addExperiment(experiment: ExperimentAPIObject) {
+        // TODO: Depending on the experiment's type, create a different type of viewport.
+        // TODO: Class viewport and experiment should be abstract.
         var exp = this.experimentFty.createFromServerResponse(experiment);
         var vp = this.viewportFty.create(exp);
-
-        var layerOpts = _.partition(experiment.layers, function(opt) {
-            return /_Mask/.test(opt.name);
-        });
-
-        var outlineOpts = <any> layerOpts[0];
-        var cycleOpts = <any> layerOpts[1];
-
-        vp.addChannelLayers(cycleOpts);
-        vp.addMaskLayers(outlineOpts);
+        vp.initialize();
 
         this.viewports.push(vp);
         if (this.viewports.length === 1) {
@@ -132,7 +129,6 @@ class Application {
                 activeViewportNumber: this.activeViewportNumber,
                 viewports: sers
             };
-            console.log(serApp);
             return serApp;
         });
     }

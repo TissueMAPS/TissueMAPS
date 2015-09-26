@@ -9,7 +9,8 @@ class ExperimentDeserializer implements Deserializer<Experiment> {
         var experiment = this.experimentFactory.create({
             id: e.id,
             name: e.name,
-            description: e.description
+            description: e.description,
+            channels: e.channels
         });
         return this.$q.when(experiment);
     }

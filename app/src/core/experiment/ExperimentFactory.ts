@@ -7,10 +7,18 @@ class ExperimentFactory {
     }
 
     createFromServerResponse(e: ExperimentAPIObject) {
+        var channels = _.map(e.layers, (l) => {
+            return {
+                name: l.name,
+                imageSize: l.imageSize,
+                pyramidPath: l.pyramidPath
+            };
+        });
         return this.create({
             id: e.id,
             name: e.name,
-            description: e.description
+            description: e.description,
+            channels: channels
         });
     }
 }
