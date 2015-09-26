@@ -7,7 +7,7 @@ from os.path import splitext, basename, exists, dirname
 from collections import Counter
 import warnings
 from . import path_utils
-from .. import utils
+from .. import text_readers
 from ..errors import PipelineDescriptionError
 
 
@@ -309,7 +309,7 @@ class PipelineChecker(object):
             handles_path = path_utils.complete_module_path(
                             module['handles'], self.libpath, self.project_dir)
             if self.handles_descriptions is None:
-                handles = utils.read_yaml(handles_path)
+                handles = text_readers.read_yaml(handles_path)
             else:
                 handles = self.handles_descriptions[i]
 

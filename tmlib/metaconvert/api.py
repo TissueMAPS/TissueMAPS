@@ -1,10 +1,10 @@
 import os
 from glob import glob
-from .default import DefaultMetadataHandler
+from .bioformats import BioformatsMetadataReader
 from .cellyoyager import CellvoyagerMetadataHandler
 from .metamorph import MetamorphMetadataHandler
 from ..cluster import ClusterRoutines
-from .. import utils
+from .. import text_writers
 from ..errors import NotSupportedError
 from ..formats import Formats
 
@@ -29,16 +29,15 @@ class MetadataConverter(ClusterRoutines):
     separate JSON file based to a custom schema.
     '''
 
-    def __init__(self, experiment, file_format, image_file_format_string,
+    def __init__(self, experiment_dir, file_format, image_file_format_string,
                  prog_name):
         '''
         Initialize an instance of class MetadataConverter.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of the
-            experiment directory
+        experiment_dir: str
+            absolute path to experiment directory
         file_format: str
             name of the microscope file format for which additional files
             are provided, e.g. "metamorph"
@@ -57,8 +56,8 @@ class MetadataConverter(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataConverter, self).__init__(experiment, prog_name)
-        self.experiment = experiment
+        super(MetadataConverter, self).__init__(experiment_dir, prog_name)
+        self.experiment_dir = experiment_dir
         self.file_format = file_format
         if self.file_format:
             if self.file_format not in Formats.support_for_additional_files:
@@ -130,7 +129,7 @@ class MetadataConverter(ClusterRoutines):
                             batch['inputs']['ome_xml_files'],
                             batch['cycle'])
         else:
-            handler = DefaultMetadataHandler(
+            handler = BioformatsMetadataReader(
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
                             batch['inputs']['ome_xml_files'],
@@ -148,7 +147,7 @@ class MetadataConverter(ClusterRoutines):
         data = dict()
         for md in metadata:
             data[md.name] = md.serialize()
-        utils.write_json(filename, data)
+        text_writers.write_json(filename, data)
 
     def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'

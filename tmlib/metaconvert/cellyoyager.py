@@ -1,7 +1,7 @@
 import os
 import bioformats
 from lxml import etree
-from .handler import MetadataHandler
+from .handlers import MetadataHandler
 from ..readers import MetadataReader
 from ..illuminati import stitch
 

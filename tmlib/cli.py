@@ -9,6 +9,7 @@ from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
 from . import cfg
+from . import logging_utils
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +25,9 @@ def command_line_call(parser):
 
     Note
     ----
-    Does some logging configuration, in particular adds a new stream handler
-    to the root logger.
+    Configures logging: Creates an applications base logger "tmlib" and
+    adds two stream handlers to it, one for standard output (INFO & DEBUG)
+    and one for standard error (WARN, ERROR, CRITICAL).
 
     Warning
     -------
@@ -33,8 +35,15 @@ def command_line_call(parser):
     '''
     args = parser.parse_args()
 
-    # logging_utils.configure_logging(
-    #                     'tmlib.%s' % parser.prog, args.verbosity)
+    if args.verbosity > 0:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+    if args.silent:
+        level = logging.CRITICAL
+    # logging.basicConfig(format=FORMAT, level=level)
+    logging_utils.configure_logging('tmlib', level)
+    logger.debug('running program: %s' % parser.prog)
 
     try:
         if args.handler:
@@ -147,28 +156,37 @@ class CommandLineInterface(object):
         '''
         self.print_logo()
         api = self._api_instance
+        job_descriptions = api.get_job_descriptions_from_files()
+        if job_descriptions['run']:
+            logger.info('clean up output of previous submission')
+            output_files = api.list_all_output_files(job_descriptions)
+            if not output_files:
+                logger.debug('no output files of previous submission found')
+            else:
+                logger.debug('remove output files of previous submission')
+                if all([not os.path.exists(f) for f in output_files]):
+                    logger.warning('output files don\'t exist')
+                elif any([not os.path.exists(f) for f in output_files]):
+                    logger.warning('some output files don\'t exist')
+                [os.remove(f) for f in output_files
+                 if os.path.exists(f) and not os.path.isdir(f)]
+            logger.debug('remove job descriptions of previous submission')
+            shutil.rmtree(api.job_descriptions_dir)
+            if self.args.backup:
+                logger.info('backup log reports of previous submission')
+                shutil.move(api.log_dir, '{name}_backup_{time}'.format(
+                                        name=api.log_dir,
+                                        time=api.create_datetimestamp()))
+            else:
+                logger.debug('remove log reports of previous submission')
+                shutil.rmtree(api.log_dir)
+
         logger.info('create job descriptions')
         kwargs = self._variable_init_args
         job_descriptions = api.create_job_descriptions(**kwargs)
-        if self.args.print_joblist:
-            api.print_joblist(job_descriptions)
+        if self.args.print_job_descriptions:
+            api.print_job_descriptions(job_descriptions)
         else:
-            # TODO: clean-up output of previous job
-            job_descriptions = api.get_job_descriptions()
-            output_files = api.list_all_output_files(job_descriptions)
-            logger.debug('remove output files of previous submission')
-            # [os.remove(f) for f in output_files]
-            logger.debug('remove job descriptions of previous submission')
-            # shutil.rmtree(api.job_descriptions_dir)
-            if os.path.exists(api.log_dir):
-                if self.args.backup:
-                    logger.info('backup log reports of previous submission')
-                    shutil.move(api.log_dir, '{name}_backup_{time}'.format(
-                                            name=api.log_dir,
-                                            time=api.create_datetimestamp()))
-                else:
-                    logger.info('overwrite log reports of previous submission')
-                    shutil.rmtree(api.log_dir)
             logger.info('write job descriptions to files')
             api.write_job_files(job_descriptions)
         return job_descriptions
@@ -197,7 +215,7 @@ class CommandLineInterface(object):
         '''
         api = self._api_instance
         logger.info('read job descriptions from files')
-        job_descriptions = api.get_job_descriptions()
+        job_descriptions = api.get_job_descriptions_from_files()
         logger.info('create jobs')
         jobs = api.create_jobs(
                 job_descriptions=job_descriptions,
@@ -292,7 +310,10 @@ class CommandLineInterface(object):
             'experiment_dir', help='path to experiment directory')
         parser.add_argument(
             '-v', '--verbosity', action='count', default=0,
-            help='increase logging verbosity, e.g. "-v" or -vv"')
+            help='increase logging verbosity to DEBUG (default: INFO)')
+        parser.add_argument(
+            '-s', '--silent', action='store_true',
+            help='set logging verbosity to WARNING')
         parser.add_argument(
             '--version', action='version')
 
@@ -313,7 +334,7 @@ class CommandLineInterface(object):
                 is specified.
             '''
             init_parser.add_argument(
-                '--show', action='store_true', dest='print_joblist',
+                '--show', action='store_true', dest='print_job_descriptions',
                 help='print joblist to standard output '
                      'without writing it to file')
             init_parser.add_argument(

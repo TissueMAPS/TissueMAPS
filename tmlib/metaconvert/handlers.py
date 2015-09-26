@@ -3,7 +3,7 @@ import re
 from abc import ABCMeta
 from abc import abstractproperty
 from ..formats import Formats
-from ..metadata_readers import BioformatsMetadataReader
+from .bioformats import BioformatsMetadataReader
 from ..metadata import ChannelImageMetadata
 from ..illuminati import stitch
 from .. import utils

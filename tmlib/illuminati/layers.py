@@ -3,7 +3,7 @@ import numpy as np
 from ..mosaic import Mosaic
 from ..metadata import MosaicMetadata
 from .. import image_utils
-from ..image_reader import OpenslideImageReader
+from ..image_readers import OpenslideImageReader
 from ..errors import NotSupportedError
 from ..plates import Slide
 from ..plates import WellPlate

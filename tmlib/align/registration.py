@@ -1,9 +1,12 @@
 import os
 import numpy as np
+import logging
 import image_registration
-from ..readers import DatasetReader
-from ..writers import DatasetWriter
+from ..data_readers import DatasetReader
+from ..data_writers import DatasetWriter
 from ..image_readers import OpencvImageReader
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_shift(target_filename, reference_filename):

@@ -1,9 +1,9 @@
+import logging
 from . import logo
 from . import __version__
 from .api import PyramidCreation
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -29,14 +29,12 @@ class Illuminati(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir, self.cfg)
-        logger.debug('created an instance of configuration class "%s"'
-                     % experiment.__class__.__name__)
+        logger.debug('parsed arguments: {0}'.format(self.args))
         self.__api_instance = PyramidCreation(
-                                experiment=experiment, prog_name=self.name)
+                                experiment_dir=self.args.experiment_dir,
+                                prog_name=self.name)
         logger.debug(
-            'created an instance of API class "%s" and initialized it with '
-            'the parsed command line arguments'
+            'initialized API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
         return self.__api_instance
 

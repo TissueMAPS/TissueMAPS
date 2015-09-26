@@ -17,15 +17,14 @@ class ImageExtractor(ClusterRoutines):
     formats (often extended TIFF formats).
     '''
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment_dir, prog_name):
         '''
         Initialize an instance of class ImageExtractor.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of the
-            experiment directory
+        experiment_dir: str
+            absolute path to experiment directory
         prog_name: str
             name of the corresponding program (command line interface)
 
@@ -33,13 +32,9 @@ class ImageExtractor(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageExtractor, self).__init__(experiment, prog_name)
-        self.experiment = experiment
+        super(ImageExtractor, self).__init__(experiment_dir, prog_name)
+        self.experiment_dir = experiment_dir
         self.prog_name = prog_name
-        for cycle in self.cycles:
-            if not os.path.exists(os.path.join(cycle.metadata_dir,
-                                               cycle.image_metadata_file)):
-                raise OSError('Metadata file does not exist.')
 
     def _create_output_dirs(self):
         for cycle in self.cycles:

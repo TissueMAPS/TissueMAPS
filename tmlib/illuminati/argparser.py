@@ -1,10 +1,6 @@
-import logging
 from . import __version__
 from .cli import Illuminati
 
-logger = logging.getLogger(__name__)
-
-logger.info('bla')
 
 parser, subparsers = Illuminati.get_parser_and_subparsers(
     required_subparsers=['init', 'run', 'submit', 'kill'])

@@ -1,12 +1,11 @@
+import logging
 from . import logo
 from . import __version__
-from .workflow import ClusterWorkflow
+from .api import ClusterWorkflow
 from .workflow import ClusterWorkflowManager
-from .. import utils
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -33,24 +32,19 @@ class Tmaps(CommandLineInterface):
 
     @property
     def _api_instance(self):
+        logger.debug('parsed arguments: {0}'.format(self.args))
         manager = ClusterWorkflowManager(self.args.experiment_dir)
-        experiment = Experiment(self.args.experiment_dir, self.cfg)
         self.__api_instance = ClusterWorkflow(
-                    experiment=experiment,
+                    experiment_dir=self.args.experiment_dir,
                     no_shared_network=self.args.no_shared_network,
                     virtualenv=self.args.virtualenv,
                     verbosity=self.args.verbosity)
         logger.debug(
-            'created an instance of API class "%s" and initialized it with '
-            'the parsed command line arguments'
+            'initialized API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
         for step in manager.workflow_description['steps']:
             prog_name = step['prog_name']
             logger.debug('add step "%s" to the workflow' % prog_name)
-            # main_args = manager.format_args(step['prog_args'])
-            # logger.debug('parsed main arguments: {0}'.format(main_args))
-            # init_args = manager.format_args(step['init_args'])
-            # logger.debug('parsed init arguments: {0}'.format(init_args))
             prog_args = step['prog_args']
             init_args = step['init_args']
             self.__api_instance.add_step(prog_name, prog_args, init_args)

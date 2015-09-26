@@ -1,25 +1,27 @@
 import os
 import re
 import numpy as np
+import logging
 from natsort import natsorted
 from . import registration as reg
-from .. import utils
+from .. import text_writers
 from ..cluster import ClusterRoutines
 from ..shift import ShiftDescription
 from ..image import ChannelImage
 
+logger = logging.getLogger(__name__)
+
 
 class ImageRegistration(ClusterRoutines):
 
-    def __init__(self, experiment, shift_file_format_string, prog_name):
+    def __init__(self, experiment_dir, shift_file_format_string, prog_name):
         '''
         Initialize an instance of class ImageRegistration.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of
-            one or more cycle directories
+        experiment_dir: str
+            absolute path to experiment directory
         shift_file_format_string: str
             format string that specifies how the name of the shift file
             should be formatted
@@ -30,8 +32,8 @@ class ImageRegistration(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageRegistration, self).__init__(experiment, prog_name)
-        self.experiment = experiment
+        super(ImageRegistration, self).__init__(experiment_dir, prog_name)
+        self.experiment_dir = experiment_dir
         self.prog_name = prog_name
         self.shift_file_format_string = shift_file_format_string
 
@@ -224,7 +226,7 @@ class ImageRegistration(ClusterRoutines):
             description = [description[j] for j in order[:, 1]]
 
             shift_file = batch['outputs']['shift_descriptor_files'][i]
-            utils.write_json(shift_file, description)
+            text_writers.write_json(shift_file, description)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):

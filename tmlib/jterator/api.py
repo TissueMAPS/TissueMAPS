@@ -10,10 +10,11 @@ from .project import JtProject
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
 from .. import utils
+from .. import text_readers
 from ..cluster import ClusterRoutines
 from ..errors import PipelineDescriptionError
 from ..errors import PipelineOSError
-from ..writers import DatasetWriter
+from ..data_writers import DatasetWriter
 
 
 class ImageProcessingPipeline(ClusterRoutines):
@@ -22,16 +23,15 @@ class ImageProcessingPipeline(ClusterRoutines):
     Class for running a Jterator image processing pipeline.
     '''
 
-    def __init__(self, experiment, pipe_name, prog_name,
+    def __init__(self, experiment_dir, pipe_name, prog_name,
                  pipe=None, handles=None):
         '''
         Initialize an instance of class ImageProcessingPipeline.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of the
-            experiment directory
+        experiment_dir: str
+            absolute path to experiment directory
         pipe_name: str
             name of the pipeline that is being processed
         prog_name: str
@@ -59,8 +59,8 @@ class ImageProcessingPipeline(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageProcessingPipeline, self).__init__(experiment, prog_name)
-        self.experiment = experiment
+        super(ImageProcessingPipeline, self).__init__(experiment_dir, prog_name)
+        self.experiment_dir = experiment_dir
         self.pipe_name = pipe_name
         self.prog_name = prog_name
         self._pipe = pipe
@@ -139,7 +139,7 @@ class ImageProcessingPipeline(ClusterRoutines):
                                 % handles_file)
                     handles_description = dict()
                     handles_description['description'] = \
-                        utils.read_yaml(handles_file)
+                        text_readers.read_yaml(handles_file)
                     handles_description['name'] = \
                         os.path.splitext(os.path.basename(handles_file))[0]
                     self._handles.append(handles_description)
@@ -258,7 +258,7 @@ class ImageProcessingPipeline(ClusterRoutines):
         return self._pipeline_file
 
     def _read_pipe_file(self):
-        content = utils.read_yaml(self.pipe_file)
+        content = text_readers.read_yaml(self.pipe_file)
         # Make paths absolute
         content['project']['lib'] = path_utils.complete_path(
                     content['project']['lib'], self.project_dir)

@@ -1,23 +1,22 @@
 import os
+import logging
 from .layers import ChannelLayer
 from ..cluster import ClusterRoutines
 from ..image import IllumstatsImages
 
-import logging
 logger = logging.getLogger(__name__)
 
 
 class PyramidCreation(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment_dir, prog_name):
         '''
         Initialize an instance of class PyramidCreation.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of
-            one or more cycle directories
+        experiment_dir: str
+            absolute path to experiment directory
         prog_name: str
             name of the corresponding program (command line interface)
 
@@ -29,8 +28,8 @@ class PyramidCreation(ClusterRoutines):
         ----
         Creates directory for `layers` if it doesn't exist.
         '''
-        super(PyramidCreation, self).__init__(experiment, prog_name)
-        self.experiment = experiment
+        super(PyramidCreation, self).__init__(experiment_dir, prog_name)
+        self.experiment_dir = experiment_dir
         self.prog_name = prog_name
         if not os.path.exists(self.experiment.layers_dir):
             logger.debug(
@@ -91,11 +90,11 @@ class PyramidCreation(ClusterRoutines):
         joblist['run'] = list()
         count = 0
         for i, cycle in enumerate(self.cycles):
-            logger.debug('process cycle "%s"' % cycle)
+            logger.debug('create job descriptions for cycle "%s"' % cycle.name)
             channels = list(set([md.channel for md in cycle.image_metadata]))
             img_batches = list()
             for c in channels:
-                logger.debug('process channel "%s"' % c)
+                logger.debug('create job descriptions for channel "%s"' % c)
                 image_files = [md.name for md in cycle.image_metadata
                                if md.channel == c]
                 if len(image_files) == 0:

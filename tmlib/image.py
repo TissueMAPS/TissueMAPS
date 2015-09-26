@@ -5,7 +5,7 @@ from abc import abstractmethod
 from cached_property import cached_property
 from .pixels import VipsPixels
 from .pixels import NumpyPixels
-from .readers import DatasetReader
+from .data_readers import DatasetReader
 from .errors import MetadataError
 
 

@@ -224,7 +224,7 @@ class VipsImageReader(ImageReader):
                              % self.__class__.__name__)
 
 
-class OpenslideSlideReader(SlideReader):
+class OpenslideImageReader(SlideReader):
 
     '''
     Class for reading whole slide images and associated metadata using the

@@ -1,7 +1,7 @@
 import os
 import re
 from .stats import OnlineStatistics
-from ..writers import DatasetWriter
+from ..data_writers import DatasetWriter
 from ..image_readers import OpencvImageReader
 from ..cluster import ClusterRoutines
 
@@ -11,15 +11,14 @@ class IllumstatsGenerator(ClusterRoutines):
     Class for calculating illumination statistics.
     '''
 
-    def __init__(self, experiment, stats_file_format_string, prog_name):
+    def __init__(self, experiment_dir, stats_file_format_string, prog_name):
         '''
         Initialize an instance of class IllumstatsGenerator.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of the
-            experiment directory
+        experiment_dir: str
+            absolute path to experiment directory
         image_file_format_string: str
             format string that specifies how the names of the statistics files
             should be formatted
@@ -31,8 +30,8 @@ class IllumstatsGenerator(ClusterRoutines):
         Creates directory where statistics files will be stored in case it
         doesn't exist.
         '''
-        super(IllumstatsGenerator, self).__init__(experiment, prog_name)
-        self.experiment = experiment
+        super(IllumstatsGenerator, self).__init__(experiment_dir, prog_name)
+        self.experiment_dir = experiment_dir
         self.stats_file_format_string = stats_file_format_string
 
     def create_job_descriptions(self, **kwargs):

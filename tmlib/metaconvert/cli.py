@@ -1,8 +1,10 @@
+import logging
 from . import logo
 from . import __version__
 from .api import MetadataConverter
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
+
+logger = logging.getLogger(__name__)
 
 
 class Metaconvert(CommandLineInterface):
@@ -39,12 +41,16 @@ class Metaconvert(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir, self.cfg)
-        return MetadataConverter(
-                    experiment=experiment,
-                    file_format=self.args.format,
-                    image_file_format_string=self.cfg['IMAGE_FILE'],
-                    prog_name=self.name)
+        logger.debug('parsed arguments: {0}'.format(self.args))
+        self.__api_instance = MetadataConverter(
+                            experiment_dir=self.args.experiment_dir,
+                            file_format=self.args.format,
+                            image_file_format_string=self.cfg['IMAGE_FILE'],
+                            prog_name=self.name)
+        logger.debug(
+            'initialized API class "%s" with parsed arguments'
+            % self.__api_instance.__class__.__name__)
+        return self.__api_instance
 
     @staticmethod
     def call(args):
@@ -59,4 +65,6 @@ class Metaconvert(CommandLineInterface):
             parsed command line arguments
         '''
         cli = Metaconvert(args)
+        logger.debug('call "%s" method of class "%s"'
+                     % (args.subparser_name, cli.__class__.__name__))
         getattr(cli, args.subparser_name)()

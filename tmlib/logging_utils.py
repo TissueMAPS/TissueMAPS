@@ -43,14 +43,14 @@ def map_log_verbosity(verbosity):
     return VERBOSITY_LEVELS.get(verbosity, logging.NOTSET)
 
 
-def configure_logging(name, verbosity):
+def configure_logging(name, level):
 
     fmt = '%(asctime)s %(name)-40s %(levelname)-8s %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 
     logger = logging.getLogger(name)
-    logger.setLevel(map_log_verbosity(verbosity))
+    logger.setLevel(level)
 
     stderr_handler = logging.StreamHandler(stream=sys.stderr)
     stderr_handler.name = 'err'

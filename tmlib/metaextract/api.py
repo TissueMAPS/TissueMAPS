@@ -19,15 +19,14 @@ class MetadataExtractor(ClusterRoutines):
     and written to XML files.
     '''
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment_dir, prog_name):
         '''
         Initialize an instance of class MetadataExtractor.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of the
-            experiment directory
+        experiment_dir: str
+            absolute path to experiment directory
         prog_name: str
             name of the corresponding command line interface
 
@@ -35,8 +34,8 @@ class MetadataExtractor(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataExtractor, self).__init__(experiment, prog_name)
-        self.experiment = experiment
+        super(MetadataExtractor, self).__init__(experiment_dir, prog_name)
+        self.experiment_dir = experiment_dir
         self.prog_name = prog_name
 
     @staticmethod
@@ -88,13 +87,15 @@ class MetadataExtractor(ClusterRoutines):
                     'inputs': {
                         'image_files': [input_files[j]]
                     },
-                    'outputs': list(),
+                    'outputs': {'bla': list()},
                     'cycle': cycle.name
                 })
 
         joblist['collect'] = {
             'inputs': {},
-            'outputs': output_files
+            'outputs': {
+                'ome_xml_files': output_files
+            }
         }
         return joblist
 
@@ -134,7 +135,7 @@ class MetadataExtractor(ClusterRoutines):
         **kwargs: dict
             additional variable input arguments as key-value pairs
         '''
-        for i, f in enumerate(batch['outputs']):
+        for i, f in enumerate(batch['outputs']['ome_xml_files']):
             output_files = glob(os.path.join(
                                 self.log_dir, '*_%.5d*.out' % (i+1)))
             # Take the most recent one, in case there are outputs of previous

@@ -1,8 +1,10 @@
+import logging
 from . import logo
 from . import __version__
 from .api import ImageProcessingPipeline
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
+
+logger = logging.getLogger(__name__)
 
 
 class Jterator(CommandLineInterface):
@@ -27,19 +29,23 @@ class Jterator(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir, self.cfg)
-        return ImageProcessingPipeline(
-                    experiment=experiment,
-                    pipe_name=self.args.pipeline,
-                    prog_name=self.name)
+        logger.debug('parsed arguments: {0}'.format(self.args))
+        self.__api_instance = ImageProcessingPipeline(
+                                experiment_dir=self.args.experiment_dir,
+                                pipe_name=self.args.pipeline,
+                                prog_name=self.name)
+        logger.debug(
+            'initialized API class "%s" with parsed arguments'
+            % self.__api_instance.__class__.__name__)
+        return self.__api_instance
 
     def create(self):
         '''
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "create" subparser.
         '''
-        print 'CREATE'
         api = self._api_instance
+        logger.info('create project: %s' % api.project_dir)
         api.create_project(self.args.repo_dir, self.args.skel_dir)
 
     def remove(self):
@@ -47,8 +53,8 @@ class Jterator(CommandLineInterface):
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "remove" subparser.
         '''
-        print 'REMOVE'
         api = self._api_instance
+        logger.info('remove project: %s' % api.project_dir)
         api.remove_project()
 
     def check(self):
@@ -58,6 +64,7 @@ class Jterator(CommandLineInterface):
         '''
         print 'CHECK'
         api = self._api_instance
+        logger.info('check pipe and handles descriptor files')
         api.check_pipeline()
 
     @staticmethod
@@ -76,4 +83,6 @@ class Jterator(CommandLineInterface):
         `tmlib.jterator.argparser`_
         '''
         cli = Jterator(args)
+        logger.debug('call "%s" method of class "%s"'
+                     % (args.subparser_name, cli.__class__.__name__))
         getattr(cli, args.subparser_name)()

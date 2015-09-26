@@ -3,7 +3,8 @@ import re
 import glob
 from copy import copy
 import shutil
-from .. import utils
+from .. import text_readers
+from .. import text_writers
 from ..errors import PipelineOSError
 
 
@@ -167,7 +168,7 @@ class JtProject(object):
         pipe_file = self._get_pipe_file()
         pipe = {
             'name': self._get_descriptor_name(pipe_file),
-            'description': utils.read_yaml(pipe_file)
+            'description': text_readers.read_yaml(pipe_file)
         }
         if pipe['description']['pipeline']:
             # Add module 'name' to pipeline for display in the interface
@@ -184,7 +185,7 @@ class JtProject(object):
             for f in handles_files:
                 h = {
                     'name': self._get_descriptor_name(f),
-                    'description': utils.read_yaml(f)
+                    'description': text_readers.read_yaml(f)
                 }
                 handles.append(h)
         return handles
@@ -202,7 +203,7 @@ class JtProject(object):
             'pipeline': list()
         }
 
-        utils.write_yaml(pipe_file, pipe_skeleton, use_ruamel=True)
+        text_writers.write_yaml(pipe_file, pipe_skeleton, use_ruamel=True)
 
     def _create_handles_folder(self):
         handles_dir = os.path.join(self.project_dir, 'handles')
@@ -214,11 +215,11 @@ class JtProject(object):
         if not repo_dir:
             shutil.copy(pipe_file, self.project_dir)
         else:
-            pipe_content = utils.read_yaml(pipe_file, use_ruamel=True)
+            pipe_content = text_readers.read_yaml(pipe_file, use_ruamel=True)
             pipe_content['project']['lib'] = repo_dir
             new_pipe_file = os.path.join(self.project_dir,
                                          '%s.pipe' % self.pipe_name)
-            utils.write_yaml(new_pipe_file, pipe_content, use_ruamel=True)
+            text_writers.write_yaml(new_pipe_file, pipe_content, use_ruamel=True)
         shutil.copytree(os.path.join(skel_dir, 'handles'),
                         os.path.join(self.project_dir, 'handles'))
 
@@ -233,14 +234,14 @@ class JtProject(object):
     def _modify_pipe(self):
         pipe_file = self._get_pipe_file()
         # Use ruamel.yaml to preserve comments in the pipe file
-        old_pipe_content = utils.read_yaml(pipe_file, use_ruamel=True)
+        old_pipe_content = text_readers.read_yaml(pipe_file, use_ruamel=True)
         new_pipe_content = self.pipe['description']
         # Remove module 'name' from pipeline (only used internally)
         for i, module in enumerate(new_pipe_content['pipeline']):
             new_pipe_content['pipeline'][i].pop('name', None)
         mod_pipe_content = self._replace_values(old_pipe_content,
                                                 new_pipe_content)
-        utils.write_yaml(pipe_file, mod_pipe_content, use_ruamel=True)
+        text_writers.write_yaml(pipe_file, mod_pipe_content, use_ruamel=True)
 
     def _modify_handles(self):
         handles_files = []
@@ -252,14 +253,14 @@ class JtProject(object):
         for i, handles_file in enumerate(handles_files):
             # If file already exists, modify its content
             if os.path.exists(handles_file):
-                old_handles_content = utils.read_yaml(handles_file)
+                old_handles_content = text_readers.read_yaml(handles_file)
                 new_handles_content = self.handles[i]['description']
                 mod_handles_content = self.replace_values(old_handles_content,
                                                           new_handles_content)
             # If file doesn't yet exist, create it and add content
             else:
                 mod_handles_content = self.handles[i]['description']
-            utils.write_yaml(mod_handles_content, handles_file)
+            text_writers.write_yaml(mod_handles_content, handles_file)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(os.path.join(self.project_dir,
                                            'handles', '*.handles'))
