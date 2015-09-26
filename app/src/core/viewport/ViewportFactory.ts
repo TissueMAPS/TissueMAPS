@@ -5,11 +5,9 @@ class ViewportFactory {
         '$q',
         'cellSelectionHandlerFactory',
         'channelLayerFactory',
-        'experimentFactory',
         '$http',
         'Cell',
-        'objectLayerFactory',
-        'toolLoader'
+        'objectLayerFactory'
     ];
 
     constructor(private createViewportService: CreateViewportService,
@@ -17,26 +15,20 @@ class ViewportFactory {
                 private $q: ng.IQService,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private channelLayerFactory: ChannelLayerFactory,
-                private experimentFactory: ExperimentFactory,
                 private $http: ng.IHttpService,
                 private Cell,
-                private objectLayerFty: ObjectLayerFactory,
-                private toolLoader: ToolLoader) {}
+                private objectLayerFty: ObjectLayerFactory) {}
 
-    create(experiment: Experiment): Viewport {
+    create(): Viewport {
         return new Viewport(
             this.createViewportService,
             this.ol,
             this.$q,
             this.cellSelectionHandlerFty,
             this.channelLayerFactory,
-            this.experimentFactory,
             this.$http,
             this.Cell,
-            this.objectLayerFty,
-            this.toolLoader,
-
-            experiment
+            this.objectLayerFty
         );
     }
 }

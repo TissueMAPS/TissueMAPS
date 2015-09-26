@@ -9,7 +9,7 @@ class Cell implements MapObject {
                 public outline?: PolygonCoordinates) {
     }
 
-    getOLFeature() {
+    getOLFeature(): ol.Feature {
         var coord = [this.position.x, this.position.y];
         if (this.outline === undefined) {
             return new ol.Feature({

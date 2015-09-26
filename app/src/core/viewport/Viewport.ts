@@ -6,7 +6,6 @@ interface MapState {
 }
 
 interface SerializedViewport extends Serialized<Viewport> {
-    experiment: SerializedExperiment;
     selectionHandler: SerializedSelectionHandler;
     channelLayerOptions: TileLayerArgs[];
     mapState: MapState;
@@ -20,7 +19,6 @@ interface ViewportElementScope extends ng.IScope {
 
 class Viewport implements Serializable<Viewport> {
 
-    experiment: Experiment;
     element: ng.IPromise<JQuery>;
     elementScope: ng.IPromise<ng.IScope>;
     map: ng.IPromise<ol.Map>;
@@ -30,44 +28,30 @@ class Viewport implements Serializable<Viewport> {
 
     selectionHandler: CellSelectionHandler;
 
-    tools: ng.IPromise<Tool[]>;
+    private mapDef: ng.IDeferred<ol.Map>;
+    private elementDef: ng.IDeferred<JQuery>;
+    private elementScopeDef: ng.IDeferred<ViewportElementScope>;
 
     constructor(private createViewportService: CreateViewportService,
                 private ol,
                 private $q: ng.IQService,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private channelLayerFactory: ChannelLayerFactory,
-                private experimentFactory: ExperimentFactory,
                 private $http: ng.IHttpService,
                 private Cell,
-                private objectLayerFactory: ObjectLayerFactory,
-                private toolLoader: ToolLoader,
+                private objectLayerFactory: ObjectLayerFactory) {
 
-                experiment: Experiment) {
+        this.mapDef = this.$q.defer();
+        this.map = this.mapDef.promise;
 
-        this.experiment = experiment;
+        this.elementDef = this.$q.defer();
+        this.element = this.elementDef.promise;
 
-        var mapDef = this.$q.defer();
-        this.map = mapDef.promise;
-
-        var elementDef = this.$q.defer();
-        this.element = elementDef.promise;
-        var elementScopeDef = this.$q.defer();
-        this.elementScope = elementScopeDef.promise;
+        this.elementScopeDef = this.$q.defer();
+        this.elementScope = this.elementScopeDef.promise;
 
         // Helper class to manage the differently marker selections
         this.selectionHandler = this.cellSelectionHandlerFty.create(this);
-
-        createViewportService.createViewport(
-            this, 'viewports', '/templates/main/viewport.html'
-        ).then(function(ret) {
-            elementDef.resolve(ret.element);
-            elementScopeDef.resolve(ret.scope);
-            mapDef.resolve(ret.map);
-        });
-
-        // Load tools
-        this.tools = this.toolLoader.loadTools(this);
 
 
         // var createDemoRectangles = function(startx, starty) {
@@ -107,27 +91,16 @@ class Viewport implements Serializable<Viewport> {
         // this.addObjectLayer(objLayerA);
         // this.addObjectLayer(objLayerB);
 
-        this.experiment.cells.then((cells) => {
-            var cellLayer = this.objectLayerFactory.create('Cells', {
-                objects: cells,
-                fillColor: 'rgba(255, 0, 0, 0)',
-                strokeColor: 'rgba(255, 0, 0, 1)'
-            });
-            this.addObjectLayer(cellLayer);
-        });
     }
 
-    initialize() {
-        var layerOpts = _(this.experiment.channels).map((ch) => {
-            return {
-                name: ch.name,
-                imageSize: ch.imageSize,
-                pyramidPath: ch.pyramidPath
-            };
+    injectAndAttach(appInstance: AppInstance) {
+        this.createViewportService.createViewport(
+            this, 'viewports', '/templates/main/viewport.html'
+        ).then(function(ret) {
+            this.elementDef.resolve(ret.element);
+            this.elementScopeDef.resolve(ret.scope);
+            this.mapDef.resolve(ret.map);
         });
-        console.log(layerOpts);
-        console.log(this.experiment);
-        this.addChannelLayers(layerOpts);
     }
 
     addObjectLayer(objLayer: ObjectLayer) {
@@ -148,15 +121,15 @@ class Viewport implements Serializable<Viewport> {
     }
 
     // TODO: Handle this via mapobjects.
-    getCellAtPos(pos: MapPosition) {
-        return this.$http.get(
-            '/experiments/' + this.experiment.id +
-            '/cells?x=' + pos.x + '&y=' + pos.y
-        ).then((resp) => {
-            console.log(resp);
-            return resp.data['cell_id'];
-        });
-    }
+    // getCellAtPos(pos: MapPosition) {
+    //     return this.$http.get(
+    //         '/experiments/' + this.experiment.id +
+    //         '/cells?x=' + pos.x + '&y=' + pos.y
+    //     ).then((resp) => {
+    //         console.log(resp);
+    //         return resp.data['cell_id'];
+    //     });
+    // }
 
     addChannelLayers(layerOptions) {
         // Only the first layer should be visible
@@ -260,21 +233,18 @@ class Viewport implements Serializable<Viewport> {
                 rotation: v.getRotation()
             };
 
-            var channelOptsPr = this.$q.all(_(this.channelLayers).map(function(l) {
+            var channelOptsPr = this.$q.all(_(this.channelLayers).map((l) => {
                 return l.serialize();
             }));
-            var experimentPr =  this.experiment.serialize();
             var selectionHandlerPr = this.selectionHandler.serialize();
             var bundledPromises: any = {
                 channels: channelOptsPr,
-                exp: experimentPr,
                 selHandler: selectionHandlerPr
             };
             return this.$q.all(bundledPromises).then((res: any) => {
                 return {
                     channelLayerOptions: res.channels,
                     mapState: mapState,
-                    experiment: res.exp,
                     selectionHandler: res.selHandler
                 };
             });

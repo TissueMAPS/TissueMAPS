@@ -1,8 +1,9 @@
 class Application {
 
-    viewportContainerId = 'viewports';
-    activeViewportNumber = 0;
     viewports: Viewport[] = [];
+
+    private viewportContainerId = 'viewports';
+    private activeViewportNumber = 0;
 
     static $inject = [
         '$q',
@@ -81,17 +82,9 @@ class Application {
         var newActive = this.getActiveViewport();
         if (oldActive) {
             // If the vp wasn't deleted
-            this.setViewportInactive(oldActive);
+            oldActive.hide();
         }
-        this.setViewportActive(newActive);
-    }
-
-    private setViewportInactive(vp: Viewport) {
-        vp.hide();
-    }
-
-    private setViewportActive(vp: Viewport) {
-        vp.show();
+        newActive.show();
     }
 
     setActiveViewport(vp: Viewport) {
