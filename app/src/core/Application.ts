@@ -18,7 +18,7 @@ class Application {
                 private ol,
                 private experimentFty: ExperimentFactory,
                 private viewportFty: ViewportFactory,
-                private appInstDeserializer: ViewportDeserializer) {
+                private viewportDeserializer: ViewportDeserializer) {
 
         // Check if the executing browser is PhantomJS (= code runs in
         // testing mode.
@@ -44,8 +44,8 @@ class Application {
      */
     showViewports() {
         this.$('.app').show();
-        this.viewports.forEach((inst) => {
-            inst.map.then(function(map) {
+        this.viewports.forEach((vp) => {
+            vp.map.then(function(map) {
                 map.updateSize();
             });
         });
@@ -92,8 +92,8 @@ class Application {
     }
 
     getByExpName(expName: string): Viewport {
-        return _.find(this.viewports, function(inst) {
-            return inst.experiment.name === expName;
+        return _.find(this.viewports, function(vp) {
+            return vp.experiment.name === expName;
         });
     }
 
@@ -124,10 +124,10 @@ class Application {
     }
 
     serialize(): ng.IPromise<SerializedApplication> {
-        var instPromises = _(this.viewports).map((inst) => {
-            return inst.serialize();
+        var vpPromises = _(this.viewports).map((vp) => {
+            return vp.serialize();
         });
-        return this.$q.all(instPromises).then((sers) => {
+        return this.$q.all(vpPromises).then((sers) => {
             var serApp =  {
                 activeViewportNumber: this.activeViewportNumber,
                 viewports: sers

@@ -1,8 +1,6 @@
 (function() {
     /**
      * Declare all modules here.
-     * In the index this file is listed right after all library code (incl. angular)
-     * and after the shared module, but before all other application modules.
      * => Make sure to never redeclare a module in another file
      * (i.e. never call an already declared module with an array argument).
      */
