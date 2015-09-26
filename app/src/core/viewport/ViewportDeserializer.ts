@@ -37,7 +37,6 @@ class ViewportDeserializer implements Deserializer<Viewport> {
 
             // Add layers
             vp.addChannelLayers(ser.channelLayerOptions);
-            vp.addMaskLayers(ser.maskLayerOptions);
 
             // Recover map state
             vp.map.then(function(map) {

@@ -15,7 +15,7 @@
     outline: 0;
 }
 
-.channel-section, .mask-section, .selection-section, .object-section {
+.channel-section, .selection-section, .object-section {
     .tm-selectable-tab-content {
         white-space: nowrap;
         input[type=text] {
@@ -89,67 +89,6 @@
     .ui-slider {
         background-color: darken(@panel-bg-color, 10%);
     }
-}
-
-
-/******************************************************************************
- *                               MASK SETTINGS                                *
- ******************************************************************************/
-@color-square-size: 20px;
-
-.mask-section {
-    height: @mask-section-height;
-
-    // The inner div
-    .mask-settings {
-        height: 100%;
-    }
-
-    .tm-selectable-tabs {
-        li {
-            line-height: @mask-settings-li-height;
-            height: @mask-settings-li-height;
-        }
-    }
-
-    .name-container {
-        // without a fixed width, the container will expand
-        // with longer names, expanding the slider
-        width: 180px;
-        display: inline-block;
-        line-height: normal;
-        vertical-align: middle;
-    }
-
-    .tm-selectable-tab-popup-window {
-        width: 260px;
-    }
-
-    .color-picker {
-        ul {
-            height: @color-square-size;
-            width: 260px - @color-square-size;
-        }
-        li {
-            height: @color-square-size;
-            width: @color-square-size;
-        }
-    }
-
-
-    .slider-container {
-
-        .ui-slider {
-            height: 5px;
-            width: 100%;
-
-            .ui-slider-handle.ui-state-default {
-                width: 0.5em;
-                height: 0.8em;
-            }
-        }
-    }
-
 }
 
 

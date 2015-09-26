@@ -14,12 +14,6 @@ angular.module('tmaps.main.layerprops')
         });
     }
 
-    this.removeMasksAfterPrompt = function(layers) {
-        removeAfterPrompt(layers, function(l) {
-            app.getActiveInstance().removeOutlineLayer(l);
-        });
-    };
-
     this.removeChannelsAfterPrompt = function(layers) {
         removeAfterPrompt(layers, function(l) {
             app.getActiveInstance().removeChannelLayer(l);

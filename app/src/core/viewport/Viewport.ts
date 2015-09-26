@@ -9,7 +9,6 @@ interface SerializedViewport extends Serialized<Viewport> {
     experiment: SerializedExperiment;
     selectionHandler: SerializedSelectionHandler;
     channelLayerOptions: TileLayerArgs[];
-    maskLayerOptions: TileLayerArgs[];
     mapState: MapState;
 }
 
@@ -27,7 +26,6 @@ class Viewport implements Serializable<Viewport> {
     map: ng.IPromise<ol.Map>;
 
     channelLayers: ChannelLayer[] = [];
-    outlineLayers: OutlineLayer[] = [];
     objectLayers: ObjectLayer[] = [];
 
     selectionHandler: CellSelectionHandler;
@@ -39,7 +37,6 @@ class Viewport implements Serializable<Viewport> {
                 private $q: ng.IQService,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private channelLayerFactory: ChannelLayerFactory,
-                private outlineLayerFactory: OutlineLayerFactory,
                 private experimentFactory: ExperimentFactory,
                 private $http: ng.IHttpService,
                 private Cell,
@@ -224,52 +221,6 @@ class Viewport implements Serializable<Viewport> {
         this.channelLayers.splice(idx, 1);
     }
 
-
-    addMaskLayers(layerOptions: TileLayerArgs[]) {
-        // Add the layers that are flagged as masking layers
-        // If there are multiple such layers, the first will be
-        // initially visible and the others invisible.
-        _.each(layerOptions, (opt, i) => {
-            opt = _.defaults(opt, {
-                visible: i === 0,
-                color: [1, 1, 1]
-            });
-            this.addOutlineLayer(opt);
-        });
-    }
-
-    /*
-     * Add a segmentation layer for this experiment
-     * The main difference to setting a channel layer is that
-     * 1. The created class is a OutlineLayer and as such it is not blended
-     *    additively but black parts of the image aren't drawn anyway.
-     * 2. The layer won't get added to the Viewport.channelLayers array.
-     */
-    addOutlineLayer(opt: TileLayerArgs) {
-        var outlineLayer = this.outlineLayerFactory.create(opt);
-        this.outlineLayers.push(outlineLayer);
-
-        return this.map.then(function(map) {
-            outlineLayer.addToMap(map);
-            return outlineLayer;
-        });
-    }
-
-    /**
-     * Remove a outlineLayer from the map.
-     * Use this method whenever a layer should be removed since it also updates
-     * the app instance's internal state.
-     */
-    removeOutlineLayer(outlineLayer) {
-        this.map.then(function(map) {
-            outlineLayer.removeFromMap(map);
-        });
-        var idx = this.outlineLayers.indexOf(outlineLayer);
-        this.outlineLayers.splice(idx, 1);
-    }
-
-
-
     /**
      * Clean up method when the instance is closed (e.g. by deleting the Tab).
      */
@@ -312,21 +263,16 @@ class Viewport implements Serializable<Viewport> {
             var channelOptsPr = this.$q.all(_(this.channelLayers).map(function(l) {
                 return l.serialize();
             }));
-            var maskOptsPr = this.$q.all(_(this.outlineLayers).map(function(l) {
-                return l.serialize();
-            }));
             var experimentPr =  this.experiment.serialize();
             var selectionHandlerPr = this.selectionHandler.serialize();
             var bundledPromises: any = {
                 channels: channelOptsPr,
-                masks: maskOptsPr,
                 exp: experimentPr,
                 selHandler: selectionHandlerPr
             };
             return this.$q.all(bundledPromises).then((res: any) => {
                 return {
                     channelLayerOptions: res.channels,
-                    maskLayerOptions: res.masks,
                     mapState: mapState,
                     experiment: res.exp,
                     selectionHandler: res.selHandler
