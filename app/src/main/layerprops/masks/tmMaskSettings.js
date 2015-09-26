@@ -3,7 +3,7 @@ angular.module('tmaps.main.layerprops.masks')
     return {
         restrict: 'E',
         scope: {
-            appInstance: '='
+            viewport: '='
         },
         bindToController: true,
         controller: 'MaskSettingsCtrl',

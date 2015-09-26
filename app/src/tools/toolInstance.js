@@ -16,14 +16,14 @@ angular.module('tmaps.tools')
         console.log('No tmaps object on the global scope!');
     }
 
-    function addLayerModToAppInstance(appInstance, layermod) {
+    function addLayerModToViewport(viewport, layermod) {
         var layermodId = layermod.id;
         var tileUrlPrefix = '/layermods/' + layermodId + '/tiles/';
 
         var blackAsAlpha = layermod.render_args && layermod.render_args.black_as_alpha;
         var whiteAsAlpha = layermod.render_args && layermod.render_args.white_as_alpha;
 
-        appInstance.addLayerMod({
+        viewport.addLayerMod({
             name: layermod.name,
             imageSize: layermod.image_size,
             pyramidPath: tileUrlPrefix,
@@ -75,7 +75,7 @@ angular.module('tmaps.tools')
             console.log(data);
         })
         .$on('add_layermod', function(data) {
-            addLayerModToAppInstance(tmapsProxy.appInstance, data.layermod);
+            addLayerModToViewport(tmapsProxy.viewport, data.layermod);
         })
         .$on('$close', function () {
             console.log('WebSocket connection closed.');

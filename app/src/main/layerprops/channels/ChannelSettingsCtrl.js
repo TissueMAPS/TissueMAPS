@@ -2,6 +2,6 @@ angular.module('tmaps.main.layerprops.channels')
 .controller('ChannelSettingsCtrl',
             ['$scope', function($scope) {
 
-    this.layers = $scope.appInstance.cycleLayers;
+    this.layers = $scope.viewport.cycleLayers;
 
 }]);

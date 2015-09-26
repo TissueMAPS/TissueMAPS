@@ -10,7 +10,7 @@ var fakeInit = {
     },
     tmapsProxy: {
         application: {},
-        appInstance: {
+        viewport: {
             addLayerMod: jasmine.createSpy('addLayerMod')
         }
     }

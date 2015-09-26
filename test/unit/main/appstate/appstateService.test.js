@@ -1,7 +1,7 @@
 var appstateHash = 'ddfg438';
 var serializedApp = {
     activeInstanceNumber: 0,
-    appInstances: [{}]
+    viewports: [{}]
 };
 var appstateServerResponse = {
     id: appstateHash,

@@ -5,7 +5,7 @@ interface SerializedSelectionHandler extends Serialized<CellSelectionHandler> {
 
 class CellSelectionHandler implements Serializable<CellSelectionHandler> {
 
-    appInstance: AppInstance;
+    viewport: Viewport;
     activeSelectionId: CellSelectionId;
     selections: CellSelection[] = [];
     availableColors: Color[];
@@ -15,9 +15,9 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
                 private $q: ng.IQService,
                 private $http: ng.IHttpService,
                 private $rootScope: ng.IRootScopeService,
-                appInstance) {
+                viewport) {
 
-        this.appInstance = appInstance;
+        this.viewport = viewport;
 
         var colorsRGBString = [
             'rgb(228,26,28)','rgb(55,126,184)','rgb(77,175,74)','rgb(152,78,163)',
@@ -90,7 +90,7 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
     removeSelectionById = function(id) {
         var sel = this.getSelectionById(id);
         if (sel) {
-            this.appInstance.map.then((map: ol.Map) => {
+            this.viewport.map.then((map: ol.Map) => {
                 sel.removeFromMap(map);
                 this.selections.splice(this.selections.indexOf(sel), 1);
             });

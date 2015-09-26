@@ -41,12 +41,12 @@ angular.module('tmaps.tools.widgets')
             var expId;
 
             if (!angular.isDefined(this.experimentId)) {
-                expId = tmapsProxy.appInstance.experiment.id;
+                expId = tmapsProxy.viewport.experiment.id;
             } else {
                 expId = this.experimentId;
             }
 
-            tmapsProxy.appInstance.experiment.features
+            tmapsProxy.viewport.experiment.features
             .then(function(feats) {
                 self.features = feats;
                 $scope.$digest();

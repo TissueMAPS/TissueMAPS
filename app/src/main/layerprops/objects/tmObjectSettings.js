@@ -3,7 +3,7 @@ angular.module('tmaps.main.layerprops.objects')
     return {
         restrict: 'E',
         scope: {
-            appInstance: '='
+            viewport: '='
         },
         bindToController: true,
         controllerAs: 'objCtrl',

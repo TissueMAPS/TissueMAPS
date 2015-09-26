@@ -4,7 +4,7 @@ angular.module('tmaps.main.layerprops.objects')
 
     this.removeSelectedLayers = function() {
         _($scope.selectionBox.getSelectedItems()).each(function(layer) {
-            $scope.objCtrl.appInstance.removeObjectLayer(layer);
+            $scope.objCtrl.viewport.removeObjectLayer(layer);
         });
     };
 

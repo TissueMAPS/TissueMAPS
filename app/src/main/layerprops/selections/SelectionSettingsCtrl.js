@@ -2,7 +2,7 @@ angular.module('tmaps.main.layerprops.selections')
 .controller('SelectionSettingsCtrl',
             ['$scope', function($scope) {
 
-    var selHandler = this.appInstance.selectionHandler;
+    var selHandler = this.viewport.selectionHandler;
 
     this.selections = selHandler.selections;
 

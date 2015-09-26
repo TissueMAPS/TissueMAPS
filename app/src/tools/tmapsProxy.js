@@ -3,8 +3,8 @@ angular.module('tmaps.tools')
 
     if (angular.isDefined($window.init)) {
         this.application = $window.init.tmapsProxy.application;
-        this.appInstance = $window.init.tmapsProxy.appInstance;
-        // TODO: Include the AppInstance scope so that the pubsub
+        this.viewport = $window.init.tmapsProxy.viewport;
+        // TODO: Include the Viewport scope so that the pubsub
         // system isn't automatically global.
         this.$rootScope = $window.init.tmapsProxy.$rootScope;
     } else {

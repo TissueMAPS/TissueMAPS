@@ -5,7 +5,7 @@ interface MapState {
     rotation: number;
 }
 
-interface SerializedAppInstance extends Serialized<AppInstance> {
+interface SerializedViewport extends Serialized<Viewport> {
     experiment: SerializedExperiment;
     selectionHandler: SerializedSelectionHandler;
     channelLayerOptions: TileLayerArgs[];
@@ -13,10 +13,17 @@ interface SerializedAppInstance extends Serialized<AppInstance> {
     mapState: MapState;
 }
 
-class AppInstance implements Serializable<AppInstance> {
+interface ViewportElementScope extends ng.IScope {
+    viewport: Viewport;
+    // TODO: Set type to that of ViewportCtrl
+    viewportCtrl: any;
+}
+
+class Viewport implements Serializable<Viewport> {
 
     experiment: Experiment;
-    viewport: ng.IPromise<Viewport>;
+    element: ng.IPromise<JQuery>;
+    elementScope: ng.IPromise<ng.IScope>;
     map: ng.IPromise<ol.Map>;
 
     channelLayers: ChannelLayer[] = [];
@@ -46,17 +53,20 @@ class AppInstance implements Serializable<AppInstance> {
         var mapDef = this.$q.defer();
         this.map = mapDef.promise;
 
-        var viewportDef = this.$q.defer();
-        this.viewport = viewportDef.promise;
+        var elementDef = this.$q.defer();
+        this.element = elementDef.promise;
+        var elementScopeDef = this.$q.defer();
+        this.elementScope = elementScopeDef.promise;
 
         // Helper class to manage the differently marker selections
         this.selectionHandler = this.cellSelectionHandlerFty.create(this);
 
         createViewportService.createViewport(
             this, 'viewports', '/templates/main/viewport.html'
-        ).then(function(viewport) {
-            viewportDef.resolve(viewport);
-            mapDef.resolve(viewport.map);
+        ).then(function(ret) {
+            elementDef.resolve(ret.element);
+            elementScopeDef.resolve(ret.scope);
+            mapDef.resolve(ret.map);
         });
 
         // Load tools
@@ -221,7 +231,7 @@ class AppInstance implements Serializable<AppInstance> {
      * The main difference to setting a channel layer is that
      * 1. The created class is a OutlineLayer and as such it is not blended
      *    additively but black parts of the image aren't drawn anyway.
-     * 2. The layer won't get added to the AppInstance.channelLayers array.
+     * 2. The layer won't get added to the Viewport.channelLayers array.
      */
     addOutlineLayer(opt: TileLayerArgs) {
         var outlineLayer = this.outlineLayerFactory.create(opt);
@@ -252,10 +262,12 @@ class AppInstance implements Serializable<AppInstance> {
      * Clean up method when the instance is closed (e.g. by deleting the Tab).
      */
     destroy() {
-        this.viewport.then((viewport) => {
-            // Destroy the stuff that this instance created
-            viewport.scope.$destroy();
-            viewport.element.remove();
+        this.elementScope.then((scope) => {
+            scope.$destroy();
+            this.element.then((element) => {
+                // Destroy the stuff that this instance created
+                element.remove();
+            });
         });
     }
 
@@ -266,20 +278,22 @@ class AppInstance implements Serializable<AppInstance> {
      * object since that function will also deactivate other instances.
      */
     setActive() {
-        this.viewport.then(function(viewport) {
-            viewport.element.show();
-            viewport.map.updateSize();
+        this.element.then((element) => {
+            element.show();
+            this.map.then((map) => {
+                map.updateSize();
+            });
         });
     }
 
     /**
      * Hide the openlayers canvas.
      * As with setInactive: the Application object should call this function
-     * and make sure that exactly one AppInstance is set active at all times.
+     * and make sure that exactly one Viewport is set active at all times.
      */
     setInactive() {
-        this.viewport.then(function(viewport) {
-            viewport.element.hide();
+        this.element.then(function(element) {
+            element.hide();
         });
     }
 

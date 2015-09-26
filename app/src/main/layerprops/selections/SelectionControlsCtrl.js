@@ -8,7 +8,7 @@ angular.module('tmaps.main.layerprops.selections')
 .controller('SelectionControlsCtrl',
             ['$scope', function($scope) {
 
-    var selHandler = $scope.selCtrl.appInstance.selectionHandler;
+    var selHandler = $scope.selCtrl.viewport.selectionHandler;
 
     this.clearSelectedSelections = function() {
         _($scope.selectionBox.getSelectedItems()).each(function(s) {

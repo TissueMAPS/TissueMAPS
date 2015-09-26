@@ -6,7 +6,7 @@ class ToolLoader {
                 private toolFactory: ToolFactory) {
     }
 
-    loadTools(appInstance: AppInstance) {
+    loadTools(viewport: Viewport) {
         var toolsDef = this.$q.defer();
         this.$http.get('/src/tools/tools.json').then((resp) => {
             var configs: any = resp.data;
@@ -19,7 +19,7 @@ class ToolLoader {
                         width: 300
                     };
                     var t = this.toolFactory.create(
-                        appInstance,
+                        viewport,
                         cfg.id,
                         cfg.name || cfg.id,
                         cfg.description || cfg.id,

@@ -4,7 +4,7 @@ angular.module('tmaps.tools.modules.cellstats')
             function($scope, $rootScope, colorUtil, toolInstance, tmapsProxy) {
 
     var self = this;
-    var expId = tmapsProxy.appInstance.experiment.id;
+    var expId = tmapsProxy.viewport.experiment.id;
 
     $scope.featureValues = [];
 

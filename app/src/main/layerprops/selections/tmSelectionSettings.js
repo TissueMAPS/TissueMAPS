@@ -3,7 +3,7 @@ angular.module('tmaps.main.layerprops.selections')
     return {
         restrict: 'E',
         scope: {
-            appInstance: '='
+            viewport: '='
         },
         bindToController: true,
         controllerAs: 'selCtrl',

@@ -12,14 +12,14 @@ class CellSelectionHandlerFactory {
                 private $http: ng.IHttpService,
                 private $rootScope: ng.IRootScopeService) {}
 
-    create(appInstance: AppInstance) {
+    create(viewport: Viewport) {
         return new CellSelectionHandler(
             this.colorFty,
             this.cellSelectionFty,
             this.$q,
             this.$http,
             this.$rootScope,
-            appInstance
+            viewport
         );
     }
 }

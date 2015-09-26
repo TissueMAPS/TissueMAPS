@@ -54,7 +54,7 @@ angular.module('tmaps.tools.modules.featurestats')
         // on the tmFeatureSelectionWidget.
         var feature = selectedFeatures[0];
 
-        var selections = tmapsProxy.appInstance.selectionHandler.selections;
+        var selections = tmapsProxy.viewport.selectionHandler.selections;
 
         // Create a mapping of the sort String => List[Int]
         var selectedCells = {};

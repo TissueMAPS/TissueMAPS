@@ -5,7 +5,7 @@ class ToolFactory {
                 private $window: Window,
                 private $rootScope: ng.IRootScopeService) {}
 
-    create(appInstance: AppInstance,
+    create(viewport: Viewport,
            id: string,
            name: string,
            description: string,
@@ -19,7 +19,7 @@ class ToolFactory {
             this.$http,
             this.$window,
             this.$rootScope,
-            appInstance,
+            viewport,
             id,
             name,
             description,

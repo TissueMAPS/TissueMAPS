@@ -2,7 +2,7 @@ angular.module('tmaps.tools.modules.decisiontree')
 .controller('DecisionTreeCtrl', ['$scope', '$rootScope', 'tmapsProxy', 'toolInstance',
             function($scope, $rootScope, tmapsProxy, toolInstance) {
 
-    $scope.selections = tmapsProxy.appInstance.selectionHandler.selections;
+    $scope.selections = tmapsProxy.viewport.selectionHandler.selections;
     $scope.numClasses = $scope.selections.length;
 
     $scope.sendRequest = function() {

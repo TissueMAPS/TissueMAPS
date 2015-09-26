@@ -1,4 +1,4 @@
-class AppInstanceFactory {
+class ViewportFactory {
     static $inject = [
         'createViewportService',
         'openlayers',
@@ -25,8 +25,8 @@ class AppInstanceFactory {
                 private objectLayerFty: ObjectLayerFactory,
                 private toolLoader: ToolLoader) {}
 
-    create(experiment: Experiment): AppInstance {
-        return new AppInstance(
+    create(experiment: Experiment): Viewport {
+        return new Viewport(
             this.createViewportService,
             this.ol,
             this.$q,
@@ -43,5 +43,5 @@ class AppInstanceFactory {
         );
     }
 }
-angular.module('tmaps.core').service('appInstanceFactory', AppInstanceFactory);
+angular.module('tmaps.core').service('viewportFactory', ViewportFactory);
 

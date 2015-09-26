@@ -26,7 +26,7 @@
 //      * Save some information on its root window object.
 //      * Note that this window will have its own angular application.
 //      */
-//     this.openWindow = function(tool, appInstance, appstateId, experimentId) {
+//     this.openWindow = function(tool, viewport, appstateId, experimentId) {
 //         createToolInstance(tool, appstateId, experimentId)
 //         .then(function(instance) {
 //             // Without appending the current date to the title, the browser (chrome)
@@ -62,9 +62,9 @@
 //                 tmapsProxy: {
 //                     // The main application object
 //                     application: application,
-//                     // The appInstance from which this tool was called.
+//                     // The viewport from which this tool was called.
 //                     // The map object is available via this object.
-//                     appInstance: appInstance,
+//                     viewport: viewport,
 //                     // TissueMAPS' $rootScope; can be used to listen to
 //                     // events that happen in the main window.
 //                     $rootScope: $rootScope

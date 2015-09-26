@@ -1,13 +1,21 @@
+interface CreateViewportResponse {
+    element: JQuery;
+    scope: ViewportElementScope;
+    map: ol.Map;
+    ctrl: any;
+}
+
 class CreateViewportService {
 
-    static $inject = ['$http', 'openlayers', '$q', '$controller', '$compile', '$rootScope'];
+    static $inject = ['$http', 'openlayers', '$q', '$controller', '$compile', '$rootScope', '$'];
 
     constructor(private $http: ng.IHttpService,
-                private openlayers,
+                private ol,
                 private $q: ng.IQService,
                 private $controller: ng.IControllerService,
                 private $compile: ng.ICompileService,
-                private $rootScope: ng.IRootScopeService) {}
+                private $rootScope: ng.IRootScopeService,
+                private $: JQueryStatic) {}
 
     private getTemplate(templateUrl): ng.IPromise<string> {
         var deferred = this.$q.defer();
@@ -21,16 +29,16 @@ class CreateViewportService {
         return deferred.promise;
     }
 
-    private createViewportSync(appInstance: AppInstance,
+    private createViewportSync(viewport: Viewport,
                                appendToId: string,
-                               templateString: string): Viewport {
-        var newScope = <ViewportScope> this.$rootScope.$new();
-        newScope.appInstance = appInstance;
+                               templateString: string) {
+        var newScope = <ViewportElementScope> this.$rootScope.$new();
+        newScope.viewport = viewport;
         var ctrl = this.$controller('ViewportCtrl', {
             '$scope': newScope,
-            'appInstance': appInstance
+            'viewport': viewport
         });
-        newScope.viewport = ctrl;
+        newScope.viewportCtrl = ctrl;
 
         // The divs have to be shown and hidden manually since ngShow
         // doesn't quite work correctly when doing it this way.
@@ -42,11 +50,11 @@ class CreateViewportService {
         var viewportElem = linkFunc(newScope);
 
         // Append to viewports
-        $('#' + appendToId).append(viewportElem);
+        this.$('#' + appendToId).append(viewportElem);
         // Append map after the element has been added to the DOM.
         // Otherwise the viewport size calculation of openlayers gets
         // messed up.
-        var map = new ol.Map({
+        var map = new this.ol.Map({
             layers: [],
             controls: [],
             renderer: 'webgl',
@@ -62,10 +70,10 @@ class CreateViewportService {
         };
     }
 
-    createViewport(appInstance, appendToId, templateUrl): ng.IPromise<Viewport> {
+    createViewport(viewport, appendToId, templateUrl): ng.IPromise<CreateViewportResponse> {
         var deferred = this.$q.defer();
         this.getTemplate(templateUrl).then((templateString) => {
-            var viewportObj = this.createViewportSync(appInstance, appendToId, templateString);
+            var viewportObj = this.createViewportSync(viewport, appendToId, templateString);
             deferred.resolve(viewportObj);
         });
         return deferred.promise;

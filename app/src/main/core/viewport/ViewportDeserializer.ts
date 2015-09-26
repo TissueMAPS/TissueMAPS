@@ -1,28 +1,28 @@
-class AppInstanceDeserializer implements Deserializer<AppInstance> {
+class ViewportDeserializer implements Deserializer<Viewport> {
 
     static $inject = [
         'cellSelectionDeserializer', 'cellSelectionHandlerFactory',
-        'appInstanceFactory', 'experimentDeserializer', '$q'
+        'viewportFactory', 'experimentDeserializer', '$q'
     ];
 
     constructor(private cellSelectionDeserializer: CellSelectionDeserializer,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
-                private appInstanceFty: AppInstanceFactory,
+                private viewportFty: ViewportFactory,
                 private experimentDeserializer: ExperimentDeserializer,
                 private $q: ng.IQService) {}
 
-    deserialize(ser: SerializedAppInstance) {
+    deserialize(ser: SerializedViewport) {
 
-        var instDef = this.$q.defer();
+        var vpDef = this.$q.defer();
 
-        // Deserialize the experiment object related to this app instance first.
+        // Deserialize the experiment object related to this viewport first.
         var expPromise = this.experimentDeserializer.deserialize(ser.experiment);
 
         var exp = expPromise.then((exp) => {
-            var inst = this.appInstanceFty.create(exp);
+            var vp = this.viewportFty.create(exp);
 
             // Create and initialize the selection handler
-            var selHandler = this.cellSelectionHandlerFty.create(inst);
+            var selHandler = this.cellSelectionHandlerFty.create(vp);
             var activeSelId = ser.selectionHandler.activeSelectionId;
             var selections = ser.selectionHandler.selections;
             selections.forEach((serializedSelection) => {
@@ -36,11 +36,11 @@ class AppInstanceDeserializer implements Deserializer<AppInstance> {
             }
 
             // Add layers
-            inst.addChannelLayers(ser.channelLayerOptions);
-            inst.addMaskLayers(ser.maskLayerOptions);
+            vp.addChannelLayers(ser.channelLayerOptions);
+            vp.addMaskLayers(ser.maskLayerOptions);
 
             // Recover map state
-            inst.map.then(function(map) {
+            vp.map.then(function(map) {
                 var v = map.getView();
                 v.setZoom(ser.mapState.zoom);
                 v.setCenter(ser.mapState.center);
@@ -48,13 +48,13 @@ class AppInstanceDeserializer implements Deserializer<AppInstance> {
                 v.setRotation(ser.mapState.rotation);
 
                 // TODO: Add serialization of selectionhandler
-                // inst.selectionHandler.initFromBlueprint(bp.selectionHandler);
-                instDef.resolve(inst);
+                // vp.selectionHandler.initFromBlueprint(bp.selectionHandler);
+                vpDef.resolve(vp);
             });
         });
 
-        return instDef.promise;
+        return vpDef.promise;
     }
 }
 
-angular.module('tmaps.core').service('appInstanceDeserializer', AppInstanceDeserializer);
+angular.module('tmaps.core').service('viewportDeserializer', ViewportDeserializer);

@@ -1,24 +1,24 @@
 class Application {
 
     viewportContainerId = 'viewports';
-    activeInstanceNumber = 0;
-    appInstances: AppInstance[] = [];
+    activeViewportNumber = 0;
+    viewports: Viewport[] = [];
 
     static $inject = [
         '$q',
         '$',
         'openlayers',
         'experimentFactory',
-        'appInstanceFactory',
-        'appInstanceDeserializer'
+        'viewportFactory',
+        'viewportDeserializer'
     ];
 
     constructor(private $q: ng.IQService,
                 private $: JQueryStatic,
                 private ol,
                 private experimentFty: ExperimentFactory,
-                private appInstFty: AppInstanceFactory,
-                private appInstDeserializer: AppInstanceDeserializer) {
+                private viewportFty: ViewportFactory,
+                private appInstDeserializer: ViewportDeserializer) {
 
         // Check if the executing browser is PhantomJS (= code runs in
         // testing mode.
@@ -44,66 +44,66 @@ class Application {
      */
     showViewports() {
         this.$('.app').show();
-        this.appInstances.forEach((inst) => {
+        this.viewports.forEach((inst) => {
             inst.map.then(function(map) {
                 map.updateSize();
             });
         });
     }
 
-    removeInstance(num: number) {
-        this.appInstances[num].destroy();
-        this.appInstances.splice(num, 1);
-        if (num === this.activeInstanceNumber) {
+    remove(num: number) {
+        this.viewports[num].destroy();
+        this.viewports.splice(num, 1);
+        if (num === this.activeViewportNumber) {
             if (num >= 1) {
-                // There are still instances with lower number
-                this.setActiveInstanceByNumber(num - 1);
-            } else if (this.appInstances.length > 0) {
-                // There are still instance(s) with higher number
-                this.setActiveInstanceByNumber(0);
+                // There are still vps with lower number
+                this.setActiveViewportByNumber(num - 1);
+            } else if (this.viewports.length > 0) {
+                // There are still vp(s) with higher number
+                this.setActiveViewportByNumber(0);
             } else {
-                // this was the last instance
+                // this was the last vp
             }
         }
     }
 
-    destroyAllInstances() {
-        for (var i in this.appInstances) {
-            this.appInstances[i].destroy();
-            this.appInstances.splice(i, 1);
+    destroyAlls() {
+        for (var i in this.viewports) {
+            this.viewports[i].destroy();
+            this.viewports.splice(i, 1);
         }
-        this.activeInstanceNumber = -1;
+        this.activeViewportNumber = -1;
     }
 
-    setActiveInstanceByNumber(num: number) {
-        var oldActive = this.getActiveInstance();
-        this.activeInstanceNumber = num;
-        var newActive = this.getActiveInstance();
+    setActiveViewportByNumber(num: number) {
+        var oldActive = this.getActive();
+        this.activeViewportNumber = num;
+        var newActive = this.getActive();
         if (oldActive) {
-            // If the instance wasn't deleted
+            // If the vp wasn't deleted
             oldActive.setInactive();
         }
         newActive.setActive();
     }
 
-    setActiveInstance(instance: AppInstance) {
-        var nr = this.appInstances.indexOf(instance);
-        this.setActiveInstanceByNumber(nr);
+    setActive(vp: Viewport) {
+        var nr = this.viewports.indexOf(vp);
+        this.setActiveViewportByNumber(nr);
     }
 
-    getInstanceByExpName(expName: string): AppInstance {
-        return _.find(this.appInstances, function(inst) {
+    getByExpName(expName: string): Viewport {
+        return _.find(this.viewports, function(inst) {
             return inst.experiment.name === expName;
         });
     }
 
-    getActiveInstance(): AppInstance {
-        return this.appInstances[this.activeInstanceNumber];
+    getActive(): Viewport {
+        return this.viewports[this.activeViewportNumber];
     }
 
     addExperiment(experiment: ExperimentAPIObject) {
         var exp = this.experimentFty.createFromServerResponse(experiment);
-        var instance = this.appInstFty.create(exp);
+        var vp = this.viewportFty.create(exp);
 
         var layerOpts = _.partition(experiment.layers, function(opt) {
             return /_Mask/.test(opt.name);
@@ -112,25 +112,25 @@ class Application {
         var outlineOpts = layerOpts[0];
         var cycleOpts = layerOpts[1];
 
-        instance.addChannelLayers(cycleOpts);
-        instance.addMaskLayers(outlineOpts);
+        vp.addChannelLayers(cycleOpts);
+        vp.addMaskLayers(outlineOpts);
 
-        this.appInstances.push(instance);
-        if (this.appInstances.length === 1) {
-            this.setActiveInstance(instance);
+        this.viewports.push(vp);
+        if (this.viewports.length === 1) {
+            this.setActive(vp);
         }
 
-        return instance;
+        return vp;
     }
 
     serialize(): ng.IPromise<SerializedApplication> {
-        var instPromises = _(this.appInstances).map((inst) => {
+        var instPromises = _(this.viewports).map((inst) => {
             return inst.serialize();
         });
-        return this.$q.all(instPromises).then((serInstances) => {
+        return this.$q.all(instPromises).then((sers) => {
             var serApp =  {
-                activeInstanceNumber: this.activeInstanceNumber,
-                appInstances: serInstances
+                activeViewportNumber: this.activeViewportNumber,
+                viewports: sers
             };
             console.log(serApp);
             return serApp;
@@ -141,6 +141,6 @@ class Application {
 angular.module('tmaps.core').service('application', Application);
 
 interface SerializedApplication extends Serialized<Application> {
-    activeInstanceNumber: number;
-    appInstances: SerializedAppInstance[];
+    activeViewportNumber: number;
+    viewports: SerializedViewport[];
 }

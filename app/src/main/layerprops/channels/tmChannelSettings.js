@@ -3,7 +3,7 @@ angular.module('tmaps.main.layerprops.channels')
     return {
         restrict: 'E',
         scope: {
-            appInstance: '='
+            viewport: '='
         },
         controller: 'ChannelSettingsCtrl',
         controllerAs: 'channelsCtrl',

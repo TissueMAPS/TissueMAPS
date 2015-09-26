@@ -4,10 +4,10 @@
  */
 angular.module('tmaps.main.viewport').controller(
     'ViewportCtrl',
-        ['$scope', 'appInstance', 'authService', 'appstateService',
-            function($scope, appInstance, authService, appstateService) {
+        ['$scope', 'viewport', 'authService', 'appstateService',
+            function($scope, viewport, authService, appstateService) {
 
-    $scope.appInstance = appInstance;
+    $scope.viewport = viewport;
 
     this.isUserAuthenticated = function() {
         return authService.isAuthenticated();

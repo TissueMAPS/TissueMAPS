@@ -1,7 +1,7 @@
 angular.module('tmaps.tools.widgets')
 .controller('SelectionChooserCtrl', ['$scope', function($scope) {
 
-    var selHandler = $scope.appInstance.selectionHandler;
+    var selHandler = $scope.viewport.selectionHandler;
 
     // TODO: Maybe this directive should use an isolate scope and only expose the var currentSelection
     $scope.selectedCells = undefined;
