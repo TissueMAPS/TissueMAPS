@@ -35,14 +35,14 @@ class Application {
      * This function is called whenever the route sate changes away from the
      * visualization state.
      */
-    hideViewport() {
+    hideViewports() {
         this.$('.app').hide();
     }
 
     /**
-     * Show the viewports after hiding them with `hideViewport`.
+     * Show the viewports after hiding them with `hideViewports`.
      */
-    showViewport() {
+    showViewports() {
         this.$('.app').show();
         this.appInstances.forEach((inst) => {
             inst.map.then(function(map) {

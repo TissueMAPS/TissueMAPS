@@ -18,7 +18,7 @@ angular.module('tmaps.main')
             loginRequired: false
         },
         onEnter: ['application', function(app) {
-            app.hideViewport();
+            app.hideViewports();
         }]
     })
     .state('viewport', {
@@ -27,7 +27,7 @@ angular.module('tmaps.main')
         onEnter: ['application', '$stateParams', 'experimentService', 'appstateService',
                   function(app, $stateParams, experimentService, appstateService) {
 
-            app.showViewport();
+            app.showViewports();
 
             // Check if the app should load an app state
             var stateID = $stateParams.state;
@@ -52,7 +52,7 @@ angular.module('tmaps.main')
             }
         }],
         onLeave: ['application', function(app) {
-            app.hideViewport();
+            app.hideViewports();
         }]
     })
     .state('viewport.userpanel', {
