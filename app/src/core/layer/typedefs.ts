@@ -5,8 +5,8 @@ interface ModifiedOlTileLayer extends ol.layer.Tile {
     setMin(val: number);
     getMax(): number;
     setMax(val: number);
-    setColor(c: Color);
-    getColor(): Color;
+    setColor(c: number[]);
+    getColor(): number[];
     setAdditiveBlend(b: boolean);
     getAdditiveBlend(): boolean;
     getDrawWhitePixels(): boolean;

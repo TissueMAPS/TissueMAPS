@@ -40,6 +40,7 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
 
     constructor(protected ol,
                 protected $q: ng.IQService,
+                protected colorFty: ColorFactory,
                 opt: TileLayerArgs) {
         super(opt.name);
 
@@ -77,11 +78,13 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
     }
 
     color(val?: Color): Color {
-        if (angular.isDefined(val)) {
-            this.olLayer.setColor(val);
+        if (val) {
+            this.olLayer.setColor(val.toNormalizedRGBArray());
             return val;
         } else {
-            return this.olLayer.getColor();
+            var arrayCol: number[] = this.olLayer.getColor();
+            var col: Color = this.colorFty.createFromNormalizedRGBArray(arrayCol);
+            return col;
         }
     }
 

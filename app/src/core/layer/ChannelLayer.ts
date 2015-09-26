@@ -1,14 +1,15 @@
 /// <reference path='TileLayer.ts'/>
 class ChannelLayer extends TileLayer {
-    constructor(ol, $q: ng.IQService, opt: TileLayerArgs) {
-        super(ol, $q, opt);
+    constructor(ol, $q: ng.IQService, colorFty: ColorFactory, opt: TileLayerArgs) {
+        super(ol, $q, colorFty, opt);
     }
 }
 
 class ChannelLayerFactory {
-    static $inject = ['openlayers', '$q'];
+    static $inject = ['openlayers', '$q', 'colorFactory'];
     constructor(private ol,
-                private $q: ng.IQService) {}
+                private $q: ng.IQService,
+                private colorFactory: ColorFactory) {}
     create(opt: TileLayerArgs) {
         var tileLayerOptions = _.defaults(opt, {
             additiveBlend: true,
@@ -16,7 +17,7 @@ class ChannelLayerFactory {
             drawWhitePixels: true
         });
 
-        return new ChannelLayer(this.ol, this.$q, tileLayerOptions);
+        return new ChannelLayer(this.ol, this.$q, this.colorFactory, tileLayerOptions);
     }
 }
 
