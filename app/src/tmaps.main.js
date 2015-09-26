@@ -1,21 +1,29 @@
 (function() {
     /**
+     * Injectable third-party modules.
+     */
+    angular.module('tmaps.thirdpartymodules', [])
+    .factory('openlayers', function() { return window.ol; })
+    .factory('_', function() { return window._; })
+    .factory('$', function() { return window.$; });
+
+    /**
      * Declare all modules here.
      * => Make sure to never redeclare a module in another file
      * (i.e. never call an already declared module with an array argument).
      */
     angular.module('tmaps.core', [
         'tmaps.main.viewport',
-        'tmaps.main.experiment'
-    ]);
-    angular.module('tmaps.mock.core', []);
-    angular.module('tmaps.core.layer', []);
-    angular.module('tmaps.core.selection', ['tmaps.core.layer', 'tmaps.shared.services']);
-    angular.module('tmaps.core', [
-        'tmaps.shared.thirdpartymodules',
+        'tmaps.main.experiment',
+        'tmaps.shared',
         'tmaps.core.selection',
         'tmaps.shared.services',
         'tmaps.core.layer'
+    ]);
+    angular.module('tmaps.mock.core', []);
+    angular.module('tmaps.core.layer', []);
+    angular.module('tmaps.core.selection', [
+        'tmaps.core.layer', 'tmaps.shared.services'
     ]);
 
     angular.module('tmaps.main.misc', []);
@@ -32,13 +40,13 @@
     angular.module('tmaps.main.layerprops.objects', ['tmaps.main.layerprops']);
 
     angular.module('tmaps.main.experiment', [
-        'tmaps.shared.thirdpartymodules',
+        'tmaps.thirdpartymodules',
         'tmaps.main.appstate',
         'tmaps.core'
     ]);
 
     angular.module('tmaps.main.viewport', [
-        'tmaps.shared.thirdpartymodules',
+        'tmaps.thirdpartymodules',
         'tmaps.main.appstate',
         'tmauth',
         'tmaps.core'

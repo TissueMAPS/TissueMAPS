@@ -51,7 +51,7 @@ class Application {
         });
     }
 
-    remove(num: number) {
+    removeViewport(num: number) {
         this.viewports[num].destroy();
         this.viewports.splice(num, 1);
         if (num === this.activeViewportNumber) {
@@ -67,7 +67,7 @@ class Application {
         }
     }
 
-    destroyAlls() {
+    destroyAllViewports() {
         for (var i in this.viewports) {
             this.viewports[i].destroy();
             this.viewports.splice(i, 1);
@@ -76,9 +76,9 @@ class Application {
     }
 
     setActiveViewportByNumber(num: number) {
-        var oldActive = this.getActive();
+        var oldActive = this.getActiveViewport();
         this.activeViewportNumber = num;
-        var newActive = this.getActive();
+        var newActive = this.getActiveViewport();
         if (oldActive) {
             // If the vp wasn't deleted
             oldActive.setInactive();
@@ -86,7 +86,7 @@ class Application {
         newActive.setActive();
     }
 
-    setActive(vp: Viewport) {
+    setActiveViewport(vp: Viewport) {
         var nr = this.viewports.indexOf(vp);
         this.setActiveViewportByNumber(nr);
     }
@@ -97,7 +97,7 @@ class Application {
         });
     }
 
-    getActive(): Viewport {
+    getActiveViewport(): Viewport {
         return this.viewports[this.activeViewportNumber];
     }
 
@@ -109,15 +109,15 @@ class Application {
             return /_Mask/.test(opt.name);
         });
 
-        var outlineOpts = layerOpts[0];
-        var cycleOpts = layerOpts[1];
+        var outlineOpts = <any> layerOpts[0];
+        var cycleOpts = <any> layerOpts[1];
 
         vp.addChannelLayers(cycleOpts);
         vp.addMaskLayers(outlineOpts);
 
         this.viewports.push(vp);
         if (this.viewports.length === 1) {
-            this.setActive(vp);
+            this.setActiveViewport(vp);
         }
 
         return vp;

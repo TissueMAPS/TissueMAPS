@@ -5,7 +5,6 @@
     angular.module('tmaps.shared.services', []);
     angular.module('tmaps.shared.filters', []);
     angular.module('tmaps.shared.misc', []);
-    angular.module('tmaps.shared.thirdpartymodules', []);
 
     angular.module('tmaps.shared', [
         // Dependencies
@@ -13,7 +12,7 @@
         'tmaps.shared.auth',
         'tmaps.shared.services',
         'tmaps.shared.filters',
-        'tmaps.shared.thirdpartymodules',
+        'tmaps.thirdpartymodules',
         'tmaps.shared.misc'
         // Note that tmaps.shared must not depend on either tmaps.main or
         // tmaps.tools since this would lead to a ciruclar dependency.
