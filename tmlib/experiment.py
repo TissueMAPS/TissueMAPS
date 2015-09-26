@@ -1,10 +1,15 @@
 import re
 import os
+import logging
 from natsort import natsorted
 from cached_property import cached_property
+from . import text_readers
 from . import utils
 from .plates import WellPlate
 from .plates import Slide
+from .cfg_setters import UserConfigurations
+
+logger = logging.getLogger(__name__)
 
 
 class Experiment(object):
@@ -49,8 +54,8 @@ class Experiment(object):
         ----------
         experiment_dir: str
             absolute path to experiment folder
-        cfg: dict
-            configuration settings
+        cfg: TmlibConfigurations
+            configuration settings for names of directories and files on disk
         library: str, optional
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
@@ -60,6 +65,7 @@ class Experiment(object):
         self.experiment_dir = os.path.abspath(self.experiment_dir)
         self.cfg = cfg
         self.library = library
+        logger.debug('using the "%s" image library' % self.library)
 
     @property
     def user_cfg_file(self):
@@ -69,7 +75,7 @@ class Experiment(object):
         str
             absolute path to experiment-specific user configuration file
         '''
-        self._user_cfg_file = self.cfg['USER_CFG_FILE'].format(
+        self._user_cfg_file = self.cfg.USER_CFG_FILE.format(
                                             experiment_dir=self.dir,
                                             sep=os.path.sep)
         return self._user_cfg_file
@@ -79,11 +85,13 @@ class Experiment(object):
         '''
         Returns
         -------
-        dict
+        UserConfigurations
             experiment-specific configuration settings provided by the user
         '''
         # TODO: shall we do this via the database instead?
-        self._user_cfg = utils.read_yaml(self.user_cfg_file)
+        logger.debug('user configuration file: %s' % self.user_cfg_file)
+        configuration_settings = text_readers.read_yaml(self.user_cfg_file)
+        self._user_cfg = UserConfigurations(configuration_settings)
         return self._user_cfg
 
     @property
@@ -108,7 +116,7 @@ class Experiment(object):
         return self.experiment_dir
 
     def _is_cycle(self, folder):
-        regexp = utils.regex_from_format_string(self.cfg['CYCLE_DIR'])
+        regexp = utils.regex_from_format_string(self.cfg.CYCLE_DIR)
         return True if re.match(regexp, folder) else False
 
     @property
@@ -139,11 +147,9 @@ class Experiment(object):
             # # in this case, the *cycle* directory is the same as the
             # # the experiment directory
             # cycle_dirs = self.experiment_dir
-        if self.user_cfg['WELLPLATE_FORMAT']:
-            plate_format = self.user_cfg['NUMBER_OF_WELLS']
+        if self.user_cfg.WELLPLATE_FORMAT:
             cycles = [
-                WellPlate(d, self.cfg, self.user_cfg, self.library,
-                          plate_format)
+                WellPlate(d, self.cfg, self.user_cfg, self.library)
                 for d in cycle_dirs
             ]
         else:
@@ -170,7 +176,7 @@ class Experiment(object):
         the last cycle after sorting according to cycle names.
         '''
         if 'REFERENCE_CYCLE' in self.user_cfg.keys():
-            self._reference_cycle = self.user_cfg['REFERENCE_CYCLE']
+            self._reference_cycle = self.user_cfg.REFERENCE_CYCLE
         else:
             cycle_names = natsorted([cycle.name for cycle in self.cycles])
             self._reference_cycle = cycle_names[-1]
@@ -184,10 +190,12 @@ class Experiment(object):
         str
             absolute path to the folder holding the layers (image pyramids)
         '''
-        self._layers_dir = self.cfg['LAYERS_DIR'].format(
+        self._layers_dir = self.cfg.LAYERS_DIR.format(
                                             experiment_dir=self.experiment_dir,
                                             sep=os.path.sep)
         if not os.path.exists(self._layers_dir):
+            logger.debug('create directory for layers pyramid directories: %s'
+                         % self._layers_dir)
             os.mkdir(self._layers_dir)
         return self._layers_dir
 
@@ -203,7 +211,7 @@ class Experiment(object):
         --------
         `dafu`_
         '''
-        self._data_filename = self.cfg['DATA_FILE'].format(
+        self._data_filename = self.cfg.DATA_FILE.format(
                                             experiment_dir=self.experiment_dir,
                                             sep=os.path.sep)
         return self._data_filename

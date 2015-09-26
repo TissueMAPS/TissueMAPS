@@ -1,11 +1,16 @@
 import os
 import re
+import logging
 from .cycle import Cycle
+
+logger = logging.getLogger(__name__)
 
 
 class WellPlate(Cycle):
 
-    def __init__(self, cycle_dir, cfg, user_cfg, library, plate_format):
+    SUPPORTED_PLATE_FORMATS = {96, 384}
+
+    def __init__(self, cycle_dir, cfg, user_cfg, library):
         '''
         Initialize an instance of class WellPlate.
 
@@ -20,15 +25,36 @@ class WellPlate(Cycle):
         library: str, optional
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
-        plate_format: int
-            number of wells in the plate (supported: 96 or 384)
         '''
         super(WellPlate, self).__init__(cycle_dir, cfg, user_cfg, library)
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.cfg = cfg
         self.user_cfg = user_cfg
         self.library = library
-        self.plate_format = plate_format
+
+    @property
+    def plate_format(self):
+        '''
+        Returns
+        -------
+        plate_format: int
+            number of wells in the plate (supported: 96 or 384)
+
+        Note
+        ----
+        Information is obtained from user configurations.
+
+        Raises
+        ------
+        ValueError
+            when provided plate format is not supported
+        '''
+        self._plate_format = self.user_cfg.NUMBER_OF_WELLS
+        if self._plate_format not in self.SUPPORTED_PLATE_FORMATS:
+            raise ValueError(
+                    'Well plate format must be either "%s"' % '" or "'.join(
+                            [str(e) for e in self.SUPPORTED_PLATE_FORMATS]))
+        return self._plate_format
 
     @property
     def dimensions(self):
@@ -53,7 +79,8 @@ class WellPlate(Cycle):
             zero-based row, column position of each well in the plate
         '''
         self._plate_coordinates = [
-            (self.well_id_to_position(w)[0]-1, self.well_id_to_position(w)[1]-1)
+            (self.well_id_to_position(w)[0]-1,
+             self.well_id_to_position(w)[1]-1)
             for w in self.wells
         ]
         return self._plate_coordinates

@@ -1,8 +1,10 @@
 import re
 import os
+import logging
 from natsort import natsorted
 from cached_property import cached_property
 from . import utils
+from . import text_readers
 from .image import is_image_file
 from .image import ChannelImage
 from .image import IllumstatsImages
@@ -11,6 +13,8 @@ from .metadata import IllumstatsImageMetadata
 from .metadata import MosaicMetadata
 from .shift import ShiftDescription
 from .errors import RegexpError
+
+logger = logging.getLogger(__name__)
 
 
 class Cycle(object):
@@ -43,8 +47,8 @@ class Cycle(object):
         ----------
         cycle_dir: str
             absolute path to the cycle directory
-        cfg: Dict[str, str]
-            configuration settings
+        cfg: TmlibConfigurations
+            configuration settings for names of directories and files on disk
         user_cfg: Dict[str, str]
             additional user configuration settings
         library: str, optional
@@ -61,6 +65,7 @@ class Cycle(object):
             raise OSError('Cycle directory does not exist.')
         self.cfg = cfg
         self.user_cfg = user_cfg
+        self.library = library
 
     @property
     def name(self):
@@ -105,7 +110,7 @@ class Cycle(object):
             when cycle identifier number cannot not be determined from format
             string
         '''
-        regexp = utils.regex_from_format_string(self.cfg['CYCLE_DIR'])
+        regexp = utils.regex_from_format_string(self.cfg.CYCLE_DIR)
         m = re.search(regexp, self.name)
         if not m:
             raise RegexpError('Can\'t determine cycle id number from '
@@ -150,10 +155,12 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._image_upload_dir = self.cfg['IMAGE_UPLOAD_DIR'].format(
+        self._image_upload_dir = self.cfg.MAGE_UPLOAD_DIR.format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
         if not os.path.exists(self._image_upload_dir):
+            logger.debug('create directory for image file uploads: %s'
+                         % self._image_upload_dir)
             os.mkdir(self._image_upload_dir)
         return self._image_upload_dir
 
@@ -170,10 +177,12 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._additional_upload_dir = self.cfg['ADDITIONAL_UPLOAD_DIR'].format(
+        self._additional_upload_dir = self.cfg.ADDITIONAL_UPLOAD_DIR.format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
         if not os.path.exists(self._additional_upload_dir):
+            logger.debug('create directory for additional file uploads: %s'
+                         % self._additional_upload_dir)
             os.mkdir(self._additional_upload_dir)
         return self._additional_upload_dir
 
@@ -189,10 +198,12 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._ome_xml_dir = self.cfg['OME_XML_DIR'].format(
+        self._ome_xml_dir = self.cfg.OME_XML_DIR.format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
         if not os.path.exists(self._ome_xml_dir):
+            logger.debug('create directory for ome xml files: %s'
+                         % self._ome_xml_dir)
             os.mkdir(self._ome_xml_dir)
         return self._ome_xml_dir
 
@@ -233,10 +244,12 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._image_metadata_dir = self.cfg['METADATA_DIR'].format(
+        self._image_metadata_dir = self.cfg.METADATA_DIR.format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
         if not os.path.exists(self._image_metadata_dir):
+            logger.debug('create directory for metadata files: %s'
+                         % self._image_metadata_dir)
             os.mkdir(self._image_metadata_dir)
         return self._image_metadata_dir
 
@@ -252,10 +265,12 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._image_dir = self.cfg['IMAGE_DIR'].format(
+        self._image_dir = self.cfg.IMAGE_DIR.format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
         if not os.path.exists(self._image_dir):
+            logger.debug('create directory for image files: %s'
+                         % self._image_dir)
             os.mkdir(self._image_dir)
         return self._image_dir
 
@@ -295,7 +310,7 @@ class Cycle(object):
         str
             name of YAML file containing the metadata for each image file
         '''
-        self._image_metadata_file = self.cfg['IMAGE_METADATA_FILE']
+        self._image_metadata_file = self.cfg.IMAGE_METADATA_FILE
         return self._image_metadata_file
 
     @cached_property
@@ -320,7 +335,7 @@ class Cycle(object):
                                 self.image_metadata_file)
         if not os.path.exists(filename):
             raise OSError('Metadata file "%s" does not exists.' % filename)
-        metadata = utils.read_json(filename)
+        metadata = text_readers.read_json(filename)
         self._image_metadata = list()
         for f in natsorted(metadata.keys()):
             self._image_metadata.append(ChannelImageMetadata(metadata[f]))
@@ -341,7 +356,7 @@ class Cycle(object):
         (property) is accessed.
         '''
         self._images = list()
-        for i, f in enumerate(self.image_files):
+        for i, f in enumerate(self.image_metadata.keys()):
             img = ChannelImage.create_from_file(
                     os.path.join(self.image_dir, f), self.image_metadata[i],
                     library=self.library)
@@ -360,10 +375,12 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._stats_dir = self.cfg['STATS_DIR'].format(
+        self._stats_dir = self.cfg.STATS_DIR.format(
                                             cycle_dir=self.dir,
                                             sep=os.path.sep)
         if not os.path.exists(self._stats_dir):
+            logger.debug('create directory for illumination statistics files: %s'
+                         % self._stats_dir)
             os.mkdir(self._stats_dir)
         return self._stats_dir
 
@@ -381,7 +398,7 @@ class Cycle(object):
             when `stats_dir` does not exist or when no illumination statistic
             files are found in `stats_dir`
         '''
-        stats_pattern = self.cfg['STATS_FILE'].format(
+        stats_pattern = self.cfg.STATS_FILE.format(
                                             cycle=self.name,
                                             channel='\w+')
         stats_pattern = re.compile(stats_pattern)
@@ -418,7 +435,7 @@ class Cycle(object):
         self._stats_metadata = list()
         for f in self.stats_files:
             md = IllumstatsImageMetadata()
-            regexp = utils.regex_from_format_string(self.cfg['STATS_FILE'])
+            regexp = utils.regex_from_format_string(self.cfg.STATS_FILE)
             m = re.search(regexp, f)
             if m:
                 md.channel = m.group('channel')
@@ -468,10 +485,12 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._shift_dir = self.cfg['SHIFT_DIR'].format(
+        self._shift_dir = self.cfg.SHIFT_DIR.format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
         if not os.path.exists(self._shift_dir):
+            logger.debug('create directory for shift files: %s'
+                         % self._shift_dir)
             os.mkdir(self._shift_dir)
         return self._shift_dir
 
@@ -489,7 +508,7 @@ class Cycle(object):
             when `shift_dir` does not exist or when no
             shift descriptor file is found
         '''
-        shift_pattern = self.cfg['SHIFT_FILE'].format(cycle=self.name)
+        shift_pattern = self.cfg.SHIFT_FILE.format(cycle=self.name)
         if not os.path.exists(self.shift_dir):
             raise OSError('Shift directory does not exist: %s'
                           % self.shift_dir)
@@ -514,7 +533,7 @@ class Cycle(object):
         `shift.ShiftDescription`_
         '''
         filename = os.path.join(self.shift_dir, self.shift_file)
-        content = utils.read_json(filename)
+        content = text_readers.read_json(filename)
         self._shift_descriptions = list()
         # by matching the sites and wells, we ensure that the correct shift
         # description is assigned to each image
@@ -540,12 +559,12 @@ class Cycle(object):
         not available, default names are created, which are a unique
         combination of *cycle* and *channel* names.
         '''
-        if 'LAYER_NAMES' in self.user_cfg.keys():
-            self._layer_names = self.user_cfg['LAYER_NAMES']
+        if hasattr(self.user_cfg, 'LAYER_NAMES'):
+            self._layer_names = self.user_cfg.LAYER_NAMES
         else:
             self._layer_names = {
                 img.metadata.channel:
-                    self.cfg['LAYER_NAME'].format(
+                    self.cfg.LAYER_NAME.format(
                         cycle=img.metadata.cycle,
                         channel=img.metadata.channel)
                 for img in self.images
@@ -570,148 +589,3 @@ class Cycle(object):
             self._layer_metadata.append(
                 MosaicMetadata.create_from_images(images, layer_name))
         return self._layer_metadata
-
-    # @property
-    # def segmentation_dir(self):
-    #     '''
-    #     Segmentations are stored as image files in a single folder per
-    #     experiment. The corresponding cycles is referred to as "reference"
-    #     cycle, because its images are used as references for registration.
-    #     The format of the folder name is defined by the key
-    #     *SEGMENTATION_DIR* in the configuration settings file.
-
-    #     Returns
-    #     -------
-    #     str
-    #         absolute path to the folder containing the segmentation image files
-    #     '''
-    #     if self.reference:
-    #         self._segmentation_dir = self.cfg['SEGMENTATION_DIR'].format(
-    #                                         cycle_dir=self.dir,
-    #                                         sep=os.path.sep)
-    #     else:
-    #         self._segmentation_dir = None
-    #     return self._segmentation_dir
-
-    # @cached_property
-    # def segmentation_files(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[str]
-    #         names of segmentation files in `segmentation_dir`
-
-    #     Raises
-    #     ------
-    #     OSError
-    #         when cycle is the reference cycle, but `segmentation_dir` does not
-    #         exist or when cycle is the reference cycle, but no image files are
-    #         found in `segmentation_dir`
-
-    #     See also
-    #     --------
-    #     `image.is_image_file`_
-    #     '''
-    #     if self.reference:
-    #         if not os.path.exists(self.segmentation_dir):
-    #             raise OSError('Segmentation directory does not exist: %s'
-    #                           % self.segmentation_dir)
-    #         files = [f for f in os.listdir(self.segmentation_dir)
-    #                  if is_image_file(f)]
-    #         files = natsorted(files)
-    #         if not files:
-    #             raise OSError('No supported image files found in "%s"'
-    #                           % self.segmentation_dir)
-    #         self._segmentation_files = files
-    #     else:
-    #         self._segmentation_files = list()
-
-    #     return self._segmentation_files
-
-    # @property
-    # def segmentation_metadata_file(self):
-    #     '''
-    #     The `.metadata` YAML file contains a sequence of mappings
-    #     (key-value pairs).
-
-    #     Returns
-    #     -------
-    #     str
-    #         name of YAML file containing the metadata for each segmentation
-    #         file (returns ``None`` if cycle is not the reference cycle)
-    #     '''
-    #     if self.reference:
-    #         self._segmentation_metadata_file = \
-    #                                 self.cfg['SEGMENTATION_METADATA_FILE']
-    #     else:
-    #         self._segmentation_metadata_file = None
-    #     return self._segmentation_metadata_file
-
-    # @cached_property
-    # def segmentation_metadata(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[SegmentationImageMetadata]
-    #         metadata for each segmentation image file in `segmentation_dir`
-
-    #     See also
-    #     --------
-    #     `metadata.SegmentationImageMetadata`_
-    #     '''
-    #     filename = os.path.join(self.metadata_dir,
-    #                             self.segmentation_metadata_file)
-    #     if self.reference:
-    #         content = utils.read_json(filename)
-    #         metadata = list()
-    #         for f in self.segmentation_files:
-    #             metadata.append(SegmentationImageMetadata(content[f]))
-    #         self._segmentation_metadata = metadata
-    #     else:
-    #         self._segmentation_metadata = list()
-    #     return self._segmentation_metadata
-
-    # @property
-    # def segmentation_shifts(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[ShiftDescription]
-    #         shift description for each image file in `segmentation_dir`
-
-    #     See also
-    #     --------
-    #     `shift.ShiftDescription`_
-    #     '''
-    #     filename = os.path.join(self.shift_dir, self.shift_file)
-    #     content = utils.read_yaml(filename)
-    #     self._shift_descriptions = list()
-    #     # by matching the sites, we ensure that the correct shift description
-    #     # is assigned to each image
-    #     sites = [e.site for e in content]
-    #     for m in self.segmentation_metadata:
-    #         ix = sites.index(m.site)
-    #         self._shift_descriptions.append(ShiftDescription(content[ix]))
-    #     return self._shift_descriptions
-
-    # @property
-    # def object_types(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     Set[str]
-    #         unique objects names, e.g. ``{"Cells", "Nuclei"}``
-    #     '''
-    #     if self.segmentation_files:
-    #         self._object_types = set([m.objects
-    #                                   for m in self.segmentation_metadata])
-    #     else:
-    #         self._object_types = set()
-    #     return self._object_types
-
-    def __str__(self):
-        return('experiment "%s" - cycle #%s: "%s"'
-               % (self.experiment, self.name, self.id))
-
-    def __unicode__(self):
-        return self.__str__()

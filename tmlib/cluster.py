@@ -11,7 +11,12 @@ import gc3libs
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
 import logging
+from . import cfg
 from . import utils
+from . import text_readers
+from . import text_writers
+from .cfg_setters import TmlibConfiguration
+from .experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +25,29 @@ class BasicClusterRoutines(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment):
+    def __init__(self, experiment_dir):
         '''
         Initialize an instance of class ClusterRoutines.
 
         Parameters
         ----------
-        experiment: Experiment
-            experiment object that holds information about the content of the
-            experiment directory
+        experiment_dir: str
+            absolute path to experiment directory
         '''
-        self.experiment = experiment
-        gc3libs.configure_logger(level=logging.CRITICAL)
+        self.experiment_dir = experiment_dir
+        # gc3libs.configure_logger(level=logging.CRITICAL)
+
+    @property
+    def experiment(self):
+        '''
+        Returns
+        -------
+        Experiment
+            configured experiment object
+        '''
+        self._experiment = Experiment(self.experiment_dir,
+                                      TmlibConfiguration(cfg))
+        return self._experiment
 
     @cached_property
     def cycles(self):
@@ -39,7 +55,7 @@ class BasicClusterRoutines(object):
         Returns
         -------
         List[Wellplate or Slide]
-            cycle objects
+            configured cycle objects
         '''
         self._cycles = self.experiment.cycles
         return self._cycles
@@ -106,8 +122,6 @@ class BasicClusterRoutines(object):
 
         # Periodically check the status of submitted jobs
         while jobs.execution.state != gc3libs.Run.State.TERMINATED:
-            print '%s' % self.create_timestamp()
-            print '"%s": %s ' % (jobs.jobname, jobs.execution.state)
             logger.info('"%s": %s ' % (jobs.jobname, jobs.execution.state))
             # `progess` will do the GC3Pie magic:
             # submit new jobs, update status of submitted jobs, get
@@ -117,7 +131,6 @@ class BasicClusterRoutines(object):
             for task in jobs.iter_tasks():
                 if task.jobname == jobs.jobname:
                     continue
-                print '"%s": %s ' % (task.jobname, task.execution.state)
                 logger.info('"%s": %s ' % (task.jobname, task.execution.state))
 
             terminated_count = 0
@@ -128,7 +141,6 @@ class BasicClusterRoutines(object):
                 if task.execution.state == gc3libs.Run.State.TERMINATED:
                     terminated_count += 1
                 total_count += 1
-            print 'terminated: %d of %d jobs\n' % (terminated_count, total_count)
             logger.info('terminated: %d of %d jobs\n'
                         % (terminated_count, total_count))
             time.sleep(monitoring_interval)
@@ -170,7 +182,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment_dir, prog_name):
         '''
         Initialize an instance of class ClusterRoutines.
 
@@ -182,10 +194,10 @@ class ClusterRoutines(BasicClusterRoutines):
         prog_name: str
             name of the corresponding program (command line interface)
         '''
-        super(ClusterRoutines, self).__init__(experiment)
-        self.experiment = experiment
+        super(ClusterRoutines, self).__init__(experiment_dir)
+        self.experiment_dir = experiment_dir
         self.prog_name = prog_name
-        gc3libs.configure_logger(level=logging.CRITICAL)
+        # gc3libs.configure_logger(level=logging.CRITICAL)
 
     @cached_property
     def project_dir(self):
@@ -198,6 +210,7 @@ class ClusterRoutines(BasicClusterRoutines):
         self._project_dir = os.path.join(self.experiment.dir,
                                          'tmaps_%s' % self.prog_name)
         if not os.path.exists(self._project_dir):
+            logger.debug('create project directory: %s' % self._project_dir)
             os.mkdir(self._project_dir)
         return self._project_dir
 
@@ -211,6 +224,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         self._log_dir = os.path.join(self.project_dir, 'log')
         if not os.path.exists(self._log_dir):
+            logger.debug('create directory for log files: %s' % self._log_dir)
             os.mkdir(self._log_dir)
         return self._log_dir
 
@@ -225,10 +239,12 @@ class ClusterRoutines(BasicClusterRoutines):
         self._job_descriptions_dir = os.path.join(self.project_dir,
                                                   'job_descriptions')
         if not os.path.exists(self._job_descriptions_dir):
+            logger.debug('create directory for job descriptor files: %s'
+                         % self._job_descriptions_dir)
             os.mkdir(self._job_descriptions_dir)
         return self._job_descriptions_dir
 
-    def get_job_descriptions(self):
+    def get_job_descriptions_from_files(self):
         '''
         Get job descriptions from individual *.job* files and combine them into
         the format required by the `build_jobs()` method.
@@ -242,12 +258,16 @@ class ClusterRoutines(BasicClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         run_job_files = glob.glob(os.path.join(directory, '*_run_*.job'))
+        if not run_job_files:
+            logger.debug('No run job descriptor files found')
         collect_job_files = glob.glob(os.path.join(directory, '*_collect.job'))
+        if not collect_job_files:
+            logger.debug('No collect job descriptor file found')
         for f in run_job_files:
-            batch = utils.read_json(f)
+            batch = text_readers.read_json(f)
             job_descriptions['run'].append(batch)
         if collect_job_files:
-            job_descriptions['collect'] = utils.read_json(collect_job_files[0])
+            job_descriptions['collect'] = text_readers.read_json(collect_job_files[0])
         return job_descriptions
 
     def list_all_output_files(self, job_descriptions):
@@ -262,13 +282,21 @@ class ClusterRoutines(BasicClusterRoutines):
 
         See also
         --------
-        `get_job_descriptions`_
+        `get_job_descriptions_from_files`_
         '''
         files = list()
         if job_descriptions['run']:
-            files.append(job_descriptions['run']['outputs'].values())
+            run_files = utils.flatten([
+                j['outputs'].values() for j in job_descriptions['run']
+            ])
+            if all([isinstance(f, list) for f in run_files]):
+                files.extend(utils.flatten(run_files))
+            else:
+                files.extend(run_files)
         if 'collect' in job_descriptions.keys():
-            files.append(job_descriptions['collect']['outputs'].values())
+            files.extend(
+                utils.flatten(job_descriptions['collect']['outputs'].values())
+            )
         return files
 
     def build_run_job_filename(self, job_id):
@@ -320,7 +348,7 @@ class ClusterRoutines(BasicClusterRoutines):
         OSError
             when file does not exist
         '''
-        batch = utils.read_json(filename)
+        batch = text_readers.read_json(filename)
         return batch
 
     def write_job_files(self, job_descriptions):
@@ -339,18 +367,18 @@ class ClusterRoutines(BasicClusterRoutines):
 
         See also
         --------
-        `get_job_descriptions`_
+        `get_job_descriptions_from_files`_
         '''
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        if not os.path.exists(self.job_descriptions_dir):
+            os.makedirs(self.job_descriptions_dir)
         for batch in job_descriptions['run']:
             job_file = self.build_run_job_filename(batch['id'])
             batch['inputs']['job_file'] = job_file
-            utils.write_json(job_file, batch)
+            text_writers.write_json(job_file, batch)
         if 'collect' in job_descriptions.keys():
             job_file = self.build_collect_job_filename()
             job_descriptions['collect']['inputs']['job_file'] = job_file
-            utils.write_json(job_file, job_descriptions['collect'])
+            text_writers.write_json(job_file, job_descriptions['collect'])
 
     def _build_run_command(self, batch):
         # Build a command for GC3Pie submission. For further information on
@@ -473,17 +501,22 @@ class ClusterRoutines(BasicClusterRoutines):
 
         See also
         --------
-        `get_job_descriptions`_
+        `get_job_descriptions_from_files`_
         '''
         pass
 
-    def print_joblist(self, job_descriptions):
+    def print_job_descriptions(self, job_descriptions):
         '''
-        Print job_descriptions to standard output in YAML format.
+        Print `job_descriptions` to standard output in YAML format.
+
+        Parameters
+        ----------
+        job_descriptions: Dict[List[dict]]
+            description of inputs and outputs or individual jobs
 
         See also
         --------
-        `get_job_descriptions`_
+        `get_job_descriptions_from_files`_
         '''
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
@@ -517,10 +550,12 @@ class ClusterRoutines(BasicClusterRoutines):
 
         See also
         --------
-        `get_job_descriptions`_
+        `get_job_descriptions_from_files`_
         '''
         run_jobs = ParallelTaskCollection(
                         jobname='tmaps_%s_run' % self.prog_name)
+
+        logging.debug('create run jobs: ParallelTaskCollection')
         for i, batch in enumerate(job_descriptions['run']):
 
             jobname = 'tmaps_%s_run_%.5d' % (self.prog_name, batch['id'])
@@ -529,6 +564,7 @@ class ClusterRoutines(BasicClusterRoutines):
             log_err_file = '%s_%s.err' % (jobname, timestamp)
 
             if no_shared_network:
+                logging.warning('no shared network: files are copied')
                 # If no shared network is available, files need to be copied.
                 # They are temporary stored in ~/.gc3pie_jobs.
                 if isinstance(batch['inputs'].values()[0], list):
@@ -560,6 +596,7 @@ class ClusterRoutines(BasicClusterRoutines):
             run_jobs.add(job)
 
         if 'collect' in job_descriptions.keys():
+            logging.debug('create collect job: Application')
 
             batch = job_descriptions['collect']
 
@@ -597,12 +634,14 @@ class ClusterRoutines(BasicClusterRoutines):
                     application_name=virtualenv
             )
 
+            logging.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs, collect_job],
                         jobname='tmaps_%s' % self.prog_name)
 
         else:
 
+            logging.debug('add run jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs],
                         jobname='tmaps_%s' % self.prog_name)
