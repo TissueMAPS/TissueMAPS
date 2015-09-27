@@ -1,5 +1,5 @@
 angular.module('tmaps.main.layerprops.channels')
-.controller('ChannelCtrl', ['$scope', function($scope) {
+.controller('ChannelCtrl', ['$scope', 'colorFactory', function($scope, colorFactory) {
     var self = this;
 
     // Call the exposed method of the boxCtrl
@@ -8,19 +8,13 @@ angular.module('tmaps.main.layerprops.channels')
     }
 
     this.color = {
-        RED:   [1, 0, 0],
-        GREEN: [0, 1, 0],
-        BLUE:  [0, 0, 1]
-    };
-
-    // Since colors are arrays we have to make sure not
-    // to check their equality on reference. Underscore helps here.
-    this.colorEqual = function(color1, color2) {
-        return _.isEqual(color1, color2);
+        RED:   colorFactory.create(255, 0, 0),
+        GREEN: colorFactory.create(0, 255, 0),
+        BLUE:  colorFactory.create(0, 0, 255)
     };
 
     this.setColor = function(layer, color) {
-        if (this.colorEqual(layer.color(), color)) {
+        if (layer.color().equals(color)) {
             // Same color was selected, unselect it by setting null.
             layer.color(null);
         } else {
@@ -29,13 +23,13 @@ angular.module('tmaps.main.layerprops.channels')
     };
 
     this.isRed = function(layer) {
-        return this.colorEqual(layer.color(), this.color.RED);
+        return layer.color().equals(this.color.RED);
     };
     this.isGreen = function(layer) {
-        return this.colorEqual(layer.color(), this.color.GREEN);
+        return layer.color().equals(this.color.GREEN);
     };
     this.isBlue = function(layer) {
-        return this.colorEqual(layer.color(), this.color.BLUE);
+        return layer.color().equals(this.color.BLUE);
     };
 
     // Since two-way data binding isn't possible on the layer properties
@@ -87,16 +81,6 @@ angular.module('tmaps.main.layerprops.channels')
             });
         } else {
             layer.min(val);
-        }
-    };
-
-    this.setLayerMax = function(layer, val) {
-        if (_(getSelectedLayers()).contains(layer)) {
-            getSelectedLayers().forEach(function(l) {
-                l.max(val);
-            });
-        } else {
-            layer.max(val);
         }
     };
 

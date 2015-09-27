@@ -78,8 +78,13 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
     }
 
     color(val?: Color): Color {
-        if (val) {
-            this.olLayer.setColor(val.toNormalizedRGBArray());
+        if (val !== undefined) {
+            if (val !== null) {
+                var newCol = val.toNormalizedRGBArray();
+                this.olLayer.setColor(newCol);
+            } else {
+                this.olLayer.setColor(null);
+            }
             return val;
         } else {
             var arrayCol: number[] = this.olLayer.getColor();

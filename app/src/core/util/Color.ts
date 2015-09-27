@@ -29,6 +29,10 @@ class Color implements Serializable<Color> {
         return [this.r / 255, this.g / 255, this.b / 255];
     }
 
+    equals(other: Color) {
+        return this.r == other.r && this.g == other.g && this.b == other.b && this.a == other.a;
+    }
+
     serialize() {
         return this.$q.when({
             r: this.r, g: this.g, b: this.b, a: this.a
