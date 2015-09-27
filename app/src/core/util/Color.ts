@@ -34,6 +34,7 @@ class Color implements Serializable<Color> {
     }
 
     serialize() {
+        console.log("SERIALIZE COLOR");
         return this.$q.when({
             r: this.r, g: this.g, b: this.b, a: this.a
         });
@@ -88,6 +89,10 @@ class ColorFactory {
                                parseInt(res[2]),
                                parseInt(res[3]));
         }
+    }
+
+    createFromRGBAObject(o: {r: number; g: number; b: number; a: number;}): Color {
+        return this.create(o.r, o.g, o.b, o.a);
     }
 }
 

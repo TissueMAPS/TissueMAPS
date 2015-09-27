@@ -5,7 +5,7 @@ interface SerializedTileLayer extends Serialized<TileLayer> {
       name: string;
       pyramidPath: string;
       imageSize: ImageSize;
-      color: Color;
+      color: SerializedColor;
       additiveBlend: boolean;
       drawBlackPixels: boolean;
       drawWhitePixels: boolean;
@@ -21,11 +21,11 @@ interface TileLayerArgs {
     imageSize: ImageSize;
     pyramidPath: string;
 
-    color: Color;
-    additiveBlend: string;
-    drawBlackPixels: boolean;
-    drawWhitePixels: boolean;
-    visible: boolean;
+    additiveBlend?: string;
+    drawBlackPixels?: boolean;
+    drawWhitePixels?: boolean;
+    visible?: boolean;
+    color?: Color;
     brightness?: number;
     opacity?: number;
     min?: number;
@@ -35,7 +35,6 @@ interface TileLayerArgs {
 class TileLayer extends Layer implements Serializable<TileLayer> {
     pyramidPath: string;
     imageSize: ImageSize;
-    blendMode: string;
     olLayer: ModifiedOlTileLayer;
 
     constructor(protected ol,
@@ -50,22 +49,27 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
             pyramidPath += '/';
         }
         this.pyramidPath = pyramidPath;
-
         this.imageSize = opt.imageSize;
 
-        if (opt.additiveBlend) {
-            this.blendMode = 'additive';
+        // Some default properties
+        var olLayerColor: number[];
+        if (opt.color !== undefined) {
+            olLayerColor = opt.color.toNormalizedRGBArray();
         } else {
-            this.blendMode = 'normal';
+            olLayerColor = [1, 1, 1];
         }
 
-        // Some default properties
         var olLayerArgs: ModifiedOlTileLayerArgs = _.defaults(opt, {
             brightness: 0,
             opacity: 1,
             min: 0,
-            max: 1
+            max: 1,
+            additiveBlend: true,
+            drawBlackPixels: true,
+            drawWhitePixels: true,
+            visible: true
         });
+        olLayerArgs.color = olLayerColor;
 
         olLayerArgs.source = new ol.source.Zoomify({
             size: this.imageSize,
@@ -157,19 +161,21 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
     }
 
     serialize() {
-        return this.$q.when({
-            name: this.name,
-            pyramidPath: this.pyramidPath,
-            imageSize: this.imageSize,
-            color: this.color(),
-            additiveBlend: this.additiveBlend(),
-            drawBlackPixels: this.drawBlackPixels(),
-            drawWhitePixels: this.drawWhitePixels(),
-            visible: this.visible(),
-            brightness: this.brightness(),
-            min: this.min(),
-            max: this.max(),
-            opacity: this.opacity()
+        return this.color().serialize().then((c) => {
+            return this.$q.when({
+                name: this.name,
+                pyramidPath: this.pyramidPath,
+                imageSize: this.imageSize,
+                color: c,
+                additiveBlend: this.additiveBlend(),
+                drawBlackPixels: this.drawBlackPixels(),
+                drawWhitePixels: this.drawWhitePixels(),
+                visible: this.visible(),
+                brightness: this.brightness(),
+                min: this.min(),
+                max: this.max(),
+                opacity: this.opacity()
+            });
         });
     }
 

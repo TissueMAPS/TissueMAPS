@@ -20,6 +20,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.viewport = this.viewportFty.create();
         this.viewport.injectIntoDocumentAndAttach(this);
         this.tools = this.toolLoader.loadTools(this);
+        window['appInst'] = this;
     }
 
     setActive() {
@@ -42,15 +43,15 @@ class AppInstance implements Serializable<SerializedAppInstance> {
                 pyramidPath: ch.pyramidPath
             };
         });
-        this.viewport.addChannelLayers(layerOpts);
-        this.experiment.cells.then((cells) => {
-            var cellLayer = this.objectLayerFactory.create('Cells', {
-                objects: cells,
-                fillColor: 'rgba(255, 0, 0, 0)',
-                strokeColor: 'rgba(255, 0, 0, 1)'
-            });
-            this.viewport.addObjectLayer(cellLayer);
-        });
+        this.viewport.addChannelLayers(<TileLayerArgs[]>layerOpts);
+        // this.experiment.cells.then((cells) => {
+        //     var cellLayer = this.objectLayerFactory.create('Cells', {
+        //         objects: cells,
+        //         fillColor: 'rgba(255, 0, 0, 0)',
+        //         strokeColor: 'rgba(255, 0, 0, 1)'
+        //     });
+        //     this.viewport.addObjectLayer(cellLayer);
+        // });
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {
@@ -85,7 +86,7 @@ angular.module('tmaps.core').service('appInstanceFactory', AppInstanceFactory);
 
 class AppInstanceDeserializer implements Deserializer<AppInstance> {
     static $inject = [
-        'viewportFactory',
+        'viewportDeserializer',
         'experimentDeserializer',
         '$q',
         'appInstanceFactory'

@@ -16,7 +16,7 @@ interface ModifiedOlTileLayer extends ol.layer.Tile {
 }
 
 interface ModifiedOlTileLayerArgs extends olx.layer.LayerOptions {
-    color: Color;
+    color: number[];  // for example: [1, 0, 0] == red
     additiveBlend: string;
     drawBlackPixels: boolean;
     drawWhitePixels: boolean;

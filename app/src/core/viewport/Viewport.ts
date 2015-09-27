@@ -7,6 +7,9 @@ interface MapState {
 
 interface SerializedViewport extends Serialized<Viewport> {
     selectionHandler: SerializedSelectionHandler;
+    // TODO: Create separate interface for serialized layer options.
+    // The color object on channelLayerOptions isn't a full Color object
+    // when restored.
     channelLayerOptions: TileLayerArgs[];
     mapState: MapState;
 }
@@ -97,6 +100,10 @@ class Viewport implements Serializable<Viewport> {
 
     }
 
+    setSelectionHandler(csh: CellSelectionHandler) {
+        this.selectionHandler = csh;
+    }
+
     addObjectLayer(objLayer: ObjectLayer) {
         this.objectLayers.push(objLayer);
         this.map.then((map) => {
@@ -125,19 +132,17 @@ class Viewport implements Serializable<Viewport> {
     //     });
     // }
 
-    addChannelLayers(layerOptions) {
+    addChannelLayers(layerOptions: TileLayerArgs[]) {
         // Only the first layer should be visible
         _.each(layerOptions, (opt, i) => {
             opt = _.defaults(opt, {
-                visible: i === 0,
-                color: [1, 1, 1]
+                visible: i === 0
             });
-            console.log('sdf');
             this.addChannelLayer(opt);
         });
     }
 
-    addChannelLayer(opt) {
+    addChannelLayer(opt: TileLayerArgs) {
         var channelLayer = this.channelLayerFactory.create(opt);
         var alreadyHasLayers = this.channelLayers.length !== 0;
 
