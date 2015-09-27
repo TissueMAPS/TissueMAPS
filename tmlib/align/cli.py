@@ -32,7 +32,7 @@ class Align(CommandLineInterface):
         logger.debug('parsed arguments: {0}'.format(self.args))
         self.__api_instance = ImageRegistration(
                     experiment_dir=self.args.experiment_dir,
-                    shift_file_format_string=self.cfg['SHIFT_FILE'],
+                    shift_file_format_string=self.cfg.SHIFT_FILE,
                     prog_name=self.name)
         logger.debug(
             'initialized API class "%s" with parsed arguments'

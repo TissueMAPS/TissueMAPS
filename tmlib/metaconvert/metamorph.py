@@ -1,7 +1,7 @@
 import os
 import re
 import bioformats
-from .handlers import MetadataHandler
+from .default import MetadataHandler
 from ..readers import MetadataReader
 from ..plates import WellPlate
 

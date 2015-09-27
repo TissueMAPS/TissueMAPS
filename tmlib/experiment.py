@@ -7,7 +7,7 @@ from . import text_readers
 from . import utils
 from .plates import WellPlate
 from .plates import Slide
-from .cfg_setters import UserConfigurations
+from .cfg_setters import UserConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +85,13 @@ class Experiment(object):
         '''
         Returns
         -------
-        UserConfigurations
+        UserConfiguration
             experiment-specific configuration settings provided by the user
         '''
         # TODO: shall we do this via the database instead?
         logger.debug('user configuration file: %s' % self.user_cfg_file)
         configuration_settings = text_readers.read_yaml(self.user_cfg_file)
-        self._user_cfg = UserConfigurations(configuration_settings)
+        self._user_cfg = UserConfiguration(configuration_settings)
         return self._user_cfg
 
     @property

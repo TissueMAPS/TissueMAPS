@@ -1,6 +1,6 @@
 import os
 from glob import glob
-from .bioformats import BioformatsMetadataReader
+from .default import DefaultMetadataReader
 from .cellyoyager import CellvoyagerMetadataHandler
 from .metamorph import MetamorphMetadataHandler
 from ..cluster import ClusterRoutines
@@ -60,7 +60,7 @@ class MetadataConverter(ClusterRoutines):
         self.experiment_dir = experiment_dir
         self.file_format = file_format
         if self.file_format:
-            if self.file_format not in Formats.support_for_additional_files:
+            if self.file_format not in Formats.SUPPORTED_ADDITIONAL_FILES:
                 raise NotSupportedError('Additional metadata files are not '
                                         'supported for the provided format')
         self.image_file_format_string = image_file_format_string
@@ -129,7 +129,7 @@ class MetadataConverter(ClusterRoutines):
                             batch['inputs']['ome_xml_files'],
                             batch['cycle'])
         else:
-            handler = BioformatsMetadataReader(
+            handler = DefaultMetadataReader(
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
                             batch['inputs']['ome_xml_files'],

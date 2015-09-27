@@ -32,7 +32,7 @@ class Corilla(CommandLineInterface):
         logger.debug('parsed arguments: {0}'.format(self.args))
         self.__api_instance = IllumstatsGenerator(
                     experiment_dir=self.args.experiment_dir,
-                    stats_file_format_string=self.cfg['STATS_FILE'],
+                    stats_file_format_string=self.cfg.STATS_FILE,
                     prog_name=self.name)
         logger.debug(
             'initialized API class "%s" with parsed arguments'

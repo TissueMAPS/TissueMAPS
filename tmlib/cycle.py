@@ -155,7 +155,7 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._image_upload_dir = self.cfg.MAGE_UPLOAD_DIR.format(
+        self._image_upload_dir = self.cfg.IMAGE_UPLOAD_DIR.format(
                                                 cycle_dir=self.dir,
                                                 sep=os.path.sep)
         if not os.path.exists(self._image_upload_dir):
@@ -356,7 +356,8 @@ class Cycle(object):
         (property) is accessed.
         '''
         self._images = list()
-        for i, f in enumerate(self.image_metadata.keys()):
+        image_filenames = [md.name for md in self.image_metadata]
+        for i, f in enumerate(image_filenames):
             img = ChannelImage.create_from_file(
                     os.path.join(self.image_dir, f), self.image_metadata[i],
                     library=self.library)

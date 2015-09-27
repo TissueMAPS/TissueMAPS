@@ -45,7 +45,7 @@ class Metaconvert(CommandLineInterface):
         self.__api_instance = MetadataConverter(
                             experiment_dir=self.args.experiment_dir,
                             file_format=self.args.format,
-                            image_file_format_string=self.cfg['IMAGE_FILE'],
+                            image_file_format_string=self.cfg.IMAGE_FILE,
                             prog_name=self.name)
         logger.debug(
             'initialized API class "%s" with parsed arguments'

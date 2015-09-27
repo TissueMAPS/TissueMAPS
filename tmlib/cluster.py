@@ -35,7 +35,6 @@ class BasicClusterRoutines(object):
             absolute path to experiment directory
         '''
         self.experiment_dir = experiment_dir
-        # gc3libs.configure_logger(level=logging.CRITICAL)
 
     @property
     def experiment(self):
@@ -141,7 +140,7 @@ class BasicClusterRoutines(object):
                 if task.execution.state == gc3libs.Run.State.TERMINATED:
                     terminated_count += 1
                 total_count += 1
-            logger.info('terminated: %d of %d jobs\n'
+            logger.info('terminated: %d of %d jobs'
                         % (terminated_count, total_count))
             time.sleep(monitoring_interval)
 

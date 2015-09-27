@@ -1,11 +1,6 @@
-[ ] create a class for configuration settings??
-[ ] logger for each command line program
+[ ] further extend class for configuration settings
 [ ] implement "brainy"-like workflow
 [ ] check .out files for 😞 
 [ ] implement alternative jterator mode for loading images (old mode)
-[ ] segmentations only exists as outline values stored in HDF5 files
 [ ] update documentation
-[ ] joblist: use experiment_dir and provide all filenames relative to it to reduce the size of the joblist file
-[ ] IlluminationImages: implement lazy loading functionality
-[ ] consider breaking down joblist in individual files
-
+[ ] jterator batch_size

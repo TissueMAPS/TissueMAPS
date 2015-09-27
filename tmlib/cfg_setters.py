@@ -55,7 +55,7 @@ class UserConfiguration(object):
         '''
         [
             setattr(self, name, value)
-            for name, value in cfg_settings.itervalues()
+            for name, value in cfg_settings.iteritems()
         ]
 
     # TODO: create defined attributes with setters for required information
