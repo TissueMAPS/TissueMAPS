@@ -10,7 +10,7 @@ angular.module('tmaps.main.tools')
 
     // Add the tools to scope as soon as they are ready
     $scope.tools = [];
-    $scope.viewport.tools.then(function(tools) {
+    $scope.appInstance.tools.then(function(tools) {
         $scope.tools = tools;
         window.tools = tools;
     });
@@ -21,7 +21,7 @@ angular.module('tmaps.main.tools')
     $scope.openTool = function(tool) {
         if (appstateService.hasCurrentState()) {
             var appstate = appstateService.currentState;
-            var experimentId = $scope.viewport.experiment.id;
+            var experimentId = $scope.appInstance.experiment.id;
             tool.openWindow(appstate);
         } else {
             throw new Error('Can\'t open window when appstate hasn\'t been saved');

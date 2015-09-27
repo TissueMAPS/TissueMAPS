@@ -32,25 +32,25 @@ class Application {
     /**
      * Hide the whole viewport part of TissueMAPS.
      * Note that this will keep the active viewports. After calling
-     * `showAppInstance` the state will be restored.
+     * `showViewports` the state will be restored.
      * This function is called whenever the route sate changes away from the
      * visualization state.
      */
-    // hideAppInstances() {
-    //     this.$('.app').hide();
-    // }
+    hideViewports() {
+        this.$('.app').hide();
+    }
 
     /**
-     * Show the appInstances after hiding them with `hideAppInstances`.
+     * Show the appInstances after hiding them with `hideViewports`.
      */
-    // showAppInstances() {
-    //     this.$('.app').show();
-    //     this.viewports.forEach((vp) => {
-    //         vp.map.then(function(map) {
-    //             map.updateSize();
-    //         });
-    //     });
-    // }
+    showViewports() {
+        this.$('.app').show();
+        this.appInstances.forEach((inst) => {
+            inst.viewport.map.then(function(map) {
+                map.updateSize();
+            });
+        });
+    }
 
     removeAppInstance(num: number) {
         this.appInstances[num].destroy();
@@ -103,7 +103,7 @@ class Application {
         // TODO: Class viewport and experiment should be abstract.
         var exp = this.experimentFty.createFromServerResponse(experiment);
         var inst = this.appInstanceFty.create(exp);
-        // inst.initialize();
+        inst.addExperimentToViewport();
 
         this.appInstances.push(inst);
         if (this.appInstances.length === 1) {

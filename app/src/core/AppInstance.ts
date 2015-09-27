@@ -19,7 +19,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.name = experiment.name;
         this.viewport = this.viewportFty.create();
         this.viewport.injectIntoDocumentAndAttach(this);
-        this.tools = this.toolLoader.loadTools(this.viewport);
+        this.tools = this.toolLoader.loadTools(this);
     }
 
     setActive() {
@@ -66,7 +66,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
 class AppInstanceFactory {
     static $inject = [
         '$q',
-        'ViewportFactory',
+        'viewportFactory',
         'objectLayerFactory',
         'toolLoader',
         'channelLayerFactory'
@@ -81,6 +81,7 @@ class AppInstanceFactory {
         return new AppInstance(this.$q, this.viewportFactory, this.objectLayerFactory, this.toolLoader, this.channelLayerFactory, e);
     }
 }
+angular.module('tmaps.core').service('appInstanceFactory', AppInstanceFactory);
 
 class AppInstanceDeserializer implements Deserializer<AppInstance> {
     static $inject = [
@@ -105,3 +106,4 @@ class AppInstanceDeserializer implements Deserializer<AppInstance> {
         });
     }
 }
+angular.module('tmaps.core').service('appInstanceDeserializer', AppInstanceDeserializer);

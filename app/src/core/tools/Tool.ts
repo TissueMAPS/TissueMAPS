@@ -17,7 +17,7 @@ class Tool {
                 private $http: ng.IHttpService,
                 private $window: Window,
                 private $rootScope: ng.IRootScopeService,
-                public viewport: Viewport,
+                public appInstance: AppInstance,
                 public id: string,
                 public name: string,
                 public description: string,
@@ -111,7 +111,7 @@ class Tool {
             tmapsProxy: {
                 // The viewport from which this tool was called.
                 // The map object is available via this object.
-                viewport: this.viewport,
+                appInstance: this.appInstance,
                 // TissueMAPS' $rootScope; can be used to listen to
                 // events that happen in the main window.
                 $rootScope: this.$rootScope

@@ -45,7 +45,7 @@ angular.module('tmaps.main')
         }
     };
 
-    this.getViewports = function() {
+    this.getAppInstances = function() {
         return application.viewports;
     };
 
@@ -53,8 +53,8 @@ angular.module('tmaps.main')
         return application.activeInstanceNumber == index;
     };
 
-    this.isViewportEmpty = function() {
-        return self.getViewports().length === 0;
+    this.isAppInstanceEmpty = function() {
+        return self.getAppInstances().length === 0;
     };
 
 }]);
