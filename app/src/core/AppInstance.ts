@@ -13,14 +13,24 @@ class AppInstance implements Serializable<SerializedAppInstance> {
                 private viewportFty: ViewportFactory,
                 private objectLayerFactory: ObjectLayerFactory,
                 private toolLoader: ToolLoader,
-                private channelLayerFactory: ChannelLayerFactory) {
-        this.name = name;
+                private channelLayerFactory: ChannelLayerFactory,
+                experiment: Experiment) {
+        this.experiment = experiment;
+        this.name = experiment.name;
         this.viewport = this.viewportFty.create();
+        this.viewport.injectIntoDocumentAndAttach(this);
         this.tools = this.toolLoader.loadTools(this.viewport);
     }
 
-    addExperiment(e: Experiment) {
-        this.experiment = e;
+    setActive() {
+        this.viewport.show();
+    }
+
+    setInactive() {
+        this.viewport.hide();
+    }
+
+    addExperimentToViewport() {
         var layerOpts = _(this.experiment.channels).map((ch) => {
             return {
                 name: ch.name,
@@ -28,7 +38,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
                 pyramidPath: ch.pyramidPath
             };
         });
-
         this.viewport.addChannelLayers(layerOpts);
         this.experiment.cells.then((cells) => {
             var cellLayer = this.objectLayerFactory.create('Cells', {
@@ -39,7 +48,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             this.viewport.addObjectLayer(cellLayer);
         });
     }
-
 
     serialize(): ng.IPromise<SerializedAppInstance> {
         return this.$q.all({
@@ -65,8 +73,8 @@ class AppInstanceFactory {
                 private toolLoader,
                 private channelLayerFactory) {}
 
-    create(): AppInstance {
-        return new AppInstance(this.$q, this.viewportFactory, this.objectLayerFactory, this.toolLoader, this.channelLayerFactory);
+    create(e: Experiment): AppInstance {
+        return new AppInstance(this.$q, this.viewportFactory, this.objectLayerFactory, this.toolLoader, this.channelLayerFactory, e);
     }
 }
 
@@ -88,9 +96,8 @@ class AppInstanceDeserializer implements Deserializer<AppInstance> {
             experiment: this.expDeser.deserialize(ser.experiment),
             viewport: this.viewportDeser.deserialize(ser.viewport)
         }).then((res: any) => {
-            var e = this.appInstanceFty.create();
-            e.addExperiment(res.experiment);
-            return e;
+            var inst = this.appInstanceFty.create(res.experiment);
+            return inst;
         });
     }
 }
