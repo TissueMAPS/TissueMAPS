@@ -1,11 +1,11 @@
 <div class="tabbar-container" ng-controller="TopbarCtrl as topbarCtrl">
   <ul class="tabbar" ng-controller="InstanceTabsCtrl as tabsCtrl">
     <div class="inner-container">
-      <li ng-repeat="viewport in app.getAppInstances()"
+      <li ng-repeat="inst in tabsCtrl.appInstances"
           ng-click="tabsCtrl.clickTab($index)"
-          ng-class="{active: app.isActiveInstanceByIndex($index)}">
+          ng-class="{active: tabsCtrl.isActiveAppInstance($index)}">
           <a>
-            {{ viewport.experiment.name }}
+            {{ inst.experiment.name }}
 
             <span ng-click="tabsCtrl.removeTab($index)">
               <i class="fa fa-times"></i>

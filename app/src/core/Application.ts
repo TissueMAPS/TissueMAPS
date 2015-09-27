@@ -92,6 +92,10 @@ class Application {
         this.setActiveAppInstanceByNumber(nr);
     }
 
+    getActiveAppInstanceNumber(): number {
+        return this.activeAppInstanceNumber;
+    }
+
     // TODO: Remove as many dependencies on this function as possible!
     // Widgets etc. should know the appInstance they belong to.
     getActiveAppInstance(): AppInstance {
