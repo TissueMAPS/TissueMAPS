@@ -1,34 +1,43 @@
 class ViewportFactory {
     static $inject = [
-        'createViewportService',
         'openlayers',
         '$q',
         'cellSelectionHandlerFactory',
         'channelLayerFactory',
         '$http',
         'Cell',
-        'objectLayerFactory'
+        'objectLayerFactory',
+        '$controller',
+        '$compile',
+        '$',
+        '$rootScope'
     ];
 
-    constructor(private createViewportService: CreateViewportService,
-                private ol,
+    constructor(private ol,
                 private $q: ng.IQService,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private channelLayerFactory: ChannelLayerFactory,
                 private $http: ng.IHttpService,
                 private Cell,
-                private objectLayerFty: ObjectLayerFactory) {}
+                private objectLayerFty: ObjectLayerFactory,
+                private $controller: ng.IControllerService,
+                private $compile: ng.ICompileService,
+                private $: JQueryStatic,
+                private $rootScope: ng.IRootScopeService) {}
 
     create(): Viewport {
         return new Viewport(
-            this.createViewportService,
             this.ol,
             this.$q,
             this.cellSelectionHandlerFty,
             this.channelLayerFactory,
             this.$http,
             this.Cell,
-            this.objectLayerFty
+            this.objectLayerFty,
+            this.$controller,
+            this.$compile,
+            this.$,
+            this.$rootScope
         );
     }
 }

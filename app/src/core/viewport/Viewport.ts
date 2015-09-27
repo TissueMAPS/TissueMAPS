@@ -15,6 +15,7 @@ interface ViewportElementScope extends ng.IScope {
     viewport: Viewport;
     // TODO: Set type to that of ViewportCtrl
     viewportCtrl: any;
+    appInstance: AppInstance;
 }
 
 class Viewport implements Serializable<Viewport> {
@@ -32,14 +33,17 @@ class Viewport implements Serializable<Viewport> {
     private elementDef: ng.IDeferred<JQuery>;
     private elementScopeDef: ng.IDeferred<ViewportElementScope>;
 
-    constructor(private createViewportService: CreateViewportService,
-                private ol,
+    constructor(private ol,
                 private $q: ng.IQService,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private channelLayerFactory: ChannelLayerFactory,
                 private $http: ng.IHttpService,
                 private Cell,
-                private objectLayerFactory: ObjectLayerFactory) {
+                private objectLayerFactory: ObjectLayerFactory,
+                private $controller: ng.IControllerService,
+                private $compile: ng.ICompileService,
+                private $: JQueryStatic,
+                private $rootScope: ng.IRootScopeService) {
 
         this.mapDef = this.$q.defer();
         this.map = this.mapDef.promise;
@@ -91,16 +95,6 @@ class Viewport implements Serializable<Viewport> {
         // this.addObjectLayer(objLayerA);
         // this.addObjectLayer(objLayerB);
 
-    }
-
-    injectAndAttach(appInstance: AppInstance) {
-        this.createViewportService.createViewport(
-            this, 'viewports', '/templates/main/viewport.html'
-        ).then(function(ret) {
-            this.elementDef.resolve(ret.element);
-            this.elementScopeDef.resolve(ret.scope);
-            this.mapDef.resolve(ret.map);
-        });
     }
 
     addObjectLayer(objLayer: ObjectLayer) {
@@ -251,5 +245,55 @@ class Viewport implements Serializable<Viewport> {
         });
 
         return bpPromise;
+    }
+
+    private getTemplate(templateUrl): ng.IPromise<string> {
+        var deferred = this.$q.defer();
+        this.$http({method: 'GET', url: templateUrl, cache: true})
+        .then(function(result) {
+            deferred.resolve(result.data);
+        })
+        .catch(function(error) {
+            deferred.reject(error);
+        });
+        return deferred.promise;
+    }
+
+    injectIntoDocumentAndAttach(appInstance: AppInstance) {
+        this.getTemplate('/templates/main/viewport.html').then((template) => {
+            var newScope = <ViewportElementScope> this.$rootScope.$new();
+            newScope.viewport = this;
+            newScope.appInstance = appInstance;
+            var ctrl = this.$controller('ViewportCtrl', {
+                '$scope': newScope,
+                'viewport': this
+            });
+            newScope.viewportCtrl = ctrl;
+
+            // The divs have to be shown and hidden manually since ngShow
+            // doesn't quite work correctly when doing it this way.
+            var elem = angular.element(template);
+
+            // Compile the element (expand directives)
+            var linkFunc = this.$compile(elem);
+            // Link to scope
+            var viewportElem = linkFunc(newScope);
+
+            // Append to viewports
+            this.$('#viewports').append(viewportElem);
+            // Append map after the element has been added to the DOM.
+            // Otherwise the viewport size calculation of openlayers gets
+            // messed up.
+            var map = new this.ol.Map({
+                layers: [],
+                controls: [],
+                renderer: 'webgl',
+                target: viewportElem.find('.map-container')[0],
+                logo: false
+            });
+            this.elementDef.resolve(viewportElem);
+            this.elementScopeDef.resolve(newScope);
+            this.mapDef.resolve(map);
+        });
     }
 }
