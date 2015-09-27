@@ -1,25 +1,25 @@
 class Application {
 
-    viewports: Viewport[] = [];
+    appInstances: AppInstance[] = [];
 
     private viewportContainerId = 'viewports';
-    private activeViewportNumber = 0;
+    private activeAppInstanceNumber = 0;
 
     static $inject = [
         '$q',
         '$',
         'openlayers',
         'experimentFactory',
-        'viewportFactory',
-        'viewportDeserializer'
+        'appInstanceFactory',
+        'appInstanceDeserializer'
     ];
 
     constructor(private $q: ng.IQService,
                 private $: JQueryStatic,
                 private ol,
                 private experimentFty: ExperimentFactory,
-                private viewportFty: ViewportFactory,
-                private viewportDeserializer: ViewportDeserializer) {
+                private appInstanceFty: AppInstanceFactory,
+                private appInstanceDeserializer: AppInstanceDeserializer) {
 
         // Check if the executing browser is PhantomJS (= code runs in
         // testing mode.
@@ -32,95 +32,95 @@ class Application {
     /**
      * Hide the whole viewport part of TissueMAPS.
      * Note that this will keep the active viewports. After calling
-     * `showViewport` the state will be restored.
+     * `showAppInstance` the state will be restored.
      * This function is called whenever the route sate changes away from the
      * visualization state.
      */
-    hideViewports() {
-        this.$('.app').hide();
-    }
+    // hideAppInstances() {
+    //     this.$('.app').hide();
+    // }
 
     /**
-     * Show the viewports after hiding them with `hideViewports`.
+     * Show the appInstances after hiding them with `hideAppInstances`.
      */
-    showViewports() {
-        this.$('.app').show();
-        this.viewports.forEach((vp) => {
-            vp.map.then(function(map) {
-                map.updateSize();
-            });
-        });
-    }
+    // showAppInstances() {
+    //     this.$('.app').show();
+    //     this.viewports.forEach((vp) => {
+    //         vp.map.then(function(map) {
+    //             map.updateSize();
+    //         });
+    //     });
+    // }
 
-    removeViewport(num: number) {
-        this.viewports[num].destroy();
-        this.viewports.splice(num, 1);
-        if (num === this.activeViewportNumber) {
+    removeAppInstance(num: number) {
+        this.appInstances[num].destroy();
+        this.appInstances.splice(num, 1);
+        if (num === this.activeAppInstanceNumber) {
             if (num >= 1) {
-                // There are still vps with lower number
-                this.setActiveViewportByNumber(num - 1);
-            } else if (this.viewports.length > 0) {
-                // There are still vp(s) with higher number
-                this.setActiveViewportByNumber(0);
+                // There are still insts with lower number
+                this.setActiveAppInstanceByNumber(num - 1);
+            } else if (this.appInstances.length > 0) {
+                // There are still inst(s) with higher number
+                this.setActiveAppInstanceByNumber(0);
             } else {
-                // this was the last vp
+                // this was the last inst
             }
         }
     }
 
-    destroyAllViewports() {
-        for (var i in this.viewports) {
-            this.viewports[i].destroy();
-            this.viewports.splice(i, 1);
+    destroyAllAppInstances() {
+        for (var i in this.appInstances) {
+            this.appInstances[i].destroy();
+            this.appInstances.splice(i, 1);
         }
-        this.activeViewportNumber = -1;
+        this.activeAppInstanceNumber = -1;
     }
 
-    setActiveViewportByNumber(num: number) {
-        var oldActive = this.getActiveViewport();
-        this.activeViewportNumber = num;
-        var newActive = this.getActiveViewport();
+    setActiveAppInstanceByNumber(num: number) {
+        var oldActive = this.getActiveAppInstance();
+        this.activeAppInstanceNumber = num;
+        var newActive = this.getActiveAppInstance();
         if (oldActive) {
-            // If the vp wasn't deleted
-            oldActive.hide();
+            // If the inst wasn't deleted
+            oldActive.setInactive();
         }
-        newActive.show();
+        newActive.setActive();
     }
 
-    setActiveViewport(vp: Viewport) {
-        var nr = this.viewports.indexOf(vp);
-        this.setActiveViewportByNumber(nr);
+    setActiveAppInstance(inst: AppInstance) {
+        var nr = this.appInstances.indexOf(inst);
+        this.setActiveAppInstanceByNumber(nr);
     }
 
     // TODO: Remove as many dependencies on this function as possible!
-    // Widgets etc. should know the viewport they belong to.
-    getActiveViewport(): Viewport {
-        return this.viewports[this.activeViewportNumber];
+    // Widgets etc. should know the appInstance they belong to.
+    getActiveAppInstance(): AppInstance {
+        return this.appInstances[this.activeAppInstanceNumber];
     }
 
     addExperiment(experiment: ExperimentAPIObject) {
-        // TODO: Depending on the experiment's type, create a different type of viewport.
+        // TODO: Depending on the experiment's type, create a different type of appInstance.
         // TODO: Class viewport and experiment should be abstract.
         var exp = this.experimentFty.createFromServerResponse(experiment);
-        var vp = this.viewportFty.create(exp);
-        vp.initialize();
+        var inst = this.appInstanceFty.create(exp);
+        // inst.initialize();
 
-        this.viewports.push(vp);
-        if (this.viewports.length === 1) {
-            this.setActiveViewport(vp);
+        this.appInstances.push(inst);
+        if (this.appInstances.length === 1) {
+            this.setActiveAppInstance(inst);
         }
 
-        return vp;
+        return inst;
     }
 
     serialize(): ng.IPromise<SerializedApplication> {
-        var vpPromises = _(this.viewports).map((vp) => {
-            return vp.serialize();
+        var instPromises = _(this.appInstances).map((inst) => {
+            return inst.serialize();
         });
-        return this.$q.all(vpPromises).then((sers) => {
+        return this.$q.all(instPromises).then((sers) => {
             var serApp =  {
-                activeViewportNumber: this.activeViewportNumber,
-                viewports: sers
+                activeAppInstanceNumber: this.activeAppInstanceNumber,
+                appInstances: sers
             };
             return serApp;
         });
@@ -130,6 +130,6 @@ class Application {
 angular.module('tmaps.core').service('application', Application);
 
 interface SerializedApplication extends Serialized<Application> {
-    activeViewportNumber: number;
-    viewports: SerializedViewport[];
+    activeAppInstanceNumber: number;
+    appInstances: SerializedAppInstance[];
 }

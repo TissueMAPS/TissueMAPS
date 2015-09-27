@@ -30,6 +30,10 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.viewport.hide();
     }
 
+    destroy() {
+        this.viewport.destroy();
+    }
+
     addExperimentToViewport() {
         var layerOpts = _(this.experiment.channels).map((ch) => {
             return {

@@ -1,27 +1,25 @@
 class ApplicationDeserializer implements Deserializer<Application> {
 
     static $inject = [
-        'application', 'viewportDeserializer', '$q'
+        'application', 'appInstanceDeserializer', '$q'
     ];
 
     constructor(private application: Application,
-                private viewportDeser: ViewportDeserializer,
+                private appInstanceDeser: AppInstanceDeserializer,
                 private $q: ng.IQService) {}
 
     deserialize(ser: SerializedApplication) {
 
-        var viewports = _(ser.viewports).map((vpSer) => {
-            var vpPromise: ng.IPromise<Viewport> = this.viewportDeser.deserialize(vpSer);
-            return vpPromise.then((vp) => {
-                vp.element.then((elem) => {
-                    elem.hide();
-                });
-                this.application.viewports.push(vp);
-                return vp;
+        var appInstances = _(ser.appInstances).map((instSer) => {
+            var instPromise: ng.IPromise<AppInstance> = this.appInstanceDeser.deserialize(instSer);
+            return instPromise.then((inst) => {
+                inst.setInactive();
+                this.application.appInstances.push(inst);
+                return inst;
             });
         });
-        return this.$q.all(viewports).then((vps) => {
-            this.application.setActiveViewportByNumber(ser.activeViewportNumber);
+        return this.$q.all(appInstances).then((insts) => {
+            this.application.setActiveAppInstanceByNumber(ser.activeAppInstanceNumber);
             return this.application;
         });
     }
