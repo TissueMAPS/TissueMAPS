@@ -1,42 +1,40 @@
-var appstateHash = 'ddfg438';
-var serializedApp = {
-    activeInstanceNumber: 0,
-    viewports: [{}]
-};
-var appstateServerResponse = {
-    id: appstateHash,
-    name: 'fakeAppState',
-    is_snapshot: false,
-    owner: 'testuser',
-    blueprint: serializedApp
-};
-var getStatesResponse = {
-    owned: [appstateServerResponse],
-    shared: [appstateServerResponse]
-};
-var appstate = {
-    id: appstateHash,
-    name: 'fakeAppState',
-    isSnapshot: false,
-    owner: 'testuser',
-    blueprint: serializedApp
-};
-var appstateSnapshot = {
-    id: appstateHash,
-    name: 'fakeAppState',
-    isSnapshot: true,
-    owner: 'testuser',
-    blueprint: serializedApp
-};
-
-
-
 describe('appstateService:', function() {
+
+    var appstateHash = 'ddfg438';
+    var serializedApp = {
+        activeInstanceNumber: 0,
+        appInstances: [{}]
+    };
+    var appstateServerResponse = {
+        id: appstateHash,
+        name: 'fakeAppState',
+        is_snapshot: false,
+        owner: 'testuser',
+        blueprint: serializedApp
+    };
+    var getStatesResponse = {
+        owned: [appstateServerResponse],
+        shared: [appstateServerResponse]
+    };
+    var appstate = {
+        id: appstateHash,
+        name: 'fakeAppState',
+        isSnapshot: false,
+        owner: 'testuser',
+        blueprint: serializedApp
+    };
+    var appstateSnapshot = {
+        id: appstateHash,
+        name: 'fakeAppState',
+        isSnapshot: true,
+        owner: 'testuser',
+        blueprint: serializedApp
+    };
 
     // Declare variables that will get assigned an actual instance after each
     // function that was passed to beforeEach is executed
     var appstateService, $httpBackend, application, $q, dialogService,
-        $location, $modal, applicationDeserializer, $rootScope;
+        $location, $modal, restoreAppstateService, $rootScope;
 
     // Load the application service mock before
     beforeEach(module('tmaps.mock.core'));
@@ -46,7 +44,7 @@ describe('appstateService:', function() {
     // declaring the module!).
     beforeEach(module('tmaps.main.appstate'));
 
-    beforeEach(inject(function(_appstateService_, _$httpBackend_, _application_, _$q_, _dialogService_, _$location_, _$modal_, _applicationDeserializer_, _$rootScope_) {
+    beforeEach(inject(function(_appstateService_, _$httpBackend_, _application_, _$q_, _dialogService_, _$location_, _$modal_, _restoreAppstateService_, _$rootScope_) {
         // Assign the injected variables to the variables s.t. they can be used
         // in the specs
         appstateService = _appstateService_;
@@ -56,7 +54,7 @@ describe('appstateService:', function() {
         dialogService = _dialogService_;
         $location = _$location_;
         $modal = _$modal_;
-        applicationDeserializer = _applicationDeserializer_;
+        restoreAppstateService = _restoreAppstateService_;
         $rootScope = _$rootScope_;
 
         // Create proxy functions on appstateService that can be tracked
@@ -68,7 +66,7 @@ describe('appstateService:', function() {
         spyOn(appstateService, 'loadState').and.callThrough();
         spyOn(appstateService, 'loadStateFromId').and.callThrough();
         spyOn(appstateService, 'shareState').and.callThrough();
-        spyOn(applicationDeserializer, 'deserialize');
+        spyOn(restoreAppstateService, 'restoreAppstate');
         spyOn($modal, 'open').and.callThrough();
     }));
 
@@ -122,7 +120,7 @@ describe('appstateService:', function() {
         });
 
         it('should load the state', function() {
-            expect(applicationDeserializer.deserialize).toHaveBeenCalledWith(appstate.blueprint);
+            expect(restoreAppstateService.restoreAppstate).toHaveBeenCalledWith(appstate);
         });
 
         it('should update the url bar', function() {
@@ -252,7 +250,7 @@ describe('appstateService:', function() {
                 '/api/appstates/' + appstateHash + '/snapshots'
             ).respond(200, appstateSnapshot)
 
-            $httpBackend.whenGET(
+            $httpBackend.expectGET(
                 '/templates/main/appstate/share-appstate-dialog.html'
             ).respond(200, ''); // respond with empty template
         });
