@@ -244,7 +244,7 @@ class ChannelImage(Image):
         new_object.metadata = self.metadata
         new_object.filename = self.filename
         new_object.pixels = self.pixels.align(shift_description, crop=crop)
-        return self
+        return new_object
 
 
 class BrightfieldImage(Image):
