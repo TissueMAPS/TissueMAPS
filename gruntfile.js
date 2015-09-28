@@ -453,6 +453,7 @@ module.exports = function(grunt) {
             },
             unit: {
                 singleRun: false,
+                reporters: 'mocha',
                 files: [
                     { src: ['test/unit/**/*.js'] }
                 ]

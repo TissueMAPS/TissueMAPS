@@ -1,4 +1,4 @@
-describe('appstateService:', function() {
+describe('In appstateService', function() {
 
     var appstateHash = 'ddfg438';
     var serializedApp = {
@@ -71,7 +71,7 @@ describe('appstateService:', function() {
     }));
 
 
-    describe('hasCurrentState', function() {
+    describe('the function hasCurrentState', function() {
 
         it('should return true if the state has been saved', function() {
             appstateService.currentState = appstate;
@@ -85,7 +85,7 @@ describe('appstateService:', function() {
 
     });
 
-    describe('getStates', function() {
+    describe('the function getStates', function() {
 
         it('should return a promise of the clientized version of the server response', function(done) {
             $httpBackend.expectGET('/api/appstates')
@@ -109,7 +109,7 @@ describe('appstateService:', function() {
 
     });
 
-    describe('loadState', function() {
+    describe('the function loadState', function() {
 
         beforeEach(function() {
             appstateService.loadState(appstate);
@@ -129,7 +129,7 @@ describe('appstateService:', function() {
 
     });
 
-    describe('loadStateFromId', function() {
+    describe('the function loadStateFromId', function() {
         var handler;
         beforeEach(function() {
             handler = $httpBackend.expectGET('/api/appstates/' + appstateHash)
@@ -164,7 +164,7 @@ describe('appstateService:', function() {
     });
 
 
-    describe('saveStateAs', function() {
+    describe('the function saveStateAs', function() {
 
         var handler;
 
@@ -214,7 +214,7 @@ describe('appstateService:', function() {
         });
     });
 
-    describe('saveState', function() {
+    describe('the function saveState', function() {
 
         var handler;
 
@@ -243,7 +243,7 @@ describe('appstateService:', function() {
     });
 
 
-    describe('shareState', function() {
+    describe('the function shareState', function() {
 
         beforeEach(function() {
             $httpBackend.whenGET(
@@ -295,7 +295,7 @@ describe('appstateService:', function() {
     });
 
 
-    describe('getLinkForSnapshot', function() {
+    describe('the function getLinkForSnapshot', function() {
         it('should generate a snapshot URL given a snapshot', function() {
             var link = appstateService.getLinkForSnapshot(appstateSnapshot);
             expect(link).toEqual('http://server:80/#/viewport?snapshot=' + appstateSnapshot.id);
