@@ -10,7 +10,7 @@ from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
 from . import cfg
-from . import logging_utils
+from .logging_utils import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def command_line_call(parser):
         level = logging.INFO
     if args.silent:
         level = logging.CRITICAL
-    logging_utils.configure_logging(level)
+    tmlib_logger = configure_logging(level
     logger.debug('running program: %s' % parser.prog)
 
     gc3libs.log = logging.getLogger('gc3lib')

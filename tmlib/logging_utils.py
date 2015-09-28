@@ -43,7 +43,7 @@ def map_log_verbosity(verbosity):
     return VERBOSITY_LEVELS.get(verbosity, logging.NOTSET)
 
 
-def configure_logging(level, name='tmlib'):
+def configure_logging(level):
     '''
     Create a logger instance and configure it for the command line applications.
 
@@ -57,8 +57,6 @@ def configure_logging(level, name='tmlib'):
     ----------
     level: int
         logging level verbosity
-    name: str, optional
-        name that should be given to the logger (default: "tmlib")
 
     Returns
     -------
