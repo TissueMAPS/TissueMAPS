@@ -4,3 +4,4 @@
 [ ] implement alternative jterator mode for loading images (old mode)
 [ ] update documentation
 [ ] jterator batch_size
+[ ] consider using a relational table approach for object outline coordinates, i.e. only atomic values in each dataset (no nested arrays)

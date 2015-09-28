@@ -43,13 +43,39 @@ def map_log_verbosity(verbosity):
     return VERBOSITY_LEVELS.get(verbosity, logging.NOTSET)
 
 
-def configure_logging(name, level):
+def configure_logging(level, name='tmlib'):
+    '''
+    Create a logger instance and configure it for the command line applications.
 
-    fmt = '%(asctime)s %(name)-40s %(levelname)-8s %(message)s'
+    Two stream handlers will be added to the logger:
+        * "out" that will direct INFO & DEBUG messages to the standard output
+        stream
+        * "err" that will direct WARN, WARNING, ERROR, & CRITICAL messages to
+        the standard error stream
+
+    Parameters
+    ----------
+    level: int
+        logging level verbosity
+    name: str, optional
+        name that should be given to the logger (default: "tmlib")
+
+    Returns
+    -------
+    logging.Logger
+        configured logger object
+
+    Warning
+    -------
+    Logging should only be configured at the main entry point of the
+    application, but not within the library!
+    '''
+
+    fmt = '%(asctime)s | %(name)-30s | %(levelname)-8s | %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 
-    logger = logging.getLogger(name)
+    logger = logging.getLogger()
     logger.setLevel(level)
 
     stderr_handler = logging.StreamHandler(stream=sys.stderr)

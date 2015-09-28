@@ -11,29 +11,33 @@ class IllumstatsGenerator(ClusterRoutines):
     Class for calculating illumination statistics.
     '''
 
-    def __init__(self, experiment_dir, stats_file_format_string, prog_name):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class IllumstatsGenerator.
 
         Parameters
         ----------
-        experiment_dir: str
-            absolute path to experiment directory
+        experiment: Experiment
+            configured experiment object
+        prog_name: str
+            name of the corresponding program (command line interface)
+        '''
+        super(IllumstatsGenerator, self).__init__(experiment, prog_name)
+        self.experiment = experiment
+        self.prog_name = prog_name
+
+    @property
+    def stats_file_format_string(self):
+        '''
+        Returns
+        -------
         image_file_format_string: str
             format string that specifies how the names of the statistics files
             should be formatted
-        prog_name: str
-            name of the corresponding program (command line interface)
-
-        Note
-        ----
-        Creates directory where statistics files will be stored in case it
-        doesn't exist.
         '''
-        super(IllumstatsGenerator, self).__init__(experiment_dir, prog_name)
-        self.experiment_dir = experiment_dir
-        self.stats_file_format_string = stats_file_format_string
-
+        self._stats_file_format_string = self.experiment.cfg.STATS_FILE
+        return self._stats_file_format_string
+    
     def create_job_descriptions(self, **kwargs):
         '''
         Create job descriptions for parallel computing.

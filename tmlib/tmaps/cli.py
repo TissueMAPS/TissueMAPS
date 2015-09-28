@@ -33,9 +33,10 @@ class Tmaps(CommandLineInterface):
     @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
+        experiment = Experiment(self.args.experiment_dir)
         manager = ClusterWorkflowManager(self.args.experiment_dir)
         self.__api_instance = ClusterWorkflow(
-                    experiment_dir=self.args.experiment_dir,
+                    experiment=experiment,
                     no_shared_network=self.args.no_shared_network,
                     virtualenv=self.args.virtualenv,
                     verbosity=self.args.verbosity)

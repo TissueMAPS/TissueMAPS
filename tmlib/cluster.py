@@ -11,12 +11,9 @@ import gc3libs
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
 import logging
-from . import cfg
 from . import utils
 from . import text_readers
 from . import text_writers
-from .cfg_setters import TmlibConfiguration
-from .experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -25,28 +22,16 @@ class BasicClusterRoutines(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment_dir):
+    def __init__(self, experiment):
         '''
         Initialize an instance of class ClusterRoutines.
 
         Parameters
         ----------
-        experiment_dir: str
-            absolute path to experiment directory
-        '''
-        self.experiment_dir = experiment_dir
-
-    @property
-    def experiment(self):
-        '''
-        Returns
-        -------
-        Experiment
+        experiment: Experiment
             configured experiment object
         '''
-        self._experiment = Experiment(self.experiment_dir,
-                                      TmlibConfiguration(cfg))
-        return self._experiment
+        self.experiment = experiment
 
     @cached_property
     def cycles(self):
@@ -181,22 +166,20 @@ class ClusterRoutines(BasicClusterRoutines):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment_dir, prog_name):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class ClusterRoutines.
 
         Parameters
         ----------
         experiment: Experiment
-            experiment object that holds information about the content of the
-            experiment directory
+            configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
         '''
-        super(ClusterRoutines, self).__init__(experiment_dir)
-        self.experiment_dir = experiment_dir
+        super(ClusterRoutines, self).__init__(experiment)
+        self.experiment = experiment
         self.prog_name = prog_name
-        # gc3libs.configure_logger(level=logging.CRITICAL)
 
     @cached_property
     def project_dir(self):

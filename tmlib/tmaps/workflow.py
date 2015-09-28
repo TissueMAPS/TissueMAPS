@@ -1,5 +1,6 @@
 import os
 from .. import text_readers
+from .. import utils
 
 
 class ClusterWorkflowManager(object):

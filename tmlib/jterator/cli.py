@@ -3,6 +3,7 @@ from . import logo
 from . import __version__
 from .api import ImageProcessingPipeline
 from ..cli import CommandLineInterface
+from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +31,10 @@ class Jterator(CommandLineInterface):
     @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
+        experiment = Experiment(self.args.experiment_dir)
         self.__api_instance = ImageProcessingPipeline(
-                                experiment_dir=self.args.experiment_dir,
-                                pipe_name=self.args.pipeline,
-                                prog_name=self.name)
+                                experiment=experiment, prog_name=self.name,
+                                pipe_name=self.args.pipeline)
         logger.debug(
             'initialized API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)

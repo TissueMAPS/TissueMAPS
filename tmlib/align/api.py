@@ -14,28 +14,32 @@ logger = logging.getLogger(__name__)
 
 class ImageRegistration(ClusterRoutines):
 
-    def __init__(self, experiment_dir, shift_file_format_string, prog_name):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class ImageRegistration.
 
         Parameters
         ----------
-        experiment_dir: str
-            absolute path to experiment directory
+        experiment: Experiment
+            configured experiment object
+        prog_name: str
+            name of the corresponding program (command line interface)
+        '''
+        super(ImageRegistration, self).__init__(experiment, prog_name)
+        self.experiment = experiment
+        self.prog_name = prog_name
+
+    @property
+    def shift_file_format_string(self):
+        '''
+        Returns
+        -------
         shift_file_format_string: str
             format string that specifies how the name of the shift file
             should be formatted
-        prog_name: str
-            name of the corresponding program (command line interface)
-
-        See also
-        --------
-        `tmlib.cfg`_
         '''
-        super(ImageRegistration, self).__init__(experiment_dir, prog_name)
-        self.experiment_dir = experiment_dir
-        self.prog_name = prog_name
-        self.shift_file_format_string = shift_file_format_string
+        self._shift_file_format_string = self.experiment.cfg.SHIFT_FILE
+        return self._shift_file_format_string
 
     @property
     def shift_files(self):

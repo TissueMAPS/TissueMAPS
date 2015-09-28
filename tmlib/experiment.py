@@ -3,11 +3,13 @@ import os
 import logging
 from natsort import natsorted
 from cached_property import cached_property
+from . import cfg
 from . import text_readers
 from . import utils
 from .plates import WellPlate
 from .plates import Slide
 from .cfg_setters import UserConfiguration
+from .cfg_setters import TmlibConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,8 @@ class Experiment(object):
     `user.cfg`_
     '''
 
-    def __init__(self, experiment_dir, cfg, library='vips'):
+    def __init__(self, experiment_dir, cfg=TmlibConfiguration(cfg),
+                 library='vips'):
         '''
         Initialize an instance of class Experiment.
 
@@ -54,8 +57,9 @@ class Experiment(object):
         ----------
         experiment_dir: str
             absolute path to experiment folder
-        cfg: TmlibConfigurations
+        cfg: TmlibConfigurations, optional
             configuration settings for names of directories and files on disk
+            (default: settings provided by `cfg` module)
         library: str, optional
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)

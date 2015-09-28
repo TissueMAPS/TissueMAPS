@@ -9,32 +9,20 @@ logger = logging.getLogger(__name__)
 
 class PyramidCreation(ClusterRoutines):
 
-    def __init__(self, experiment_dir, prog_name):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class PyramidCreation.
 
         Parameters
         ----------
-        experiment_dir: str
-            absolute path to experiment directory
+        experiment: Experiment
+            configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
-
-        See also
-        --------
-        `tmlib.cfg`_
-
-        Note
-        ----
-        Creates directory for `layers` if it doesn't exist.
         '''
-        super(PyramidCreation, self).__init__(experiment_dir, prog_name)
-        self.experiment_dir = experiment_dir
+        super(PyramidCreation, self).__init__(experiment, prog_name)
+        self.experiment = experiment
         self.prog_name = prog_name
-        if not os.path.exists(self.experiment.layers_dir):
-            logger.debug(
-                'create "layers" directory: %s' % self.experiment.layers_dir)
-            os.mkdir(self.experiment.layers_dir)
 
     @property
     def shift_dirs(self):

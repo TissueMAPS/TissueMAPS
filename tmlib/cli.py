@@ -5,6 +5,7 @@ import traceback
 import logging
 import shutil
 import argparse
+import gc3libs
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
@@ -18,20 +19,17 @@ def command_line_call(parser):
     '''
     Main entry point for command line interfaces.
 
+    Parsers the command line arguments to the corresponding handler
+    and configures logging.
+
     Parameters
     ----------
     parser: argparse.ArgumentParser
         argument parser object
 
-    Note
-    ----
-    Configures logging: Creates an applications base logger "tmlib" and
-    adds two stream handlers to it, one for standard output (INFO & DEBUG)
-    and one for standard error (WARN, ERROR, CRITICAL).
-
     Warning
     -------
-    Don't do any other logging configuration anywhere else.
+    Don't do any other logging configuration anywhere else!
     '''
     args = parser.parse_args()
 
@@ -41,9 +39,11 @@ def command_line_call(parser):
         level = logging.INFO
     if args.silent:
         level = logging.CRITICAL
-    # logging.basicConfig(format=FORMAT, level=level)
-    logging_utils.configure_logging('tmlib', level)
+    logging_utils.configure_logging(level)
     logger.debug('running program: %s' % parser.prog)
+
+    gc3libs.log = logging.getLogger('gc3lib')
+    gc3libs.log.level = logging.CRITICAL
 
     try:
         if args.handler:

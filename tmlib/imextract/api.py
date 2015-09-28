@@ -17,23 +17,19 @@ class ImageExtractor(ClusterRoutines):
     formats (often extended TIFF formats).
     '''
 
-    def __init__(self, experiment_dir, prog_name):
+    def __init__(self, experiment, prog_name):
         '''
         Initialize an instance of class ImageExtractor.
 
         Parameters
         ----------
-        experiment_dir: str
-            absolute path to experiment directory
+        experiment: Experiment
+            configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
-
-        See also
-        --------
-        `tmlib.cfg`_
         '''
-        super(ImageExtractor, self).__init__(experiment_dir, prog_name)
-        self.experiment_dir = experiment_dir
+        super(ImageExtractor, self).__init__(experiment, prog_name)
+        self.experiment = experiment
         self.prog_name = prog_name
 
     def _create_output_dirs(self):

@@ -23,19 +23,19 @@ class ImageProcessingPipeline(ClusterRoutines):
     Class for running a Jterator image processing pipeline.
     '''
 
-    def __init__(self, experiment_dir, pipe_name, prog_name,
+    def __init__(self, experiment, prog_name, pipe_name,
                  pipe=None, handles=None):
         '''
         Initialize an instance of class ImageProcessingPipeline.
 
         Parameters
         ----------
-        experiment_dir: str
-            absolute path to experiment directory
-        pipe_name: str
-            name of the pipeline that is being processed
+        experiment: Experiment
+            configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        pipe_name: str
+            name of the pipeline that is being processed
         pipe: dict, optional
             name of the pipeline and the description of module order and
             paths to module code and descriptor files
@@ -59,22 +59,12 @@ class ImageProcessingPipeline(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageProcessingPipeline, self).__init__(experiment_dir, prog_name)
-        self.experiment_dir = experiment_dir
+        super(ImageProcessingPipeline, self).__init__(experiment, prog_name)
+        self.experiment = experiment
         self.pipe_name = pipe_name
         self.prog_name = prog_name
         self._pipe = pipe
         self._handles = handles
-
-    # def configure_logger(self, verbosity):
-    #     logger = logging.getLogger(self.prog_name)
-    #     logger.setLevel(verbosity)
-    #     err = logging.StreamHandler(stream=sys.stderr)
-    #     err.setLevel(verbosity)
-    #     formatter = logging.Formatter('%(name)s - %(levelname)s: %(message)s')
-    #     err.setFormatter(formatter)
-    #     logger.addHandler(err)
-    #     return logger
 
     @cached_property
     def project_dir(self):

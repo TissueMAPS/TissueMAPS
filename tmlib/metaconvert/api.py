@@ -26,26 +26,22 @@ class MetadataConverter(ClusterRoutines):
     files and/or user input.
 
     The metadata corresponding to the final PNG images are stored in a
-    separate JSON file based to a custom schema.
+    separate JSON file.
     '''
 
-    def __init__(self, experiment_dir, file_format, image_file_format_string,
-                 prog_name):
+    def __init__(self, experiment, prog_name, file_format):
         '''
         Initialize an instance of class MetadataConverter.
 
         Parameters
         ----------
-        experiment_dir: str
-            absolute path to experiment directory
+        experiment: Experiment
+            configured experiment object
+        prog_name: str
+            name of the corresponding program (command line interface)
         file_format: str
             name of the microscope file format for which additional files
             are provided, e.g. "metamorph"
-        image_file_format_string: str
-            format string that specifies how the names of the final image PNG
-            files should be formatted
-        prog_name: str
-            name of the corresponding program (command line interface)
 
         Raises
         ------
@@ -56,14 +52,25 @@ class MetadataConverter(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataConverter, self).__init__(experiment_dir, prog_name)
-        self.experiment_dir = experiment_dir
+        super(MetadataConverter, self).__init__(experiment, prog_name)
+        self.experiment = experiment
         self.file_format = file_format
         if self.file_format:
             if self.file_format not in Formats.SUPPORTED_ADDITIONAL_FILES:
                 raise NotSupportedError('Additional metadata files are not '
                                         'supported for the provided format')
-        self.image_file_format_string = image_file_format_string
+
+    @property
+    def image_file_format_string(self):
+        '''
+        Returns
+        -------
+        image_file_format_string: str
+            format string that specifies how the names of the final image PNG
+            files should be formatted
+        '''
+        self._image_file_format_string = self.experiment.cfg.IMAGE_FILE
+        return self._image_file_format_string
 
     def create_job_descriptions(self, **kwargs):
         '''
