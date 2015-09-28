@@ -34,7 +34,6 @@ class Color implements Serializable<Color> {
     }
 
     serialize() {
-        console.log("SERIALIZE COLOR");
         return this.$q.when({
             r: this.r, g: this.g, b: this.b, a: this.a
         });
@@ -104,14 +103,3 @@ interface SerializedColor extends Serialized<Color> {
     b: number;
     a: number;
 }
-
-class ColorDeserializer implements Deserializer<Color> {
-    static $inject = ['colorFactory', '$q'];
-    constructor(private colorFty: ColorFactory, private $q: ng.IQService) {}
-    deserialize(col: SerializedColor) {
-        var color = this.colorFty.create(col.r, col.g, col.b, col.a);
-        return this.$q.when(color);
-    }
-}
-
-angular.module('tmaps.core').service('colorDeserializer', ColorDeserializer);

@@ -8,7 +8,6 @@ class AppstateService {
         '$modal',
         '$http',
         '$location',
-        'applicationDeserializer',
         'restoreAppstateService'
     ];
 
@@ -16,7 +15,6 @@ class AppstateService {
                 private $modal,
                 private $http: ng.IHttpService,
                 private $location: ng.ILocationService,
-                private applicationDeserializer: ApplicationDeserializer,
                 private restoreAppstateService: RestoreAppstateService) {
     }
 
@@ -66,7 +64,6 @@ class AppstateService {
      */
     loadState(state: Appstate) {
         this.setCurrentState(state);
-        // this.applicationDeserializer.deserialize(state.blueprint);
         this.restoreAppstateService.restoreAppstate(state);
     }
 

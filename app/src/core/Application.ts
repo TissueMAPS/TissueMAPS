@@ -10,17 +10,14 @@ class Application {
         '$',
         'openlayers',
         'experimentFactory',
-        'appInstanceFactory',
-        'appInstanceDeserializer'
+        'appInstanceFactory'
     ];
 
     constructor(private $q: ng.IQService,
                 private $: JQueryStatic,
                 private ol,
                 private experimentFty: ExperimentFactory,
-                private appInstanceFty: AppInstanceFactory,
-                private appInstanceDeserializer: AppInstanceDeserializer) {
-
+                private appInstanceFty: AppInstanceFactory) {
         // Check if the executing browser is PhantomJS (= code runs in
         // testing mode.
         var isPhantom = /PhantomJS/.test(window.navigator.userAgent);

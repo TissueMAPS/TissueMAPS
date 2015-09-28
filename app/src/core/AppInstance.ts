@@ -83,28 +83,3 @@ class AppInstanceFactory {
     }
 }
 angular.module('tmaps.core').service('appInstanceFactory', AppInstanceFactory);
-
-class AppInstanceDeserializer implements Deserializer<AppInstance> {
-    static $inject = [
-        'viewportDeserializer',
-        'experimentDeserializer',
-        '$q',
-        'appInstanceFactory'
-    ];
-
-    constructor(private viewportDeser: ViewportDeserializer,
-                private expDeser: ExperimentDeserializer,
-                private $q: ng.IQService,
-                private appInstanceFty: AppInstanceFactory) {}
-
-    deserialize(ser: SerializedAppInstance) {
-        return this.$q.all({
-            experiment: this.expDeser.deserialize(ser.experiment),
-            viewport: this.viewportDeser.deserialize(ser.viewport)
-        }).then((res: any) => {
-            var inst = this.appInstanceFty.create(res.experiment);
-            return inst;
-        });
-    }
-}
-angular.module('tmaps.core').service('appInstanceDeserializer', AppInstanceDeserializer);
