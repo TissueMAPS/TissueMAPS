@@ -11,6 +11,8 @@ class ObjectLayer extends Layer {
     defaultStrokeColor = 'rgba(0, 0, 255, 1)';
     defaultFillColor = 'rgba(0, 0, 255, 0.5)';
 
+    private _objects: MapObject[] = [];
+
     constructor(private ol, name: string, opt: ObjectLayerArgs = {}) {
         super(name);
 
@@ -52,19 +54,21 @@ class ObjectLayer extends Layer {
         };
     }
 
+    getObjects() {
+        return this._objects;
+    }
+
     addObject(obj: MapObject) {
+        this._objects.push(obj);
         this.olLayer.getSource().addFeature(obj.getOLFeature());
     }
 
     addObjects(objs: MapObject[]) {
+        objs.forEach((o) => {
+            this._objects.push(o);
+        });
         var features = _(objs).map((o) => { return o.getOLFeature(); });
         this.olLayer.getSource().addFeatures(features);
-    }
-
-    addFeaturesFromGeoJSON(obj: JSON) {
-        var feats: ol.Feature[] = (new ol.format.GeoJSON()).readFeatures(obj);
-        var source = this.olLayer.getSource();
-        source.addFeatures(feats);
     }
 }
 

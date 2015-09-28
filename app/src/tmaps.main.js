@@ -21,7 +21,10 @@
         'tmaps.core.layer'
     ]);
     angular.module('tmaps.mock.core', []);
-    angular.module('tmaps.core.layer', []);
+    angular.module('tmaps.core.layer', [
+        'tmaps.thirdpartymodules',
+        'tmaps.core'
+    ]);
     angular.module('tmaps.core.selection', [
         'tmaps.core.layer', 'tmaps.shared.services'
     ]);
