@@ -59,7 +59,7 @@ class Tool {
     }
 
     private createToolWindowOnServer(appstate: Appstate, experiment: Experiment): ng.IPromise<ServerToolWindow> {
-        return this.$http.post('/tools/' + this.id + '/instances', {
+        return this.$http.post('/api/tools/' + this.id + '/instances', {
             'appstate_id': appstate.id,
             'experiment_id': experiment.id
         }).then((resp) => {
@@ -71,7 +71,7 @@ class Tool {
     }
 
     private deleteToolWindowOnServer(id): ng.IPromise<boolean> {
-        return this.$http.delete('/tool_instances/' + id).then((resp) => {
+        return this.$http.delete('/api/tool_instances/' + id).then((resp) => {
             console.log('Successfully deleted tool instance with id', id);
             return true;
         }, function(err) {
@@ -81,11 +81,11 @@ class Tool {
         });
     }
 
-    openWindow(instance: ServerToolWindow) {
+    private openWindow(instance: ServerToolWindow) {
         // Without appending the current date to the title, the browser (chrome)
         // won't open multiple tool windows of the same type.
         var toolWindow = this.$window.open(
-            '/tools/#/' + this.getIdSlug(), this.id, // + Date.now(),
+            '/templates/tools/#/' + this.getIdSlug(), this.id, // + Date.now(),
             'toolbar=no,menubar=no,titebar=no,location=no,directories=no,replace=no,' +
             'width=' + this.defaultWindowWidth + ',height=' + this.defaultWindowHeight
         );
