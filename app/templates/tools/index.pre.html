@@ -13,40 +13,45 @@
        ================================================================ -->
 
   <!-- build:js script-tools.min.js -->
-      <script src="/libs/bower/jquery/dist/jquery.js" type="text/javascript" charset="utf-8"></script>
+      <!-- Library code -->
+      <script src="/assets/libs/bower_components/jquery/dist/jquery.js" type="text/javascript" charset="utf-8"></script>
       <!-- Custom jquery build with required components for slider and sortable widget -->
       <!-- http://jqueryui.com/download/#!version=1.10&components=1110000010000000000000000000000000 -->
-      <script src="/libs/unmanaged/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script>
+      <!-- THIS NEEDS TO COME BEFORE ANGULAR DUE TO A BUG THAT OCCURS OTHERWISE WHEN REMOVING A SLIDER-->
+      <script src="/assets/libs/unmanaged/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script>
 
-      <script src="/libs/bower/underscore/underscore.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/underscore/underscore.js" type="text/javascript" charset="utf-8"></script>
 
-      <!-- No openlayers included-->
+      <script src="/assets/libs/ol3/build/ol-debug.js" type="text/javascript" charset="utf-8"></script>
 
       <!-- Angular -->
-      <script src="/libs/bower/angular/angular.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/libs/bower/angular-ui-router/release/angular-ui-router.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/libs/bower/angular-sanitize/angular-sanitize.js"></script>
+      <script src="/assets/libs/bower_components/angular/angular.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/angular-ui-router/release/angular-ui-router.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/angular-sanitize/angular-sanitize.js"></script>
 
       <!-- Highcharts -->
-      <script src="/libs/bower/highcharts/highcharts.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/libs/bower/highcharts-ng/dist/highcharts-ng.min.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/highcharts/highcharts.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/highcharts-ng/dist/highcharts-ng.min.js" type="text/javascript" charset="utf-8"></script>
 
       <!-- Angular UI -->
-      <script src="/libs/bower/angular-ui-sortable/sortable.min.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/libs/bower/angular-ui-slider/src/slider.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/libs/bower/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/angular-ui-sortable/sortable.min.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/angular-ui-slider/src/slider.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js" type="text/javascript" charset="utf-8"></script>
 
       <!-- Other plugins -->
-      <script src="/libs/bower/ng-color-picker/color-picker.js" type="text/javascript" charset="utf-8"></script>
-      <!-- I made some small changes to the following file since it had some bugs and the pull requests weren't accepted on the original repo -->
-      <script src="/libs/bower/perfect-scrollbar/js/perfect-scrollbar.jquery.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/libs/unmanaged/angular-perfect-scrollbar.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/unmanaged/ng-color-picker/color-picker.js" type="text/javascript" charset="utf-8"></script>
 
-      <script src="/libs/bower/ng-websocket/ng-websocket.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/perfect-scrollbar/js/perfect-scrollbar.jquery.js" type="text/javascript" charset="utf-8"></script>
+      <!-- I made some small changes to the following file since it had some bugs and the pull requests weren't accepted on the original repo -->
+      <script src="/assets/libs/unmanaged/angular-perfect-scrollbar.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/assets/libs/bower_components/momentjs/moment.js" type="text/javascript" charset="utf-8"></script>
+
+      <script src="/assets/libs/bower_components/ng-websocket/ng-websocket.js" type="text/javascript" charset="utf-8"></script>
+
+      <script src="/assets/libs/bower_components/tmauth/dist/tmauth.js" type="text/javascript" charset="utf-8"></script>
 
       <!-- Application code -->
       <!-- All source files are linked here in a preprocessing step by 'grunt-glob-html' -->
-
       <!-- Module declaration -->
       <script src="/src/tmaps.shared.js" type="text/javascript" charset="utf-8"></script>
       <!-- Other files -->
@@ -54,7 +59,11 @@
 
       <!-- Module declaration -->
       <script src="/src/tmaps.tools.js" type="text/javascript" charset="utf-8"></script>
+      <script src="/src/tmaps.main.js" type="text/javascript" charset="utf-8"></script>
+      <!-- <script src="/src/tmaps.main.routes.js" type="text/javascript" charset="utf-8"></script> -->
+      <script src="/build/compiled-ts.js" type="text/javascript" charset="utf-8"></script>
       <!-- Other files -->
+      <!-- include: "type": "js", "files": ["src/main/**/*.js", "!src/main/**/*.test.js"] -->
       <!-- include: "type": "js", "files": ["src/tools/**/*.js", "!src/tools/**/*.test.js"] -->
 
   <!-- endbuild -->
@@ -65,20 +74,19 @@
        |                             CSS                              |
        ================================================================ -->
   <!-- build:css style-tools.min.css -->
-      <!-- Unmanaged styles -->
-      <link rel="stylesheet" href="/styles/css/bootstrap.css">
+      <link rel="stylesheet" href="/assets/css/bootstrap.css">
 
       <!-- TODO: Maybe remove the following two styles if they aren't needed -->
-      <link rel="stylesheet" href="/styles/css/jquery-ui.css">
-      <link rel="stylesheet" href="/styles/css/jquery.ui.theme.css">
+      <link rel="stylesheet" href="/assets/css/jquery-ui.css">
+      <link rel="stylesheet" href="/assets/css/jquery.ui.theme.css">
 
-      <!-- Styles of bower-installed libs -->
-      <link rel="stylesheet" href="/libs/bower/ng-color-picker/color-picker.css">
-      <link rel="stylesheet" href="/libs/bower/perfect-scrollbar/css/perfect-scrollbar.css">
-      <link rel="stylesheet" href="/libs/bower/fontawesome/css/font-awesome.css">
+      <!-- Styles of libraries -->
+      <link rel="stylesheet" href="/assets/libs/unmanaged/ng-color-picker/color-picker.css">
+      <link rel="stylesheet" href="/assets/libs/bower_components/perfect-scrollbar/css/perfect-scrollbar.css">
+      <link rel="stylesheet" href="/assets/libs/bower_components/fontawesome/css/font-awesome.css">
 
       <!-- Applications style -->
-      <link rel="stylesheet" href="/build/style-tools.css">
+      <link rel="stylesheet" href="/assets/css/style-tools.css">
   <!-- endbuild -->
 
 
