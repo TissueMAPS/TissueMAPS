@@ -525,7 +525,7 @@ module.exports = function(grunt) {
         'clean:build',
         'clean:tmp',
         'less',
-        'typescript',
+        // 'typescript',
         'includeSource',
         'configureProxies:server',
         'connect',
