@@ -9,7 +9,6 @@
         "out": "app/build/compiled-ts.js"
     },
     "files": [
-        "app/src/main.ts",
         "app/src/core/AppInstance.ts",
         "app/src/core/Application.ts",
         "app/src/core/appstate/Appstate.ts",
@@ -40,9 +39,11 @@
         "app/src/core/tools/ToolLoader.ts",
         "app/src/core/tools/ToolResult.ts",
         "app/src/core/util/Color.ts",
-        "app/src/core/viewport/CreateViewportService.ts",
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/ViewportFactory.ts",
+
+        "app/src/main/tools/tmToolbar.ts",
+        "app/src/main/tools/ToolbarCtrl.ts",
 
         "app/typedefs/DefinitelyTyped/underscore/underscore.d.ts",
         "app/typedefs/DefinitelyTyped/angularjs/angular.d.ts",

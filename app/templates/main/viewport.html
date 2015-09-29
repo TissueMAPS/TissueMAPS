@@ -1,9 +1,6 @@
 <div class="instance-viewport">
 
-    <div class="toolbar"
-        ng-show="viewport.isUserAuthenticated() && !viewport.isUserViewingSnapshot()">
-        <tm-toolbar viewport="viewport"/>
-    </div>
+    <tm-toolbar app-instance="appInstance"/>
 
     <div class="map-container"></div>
 
