@@ -13,11 +13,14 @@ def complete_path(input_path, project_dir):
     project_dir: str
         absolute path to project folder
     '''
-    input_path = os.path.expandvars(input_path)
-    input_path = os.path.expanduser(input_path)
-    if input_path.startswith('.'):
-        input_path = os.path.join(project_dir, input_path)
-    return input_path
+    if not input_path:
+        return input_path
+    else:
+        input_path = os.path.expandvars(input_path)
+        input_path = os.path.expanduser(input_path)
+        if input_path.startswith('.'):
+            input_path = os.path.join(project_dir, input_path)
+        return input_path
 
 
 def complete_module_path(input_path, repo_dir, project_dir):

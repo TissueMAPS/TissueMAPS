@@ -1,6 +1,7 @@
 import os
 import sys
 import h5py
+import logging
 import collections
 import matlab_wrapper as matlab
 from cached_property import cached_property
@@ -13,11 +14,12 @@ from .. import utils
 from .. import text_readers
 from ..cluster import ClusterRoutines
 from ..errors import PipelineDescriptionError
-from ..errors import PipelineOSError
 from ..data_writers import DatasetWriter
 
+logger = logging.getLogger(__name__)
 
-class ImageProcessingPipeline(ClusterRoutines):
+
+class ImageAnalysisPipeline(ClusterRoutines):
 
     '''
     Class for running a Jterator image processing pipeline.
@@ -26,7 +28,7 @@ class ImageProcessingPipeline(ClusterRoutines):
     def __init__(self, experiment, prog_name, pipe_name,
                  pipe=None, handles=None):
         '''
-        Initialize an instance of class ImageProcessingPipeline.
+        Initialize an instance of class ImageAnalysisPipeline.
 
         Parameters
         ----------
@@ -59,12 +61,15 @@ class ImageProcessingPipeline(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageProcessingPipeline, self).__init__(experiment, prog_name)
+        super(ImageAnalysisPipeline, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.pipe_name = pipe_name
         self.prog_name = prog_name
-        self._pipe = pipe
-        self._handles = handles
+        self.project = JtProject(
+                    project_dir=self.project_dir, pipe_name=self.pipe_name,
+                    pipe=pipe, handles=handles)
+        # self.project.pipe = pipe
+        # self.project.handles = handles
 
     @cached_property
     def project_dir(self):
@@ -80,104 +85,86 @@ class ImageProcessingPipeline(ClusterRoutines):
                                                           self.pipe_name))
         return self._project_dir
 
+    # @property
+    # def pipe(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     dict or None
+    #         name of the pipeline and the description of module order and
+    #         paths to module code and descriptor files (returns ``None`` if a
+    #         pipeline description is neither provided nor available from file
+    #         on disk)
+    #     '''
+    #     if self._pipe is None:
+    #         try:
+    #             self._pipe = dict()
+    #             logger.info('read pipe file: %s' % self.pipe_file)
+    #             self._pipe['description'] = self._read_pipe_file()
+    #             self._pipe['name'] = self.pipe_name
+    #         except OSError:
+    #             self._pipe = None
+    #     return self._pipe
+
+    # @property
+    # def handles(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     List[dict]
+    #         name of each module and the description of its input/output
+
+    #     Raises
+    #     ------
+    #     PipelineOSError
+    #         when a handles file does not exist
+    #     '''
+    #     if self._handles is None:
+    #         if self.pipe is None:
+    #             self._handles = None
+    #         else:
+    #             self._handles = list()
+    #             for element in self.pipe['description']['pipeline']:
+    #                 handles_file = element['handles']
+    #                 if not os.path.isabs(handles_file):
+    #                     handles_file = os.path.join(self.project_dir,
+    #                                                 handles_file)
+    #                 if not os.path.exists(handles_file):
+    #                     raise PipelineOSError(
+    #                             'Handles file does not exist: "%s"'
+    #                             % handles_file)
+    #                 handles_description = dict()
+    #                 logger.info('read handles file: %s' % handles_file)
+    #                 handles_description['description'] = \
+    #                     text_readers.read_yaml(handles_file)
+    #                 handles_description['name'] = \
+    #                     os.path.splitext(os.path.basename(handles_file))[0]
+    #                 self._handles.append(handles_description)
+    #     return self._handles
+
     @property
-    def pipe(self):
+    def project(self):
         '''
         Returns
         -------
-        dict or None
-            name of the pipeline and the description of module order and
-            paths to module code and descriptor files (returns ``None`` if a
-            pipeline description is neither provided nor available from file
-            on disk)
+        JtProject
+            jterator project object
         '''
-        if self._pipe is None:
-            try:
-                self._pipe = dict()
-                self._pipe['description'] = self._read_pipe_file()
-                self._pipe['name'] = self.pipe_name
-            except OSError:
-                self._pipe = None
-        return self._pipe
+        # self._project = JtProject(
+        #             project_dir=self.project_dir, pipe_name=self.pipe_name,
+        #             pipe=self.pipe, handles=self.handles)
+        return self._project
 
-    @property
-    def handles(self):
-        '''
-        Returns
-        -------
-        List[dict]
-            name of each module and the description of its input/output
-
-        Raises
-        ------
-        PipelineOSError
-            when a handles file does not exist
-        '''
-        if self._handles is None:
-            if self.pipe is None:
-                self._handles = None
-            else:
-                self._handles = list()
-                for element in self.pipe['description']['pipeline']:
-                    handles_file = element['handles']
-                    if not os.path.isabs(handles_file):
-                        handles_file = os.path.join(self.project_dir,
-                                                    handles_file)
-                    if not os.path.exists(handles_file):
-                        raise PipelineOSError(
-                                'Handles file does not exist: "%s"'
-                                % handles_file)
-                    handles_description = dict()
-                    handles_description['description'] = \
-                        text_readers.read_yaml(handles_file)
-                    handles_description['name'] = \
-                        os.path.splitext(os.path.basename(handles_file))[0]
-                    self._handles.append(handles_description)
-        return self._handles
-
-    def create_project(self, repo_dir=None, skel_dir=None):
-        '''
-        Create a project on disk.
-
-        Parameters
-        ----------
-        repo_dir: str, optional
-            path to a repository location that contains the module files
-        skel_dir: str
-            path to a repository location that contains *.pipe* and
-            *.handles* file templates for standard image analysis routines
-
-        See also
-        --------
-        `tmlib.jterator.project.JtProject`_
-        '''
-        project = JtProject(
-                    project_dir=self.project_dir, pipe_name=self.pipe_name,
-                    pipe=self.pipe, handles=self.handles)
-        project.create(repo_dir, skel_dir)
-
-    def remove_project(self):
-        '''
-        Remove a project on disk.
-
-        See also
-        --------
-        `tmlib.jterator.project.JtProject`_
-        '''
-        project = JtProject(
-                    project_dir=self.project_dir, pipe_name=self.pipe_name,
-                    pipe=self.pipe, handles=self.handles)
-        project.remove()
+    @project.setter
+    def project(self, value):
+        self._project = value
 
     def check_pipeline(self):
-        try:
-            self.pipe
-        except OSError:
-            raise PipelineOSError('Pipe file does not exist.')
+        handles_descriptions = [h['description'] for h in self.project.handles]
         checker = PipelineChecker(
                 project_dir=self.project_dir,
-                pipe_description=self.pipe['description'],
-                handles_descriptions=[h['description'] for h in self.handles]
+                pipe_description=self.project.pipe['description'],
+                handles_descriptions=handles_descriptions
         )
         checker.check_all()
 
@@ -232,7 +219,9 @@ class ImageProcessingPipeline(ClusterRoutines):
         '''
         self._module_log_dir = os.path.join(self.project_dir, 'log_modules')
         if not os.path.exists(self._module_log_dir):
-                os.mkdir(self._module_log_dir)
+            logger.debug('create directory for module log output: %s'
+                         % self._module_log_dir)
+            os.mkdir(self._module_log_dir)
         return self._module_log_dir
 
     @property
@@ -268,9 +257,9 @@ class ImageProcessingPipeline(ClusterRoutines):
         PipelineDescriptionError
             when information in *pipe* description is missing or incorrect
         '''
-        libpath = self.pipe['description']['project']['lib']
+        libpath = self.project.pipe['description']['project']['lib']
         self._pipeline = list()
-        for i, element in enumerate(self.pipe['description']['pipeline']):
+        for i, element in enumerate(self.project.pipe['description']['pipeline']):
             if not element['active']:
                 continue
             module_path = element['module']
@@ -281,8 +270,8 @@ class ImageProcessingPipeline(ClusterRoutines):
             if not os.path.exists(module_path):
                 raise PipelineDescriptionError(
                         'Missing module file: %s' % module_path)
-            module_name = self.handles[i]['name']
-            handles_description = self.handles[i]['description']
+            module_name = self.project.handles[i]['name']
+            handles_description = self.project.handles[i]['description']
             module = ImageProcessingModule(
                         name=module_name, module_file=module_path,
                         handles_description=handles_description,
@@ -305,6 +294,7 @@ class ImageProcessingPipeline(ClusterRoutines):
         self.engines['Python'] = None
         self.engines['R'] = None
         if 'Matlab' in languages:
+            logger.debug('start Matlab engine')
             self.engines['Matlab'] = matlab.MatlabSession()
             # We have to make sure code that may be called within the module,
             # i.e. the module dependencies, are actually on the path.
@@ -354,7 +344,7 @@ class ImageProcessingPipeline(ClusterRoutines):
         joblist['run'] = list()
         layer_names = [
             layer['name']
-            for layer in self.pipe['description']['images']['layers']
+            for layer in self.project.pipe['description']['images']['layers']
         ]
         image_files = dict()
         for cycle in self.cycles:
@@ -375,7 +365,7 @@ class ImageProcessingPipeline(ClusterRoutines):
                 'image_files': batch
             },
             'outputs': {
-                'data_file': self.build_data_filename(i+1),
+                'data_files': [self.build_data_filename(i+1)],
                 'figure_files': [
                     module.build_figure_filename(
                         self.figures_dir, i+1)
@@ -396,7 +386,7 @@ class ImageProcessingPipeline(ClusterRoutines):
                 ]
             },
             'outputs': {
-                'data_file': [self.experiment.data_file]
+                'data_files': [self.experiment.data_file]
             }
         }
 
@@ -422,8 +412,8 @@ class ImageProcessingPipeline(ClusterRoutines):
         '''
         checker = PipelineChecker(
                 project_dir=self.project_dir,
-                pipe_description=self.pipe['description'],
-                handles_descriptions=[h['description'] for h in self.handles]
+                pipe_description=self.project.pipe['description'],
+                handles_descriptions=[h['description'] for h in self.project.handles]
         )
         checker.check_all()
         self.start_engines()
@@ -440,6 +430,8 @@ class ImageProcessingPipeline(ClusterRoutines):
                         upstream_output=outputs['data'],
                         data_file=data_file, figure_file=figure_file,
                         job_id=job_id)
+            logger.info('run module "%s": %s'
+                        % (module.name, module.module_file))
             out = module.run(inputs, self.engines[module.language])
             module.write_output_and_errors(log_files['stdout'], out['stdout'],
                                            log_files['stderr'], out['stderr'])
@@ -470,7 +462,7 @@ class ImageProcessingPipeline(ClusterRoutines):
         '''
         # NOTE: the job id should correspond to the site number
         datasets = fusion.fuse_datasets(batch['inputs']['data_files'])
-        with DatasetWriter(batch['outputs']['data_file'][0]) as f:
+        with DatasetWriter(batch['outputs']['data_files'][0]) as f:
             for path, data in datasets.iteritems():
                 f.write(path, data)
 

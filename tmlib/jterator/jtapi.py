@@ -1,8 +1,9 @@
-from __future__ import unicode_literals
-import sys
-import yaml
-import h5py
 import mpld3
+import logging
+from .. import text_readers
+from ..data_readers import DatasetReader
+
+logger = logging.getLogger(__name__)
 
 
 def readconfig(configuration):
@@ -18,10 +19,8 @@ def readconfig(configuration):
     -------
     dict
     '''
-    pyfilename = sys._getframe().f_code.co_name
-    config = yaml.load(configuration)
-    print('jt -- %s: read configuration settings from "%s"'
-          % (pyfilename, configuration))
+    config = text_readers.load_yaml(configuration)
+    logger.debug('read configuration settings from "%s"' % configuration)
     return config
 
 
@@ -39,14 +38,12 @@ def writedata(data, data_file):
     data_file: str
         path to the data file
     '''
-    pyfilename = sys._getframe().f_code.co_name
-    hdf5_data = h5py.File(data_file, 'r+')
-    for key in data:
-        hdf5_location = key
-        hdf5_data.create_dataset(hdf5_location, data=data[key])
-        print('jt -- %s: wrote dataset \'%s\' to HDF5 location: "%s"'
-              % (pyfilename, key, hdf5_location))
-    hdf5_data.close()
+    with DatasetReader(data_file) as f:
+        for key in data:
+            hdf5_location = key
+            logger.debug('write dataset \'%s\' to HDF5 location: "%s"'
+                        % (key, hdf5_location))
+            f.write(hdf5_location, data=data[key])
 
 
 def savefigure(fig, figure_file):
@@ -61,9 +58,7 @@ def savefigure(fig, figure_file):
     figure_file: str
         name of the figure file
     '''
-    pyfilename = sys._getframe().f_code.co_name
     mousepos = mpld3.plugins.MousePosition(fontsize=20)
     mpld3.plugins.connect(fig, mousepos)
+    logger.debug('write figure to HTML file: "%s"' % figure_file)
     mpld3.save_html(fig, figure_file)   # template_type='simple'
-    print('jt -- %s: wrote figure to HTML file: "%s"'
-          % (pyfilename, figure_file))

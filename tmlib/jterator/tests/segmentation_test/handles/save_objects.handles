@@ -1,6 +1,6 @@
 input:
 
-    - name: label_image
+    - name: labeled_image
       class: pipeline
       value: Nuclei
       help: Image that contains the objects.

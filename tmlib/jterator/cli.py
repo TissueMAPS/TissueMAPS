@@ -1,7 +1,7 @@
 import logging
 from . import logo
 from . import __version__
-from .api import ImageProcessingPipeline
+from .api import ImageAnalysisPipeline
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
@@ -32,7 +32,7 @@ class Jterator(CommandLineInterface):
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        self.__api_instance = ImageProcessingPipeline(
+        self.__api_instance = ImageAnalysisPipeline(
                                 experiment=experiment, prog_name=self.name,
                                 pipe_name=self.args.pipeline)
         logger.debug(
@@ -45,25 +45,27 @@ class Jterator(CommandLineInterface):
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "create" subparser.
         '''
+        self.print_logo()
         api = self._api_instance
         logger.info('create project: %s' % api.project_dir)
-        api.create_project(self.args.repo_dir, self.args.skel_dir)
+        api.project.create(self.args.repo_dir, self.args.skel_dir)
 
     def remove(self):
         '''
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "remove" subparser.
         '''
+        self.print_logo()
         api = self._api_instance
         logger.info('remove project: %s' % api.project_dir)
-        api.remove_project()
+        api.project.remove()
 
     def check(self):
         '''
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "check" subparser.
         '''
-        print 'CHECK'
+        self.print_logo()
         api = self._api_instance
         logger.info('check pipe and handles descriptor files')
         api.check_pipeline()

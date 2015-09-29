@@ -1,23 +1,13 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 import yaml
 import re
+import logging
 from os.path import splitext, basename, exists, dirname
 from collections import Counter
-import warnings
 from . import path_utils
 from .. import text_readers
 from ..errors import PipelineDescriptionError
 
-
-def JteratorWarning(msg, *a):
-    '''
-    Custom warning message that will end up in standard error.
-    '''
-    return 'Warning: ' + str(msg) + '\n'
-
-warnings.formatwarning = JteratorWarning
+logger = logging.getLogger(__name__)
 
 
 class PipelineChecker(object):
@@ -142,7 +132,7 @@ class PipelineChecker(object):
         if repeated:
             raise PipelineDescriptionError('Handles files need to be unique.')
 
-        print('🍺  Pipe description check successful!')
+        logger.info('Pipe description check successful!')
 
     def check_handles(self):
         '''
@@ -204,14 +194,15 @@ class PipelineChecker(object):
                 handles_basename = splitext(basename(handles_path))
                 handles_dirname = dirname(handles_path)
                 if not handles_basename[1] == '.handles':
-                    warnings.warn('Handles file "%s" doesn\'t have suffix '
-                                  '".handles". This may cause problems with '
-                                  'the user interface.' % handles_path)
+                    logger.warning(
+                        'Handles file "%s" doesn\'t have suffix '
+                        '".handles". This may cause problems with '
+                        'the user interface.' % handles_path)
                 if not re.search(r'handles$', handles_dirname):
-                    warnings.warn('Handles file "%s" doesn\'t reside in a '
-                                  'foler called "handles". This may cause '
-                                  'problems with the user interface.'
-                                  % handles_path)
+                    logger.warning(
+                        'Handles file "%s" doesn\'t reside in a '
+                        'foler called "handles". This may cause '
+                        'problems with the user interface.' % handles_path)
 
                 try:
                     handles = yaml.load(open(handles_path).read())
@@ -298,7 +289,7 @@ class PipelineChecker(object):
                         'Plot argument in handles file '
                         '"%s" needs to be boolean.' % handles_path)
 
-        print('🍺  Handles descriptions check successful!')
+        logger.info('Handles descriptions check successful!')
 
     def check_pipeline_io(self):
         '''
@@ -348,6 +339,8 @@ class PipelineChecker(object):
                     # So there is no need to check them here.
                     continue
                 if input_arg['value'] not in outputs:
+                    print input_arg['name']
+                    print input_arg['value']
                     raise PipelineDescriptionError(
                             'Input "%s" of module "%s" is not '
                             'created upstream in the pipeline.'
@@ -357,7 +350,7 @@ class PipelineChecker(object):
             for output_arg in handles['output']:
                 output = output_arg['value']
                 outputs.append(output)
-        print('🍺  Module input/output check successful!')
+        logger.info('Module input/output check successful!')
 
     def check_all(self):
         self.check_pipeline()

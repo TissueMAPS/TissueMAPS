@@ -10,44 +10,7 @@ from ..plates import WellPlate
 import logging
 
 
-class Layer(object):
-
-    '''
-    Abstract base class for a layer.
-
-    A layer represents a 2D image (mosaic) that is stitched together from
-    several individual images.
-    '''
-
-    def __init__(self, mosaic, metadata):
-        '''
-        Initialize an instance of class Layer.
-
-        Parameters
-        ----------
-        mosaic: Mosaic
-            stitched mosaic image
-        metadata: MosaicMetadata
-            metadata corresponding to the mosaic image
-        '''
-        self.mosaic = mosaic
-        self.metadata = metadata
-
-    def create_pyramid(self, pyramid_dir):
-        '''
-        Create zoomify pyramid (8-bit grayscale JPEG images) of mosaic.
-
-        Parameters
-        ----------
-        pyramid_dir: str
-            path to the folder where pyramid should be saved
-        '''
-        self.logger.info('create pyramid')
-        self.mosaic.array.dzsave(
-            pyramid_dir, layout='zoomify', suffix='.jpg[Q=100]')
-
-
-class ChannelLayer(Layer):
+class ChannelLayer(object):
 
     '''
     Class for a channel layer, i.e. a mosaic layer that can be displayed
@@ -66,7 +29,6 @@ class ChannelLayer(Layer):
         metadata: MosaicMetadata
             metadata corresponding to the mosaic image
         '''
-        super(ChannelLayer, self).__init__(mosaic, metadata)
         self.mosaic = mosaic
         self.metadata = metadata
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -273,6 +235,19 @@ class ChannelLayer(Layer):
         clipped_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(Mosaic(clipped_image), self.metadata)
 
+    def create_pyramid(self, pyramid_dir):
+        '''
+        Create zoomify pyramid (8-bit grayscale JPEG images) of mosaic.
+
+        Parameters
+        ----------
+        pyramid_dir: str
+            path to the folder where pyramid should be saved
+        '''
+        self.logger.info('create pyramid')
+        self.mosaic.array.dzsave(
+            pyramid_dir, layout='zoomify', suffix='.jpg[Q=100]')
+
 
 class BrightfieldLayer(object):
 
@@ -361,3 +336,9 @@ class BrightfieldLayer(object):
         '''
         # TODO
         print('TODO')
+
+
+class ObjectLayer(object):
+
+    def __init__(self):
+        pass

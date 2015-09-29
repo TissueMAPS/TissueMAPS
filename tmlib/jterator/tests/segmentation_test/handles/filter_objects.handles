@@ -1,9 +1,9 @@
 input:
-
-    - name: mask
+    
+    - name: labeled_image
       class: pipeline
       value: 150820-Testset-CV-1-1.filled
-      help: Binary image in which connected components should be filtered.
+      help: Labeled image in which objects should be filtered.
 
     - name: feature
       class: parameter
@@ -21,11 +21,17 @@ input:
       value: above
       help: Whether values "above" or "below" threshold level should be kept.
 
+    - name: relabel
+      class: parameter
+      value: No
+      options: [Yes, No]
+      help: Whether objects should be relabeled after filtering.
+
 output:
 
-    - name: filtered_mask
+    - name: filtered_objects
       class: pipeline
-      value: 150820-Testset-CV-1-1.filtered
-      help: Filtered binary image.
+      value: 
+      help: Filtered label image.
 
 plot: Yes

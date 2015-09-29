@@ -1,11 +1,15 @@
 import os
 import re
 import glob
+import logging
 from copy import copy
 import shutil
+from natsort import natsorted
 from .. import text_readers
 from .. import text_writers
 from ..errors import PipelineOSError
+
+logger = logging.getLogger(__name__)
 
 
 def list_jtprojects(directory):
@@ -18,11 +22,14 @@ def list_jtprojects(directory):
     directory: str
         absolute path to a directory
     '''
-    projects = [name for name in os.listdir(directory)
-                if (os.path.isdir(os.path.join(directory, name))
-                and glob.glob(os.path.join(directory, name, '*.pipe')))]
+    projects = [
+        os.path.join(directory, name)
+        for name in os.listdir(directory)
+        if os.path.isdir(os.path.join(directory, name))
+        and glob.glob(os.path.join(directory, name, '*.pipe'))
+    ]
     if not projects:
-        print 'No Jterator projects found in %s' % directory
+        logger.warning('No Jterator projects found in %s' % directory)
     return projects
 
 
@@ -64,7 +71,7 @@ class JtProject(object):
         str
             name of the corresponding experiment
         '''
-        self._experiment = os.path.basename(self.project_dir)
+        self._experiment = os.path.basename(os.path.dirname(self.project_dir))
         return self._experiment
 
     @property
@@ -75,6 +82,8 @@ class JtProject(object):
         dict
             name and description of the pipeline
         '''
+        if self._pipe is None:
+            self._pipe = self._create_pipe()
         return self._pipe
 
     @pipe.setter
@@ -89,6 +98,8 @@ class JtProject(object):
         List[dict]
             name and description of modules
         '''
+        if self._handles is None:
+            self._handles = self._create_handles()
         return self._handles
 
     @handles.setter
@@ -117,7 +128,7 @@ class JtProject(object):
         if not handles_files:
             # We don't raise an exception, because an empty handles folder
             # can occur, for example upon creation of a new project
-            print('No .handles files found: %s' % directory)
+            logger.warning('No .handles files found: %s' % directory)
         return handles_files
 
     @staticmethod
@@ -178,17 +189,34 @@ class JtProject(object):
                         pipe['description']['pipeline'][i]['handles'])
         return pipe
 
+    @property
+    def _module_names(self):
+        self.__module_names = [
+            m['name'] for m in self.pipe['description']['pipeline']
+        ]
+        return self.__module_names
+
     def _create_handles(self):
-        handles = []
+        handles = list()
         handles_files = self._get_handles_files()
         if handles_files:
             for f in handles_files:
-                h = {
+                if not os.path.isabs(f):
+                    f = os.path.join(self.project_dir, f)
+                if not os.path.exists(f):
+                    raise PipelineOSError(
+                            'Handles file does not exist: "%s"' % f)
+                handles.append({
                     'name': self._get_descriptor_name(f),
                     'description': text_readers.read_yaml(f)
-                }
-                handles.append(h)
-        return handles
+                })
+        # Sort handles information according to order of modules in the pipeline
+        names = [h['name'] for h in handles]
+        sorted_handles = [
+            handles[names.index(name)]
+            for ix, name in enumerate(self._module_names)
+        ]
+        return sorted_handles
 
     def _create_pipe_file(self, repo_dir):
         pipe_file = os.path.join(self.project_dir, '%s.pipe' % self.pipe_name)
@@ -255,12 +283,13 @@ class JtProject(object):
             if os.path.exists(handles_file):
                 old_handles_content = text_readers.read_yaml(handles_file)
                 new_handles_content = self.handles[i]['description']
-                mod_handles_content = self.replace_values(old_handles_content,
-                                                          new_handles_content)
+                mod_handles_content = self._replace_values(
+                                            old_handles_content,
+                                            new_handles_content)
             # If file doesn't yet exist, create it and add content
             else:
                 mod_handles_content = self.handles[i]['description']
-            text_writers.write_yaml(mod_handles_content, handles_file)
+            text_writers.write_yaml(handles_file, mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(os.path.join(self.project_dir,
                                            'handles', '*.handles'))
@@ -273,8 +302,8 @@ class JtProject(object):
         Serialize the attributes of the class in the format::
 
             {
-                "experiment": str,
-                "name": str,
+                "experiment_name": str,
+                "project_name": str,
                 "pipe": {
                     "name": str,
                     "description": dict
@@ -358,6 +387,8 @@ class JtAvailableModules(object):
     in the `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
     '''
 
+    MODULE_FILE_EXT = {'r', 'R', 'm', 'jl', 'py'}
+
     def __init__(self, repo_dir):
         '''
         Initialize an instance of class JtAvailableModules.
@@ -368,10 +399,6 @@ class JtAvailableModules(object):
             absolute path to the local clone of the repository
         '''
         self.repo_dir = repo_dir
-        self._module_files = None
-        self._handles = None
-        self._module_names = None
-        self._pipe_registration = None
 
     @property
     def module_files(self):
@@ -384,12 +411,14 @@ class JtAvailableModules(object):
         List[str]
             paths to the module files
         '''
-        if self._module_files is None:
-            modules_dir = os.path.join(self.repo_dir, 'modules')
-            files = [os.path.join(modules_dir, f)
-                     for f in os.listdir(modules_dir)
-                     if re.search(r'\.(r|R|m|jl|py)$', f)]
-            self._module_files = files
+        modules_dir = os.path.join(self.repo_dir, 'modules')
+        search_string = '\.(%s)$' % '|'.join(self.MODULE_FILE_EXT)
+        regexp_pattern = re.compile(search_string)
+        self._module_files = natsorted([
+            os.path.join(modules_dir, f)
+            for f in os.listdir(modules_dir)
+            if re.search(regexp_pattern, f)
+        ])
         return self._module_files
 
     @property
@@ -403,11 +432,27 @@ class JtAvailableModules(object):
         List[str]
             names of the modules
         '''
-        if self._module_names is None:
-            names = [os.path.splitext(os.path.basename(f))[0]
-                     for f in self.module_files]
-            self._module_names = names
+        self._module_names = [
+            os.path.splitext(os.path.basename(f))[0]
+            for f in self.module_files
+        ]
         return self._module_names
+
+    def _get_corresponding_handles_file(self, module_name):
+        handles_dir = os.path.join(self.repo_dir, 'handles')
+        search_string = '^%s\.handles$' % module_name
+        regexp_pattern = re.compile(search_string)
+        handles_files = natsorted([
+            os.path.join(handles_dir, f)
+            for f in os.listdir(handles_dir)
+            if re.search(regexp_pattern, f)
+        ])
+        if len(handles_files) == 0:
+            raise ValueError('No handles file found for module "%s"'
+                             % module_name)
+        elif len(handles_files) == 1:
+            handles_file = handles_files[0]
+        return handles_file
 
     @property
     def handles(self):
@@ -424,7 +469,14 @@ class JtAvailableModules(object):
         --------
         `create_handles`
         '''
-        self._handles = create_handles(self.repo_dir)
+        self._handles = [
+            {
+                'name': name,
+                'description': text_readers.read_yaml(
+                                self._get_corresponding_handles_file(name))
+            }
+            for name in self.module_names
+        ]
         return self._handles
 
     @property
@@ -441,20 +493,19 @@ class JtAvailableModules(object):
         # modules are "available" if there is a corresponding handles file
         # TODO: some checks of handles content
         available_modules = [h['name'] for h in self.handles]
-        if self._pipe_registration is None:
-            self._pipe_registration = list()
-            for i, f in enumerate(self.module_files):
-                name = self.module_names[i]
-                if name in available_modules:
-                    element = {
-                        'name': name,
-                        'description': {
-                            'handles': './handles/%s.handles' % name,
-                            'module': f,
-                            'active': True
-                        }
+        self._pipe_registration = list()
+        for i, f in enumerate(self.module_files):
+            name = self.module_names[i]
+            if name in available_modules:
+                element = {
+                    'name': name,
+                    'description': {
+                        'handles': self._get_corresponding_handles_file(name),
+                        'module': f,
+                        'active': True
                     }
-                    self._pipe_registration.append(element)
+                }
+                self._pipe_registration.append(element)
         return self._pipe_registration
 
     def serialize(self):

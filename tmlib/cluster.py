@@ -17,7 +17,6 @@ from . import text_writers
 
 logger = logging.getLogger(__name__)
 
-
 class BasicClusterRoutines(object):
 
     __metaclass__ = ABCMeta
@@ -252,7 +251,7 @@ class ClusterRoutines(BasicClusterRoutines):
             job_descriptions['collect'] = text_readers.read_json(collect_job_files[0])
         return job_descriptions
 
-    def list_all_output_files(self, job_descriptions):
+    def list_output_files(self, job_descriptions):
         '''
         Provide a list of all output files that should be created by the
         program.

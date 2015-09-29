@@ -4,4 +4,6 @@
 [ ] implement alternative jterator mode for loading images (old mode)
 [ ] update documentation
 [ ] jterator batch_size
-[ ] consider using a relational table approach for object outline coordinates, i.e. only atomic values in each dataset (no nested arrays)
+[ ] store shift statistics in HDF5 files
+
+[ ] jterator collection step: keep local (image-specific) coordinates in the data files of the corresponding jobs and map them to global map upon collection. Since we read the data for the vector layers directly from the HDFT5 file, this will allow the direct visualization of jterator results on the map!!!

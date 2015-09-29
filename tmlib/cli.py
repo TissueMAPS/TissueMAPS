@@ -39,7 +39,7 @@ def command_line_call(parser):
         level = logging.INFO
     if args.silent:
         level = logging.CRITICAL
-    tmlib_logger = configure_logging(level
+    configure_logging(level)
     logger.debug('running program: %s' % parser.prog)
 
     gc3libs.log = logging.getLogger('gc3lib')
@@ -48,12 +48,12 @@ def command_line_call(parser):
     try:
         if args.handler:
             args.handler(args)
-            print '🍺  Done!'
+            sys.stdout.write('🍺  Done!')
         else:
             parser.print_help()
     except Exception as error:
-        sys.stdout.write('😞  Failed!\n')
-        sys.stderr.write('Error message: "%s"\n' % str(error))
+        sys.stderr.write('😞  Failed!\n')
+        sys.stderr.write(str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):
             sys.stderr.write(tb)
 
@@ -159,7 +159,8 @@ class CommandLineInterface(object):
         job_descriptions = api.get_job_descriptions_from_files()
         if job_descriptions['run']:
             logger.info('clean up output of previous submission')
-            output_files = api.list_all_output_files(job_descriptions)
+            output_files = api.list_output_files(job_descriptions)
+            # TODO
             if not output_files:
                 logger.debug('no output files of previous submission found')
             else:
@@ -170,15 +171,21 @@ class CommandLineInterface(object):
                     logger.warning('some output files don\'t exist')
                 [os.remove(f) for f in output_files
                  if os.path.exists(f) and not os.path.isdir(f)]
-            logger.debug('remove job descriptions of previous submission')
-            shutil.rmtree(api.job_descriptions_dir)
             if self.args.backup:
-                logger.info('backup log reports of previous submission')
-                shutil.move(api.log_dir, '{name}_backup_{time}'.format(
+                logger.info('backup project directory of previous submission')
+                timestamp = api.create_datetimestamp()
+                shutil.move(api.log_dir,
+                            '{name}_backup_{time}'.format(
                                         name=api.log_dir,
-                                        time=api.create_datetimestamp()))
+                                        time=timestamp))
+                shutil.move(api.job_descriptions_dir,
+                            '{name}_backup_{time}'.format(
+                                        name=api.job_descriptions_dir,
+                                        time=timestamp))
             else:
-                logger.debug('remove log reports of previous submission')
+                logger.debug('remove log reports and job descriptions '
+                             'of previous submission')
+                shutil.rmtree(api.job_descriptions_dir)
                 shutil.rmtree(api.log_dir)
 
         logger.info('create job descriptions')

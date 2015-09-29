@@ -2,6 +2,7 @@ import os
 import imp
 import sys
 import re
+import logging
 import traceback
 import collections
 import numpy as np
@@ -11,6 +12,8 @@ from rpy2.robjects.packages import importr
 from cStringIO import StringIO
 from . import path_utils
 from ..errors import PipelineRunError
+
+logger = logging.getLogger(__name__)
 
 
 class CaptureOutput(dict):
@@ -168,9 +171,9 @@ class ImageProcessingModule(object):
         return self._language
 
     def _exec_m_module(self, inputs, output_names, engine):
-        print 'jt -- Adding module to Matlab path: "%s"' % self.module_file
+        logger.debug('adding module to Matlab path: "%s"' % self.module_file)
         engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.module_file)))
-        print('jt -- Evaluating Matlab function with INPUTS: "%s"'
+        logger.debug('evaluating Matlab function with INPUTS: "%s"'
               % '", "'.join(inputs.keys()))
         for name, value in inputs.iteritems():
             engine.put('%s' % name, value)
@@ -185,14 +188,14 @@ class ImageProcessingModule(object):
         print out  # print to standard output
         for i, name in enumerate(output_names):
             m_out = engine.get('%s' % name)
-            print 'jt -- value of OUTPUT "{name}":\n{value}'.format(
-                                            name=name, value=m_out)
-            print 'jt -- dimensions of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=m_out.shape)
-            print 'jt -- type of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=type(m_out))
-            print 'jt -- dtype of elements of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=m_out.dtype)
+            logger.debug('value of OUTPUT "{name}":\n{value}'.format(
+                                            name=name, value=m_out))
+            logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=m_out.shape))
+            logger.debug('type of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=type(m_out)))
+            logger.debug('dtype of elements of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=m_out.dtype))
             output_value = [
                 o['value'] for o in self.handles_description['output']
                 if o['name'] == name
@@ -200,28 +203,28 @@ class ImageProcessingModule(object):
             self.outputs[output_value] = m_out
 
     def _exec_py_module(self, inputs, output_names):
-        print 'jt -- Importing module: "%s"' % self.module_file
+        logger.debug('importing module: "%s"' % self.module_file)
         imp.load_source(self.name, self.module_file)
         func = getattr(__import__(self.name, fromlist=[self.name]), self.name)
-        print('jt -- Evaluating Python function with INPUTS: "%s"'
+        logger.debug('evaluating Python function with INPUTS: "%s"'
               % '", "'.join(inputs.keys()))
         py_out = func(**inputs)
         if not output_names:
             return
         if not len(py_out) == len(output_names):
-            raise PipelineRunError('Number of outputs is incorrect.')
+            raise PipelineRunError('number of outputs is incorrect.')
         for i, name in enumerate(output_names):
             # NOTE: The Python function is supposed to return a namedtuple!
             if py_out._fields[i] != name:
                 raise PipelineRunError('Incorrect output names.')
-            print 'jt -- value of OUTPUT "{name}":\n{value}'.format(
-                                            name=name, value=py_out[i])
-            print 'jt -- dimensions of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=py_out[i].shape)
-            print 'jt -- type of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=type(py_out[i]))
-            print 'jt -- dtype of elements of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=py_out[i].dtype)
+            logger.debug('value of OUTPUT "{name}":\n{value}'.format(
+                                            name=name, value=py_out[i]))
+            logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=py_out[i].shape))
+            logger.debug('type of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=type(py_out[i])))
+            logger.debug('dtype of elements of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=py_out[i].dtype))
             output_value = [
                 o['value'] for o in self.handles_description['output']
                 if o['name'] == name
@@ -231,25 +234,25 @@ class ImageProcessingModule(object):
             self.figure = py_out.Figure
 
     def _exec_r_module(self, inputs, output_names):
-        print 'jt -- Sourcing module: "%s"' % self.module_file
+        logger.debug('sourcing module: "%s"' % self.module_file)
         robjects.r('source("{0}")'.format(self.module_file))
         robjects.numpy2ri.activate()  # enables use of numpy arrays
         func = robjects.globalenv['{0}'.format(self.name)]
-        print('jt -- Evaluating R function with INPUTS: "%s"'
-              % '", "'.join(inputs.keys()))
+        logger.debug('evaluating R function with INPUTS: "%s"'
+                     % '", "'.join(inputs.keys()))
         args = robjects.ListVector({k: v for k, v in inputs.iteritems()})
         base = importr('base')
         r_var = base.do_call(func, args)
         for i, name in enumerate(output_names):
             r_var_np = np.array(r_var.rx2(name))
-            print 'jt -- value of OUTPUT "{name}":\n{value}'.format(
-                                            name=name, value=r_var_np)
-            print 'jt -- dimensions of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=r_var_np.shape)
-            print 'jt -- type of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=type(r_var_np))
-            print 'jt -- dtype of elements of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=r_var_np.dtype)
+            logger.debug('value of OUTPUT "{name}":\n{value}'.format(
+                                            name=name, value=r_var_np))
+            logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=r_var_np.shape))
+            logger.debug('type of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=type(r_var_np)))
+            logger.debug('dtype of elements of OUTPUT "{name}": {value}'.format(
+                                            name=name, value=r_var_np.dtype))
             output_value = [
                 o['value'] for o in self.handles_description['output']
                 if o['name'] == name
@@ -354,7 +357,7 @@ class ImageProcessingModule(object):
                 success = False
 
         stdout = output['stdout']
-        print stdout
+        sys.stdout.write(stdout)
 
         stderr = output['stderr']
         stderr += error

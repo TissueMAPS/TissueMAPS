@@ -157,7 +157,7 @@ class ShiftDescription(object):
     of the reference cycle.
     '''
 
-    persistent = {
+    PERSISTENT = {
         'x_shift', 'y_shift', 'lower_overhang', 'upper_overhang',
         'left_overhang', 'right_overhang', 'omit', 'cycle', 'filename',
         'site'
@@ -358,7 +358,7 @@ class ShiftDescription(object):
         '''
         serialized_description = dict()
         for a in dir(self):
-            if a in ShiftDescription.persistent:
+            if a in ShiftDescription.PERSISTENT:
                 serialized_description[a] = getattr(self, a)
         return serialized_description
 
@@ -378,12 +378,12 @@ class ShiftDescription(object):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in ShiftDescription.persistent
+        missing_keys = [a for a in ShiftDescription.PERSISTENT
                         if a not in description.keys()]
         if len(missing_keys) > 0:
             raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in description.iteritems():
-            if k not in ShiftDescription.persistent:
+            if k not in ShiftDescription.PERSISTENT:
                 raise AttributeError(
                         'Class "%s" has no attribute "%s"'
                         % (ShiftDescription.__class__.__name__, k))

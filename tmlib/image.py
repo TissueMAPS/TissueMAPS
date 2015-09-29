@@ -713,7 +713,7 @@ class IllumstatsImages(object):
         }
 
     @staticmethod
-    def create_from_file(filename, metadata, library='vips'):
+    def create_from_file(filename, metadata=None, library='vips'):
         '''
         Create an Illumstats object from a file on disk.
 
