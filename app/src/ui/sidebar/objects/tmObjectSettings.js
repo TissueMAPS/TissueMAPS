@@ -8,7 +8,7 @@ angular.module('tmaps.ui')
         bindToController: true,
         controllerAs: 'objCtrl',
         controller: 'ObjectSettingsCtrl',
-        templateUrl: '/src/main/layerprops/objects/tm-object-settings.html'
+        templateUrl: '/src/ui/sidebar/objects/tm-object-settings.html'
     };
 });
 
