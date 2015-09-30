@@ -46,6 +46,7 @@ class Viewport implements Serializable<Viewport> {
                 private $controller: ng.IControllerService,
                 private $compile: ng.ICompileService,
                 private $: JQueryStatic,
+                private $document: ng.IDocumentService,
                 private $rootScope: ng.IRootScopeService) {
 
         this.mapDef = this.$q.defer();
@@ -132,26 +133,15 @@ class Viewport implements Serializable<Viewport> {
     //     });
     // }
 
-    addChannelLayers(layerOptions: TileLayerArgs[]) {
-        // Only the first layer should be visible
-        _.each(layerOptions, (opt, i) => {
-            opt = _.defaults(opt, {
-                visible: i === 0
-            });
-            this.addChannelLayer(opt);
-        });
-    }
-
-    addChannelLayer(opt: TileLayerArgs) {
-        var channelLayer = this.channelLayerFactory.create(opt);
+    addChannelLayer(channelLayer: ChannelLayer) {
         var alreadyHasLayers = this.channelLayers.length !== 0;
 
         // If this is the first time a layer is added, create a view and add it to the map.
         if (!alreadyHasLayers) {
             // Center the view in the iddle of the image
             // (Note the negative sign in front of half the height)
-            var width = opt.imageSize[0];
-            var height = opt.imageSize[1];
+            var width = channelLayer.imageSize[0];
+            var height = channelLayer.imageSize[1];
             var center = [width / 2, - height / 2];
             var view = new this.ol.View({
                 // We create a custom (dummy) projection that is based on pixels
@@ -285,7 +275,7 @@ class Viewport implements Serializable<Viewport> {
             var viewportElem = linkFunc(newScope);
 
             // Append to viewports
-            this.$('#viewports').append(viewportElem);
+            this.$document.find('#viewports').append(viewportElem);
             // Append map after the element has been added to the DOM.
             // Otherwise the viewport size calculation of openlayers gets
             // messed up.

@@ -12,8 +12,8 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     constructor(private $q: ng.IQService,
                 private viewportFty: ViewportFactory,
                 private objectLayerFactory: ObjectLayerFactory,
-                private toolLoader: ToolLoader,
                 private channelLayerFactory: ChannelLayerFactory,
+                private toolLoader: ToolLoader,
                 experiment: Experiment) {
         this.experiment = experiment;
         this.name = experiment.name;
@@ -43,7 +43,14 @@ class AppInstance implements Serializable<SerializedAppInstance> {
                 pyramidPath: ch.pyramidPath
             };
         });
-        this.viewport.addChannelLayers(<TileLayerArgs[]>layerOpts);
+        _(layerOpts).each((opt, i) => {
+            opt = _.defaults(opt, {
+                visible: i === 0
+            });
+            var layer = this.channelLayerFactory.create(opt);
+            this.viewport.addChannelLayer(layer);
+        });
+
         // this.experiment.cells.then((cells) => {
         //     var cellLayer = this.objectLayerFactory.create('Cells', {
         //         objects: cells,
@@ -69,17 +76,20 @@ class AppInstanceFactory {
         '$q',
         'viewportFactory',
         'objectLayerFactory',
+        'channelLayerFactory',
         'toolLoader',
-        'channelLayerFactory'
     ];
     constructor(private $q,
                 private viewportFactory,
                 private objectLayerFactory,
-                private toolLoader,
-                private channelLayerFactory) {}
+                private channelLayerFactory,
+                private toolLoader) {}
 
     create(e: Experiment): AppInstance {
-        return new AppInstance(this.$q, this.viewportFactory, this.objectLayerFactory, this.toolLoader, this.channelLayerFactory, e);
+        return new AppInstance(
+            this.$q, this.viewportFactory, this.objectLayerFactory,
+            this.channelLayerFactory, this.toolLoader, e
+        );
     }
 }
 angular.module('tmaps.core').service('appInstanceFactory', AppInstanceFactory);

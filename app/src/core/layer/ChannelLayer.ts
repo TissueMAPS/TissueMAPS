@@ -10,6 +10,7 @@ class ChannelLayerFactory {
     constructor(private ol,
                 private $q: ng.IQService,
                 private colorFactory: ColorFactory) {}
+
     create(opt: TileLayerArgs) {
         var tileLayerOptions = _.defaults(opt, {
             additiveBlend: true,

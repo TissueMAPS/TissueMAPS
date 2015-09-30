@@ -6,6 +6,7 @@ class RestoreAppstateService {
         'colorFactory',
         'cellSelectionHandlerFactory',
         'cellSelectionFactory',
+        'channelLayerFactory',
         '$q'
     ];
 
@@ -15,6 +16,7 @@ class RestoreAppstateService {
                 private colorFty: ColorFactory,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private cellSelectionFty: CellSelectionFactory,
+                private channelLayerFty: ChannelLayerFactory,
                 private $q: ng.IQService) {
     }
 
@@ -54,7 +56,8 @@ class RestoreAppstateService {
             // We need to restore them to a full Color object.
             var color = this.colorFty.create(ch.color.r, ch.color.g, ch.color.b, ch.color.a);
             ch.color = color;
-            vp.addChannelLayer(ch);
+            var layer = this.channelLayerFty.create(ch);
+            vp.addChannelLayer(layer);
         });
 
         // Restore the camera position

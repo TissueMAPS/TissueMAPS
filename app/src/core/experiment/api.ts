@@ -5,7 +5,7 @@ interface GetExperimentResponse {
 
 interface LayerAPIObject {
     name: string;
-    imageSize: number[];
+    imageSize: ImageSize;
     pyramidPath: string;
 }
 

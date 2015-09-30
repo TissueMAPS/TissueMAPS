@@ -79,6 +79,7 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
 
         // Create the underlying openlayers layer object
         this.olLayer = new this.ol.layer.Tile(olLayerArgs);
+
     }
 
     color(val?: Color): Color {

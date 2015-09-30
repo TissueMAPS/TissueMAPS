@@ -18,7 +18,7 @@ interface SerializedExperiment extends Serialized<Experiment> {
 
 interface Channel {
     name: string;
-    imageSize: number[];
+    imageSize: ImageSize;
     pyramidPath: string;
 }
 

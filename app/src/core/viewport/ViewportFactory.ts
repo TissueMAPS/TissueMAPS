@@ -10,6 +10,7 @@ class ViewportFactory {
         '$controller',
         '$compile',
         '$',
+        '$document',
         '$rootScope'
     ];
 
@@ -23,6 +24,7 @@ class ViewportFactory {
                 private $controller: ng.IControllerService,
                 private $compile: ng.ICompileService,
                 private $: JQueryStatic,
+                private $document: ng.IDocumentService,
                 private $rootScope: ng.IRootScopeService) {}
 
     create(): Viewport {
@@ -37,6 +39,7 @@ class ViewportFactory {
             this.$controller,
             this.$compile,
             this.$,
+            this.$document,
             this.$rootScope
         );
     }
