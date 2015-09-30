@@ -1,6 +1,6 @@
 describe('In ObjectLayer', function() {
     // Load the module of ObjectLayer and its dependencies
-    beforeEach(module('tmaps.core.layer'));
+    beforeEach(module('tmaps.core'));
 
     // Some fake data
     var mapObject1, mapObject2, mapObjects;

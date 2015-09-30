@@ -42,8 +42,8 @@
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/ViewportFactory.ts",
 
-        "app/src/main/tools/tmToolbar.ts",
-        "app/src/main/tools/ToolbarCtrl.ts",
+        "app/src/ui/tools/tmToolbar.ts",
+        "app/src/ui/tools/ToolbarCtrl.ts",
 
         "app/typedefs/DefinitelyTyped/underscore/underscore.d.ts",
         "app/typedefs/DefinitelyTyped/angularjs/angular.d.ts",

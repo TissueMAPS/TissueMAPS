@@ -21,5 +21,5 @@ class ChannelLayerFactory {
     }
 }
 
-angular.module('tmaps.core.layer').service('channelLayerFactory', ChannelLayerFactory);
+angular.module('tmaps.core').service('channelLayerFactory', ChannelLayerFactory);
 

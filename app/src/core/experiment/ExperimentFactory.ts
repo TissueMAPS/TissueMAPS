@@ -23,5 +23,5 @@ class ExperimentFactory {
     }
 }
 
-angular.module('tmaps.main.experiment')
+angular.module('tmaps.core')
 .service('experimentFactory', ExperimentFactory);

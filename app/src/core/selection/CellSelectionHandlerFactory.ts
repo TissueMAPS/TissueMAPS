@@ -24,5 +24,5 @@ class CellSelectionHandlerFactory {
     }
 }
 
-angular.module('tmaps.core.selection')
+angular.module('tmaps.core')
 .service('cellSelectionHandlerFactory', CellSelectionHandlerFactory);

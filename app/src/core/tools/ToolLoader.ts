@@ -8,7 +8,7 @@ class ToolLoader {
 
     loadTools(appInstance: AppInstance) {
         var toolsDef = this.$q.defer();
-        this.$http.get('/src/tools/tools.json').then((resp) => {
+        this.$http.get('/src/ui-tools/tools.json').then((resp) => {
             var configs: any = resp.data;
             var tools = _.map(configs, (cfg: any) => {
                 if (!cfg.id || !cfg.templateUrl) {
@@ -39,5 +39,5 @@ class ToolLoader {
     }
 }
 
-angular.module('tmaps.main.tools').service('toolLoader', ToolLoader);
+angular.module('tmaps.core').service('toolLoader', ToolLoader);
 

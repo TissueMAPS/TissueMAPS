@@ -11,7 +11,7 @@ describe('In restoreAppstateService', function() {
     // Load the appstate module, automatically loads all dependencies of
     // that module (as long as they are listed in the brackets when
     // declaring the module!).
-    beforeEach(module('tmaps.main.appstate'));
+    beforeEach(module('tmaps.core'));
 
     beforeEach(inject(function(_restoreAppstateService_, _$httpBackend_, _application_, _$q_, _$rootScope_, _colorFactory_) {
         // Assign the injected variables to the variables s.t. they can be used
@@ -40,7 +40,7 @@ describe('In restoreAppstateService', function() {
             $httpBackend.whenGET('/api/experiments/D5YAKwe7/cells')
             .respond(200, {});
 
-            $httpBackend.whenGET('/src/tools/tools.json')
+            $httpBackend.whenGET('/src/ui-tools/tools.json')
             .respond(200, {});
 
             restoreAppstateService.restoreAppstate(appstate);

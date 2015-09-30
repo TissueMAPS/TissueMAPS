@@ -439,16 +439,14 @@ module.exports = function(grunt) {
                     'app/assets/libs/bower_components/tmauth/dist/tmauth.js',
 
                     // Module declarations
-                    'app/src/tmaps.shared.js',
-                    'app/src/tmaps.main.js',
-                    'app/src/tmaps.main.routes.js',
+                    'app/src/tmaps.js',
+                    'app/src/tmaps.routes.js',
                     'app/src/tmaps.tools.js',
 
                     // Source
-                    'app/src/shared/**/*.js',
                     'app/build/compiled-ts.js',
-                    'app/src/main/**/*.js',
-                    'app/src/tools/**/*.js'
+                    'app/src/ui/**/*.js',
+                    'app/src/ui-tools/**/*.js'
                 ]
             },
             unit: {

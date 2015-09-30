@@ -122,4 +122,4 @@ class CellSelectionFactory {
     }
 }
 
-angular.module('tmaps.core.selection').service('cellSelectionFactory', CellSelectionFactory);
+angular.module('tmaps.core').service('cellSelectionFactory', CellSelectionFactory);

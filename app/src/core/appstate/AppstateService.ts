@@ -185,4 +185,4 @@ class AppstateService {
     }
 }
 
-angular.module('tmaps.main.appstate').service('appstateService', AppstateService);
+angular.module('tmaps.core').service('appstateService', AppstateService);

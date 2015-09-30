@@ -86,4 +86,4 @@ class RestoreAppstateService {
     }
 }
 
-angular.module('tmaps.main.appstate').service('restoreAppstateService', RestoreAppstateService);
+angular.module('tmaps.core').service('restoreAppstateService', RestoreAppstateService);

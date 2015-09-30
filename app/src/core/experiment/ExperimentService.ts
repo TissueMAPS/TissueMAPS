@@ -100,4 +100,4 @@ class ExperimentService {
  * for experiments and prompting to user when he wants to add an experiment
  * to the viewport.
  */
-angular.module('tmaps.main.experiment').service('experimentService', ExperimentService);
+angular.module('tmaps.core').service('experimentService', ExperimentService);

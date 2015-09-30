@@ -1,6 +1,6 @@
 describe('In Tool', function() {
     // Load the module of ObjectLayer and its dependencies
-    beforeEach(module('tmaps.main.tools'));
+    beforeEach(module('tmaps.core'));
 
     var tool;
     var toolId = 'SomeTool';

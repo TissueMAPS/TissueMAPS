@@ -33,25 +33,21 @@ describe('In appstateService', function() {
 
     // Declare variables that will get assigned an actual instance after each
     // function that was passed to beforeEach is executed
-    var appstateService, $httpBackend, application, $q, dialogService,
+    var appstateService, $httpBackend, application, $q,
         $location, $modal, restoreAppstateService, $rootScope;
-
-    // Load the application service mock before
-    beforeEach(module('tmaps.mock.core'));
 
     // Load the appstate module, automatically loads all dependencies of
     // that module (as long as they are listed in the brackets when
     // declaring the module!).
-    beforeEach(module('tmaps.main.appstate'));
+    beforeEach(module('tmaps.core'));
 
-    beforeEach(inject(function(_appstateService_, _$httpBackend_, _application_, _$q_, _dialogService_, _$location_, _$modal_, _restoreAppstateService_, _$rootScope_) {
+    beforeEach(inject(function(_appstateService_, _$httpBackend_, _application_, _$q_, _$location_, _$modal_, _restoreAppstateService_, _$rootScope_) {
         // Assign the injected variables to the variables s.t. they can be used
         // in the specs
         appstateService = _appstateService_;
         $httpBackend = _$httpBackend_;
         application = _application_;
         $q = _$q_;
-        dialogService = _dialogService_;
         $location = _$location_;
         $modal = _$modal_;
         restoreAppstateService = _restoreAppstateService_;

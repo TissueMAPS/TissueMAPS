@@ -31,4 +31,4 @@ class ToolFactory {
    }
 }
 
-angular.module('tmaps.main.tools').service('toolFactory', ToolFactory);
+angular.module('tmaps.core').service('toolFactory', ToolFactory);
