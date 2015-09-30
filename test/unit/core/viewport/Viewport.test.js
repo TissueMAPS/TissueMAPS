@@ -283,21 +283,103 @@ describe('In Viewport', function() {
             expect(vpElements.css('display')).toEqual('block');
         });
 
-        // it('should recalculate the map\'s size', function(done) {
-        //     vp.show();
+        it('should recalculate the map\'s size', function(done) {
+            pending();
+            // vp.map.then(function(map) {
+            //     map.updateSize = jasmine.createSpy('updateSize');
+            // });
+            // $rootScope.$apply();
 
-        //     vp.map.then(function(map) {
-        //         expect(map.updateSize).toHaveBeenCalled();
-        //         done();
-        //     });
-        //     $rootScope.$apply();
-        // });
+            // vp.show();
+
+            // vp.map.then(function(map) {
+            //     expect(map.updateSize).toHaveBeenCalled();
+            //     done();
+            // });
+            // $rootScope.$apply();
+        });
     });
 
     describe('the function serialize', function() {
-        it('should save all the layers\' state');
-        it('should serialize the selection handler\'s state');
-        it('should save the map state');
+        it('should save all the layers\' state', function(done) {
+            var red = colorFactory.create(255, 0, 0);
+            // Create a channel layer with some additional properties
+            var tileOpt = {
+                name: 'Test', imageSize: [123, 123], pyramidPath: '/some/path',
+                max: 0.5, min: 0.1, color: red
+            };
+            var l = channelLayerFactory.create(tileOpt);
+            vp.addChannelLayer(l);
+
+            var serializedVp = vp.serialize();
+
+            serializedVp.then(function(ser) {
+                expect(ser.channelLayerOptions).toBeDefined();
+
+                var lopt = ser.channelLayerOptions[0]
+
+                expect(lopt.name).toEqual(l.name);
+                expect(lopt.pyramidPath).toEqual(l.pyramidPath);
+                expect(lopt.imageSize).toEqual(l.imageSize);
+                expect(lopt.max).toEqual(l.max());
+                expect(lopt.min).toEqual(l.min());
+                expect(red.equals(lopt.color)).toEqual(true);
+                done();
+            });
+
+            $rootScope.$apply();
+        });
+
+        it('should serialize the selection handler\'s state', function(done) {
+            var fakeSelectionHandlerState = 'this_would_be_an_object';
+            vp.selectionHandler.serialize =
+                jasmine.createSpy('serialize').and.returnValue(fakeSelectionHandlerState);
+
+            var serializedVp = vp.serialize();
+            $rootScope.$apply();
+
+            expect(vp.selectionHandler.serialize).toHaveBeenCalled();
+
+            serializedVp.then(function(ser) {
+                expect(ser.selectionHandler).toEqual('this_would_be_an_object');
+                done();
+            });
+            $rootScope.$apply();
+        });
+
+        it('should save the map state', function(done) {
+            vp.map.then(function(map) {
+                var v = map.getView();
+                v.setCenter([0, 0]);
+                v.setResolution(2);
+                v.setRotation(0);
+                v.setZoom(0);
+            });
+
+            var serializedVp = vp.serialize();
+
+            serializedVp.then(function(ser) {
+                expect(ser.mapState).toBeDefined();
+
+                vp.map.then(function(map) {
+                    var v = map.getView();
+                    var mapst = ser.mapState;
+
+                    expect(mapst.zoom).toBeDefined();
+                    expect(mapst.zoom).toEqual(v.getZoom());
+
+                    expect(mapst.center).toBeDefined();
+                    expect(mapst.center).toEqual(v.getCenter());
+
+                    expect(mapst.resolution).toBeDefined()
+                    expect(mapst.resolution).toEqual(v.getResolution());
+
+                    done();
+                });
+            });
+
+            $rootScope.$apply();
+        });
     });
 });
 

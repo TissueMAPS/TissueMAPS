@@ -61,7 +61,6 @@ class Viewport implements Serializable<Viewport> {
         // Helper class to manage the differently marker selections
         this.selectionHandler = this.cellSelectionHandlerFty.create(this);
 
-
         // var createDemoRectangles = function(startx, starty) {
         //     var side = 100;
         //     var nRect = 100;
