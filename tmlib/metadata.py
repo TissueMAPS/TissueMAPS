@@ -24,7 +24,7 @@ class ImageMetadata(object):
 
     def __init__(self, metadata=None):
         '''
-        Initialize an instance of class ImageMetadata.
+        Instantiate an instance of class ImageMetadata.
 
         Parameters
         ----------
@@ -261,7 +261,7 @@ class ChannelImageMetadata(ImageMetadata):
 
     def __init__(self, metadata=None):
         '''
-        Initialize an instance of class ChannelImageMetadata.
+        Instantiate an instance of class ChannelImageMetadata.
 
         Parameters
         ----------
@@ -358,7 +358,7 @@ class SegmentationImageMetadata(ImageMetadata):
 
     def __init__(self, metadata=None):
         '''
-        Initialize an instance of class SegmentationImageMetadata.
+        Instantiate an instance of class SegmentationImageMetadata.
 
         Parameters
         ----------
@@ -445,7 +445,7 @@ class IllumstatsImageMetadata(object):
 
     def __init__(self):
         '''
-        Initialize an instance of class IllumstatsMetadata.
+        Instantiate an instance of class IllumstatsMetadata.
         '''
 
     @property

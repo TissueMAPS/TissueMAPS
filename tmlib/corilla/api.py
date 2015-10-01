@@ -1,8 +1,8 @@
 import os
 import re
 from .stats import OnlineStatistics
-from ..data_writers import DatasetWriter
-from ..image_readers import OpencvImageReader
+from ..writers import DatasetWriter
+from ..readers import OpencvImageReader
 from ..cluster import ClusterRoutines
 
 
@@ -13,7 +13,7 @@ class IllumstatsGenerator(ClusterRoutines):
 
     def __init__(self, experiment, prog_name):
         '''
-        Initialize an instance of class IllumstatsGenerator.
+        Instantiate an instance of class IllumstatsGenerator.
 
         Parameters
         ----------

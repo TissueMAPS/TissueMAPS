@@ -1,0 +1,16 @@
+---
+input:
+- class: pipeline
+  help: Name of the image.
+  name: image_filename
+  value: 150820-Testset-CV-1-1
+- class: parameter
+  help: Should the image be corrected for illumination artifacts?
+  name: illumcorr
+  value: true
+output:
+- class: pipeline
+  help: Loaded grayscale image.
+  name: image
+  value: 150820-Testset-CV-1-1.loaded
+plot: true

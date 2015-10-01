@@ -20,7 +20,7 @@ class StichedImage(object):
 
     def __init__(self, array):
         '''
-        Initialize an instance of class Mosaic.
+        Instantiate an instance of class Mosaic.
 
         Parameters
         ----------
@@ -118,7 +118,7 @@ class Mosaic(StichedImage):
 
     def __init__(self, array):
         '''
-        Initialize an instance of class Mosaic.
+        Instantiate an instance of class Mosaic.
 
         Parameters
         ----------
@@ -208,7 +208,7 @@ class Collage(StichedImage):
 
     def __init__(self, array):
         '''
-        Initialize an instance of class Mosaic.
+        Instantiate an instance of class Mosaic.
 
         Parameters
         ----------

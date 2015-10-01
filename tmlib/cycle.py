@@ -4,7 +4,8 @@ import logging
 from natsort import natsorted
 from cached_property import cached_property
 from . import utils
-from . import text_readers
+from .readers import ImageMetadataReader
+from .readers import ShiftDescriptionReader
 from .image import is_image_file
 from .image import ChannelImage
 from .image import IllumstatsImages
@@ -41,7 +42,7 @@ class Cycle(object):
 
     def __init__(self, cycle_dir, cfg, user_cfg, library='vips'):
         '''
-        Initialize an instance of class Cycle.
+        Instantiate an instance of class Cycle.
 
         Parameters
         ----------
@@ -259,7 +260,7 @@ class Cycle(object):
         Returns
         -------
         str
-            path to the folder holding the image files
+            path to the folder holding the extracted image files
 
         Note
         ----
@@ -280,7 +281,7 @@ class Cycle(object):
         Returns
         -------
         List[str]
-            names of image files in `image_dir`
+            names of files in `image_dir`
 
         Raises
         ------
@@ -319,8 +320,7 @@ class Cycle(object):
         Returns
         -------
         List[ChannelImageMetadata]
-            metadata for each image file in `image_dir` (the `.metadata` YAML
-            file maps each image file to its corresponding metadata)
+            metadata for each file in `image_dir`
 
         Raises
         ------
@@ -331,14 +331,13 @@ class Cycle(object):
         --------
         `metadata.ChannelImageMetadata`_
         '''
-        filename = os.path.join(self.metadata_dir,
-                                self.image_metadata_file)
-        if not os.path.exists(filename):
-            raise OSError('Metadata file "%s" does not exists.' % filename)
-        metadata = text_readers.read_json(filename)
-        self._image_metadata = list()
-        for f in natsorted(metadata.keys()):
-            self._image_metadata.append(ChannelImageMetadata(metadata[f]))
+        with ImageMetadataReader(self.metadata_dir) as reader:
+            metadata = reader.read(self.image_metadata_file)
+        names = [md['name'] for md in metadata]
+        self._image_metadata = [
+            ChannelImageMetadata(metadata[i])
+            for i, f in enumerate(natsorted(names))
+        ]
         return self._image_metadata
 
     @property
@@ -533,15 +532,15 @@ class Cycle(object):
         --------
         `shift.ShiftDescription`_
         '''
-        filename = os.path.join(self.shift_dir, self.shift_file)
-        content = text_readers.read_json(filename)
-        self._shift_descriptions = list()
-        # by matching the sites and wells, we ensure that the correct shift
+        with ShiftDescriptionReader(self.shift_dir) as reader:
+            content = reader.read(self.shift_file)
+        # by matching the sites, we ensure that the correct shift
         # description is assigned to each image
         sites = [e['site'] for e in content]
-        for m in self.image_metadata:
-            ix = sites.index(m.site)
-            self._shift_descriptions.append(ShiftDescription(content[ix]))
+        self._shift_descriptions = [
+            ShiftDescription(content[sites.index(m.site)])
+            for m in self.image_metadata
+        ]
         return self._shift_descriptions
 
     @property

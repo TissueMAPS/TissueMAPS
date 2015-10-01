@@ -4,7 +4,7 @@ import logging
 from natsort import natsorted
 from cached_property import cached_property
 from . import cfg
-from . import text_readers
+from .readers import UserConfigurationReader
 from . import utils
 from .plates import WellPlate
 from .plates import Slide
@@ -51,7 +51,7 @@ class Experiment(object):
     def __init__(self, experiment_dir, cfg=TmlibConfiguration(cfg),
                  library='vips'):
         '''
-        Initialize an instance of class Experiment.
+        Instantiate an instance of class Experiment.
 
         Parameters
         ----------
@@ -94,7 +94,8 @@ class Experiment(object):
         '''
         # TODO: shall we do this via the database instead?
         logger.debug('user configuration file: %s' % self.user_cfg_file)
-        configuration_settings = text_readers.read_yaml(self.user_cfg_file)
+        with UserConfigurationReader() as reader:
+            configuration_settings = reader.read(self.user_cfg_file)
         self._user_cfg = UserConfiguration(configuration_settings)
         return self._user_cfg
 

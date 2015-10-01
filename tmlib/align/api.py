@@ -4,7 +4,7 @@ import numpy as np
 import logging
 from natsort import natsorted
 from . import registration as reg
-from .. import text_writers
+from ..writers import ShiftDescriptionWriter
 from ..cluster import ClusterRoutines
 from ..shift import ShiftDescription
 from ..image import ChannelImage
@@ -16,7 +16,7 @@ class ImageRegistration(ClusterRoutines):
 
     def __init__(self, experiment, prog_name):
         '''
-        Initialize an instance of class ImageRegistration.
+        Instantiate an instance of class ImageRegistration.
 
         Parameters
         ----------
@@ -50,8 +50,9 @@ class ImageRegistration(ClusterRoutines):
             absolute paths to the shift descriptor files
         '''
         self._shift_files = [
-            os.path.join(c.shift_dir,
-                         self.shift_file_format_string.format(cycle=c.name))
+            os.path.join(
+                c.shift_dir,
+                self.shift_file_format_string.format(cycle=c.name))
             for c in self.cycles
         ]
         return self._shift_files
@@ -204,33 +205,34 @@ class ImageRegistration(ClusterRoutines):
         top, bottom, right, left, no_shift = \
             reg.calculate_overhang(shift_descriptions, batch['max_shift'])
 
-        for i, cycle_name in enumerate(cycle_names):
+        with ShiftDescriptionWriter() as writer:
+            for i, cycle_name in enumerate(cycle_names):
 
-            description = list()
-            for j in xrange(len(no_shift)):
+                description = list()
+                for j in xrange(len(no_shift)):
 
-                shift = ShiftDescription()
-                shift.lower_overhang = bottom
-                shift.upper_overhang = top
-                shift.right_overhang = right
-                shift.left_overhang = left
-                shift.max_shift = batch['max_shift']
-                shift.omit = bool(no_shift[j])
-                shift.cycle = self.cycles[i].name
-                shift.filename = shift_descriptions[i][j]['filename']
-                shift.x_shift = shift_descriptions[i][j]['x_shift']
-                shift.y_shift = shift_descriptions[i][j]['y_shift']
-                shift.site = shift_descriptions[i][j]['site']
+                    shift = ShiftDescription()
+                    shift.lower_overhang = bottom
+                    shift.upper_overhang = top
+                    shift.right_overhang = right
+                    shift.left_overhang = left
+                    shift.max_shift = batch['max_shift']
+                    shift.omit = bool(no_shift[j])
+                    shift.cycle = self.cycles[i].name
+                    shift.filename = shift_descriptions[i][j]['filename']
+                    shift.x_shift = shift_descriptions[i][j]['x_shift']
+                    shift.y_shift = shift_descriptions[i][j]['y_shift']
+                    shift.site = shift_descriptions[i][j]['site']
 
-                description.append(shift.serialize())
+                    description.append(shift.serialize())
 
-            # Sort entries according to site
-            sites = [(d['site'], j) for j, d in enumerate(description)]
-            order = np.array(natsorted(sites))
-            description = [description[j] for j in order[:, 1]]
+                # Sort entries according to site
+                sites = [(d['site'], j) for j, d in enumerate(description)]
+                order = np.array(natsorted(sites))
+                description = [description[j] for j in order[:, 1]]
 
-            shift_file = batch['outputs']['shift_descriptor_files'][i]
-            text_writers.write_json(shift_file, description)
+                shift_file = batch['outputs']['shift_descriptor_files'][i]
+                writer.write(shift_file, description)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):

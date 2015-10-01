@@ -1,9 +1,9 @@
 import random as rand
+from gi.repository import Vips
 from scipy.misc import imread, bytescale
 import numpy as np
 import png
 import logging
-from gi.repository import Vips
 
 logger = logging.getLogger(__name__)
 

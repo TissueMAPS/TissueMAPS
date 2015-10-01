@@ -4,8 +4,8 @@ import lxml
 import lxml.html
 import lxml.etree
 from .utils import flatten
-from .text_readers import read_json
-from .text_writers import write_json
+from .readers import SupportedFormatsReader
+from .writers import SupportedFormatsWriter
 
 
 class Formats(object):
@@ -38,7 +38,8 @@ class Formats(object):
         Dict[str, List[str]]
             names and file extensions of supported formats as key-value pairs
         '''
-        self._supported_formats = read_json(self.filename)
+        with SupportedFormatsReader() as reader:
+            self._supported_formats = reader.read(self.filename)
         return self._supported_formats
 
     @property
@@ -129,4 +130,5 @@ class Formats(object):
                             extensions.append(extensions_element[0].split(', '))
                             names.append(name_elements[0])
 
-        write_json(self.filename, dict(zip(names, extensions)))
+        with SupportedFormatsWriter() as writer:
+            writer.write(self.filename, dict(zip(names, extensions)))

@@ -157,7 +157,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
         '''
-        Initialize an instance of class MetadataHandler.
+        Instantiate an instance of class MetadataHandler.
 
         Parameters
         ----------

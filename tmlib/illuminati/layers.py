@@ -3,7 +3,7 @@ import numpy as np
 from ..mosaic import Mosaic
 from ..metadata import MosaicMetadata
 from .. import image_utils
-from ..image_readers import OpenslideImageReader
+from ..readers import OpenslideImageReader
 from ..errors import NotSupportedError
 from ..plates import Slide
 from ..plates import WellPlate
@@ -20,7 +20,7 @@ class ChannelLayer(object):
 
     def __init__(self, mosaic, metadata):
         '''
-        Initialize an instance of class Layer.
+        Instantiate an instance of class Layer.
 
         Parameters
         ----------
@@ -263,7 +263,7 @@ class BrightfieldLayer(object):
 
     def __init__(self, image_file):
         '''
-        Initialize an instance of class BrightfieldLayer.
+        Instantiate an instance of class BrightfieldLayer.
 
         Parameters
         ----------
@@ -303,7 +303,7 @@ class BrightfieldLayer(object):
 
         See also
         --------
-        `tmlib.image_readers.OpenslideImageReader`_
+        `tmlib.readers.OpenslideImageReader`_
         '''
         with OpenslideImageReader() as reader:
             mosaic = reader.read(slide_file)

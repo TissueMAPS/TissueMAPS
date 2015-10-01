@@ -2,9 +2,9 @@ import os
 import numpy as np
 import logging
 import image_registration
-from ..data_readers import DatasetReader
-from ..data_writers import DatasetWriter
-from ..image_readers import OpencvImageReader
+from ..readers import DatasetReader
+from ..writers import DatasetWriter
+from ..readers import OpencvImageReader
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def register_images(sites, target_files, reference_files, output_file):
     '''
     out = dict()
     for cycle, files in target_files.iteritems():
-        print '.. "%s"' % cycle
+        logger.info('register images of cycle "%s"' % cycle)
         out[cycle] = dict()
         out[cycle]['x_shift'] = list()
         out[cycle]['y_shift'] = list()
@@ -86,9 +86,9 @@ def register_images(sites, target_files, reference_files, output_file):
         out[cycle]['site'] = list()
         for i in xrange(len(files)):
             target_filename = files[i]
-            print '... registration: %s' % target_filename
+            logger.debug('registration file: %s' % target_filename)
             ref_filename = reference_files[i]
-            print '... reference: %s' % ref_filename
+            logger.debug('reference file: %s' % ref_filename)
 
             # Calculate shift between images
             x, y = calculate_shift(target_filename, ref_filename)
@@ -99,7 +99,7 @@ def register_images(sites, target_files, reference_files, output_file):
             out[cycle]['filename'].append(os.path.basename(target_filename))
             out[cycle]['site'].append(sites[i])
 
-    print '. Store registration in file: %s' % output_file
+    logger.info('write registration to file: %s' % output_file)
     with DatasetWriter(output_file, new=True) as writer:
         for cycle, data in out.iteritems():
             for feature, values in data.iteritems():

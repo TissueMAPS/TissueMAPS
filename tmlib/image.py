@@ -5,7 +5,7 @@ from abc import abstractmethod
 from cached_property import cached_property
 from .pixels import VipsPixels
 from .pixels import NumpyPixels
-from .data_readers import DatasetReader
+from .readers import DatasetReader
 from .errors import MetadataError
 
 
@@ -573,7 +573,7 @@ class IllumstatsImage(object):
 
     def __init__(self, pixels, metadata):
         '''
-        Initialize an instance of class IllumstatsImage.
+        Instantiate an instance of class IllumstatsImage.
 
         Parameters
         ----------

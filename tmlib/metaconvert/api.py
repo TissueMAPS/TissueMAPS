@@ -1,12 +1,15 @@
 import os
+import logging
 from glob import glob
-from .default import DefaultMetadataReader
+from .default import DefaultMetadataHandler
 from .cellyoyager import CellvoyagerMetadataHandler
 from .metamorph import MetamorphMetadataHandler
 from ..cluster import ClusterRoutines
-from .. import text_writers
+from ..writers import ImageMetadataWriter
 from ..errors import NotSupportedError
 from ..formats import Formats
+
+logger = logging.getLogger(__name__)
 
 
 class MetadataConverter(ClusterRoutines):
@@ -31,7 +34,7 @@ class MetadataConverter(ClusterRoutines):
 
     def __init__(self, experiment, prog_name, file_format):
         '''
-        Initialize an instance of class MetadataConverter.
+        Instantiate an instance of class MetadataConverter.
 
         Parameters
         ----------
@@ -100,9 +103,10 @@ class MetadataConverter(ClusterRoutines):
                         glob(os.path.join(cycle.ome_xml_dir, '*'))
                 },
                 'outputs': {
-                    'metadata_file':
+                    'metadata_files': [
                         os.path.join(cycle.metadata_dir,
                                      cycle.image_metadata_file)
+                    ]
                 },
                 'cycle': cycle.name
             }])
@@ -124,19 +128,22 @@ class MetadataConverter(ClusterRoutines):
         and write the formatted metadata to a JSON file.
         '''
         if self.file_format == 'metamorph':
+            logger.debug('use "metamorph" reader')
             handler = MetamorphMetadataHandler(
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
                             batch['inputs']['ome_xml_files'],
                             batch['cycle'])
         elif self.file_format == 'cellvoyager':
+            logger.debug('use "cellvoyager" reader')
             handler = CellvoyagerMetadataHandler(
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
                             batch['inputs']['ome_xml_files'],
                             batch['cycle'])
         else:
-            handler = DefaultMetadataReader(
+            logger.debug('use default reader')
+            handler = DefaultMetadataHandler(
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
                             batch['inputs']['ome_xml_files'],
@@ -147,14 +154,15 @@ class MetadataConverter(ClusterRoutines):
         meta = handler.determine_grid_coordinates(meta)
         meta = handler.build_filenames_for_extracted_images(
                     meta, self.image_file_format_string)
-        self._write_metadata_to_file(batch['outputs']['metadata_file'], meta)
+        self._write_metadata_to_file(batch['outputs']['metadata_files'], meta)
 
     @staticmethod
-    def _write_metadata_to_file(filename, metadata):
-        data = dict()
-        for md in metadata:
-            data[md.name] = md.serialize()
-        text_writers.write_json(filename, data)
+    def _write_metadata_to_file(filenames, metadata):
+        with ImageMetadataWriter() as writer:
+            f = filenames[0]
+            data = [md.serialize() for md in metadata]
+            logger.info('write metadata to file: %s' % f)
+            writer.write(f, data)
 
     def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'

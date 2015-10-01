@@ -1,0 +1,15 @@
+---
+input:
+- class: pipeline
+  help: Binary image that should be labeled.
+  name: mask
+  value: 150820-Testset-CV-1-1.filtered
+output:
+- class: pipeline
+  help: 'Labeled image, where pixels of each connected component (object) have a unique
+    non-zero identifier number.
+
+    '
+  name: objects
+  value: Nuclei
+plot: true

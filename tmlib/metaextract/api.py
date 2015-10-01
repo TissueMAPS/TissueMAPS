@@ -21,7 +21,7 @@ class MetadataExtractor(ClusterRoutines):
 
     def __init__(self, experiment, prog_name):
         '''
-        Initialize an instance of class MetadataExtractor.
+        Instantiate an instance of class MetadataExtractor.
 
         Parameters
         ----------

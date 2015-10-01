@@ -16,7 +16,7 @@ class Metaconvert(CommandLineInterface):
 
     def __init__(self, args):
         '''
-        Initialize an instance of class Metaconvert.
+        Instantiate an instance of class Metaconvert.
 
         Parameters
         ----------
@@ -48,14 +48,14 @@ class Metaconvert(CommandLineInterface):
                             experiment=experiment, prog_name=self.name,
                             file_format=self.args.format,)
         logger.debug(
-            'initialized API class "%s" with parsed arguments'
+            'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
         return self.__api_instance
 
     @staticmethod
     def call(args):
         '''
-        Initializes an instance of class Metaconvert and calls the method
+        Instantiates an instance of class Metaconvert and calls the method
         that matches the name of the subparser with the parsed command
         line arguments.
 
@@ -66,5 +66,5 @@ class Metaconvert(CommandLineInterface):
         '''
         cli = Metaconvert(args)
         logger.debug('call "%s" method of class "%s"'
-                     % (args.subparser_name, cli.__class__.__name__))
-        getattr(cli, args.subparser_name)()
+                     % (args.method_name, cli.__class__.__name__))
+        getattr(cli, args.method_name)()

@@ -5,8 +5,10 @@ import logging
 from copy import copy
 import shutil
 from natsort import natsorted
-from .. import text_readers
-from .. import text_writers
+from ..readers import PipeReader
+from ..readers import HandlesReader
+from ..writers import PipeWriter
+from ..writers import HandlesWriter
 from ..errors import PipelineOSError
 
 logger = logging.getLogger(__name__)
@@ -45,7 +47,7 @@ class JtProject(object):
     '''
     def __init__(self, project_dir, pipe_name, pipe=None, handles=None):
         '''
-        Initialize an instance of class Jtproject.
+        Instantiate an instance of class Jtproject.
 
         Parameters
         ----------
@@ -177,10 +179,11 @@ class JtProject(object):
 
     def _create_pipe(self):
         pipe_file = self._get_pipe_file()
-        pipe = {
-            'name': self._get_descriptor_name(pipe_file),
-            'description': text_readers.read_yaml(pipe_file)
-        }
+        with PipeReader() as reader:
+            pipe = {
+                'name': self._get_descriptor_name(pipe_file),
+                'description': reader.read(pipe_file)
+            }
         if pipe['description']['pipeline']:
             # Add module 'name' to pipeline for display in the interface
             for i, module in enumerate(pipe['description']['pipeline']):
@@ -199,17 +202,18 @@ class JtProject(object):
     def _create_handles(self):
         handles = list()
         handles_files = self._get_handles_files()
-        if handles_files:
-            for f in handles_files:
-                if not os.path.isabs(f):
-                    f = os.path.join(self.project_dir, f)
-                if not os.path.exists(f):
-                    raise PipelineOSError(
-                            'Handles file does not exist: "%s"' % f)
-                handles.append({
-                    'name': self._get_descriptor_name(f),
-                    'description': text_readers.read_yaml(f)
-                })
+        with HandlesReader() as reader:
+            if handles_files:
+                for f in handles_files:
+                    if not os.path.isabs(f):
+                        f = os.path.join(self.project_dir, f)
+                    if not os.path.exists(f):
+                        raise PipelineOSError(
+                                'Handles file does not exist: "%s"' % f)
+                    handles.append({
+                        'name': self._get_descriptor_name(f),
+                        'description': reader.read(f)
+                    })
         # Sort handles information according to order of modules in the pipeline
         names = [h['name'] for h in handles]
         sorted_handles = [
@@ -230,8 +234,8 @@ class JtProject(object):
             },
             'pipeline': list()
         }
-
-        text_writers.write_yaml(pipe_file, pipe_skeleton, use_ruamel=True)
+        with PipeWriter() as writer:
+            writer.write(pipe_file, pipe_skeleton, use_ruamel=True)
 
     def _create_handles_folder(self):
         handles_dir = os.path.join(self.project_dir, 'handles')
@@ -243,11 +247,13 @@ class JtProject(object):
         if not repo_dir:
             shutil.copy(pipe_file, self.project_dir)
         else:
-            pipe_content = text_readers.read_yaml(pipe_file, use_ruamel=True)
+            with PipeReader() as reader:
+                pipe_content = reader.read(pipe_file, use_ruamel=True)
             pipe_content['project']['lib'] = repo_dir
             new_pipe_file = os.path.join(self.project_dir,
                                          '%s.pipe' % self.pipe_name)
-            text_writers.write_yaml(new_pipe_file, pipe_content, use_ruamel=True)
+            with PipeWriter() as writer:
+                writer.write(new_pipe_file, pipe_content, use_ruamel=True)
         shutil.copytree(os.path.join(skel_dir, 'handles'),
                         os.path.join(self.project_dir, 'handles'))
 
@@ -261,15 +267,17 @@ class JtProject(object):
 
     def _modify_pipe(self):
         pipe_file = self._get_pipe_file()
-        # Use ruamel.yaml to preserve comments in the pipe file
-        old_pipe_content = text_readers.read_yaml(pipe_file, use_ruamel=True)
+        with PipeReader() as reader:
+            # Use ruamel.yaml to preserve comments in the pipe file
+            old_pipe_content = reader.read(pipe_file, use_ruamel=True)
         new_pipe_content = self.pipe['description']
         # Remove module 'name' from pipeline (only used internally)
         for i, module in enumerate(new_pipe_content['pipeline']):
             new_pipe_content['pipeline'][i].pop('name', None)
         mod_pipe_content = self._replace_values(old_pipe_content,
                                                 new_pipe_content)
-        text_writers.write_yaml(pipe_file, mod_pipe_content, use_ruamel=True)
+        with PipeWriter() as writer:
+            writer.write(pipe_file, mod_pipe_content, use_ruamel=True)
 
     def _modify_handles(self):
         handles_files = []
@@ -278,18 +286,20 @@ class JtProject(object):
             filename = os.path.join(self.project_dir, 'handles',
                                     '%s.handles' % h['name'])
             handles_files.append(filename)
-        for i, handles_file in enumerate(handles_files):
-            # If file already exists, modify its content
-            if os.path.exists(handles_file):
-                old_handles_content = text_readers.read_yaml(handles_file)
-                new_handles_content = self.handles[i]['description']
-                mod_handles_content = self._replace_values(
-                                            old_handles_content,
-                                            new_handles_content)
-            # If file doesn't yet exist, create it and add content
-            else:
-                mod_handles_content = self.handles[i]['description']
-            text_writers.write_yaml(handles_file, mod_handles_content)
+        with HandlesReader() as reader:
+            for i, handles_file in enumerate(handles_files):
+                # If file already exists, modify its content
+                if os.path.exists(handles_file):
+                    old_handles_content = reader.read(handles_file)
+                    new_handles_content = self.handles[i]['description']
+                    mod_handles_content = self._replace_values(
+                                                old_handles_content,
+                                                new_handles_content)
+                # If file doesn't yet exist, create it and add content
+                else:
+                    mod_handles_content = self.handles[i]['description']
+                with HandlesWriter() as writer:
+                    writer.write(handles_file, mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(os.path.join(self.project_dir,
                                            'handles', '*.handles'))
@@ -391,7 +401,7 @@ class JtAvailableModules(object):
 
     def __init__(self, repo_dir):
         '''
-        Initialize an instance of class JtAvailableModules.
+        Instantiate an instance of class JtAvailableModules.
 
         Parameters
         ----------
@@ -469,14 +479,15 @@ class JtAvailableModules(object):
         --------
         `create_handles`
         '''
-        self._handles = [
-            {
-                'name': name,
-                'description': text_readers.read_yaml(
-                                self._get_corresponding_handles_file(name))
-            }
-            for name in self.module_names
-        ]
+        with HandlesReader() as reader:
+            self._handles = [
+                {
+                    'name': name,
+                    'description': reader.read(
+                                    self._get_corresponding_handles_file(name))
+                }
+                for name in self.module_names
+            ]
         return self._handles
 
     @property

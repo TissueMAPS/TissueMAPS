@@ -35,7 +35,7 @@ class Corilla(CommandLineInterface):
         self.__api_instance = IllumstatsGenerator(
                                 experiment=experiment, prog_name=self.name)
         logger.debug(
-            'initialized API class "%s" with parsed arguments'
+            'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
         return self.__api_instance
 
@@ -56,5 +56,5 @@ class Corilla(CommandLineInterface):
         '''
         cli = Corilla(args)
         logger.debug('call "%s" method of class "%s"'
-                     % (args.subparser_name, cli.__class__.__name__))
-        getattr(cli, args.subparser_name)()
+                     % (args.method_name, cli.__class__.__name__))
+        getattr(cli, args.method_name)()

@@ -1,11 +1,11 @@
 import os
 import re
 import operator as op
+from gi.repository import Vips
 import numpy as np
 import h5py
 import scipy
 import logging
-from gi.repository import Vips
 from skimage.measure import find_contours, approximate_polygon
 from .. import image_utils
 from ..dafu.utils import extract_ids

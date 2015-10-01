@@ -29,8 +29,13 @@ by Python format strings. To this end, the following keywords are available::
 * *sep*: Platform-specific path separator ("/" Unix or "\" Windows)
 '''
 
+LAYERS_DIR = '{experiment_dir}{sep}layers'
+DATA_FILE = '{experiment_dir}{sep}data.h5'
+
+USER_CFG_FILE = '{experiment_dir}{sep}user.cfg'
 
 CYCLE_DIR = '{experiment}-{cycle_id}'
+LAYER_NAME = '{cycle}-{channel}'
 
 IMAGE_UPLOAD_DIR = '{cycle_dir}{sep}image_uploads'
 ADDITIONAL_UPLOAD_DIR = '{cycle_dir}{sep}additional_uploads'
@@ -43,13 +48,7 @@ METADATA_DIR = '{cycle_dir}{sep}metadata'
 IMAGE_METADATA_FILE = 'images.metadata'
 
 STATS_DIR = '{cycle_dir}{sep}stats'
-STATS_FILE = '{cycle}_{channel}.stats'
+STATS_FILE = '{cycle}_{channel}.stat'
 
-SHIFT_DIR = '{cycle_dir}{sep}shift'
+SHIFT_DIR = '{cycle_dir}{sep}shifts'
 SHIFT_FILE = '{cycle}.shift'
-
-LAYERS_DIR = '{experiment_dir}{sep}layers'
-LAYER_NAME = '{cycle}-{channel}'
-DATA_FILE = '{experiment_dir}{sep}data.h5'
-
-USER_CFG_FILE = '{experiment_dir}{sep}user.cfg'

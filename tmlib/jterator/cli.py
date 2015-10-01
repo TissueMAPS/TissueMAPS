@@ -36,13 +36,13 @@ class Jterator(CommandLineInterface):
                                 experiment=experiment, prog_name=self.name,
                                 pipe_name=self.args.pipeline)
         logger.debug(
-            'initialized API class "%s" with parsed arguments'
+            'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
         return self.__api_instance
 
     def create(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
+        Instantiate an instance of the API class corresponding to the specific
         command line interface and process arguments of the "create" subparser.
         '''
         self.print_logo()
@@ -52,7 +52,7 @@ class Jterator(CommandLineInterface):
 
     def remove(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
+        Instantiate an instance of the API class corresponding to the specific
         command line interface and process arguments of the "remove" subparser.
         '''
         self.print_logo()
@@ -62,7 +62,7 @@ class Jterator(CommandLineInterface):
 
     def check(self):
         '''
-        Initialize an instance of the API class corresponding to the specific
+        Instantiate an instance of the API class corresponding to the specific
         command line interface and process arguments of the "check" subparser.
         '''
         self.print_logo()
@@ -87,5 +87,5 @@ class Jterator(CommandLineInterface):
         '''
         cli = Jterator(args)
         logger.debug('call "%s" method of class "%s"'
-                     % (args.subparser_name, cli.__class__.__name__))
-        getattr(cli, args.subparser_name)()
+                     % (args.method_name, cli.__class__.__name__))
+        getattr(cli, args.method_name)()

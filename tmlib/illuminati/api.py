@@ -11,7 +11,7 @@ class PyramidCreation(ClusterRoutines):
 
     def __init__(self, experiment, prog_name):
         '''
-        Initialize an instance of class PyramidCreation.
+        Instantiate an instance of class PyramidCreation.
 
         Parameters
         ----------

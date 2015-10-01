@@ -7,8 +7,8 @@ from . import image_utils
 from . import shift
 from .corilla import illumcorr
 from .illuminati import segment
-from .image_readers import VipsImageReader
-from .image_readers import OpencvImageReader
+from .readers import VipsImageReader
+from .readers import OpencvImageReader
 
 
 class Pixels(object):
@@ -89,7 +89,7 @@ class VipsPixels(Pixels):
 
     def __init__(self, array):
         '''
-        Initialize an instance of class VipsPixels.
+        Instantiate an instance of class VipsPixels.
 
         Parameters
         ----------
@@ -286,7 +286,7 @@ class VipsPixels(Pixels):
 
         See also
         --------
-        `tmlib.image_readers.VipsImageReader`_
+        `tmlib.readers.VipsImageReader`_
         '''
         with VipsImageReader() as reader:
             return VipsPixels(reader.read(filename))
@@ -327,7 +327,7 @@ class NumpyPixels(Pixels):
 
     def __init__(self, array):
         '''
-        Initialize an instance of class NumpyPixels.
+        Instantiate an instance of class NumpyPixels.
 
         Parameters
         ----------
@@ -520,7 +520,7 @@ class NumpyPixels(Pixels):
 
         See also
         --------
-        `tmlib.image_readers.OpencvImageReader`_
+        `tmlib.readers.OpencvImageReader`_
         '''
         with OpencvImageReader() as reader:
             return NumpyPixels(reader.read(filename))

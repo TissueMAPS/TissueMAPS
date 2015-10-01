@@ -12,7 +12,7 @@ class WellPlate(Cycle):
 
     def __init__(self, cycle_dir, cfg, user_cfg, library):
         '''
-        Initialize an instance of class WellPlate.
+        Instantiate an instance of class WellPlate.
 
         Parameters
         ----------
@@ -198,7 +198,7 @@ class Slide(Cycle):
 
     def __init__(self, cycle_dir, cfg, user_cfg, library):
         '''
-        Initialize an instance of class Slide.
+        Instantiate an instance of class Slide.
 
         Parameters
         ----------

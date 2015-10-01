@@ -6,6 +6,7 @@ import logging
 import shutil
 import argparse
 import gc3libs
+from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
@@ -52,10 +53,11 @@ def command_line_call(parser):
         else:
             parser.print_help()
     except Exception as error:
-        sys.stderr.write('😞  Failed!\n')
-        sys.stderr.write(str(error))
+        sys.stdout.write('😞  Failed!\n')
+        sys.stderr.write('%s\n' % str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):
             sys.stderr.write(tb)
+        raise
 
 
 class CommandLineInterface(object):
@@ -73,7 +75,7 @@ class CommandLineInterface(object):
 
     def __init__(self, args):
         '''
-        Initialize an instance of class CommandLineInterface.
+        Instantiate an instance of class CommandLineInterface.
 
         Parameters
         ----------
@@ -117,7 +119,7 @@ class CommandLineInterface(object):
         '''
         Handler function that can be called by a subparser.
 
-        Initializes an instance of the class and calls the method matching the
+        Instantiates an instance of the class and calls the method matching the
         name of the specified subparser with the parsed arguments.
 
         Parameters
@@ -146,7 +148,7 @@ class CommandLineInterface(object):
 
     def init(self):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Instantiate an instance of the API class corresponding to the program
         and process arguments of the "init" subparser.
 
         Returns
@@ -159,34 +161,47 @@ class CommandLineInterface(object):
         job_descriptions = api.get_job_descriptions_from_files()
         if job_descriptions['run']:
             logger.info('clean up output of previous submission')
-            output_files = api.list_output_files(job_descriptions)
+            outputs = api.list_output_files(job_descriptions)
             # TODO
-            if not output_files:
-                logger.debug('no output files of previous submission found')
-            else:
-                logger.debug('remove output files of previous submission')
-                if all([not os.path.exists(f) for f in output_files]):
-                    logger.warning('output files don\'t exist')
-                elif any([not os.path.exists(f) for f in output_files]):
-                    logger.warning('some output files don\'t exist')
-                [os.remove(f) for f in output_files
-                 if os.path.exists(f) and not os.path.isdir(f)]
+            if outputs:
+                dont_exist_ix = [not os.path.exists(f) for f in outputs]
+                if all(dont_exist_ix):
+                    logger.warning('outputs don\'t exist')
+                elif any(dont_exist_ix):
+                    logger.warning('some outputs don\'t exist')
+                for out in outputs:
+                    if not os.path.exists(out):
+                        continue
+                    if os.path.isdir(out):
+                        logger.debug('remove output directory: %s' % out)
+                        # shutil.rmtree(out)
+                    else:
+                        logger.debug('remove output file: %s' % out)
+                        os.remove(out)
+
             if self.args.backup:
-                logger.info('backup project directory of previous submission')
+                logger.info('backup log reports and job descriptions '
+                            'of previous submission')
                 timestamp = api.create_datetimestamp()
                 shutil.move(api.log_dir,
                             '{name}_backup_{time}'.format(
-                                        name=api.log_dir,
-                                        time=timestamp))
+                                name=api.log_dir,
+                                time=timestamp))
                 shutil.move(api.job_descriptions_dir,
                             '{name}_backup_{time}'.format(
-                                        name=api.job_descriptions_dir,
-                                        time=timestamp))
+                                name=api.job_descriptions_dir,
+                                time=timestamp))
+                shutil.move(api.status_dir, 
+                            '{name}_backup_{time}'.format(
+                                name=api.status_file,
+                                time=timestamp))
+
             else:
                 logger.debug('remove log reports and job descriptions '
                              'of previous submission')
                 shutil.rmtree(api.job_descriptions_dir)
                 shutil.rmtree(api.log_dir)
+                shutil.rmtree(api.status_dir)
 
         logger.info('create job descriptions')
         kwargs = self._variable_init_args
@@ -200,7 +215,7 @@ class CommandLineInterface(object):
 
     def run(self):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Instantiate an instance of the API class corresponding to the program
         and process arguments of the "run" subparser.
         '''
         self.print_logo()
@@ -211,9 +226,47 @@ class CommandLineInterface(object):
         logger.info('run job #%d' % batch['id'])
         api.run_job(batch)
 
-    def get_jobs(self):
+    @cached_property
+    def _job_descriptions(self):
+        api = self._api_instance
+        logger.debug('read job descriptions from files')
+        self.__job_descriptions = api.get_job_descriptions_from_files()
+        return self.__job_descriptions
+
+    @property
+    def expected_outputs(self):
         '''
-        Read the job descriptions from the *.job* files and build GCPie "jobs".
+        Read the job descriptions and extract the "outputs" information.
+
+        Returns
+        -------
+        List[str]
+            absolute paths to outputs that should be generated by the program
+        '''
+        api = self._api_instance
+        logger.debug('get expected outputs from job descriptions')
+        outputs = api.list_output_files(self._job_descriptions)
+        return outputs
+
+    @property
+    def required_inputs(self):
+        '''
+        Read the job descriptions and extract the "inputs" information.
+
+        Returns
+        -------
+        List[str]
+            absolute paths to inputs that are required by the program
+        '''
+        api = self._api_instance
+        logger.debug('get required inputs from job descriptions')
+        self._required_inputs = api.list_input_files(self._job_descriptions)
+        return self._required_inputs
+
+    @property
+    def jobs(self):
+        '''
+        Read the job descriptions and build GCPie "jobs".
 
         Returns
         -------
@@ -221,29 +274,26 @@ class CommandLineInterface(object):
             jobs
         '''
         api = self._api_instance
-        logger.info('read job descriptions from files')
-        job_descriptions = api.get_job_descriptions_from_files()
         logger.info('create jobs')
         jobs = api.create_jobs(
-                job_descriptions=job_descriptions,
-                no_shared_network=self.args.no_shared_network,
+                job_descriptions=self._job_descriptions,
                 virtualenv=self.args.virtualenv)
         return jobs
 
     def submit(self):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Instantiate an instance of the API class corresponding to the program
         and process arguments of the "submit" subparser.
         '''
         self.print_logo()
         api = self._api_instance
-        jobs = self.get_jobs()
+        jobs = self.jobs
         logger.info('submit and monitor jobs')
         api.submit_jobs(jobs, self.args.interval)
 
     def kill(self):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Instantiate an instance of the API class corresponding to the program
         and process arguments of the "kill" subparser.
         '''
         self.print_logo()
@@ -259,7 +309,7 @@ class CommandLineInterface(object):
 
     def apply(self):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Instantiate an instance of the API class corresponding to the program
         and process arguments of the "apply" subparser.
         '''
         self.print_logo()
@@ -276,7 +326,7 @@ class CommandLineInterface(object):
 
     def collect(self):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Instantiate an instance of the API class corresponding to the program
         and process arguments of the "collect" subparser.
         '''
         self.print_logo()
@@ -327,18 +377,19 @@ class CommandLineInterface(object):
         if not required_subparsers:
             raise ValueError('At least one subparser has to specified')
 
-        subparsers = parser.add_subparsers(dest='subparser_name',
+        subparsers = parser.add_subparsers(dest='method_name',
                                            help='sub-commands')
 
         if 'init' in required_subparsers:
             init_parser = subparsers.add_parser(
-                'init', help='initialize the program with required arguments')
+                'init', help='instantiate the program with required arguments')
             init_parser.description = '''
-                Create a list of job descriptions (batches) for parallel
-                processing and write it to a file in JSON format. Note that in
-                case of existing previous submissions, the log output will be
-                overwritten unless either the "--backup" or "--show" argument
-                is specified.
+                Instantiate a step: Create a list of persistent job
+                descriptions (batches) for parallel processing, which are
+                stored as ".job" JSON files. Note that in
+                case of the existence of a previous submission, the job
+                description and log outputs files will be overwritten unless
+                the "--backup" or "--show" argument is specified.
             '''
             init_parser.add_argument(
                 '--show', action='store_true', dest='print_job_descriptions',
@@ -374,26 +425,6 @@ class CommandLineInterface(object):
                 help='monitoring interval in seconds'
             )
             submit_parser.add_argument(
-                '--no_shared_network', dest='no_shared_network',
-                action='store_true', help='when worker nodes don\'t have \
-                access to a shared network; triggers copying of files')
-            submit_parser.add_argument(
-                '--virtualenv', type=str, default='tmaps',
-                help='name of a virtual environment that should be activated '
-                     '(default: tmaps')
-
-        if 'kill' in required_subparsers:
-            kill_parser = subparsers.add_parser(
-                'kill',
-                help='kill submitted jobs')
-            kill_parser.description = '''
-                Stop submitted jobs and set their status to "terminated".
-            '''
-            kill_parser.add_argument(
-                '--no_shared_network', dest='no_shared_network',
-                action='store_true', help='when worker nodes don\'t have \
-                access to a shared network; triggers copying of files')
-            kill_parser.add_argument(
                 '--virtualenv', type=str, default='tmaps',
                 help='name of a virtual environment that should be activated '
                      '(default: tmaps')

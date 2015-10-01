@@ -165,7 +165,7 @@ class ShiftDescription(object):
 
     def __init__(self, description=None):
         '''
-        Initialize an instance of class ShiftDescription.
+        Instantiate an instance of class ShiftDescription.
 
         Parameters
         ----------

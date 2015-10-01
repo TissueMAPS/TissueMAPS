@@ -34,7 +34,7 @@ class MetadataHandler(object):
     def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
         '''
-        Initialize an instance of class MetadataHandler.
+        Instantiate an instance of class MetadataHandler.
 
         Parameters
         ----------
@@ -76,7 +76,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        `tmlib.metadata_readers.DefaultMetadataReader`_
+        `tmlib.metareaders.DefaultMetadataReader`_
         '''
         self._ome_image_metadata = dict()
         with DefaultMetadataReader() as reader:
@@ -463,8 +463,10 @@ class MetadataHandler(object):
             raise MetadataError('Metadata requires "position" attribute '
                                 'for determination of grid coordinates.')
         if not any(utils.flatten([md.position for md in metadata])):
-            raise MetadataError('Positions are not specified. Grid '
-                                'coordinates can therefore not be determined.')
+            raise MetadataError(
+                    'Positions are not specified. '
+                    'Grid coordinates can therefore not be determined.\n'
+                    'Are you sure you have specified the correct format?')
         complemented_metadata = list(metadata)
         all_positions = list()
         if metadata[0].well:
@@ -539,7 +541,7 @@ class DefaultMetadataHandler(MetadataHandler):
     def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
         '''
-        Initialize an instance of class MetadataHandler.
+        Instantiate an instance of class MetadataHandler.
 
         Parameters
         ----------
@@ -553,7 +555,7 @@ class DefaultMetadataHandler(MetadataHandler):
             name of the cycle, i.e. the name of the folder of the corresponding
             experiment or subexperiment
         '''
-        super(DefaultMetadataReader, self).__init__(
+        super(DefaultMetadataHandler, self).__init__(
                 image_files, additional_files, ome_xml_files, cycle_name)
         self.image_files = image_files
         self.additional_files = additional_files

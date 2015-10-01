@@ -39,7 +39,7 @@ class Metaextract(CommandLineInterface):
         self.__api_instance = MetadataExtractor(
                                 experiment=experiment, prog_name=self.name)
         logger.debug(
-            'initialized API class "%s" with parsed arguments'
+            'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
         return self.__api_instance
 
@@ -59,4 +59,4 @@ class Metaextract(CommandLineInterface):
         `tmlib.metaextract.argparser`_
         '''
         cli = Metaextract(args)
-        getattr(cli, args.subparser_name)()
+        getattr(cli, args.method_name)()

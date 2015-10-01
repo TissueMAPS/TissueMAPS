@@ -4,7 +4,8 @@ import logging
 from os.path import splitext, basename, exists, dirname
 from collections import Counter
 from . import path_utils
-from .. import text_readers
+from ..readers import PipeReader
+from ..readers import HandlesReader
 from ..errors import PipelineDescriptionError
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class PipelineChecker(object):
     def __init__(self, project_dir, pipe_description,
                  handles_descriptions=None):
         '''
-        Initialize an instance of class JtChecker.
+        Instantiate an instance of class JtChecker.
 
         project_dir: str
             path to Jterator project folder
@@ -296,55 +297,57 @@ class PipelineChecker(object):
         Ensure that module inputs have been produced upstream in the pipeline.
         '''
         outputs = list()
-        for i, module in enumerate(self.pipe_description['pipeline']):
-            handles_path = path_utils.complete_module_path(
-                            module['handles'], self.libpath, self.project_dir)
-            if self.handles_descriptions is None:
-                handles = text_readers.read_yaml(handles_path)
-            else:
-                handles = self.handles_descriptions[i]
+        with HandlesReader() as reader:
+            for i, module in enumerate(self.pipe_description['pipeline']):
+                handles_path = path_utils.complete_module_path(
+                                module['handles'], self.libpath,
+                                self.project_dir)
+                if self.handles_descriptions is None:
+                    handles = reader.read(handles_path)
+                else:
+                    handles = self.handles_descriptions[i]
 
-            # Ensure that argument names are unique
-            n = Counter([arg['name'] for arg in handles['input']])
-            repeated = [x for x in n.values() if x > 1]
-            if repeated:
-                raise PipelineDescriptionError(
-                        'Input arguments names in "%s" '
-                        'have to be unique.' % handles_path)
-            if not handles['output']:
-                continue
-            n = Counter([arg['name'] for arg in handles['output']])
-            repeated = [x for x in n.values() if x > 1]
-            if repeated:
-                raise PipelineDescriptionError(
-                        'Output arguments names in "%s" '
-                        'have to be unique.' % handles_path)
-
-            # Check pipeline logic:
-            # Check whether input arguments for current module were produced
-            # upstream in the pipeline
-            for input_arg in handles['input']:
-                if (input_arg['class'] != 'pipeline'
-                        or input_arg['value'] is None):
-                    # We only check for non-empty data passed via the HDF5 file
-                    continue
-                name = input_arg['value']
-                layer_names = [
-                    layer['name']
-                    for layer in self.pipe_description['images']['layers']
-                ]
-                if name in layer_names:
-                    # These names are written into the HDF5 file by Jterator
-                    # and are therefore not created in the pipeline.
-                    # So there is no need to check them here.
-                    continue
-                if input_arg['value'] not in outputs:
-                    print input_arg['name']
-                    print input_arg['value']
+                # Ensure that argument names are unique
+                n = Counter([arg['name'] for arg in handles['input']])
+                repeated = [x for x in n.values() if x > 1]
+                if repeated:
                     raise PipelineDescriptionError(
-                            'Input "%s" of module "%s" is not '
-                            'created upstream in the pipeline.'
-                            % (input_arg['name'], module['handles']))
+                            'Input arguments names in "%s" '
+                            'have to be unique.' % handles_path)
+                if not handles['output']:
+                    continue
+                n = Counter([arg['name'] for arg in handles['output']])
+                repeated = [x for x in n.values() if x > 1]
+                if repeated:
+                    raise PipelineDescriptionError(
+                            'Output arguments names in "%s" '
+                            'have to be unique.' % handles_path)
+
+                # Check pipeline logic:
+                # Check whether input arguments for current module were produced
+                # upstream in the pipeline
+                for input_arg in handles['input']:
+                    if (input_arg['class'] != 'pipeline'
+                            or input_arg['value'] is None):
+                        # We only check for non-empty data passed via the HDF5 file
+                        continue
+                    name = input_arg['value']
+                    layer_names = [
+                        layer['name']
+                        for layer in self.pipe_description['images']['layers']
+                    ]
+                    if name in layer_names:
+                        # These names are written into the HDF5 file by Jterator
+                        # and are therefore not created in the pipeline.
+                        # So there is no need to check them here.
+                        continue
+                    if input_arg['value'] not in outputs:
+                        print input_arg['name']
+                        print input_arg['value']
+                        raise PipelineDescriptionError(
+                                'Input "%s" of module "%s" is not '
+                                'created upstream in the pipeline.'
+                                % (input_arg['name'], module['handles']))
 
             # Store all upstream output arguments
             for output_arg in handles['output']:

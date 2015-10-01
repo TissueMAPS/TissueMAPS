@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from .. import image_utils
-from ..image_readers import BioformatsImageReader
+from ..readers import BioformatsImageReader
 from ..cluster import ClusterRoutines
 
 
@@ -19,7 +19,7 @@ class ImageExtractor(ClusterRoutines):
 
     def __init__(self, experiment, prog_name):
         '''
-        Initialize an instance of class ImageExtractor.
+        Instantiate an instance of class ImageExtractor.
 
         Parameters
         ----------

@@ -36,22 +36,39 @@ class StitchError(Exception):
     '''
 
 
-class PipelineRunError(Exception):
+class PipelineError(Exception):
+    '''
+    Base class for jterator pipeline errors.
+    '''
+
+
+class PipelineRunError(PipelineError):
     '''
     Error class that is raised when an error occurs upon running a jterator
     pipeline.
     '''
 
 
-class PipelineDescriptionError(Exception):
+class PipelineDescriptionError(PipelineError):
     '''
     Error class that is raised when information in pipeline description is
     missing or incorrect.
     '''
 
 
-class PipelineOSError(Exception):
+class PipelineOSError(PipelineError):
     '''
     Error class that is raised when pipeline related files do not exist
     on disk.
+    '''
+
+class WorkflowError(Exception):
+    '''
+    Base class for workflow errors.
+    '''
+
+class WorkflowNextStepError(WorkflowError):
+    '''
+    Error class that is raised when requirements for progressing to the next
+    step are not fulfilled.
     '''

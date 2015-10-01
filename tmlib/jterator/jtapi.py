@@ -1,27 +1,8 @@
 import mpld3
 import logging
-from .. import text_readers
-from ..data_readers import DatasetReader
+from ..readers import DatasetReader
 
 logger = logging.getLogger(__name__)
-
-
-def readconfig(configuration):
-    '''
-    Reading configuration settings from YAML string.
-
-    Parameters
-    ----------
-    configuration: str
-        configuration settings
-
-    Returns
-    -------
-    dict
-    '''
-    config = text_readers.load_yaml(configuration)
-    logger.debug('read configuration settings from "%s"' % configuration)
-    return config
 
 
 def writedata(data, data_file):

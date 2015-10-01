@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from ..data_readers import DatasetReader
+from ..readers import DatasetReader
 
 
 def fuse_datasets(data_files):
