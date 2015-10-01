@@ -1,18 +1,18 @@
 import logging
+import argparse
 from . import logo
 from . import __version__
-from .api import ClusterWorkflow
 from .workflow import ClusterWorkflowManager
+from .workflow import WorkflowClusterRoutines
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
-class Tmaps(CommandLineInterface):
+class Tmaps(object):
 
     def __init__(self, args):
-        super(Tmaps, self).__init__(args)
         self.args = args
         self.logger = logger
 
@@ -34,35 +34,14 @@ class Tmaps(CommandLineInterface):
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        manager = ClusterWorkflowManager(self.args.experiment_dir)
-        self.__api_instance = ClusterWorkflow(
+        self.__api_instance = ClusterWorkflowManager(
                     experiment=experiment,
-                    no_shared_network=self.args.no_shared_network,
                     virtualenv=self.args.virtualenv,
                     verbosity=self.args.verbosity)
         logger.debug(
-            'initialized API class "%s" with parsed arguments'
+            'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
-        for step in manager.workflow_description['steps']:
-            prog_name = step['prog_name']
-            logger.debug('add step "%s" to the workflow' % prog_name)
-            prog_args = step['prog_args']
-            init_args = step['init_args']
-            self.__api_instance.add_step(prog_name, prog_args, init_args)
         return self.__api_instance
-
-    def get_jobs(self):
-        '''
-        Combine GCPie "jobs" from different steps.
-
-        Returns
-        -------
-        gc3libs.workflow.SequentialTaskCollection
-            jobs
-        '''
-        api = self._api_instance
-        jobs = api.create_jobs()
-        return jobs
 
     @staticmethod
     def call(args):
@@ -81,5 +60,50 @@ class Tmaps(CommandLineInterface):
         '''
         cli = Tmaps(args)
         logger.debug('call "%s" method of class "%s"'
-                     % (args.subparser_name, cli.__class__.__name__))
-        getattr(cli, args.subparser_name)()
+                     % (args.method_name, cli.__class__.__name__))
+        getattr(cli, args.method_name)()
+
+    def submit(self):
+        api = self._api_instance
+        clst = WorkflowClusterRoutines(api.experiment, self.name)
+        clst.submit_jobs(api, 5)
+
+    @staticmethod
+    def get_parser_and_subparsers(
+            required_subparsers=['submit']):
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            'experiment_dir', help='path to experiment directory')
+        parser.add_argument(
+            '-v', '--verbosity', action='count', default=0,
+            help='increase logging verbosity to DEBUG (default: INFO)')
+        parser.add_argument(
+            '-s', '--silent', action='store_true',
+            help='set logging verbosity to WARNING')
+        parser.add_argument(
+            '--version', action='version')
+
+        if not required_subparsers:
+            raise ValueError('At least one subparser has to specified')
+
+        subparsers = parser.add_subparsers(dest='method_name',
+                                           help='sub-commands')
+
+        if 'submit' in required_subparsers:
+            submit_parser = subparsers.add_parser(
+                'submit',
+                help='submit and monitor jobs')
+            submit_parser.description = '''
+                Create jobs, submit them to the cluster, monitor their
+                processing and collect their outputs.
+            '''
+            submit_parser.add_argument(
+                '--interval', type=int, default=5,
+                help='monitoring interval in seconds'
+            )
+            submit_parser.add_argument(
+                '--virtualenv', type=str, default='tmaps',
+                help='name of a virtual environment that should be activated '
+                     '(default: tmaps')
+
+        return (parser, subparsers)

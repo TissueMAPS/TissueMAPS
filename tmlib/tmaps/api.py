@@ -19,7 +19,7 @@ class ClusterWorkflow(BasicClusterRoutines):
 
     def __init__(self, experiment, no_shared_network, virtualenv, verbosity):
         '''
-        Initialize an instance of class ClusterWorkflow.
+        Instantiate an instance of class ClusterWorkflow.
 
         Parameters
         ----------
