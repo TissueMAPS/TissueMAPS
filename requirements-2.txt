@@ -37,7 +37,7 @@ parsedatetime==1.5
 passlib==1.6.4
 Pillow==2.9.0
 prettytable==0.7.2
-psycopg2-2.6.1
+psycopg2==2.6.1
 pyCLI==2.0.3
 pycrypto==2.6.1
 pyparsing==2.0.3
