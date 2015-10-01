@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Installation &mdash; TissueMAPS Toolbox 0.1.0 documentation</title>
+    <title>Installation &mdash; TissueMAPS Library 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="_static/tm_favicon.png"/>
-    <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="index.html" />
+    <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
     <link rel="next" title="API reference" href="api_reference.html" />
     <link rel="prev" title="Introduction" href="introduction.html" />
    
@@ -42,32 +42,56 @@
             
   <div class="section" id="installation">
 <span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p>Clone the repository</p>
-<div class="code bash highlight-python"><div class="highlight"><pre>$ git clone https://github.com/HackerMD/TissueMAPSToolbox.git ~/tmapstoolbox
+<p>First, create a virtual environment:</p>
+<p>To this end, install <cite>virtualenv</cite> and <cite>virtualenvwrapper</cite> and set up your environment:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ pip install virtualenv
+$ pip install virtualenvwrapper
 </pre></div>
 </div>
-<p>and install it</p>
-<div class="code bash highlight-python"><div class="highlight"><pre>$ cd ~/tmapstoolbox/tmt
-$ pip install -e .
+<p>Add the following lines to your <code class="docutils literal"><span class="pre">.bash_profile</span></code> file:</p>
+<div class="highlight-python"><div class="highlight"><pre>export WORKON_HOME=$HOME/.virtualenvs
+export PROJECT_HOME=$HOME/Devel
+source /usr/local/bin/virtualenvwrapper.sh
+</pre></div>
+</div>
+<p>Create a virtual environment for the application:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ mkvirtualenv tmaps
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Anticipate some problems when you have <a class="reference external" href="http://docs.continuum.io/anaconda/pkg-docs">anaconda</a> installed: see <a class="reference external" href="https://gist.github.com/mangecoeur/5161488">potential solution</a> and please also consider Sir Mix-a-Lot&#8217;s opinion about anaconda in general: <a class="reference external" href="https://www.youtube.com/watch?v=FlItMpGYQTo">conference talk</a></p>
+</div>
+<dl class="docutils">
+<dt>Activate the virtual environment and run the installation of required packages::</dt>
+<dd>$ workon tmaps
+$ pip install -r ~/tmlib/requirements-1.txt
+$ pip install -r ~/tmlib/requirements-2.txt</dd>
+</dl>
+<p>Then, clone the repository from Github into the virtual environment:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ git clone https://github.com/TissueMAPS/TmLibrary.git $WORKON_HOME/tmaps/lib/python2.7/site-packages/tmlib
 </pre></div>
 </div>
 <div class="section" id="dependencies">
 <span id="id2"></span><h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>On <em>OSX</em> use <a class="reference external" href="http://brew.sh/">homebrew</a> for the installation of non-Python dependencies listed below. See <a class="reference external" href="https://github.com/HackerMD/OSXEssentials">OSXEssentials</a> on recommendations for setting up your mac.</p>
 <div class="section" id="vips">
 <span id="id3"></span><h3>Vips<a class="headerlink" href="#vips" title="Permalink to this headline">¶</a></h3>
 <blockquote>
-<div>Images are processed with <a class="reference external" href="http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS">VIPS</a>, a fast and memory efficient image processing library (<a class="reference external" href="http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html">Libvips API</a>). The library can be installed via homebrew (or other package managers).</div></blockquote>
+<div><a class="reference external" href="http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS">VIPS</a> is a fast and memory efficient image processing library (<a class="reference external" href="http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html">Libvips API</a>). <cite>VIPS</cite> also supports <a class="reference external" href="http://openslide.org/">OpenSlide</a> and with it many <a class="reference external" href="http://openslide.org/formats/">virtual slide formats</a>. The library can be installed via homebrew (or other package managers).</div></blockquote>
 <p>On Mac OSX:</p>
-<div class="code bash highlight-python"><div class="highlight"><pre>$ brew tab homebrew/science
-$ brew install vips
+<div class="code bash highlight-python"><div class="highlight"><pre>$ brew tap homebrew/science
+$ brew install vips --with-openslide
 </pre></div>
 </div>
-<p>Since <cite>VIPS</cite> is used from python, you also need to install the required python package <a class="reference external" href="https://wiki.gnome.org/action/show/Projects/PyGObject?action=show&amp;redirect=PyGObject">pygobject</a>.</p>
-<div class="code bash highlight-python"><div class="highlight"><pre>$ brew install pygobject3
+<p>The Python API for <cite>VIPS</cite> is based on <a class="reference external" href="https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&amp;redirect=GObjectIntrospection">GObject introspection</a>.
+To use <cite>VIPS</cite> from python, you also need to install the python package <a class="reference external" href="https://wiki.gnome.org/action/show/Projects/PyGObject?action=show&amp;redirect=PyGObject">pygobject</a>.</p>
+<p>In order to be able to use it within the virtual environment, you need to create a soft link:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ cd $VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages/gi
+$ ln -s /usr/local/lib/python2.7/site-packages/gi gi
 </pre></div>
 </div>
-<p>You also need to set the <code class="docutils literal"><span class="pre">GI_TYPELIB_PATH</span></code> variable.</p>
-<p>The Python API for <cite>VIPS</cite> is based on <a class="reference external" href="https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&amp;redirect=GObjectIntrospection">GObject introspection</a>. The type definitions are therefore automatically loaded and can be used from within Python, but there are also some convenience functions that are added to the <cite>Image</cite> class and some other shortcuts (like the automatic conversions of Python strings like <code class="docutils literal"><span class="pre">'horizontal'</span></code> to the respective C constants).
+<p>The type definitions are therefore automatically loaded and can be used from within Python, but there are also some convenience functions that are added to the <cite>Image</cite> class and some other shortcuts (like the automatic conversions of Python strings like <code class="docutils literal"><span class="pre">'horizontal'</span></code> to the respective C constants).
 In IPython these convenience functions won&#8217;t show up when TAB completing on the image object. For example:</p>
 <p>The C function</p>
 <div class="code python highlight-python"><div class="highlight"><pre>int
@@ -82,16 +106,71 @@ vips_add (VipsImage *left,
 <p>It may also be helpful to look into the <a class="reference external" href="http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/func-list.html">VIPS function list</a>.</p>
 <blockquote>
 <div>NOTE: The <cite>illuminati</cite> package depends on <cite>VIPS</cite>, but the other routines also work without <cite>VIPS</cite> and use <cite>numpy</cite> instead if you set <code class="docutils literal"><span class="pre">USE_VIPS_LIBRARY</span></code> to &#8220;No&#8221;.</div></blockquote>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The <cite>libvips</cite> Python code contains a bug that breaks logging, see <a class="reference external" href="https://github.com/jcupitt/libvips/issues/330#issuecomment-143421649">issue on Github</a>. Therefore, either change the code manually as described in the issue on install from Github.</p>
+</div>
+</div>
+<div class="section" id="opencv">
+<span id="id5"></span><h3>OpenCV<a class="headerlink" href="#opencv" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="http://opencv.org/">OpenCV</a> is an extensive image processing and computer vision library that provides a Python interface.</p>
+<p>On Mac OSX:</p>
+<div class="code bash highlight-python"><div class="highlight"><pre>$ brew tap homebrew/science
+$ brew install opencv3
+$ echo /usr/local/opt/opencv3/lib/python2.7/site-packages &gt;&gt; /usr/local/lib/python2.7/site-packages/opencv3.pth
+</pre></div>
+</div>
+<p>In order to be able to use it within the virtual environment, you need to create a soft link:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ cd $VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages/
+$ ln -s /usr/local/lib/python2.7/site-packages/opencv3.pth opencv3.pth
+</pre></div>
+</div>
+<p>On Linux (Ubuntu):</p>
+<p>See <a class="reference external" href="http://rodrigoberriel.com/2014/10/installing-opencv-3-0-0-on-ubuntu-14-04/">http://rodrigoberriel.com/2014/10/installing-opencv-3-0-0-on-ubuntu-14-04/</a></p>
+</div>
+<div class="section" id="bio-formats">
+<span id="id7"></span><h3>Bio-Formats<a class="headerlink" href="#bio-formats" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="http://www.openmicroscopy.org/site/products/bio-formats">Bio-Formats</a> is a tool for reading and writing microscopic image data in a standardized way. It <a class="reference external" href="http://www.openmicroscopy.org/site/support/bio-formats5.1/supported-formats.html">supports many formats</a> and can thus be used to read images together with their corresponding metadata from different sources.</p>
+<p>The library can be installed via homebrew (or other package managers).</p>
+<p>On Mac OSX:</p>
+<div class="code bash highlight-python"><div class="highlight"><pre>$ brew install bioformats
+</pre></div>
+</div>
+<p>In <em>TissueMAPS</em>, we use the Python implementation <a class="reference external" href="https://github.com/CellProfiler/python-bioformats">python-bioformats</a>.</p>
+<p>The file <a href="#id9"><span class="problematic" id="id10">``</span></a>$$VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages/bioformats/jars/loci_tools.jar``file can be replaced by a more recent one, e.g. <a class="reference external" href="http://downloads.openmicroscopy.org/bio-formats/5.1.3/artifacts/loci_tools.jar">version 5.1.3</a>.</p>
+</div>
+<div class="section" id="simpleitk">
+<span id="id11"></span><h3>SimpleITK<a class="headerlink" href="#simpleitk" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="http://www.simpleitk.org/">SimpleITK</a> is based on the <a class="reference external" href="http://www.itk.org/">insight segmentation and registration toolkit (ITK)</a>, an extensive suite of image analysis tools, which also provides Python wrappers.</p>
 </div>
 <div class="section" id="hdf5">
-<span id="id5"></span><h3>HDF5<a class="headerlink" href="#hdf5" title="Permalink to this headline">¶</a></h3>
-<p>Data are stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files. The library can be installed via homebrew (or other package managers).</p>
+<span id="id13"></span><h3>HDF5<a class="headerlink" href="#hdf5" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files are suited for storing large datasets. The library can be installed via homebrew (or other package managers).</p>
 <p>On Mac OSX:</p>
 <div class="code bash highlight-python"><div class="highlight"><pre>$ brew tab homebrew/science
 $ brew install hdf5
 </pre></div>
 </div>
 <p>The content of <cite>HDF5</cite> files can be conveniently inspected via the command line interface <a class="reference external" href="https://www.hdfgroup.org/HDF5/doc/RM/Tools.html#Tools-Ls">h5ls</a> or via the graphical user interface <a class="reference external" href="https://www.hdfgroup.org/products/java/hdfview/index.html">HDFVIEW</a>.</p>
+</div>
+<div class="section" id="other">
+<span id="id15"></span><h3>Other<a class="headerlink" href="#other" title="Permalink to this headline">¶</a></h3>
+<div class="code bash highlight-python"><div class="highlight"><pre>$ brew install libmagic     # required by python-magic
+$ brew install time         # required by gc3pie
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="gc3pie">
+<h3>GC3Pie<a class="headerlink" href="#gc3pie" title="Permalink to this headline">¶</a></h3>
+<p>With <em>GC3Pie</em> you can run computational tasks &#8220;jobs&#8221; on your local machine as well as in diverse cluster and cloud environments. To process jobs in parallel, you need to configure some settings regarding your computational environment.</p>
+<p>You can create an example configuration file by simply calling any gc3pie command, e.g.:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ gserver
+</pre></div>
+</div>
+<p>This will create the file <code class="docutils literal"><span class="pre">$HOME/.gc3/gc3pie.conf</span></code>. Modify it according to your needs. For more information please refer to the <a class="reference external" href="http://gc3pie.readthedocs.org/en/latest/users/configuration.html">GC3Pie online documentation</a></p>
 </div>
 </div>
 </div>
@@ -103,14 +182,22 @@ $ brew install hdf5
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/tm_logo.svg" alt="Logo"/>
+              <img class="logo" src="_static/tmaps_logo.png" alt="Logo"/>
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Installation</a><ul>
 <li><a class="reference internal" href="#dependencies">Dependencies</a><ul>
 <li><a class="reference internal" href="#vips">Vips</a></li>
+<li><a class="reference internal" href="#opencv">OpenCV</a></li>
+<li><a class="reference internal" href="#bio-formats">Bio-Formats</a></li>
+<li><a class="reference internal" href="#simpleitk">SimpleITK</a></li>
 <li><a class="reference internal" href="#hdf5">HDF5</a></li>
+<li><a class="reference internal" href="#other">Other</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#configuration">Configuration</a><ul>
+<li><a class="reference internal" href="#gc3pie">GC3Pie</a></li>
 </ul>
 </li>
 </ul>

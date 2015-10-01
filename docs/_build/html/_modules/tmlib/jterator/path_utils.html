@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tmlib.jterator.path_utils &mdash; TissueMAPS Library 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tmlib.jterator.path_utils</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+
+<div class="viewcode-block" id="complete_path"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.path_utils.complete_path">[docs]</a><span class="k">def</span> <span class="nf">complete_path</span><span class="p">(</span><span class="n">input_path</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Complete relative path variables.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input_path: str</span>
+<span class="sd">        the path the should be completed</span>
+<span class="sd">    project_dir: str</span>
+<span class="sd">        absolute path to project folder</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">input_path</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">input_path</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">input_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+        <span class="n">input_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">input_path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">):</span>
+            <span class="n">input_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">input_path</span>
+
+</div>
+<div class="viewcode-block" id="complete_module_path"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.path_utils.complete_module_path">[docs]</a><span class="k">def</span> <span class="nf">complete_module_path</span><span class="p">(</span><span class="n">input_path</span><span class="p">,</span> <span class="n">repo_dir</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Complete module path, which can be provided in the pipeline descriptor</span>
+<span class="sd">    file as full path, relative path or a path containing format string.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input_path: str</span>
+<span class="sd">        the path the should be completed</span>
+<span class="sd">    repo_dir: str</span>
+<span class="sd">        value of the &quot;lib&quot; key in the pipeline descriptor file</span>
+<span class="sd">    project_dir: str</span>
+<span class="sd">        absolute path to project folder</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># Replace the `variable` name with the actual value</span>
+    <span class="k">if</span> <span class="n">repo_dir</span> <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">r&#39;^{lib}&#39;</span><span class="p">,</span> <span class="n">input_path</span><span class="p">):</span>
+        <span class="n">re_path</span> <span class="o">=</span> <span class="n">input_path</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lib</span><span class="o">=</span><span class="n">repo_dir</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">input_path</span><span class="p">):</span>
+        <span class="n">re_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">input_path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">re_path</span> <span class="o">=</span> <span class="n">input_path</span>
+    <span class="c"># Expand path containing environment variables &#39;$&#39;</span>
+    <span class="n">complete_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">re_path</span><span class="p">)</span>
+    <span class="c"># Expand path starting with `~`</span>
+    <span class="n">complete_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">re_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">complete_path</span>
+
+</div>
+<div class="viewcode-block" id="determine_language"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.path_utils.determine_language">[docs]</a><span class="k">def</span> <span class="nf">determine_language</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Determine language form module filename suffix.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename: str</span>
+<span class="sd">        name of a module file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>  <span class="c"># removes trailing &#39;/&#39;</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s">&#39;.m&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;Matlab&#39;</span>
+    <span class="k">elif</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s">&#39;.R&#39;</span> <span class="ow">or</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s">&#39;.r&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;R&#39;</span>
+    <span class="k">elif</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s">&#39;.py&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;Python&#39;</span>
+    <span class="k">elif</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s">&#39;.jl&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;Julia&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Language could not be determined from filename.&#39;</span><span class="p">)</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/tmaps_logo.png" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Markus D. Herrmann, Robin Hafen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

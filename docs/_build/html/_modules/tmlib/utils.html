@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tmlib.utils &mdash; TissueMAPS Library 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tmlib.utils</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="sd">&#39;&#39;&#39;Utility functions for standard routines.&#39;&#39;&#39;</span>
+
+
+<div class="viewcode-block" id="regex_from_format_string"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.regex_from_format_string">[docs]</a><span class="k">def</span> <span class="nf">regex_from_format_string</span><span class="p">(</span><span class="n">format_string</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convert a format string of the sort &quot;{name}_bla/something_{number}&quot;</span>
+<span class="sd">    to a named regular expression a la &quot;P&lt;name&gt;.*_bla/something_P&lt;number&gt;\d+&quot;.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    format_string: str</span>
+<span class="sd">        Python format string</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        named regular expression pattern</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># Extract the names of all placeholders from the format string</span>
+    <span class="n">format_string</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">r&#39;\.&#39;</span><span class="p">,</span> <span class="s">&#39;\.&#39;</span><span class="p">,</span> <span class="n">format_string</span><span class="p">)</span>  <span class="c"># escape dot</span>
+    <span class="n">placeholders_inner_parts</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s">r&#39;{(.+?)}&#39;</span><span class="p">,</span> <span class="n">format_string</span><span class="p">)</span>
+    <span class="c"># Remove format strings</span>
+    <span class="n">placeholder_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">pl</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">pl</span> <span class="ow">in</span> <span class="n">placeholders_inner_parts</span><span class="p">]</span>
+    <span class="n">placeholder_regexes</span> <span class="o">=</span> <span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="s">&#39;{</span><span class="si">%s</span><span class="s">}&#39;</span> <span class="o">%</span> <span class="n">pl</span><span class="p">)</span>
+                           <span class="k">for</span> <span class="n">pl</span> <span class="ow">in</span> <span class="n">placeholders_inner_parts</span><span class="p">]</span>
+
+    <span class="n">regex</span> <span class="o">=</span> <span class="n">format_string</span>
+    <span class="k">for</span> <span class="n">pl_name</span><span class="p">,</span> <span class="n">pl_regex</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">placeholder_names</span><span class="p">,</span> <span class="n">placeholder_regexes</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">r&#39;number&#39;</span><span class="p">,</span> <span class="n">pl_name</span><span class="p">):</span>
+            <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">pl_regex</span><span class="p">,</span> <span class="s">&#39;(?P&lt;</span><span class="si">%s</span><span class="s">&gt;\d+)&#39;</span> <span class="o">%</span> <span class="n">pl_name</span><span class="p">,</span> <span class="n">regex</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">pl_regex</span><span class="p">,</span> <span class="s">&#39;(?P&lt;</span><span class="si">%s</span><span class="s">&gt;.*)&#39;</span> <span class="o">%</span> <span class="n">pl_name</span><span class="p">,</span> <span class="n">regex</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">regex</span>
+
+</div>
+<div class="viewcode-block" id="indices"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.indices">[docs]</a><span class="k">def</span> <span class="nf">indices</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Determine all indices of an item in a list.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    seq: list</span>
+<span class="sd">    item:</span>
+<span class="sd">        the element whose index position should be determined</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        all indices of `item` in `seq`</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">start_at</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">locs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">start_at</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">locs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span>
+            <span class="n">start_at</span> <span class="o">=</span> <span class="n">loc</span>
+    <span class="k">return</span> <span class="n">locs</span>
+
+</div>
+<div class="viewcode-block" id="flatten"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.flatten">[docs]</a><span class="k">def</span> <span class="nf">flatten</span><span class="p">(</span><span class="n">seq</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Flatten a list of lists into a list.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    seq: List[list]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">seq</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">]</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/tmaps_logo.png" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Markus D. Herrmann, Robin Hafen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

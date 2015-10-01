@@ -1,0 +1,434 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tmlib.mosaic &mdash; TissueMAPS Library 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tmlib.mosaic</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">gi.repository</span> <span class="kn">import</span> <span class="n">Vips</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABCMeta</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">image_utils</span>
+<span class="kn">from</span> <span class="nn">.errors</span> <span class="kn">import</span> <span class="n">MetadataError</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="StichedImage"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.StichedImage">[docs]</a><span class="k">class</span> <span class="nc">StichedImage</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Abstract base class for an image that was created by stitching several</span>
+<span class="sd">    smaller images together.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Instantiate an instance of class Mosaic.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        array: Vips.Image</span>
+<span class="sd">            stitched image pixel array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">array</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Tuple[int]</span>
+<span class="sd">            y, x dimensions of the pixel array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dimensions</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">width</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dimensions</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">bands</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Bands represent colors. An RGB image has 3 bands while a greyscale</span>
+<span class="sd">        image has only one band.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">            number of bands in the pixel array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bands</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">bands</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bands</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            data type (format) of the pixel array elements</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">get_format</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_float</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            whether pixel array has float data type</span>
+<span class="sd">            (Vips.BandFormat.FLOAT or Vips.BandFormat.DOUBLE)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_float</span> <span class="o">=</span> <span class="n">Vips</span><span class="o">.</span><span class="n">BandFormat</span><span class="o">.</span><span class="n">isfloat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_float</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_uint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            whether pixel array has unsigned integer data type</span>
+<span class="sd">            (Vips.BandFormat.UCHAR or Vips.BandFormat.USHORT)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_uint</span> <span class="o">=</span> <span class="n">Vips</span><span class="o">.</span><span class="n">BandFormat</span><span class="o">.</span><span class="n">isuint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_uint</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_binary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            whether pixel array has boolean data type</span>
+<span class="sd">            (Vips.BandFormat.UCHAR)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">Vips</span><span class="o">.</span><span class="n">BandFormat</span><span class="o">.</span><span class="n">UCHAR</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_binary</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_build_image_grid</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+<div class="viewcode-block" id="StichedImage.create_from_images"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.StichedImage.create_from_images">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_images</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+</div></div>
+<div class="viewcode-block" id="Mosaic"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.Mosaic">[docs]</a><span class="k">class</span> <span class="nc">Mosaic</span><span class="p">(</span><span class="n">StichedImage</span><span class="p">):</span>
+
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class for a mosaic image of type `Vips.Image`.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Instantiate an instance of class Mosaic.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        array: Vips.Image</span>
+<span class="sd">            stitched image pixel array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Mosaic</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">array</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_build_image_grid</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">grid_coordinates</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+        <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">coordinates</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c"># zero-based</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">height</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">width</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coordinates</span><span class="p">):</span>
+            <span class="n">grid</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">images</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">grid</span>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Mosaic.create_from_images"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.Mosaic.create_from_images">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_images</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create a Mosaic object from image objects.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        images: List[ChannelImage]</span>
+<span class="sd">            set of images that are all of the same *cycle* and *channel*</span>
+<span class="sd">        dx: int, optional</span>
+<span class="sd">            displacement in x direction in pixels; i.e. overlap of images</span>
+<span class="sd">            in x direction (negative integer value; default: ``0``)</span>
+<span class="sd">        dy: int, optional</span>
+<span class="sd">            displacement in y direction in pixels; i.e. overlap of images</span>
+<span class="sd">            in y direction (negative integer value; default: ``0``)</span>
+<span class="sd">        stats: IllumstatsImages, optional</span>
+<span class="sd">            illumination statistics to correct images for</span>
+<span class="sd">            illumination artifacts</span>
+<span class="sd">        shift: List[ShiftDescription], optional</span>
+<span class="sd">            shift descriptions, when provided images are aligned between</span>
+<span class="sd">            cycles</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Mosaic</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            when `dx` or `dy` are positive</span>
+<span class="sd">        MetadataError</span>
+<span class="sd">            when `images` are not of same *cycle* or *channel*</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dx</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&quot;dx&quot; has to be a negative integer value&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dy</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&quot;dy&quot; has to be a negative integer value&#39;</span><span class="p">)</span>
+
+        <span class="n">cycles</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cycle</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cycles</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same cycle&#39;</span><span class="p">)</span>
+        <span class="n">channels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">channel</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same channel&#39;</span><span class="p">)</span>
+
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="o">.</span><span class="n">_build_image_grid</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">current_row</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">grid</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">stats</span><span class="p">:</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">correct</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">shift</span><span class="p">:</span>
+                    <span class="n">shift_description</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">shift</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="n">img</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">site</span>
+                    <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">shift_description</span><span class="p">,</span> <span class="n">crop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+                <span class="n">current_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span>
+                        <span class="n">x</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="s">&#39;horizontal&#39;</span><span class="p">,</span> <span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">width</span><span class="o">-</span><span class="n">dx</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">current_row</span><span class="p">))</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span>
+                     <span class="n">x</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="s">&#39;vertical&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">height</span><span class="o">-</span><span class="n">dy</span><span class="p">),</span> <span class="n">rows</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Mosaic</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="Collage"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.Collage">[docs]</a><span class="k">class</span> <span class="nc">Collage</span><span class="p">(</span><span class="n">StichedImage</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Instantiate an instance of class Mosaic.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        array: Vips.Image</span>
+<span class="sd">            stitched image pixel array</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Collage</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">array</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_build_image_grid</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
+        <span class="c"># Build a quadratic grid and place the images in there without any</span>
+        <span class="c"># particular order</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
+                <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
+                    <span class="n">grid</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">images</span><span class="p">[</span><span class="n">count</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">grid</span>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Collage.create_from_images"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.Collage.create_from_images">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_images</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create a Collage object from image objects.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        images: List[ChannelImage]</span>
+<span class="sd">            set of images that are all of the same *cycle* and *channel*</span>
+<span class="sd">        dx: int, optional</span>
+<span class="sd">            displacement in x direction in pixels, i.e. gap that should be</span>
+<span class="sd">            introduced between individual images in x direction</span>
+<span class="sd">            (positive integer value; default: ``100``)</span>
+<span class="sd">        dy: int, optional</span>
+<span class="sd">            displacement in y direction in pixels, i.e. gap that should be</span>
+<span class="sd">            introduced between individual images in y direction</span>
+<span class="sd">            (positive integer value; default: ``100``)</span>
+<span class="sd">        stats: IllumstatsImages, optional</span>
+<span class="sd">            illumination statistics to correct images for</span>
+<span class="sd">            illumination artifacts</span>
+<span class="sd">        shift: List[ShiftDescription], optional</span>
+<span class="sd">            shift descriptions, when provided images are aligned between</span>
+<span class="sd">            cycles</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Mosaic</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            when `dx` or `dy` are negative</span>
+<span class="sd">        MetadataError</span>
+<span class="sd">            when `images` are not of same *cycle* or *channel*</span>
+<span class="sd">        TypeError</span>
+<span class="sd">            when `images` are not of the same data type</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&quot;dx&quot; has to be a positive integer value&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dy</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&quot;dy&quot; has to be a positive integer value&#39;</span><span class="p">)</span>
+
+        <span class="n">cycles</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cycle</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cycles</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same cycle&#39;</span><span class="p">)</span>
+        <span class="n">channels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">channel</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same channel&#39;</span><span class="p">)</span>
+        <span class="n">dtypes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dtypes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;All images must have the same type&#39;</span><span class="p">)</span>
+
+        <span class="n">image_dims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">dimensions</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">Collage</span><span class="o">.</span><span class="n">_build_image_grid</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+
+        <span class="n">im_height</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">image_dims</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">im_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">image_dims</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">im_dtype</span> <span class="o">=</span> <span class="n">dtypes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">column_spacer</span> <span class="o">=</span> <span class="n">image_utils</span><span class="o">.</span><span class="n">create_spacer_image</span><span class="p">(</span>
+                <span class="n">im_height</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">im_dtype</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">row_spacer</span> <span class="o">=</span> <span class="n">image_utils</span><span class="o">.</span><span class="n">create_spacer_image</span><span class="p">(</span>
+                <span class="n">dy</span><span class="p">,</span>
+                <span class="n">im_width</span><span class="o">*</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
+                <span class="n">column_spacer</span><span class="o">.</span><span class="n">width</span><span class="o">*</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">im_dtype</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">current_row</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">grid</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">stats</span><span class="p">:</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">correct</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">shift</span><span class="p">:</span>
+                    <span class="n">shift_description</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">shift</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="n">img</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">site</span>
+                    <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">shift_description</span><span class="p">,</span> <span class="n">crop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+                <span class="c"># pad image with zeros if necessary</span>
+                <span class="n">height_diff</span> <span class="o">=</span> <span class="n">im_height</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">height_diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">top</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">height_diff</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">top</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">width_diff</span> <span class="o">=</span> <span class="n">im_width</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">width_diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">left</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">width_diff</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">left</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">empty_image</span> <span class="o">=</span> <span class="n">image_utils</span><span class="o">.</span><span class="n">create_spacer_image</span><span class="p">(</span>
+                                <span class="n">im_height</span><span class="p">,</span> <span class="n">im_width</span><span class="p">,</span>
+                                <span class="n">dtype</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">padded_image</span> <span class="o">=</span> <span class="n">empty_image</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span>
+                                <span class="n">img</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">top</span><span class="p">)</span>
+
+                <span class="n">current_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">padded_image</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">current_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column_spacer</span><span class="p">)</span>
+
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span>
+                        <span class="n">x</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="s">&#39;horizontal&#39;</span><span class="p">,</span> <span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">width</span><span class="o">-</span><span class="n">dx</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">current_row</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_spacer</span><span class="p">)</span>
+
+        <span class="n">img</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span>
+                     <span class="n">x</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="s">&#39;vertical&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">height</span><span class="o">-</span><span class="n">dy</span><span class="p">),</span> <span class="n">rows</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Collage</span><span class="p">(</span><span class="n">img</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/tmaps_logo.png" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Markus D. Herrmann, Robin Hafen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -4,57 +4,152 @@
 Introduction
 ************
 
-.. _sub-packages:
+`TissueMAPS` is a web-based, cluster-integrated tool for the visualization and analysis of large-scale 2D image datasets.
 
-Sub-packages
-============
+Microscopy datasets can easily amount to several terabytes of size, which makes it infeasible to store and process them on a local computer. Instead, we store image files on a remote data volume and process them using cluster computing.
 
-The toolbox provides the following routines:
+`TissueMAPS` runs on a virtual machine (*VM*) within a cloud, where it has access to a files system and a cluster computing infrastructure. Users interact with the program via the Internet.
 
-- `align`_ - Alignment of images between different acquisition cycles.
+.. image:: ./_static/TissueMAPS_overview.png
+    :height: 500px
 
-- `corilla`_ - Correction of illumination artifacts.
+The web-based approach has the advantage that no specialized software has to be installed locally and that large datasets can be handled efficiently and conveniently from a laptop computer via a standard web browser.
 
-- `dafu`_ - Data fusion for `Jterator <https://github.com/HackerMD/Jterator>`_ projects.
+Automated configuration and installation procedures make it easy to deploy the *VM* image in different virtual environments. This can be useful for development, debugging and testing purposes.
 
-- `illuminati`_ - Creation of image pyramids.
+The `tmlib` Python package serves as a library for image storage and processing routines. The library has an object-orientated design and provides classes for file system operations and interaction with the computer cluster.
 
-- `visi`_ - Conversion of `Visiview <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_'s STK files to PNG images with optional renaming.
+The organizational unit of `TissueMAPS` is an **Experiment**, which is represented by a directory on disk that holds the microscopic image files and related files for metadata, calculated statistics or extracted features, for example.
 
-Each tool comes with a separate API and command line interface, but they all depend on the package wide configuration settings.
+.. _file-system-configuration:
 
-.. _configuration-settings:
+File system configuration
+=========================
 
-Configuration settings
-======================
+Images as well as metadata are stored in files on the file system.
 
-.. literatalinclude:: tmt.config
-    :language: yaml
+.. _config-file:
 
 Config file
 -----------
 
-The *tmt.config* `YAML <http://yaml.org/>`_ file specifies the experiment layout, such as the directory structure on disk.
+The layout of the directory tree on disk is configured via the `cfg.py` file where Python `format strings <https://docs.python.org/2/library/string.html#formatstrings>`_ are used to set paths and filenames:
 
-.. literalinclude:: ../tmt/tmt.config
-   :language: yaml
+.. literalinclude:: ./../tmlib/cfg.py
 
 
-.. note::
+Configuration classes then replace the *replacement fields* in curly braches ``{}`` are replaced with experiment-specific attribute values.
 
-    Quotes are generally not required around strings in YAML syntax, but are necessary here to escape the curly braces in the format strings!
 
-.. _config-classes:
+.. _workflow:
 
-Configuration classes
----------------------
+Workflow
+========
 
-Paths and filenames are described with `Python format strings <https://docs.python.org/2/library/string.html#formatstrings>`_. The configuration classes replace the **replacement fields** surrounded by curly braces ``{}`` with experiment specific variables and provide the formatted path or filename in form of an attribute.
+The data unit for visualization in `TissueMAPS` is a **Layer**.
 
-Definitions
------------
+The program supports different types of layers and their generation requires multiple steps that are combined into larger workflows.
 
-A **project** represents the folder on disk, which contains the images and corresponding data. This may either be an **experiment** or a **subexperiment**, in case the experiment is made up of several related image acquisition *cycles*, i.e. if you acquired images of the same sample at different time points.
+**Channel** layers are comprised of the microscopic raster images. For interactive visualization via the web, images are converted into `zoomify <http://www.zoomify.com/>`_ format. These so called `pyramids <https://en.wikipedia.org/wiki/Pyramid_(image_processing)>`_ represent a large image by several smaller image tiles (stored in `JPEG <http://www.jpeg.org>`_ files) at different resolution levels. Only the tiles that are requested for the current view are loaded and streamed to the client. Channels can be dynamically colorized on the client side and combined by additive color blending for RGB display.
+
+**Object** layers represent geometrical structures, such as cell segmentations or wells in a multi-well plate, that are rendered on the client side as vector graphics. The data that specifies the location of objects in the map as well as the corresponding features that describe properties of the objects are stored in `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files. Objects can be overlaid on channels and colorized according to pre-calculated feature values or results of the program's data analysis tools, e.g. class labels generated by a classifier. This allows the user to browse the entire image dataset and perform statistical hypothesis testing in a visually assisted way.
+
+
+The generation of layers from the microscopic images may involve the following sequence of steps:
+
+.. image:: ./_static/TissueMAPS_workflow.png
+    :height: 500px
+
+
+.. _steps:
+
+Steps
+-----
+
+Each step of the workflow corresponds to a subpackage of the `tmlib` package:
+
+- `metaextract <../tmlib/metaextract>`_: **Extraction of metadata from files**
+    Microscopes usually store images together with the acquisition information in vendor-specific formats, which are often not understood by standard readers. The program uses the `Bio-Formats <https://www.openmicroscopy.org/site/products/bio-formats>`_ Java library to extract the metadata from heterogeneous image file formats and stores as `XML <https://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html>`_ files according to the standardized `OME <https://www.openmicroscopy.org/site/support/ome-model/>`_ data model.
+
+- `metaconvert <../tmlib/metaconvert>`_: **Conversion of extracted metadata to custom format**
+    For the subsequent steps, the relevant metadata is converted to a custom format and serialized to `JSON <http://www.json.org/>`_ files. In particular, the microscope stage positions are used to calculate the relative positions of the images within the scanned acquisition grid, which are ultimately required to stitch individual images together to create an overview of the entire imaged area.
+
+- `imextract <../tmlib/imextract>`_: **Extraction of images from files**
+    Image files may contain more than one image. Often images acquired at different *z*-resolutions are stored in the same file. Some microscopes even store all images in a single file. To facilitate easier handling of images, they are extracted from the original files and stored separately as `PNG <http://www.libpng.org/pub/png/>`_ files. If images have more than one *z*-dimensions, they are automatically projected to 2D.
+
+- `corilla <../tmlib/corilla>`_: **Calculation of illumination statistics**
+    Microscopic images display illumination artifacts. Correction of these artifacts is important for visualization and even more so for quantitative analysis of pixel intensity values. Illumination statistics are pre-calculated across all acquisition sites and stored in `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files. They can later be applied to individual images in order to correct them for illumination artifacts.
+
+- `align <../tmlib/align>`_: **Calculation of shift statistics**
+    Images may be acquired at different time points with a potential shift in x-y directions between acquisitions. In order to be able to overlay images from different *cycles*, images have to be registered and aligned. Shift statistics are pre-calculated for each acquisition site and stored as `JSON <http://www.json.org/>`_ files.
+
+- `jterator <../tmlib/jterator>`_: **Building and running image analysis pipelines**
+    Images are segmented and features are extracted for the detected objects, such as "nuclei" or "cells".
+    Users can build custom image analysis *pipelines* by combining available modules. The extracted features are stored in `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files.
+
+- `illuminati <../tmlib/illuminati>`_: **Creation of map layers for web visualization**
+    Individual images are stitched together to one big overview image according the positional information provided by the obtained metadata. Images are also corrected for illumination artifacts and aligned if necessary based on the calculated illumination and shift statistics, respectively. Segmented objects are given global Ids and their locations within images are translated into global map coordinates. Images are stored as `JPEG <http://www.jpeg.org>`_ files and features in `HDF5 <http://www.json.org/>`_ files.
+
+
+The order of steps is not arbitrary, since some steps are dependent on others, i.e. the *outputs* of one step may be the *inputs* for another.
+
+.. _command-line-interface:
+
+Command-line interface
+----------------------
+
+Each of the above listed packages provides an application programming interface (**API**) and command-line interface (**CLI**).
+
+The corresponding classes inherit from the `CommandLineInterface` and `ClusterRoutines` base classes. This makes it easy to further extend the workflow by additional steps and allows packages to share a common interface.
+
+Command line calls are handled by `argparse <https://docs.python.org/3/library/argparse.html>`_ and follow a general syntax:
+
+.. code-block:: bash
+
+    <class_name> <class_args> <method_name> <method_args>
+
+where
+
+* *class_name* is the name of the main parser corresponding to the *cli* class of an individual step
+* *class_args* are arguments that are handled by the main parser, such as the logging verbosity level or the path to the directory of the experiment that should be processed, which are used to instantiate the corresponding *api* class
+* *method_name* is the name of a subparser corresponding to a method of the *cli* class
+* *method_args* are arguments that are handled by the subparser and are forwarded to the methods of the *api* class
+
+You can use the ``-h`` or ``--help`` argument to get help for a particular step:
+
+.. code-block:: bash
+    
+    <class_name> --help
+
+By default, each step is equipped with the following methods:
+
+* **init**: initialize a step and create persistent job descriptions
+* **run**: run an individual job on the local machine
+* **submit**: submit all jobs to the cluster and continuously monitor their status
+
+Optionally, steps may provide additional methods, such as:
+
+* **collect**: collect the job output after submission and fuse the data spread across individual files into a single dataset if necessary
+* **apply**: apply the results of the step (calculated statistics) to individual images
+
+You can also use the ``-h`` or ``--help`` argument to get help for the individual methods available for a particular step:
+
+.. code-block:: bash
+
+    <class_name> <class_args> <method_name> --help
+
+
+An example for the `metaconvert` step:
+
+The call
+
+.. code-block:: bash
+    
+    metaconvert --format cellvoyager ./ init --backup
+
+
+would initialize the `metaconvert` step and create persistent job descriptions on disk, which could subsequently be used to *run* or *submit* jobs. It further specifies that the format of files as "cellvoyager" and backs up job descriptions and log outputs of the previous submission. 
+
 
 
 Documentation
@@ -66,7 +161,7 @@ To update the documentation upon changes in the source code, do
 
 .. code:: bash
 
-    $ sphinx-apidoc -o ./docs ./tmt
+    $ sphinx-apidoc -o ./docs ./tmlib
 
 To build the documentation website, do
 

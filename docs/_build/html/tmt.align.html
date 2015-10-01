@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tmt.align package &mdash; TissueMAPS Toolbox 0.1.0 documentation</title>
+    <title>tmt.align package &mdash; TissueMAPS Library 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="_static/tm_favicon.png"/>
-    <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="index.html" />
+    <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -43,307 +43,14 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.align.api">
-<span id="tmt-align-api-module"></span><h2>tmt.align.api module<a class="headerlink" href="#module-tmt.align.api" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="tmt.align.api.Align">
-<em class="property">class </em><code class="descclassname">tmt.align.api.</code><code class="descname">Align</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class for alignment of images based on registration.</p>
-<dl class="method">
-<dt id="tmt.align.api.Align.apply">
-<code class="descname">apply</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align.apply" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply calculated shift and overlap values in order to align images.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.api.Align.fuse">
-<code class="descname">fuse</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align.fuse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align.fuse" title="Permalink to this definition">¶</a></dt>
-<dd><p>Fuse shift calculations and create shift descriptor JSON file.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.api.Align.joblist">
-<code class="descname">joblist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align.joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align.joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a joblist in YAML format for parallel computing.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.api.Align.print_logo_and_prompt">
-<code class="descname">print_logo_and_prompt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align.print_logo_and_prompt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align.print_logo_and_prompt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="staticmethod">
-<dt id="tmt.align.api.Align.process_cli_commands">
-<em class="property">static </em><code class="descname">process_cli_commands</code><span class="sig-paren">(</span><em>args</em>, <em>subparser</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align.process_cli_commands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align.process_cli_commands" title="Permalink to this definition">¶</a></dt>
-<dd><p>Initialize Corilla class with parsed command line arguments.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>args</strong> (<a class="reference external" href="https://docs.python.org/library/argparse.html#argparse.Namespace" title="(in Python v2.7)"><em>argparse.Namespace</em></a>) &#8211; arguments parsed by command line interface</li>
-<li><strong>subparser</strong> (<a class="reference external" href="https://docs.python.org/library/argparse.html#argparse.ArgumentParser" title="(in Python v2.7)"><em>argparse.ArgumentParser</em></a>) &#8211; </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.api.Align.run">
-<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align.run" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run shift calculation.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.api.Align.submit">
-<code class="descname">submit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/api.html#Align.submit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.api.Align.submit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Submit jobs for shift calculation.</p>
-</dd></dl>
-
-</dd></dl>
-
+<div class="section" id="tmt-align-api-module">
+<h2>tmt.align.api module<a class="headerlink" href="#tmt-align-api-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.align.registration">
-<span id="tmt-align-registration-module"></span><h2>tmt.align.registration module<a class="headerlink" href="#module-tmt.align.registration" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="tmt.align.registration.Registration">
-<em class="property">class </em><code class="descclassname">tmt.align.registration.</code><code class="descname">Registration</code><span class="sig-paren">(</span><em>cycles</em>, <em>reference_cycle=None</em>, <em>reference_channel=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#Registration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.Registration" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class for registration of images from different acquisition cycles.</p>
-<dl class="method">
-<dt id="tmt.align.registration.Registration.create_joblist">
-<code class="descname">create_joblist</code><span class="sig-paren">(</span><em>batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#Registration.create_joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.Registration.create_joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create list of jobs for parallel processing.</p>
-<p>A joblist has the following structure (YAML):</p>
-<div class="highlight-python"><div class="highlight"><pre>- job_id: int
-  registration_files: Dict[str, List[str]]
-  reference_files:  List[str]
-  output_file: str
-
-- job_id: int
-  registration_files: Dict[str, List[str]]
-  reference_files:  List[str]
-  output_file: str
-
-...
-</pre></div>
+<div class="section" id="tmt-align-registration-module">
+<h2>tmt.align.registration module<a class="headerlink" href="#tmt-align-registration-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>batch_size</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; number of batches</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">job description</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">List[Dict[str, List[str] or str]]</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal"><span class="pre">IOError</span></code> &#8211;
-when argument <cite>reference_cycle</cite> is not specified</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.registration.Registration.create_output_dir">
-<code class="descname">create_output_dir</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#Registration.create_output_dir"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.Registration.create_output_dir" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create &#8220;registration&#8221; folder that will hold the HDF5 files,
-where the calculated shift values will be stored.
-There will be one HDF5 file per job (i.e. batch).</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="tmt.align.registration.Registration.image_files">
-<code class="descname">image_files</code><a class="headerlink" href="#tmt.align.registration.Registration.image_files" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">image files of the reference channel grouped by cycle</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List[List[str]]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.registration.Registration.read_joblist">
-<code class="descname">read_joblist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#Registration.read_joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.Registration.read_joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read joblist from YAML file.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">job description</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List[dict[str, list[str] or str]]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.align.registration.Registration.write_joblist">
-<code class="descname">write_joblist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#Registration.write_joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.Registration.write_joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Write joblist to file as YAML.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.align.registration.calculate_local_overlap">
-<code class="descclassname">tmt.align.registration.</code><code class="descname">calculate_local_overlap</code><span class="sig-paren">(</span><em>x_shift</em>, <em>y_shift</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#calculate_local_overlap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.calculate_local_overlap" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculates the overlap of images at one acquisition site
-across different acquisition cycles.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>x_shift</strong> (<em>List[int]</em>) &#8211; shift values in x direction</li>
-<li><strong>y_shift</strong> (<em>List[int]</em>) &#8211; shift values in y direction</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">upper, lower, right and left overlap</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List[int]</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.align.registration.calculate_overlap">
-<code class="descclassname">tmt.align.registration.</code><code class="descname">calculate_overlap</code><span class="sig-paren">(</span><em>descriptor</em>, <em>max_shift</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#calculate_overlap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.calculate_overlap" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the maximum overlap of images across all sites and
-across all acquisition cycles. The images will later be cropped according
-to this overlap. In order to limit the extent of cropping, <cite>max_shift</cite> can
-be set.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>descriptor</strong> (<em>List[Dict[str, List[str or int]]]</em>) &#8211; calculated shift values (and names) of registered images for
-each acquisition cycle</li>
-<li><strong>max_shift</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; maximally tolerated shift (in pixels)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">upper, lower, right, and left overlap per site (in pixels)
-and indices of sites were shift exceeds maximally tolerated value</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple[List[int]]</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.align.registration.calculate_shift">
-<code class="descclassname">tmt.align.registration.</code><code class="descname">calculate_shift</code><span class="sig-paren">(</span><em>filename</em>, <em>ref_filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#calculate_shift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.calculate_shift" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate shift between two images based on fast Fourier transform.</p>
-<p>&#8220;Apparently astronomical images look a lot like microscopic images.&#8221; <a class="footnote-reference" href="#id2" id="id1">[1]</a></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; path to image that should be registered</li>
-<li><strong>ref_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; path to image that should be used as a reference</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">shift in x, y direction</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple[int]</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">References</p>
-<table class="docutils footnote" frame="void" id="id2" rules="none">
-<colgroup><col class="label" /><col /></colgroup>
-<tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="http://image-registration.readthedocs.org/en/latest/">http://image-registration.readthedocs.org/en/latest/</a></td></tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.align.registration.fuse_registration">
-<code class="descclassname">tmt.align.registration.</code><code class="descname">fuse_registration</code><span class="sig-paren">(</span><em>output_files</em>, <em>cycle_names</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#fuse_registration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.fuse_registration" title="Permalink to this definition">¶</a></dt>
-<dd><p>For each acquisition cycle, fuse calculated shifts stored across
-several HDF5 files.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>output_files</strong> (<em>List[str]</em>) &#8211; names of HDF5 files, where registration results were stored</li>
-<li><strong>cycle_names</strong> (<em>List[str]</em>) &#8211; names of cycles (correspond to groups in HDF5 files)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">&#8220;xShift&#8221;, &#8220;yShift&#8221;, and &#8220;fileName&#8221; of each registered image</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List[Dict[str, List[str or int]]]</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.align.registration.register_images">
-<code class="descclassname">tmt.align.registration.</code><code class="descname">register_images</code><span class="sig-paren">(</span><em>registration_files</em>, <em>reference_files</em>, <em>output_file</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/align/registration.html#register_images"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.align.registration.register_images" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate shift between a set of two images (image to register and
-reference image) from two different acquisition cycles
-and store the results in an HDF5 file.</p>
-<p>The HDF5 file will have the following internal hierarchical structure:</p>
-<div class="highlight-python"><div class="highlight"><pre>/
-/cycle1                Group
-/cycle1/x_shift        Dataset {n}  : INTEGER
-/cycle1/y_shift        Dataset {n}  : INTEGER
-/cycle1/file_name      Dataset {n}  : STRING
-/cycle2                Group
-/cycle2/x_shift        Dataset {n}  : INTEGER
-/cycle2/y_shift        Dataset {n}  : INTEGER
-/cycle2/file_name      Dataset {n}  : STRING
-...
-</pre></div>
-</div>
-<p>where <cite>n</cite> is the number of image sites per cycle.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>registration_files</strong> (<em>List[Dict[str, List[str]]]</em>) &#8211; name of image files that should be registered</li>
-<li><strong>reference_files</strong> (<em>List[str]</em>) &#8211; name of image files used as reference for registration</li>
-<li><strong>output_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; name of the HDF5 file, where calculated values will be stored</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</div>
-<div class="section" id="module-tmt.align">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tmt.align" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -354,15 +61,15 @@ and store the results in an HDF5 file.</p>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/tm_logo.svg" alt="Logo"/>
+              <img class="logo" src="_static/tmaps_logo.png" alt="Logo"/>
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">tmt.align package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-tmt.align.api">tmt.align.api module</a></li>
-<li><a class="reference internal" href="#module-tmt.align.registration">tmt.align.registration module</a></li>
-<li><a class="reference internal" href="#module-tmt.align">Module contents</a></li>
+<li><a class="reference internal" href="#tmt-align-api-module">tmt.align.api module</a></li>
+<li><a class="reference internal" href="#tmt-align-registration-module">tmt.align.registration module</a></li>
+<li><a class="reference internal" href="#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

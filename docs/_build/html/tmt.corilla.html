@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tmt.corilla package &mdash; TissueMAPS Toolbox 0.1.0 documentation</title>
+    <title>tmt.corilla package &mdash; TissueMAPS Library 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="_static/tm_favicon.png"/>
-    <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="index.html" />
+    <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -43,117 +43,14 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.corilla.api">
-<span id="tmt-corilla-api-module"></span><h2>tmt.corilla.api module<a class="headerlink" href="#module-tmt.corilla.api" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="tmt.corilla.api.Corilla">
-<em class="property">class </em><code class="descclassname">tmt.corilla.api.</code><code class="descname">Corilla</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/corilla/api.html#Corilla"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.corilla.api.Corilla" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class for corilla interface.</p>
-<dl class="method">
-<dt id="tmt.corilla.api.Corilla.apply">
-<code class="descname">apply</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/corilla/api.html#Corilla.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.corilla.api.Corilla.apply" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply calculated statistics in order to correct illumination artifacts.</p>
-</dd></dl>
-
-<dl class="staticmethod">
-<dt id="tmt.corilla.api.Corilla.process_cli_commands">
-<em class="property">static </em><code class="descname">process_cli_commands</code><span class="sig-paren">(</span><em>args</em>, <em>subparser</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/corilla/api.html#Corilla.process_cli_commands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.corilla.api.Corilla.process_cli_commands" title="Permalink to this definition">¶</a></dt>
-<dd><p>Initialize Corilla class with parsed command line arguments.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>args</strong> (<em>Namespace</em>) &#8211; arguments parsed by command line interface</li>
-<li><strong>subparser</strong> (<a class="reference external" href="https://docs.python.org/library/argparse.html#argparse.ArgumentParser" title="(in Python v2.7)"><em>argparse.ArgumentParser</em></a>) &#8211; </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.corilla.api.Corilla.run">
-<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/corilla/api.html#Corilla.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.corilla.api.Corilla.run" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run calculation of online statistics and write results to HDF5 file.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.corilla.api.Corilla.submit">
-<code class="descname">submit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/corilla/api.html#Corilla.submit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.corilla.api.Corilla.submit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Submit jobs for shift calculation.</p>
-<p>In contrast to other routines, submission doesn&#8217;t require joblist!</p>
-</dd></dl>
-
-</dd></dl>
-
+<div class="section" id="tmt-corilla-api-module">
+<h2>tmt.corilla.api module<a class="headerlink" href="#tmt-corilla-api-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.corilla.stats">
-<span id="tmt-corilla-stats-module"></span><h2>tmt.corilla.stats module<a class="headerlink" href="#module-tmt.corilla.stats" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="tmt.corilla.stats.OnlineStatistics">
-<em class="property">class </em><code class="descclassname">tmt.corilla.stats.</code><code class="descname">OnlineStatistics</code><span class="sig-paren">(</span><em>dims</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/corilla/stats.html#OnlineStatistics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.corilla.stats.OnlineStatistics" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class for calculating online statistics based on Welford&#8217;s method:</p>
-<p>B. P. Welford (1962). &#8220;Note on a method for calculating corrected sums of
-squares and products&#8221;. Technometrics 4(3):419-420.</p>
-<p>Code adapted from Wikipedia article &#8220;Algorithms for calculating variance&#8221;.
-<a class="reference external" href="https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm">https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm</a></p>
-<dl class="attribute">
-<dt id="tmt.corilla.stats.OnlineStatistics.std">
-<code class="descname">std</code><a class="headerlink" href="#tmt.corilla.stats.OnlineStatistics.std" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">standard deviation</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray[float]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.corilla.stats.OnlineStatistics.update">
-<code class="descname">update</code><span class="sig-paren">(</span><em>x</em>, <em>log_transform=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/corilla/stats.html#OnlineStatistics.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.corilla.stats.OnlineStatistics.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update statistics with new matrix.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>x</strong> (<em>numpy.ndarray[float]</em>) &#8211; new matrix</li>
-<li><strong>log_transform</strong> (<em>bool, optional</em>) &#8211; log10 transform matrix (defaults to True)</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="tmt.corilla.stats.OnlineStatistics.var">
-<code class="descname">var</code><a class="headerlink" href="#tmt.corilla.stats.OnlineStatistics.var" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">variance</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray[float]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
+<div class="section" id="tmt-corilla-stats-module">
+<h2>tmt.corilla.stats module<a class="headerlink" href="#tmt-corilla-stats-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.corilla">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tmt.corilla" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -164,15 +61,15 @@ squares and products&#8221;. Technometrics 4(3):419-420.</p>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/tm_logo.svg" alt="Logo"/>
+              <img class="logo" src="_static/tmaps_logo.png" alt="Logo"/>
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">tmt.corilla package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-tmt.corilla.api">tmt.corilla.api module</a></li>
-<li><a class="reference internal" href="#module-tmt.corilla.stats">tmt.corilla.stats module</a></li>
-<li><a class="reference internal" href="#module-tmt.corilla">Module contents</a></li>
+<li><a class="reference internal" href="#tmt-corilla-api-module">tmt.corilla.api module</a></li>
+<li><a class="reference internal" href="#tmt-corilla-stats-module">tmt.corilla.stats module</a></li>
+<li><a class="reference internal" href="#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

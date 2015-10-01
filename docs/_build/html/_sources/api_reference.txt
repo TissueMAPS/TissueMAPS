@@ -4,12 +4,35 @@
 API reference
 *************
 
+.. _metaextract:
+
+metaextract
+===========
+
+.. include:: ../tmlib/metaextract/README.rst
+
+
+.. _metaconvert:
+
+metaconvert
+===========
+
+.. include:: ../tmlib/metaconvert/README.rst
+
+
+.. _imextract:
+
+imextract
+===========
+
+.. include:: ../tmlib/imextract/README.rst
+
 .. _align:
 
 align
 =====
 
-.. include:: ../tmt/align/README.rst
+.. include:: ../tmlib/align/README.rst
 
 
 .. _corilla:
@@ -17,15 +40,15 @@ align
 corilla
 =======
 
-.. include:: ../tmt/corilla/README.rst
+.. include:: ../tmlib/corilla/README.rst
 
 
-.. _dafu:
+.. _jterator:
 
-dafu
-====
+jterator
+========
 
-.. include:: ../tmt/dafu/README.rst
+.. include:: ../tmlib/jterator/README.rst
 
 
 .. _illuminati:
@@ -33,12 +56,5 @@ dafu
 illuminati
 ==========
 
-.. include:: ../tmt/illuminati/README.rst
+.. include:: ../tmlib/illuminati/README.rst
 
-
-.. _visi:
-
-visi
-====
-
-.. include:: ../tmt/visi/README.rst

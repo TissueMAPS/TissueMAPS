@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tmt.visi package &mdash; TissueMAPS Toolbox 0.1.0 documentation</title>
+    <title>tmt.visi package &mdash; TissueMAPS Library 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="_static/tm_favicon.png"/>
-    <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="index.html" />
+    <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -46,364 +46,17 @@
 <div class="section" id="tmt-visi-api-module">
 <h2>tmt.visi.api module<a class="headerlink" href="#tmt-visi-api-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.visi.stk">
-<span id="tmt-visi-stk-module"></span><h2>tmt.visi.stk module<a class="headerlink" href="#module-tmt.visi.stk" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="tmt.visi.stk.Stk">
-<em class="property">class </em><code class="descclassname">tmt.visi.stk.</code><code class="descname">Stk</code><span class="sig-paren">(</span><em>input_dir</em>, <em>wildcards</em>, <em>config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk.html#Stk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk.Stk" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class for a visi project.</p>
-<p>A visi project corresponds to a folder holding .stk and .nd files.</p>
-<dl class="method">
-<dt id="tmt.visi.stk.Stk.create_joblist">
-<code class="descname">create_joblist</code><span class="sig-paren">(</span><em>batch_size</em>, <em>rename=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk.html#Stk.create_joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk.Stk.create_joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create list of jobs for parallel processing.</p>
-<p>A joblist has the following structure (YAML format):</p>
-<div class="highlight-python"><div class="highlight"><pre>- job_id: int
-  stk_files: List[str]
-  nd_file:  str
-  png_files: List[str]
-  output_dir: str
-
-- job_id: int
-  stk_files: List[str]
-  nd_file:  str
-  png_files: List[str]
-  output_dir: str
-
-...
-</pre></div>
+<div class="section" id="tmt-visi-stk-module">
+<h2>tmt.visi.stk module<a class="headerlink" href="#tmt-visi-stk-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>batch_size</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; number of batches</li>
-<li><strong>rename</strong> (<em>bool, optional</em>) &#8211; whether files should be renamed according to configuration settings
-(defaults to True)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List[dict[str, list[str] or str]]</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.visi.stk.Stk.create_output_dirs">
-<code class="descname">create_output_dirs</code><span class="sig-paren">(</span><em>split_output</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk.html#Stk.create_output_dirs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk.Stk.create_output_dirs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create an output directory for each .nd file.</p>
-<p>The elements may be the same or different depending on the value
-of <cite>split_output</cite>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>split_output</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Should output be split into separate folders for each .nd file?</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">List[str]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="tmt.visi.stk.Stk.files">
-<code class="descname">files</code><a class="headerlink" href="#tmt.visi.stk.Stk.files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Select files from input directory that match globbing pattern.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List[str]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="tmt.visi.stk.Stk.nd_files">
-<code class="descname">nd_files</code><a class="headerlink" href="#tmt.visi.stk.Stk.nd_files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract .nd files from the list of selected files.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List[str]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.visi.stk.Stk.read_joblist">
-<code class="descname">read_joblist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk.html#Stk.read_joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk.Stk.read_joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read joblist from YAML file.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List[dict[str, list[str] or str]]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="tmt.visi.stk.Stk.stk_files">
-<code class="descname">stk_files</code><a class="headerlink" href="#tmt.visi.stk.Stk.stk_files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract .stk files from the list of selected files, grouped by .nd file.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List[list]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.visi.stk.Stk.write_joblist">
-<code class="descname">write_joblist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk.html#Stk.write_joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk.Stk.write_joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Write joblist to file as YAML.</p>
-</dd></dl>
-
-</dd></dl>
-
+<div class="section" id="tmt-visi-stk2png-module">
+<h2>tmt.visi.stk2png module<a class="headerlink" href="#tmt-visi-stk2png-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.visi.stk2png">
-<span id="tmt-visi-stk2png-module"></span><h2>tmt.visi.stk2png module<a class="headerlink" href="#module-tmt.visi.stk2png" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="tmt.visi.stk2png.Stk2png">
-<em class="property">class </em><code class="descclassname">tmt.visi.stk2png.</code><code class="descname">Stk2png</code><span class="sig-paren">(</span><em>input_files</em>, <em>nd_file</em>, <em>config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#Stk2png"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.Stk2png" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class for unpacking .stk files outputted from Visitron microscopes
-and conversion to .png format (with optional file renaming).</p>
-<dl class="method">
-<dt id="tmt.visi.stk2png.Stk2png.calc_image_position">
-<code class="descname">calc_image_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#Stk2png.calc_image_position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.Stk2png.calc_image_position" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the y,x (row, column) position of images
-within the continuous acquisition grid, i.e. the well.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.visi.stk2png.Stk2png.extract_info_from_filenames">
-<code class="descname">extract_info_from_filenames</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#Stk2png.extract_info_from_filenames"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.Stk2png.extract_info_from_filenames" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract image information (such as channel, site, etc.) from filenames.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.visi.stk2png.Stk2png.extract_info_from_nd_files">
-<code class="descname">extract_info_from_nd_files</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#Stk2png.extract_info_from_nd_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.Stk2png.extract_info_from_nd_files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract meta information from .nd files,
-in particular information on the position within the well plate.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.visi.stk2png.Stk2png.format_filenames">
-<code class="descname">format_filenames</code><span class="sig-paren">(</span><em>rename=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#Stk2png.format_filenames"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.Stk2png.format_filenames" title="Permalink to this definition">¶</a></dt>
-<dd><p>If files should be renamed, first extract required information from
-metadata files (.nd) and filenames (.stk) and then format filenames
-according to nomenclature defined in configuration settings.
-Otherwise, simply replace &#8221;.stk&#8221; suffix with &#8221;.png&#8221;.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rename</strong> (<em>bool, optional</em>) &#8211; whether files should be renamed according to configuration settings
-(defaults to True)</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmt.visi.stk2png.Stk2png.unpack_images">
-<code class="descname">unpack_images</code><span class="sig-paren">(</span><em>output_dir</em>, <em>output_files=None</em>, <em>keep_z=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#Stk2png.unpack_images"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.Stk2png.unpack_images" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read and upstack stk files and write images (z-stacks or MIPs)
-to disk as .png files.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>output_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; directory where images should be saved</li>
-<li><strong>output_files</strong> (<em>List[str], optional</em>) &#8211; list of output filenames</li>
-<li><strong>keep_z</strong> (<em>bool, optional</em>) &#8211; keep individual z stacks (True) or perform maximum intensity
-projection (False - default)</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.visi.stk2png.determine_image_snake">
-<code class="descclassname">tmt.visi.stk2png.</code><code class="descname">determine_image_snake</code><span class="sig-paren">(</span><em>stitch_dims</em>, <em>zig_zag</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#determine_image_snake"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.determine_image_snake" title="Permalink to this definition">¶</a></dt>
-<dd><p>The image snake defines the position of each image in the stitched
-image.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>stitch_dims</strong> (<em>Tuple[int]</em>) &#8211; y,x dimensions (height, width) of the stitched image</li>
-<li><strong>zig_zag</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; were images acquired in &#8220;ZigZag&#8221; mode?</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li><em>Dict[str, List[int]]</em></li>
-<li><em>one-based &#8220;row&#8221; and &#8220;column&#8221; position of each image in the stitched image</em></li>
-</ul>
-</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.visi.stk2png.format_nd">
-<code class="descclassname">tmt.visi.stk2png.</code><code class="descname">format_nd</code><span class="sig-paren">(</span><em>nd</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#format_nd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.format_nd" title="Permalink to this definition">¶</a></dt>
-<dd><p>Format .nd file content, i.e. translate it into python syntax.</p>
-<dl class="docutils">
-<dt>Important keys:</dt>
-<dd><ul class="first last simple">
-<li>DoStage</li>
-<li>DoTimelapse</li>
-<li>DoWave</li>
-<li>DoZSeries</li>
-</ul>
-</dd>
-</dl>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nd</strong> (<em>Dict[str, str or List[str]]</em>) &#8211; </td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Dict[str, str or List[str]]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.visi.stk2png.guess_stitch_dims">
-<code class="descclassname">tmt.visi.stk2png.</code><code class="descname">guess_stitch_dims</code><span class="sig-paren">(</span><em>max_position</em>, <em>layout</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#guess_stitch_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.guess_stitch_dims" title="Permalink to this definition">¶</a></dt>
-<dd><p>Simple algorithm to guess correct dimensions of a stitched image.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>max_position</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; maximum position in the stitched image</li>
-<li><strong>layout</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; either &#8220;columns&lt;rows&#8221; (more rows than columns)
-or &#8220;columns&gt;rows&#8221; (vice versa)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li><em>Tuple[int]</em></li>
-<li><em>y, x dimensions (height, width) of the stitched image</em></li>
-</ul>
-</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.visi.stk2png.read_nd">
-<code class="descclassname">tmt.visi.stk2png.</code><code class="descname">read_nd</code><span class="sig-paren">(</span><em>nd_filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#read_nd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.read_nd" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read the content of the .nd file and do some pre-formatting.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nd_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; </td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Dict[str, str or List[str]]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.visi.stk2png.read_stk">
-<code class="descclassname">tmt.visi.stk2png.</code><code class="descname">read_stk</code><span class="sig-paren">(</span><em>stk_filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#read_stk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.read_stk" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read stk file from disk and unpack individual stacks.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>stk_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; </td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmt.visi.stk2png.write_png">
-<code class="descclassname">tmt.visi.stk2png.</code><code class="descname">write_png</code><span class="sig-paren">(</span><em>png_filename</em>, <em>image</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/stk2png.html#write_png"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.stk2png.write_png" title="Permalink to this definition">¶</a></dt>
-<dd><p>Write image to disk as png.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>png_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; </li>
-<li><strong>image</strong> (<em>numpy.ndarray</em>) &#8211; </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
+<div class="section" id="tmt-visi-util-module">
+<h2>tmt.visi.util module<a class="headerlink" href="#tmt-visi-util-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmt.visi.util">
-<span id="tmt-visi-util-module"></span><h2>tmt.visi.util module<a class="headerlink" href="#module-tmt.visi.util" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="tmt.visi.util.check_visi_config">
-<code class="descclassname">tmt.visi.util.</code><code class="descname">check_visi_config</code><span class="sig-paren">(</span><em>config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmt/visi/util.html#check_visi_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmt.visi.util.check_visi_config" title="Permalink to this definition">¶</a></dt>
-<dd><p>Utility function to check whether the YAML configuration file is provided
-in the correct format.</p>
-</dd></dl>
-
-</div>
-<div class="section" id="module-tmt.visi">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tmt.visi" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -414,17 +67,17 @@ in the correct format.</p>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/tm_logo.svg" alt="Logo"/>
+              <img class="logo" src="_static/tmaps_logo.png" alt="Logo"/>
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">tmt.visi package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#tmt-visi-api-module">tmt.visi.api module</a></li>
-<li><a class="reference internal" href="#module-tmt.visi.stk">tmt.visi.stk module</a></li>
-<li><a class="reference internal" href="#module-tmt.visi.stk2png">tmt.visi.stk2png module</a></li>
-<li><a class="reference internal" href="#module-tmt.visi.util">tmt.visi.util module</a></li>
-<li><a class="reference internal" href="#module-tmt.visi">Module contents</a></li>
+<li><a class="reference internal" href="#tmt-visi-stk-module">tmt.visi.stk module</a></li>
+<li><a class="reference internal" href="#tmt-visi-stk2png-module">tmt.visi.stk2png module</a></li>
+<li><a class="reference internal" href="#tmt-visi-util-module">tmt.visi.util module</a></li>
+<li><a class="reference internal" href="#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

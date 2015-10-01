@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tmt &mdash; TissueMAPS Toolbox 0.1.0 documentation</title>
+    <title>tmlib &mdash; TissueMAPS Library 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="_static/tm_favicon.png"/>
-    <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="index.html" />
+    <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -38,63 +38,128 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="tmt">
-<h1>tmt<a class="headerlink" href="#tmt" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="tmlib">
+<h1>tmlib<a class="headerlink" href="#tmlib" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="tmt.html">tmt package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#subpackages">Subpackages</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="tmt.align.html">tmt.align package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="tmt.align.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.align.html#module-tmt.align.api">tmt.align.api module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.align.html#module-tmt.align.registration">tmt.align.registration module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.align.html#module-tmt.align">Module contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tmlib.html">tmlib package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.align.html">tmlib.align package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.align.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.align.html#tmlib-align-api-module">tmlib.align.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.align.html#tmlib-align-argparser-module">tmlib.align.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.align.html#tmlib-align-cli-module">tmlib.align.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.align.html#tmlib-align-registration-module">tmlib.align.registration module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.align.html#module-tmlib.align">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="tmt.corilla.html">tmt.corilla package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="tmt.corilla.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.corilla.html#module-tmt.corilla.api">tmt.corilla.api module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.corilla.html#module-tmt.corilla.stats">tmt.corilla.stats module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.corilla.html#module-tmt.corilla">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.corilla.html">tmlib.corilla package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.corilla.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.corilla.html#tmlib-corilla-api-module">tmlib.corilla.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.corilla.html#tmlib-corilla-argparser-module">tmlib.corilla.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.corilla.html#tmlib-corilla-cli-module">tmlib.corilla.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.corilla.html#module-tmlib.corilla.illumcorr">tmlib.corilla.illumcorr module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.corilla.html#module-tmlib.corilla.stats">tmlib.corilla.stats module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.corilla.html#module-tmlib.corilla">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="tmt.dafu.html">tmt.dafu package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="tmt.dafu.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.dafu.html#module-tmt.dafu.checkdata">tmt.dafu.checkdata module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.dafu.html#module-tmt.dafu.util">tmt.dafu.util module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.dafu.html#module-tmt.dafu">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.dafu.html">tmlib.dafu package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.dafu.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.dafu.html#tmlib-dafu-checkdata-module">tmlib.dafu.checkdata module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.dafu.html#module-tmlib.dafu.utils">tmlib.dafu.utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.dafu.html#module-tmlib.dafu">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="tmt.illuminati.html">tmt.illuminati package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="tmt.illuminati.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.illuminati.html#module-tmt.illuminati.api">tmt.illuminati.api module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.illuminati.html#module-tmt.illuminati.mosaic">tmt.illuminati.mosaic module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.illuminati.html#module-tmt.illuminati.segment">tmt.illuminati.segment module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.illuminati.html#module-tmt.illuminati">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.illuminati.html">tmlib.illuminati package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#tmlib-illuminati-api-module">tmlib.illuminati.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#tmlib-illuminati-argparser-module">tmlib.illuminati.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#tmlib-illuminati-cli-module">tmlib.illuminati.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#tmlib-illuminati-layers-module">tmlib.illuminati.layers module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#module-tmlib.illuminati.segment">tmlib.illuminati.segment module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#module-tmlib.illuminati.stitch">tmlib.illuminati.stitch module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.illuminati.html#module-tmlib.illuminati">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="tmt.visi.html">tmt.visi package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="tmt.visi.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.visi.html#tmt-visi-api-module">tmt.visi.api module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.visi.html#module-tmt.visi.stk">tmt.visi.stk module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.visi.html#module-tmt.visi.stk2png">tmt.visi.stk2png module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.visi.html#module-tmt.visi.util">tmt.visi.util module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="tmt.visi.html#module-tmt.visi">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.imextract.html">tmlib.imextract package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.imextract.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.imextract.html#tmlib-imextract-api-module">tmlib.imextract.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.imextract.html#tmlib-imextract-argparser-module">tmlib.imextract.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.imextract.html#tmlib-imextract-cli-module">tmlib.imextract.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.imextract.html#module-tmlib.imextract">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.jterator.html">tmlib.jterator package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#tmlib-jterator-api-module">tmlib.jterator.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#tmlib-jterator-argparser-module">tmlib.jterator.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#tmlib-jterator-checkers-module">tmlib.jterator.checkers module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#tmlib-jterator-cli-module">tmlib.jterator.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#tmlib-jterator-fusion-module">tmlib.jterator.fusion module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#tmlib-jterator-jtapi-module">tmlib.jterator.jtapi module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#module-tmlib.jterator.module">tmlib.jterator.module module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#module-tmlib.jterator.path_utils">tmlib.jterator.path_utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#tmlib-jterator-project-module">tmlib.jterator.project module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.jterator.html#module-tmlib.jterator">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.metaconvert.html">tmlib.metaconvert package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#tmlib-metaconvert-api-module">tmlib.metaconvert.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#tmlib-metaconvert-argparser-module">tmlib.metaconvert.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#tmlib-metaconvert-cellyoyager-module">tmlib.metaconvert.cellyoyager module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#tmlib-metaconvert-cli-module">tmlib.metaconvert.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#tmlib-metaconvert-default-module">tmlib.metaconvert.default module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#tmlib-metaconvert-metamorph-module">tmlib.metaconvert.metamorph module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#tmlib-metaconvert-openslide-module">tmlib.metaconvert.openslide module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaconvert.html#module-tmlib.metaconvert">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.metaextract.html">tmlib.metaextract package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaextract.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaextract.html#tmlib-metaextract-api-module">tmlib.metaextract.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaextract.html#tmlib-metaextract-argparser-module">tmlib.metaextract.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaextract.html#tmlib-metaextract-cli-module">tmlib.metaextract.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.metaextract.html#module-tmlib.metaextract">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="tmlib.tmaps.html">tmlib.tmaps package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.tmaps.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.tmaps.html#tmlib-tmaps-api-module">tmlib.tmaps.api module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.tmaps.html#tmlib-tmaps-argparser-module">tmlib.tmaps.argparser module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.tmaps.html#tmlib-tmaps-cli-module">tmlib.tmaps.cli module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.tmaps.html#tmlib-tmaps-workflow-module">tmlib.tmaps.workflow module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tmlib.tmaps.html#module-tmlib.tmaps">Module contents</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.cluster">tmt.cluster module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.experiment">tmt.experiment module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.illumstats">tmt.illumstats module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.image">tmt.image module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.imageutil">tmt.imageutil module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.project">tmt.project module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#tmt-setup-module">tmt.setup module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.shift">tmt.shift module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt.util">tmt.util module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tmt.html#module-tmt">Module contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.cfg">tmlib.cfg module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.cfg_setters">tmlib.cfg_setters module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-cli-module">tmlib.cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-cluster-module">tmlib.cluster module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-cycle-module">tmlib.cycle module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-data-readers-module">tmlib.data_readers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-data-writers-module">tmlib.data_writers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.errors">tmlib.errors module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-experiment-module">tmlib.experiment module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-formats-module">tmlib.formats module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-image-module">tmlib.image module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-image-readers-module">tmlib.image_readers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.image_utils">tmlib.image_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.logging_utils">tmlib.logging_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.metadata">tmlib.metadata module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.mosaic">tmlib.mosaic module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-pixels-module">tmlib.pixels module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-plates-module">tmlib.plates module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-readers-module">tmlib.readers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-setup-module">tmlib.setup module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.shift">tmlib.shift module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-text-readers-module">tmlib.text_readers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#tmlib-text-writers-module">tmlib.text_writers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib.utils">tmlib.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tmlib.html#module-tmlib">Module contents</a></li>
 </ul>
 </li>
 </ul>
@@ -108,7 +173,7 @@
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/tm_logo.svg" alt="Logo"/>
+              <img class="logo" src="_static/tmaps_logo.png" alt="Logo"/>
             </a></p><div class="relations">
 <h3>Related Topics</h3>
 <ul>

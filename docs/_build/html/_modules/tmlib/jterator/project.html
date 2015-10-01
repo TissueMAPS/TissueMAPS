@@ -1,0 +1,626 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tmlib.jterator.project &mdash; TissueMAPS Library 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../../_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for tmlib.jterator.project</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">natsort</span> <span class="kn">import</span> <span class="n">natsorted</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">text_readers</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">text_writers</span>
+<span class="kn">from</span> <span class="nn">..errors</span> <span class="kn">import</span> <span class="n">PipelineOSError</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="list_jtprojects"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.list_jtprojects">[docs]</a><span class="k">def</span> <span class="nf">list_jtprojects</span><span class="p">(</span><span class="n">directory</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    List Jterator projects in a given directory.</span>
+<span class="sd">    A Jterator project is defined as a folder containing a `.pipe` file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    directory: str</span>
+<span class="sd">        absolute path to a directory</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">projects</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+        <span class="ow">and</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s">&#39;*.pipe&#39;</span><span class="p">))</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">projects</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;No Jterator projects found in </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">directory</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">projects</span>
+
+</div>
+<div class="viewcode-block" id="JtProject"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtProject">[docs]</a><span class="k">class</span> <span class="nc">JtProject</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A class for a Jterator project.</span>
+
+<span class="sd">    A Jterator project is defined as a folder containing a `.pipe` file.</span>
+<span class="sd">    The class holds information about the project, in particular on the content</span>
+<span class="sd">    of YAML pipeline and module descriptor files that can be edited in the</span>
+<span class="sd">    JtUI app.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">,</span> <span class="n">pipe_name</span><span class="p">,</span> <span class="n">pipe</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">handles</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Instantiate an instance of class Jtproject.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        project_dir: str</span>
+<span class="sd">            path to the project folder</span>
+<span class="sd">        pipe_name: str</span>
+<span class="sd">            name of the pipeline</span>
+<span class="sd">        pipe: dict</span>
+<span class="sd">            pipeline description</span>
+<span class="sd">        handles: List[dict]</span>
+<span class="sd">            module descriptions</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span> <span class="o">=</span> <span class="n">project_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pipe_name</span> <span class="o">=</span> <span class="n">pipe_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span> <span class="o">=</span> <span class="n">pipe</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handles</span> <span class="o">=</span> <span class="n">handles</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">experiment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            name of the corresponding experiment</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_experiment</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_experiment</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            name and description of the pipeline</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipe</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pipe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_pipe</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipe</span>
+
+    <span class="nd">@pipe.setter</span>
+    <span class="k">def</span> <span class="nf">pipe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pipe</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[dict]</span>
+<span class="sd">            name and description of modules</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_handles</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span>
+
+    <span class="nd">@handles.setter</span>
+    <span class="k">def</span> <span class="nf">handles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_get_pipe_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">directory</span><span class="p">:</span>
+            <span class="n">directory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span>
+        <span class="n">pipe_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="s">&#39;*.pipe&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pipe_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pipe_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">pipe_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PipelineOSError</span><span class="p">(</span>
+                    <span class="s">&#39;More than more .pipe file found: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pipe_files</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PipelineOSError</span><span class="p">(</span>
+                    <span class="s">&#39;No .pipe file found: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">directory</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_handles_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">directory</span><span class="p">:</span>
+            <span class="n">directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">)</span>
+        <span class="n">handles_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="s">&#39;*.handles&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">handles_files</span><span class="p">:</span>
+            <span class="c"># We don&#39;t raise an exception, because an empty handles folder</span>
+            <span class="c"># can occur, for example upon creation of a new project</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;No .handles files found: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">handles_files</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_descriptor_name</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_replace_values</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="c"># Recursively replace the values of key-value pairs.</span>
+        <span class="c"># The comments below are guides for the .pipe pipeline descriptor file,</span>
+        <span class="c"># but it works similarly for .handles files.</span>
+        <span class="k">for</span> <span class="n">k1</span><span class="p">,</span> <span class="n">v1</span> <span class="ow">in</span> <span class="n">old</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="c"># These are the main keys in the pipeline descriptor file:</span>
+            <span class="c"># &#39;project&#39;, &#39;jobs&#39;, &#39;description&#39;</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="c"># This affects &#39;project&#39; and &#39;jobs&#39;</span>
+                <span class="k">for</span> <span class="n">k2</span><span class="p">,</span> <span class="n">v2</span> <span class="ow">in</span> <span class="n">v1</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v2</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                        <span class="c"># This is the array of &#39;pattern&#39; in the &#39;jobs&#39; section</span>
+                        <span class="n">old</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">k2</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">k2</span><span class="p">]):</span>
+                            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                                <span class="k">for</span> <span class="n">k3</span> <span class="ow">in</span> <span class="n">copy</span><span class="p">(</span><span class="n">element</span><span class="p">):</span>
+                                    <span class="c"># Remove &#39;hashKey&#39; elements</span>
+                                    <span class="c"># (included by Javascript)</span>
+                                    <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">r&#39;\$\$hashKey&#39;</span><span class="p">,</span> <span class="n">k3</span><span class="p">):</span>
+                                        <span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">k2</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k3</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+                                <span class="n">old</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">k2</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">k2</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">old</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">k2</span><span class="p">]</span> <span class="o">=</span> <span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">k2</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="c"># This affects &#39;description&#39; (the array of modules)</span>
+                <span class="n">old</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">copy</span><span class="p">(</span><span class="n">element</span><span class="p">):</span>
+                        <span class="c"># Remove &#39;hashKey&#39; elements</span>
+                        <span class="c"># (included by Javascript)</span>
+                        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s">r&#39;\$\$hashKey&#39;</span><span class="p">,</span> <span class="n">k2</span><span class="p">):</span>
+                            <span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k2</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                        <span class="n">old</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">old</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span> <span class="o">=</span> <span class="n">new</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">old</span>
+
+    <span class="k">def</span> <span class="nf">_create_pipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pipe_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pipe_file</span><span class="p">()</span>
+        <span class="n">pipe</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_descriptor_name</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">),</span>
+            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">][</span><span class="s">&#39;pipeline&#39;</span><span class="p">]:</span>
+            <span class="c"># Add module &#39;name&#39; to pipeline for display in the interface</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">][</span><span class="s">&#39;pipeline&#39;</span><span class="p">]):</span>
+                <span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">][</span><span class="s">&#39;pipeline&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_get_descriptor_name</span><span class="p">(</span>
+                        <span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">][</span><span class="s">&#39;pipeline&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;handles&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">pipe</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_module_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__module_names</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">m</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">][</span><span class="s">&#39;pipeline&#39;</span><span class="p">]</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__module_names</span>
+
+    <span class="k">def</span> <span class="nf">_create_handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">handles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">handles_files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_handles_files</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">handles_files</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">handles_files</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+                    <span class="n">f</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">PipelineOSError</span><span class="p">(</span>
+                            <span class="s">&#39;Handles file does not exist: &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">f</span><span class="p">)</span>
+                <span class="n">handles</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_descriptor_name</span><span class="p">(</span><span class="n">f</span><span class="p">),</span>
+                    <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                <span class="p">})</span>
+        <span class="c"># Sort handles information according to order of modules in the pipeline</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">]</span>
+        <span class="n">sorted_handles</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">handles</span><span class="p">[</span><span class="n">names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">ix</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_module_names</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">sorted_handles</span>
+
+    <span class="k">def</span> <span class="nf">_create_pipe_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo_dir</span><span class="p">):</span>
+        <span class="n">pipe_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.pipe&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_name</span><span class="p">)</span>
+        <span class="n">pipe_skeleton</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&#39;project&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s">&#39;lib&#39;</span><span class="p">:</span> <span class="n">repo_dir</span><span class="p">,</span>
+                <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">()</span>
+            <span class="p">},</span>
+            <span class="s">&#39;images&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s">&#39;layers&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="p">},</span>
+            <span class="s">&#39;pipeline&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="p">}</span>
+
+        <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">pipe_skeleton</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_handles_folder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">handles_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">handles_dir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">handles_dir</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_project_from_skeleton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">skel_dir</span><span class="p">,</span> <span class="n">repo_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">pipe_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pipe_file</span><span class="p">(</span><span class="n">skel_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">repo_dir</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pipe_content</span> <span class="o">=</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">pipe_content</span><span class="p">[</span><span class="s">&#39;project&#39;</span><span class="p">][</span><span class="s">&#39;lib&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">repo_dir</span>
+            <span class="n">new_pipe_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span>
+                                         <span class="s">&#39;</span><span class="si">%s</span><span class="s">.pipe&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_name</span><span class="p">)</span>
+            <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">new_pipe_file</span><span class="p">,</span> <span class="n">pipe_content</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">skel_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">),</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_remove_pipe_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">pipe_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">.pipe&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_handles_folder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">handles_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">handles_dir</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_modify_pipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pipe_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pipe_file</span><span class="p">()</span>
+        <span class="c"># Use ruamel.yaml to preserve comments in the pipe file</span>
+        <span class="n">old_pipe_content</span> <span class="o">=</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">new_pipe_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
+        <span class="c"># Remove module &#39;name&#39; from pipeline (only used internally)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new_pipe_content</span><span class="p">[</span><span class="s">&#39;pipeline&#39;</span><span class="p">]):</span>
+            <span class="n">new_pipe_content</span><span class="p">[</span><span class="s">&#39;pipeline&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">mod_pipe_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_values</span><span class="p">(</span><span class="n">old_pipe_content</span><span class="p">,</span>
+                                                <span class="n">new_pipe_content</span><span class="p">)</span>
+        <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">mod_pipe_content</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_modify_handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">handles_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c"># Create new .handles files for added modules</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">:</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">,</span>
+                                    <span class="s">&#39;</span><span class="si">%s</span><span class="s">.handles&#39;</span> <span class="o">%</span> <span class="n">h</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+            <span class="n">handles_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">handles_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">handles_files</span><span class="p">):</span>
+            <span class="c"># If file already exists, modify its content</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">handles_file</span><span class="p">):</span>
+                <span class="n">old_handles_content</span> <span class="o">=</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">handles_file</span><span class="p">)</span>
+                <span class="n">new_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
+                <span class="n">mod_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_values</span><span class="p">(</span>
+                                            <span class="n">old_handles_content</span><span class="p">,</span>
+                                            <span class="n">new_handles_content</span><span class="p">)</span>
+            <span class="c"># If file doesn&#39;t yet exist, create it and add content</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mod_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
+            <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">handles_file</span><span class="p">,</span> <span class="n">mod_handles_content</span><span class="p">)</span>
+        <span class="c"># Remove .handles file that are no longer in the pipeline</span>
+        <span class="n">existing_handles_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span>
+                                           <span class="s">&#39;handles&#39;</span><span class="p">,</span> <span class="s">&#39;*.handles&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">existing_handles_files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">handles_files</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+<div class="viewcode-block" id="JtProject.serialize"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtProject.serialize">[docs]</a>    <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Serialize the attributes of the class in the format::</span>
+
+<span class="sd">            {</span>
+<span class="sd">                &quot;experiment_name&quot;: str,</span>
+<span class="sd">                &quot;project_name&quot;: str,</span>
+<span class="sd">                &quot;pipe&quot;: {</span>
+<span class="sd">                    &quot;name&quot;: str,</span>
+<span class="sd">                    &quot;description&quot;: dict</span>
+<span class="sd">                }</span>
+<span class="sd">                &quot;handles&quot;: [</span>
+<span class="sd">                    {</span>
+<span class="sd">                        &quot;name&quot;: str,</span>
+<span class="sd">                        &quot;description&quot;: dict</span>
+<span class="sd">                    },</span>
+<span class="sd">                    ...</span>
+<span class="sd">                ]</span>
+<span class="sd">            }</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s">&#39;experiment&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span>
+            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_name</span><span class="p">,</span>
+            <span class="s">&#39;pipe&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span><span class="p">,</span>
+            <span class="s">&#39;handles&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span>
+        <span class="p">}</span>
+</div>
+<div class="viewcode-block" id="JtProject.save"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtProject.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Save Jterator project:</span>
+<span class="sd">        Update the content of *.pipe* and *.handles* files on disk</span>
+<span class="sd">        according to modifications to the pipeline and module descriptions.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modify_pipe</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modify_handles</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="JtProject.create"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtProject.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">skel_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create a Jterator project:</span>
+<span class="sd">        Create the project folder and an empty &quot;handles&quot; subfolder as well as</span>
+<span class="sd">        a skeleton *.pipe* file, i.e. a pipeline descriptor file with all</span>
+<span class="sd">        required main keys but an empty module list.</span>
+<span class="sd">        When `skel_dir` is provided, the *.pipe* and *.handles* files are</span>
+<span class="sd">        copied.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        repo_dir: str, optional</span>
+<span class="sd">            path to repository directory where module files are located</span>
+<span class="sd">        skel_dir: str, optional</span>
+<span class="sd">            path to repository directory that represents a project skeleton,</span>
+<span class="sd">            i.e. contains a *.pipe* and one or more *.handles* files in a</span>
+<span class="sd">            *handles* directory.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">repo_dir</span><span class="p">:</span>
+            <span class="n">repo_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">repo_dir</span><span class="p">)</span>
+            <span class="n">repo_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">repo_dir</span><span class="p">)</span>
+            <span class="n">repo_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">repo_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">skel_dir</span><span class="p">:</span>
+            <span class="n">skel_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">skel_dir</span><span class="p">)</span>
+            <span class="n">skel_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">skel_dir</span><span class="p">)</span>
+            <span class="n">skel_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">skel_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">skel_dir</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_project_from_skeleton</span><span class="p">(</span><span class="n">skel_dir</span><span class="p">,</span> <span class="n">repo_dir</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_pipe_file</span><span class="p">(</span><span class="n">repo_dir</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_handles_folder</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="JtProject.remove"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtProject.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Remove a Jterator project, i.e. kill the folder on disk.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c"># remove_pipe_file(self.project_dir, self.pipe[&#39;name&#39;])</span>
+        <span class="c"># remove_handles_folder(self.project_dir)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="JtAvailableModules"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtAvailableModules">[docs]</a><span class="k">class</span> <span class="nc">JtAvailableModules</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A class for holding information about available Jterator modules</span>
+<span class="sd">    in the `JtLibrary &lt;https://github.com/TissueMAPS/JtLibrary&gt;`_ repository.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">MODULE_FILE_EXT</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;r&#39;</span><span class="p">,</span> <span class="s">&#39;R&#39;</span><span class="p">,</span> <span class="s">&#39;m&#39;</span><span class="p">,</span> <span class="s">&#39;jl&#39;</span><span class="p">,</span> <span class="s">&#39;py&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo_dir</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Instantiate an instance of class JtAvailableModules.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        repo_dir: str</span>
+<span class="sd">            absolute path to the local clone of the repository</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">repo_dir</span> <span class="o">=</span> <span class="n">repo_dir</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">module_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Module files are assumed to reside in a subfolder called &quot;modules&quot;</span>
+<span class="sd">        and have one the following suffixes: &quot;.py&quot;, &quot;.m&quot;, &quot;.jl&quot;, &quot;.r&quot; or &quot;.R&quot;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[str]</span>
+<span class="sd">            paths to the module files</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">modules_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_dir</span><span class="p">,</span> <span class="s">&#39;modules&#39;</span><span class="p">)</span>
+        <span class="n">search_string</span> <span class="o">=</span> <span class="s">&#39;\.(</span><span class="si">%s</span><span class="s">)$&#39;</span> <span class="o">%</span> <span class="s">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MODULE_FILE_EXT</span><span class="p">)</span>
+        <span class="n">regexp_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">search_string</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_module_files</span> <span class="o">=</span> <span class="n">natsorted</span><span class="p">([</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">modules_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">modules_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">regexp_pattern</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_module_files</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">module_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Module names are the basenames of the `module_files`</span>
+<span class="sd">        without the suffix.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[str]</span>
+<span class="sd">            names of the modules</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_module_names</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">module_files</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_module_names</span>
+
+    <span class="k">def</span> <span class="nf">_get_corresponding_handles_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module_name</span><span class="p">):</span>
+        <span class="n">handles_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">)</span>
+        <span class="n">search_string</span> <span class="o">=</span> <span class="s">&#39;^</span><span class="si">%s</span><span class="s">\.handles$&#39;</span> <span class="o">%</span> <span class="n">module_name</span>
+        <span class="n">regexp_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">search_string</span><span class="p">)</span>
+        <span class="n">handles_files</span> <span class="o">=</span> <span class="n">natsorted</span><span class="p">([</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">handles_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">handles_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">regexp_pattern</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">handles_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;No handles file found for module &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span>
+                             <span class="o">%</span> <span class="n">module_name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">handles_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">handles_file</span> <span class="o">=</span> <span class="n">handles_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">handles_file</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Handles files are assumed to reside in a subfolder called &quot;handles&quot;</span>
+<span class="sd">        and have the suffix &quot;.handles&quot;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            handles name and description</span>
+
+<span class="sd">        See also</span>
+<span class="sd">        --------</span>
+<span class="sd">        `create_handles`</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_get_corresponding_handles_file</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">module_names</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipe_registration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Build pipeline elements for registration in the UI</span>
+<span class="sd">        in the format excepted in the &quot;pipeline&quot; section in the `.pipe` file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[dict]</span>
+<span class="sd">            pipeline elements</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c"># modules are &quot;available&quot; if there is a corresponding handles file</span>
+        <span class="c"># TODO: some checks of handles content</span>
+        <span class="n">available_modules</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pipe_registration</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">module_files</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">available_modules</span><span class="p">:</span>
+                <span class="n">element</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                    <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s">&#39;handles&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_corresponding_handles_file</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                        <span class="s">&#39;module&#39;</span><span class="p">:</span> <span class="n">f</span><span class="p">,</span>
+                        <span class="s">&#39;active&#39;</span><span class="p">:</span> <span class="bp">True</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pipe_registration</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipe_registration</span>
+
+<div class="viewcode-block" id="JtAvailableModules.serialize"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtAvailableModules.serialize">[docs]</a>    <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Provide information in the format required by server::</span>
+
+<span class="sd">            {</span>
+<span class="sd">                &quot;modules&quot;: list,</span>
+<span class="sd">                &quot;registration&quot;: list,</span>
+<span class="sd">            }</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s">&#39;modules&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">,</span>
+            <span class="s">&#39;registration&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_registration</span>
+        <span class="p">}</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="JtAvailableModules.get_modules"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.project.JtAvailableModules.get_modules">[docs]</a>    <span class="k">def</span> <span class="nf">get_modules</span><span class="p">(</span><span class="n">lib_dir</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return a `Jtmodule` object for all available `.handles` files in the</span>
+<span class="sd">        repository.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">JtAvailableModules</span><span class="p">(</span><span class="n">lib_dir</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/tmaps_logo.png" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Markus D. Herrmann, Robin Hafen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

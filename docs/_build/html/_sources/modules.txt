@@ -1,7 +1,7 @@
-tmt
-===
+tmlib
+=====
 
 .. toctree::
    :maxdepth: 4
 
-   tmt
+   tmlib

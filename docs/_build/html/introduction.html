@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Introduction &mdash; TissueMAPS Toolbox 0.1.0 documentation</title>
+    <title>Introduction &mdash; TissueMAPS Library 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,10 +24,10 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="shortcut icon" href="_static/tm_favicon.png"/>
-    <link rel="top" title="TissueMAPS Toolbox 0.1.0 documentation" href="index.html" />
+    <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
+    <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
     <link rel="next" title="Installation" href="installation.html" />
-    <link rel="prev" title="Welcome to TissueMAPS Toolbox’s documentation!" href="index.html" />
+    <link rel="prev" title="Welcome to the documentation for the TissueMAPS Library!" href="index.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -42,100 +42,184 @@
             
   <div class="section" id="introduction">
 <span id="id1"></span><h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="sub-packages">
-<span id="id2"></span><h2>Sub-packages<a class="headerlink" href="#sub-packages" title="Permalink to this headline">¶</a></h2>
-<p>The toolbox provides the following routines:</p>
-<ul class="simple">
-<li><a href="#id4"><span class="problematic" id="id5">`align`_</span></a> - Alignment of images between different acquisition cycles.</li>
-<li><a href="#id6"><span class="problematic" id="id7">`corilla`_</span></a> - Correction of illumination artifacts.</li>
-<li><a href="#id8"><span class="problematic" id="id9">`dafu`_</span></a> - Data fusion for <a class="reference external" href="https://github.com/HackerMD/Jterator">Jterator</a> projects.</li>
-<li><a href="#id10"><span class="problematic" id="id11">`illuminati`_</span></a> - Creation of image pyramids.</li>
-<li><a href="#id12"><span class="problematic" id="id13">`visi`_</span></a> - Conversion of <a class="reference external" href="http://www.visitron.de/Products/Software/VisiView/visiview.html">Visiview</a>&#8216;s STK files to PNG images with optional renaming.</li>
-</ul>
-<p>Each tool comes with a separate API and command line interface, but they all depend on the package wide configuration settings.</p>
-</div>
-<div class="section" id="configuration-settings">
-<span id="id3"></span><h2>Configuration settings<a class="headerlink" href="#configuration-settings" title="Permalink to this headline">¶</a></h2>
+<p><cite>TissueMAPS</cite> is a web-based, cluster-integrated tool for the visualization and analysis of large-scale 2D image datasets.</p>
+<p>Microscopy datasets can easily amount to several terabytes of size, which makes it infeasible to store and process them on a local computer. Instead, we store image files on a remote data volume and process them using cluster computing.</p>
+<p><cite>TissueMAPS</cite> runs on a virtual machine (<em>VM</em>) within a cloud, where it has access to a files system and a cluster computing infrastructure. Users interact with the program via the Internet.</p>
+<a class="reference internal image-reference" href="_images/TissueMAPS_overview.png"><img alt="_images/TissueMAPS_overview.png" src="_images/TissueMAPS_overview.png" style="height: 500px;" /></a>
+<p>The web-based approach has the advantage that no specialized software has to be installed locally and that large datasets can be handled efficiently and conveniently from a laptop computer via a standard web browser.</p>
+<p>Automated configuration and installation procedures make it easy to deploy the <em>VM</em> image in different virtual environments. This can be useful for development, debugging and testing purposes.</p>
+<p>The <cite>tmlib</cite> Python package serves as a library for image storage and processing routines. The library has an object-orientated design and provides classes for file system operations and interaction with the computer cluster.</p>
+<p>The organizational unit of <cite>TissueMAPS</cite> is an <strong>Experiment</strong>, which is represented by a directory on disk that holds the microscopic image files and related files for metadata, calculated statistics or extracted features, for example.</p>
+<div class="section" id="file-system-configuration">
+<span id="id2"></span><h2>File system configuration<a class="headerlink" href="#file-system-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Images as well as metadata are stored in files on the file system.</p>
 <div class="section" id="config-file">
-<h3>Config file<a class="headerlink" href="#config-file" title="Permalink to this headline">¶</a></h3>
-<p>The <em>tmt.config</em> <a class="reference external" href="http://yaml.org/">YAML</a> file specifies the experiment layout, such as the directory structure on disk.</p>
-<div class="highlight-yaml"><div class="highlight"><pre><span class="c1"># TISSUEMAPS TOOLBOX CONFIGURATION SETTINGS</span>
-<span class="c1"># =========================================</span>
-<span class="c1">#</span>
-<span class="c1"># Configuration of the experiment layout (directory structure and filename</span>
-<span class="c1"># nomenclature) for image processing, pyramid creation and data analysis.</span>
-<span class="c1">#</span>
-<span class="c1"># The experiment layout is defined by format strings.</span>
-<span class="c1"># To this end, you can use the following replacement fields:</span>
-<span class="c1">#</span>
-<span class="c1"># experiment_dir:</span>
-<span class="c1">#   absolute path to the experiment folder (string)</span>
-<span class="c1"># experiment:</span>
-<span class="c1">#   name of the experiment folder, i.e. basename of &#39;experiment_dir&#39; (string)                  </span>
-<span class="c1"># subexperiment:</span>
-<span class="c1">#   name of a subdirectory within the experiment folder (string)</span>
-<span class="c1"># cycle:</span>
-<span class="c1">#   number of the subexperiment (integer)</span>
-<span class="c1"># channel:</span>
-<span class="c1">#   number of the image in the multi-channel acquisition sequence</span>
-<span class="c1">#   corresponding to a particular wavelength (integer)</span>
-<span class="c1"># objects:</span>
-<span class="c1">#   name of objects in a segmentation mask image (string)</span>
-<span class="c1"># jtproject:</span>
-<span class="c1">#   name of a Jterator project folder (string)</span>
+<span id="id3"></span><h3>Config file<a class="headerlink" href="#config-file" title="Permalink to this headline">¶</a></h3>
+<p>The layout of the directory tree on disk is configured via the <cite>cfg.py</cite> file where Python <a class="reference external" href="https://docs.python.org/2/library/string.html#formatstrings">format strings</a> are used to set paths and filenames:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">TISSUEMAPS LIBRARY CONFIGURATION SETTINGS</span>
 
-<span class="l-Scalar-Plain">SUBEXPERIMENTS_EXIST</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Yes</span>
+<span class="sd">Describe the experimental layout (directory structure and filename nomenclature)</span>
+<span class="sd">by Python format strings. To this end, the following keywords are available::</span>
 
-<span class="c1"># Path format strings</span>
-<span class="l-Scalar-Plain">IMAGE_FOLDER_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}{subexperiment}{sep}images&#39;</span>
-<span class="l-Scalar-Plain">SHIFT_FOLDER_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}{subexperiment}{sep}shift&#39;</span>
-<span class="l-Scalar-Plain">STATS_FOLDER_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}{subexperiment}{sep}stats&#39;</span>
-<span class="l-Scalar-Plain">SEGMENTATION_FOLDER_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}{subexperiment}{sep}segmentations&#39;</span>
+<span class="sd">* *experiment_dir*: Absolute path to the experiment folder (string).</span>
 
-<span class="c1"># Filename format strings</span>
-<span class="l-Scalar-Plain">SUBEXPERIMENT_FOLDER_FORMAT</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment}_{cycle:0&gt;2}&#39;</span>
-<span class="l-Scalar-Plain">SUBEXPERIMENT_FILE_FORMAT</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment}_{cycle}&#39;</span>
-<span class="l-Scalar-Plain">STATS_FILE_FORMAT</span><span class="p-Indicator">:</span> <span class="s">&#39;illumstats_channel{channel:0&gt;3}.h5&#39;</span>
-<span class="l-Scalar-Plain">SHIFT_FILE_FORMAT</span><span class="p-Indicator">:</span> <span class="s">&#39;shift_descriptor.json&#39;</span>
+<span class="sd">* *experiment*: Name of the experiment folder, i.e. the basename of &quot;experiment_dir&quot; (string).</span>
+<span class="sd">                 </span>
+<span class="sd">* *cycle_dir*: Absolute path to the cycle directory (string).</span>
 
-<span class="c1"># Regular expression patterns to extract information encoded in filenames</span>
-<span class="l-Scalar-Plain">EXPERIMENT_FROM_FILENAME</span><span class="p-Indicator">:</span> <span class="s">&#39;^([^_]+)&#39;</span>
-<span class="l-Scalar-Plain">CYCLE_FROM_FILENAME</span><span class="p-Indicator">:</span> <span class="s">&#39;_(\d+)_&#39;</span>
-<span class="l-Scalar-Plain">COORDINATES_FROM_FILENAME</span><span class="p-Indicator">:</span> <span class="s">&#39;_r(\d+)_c(\d+)_&#39;</span>
-<span class="l-Scalar-Plain">COORDINATES_IN_FILENAME_ONE_BASED</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Yes</span>
-<span class="l-Scalar-Plain">SITE_FROM_FILENAME</span><span class="p-Indicator">:</span> <span class="s">&#39;_s(\d+)_&#39;</span>
-<span class="l-Scalar-Plain">CHANNEL_FROM_FILENAME</span><span class="p-Indicator">:</span> <span class="s">&#39;C(\d+)\.png$&#39;</span>
-<span class="l-Scalar-Plain">OBJECTS_FROM_FILENAME</span><span class="p-Indicator">:</span> <span class="s">&#39;_segmented(\w+).png$&#39;</span>
+<span class="sd">* *cycle*: Name of the cycle folder, i.e. the basename of &quot;cycle_dir&quot; (string).</span>
 
-<span class="c1"># Should Vips image processing library be used?</span>
-<span class="l-Scalar-Plain">USE_VIPS_LIBRARY</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Yes</span>  <span class="c1"># Required for pyramid creation!</span>
+<span class="sd">* *channel*: Name of the corresponding channel or wavelength (string).</span>
 
-<span class="c1"># Hard-coded in TissueMAPS: Don&#39;t change these variables!</span>
-<span class="l-Scalar-Plain">LAYERS_FOLDER_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}layers&#39;</span>
-<span class="l-Scalar-Plain">ID_TABLES_FOLDER_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}id_tables&#39;</span>
-<span class="l-Scalar-Plain">ID_PYRAMIDS_FOLDER_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}id_pyramids&#39;</span>
-<span class="l-Scalar-Plain">DATA_FILE_LOCATION</span><span class="p-Indicator">:</span> <span class="s">&#39;{experiment_dir}{sep}data.h5&#39;</span>
+<span class="sd">* *site*: One-based position index in the acquisition sequence in x, y dimensions (integer).</span>
+
+<span class="sd">* *time*: One-based time point index in the acquisition sequence in t dimension (integer).</span>
+
+<span class="sd">* *zstack*: One-based z-stack index in the acquisition sequence in z dimension (integer).</span>
+
+<span class="sd">* *row*: Y index position of the image in the acquisition grid (integer).</span>
+
+<span class="sd">* *column*: X index position of the image in the acquisition grid (integer).</span>
+
+<span class="sd">* *well*: Well identifier Id encoding the position in the well plate (string).</span>
+
+<span class="sd">* *sep*: Platform-specific path separator (&quot;/&quot; Unix or &quot;\&quot; Windows)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="n">LAYERS_DIR</span> <span class="o">=</span> <span class="s">&#39;{experiment_dir}{sep}layers&#39;</span>
+<span class="n">DATA_FILE</span> <span class="o">=</span> <span class="s">&#39;{experiment_dir}{sep}data.h5&#39;</span>
+
+<span class="n">USER_CFG_FILE</span> <span class="o">=</span> <span class="s">&#39;{experiment_dir}{sep}user.cfg&#39;</span>
+
+<span class="n">CYCLE_DIR</span> <span class="o">=</span> <span class="s">&#39;{experiment}-{cycle_id}&#39;</span>
+<span class="n">LAYER_NAME</span> <span class="o">=</span> <span class="s">&#39;{cycle}-{channel}&#39;</span>
+
+<span class="n">IMAGE_UPLOAD_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}image_uploads&#39;</span>
+<span class="n">ADDITIONAL_UPLOAD_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}additional_uploads&#39;</span>
+<span class="n">OME_XML_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}ome_xml&#39;</span>
+
+<span class="n">IMAGE_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}images&#39;</span>
+<span class="n">IMAGE_FILE</span> <span class="o">=</span> <span class="s">&#39;{cycle}_{well}_s{site:0&gt;3}_r{row:0&gt;2}_c{column:0&gt;2}_{channel}.png&#39;</span>
+
+<span class="n">METADATA_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}metadata&#39;</span>
+<span class="n">IMAGE_METADATA_FILE</span> <span class="o">=</span> <span class="s">&#39;images.metadata&#39;</span>
+
+<span class="n">STATS_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}stats&#39;</span>
+<span class="n">STATS_FILE</span> <span class="o">=</span> <span class="s">&#39;{cycle}_{channel}.stat&#39;</span>
+
+<span class="n">SHIFT_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}shifts&#39;</span>
+<span class="n">SHIFT_FILE</span> <span class="o">=</span> <span class="s">&#39;{cycle}.shift&#39;</span>
 </pre></div>
 </div>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Quotes are generally not required around strings in YAML syntax, but are necessary here to escape the curly braces in the format strings!</p>
+<p>Configuration classes then replace the <em>replacement fields</em> in curly braches <code class="docutils literal"><span class="pre">{}</span></code> are replaced with experiment-specific attribute values.</p>
 </div>
 </div>
-<div class="section" id="configuration-classes">
-<span id="config-classes"></span><h3>Configuration classes<a class="headerlink" href="#configuration-classes" title="Permalink to this headline">¶</a></h3>
-<p>Paths and filenames are described with <a class="reference external" href="https://docs.python.org/2/library/string.html#formatstrings">Python format strings</a>. The configuration classes replace the <strong>replacement fields</strong> surrounded by curly braces <code class="docutils literal"><span class="pre">{}</span></code> with experiment specific variables and provide the formatted path or filename in form of an attribute.</p>
+<div class="section" id="workflow">
+<span id="id4"></span><h2>Workflow<a class="headerlink" href="#workflow" title="Permalink to this headline">¶</a></h2>
+<p>The data unit for visualization in <cite>TissueMAPS</cite> is a <strong>Layer</strong>.</p>
+<p>The program supports different types of layers and their generation requires multiple steps that are combined into larger workflows.</p>
+<p><strong>Channel</strong> layers are comprised of the microscopic raster images. For interactive visualization via the web, images are converted into <a class="reference external" href="http://www.zoomify.com/">zoomify</a> format. These so called <a class="reference external" href="https://en.wikipedia.org/wiki/Pyramid_(image_processing)">pyramids</a> represent a large image by several smaller image tiles (stored in <a class="reference external" href="http://www.jpeg.org">JPEG</a> files) at different resolution levels. Only the tiles that are requested for the current view are loaded and streamed to the client. Channels can be dynamically colorized on the client side and combined by additive color blending for RGB display.</p>
+<p><strong>Object</strong> layers represent geometrical structures, such as cell segmentations or wells in a multi-well plate, that are rendered on the client side as vector graphics. The data that specifies the location of objects in the map as well as the corresponding features that describe properties of the objects are stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files. Objects can be overlaid on channels and colorized according to pre-calculated feature values or results of the program&#8217;s data analysis tools, e.g. class labels generated by a classifier. This allows the user to browse the entire image dataset and perform statistical hypothesis testing in a visually assisted way.</p>
+<p>The generation of layers from the microscopic images may involve the following sequence of steps:</p>
+<a class="reference internal image-reference" href="_images/TissueMAPS_workflow.png"><img alt="_images/TissueMAPS_workflow.png" src="_images/TissueMAPS_workflow.png" style="height: 500px;" /></a>
+<div class="section" id="steps">
+<span id="id5"></span><h3>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h3>
+<p>Each step of the workflow corresponds to a subpackage of the <cite>tmlib</cite> package:</p>
+<ul>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="../tmlib/metaextract">metaextract</a>: <strong>Extraction of metadata from files</strong></dt>
+<dd><p class="first last">Microscopes usually store images together with the acquisition information in vendor-specific formats, which are often not understood by standard readers. The program uses the <a class="reference external" href="https://www.openmicroscopy.org/site/products/bio-formats">Bio-Formats</a> Java library to extract the metadata from heterogeneous image file formats and stores as <a class="reference external" href="https://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html">XML</a> files according to the standardized <a class="reference external" href="https://www.openmicroscopy.org/site/support/ome-model/">OME</a> data model.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="../tmlib/metaconvert">metaconvert</a>: <strong>Conversion of extracted metadata to custom format</strong></dt>
+<dd><p class="first last">For the subsequent steps, the relevant metadata is converted to a custom format and serialized to <a class="reference external" href="http://www.json.org/">JSON</a> files. In particular, the microscope stage positions are used to calculate the relative positions of the images within the scanned acquisition grid, which are ultimately required to stitch individual images together to create an overview of the entire imaged area.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="../tmlib/imextract">imextract</a>: <strong>Extraction of images from files</strong></dt>
+<dd><p class="first last">Image files may contain more than one image. Often images acquired at different <em>z</em>-resolutions are stored in the same file. Some microscopes even store all images in a single file. To facilitate easier handling of images, they are extracted from the original files and stored separately as <a class="reference external" href="http://www.libpng.org/pub/png/">PNG</a> files. If images have more than one <em>z</em>-dimensions, they are automatically projected to 2D.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="../tmlib/corilla">corilla</a>: <strong>Calculation of illumination statistics</strong></dt>
+<dd><p class="first last">Microscopic images display illumination artifacts. Correction of these artifacts is important for visualization and even more so for quantitative analysis of pixel intensity values. Illumination statistics are pre-calculated across all acquisition sites and stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files. They can later be applied to individual images in order to correct them for illumination artifacts.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="../tmlib/align">align</a>: <strong>Calculation of shift statistics</strong></dt>
+<dd><p class="first last">Images may be acquired at different time points with a potential shift in x-y directions between acquisitions. In order to be able to overlay images from different <em>cycles</em>, images have to be registered and aligned. Shift statistics are pre-calculated for each acquisition site and stored as <a class="reference external" href="http://www.json.org/">JSON</a> files.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="../tmlib/jterator">jterator</a>: <strong>Building and running image analysis pipelines</strong></dt>
+<dd><p class="first last">Images are segmented and features are extracted for the detected objects, such as &#8220;nuclei&#8221; or &#8220;cells&#8221;.
+Users can build custom image analysis <em>pipelines</em> by combining available modules. The extracted features are stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="../tmlib/illuminati">illuminati</a>: <strong>Creation of map layers for web visualization</strong></dt>
+<dd><p class="first last">Individual images are stitched together to one big overview image according the positional information provided by the obtained metadata. Images are also corrected for illumination artifacts and aligned if necessary based on the calculated illumination and shift statistics, respectively. Segmented objects are given global Ids and their locations within images are translated into global map coordinates. Images are stored as <a class="reference external" href="http://www.jpeg.org">JPEG</a> files and features in <a class="reference external" href="http://www.json.org/">HDF5</a> files.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>The order of steps is not arbitrary, since some steps are dependent on others, i.e. the <em>outputs</em> of one step may be the <em>inputs</em> for another.</p>
 </div>
-<div class="section" id="definitions">
-<h3>Definitions<a class="headerlink" href="#definitions" title="Permalink to this headline">¶</a></h3>
-<p>A <strong>project</strong> represents the folder on disk, which contains the images and corresponding data. This may either be an <strong>experiment</strong> or a <strong>subexperiment</strong>, in case the experiment is made up of several related image acquisition <em>cycles</em>, i.e. if you acquired images of the same sample at different time points.</p>
+<div class="section" id="command-line-interface">
+<span id="id11"></span><h3>Command-line interface<a class="headerlink" href="#command-line-interface" title="Permalink to this headline">¶</a></h3>
+<p>Each of the above listed packages provides an application programming interface (<strong>API</strong>) and command-line interface (<strong>CLI</strong>).</p>
+<p>The corresponding classes inherit from the <cite>CommandLineInterface</cite> and <cite>ClusterRoutines</cite> base classes. This makes it easy to further extend the workflow by additional steps and allows packages to share a common interface.</p>
+<p>Command line calls are handled by <a class="reference external" href="https://docs.python.org/3/library/argparse.html">argparse</a> and follow a general syntax:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&lt;class_name&gt; &lt;class_args&gt; &lt;method_name&gt; &lt;method_args&gt;
+</pre></div>
+</div>
+<p>where</p>
+<ul class="simple">
+<li><em>class_name</em> is the name of the main parser corresponding to the <em>cli</em> class of an individual step</li>
+<li><em>class_args</em> are arguments that are handled by the main parser, such as the logging verbosity level or the path to the directory of the experiment that should be processed, which are used to instantiate the corresponding <em>api</em> class</li>
+<li><em>method_name</em> is the name of a subparser corresponding to a method of the <em>cli</em> class</li>
+<li><em>method_args</em> are arguments that are handled by the subparser and are forwarded to the methods of the <em>api</em> class</li>
+</ul>
+<p>You can use the <code class="docutils literal"><span class="pre">-h</span></code> or <code class="docutils literal"><span class="pre">--help</span></code> argument to get help for a particular step:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&lt;class_name&gt; --help
+</pre></div>
+</div>
+<p>By default, each step is equipped with the following methods:</p>
+<ul class="simple">
+<li><strong>init</strong>: initialize a step and create persistent job descriptions</li>
+<li><strong>run</strong>: run an individual job on the local machine</li>
+<li><strong>submit</strong>: submit all jobs to the cluster and continuously monitor their status</li>
+</ul>
+<p>Optionally, steps may provide additional methods, such as:</p>
+<ul class="simple">
+<li><strong>collect</strong>: collect the job output after submission and fuse the data spread across individual files into a single dataset if necessary</li>
+<li><strong>apply</strong>: apply the results of the step (calculated statistics) to individual images</li>
+</ul>
+<p>You can also use the <code class="docutils literal"><span class="pre">-h</span></code> or <code class="docutils literal"><span class="pre">--help</span></code> argument to get help for the individual methods available for a particular step:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&lt;class_name&gt; &lt;class_args&gt; &lt;method_name&gt; --help
+</pre></div>
+</div>
+<p>An example for the <cite>metaconvert</cite> step:</p>
+<p>The call</p>
+<div class="highlight-bash"><div class="highlight"><pre>metaconvert --format cellvoyager ./ init --backup
+</pre></div>
+</div>
+<p>would initialize the <cite>metaconvert</cite> step and create persistent job descriptions on disk, which could subsequently be used to <em>run</em> or <em>submit</em> jobs. It further specifies that the format of files as &#8220;cellvoyager&#8221; and backs up job descriptions and log outputs of the previous submission.</p>
 </div>
 </div>
 <div class="section" id="documentation">
 <h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h2>
 <p>We use <a class="reference external" href="http://sphinx-doc.org/index.html">Sphinx</a> in combination with the <a class="reference external" href="https://pypi.python.org/pypi/sphinxcontrib-napoleon">Napoleon extension</a> for support of the <a class="reference external" href="https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard">reStructuredText NumPy style</a>.</p>
 <p>To update the documentation upon changes in the source code, do</p>
-<div class="code bash highlight-python"><div class="highlight"><pre>$ sphinx-apidoc -o ./docs ./tmt
+<div class="code bash highlight-python"><div class="highlight"><pre>$ sphinx-apidoc -o ./docs ./tmlib
 </pre></div>
 </div>
 <p>To build the documentation website, do</p>
@@ -154,16 +238,18 @@ $ make html
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/tm_logo.svg" alt="Logo"/>
+              <img class="logo" src="_static/tmaps_logo.png" alt="Logo"/>
             </a></p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Introduction</a><ul>
-<li><a class="reference internal" href="#sub-packages">Sub-packages</a></li>
-<li><a class="reference internal" href="#configuration-settings">Configuration settings</a><ul>
+<li><a class="reference internal" href="#file-system-configuration">File system configuration</a><ul>
 <li><a class="reference internal" href="#config-file">Config file</a></li>
-<li><a class="reference internal" href="#configuration-classes">Configuration classes</a></li>
-<li><a class="reference internal" href="#definitions">Definitions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#workflow">Workflow</a><ul>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#command-line-interface">Command-line interface</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#documentation">Documentation</a></li>
@@ -174,7 +260,7 @@ $ make html
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Welcome to TissueMAPS Toolbox&#8217;s documentation!</a></li>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to the documentation for the TissueMAPS Library!</a></li>
       <li>Next: <a href="installation.html" title="next chapter">Installation</a></li>
   </ul></li>
 </ul>
