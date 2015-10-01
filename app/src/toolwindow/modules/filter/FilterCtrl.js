@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.modules.filter')
+angular.module('tmaps.toolwindow')
 .controller('FilterCtrl',
             ['$scope', 'toolInstance',
             function($scope, toolInstance) {

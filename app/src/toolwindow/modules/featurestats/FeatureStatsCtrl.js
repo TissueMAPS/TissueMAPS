@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.modules.featurestats')
+angular.module('tmaps.toolwindow')
 .controller('FeatureStatsCtrl',
             ['$scope', '$rootScope', 'colorUtil', 'toolInstance', 'tmapsProxy',
             function($scope, $rootScope, colorUtil, toolInstance, tmapsProxy) {

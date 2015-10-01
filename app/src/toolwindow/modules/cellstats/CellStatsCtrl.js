@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.modules.cellstats')
+angular.module('tmaps.toolwindow')
 .controller('CellStatsCtrl',
             ['$scope', '$rootScope', 'colorUtil', 'toolInstance', 'tmapsProxy',
             function($scope, $rootScope, colorUtil, toolInstance, tmapsProxy) {

@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.util')
+angular.module('tmaps.toolwindow')
 .service('featureService', ['$http', '$q', function($http, $q) {
 
     var features = {};

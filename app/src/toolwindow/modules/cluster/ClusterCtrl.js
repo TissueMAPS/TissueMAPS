@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.modules.cluster')
+angular.module('tmaps.toolwindow')
 .controller('ClusterCtrl', ['$scope', 'toolInstance', function($scope, toolInstance) {
     $scope.sendRequest = function() {
         toolInstance.sendRequest({

@@ -170,7 +170,7 @@ module.exports = function(grunt) {
             },
             tools: {
                 files: {
-                    'app/templates/tools/index.html': 'app/templates/tools/index.pre.html'
+                    'app/src/toolwindow/index.html': 'app/src/toolwindow/index.pre.html'
                 }
             }
         },
@@ -441,12 +441,12 @@ module.exports = function(grunt) {
                     // Module declarations
                     'app/src/tmaps.js',
                     'app/src/tmaps.routes.js',
-                    'app/src/tmaps.tools.js',
+                    'app/src/tmaps.toolwindow.js',
 
                     // Source
                     'app/build/compiled-ts.js',
                     'app/src/ui/**/*.js',
-                    'app/src/ui-tools/**/*.js'
+                    'app/src/toolwindow/**/*.js'
                 ]
             },
             unit: {

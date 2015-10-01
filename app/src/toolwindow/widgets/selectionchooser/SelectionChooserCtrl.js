@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.widgets')
+angular.module('tmaps.toolwindow')
 .controller('SelectionChooserCtrl', ['$scope', function($scope) {
 
     var selHandler = $scope.viewport.selectionHandler;

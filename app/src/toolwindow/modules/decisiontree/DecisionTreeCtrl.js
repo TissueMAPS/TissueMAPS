@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.modules.decisiontree')
+angular.module('tmaps.toolwindow')
 .controller('DecisionTreeCtrl', ['$scope', '$rootScope', 'tmapsProxy', 'toolInstance',
             function($scope, $rootScope, tmapsProxy, toolInstance) {
 

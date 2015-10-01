@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.widgets')
+angular.module('tmaps.toolwindow')
 .directive('tmOutputConsole', ['toolInstance', '$sce', function(toolInstance, $sce) {
 
     return {

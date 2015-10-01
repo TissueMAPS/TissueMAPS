@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.widgets')
+angular.module('tmaps.toolwindow')
 /**
  * A directive with which features can be selected.
  *

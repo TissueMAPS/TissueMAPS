@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.modules.svm')
+angular.module('tmaps.toolwindow')
 .controller('SVMCtrl', ['$scope', '$rootScope', 'tmapsProxy', 'toolInstance',
             function($scope, $rootScope, tmapsProxy, toolInstance) {
 

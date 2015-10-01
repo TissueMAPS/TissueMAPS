@@ -45,6 +45,9 @@
         "app/src/core/viewport/ViewportFactory.ts",
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
 
+        "app/src/toolwindow/TmapsProxy.ts",
+        "app/src/toolwindow/ToolContentCtrl.ts",
+
         "app/src/ui/toolbar/tmToolbar.ts",
         "app/src/ui/toolbar/ToolbarCtrl.ts",
 

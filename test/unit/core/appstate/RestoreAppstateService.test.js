@@ -40,7 +40,7 @@ describe('In restoreAppstateService', function() {
             $httpBackend.whenGET('/api/experiments/D5YAKwe7/cells')
             .respond(200, {});
 
-            $httpBackend.whenGET('/src/ui-tools/tools.json')
+            $httpBackend.whenGET('/src/core/tools/tools.json')
             .respond(200, {});
 
             restoreAppstateService.restoreAppstate(appstate);

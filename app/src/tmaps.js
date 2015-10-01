@@ -35,7 +35,6 @@
         'tmauth',
 
         // Thirdparty code
-
         'ui.router',
         'ui.bootstrap',
         'ui.sortable',

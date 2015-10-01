@@ -1,4 +1,4 @@
-angular.module('tmaps.tools.widgets')
+angular.module('tmaps.toolwindow')
 /**
  * A directive widget to assign cell selections to classes.
  * Usage:

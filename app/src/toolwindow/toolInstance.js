@@ -1,4 +1,4 @@
-angular.module('tmaps.tools')
+angular.module('tmaps.toolwindow')
 .service('toolInstance', ['$http', 'tmapsProxy', '$rootScope', '$window', '$websocket', '$interval', '$timeout',
          function($http, tmapsProxy, $rootScope, $window, $websocket, $interval, $timeout) {
 

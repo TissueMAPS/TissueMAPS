@@ -21,7 +21,7 @@ class Tool {
                 public id: string,
                 public name: string,
                 public description: string,
-                public template: string,
+                public templateUrl: string,
                 public icon: string,
                 public defaultWindowHeight: number,
                 public defaultWindowWidth: number) {
@@ -35,8 +35,8 @@ class Tool {
     }
 
     createNewWindow(appstate: Appstate, exp: Experiment) {
-        this.createToolWindowOnServer(appstate, exp).then((inst) => {
-            this.openWindow(inst);
+        return this.createToolWindowOnServer(appstate, exp).then((inst) => {
+            return this.openWindow(inst);
         });
     }
 
@@ -85,7 +85,7 @@ class Tool {
         // Without appending the current date to the title, the browser (chrome)
         // won't open multiple tool windows of the same type.
         var toolWindow = this.$window.open(
-            '/templates/tools/#/' + this.getIdSlug(), this.id, // + Date.now(),
+            '/src/toolwindow/', this.id, // + Date.now(),
             'toolbar=no,menubar=no,titebar=no,location=no,directories=no,replace=no,' +
             'width=' + this.defaultWindowWidth + ',height=' + this.defaultWindowHeight
         );
@@ -108,19 +108,17 @@ class Tool {
         // Create a container object that includes ressources that the tool may
         // need.
         var init = {
-            tmapsProxy: {
-                // The viewport from which this tool was called.
-                // The map object is available via this object.
-                appInstance: this.appInstance,
-                // TissueMAPS' $rootScope; can be used to listen to
-                // events that happen in the main window.
-                $rootScope: this.$rootScope
-            },
-            toolWindow: toolWindow
+            appInstance: this.appInstance,
+            viewportScope: this.appInstance.viewport.elementScope,
+            applicationScope: this.$rootScope,
+            toolWindow: toolWindow,
+            tool: this
         };
 
         // Save the initialization object to the local storage, such that the newly
         // created window may retrieve it.
         toolWindow.init = init;
+
+        return toolWindow;
     }
 }

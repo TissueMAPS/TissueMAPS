@@ -8,7 +8,7 @@ class ToolLoader {
 
     loadTools(appInstance: AppInstance) {
         var toolsDef = this.$q.defer();
-        this.$http.get('/src/ui-tools/tools.json').then((resp) => {
+        this.$http.get('/src/core/tools/tools.json').then((resp) => {
             var configs: any = resp.data;
             var tools = _.map(configs, (cfg: any) => {
                 if (!cfg.id || !cfg.templateUrl) {
@@ -23,7 +23,7 @@ class ToolLoader {
                         cfg.id,
                         cfg.name || cfg.id,
                         cfg.description || cfg.id,
-                        cfg.template,
+                        cfg.templateUrl,
                         cfg.icon || cfg.id,
                         windowCfg.height,
                         windowCfg.width

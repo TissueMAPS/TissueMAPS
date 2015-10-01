@@ -1,0 +1,13 @@
+<div class="tool-window-header">
+    <span class="tool-icon" ng-bind-html="tool.icon"></span>
+    <span class="tool-name">
+        {{ ::tool.name }}
+    </span>
+
+    <span class="spinner" ng-show="isRunning">
+        <i class="fa fa-refresh" ng-class="{'fa-spin': isRunning}"></i>
+    </span>
+
+</div>
+<div class="tool-window-body tm-content" ng-include="tool.templateUrl">
+</div>
