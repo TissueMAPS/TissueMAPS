@@ -34,7 +34,7 @@ openslide-python==1.1.0
 pandas==0.16.2
 paramiko==1.15.2
 parsedatetime==1.5
-passlib-1.6.4
+passlib==1.6.4
 Pillow==2.9.0
 prettytable==0.7.2
 psycopg2-2.6.1
