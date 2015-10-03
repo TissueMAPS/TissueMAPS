@@ -205,7 +205,7 @@ class ImageRegistration(ClusterRoutines):
             for i, cycle in enumerate(self.cycles):
 
                 metadata = cycle.image_metadata
-                output = [dict() for x in xrange(len(metadata))]
+                output = list()
 
                 for j in xrange(len(no_shift)):
 
@@ -218,7 +218,7 @@ class ImageRegistration(ClusterRoutines):
                         md.upper_overhang = top
                         md.right_overhang = right
                         md.left_overhang = left
-                        md.max_shift = batch['max_shift']
+                        md.max_tolerated_shift = batch['max_shift']
                         md.omit = bool(no_shift[j])
                         md.x_shift = shift_descriptions[i][j]['x_shift']
                         md.y_shift = shift_descriptions[i][j]['y_shift']

@@ -43,6 +43,7 @@ class ImageMetadata(object):
         self.max_tolerated_shift = None
         self.is_aligned = False
         self.is_corrected = False
+        self.omit = False
         self.metadata = metadata
         if self.metadata:
             self.set(self.metadata)

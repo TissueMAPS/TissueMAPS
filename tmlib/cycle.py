@@ -5,14 +5,12 @@ from natsort import natsorted
 from cached_property import cached_property
 from . import utils
 from .readers import ImageMetadataReader
-from .readers import ShiftDescriptionReader
 from .image import is_image_file
 from .image import ChannelImage
 from .image import IllumstatsImages
 from .metadata import ChannelImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .metadata import MosaicMetadata
-from .shift import ShiftDescription
 from .errors import RegexpError
 
 logger = logging.getLogger(__name__)

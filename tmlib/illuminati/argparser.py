@@ -3,7 +3,7 @@ from .cli import Illuminati
 
 
 parser, subparsers = Illuminati.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'kill'])
+    required_subparsers=['init', 'run', 'submit', 'kill', 'cleanup'])
 
 parser.description = '''
         Create image pyramids for zoom visualization in TissueMAPS.
