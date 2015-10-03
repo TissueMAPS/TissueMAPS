@@ -41,6 +41,7 @@ pyCLI==2.0.3
 pycrypto==2.6.1
 pyparsing==2.0.3
 pypng==0.0.17
+python-bioformats==1.0.5
 python-dateutil==2.4.2
 pytest==2.7.2
 pytz==2015.4
