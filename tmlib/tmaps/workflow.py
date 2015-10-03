@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 import importlib
 from gc3libs import Run
@@ -8,7 +7,6 @@ from gc3libs.workflow import AbortOnError
 from ..readers import WorkflowDescriptionReader
 from ..cluster import BasicClusterRoutines
 from ..errors import WorkflowNextStepError
-from .. import utils
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +69,8 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         List[str]
             commands for each individual step of the workflow
         '''
+        logger.debug('read workflow description from file: {0}'.format(
+                        self.workflow_file))
         with WorkflowDescriptionReader(self.experiment.dir) as reader:
             workflow = reader.read(self.workflow_file)
         self._workflow_description = [
@@ -82,25 +82,26 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
     def _create_jobs_for_step(self, step_desciption):
         package_name = 'tmlib'
         prog_name = step_desciption[0]
+        logger.debug('create jobs for step {0}'.format(prog_name))
         argparser_module_name = '%s.%s.argparser' % (package_name, prog_name)
-        logger.debug('load module "%s"' % argparser_module_name)
+        logger.debug('load argparser module "%s"' % argparser_module_name)
         argparser_module = importlib.import_module(argparser_module_name)
         parser = argparser_module.parser
         parser.prog = prog_name
         cli_module_name = '%s.%s.cli' % (package_name, prog_name)
-        logger.debug('load module "%s"' % cli_module_name)
+        logger.debug('load cli module "%s"' % cli_module_name)
         cli_module = importlib.import_module(cli_module_name)
 
         init_command = step_desciption[1:]
+        logger.debug('parse arguments to cli class instance '
+                     'for the "init" method: {0}'.format(init_command))
         # TODO: add additional arguments using the format string method
         # with a dictionary read from the user.cfg file
         args = parser.parse_args(init_command)
         cli_class_inst = getattr(cli_module, prog_name.capitalize())(args)
 
         # Check whether inputs of current step were produced upstream
-        if not all([
-                os.path.exists(i) for i in cli_class_inst.required_inputs
-            ]):
+        if not all([os.path.exists(i) for i in cli_class_inst.required_inputs]):
             logger.error('required inputs were not produced upstream')
             raise WorkflowNextStepError('required inputs do not exist')
 
@@ -121,18 +122,20 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         submit_command.append('submit')
         if self.virtualenv:
             submit_command.extend(['--virtualenv', self.virtualenv])
+        logger.debug('parse arguments to cli class instance '
+                     'for the "submit" method: {0}'.format(submit_command))
         args = parser.parse_args(submit_command)
         cli_class_inst = getattr(cli_module, prog_name.capitalize())(args)
         return cli_class_inst.jobs
 
     def _add_step(self, index):
-        if (index > 0
-                and not all([
-                    os.path.exists(f) for f in self.expected_outputs[-1]
-                ])):
+        if (not all([os.path.exists(f) for f in self.expected_outputs[-1]])
+                and index > 0):
             logger.error('expected outputs were not generated')
             raise WorkflowNextStepError('outputs of previous step do not exist')
+        logger.debug('create job descriptions for next step')
         step_desciption = self.workflow_description[index]
+        logger.debug('create jobs for next step and add them to the task list')
         task = self._create_jobs_for_step(step_desciption)
         self.tasks.append(task)
 
@@ -150,7 +153,13 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         gc3libs.Run.State
         '''
         # TODO: resubmission and all the related shizzle
+        # TODO: start not always at step one, but figure out which steps have
+        # already been performed and allow restart at later stages
         if done+1 < len(self.workflow_description):
+            logger.info('progress to next step: {0}'.format(
+                            self.workflow_description[done+1]))
+            logger.info('step {0} of {1}'.format(
+                        (done+1), len(self.workflow_description)))
             try:
                 self._add_step(done+1)
             except Exception as error:

@@ -4,7 +4,6 @@ from . import logo
 from . import __version__
 from .workflow import ClusterWorkflowManager
 from .workflow import WorkflowClusterRoutines
-from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
