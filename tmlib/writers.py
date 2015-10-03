@@ -218,7 +218,7 @@ class YamlWriter(TextWriter):
                         explicit_start=True))
 
 
-class PipeWriter(JsonWriter):
+class PipeWriter(YamlWriter):
     '''
     Class for reading image related metadata.
     '''
@@ -235,7 +235,7 @@ class PipeWriter(JsonWriter):
         self.directory = directory
 
 
-class HandlesWriter(JsonWriter):
+class HandlesWriter(YamlWriter):
     '''
     Class for reading image related metadata.
     '''
@@ -258,7 +258,7 @@ class DatasetWriter(object):
     Base class for writing datasets and attributes to HDF5 files on disk.
     '''
 
-    def __init__(self, filename, new=False):
+    def __init__(self, filename, truncate=False):
         '''
         Instantiate an instance of class DatasetWriter.
 
@@ -266,15 +266,15 @@ class DatasetWriter(object):
         ----------
         filename: str
             absolute path to HDF5 file
-        new: bool, optional
-            whether a new file should be created, i.e. existing files should be
-            overwritten
+        truncate: bool, optional
+            whether an existing file should be truncated, i.e. a new file
+            created
         '''
         self.filename = filename
-        self.new = new
+        self.truncate = truncate
 
     def __enter__(self):
-        if self.new:
+        if self.truncate:
             self._stream = h5py.File(self.filename, 'w')
         else:
             self._stream = h5py.File(self.filename, 'a')
@@ -305,12 +305,11 @@ class DatasetWriter(object):
             data = [np.string_(d) for d in data]
         if isinstance(data, list):
             data = np.array(data)
-        if (isinstance(data, np.ndarray)
-                and all([isinstance(d, np.ndarray) for d in data])
-                and len(data.shape) == 1):
-            # TODO: is this general enough? update Note in docstring
+        if isinstance(data, np.ndarray) and data.dtype == 'O':
+            logger.debug('write as variable length dataset')
             self._write_vlen(path, data)
         else:
+            logger.debug('write as normal dataset')
             self._stream.create_dataset(path, data=data)
 
     def _write_vlen(self, path, data):

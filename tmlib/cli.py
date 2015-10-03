@@ -12,6 +12,7 @@ from abc import abstractproperty
 from abc import abstractmethod
 from . import cfg
 from .logging_utils import configure_logging
+from .logging_utils import map_logging_verbosity
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +35,13 @@ def command_line_call(parser):
     '''
     args = parser.parse_args()
 
-    if args.verbosity > 0:
-        level = logging.DEBUG
-    else:
-        level = logging.INFO
-    if args.silent:
-        level = logging.CRITICAL
+    # if args.verbosity > 0:
+    #     level = logging.DEBUG
+    # else:
+    #     level = logging.INFO
+    # if args.silent:
+    #     level = logging.CRITICAL
+    level = map_logging_verbosity(args.verbosity)
     configure_logging(level)
     logger.debug('running program: %s' % parser.prog)
 
@@ -366,11 +368,11 @@ class CommandLineInterface(object):
         parser.add_argument(
             'experiment_dir', help='path to experiment directory')
         parser.add_argument(
-            '-v', '--verbosity', action='count', default=0,
-            help='increase logging verbosity to DEBUG (default: INFO)')
-        parser.add_argument(
-            '-s', '--silent', action='store_true',
-            help='set logging verbosity to WARNING')
+            '-v', '--verbosity', dest='verbosity', action='count', default=0,
+            help='increase logging verbosity to DEBUG (default: WARN)')
+        # parser.add_argument(
+        #     '-s', '--silent', action='store_true',
+        #     help='set logging verbosity to WARNING')
         parser.add_argument(
             '--version', action='version')
 

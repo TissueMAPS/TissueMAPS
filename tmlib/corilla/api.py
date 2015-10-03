@@ -100,7 +100,7 @@ class IllumstatsGenerator(ClusterRoutines):
             for f in image_files:
                 img = reader.read(f)
                 stats.update(img)
-        with DatasetWriter(batch['outputs']['stats_file'], new=True) as f:
+        with DatasetWriter(batch['outputs']['stats_file'], truncate=True) as f:
             f.write('/images/mean', data=stats.mean)
             f.write('/images/std', data=stats.std)
             f.write('/metadata/cycle', data=batch['cycle'])

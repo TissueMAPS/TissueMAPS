@@ -1,6 +1,6 @@
 import mpld3
 import logging
-from ..readers import DatasetReader
+from tmlib.readers import DatasetReader
 
 logger = logging.getLogger(__name__)
 

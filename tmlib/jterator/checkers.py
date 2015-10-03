@@ -349,10 +349,10 @@ class PipelineChecker(object):
                                 'created upstream in the pipeline.'
                                 % (input_arg['name'], module['handles']))
 
-            # Store all upstream output arguments
-            for output_arg in handles['output']:
-                output = output_arg['value']
-                outputs.append(output)
+                # Store all upstream output arguments
+                for output_arg in handles['output']:
+                    output = output_arg['value']
+                    outputs.append(output)
         logger.info('Module input/output check successful!')
 
     def check_all(self):

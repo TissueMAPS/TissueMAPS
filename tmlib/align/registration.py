@@ -100,7 +100,7 @@ def register_images(sites, target_files, reference_files, output_file):
             out[cycle]['site'].append(sites[i])
 
     logger.info('write registration to file: %s' % output_file)
-    with DatasetWriter(output_file, new=True) as writer:
+    with DatasetWriter(output_file, truncate=True) as writer:
         for cycle, data in out.iteritems():
             for feature, values in data.iteritems():
                 # The calculated features will be stored
