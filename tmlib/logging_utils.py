@@ -26,7 +26,7 @@ VERBOSITY_TO_LEVELS = {
 }
 
 
-def map_log_verbosity(verbosity):
+def map_logging_verbosity(verbosity):
     '''
     Parameters
     ----------
