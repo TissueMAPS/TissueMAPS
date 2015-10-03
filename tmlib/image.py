@@ -215,17 +215,16 @@ class ChannelImage(Image):
         new_object.pixels = self.pixels.correct_illumination(
                                     stats.mean.pixels.array,
                                     stats.std.pixels.array)
+        new_object.metadata.is_corrected = True
         return new_object
 
-    def align(self, shift_description, crop=True):
+    def align(self, crop=True):
         '''
         Align, i.e. shift and crop, an image based on calculated shift
         and overhang values.
 
         Parameters
         ----------
-        shift_description: ShiftDescriptor
-            information required for alignment
         crop: bool, optional
             whether images should cropped or rather padded
             with zero valued pixels (default: ``True``)
@@ -243,7 +242,9 @@ class ChannelImage(Image):
         new_object = ChannelImage()
         new_object.metadata = self.metadata
         new_object.filename = self.filename
-        new_object.pixels = self.pixels.align(shift_description, crop=crop)
+        new_object.pixels = self.pixels.align(shift_description=self.metadata,
+                                              crop=crop)
+        new_object.metadata.is_aligned = True
         return new_object
 
 
@@ -318,6 +319,8 @@ class BrightfieldImage(Image):
     def pixels(self, value):
         self._pixels = value
 
+
+# TODO
 
 class MaskImage(Image):
 
@@ -401,27 +404,6 @@ class MaskImage(Image):
                             self.pixels.get_outlines(keep_ids=False),
                             self.metadata)
         return self._outlines
-
-    def align(self, shift_description):
-        '''
-        Align, i.e. shift and crop, an image based on calculated shift
-        and overhang values.
-
-        Parameters
-        ----------
-        shift_description: ShiftDescriptor
-            information required for alignment
-
-        Returns
-        -------
-        MaskImage
-            aligned image
-
-        Warning
-        -------
-        Alignment may change the dimensions of the image.
-        '''
-        return MaskImage(self.pixels.align(shift_description), self.metadata)
 
 
 class SegmentationImage(Image):
@@ -534,28 +516,6 @@ class SegmentationImage(Image):
         '''
         return SegmentationImage(
                     self.pixels.remove_objects(ids), self.metadata)
-
-    def align(self, shift_description):
-        '''
-        Align, i.e. shift and crop, an image based on calculated shift
-        and overhang values.
-
-        Parameters
-        ----------
-        shift_description: ShiftDescriptor
-            information required for alignment
-
-        Returns
-        -------
-        SegmentationImage
-            aligned image
-
-        Warning
-        -------
-        Alignment may change the dimensions of the image.
-        '''
-        return SegmentationImage(
-                    self.pixels.align(shift_description), self.metadata)
 
     def local_to_global_ids(self, max_id):
         '''

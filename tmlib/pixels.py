@@ -4,7 +4,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
 from . import image_utils
-from . import shift
+from .align import shift
 from .corilla import illumcorr
 from .illuminati import segment
 from .readers import VipsImageReader

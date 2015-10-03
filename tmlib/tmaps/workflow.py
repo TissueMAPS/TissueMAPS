@@ -129,10 +129,10 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         return cli_class_inst.jobs
 
     def _add_step(self, index):
-        if (not all([os.path.exists(f) for f in self.expected_outputs[-1]])
-                and index > 0):
-            logger.error('expected outputs were not generated')
-            raise WorkflowNextStepError('outputs of previous step do not exist')
+        if index > 0:
+            if not all([os.path.exists(f) for f in self.expected_outputs[-1]]):
+                logger.error('expected outputs were not generated')
+                raise WorkflowNextStepError('outputs of previous step do not exist')
         logger.debug('create job descriptions for next step')
         step_desciption = self.workflow_description[index]
         logger.debug('create jobs for next step and add them to the task list')

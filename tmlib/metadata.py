@@ -19,7 +19,9 @@ class ImageMetadata(object):
 
     persistent = {
         'original_filename', 'original_dtype', 'original_dimensions',
-        'original_series', 'cycle', 'name', 'site', 'row', 'column', 'well'
+        'original_series', 'cycle', 'name', 'site', 'row', 'column', 'well',
+        'x_shift', 'y_shift', 'right_overhang', 'left_overhang',
+        'upper_overhang', 'lower_overhang', 'max_tolerated_shift'
     }
 
     def __init__(self, metadata=None):
@@ -31,6 +33,15 @@ class ImageMetadata(object):
         metadata: dict
             metadata for an individual image
         '''
+        self.x_shift = None
+        self.y_shift = None
+        self.upper_overhang = None
+        self.lower_overhang = None
+        self.left_overhang = None
+        self.right_overhang = None
+        self.is_aligned = False
+        self.max_tolerated_shift = None
+        self.omit = None
         self.metadata = metadata
         if self.metadata:
             self.set(self.metadata)
@@ -236,6 +247,143 @@ class ImageMetadata(object):
     def well(self, value):
         self._well = value
 
+    @property
+    def x_shift(self):
+        '''
+        Returns
+        -------
+        int
+            shift of the image in pixels in x direction relative to its
+            reference (positive value -> to the left; negative value -> to the
+            right)
+        '''
+        return self._x_shift
+
+    @x_shift.setter
+    def x_shift(self, value):
+        self._x_shift = value
+
+    @property
+    def max_tolerated_shift(self):
+        '''
+        Returns
+        -------
+        int
+            shift in pixel values that is maximally tolerated in either
+            direction (set by the user)
+        '''
+        return self._max_tolerated_shift
+
+    @max_tolerated_shift.setter
+    def max_tolerated_shift(self, value):
+        self._max_tolerated_shift = value
+
+    @property
+    def y_shift(self):
+        '''
+        Returns
+        -------
+        int
+            shift of the image in pixels in y direction relative to its
+            reference (positive value -> downwards; negative value -> upwards)
+        '''
+        return self._y_shift
+
+    @y_shift.setter
+    def y_shift(self, value):
+        self._y_shift = value
+
+    @property
+    def lower_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the top side (bottom) of the image relative
+            to its reference: pixels to crop at the top of the image
+        '''
+        return self._lower_overhang
+
+    @lower_overhang.setter
+    def lower_overhang(self, value):
+        self._lower_overhang = value
+
+    @property
+    def upper_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the bottom side (top) of the image relative
+            to its reference: pixels to crop at the bottom of the image
+        '''
+        return self._upper_overhang
+
+    @upper_overhang.setter
+    def upper_overhang(self, value):
+        self._upper_overhang = value
+
+    @property
+    def right_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the left side of the image relative
+            to its reference: pixels to crop at the right side of the image
+        '''
+        return self._right_overhang
+
+    @right_overhang.setter
+    def right_overhang(self, value):
+        self._right_overhang = value
+
+    @property
+    def left_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the right side of the image relative
+            to its reference: pixels to crop at the left side of the image
+        '''
+        return self._left_overhang
+
+    @left_overhang.setter
+    def left_overhang(self, value):
+        self._left_overhang = value
+
+    @property
+    def omit(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the image should not be omitted from further analysis
+            (for example because shift values exceed the maximally tolerated
+             shift or because the image contains artifacts that
+             cause problems with image analysis algorithms)
+        '''
+        return self._omit
+
+    @omit.setter
+    def omit(self, value):
+        self._omit = value
+
+    @property
+    def is_aligned(self):
+        '''
+        Returns
+        -------
+        bool
+            in case the image is aligned
+        '''
+        return self._is_aligned
+
+    @is_aligned.setter
+    def is_aligned(self, value):
+        self._is_aligned = value
+
     @abstractmethod
     def serialize(self):
         '''
@@ -257,7 +405,9 @@ class ChannelImageMetadata(ImageMetadata):
     Class for metadata specific to channel images.
     '''
 
-    persistent = ImageMetadata.persistent.union({'channel', 'original_planes'})
+    persistent = ImageMetadata.persistent.union({
+                    'channel', 'original_planes', 'is_corrected'
+    })
 
     def __init__(self, metadata=None):
         '''
@@ -269,6 +419,7 @@ class ChannelImageMetadata(ImageMetadata):
             image metadata read from the *.metadata* JSON file
         '''
         super(ChannelImageMetadata, self).__init__(metadata)
+        self.is_corrected = False
         self.metadata = metadata
         if self.metadata:
             self.set(self.metadata)
@@ -300,6 +451,20 @@ class ChannelImageMetadata(ImageMetadata):
     @original_planes.setter
     def original_planes(self, value):
         self._original_planes = value
+
+    @property
+    def is_corrected(self):
+        '''
+        Returns
+        -------
+        bool
+            in case the image is illumination corrected
+        '''
+        return self._is_corrected
+
+    @is_corrected.setter
+    def is_corrected(self, value):
+        self._is_corrected = value
 
     def serialize(self):
         '''

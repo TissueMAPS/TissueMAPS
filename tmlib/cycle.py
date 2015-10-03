@@ -155,6 +155,10 @@ class Cycle(object):
         Note
         ----
         Creates the directory if it doesn't exist.
+
+        Note
+        ----
+        The value is cached!
         '''
         self._image_upload_dir = self.cfg.IMAGE_UPLOAD_DIR.format(
                                                 cycle_dir=self.dir,
@@ -177,6 +181,10 @@ class Cycle(object):
         Note
         ----
         Creates the directory if it doesn't exist.
+
+        Note
+        ----
+        The value is cached!
         '''
         self._additional_upload_dir = self.cfg.ADDITIONAL_UPLOAD_DIR.format(
                                                 cycle_dir=self.dir,
@@ -198,6 +206,10 @@ class Cycle(object):
         Note
         ----
         Creates the directory if it doesn't exist.
+
+        Note
+        ----
+        The value is cached!
         '''
         self._ome_xml_dir = self.cfg.OME_XML_DIR.format(
                                                 cycle_dir=self.dir,
@@ -221,6 +233,10 @@ class Cycle(object):
         OSError
             when `ome_xml_dir` does not exist or when no XML files are found
             in `ome_xml_dir`
+
+        Note
+        ----
+        The values are cached!
         '''
         if not os.path.exists(self.ome_xml_dir):
             raise OSError('OMEXML directory does not exist: %s'
@@ -244,6 +260,10 @@ class Cycle(object):
         Note
         ----
         Creates the directory if it doesn't exist.
+
+        Note
+        ----
+        The values are cached!
         '''
         self._image_metadata_dir = self.cfg.METADATA_DIR.format(
                                                 cycle_dir=self.dir,
@@ -265,6 +285,10 @@ class Cycle(object):
         Note
         ----
         Creates the directory if it doesn't exist.
+
+        Note
+        ----
+        The values are cached!
         '''
         self._image_dir = self.cfg.IMAGE_DIR.format(
                                                 cycle_dir=self.dir,
@@ -292,6 +316,10 @@ class Cycle(object):
         See also
         --------
         `image.is_image_file`_
+
+        Note
+        ----
+        The values are cached!
         '''
         if not os.path.exists(self.image_dir):
             raise OSError('Image directory does not exist: %s'
@@ -330,6 +358,10 @@ class Cycle(object):
         See also
         --------
         `metadata.ChannelImageMetadata`_
+
+        Note
+        ----
+        The values are cached!
         '''
         with ImageMetadataReader(self.metadata_dir) as reader:
             metadata = reader.read(self.image_metadata_file)
@@ -472,76 +504,6 @@ class Cycle(object):
                     library=self.library)
             self._images.append(img)
         return self._images
-
-    @cached_property
-    def shift_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to directory holding shift descriptor file
-
-        Note
-        ----
-        Creates the directory if it doesn't exist.
-        '''
-        self._shift_dir = self.cfg.SHIFT_DIR.format(
-                                                cycle_dir=self.dir,
-                                                sep=os.path.sep)
-        if not os.path.exists(self._shift_dir):
-            logger.debug('create directory for shift files: %s'
-                         % self._shift_dir)
-            os.mkdir(self._shift_dir)
-        return self._shift_dir
-
-    @cached_property
-    def shift_file(self):
-        '''
-        Returns
-        -------
-        str
-            name of shift descriptor file in `shift_dir`
-
-        Raises
-        ------
-        OSError
-            when `shift_dir` does not exist or when no
-            shift descriptor file is found
-        '''
-        shift_pattern = self.cfg.SHIFT_FILE.format(cycle=self.name)
-        if not os.path.exists(self.shift_dir):
-            raise OSError('Shift directory does not exist: %s'
-                          % self.shift_dir)
-        files = [f for f in os.listdir(self.shift_dir)
-                 if re.search(shift_pattern, f)]
-        if len(files) == 0:
-            raise OSError(
-                'No shift descriptor file found in "%s"' % self.shift_dir)
-        self._shift_file = natsorted(files)[-1]
-        return self._shift_file
-
-    @property
-    def shift_descriptions(self):
-        '''
-        Returns
-        -------
-        List[ShiftDescription]
-            shift description for each image file in `image_dir`
-
-        See also
-        --------
-        `shift.ShiftDescription`_
-        '''
-        with ShiftDescriptionReader(self.shift_dir) as reader:
-            content = reader.read(self.shift_file)
-        # by matching the sites, we ensure that the correct shift
-        # description is assigned to each image
-        sites = [e['site'] for e in content]
-        self._shift_descriptions = [
-            ShiftDescription(content[sites.index(m.site)])
-            for m in self.image_metadata
-        ]
-        return self._shift_descriptions
 
     @property
     def layer_names(self):
