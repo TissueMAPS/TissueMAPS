@@ -132,7 +132,8 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         if index > 0:
             if not all([os.path.exists(f) for f in self.expected_outputs[-1]]):
                 logger.error('expected outputs were not generated')
-                raise WorkflowNextStepError('outputs of previous step do not exist')
+                raise WorkflowNextStepError(
+                             'outputs of previous step do not exist')
         logger.debug('create job descriptions for next step')
         step_desciption = self.workflow_description[index]
         logger.debug('create jobs for next step and add them to the task list')
@@ -156,10 +157,9 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         # TODO: start not always at step one, but figure out which steps have
         # already been performed and allow restart at later stages
         if done+1 < len(self.workflow_description):
-            logger.info('progress to next step: {0}'.format(
-                            self.workflow_description[done+1]))
-            logger.info('step {0} of {1}'.format(
-                        (done+1), len(self.workflow_description)))
+            logger.info('progress to next step ({0} of {1}): "{2}"'.format(
+                            (done+1), len(self.workflow_description),
+                            self.workflow_description[done+1][0]))
             try:
                 self._add_step(done+1)
             except Exception as error:

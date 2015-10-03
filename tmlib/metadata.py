@@ -20,8 +20,9 @@ class ImageMetadata(object):
     persistent = {
         'original_filename', 'original_dtype', 'original_dimensions',
         'original_series', 'cycle', 'name', 'site', 'row', 'column', 'well',
-        'x_shift', 'y_shift', 'right_overhang', 'left_overhang',
-        'upper_overhang', 'lower_overhang', 'max_tolerated_shift'
+        'x_shift', 'y_shift', 'lower_overhang', 'upper_overhang',
+        'left_overhang', 'right_overhang', 'omit', 'max_tolerated_shift',
+        'is_aligned', 'is_corrected'
     }
 
     def __init__(self, metadata=None):
@@ -33,15 +34,16 @@ class ImageMetadata(object):
         metadata: dict
             metadata for an individual image
         '''
-        self.x_shift = None
-        self.y_shift = None
-        self.upper_overhang = None
-        self.lower_overhang = None
-        self.left_overhang = None
-        self.right_overhang = None
-        self.is_aligned = False
+        self.y_shift = 0
+        self.x_shift = 0
+        self.lower_overhang = 0
+        self.upper_overhang = 0
+        self.right_overhang = 0
+        self.left_overhang = 0
         self.max_tolerated_shift = None
-        self.omit = None
+        self.is_aligned = False
+        self.is_corrected = False
+        self.omit = False
         self.metadata = metadata
         if self.metadata:
             self.set(self.metadata)
@@ -264,21 +266,6 @@ class ImageMetadata(object):
         self._x_shift = value
 
     @property
-    def max_tolerated_shift(self):
-        '''
-        Returns
-        -------
-        int
-            shift in pixel values that is maximally tolerated in either
-            direction (set by the user)
-        '''
-        return self._max_tolerated_shift
-
-    @max_tolerated_shift.setter
-    def max_tolerated_shift(self, value):
-        self._max_tolerated_shift = value
-
-    @property
     def y_shift(self):
         '''
         Returns
@@ -359,10 +346,10 @@ class ImageMetadata(object):
         Returns
         -------
         bool
-            whether the image should not be omitted from further analysis
-            (for example because shift values exceed the maximally tolerated
-             shift or because the image contains artifacts that
-             cause problems with image analysis algorithms)
+            whether the image should be omitted from further analysis
+            (for example because the shift exceeds the maximally tolerated
+             shift or the image contains artifacts that would cause problems
+             for image analysis algorithms)
         '''
         return self._omit
 
@@ -371,18 +358,46 @@ class ImageMetadata(object):
         self._omit = value
 
     @property
+    def max_tolerated_shift(self):
+        '''
+        Returns
+        -------
+        int
+            maximally tolerated shift values in pixels
+        '''
+        return self._max_tolerated_shift
+
+    @max_tolerated_shift.setter
+    def max_tolerated_shift(self, value):
+        self._max_tolerated_shift = value
+
+    @property
     def is_aligned(self):
         '''
         Returns
         -------
         bool
-            in case the image is aligned
+            indicates whether the image has been aligned
         '''
         return self._is_aligned
 
     @is_aligned.setter
     def is_aligned(self, value):
         self._is_aligned = value
+
+    @property
+    def is_corrected(self):
+        '''
+        Returns
+        -------
+        bool
+            indicates whether the image has been illumination corrected
+        '''
+        return self._is_corrected
+
+    @is_corrected.setter
+    def is_corrected(self, value):
+        self._is_corrected = value
 
     @abstractmethod
     def serialize(self):
@@ -497,15 +512,13 @@ class ChannelImageMetadata(ImageMetadata):
 
         Raises
         ------
-        KeyError
-            when keys for required attributes are not provided
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in ChannelImageMetadata.persistent
-                        if a not in metadata.keys()]
-        if len(missing_keys) > 0:
-            raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
+        # missing_keys = [a for a in ChannelImageMetadata.persistent
+        #                 if a not in metadata.keys()]
+        # if len(missing_keys) > 0:
+        #     raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in metadata.iteritems():
             if k not in ChannelImageMetadata.persistent:
                 raise AttributeError('Class "%s" has no attribute "%s"'

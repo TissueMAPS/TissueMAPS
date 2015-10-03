@@ -148,23 +148,12 @@ class CommandLineInterface(object):
         kwargs = dict()
         return kwargs
 
-    def init(self):
-        '''
-        Instantiate an instance of the API class corresponding to the program
-        and process arguments of the "init" subparser.
-
-        Returns
-        -------
-        dict
-            job descriptions
-        '''
-        self.print_logo()
+    def _cleanup(self):
         api = self._api_instance
         job_descriptions = api.get_job_descriptions_from_files()
         if job_descriptions['run']:
             logger.info('clean up output of previous submission')
             outputs = api.list_output_files(job_descriptions)
-            # TODO
             if outputs:
                 dont_exist_ix = [not os.path.exists(f) for f in outputs]
                 if all(dont_exist_ix):
@@ -176,34 +165,54 @@ class CommandLineInterface(object):
                         continue
                     if os.path.isdir(out):
                         logger.debug('remove output directory: %s' % out)
-                        # shutil.rmtree(out)
+                        shutil.rmtree(out)
                     else:
                         logger.debug('remove output file: %s' % out)
                         os.remove(out)
 
-            if self.args.backup:
-                logger.info('backup log reports and job descriptions '
-                            'of previous submission')
-                timestamp = api.create_datetimestamp()
-                shutil.move(api.log_dir,
-                            '{name}_backup_{time}'.format(
-                                name=api.log_dir,
-                                time=timestamp))
-                shutil.move(api.job_descriptions_dir,
-                            '{name}_backup_{time}'.format(
-                                name=api.job_descriptions_dir,
-                                time=timestamp))
-                shutil.move(api.status_dir, 
-                            '{name}_backup_{time}'.format(
-                                name=api.status_file,
-                                time=timestamp))
+    def cleanup(self):
+        '''
+        Instantiate an instance of the API class corresponding to the program
+        and process arguments of the "cleanup" subparser.
+        '''
+        self.print_logo()
+        self._cleanup()
 
-            else:
-                logger.debug('remove log reports and job descriptions '
-                             'of previous submission')
-                shutil.rmtree(api.job_descriptions_dir)
-                shutil.rmtree(api.log_dir)
-                shutil.rmtree(api.status_dir)
+    def init(self):
+        '''
+        Instantiate an instance of the API class corresponding to the program
+        and process arguments of the "init" subparser.
+
+        Returns
+        -------
+        dict
+            job descriptions
+        '''
+        self.print_logo()
+        self._cleanup()
+        api = self._api_instance
+        if self.args.backup:
+            logger.info('backup log reports and job descriptions '
+                        'of previous submission')
+            timestamp = api.create_datetimestamp()
+            shutil.move(api.log_dir,
+                        '{name}_backup_{time}'.format(
+                            name=api.log_dir,
+                            time=timestamp))
+            shutil.move(api.job_descriptions_dir,
+                        '{name}_backup_{time}'.format(
+                            name=api.job_descriptions_dir,
+                            time=timestamp))
+            shutil.move(api.status_dir,
+                        '{name}_backup_{time}'.format(
+                            name=api.status_file,
+                            time=timestamp))
+        else:
+            logger.debug('remove log reports and job descriptions '
+                         'of previous submission')
+            shutil.rmtree(api.job_descriptions_dir)
+            shutil.rmtree(api.log_dir)
+            shutil.rmtree(api.status_dir)
 
         logger.info('create job descriptions')
         kwargs = self._variable_init_args
@@ -341,7 +350,7 @@ class CommandLineInterface(object):
 
     @staticmethod
     def get_parser_and_subparsers(
-            required_subparsers=['init', 'run', 'submit', 'kill']):
+            required_subparsers=['init', 'run', 'submit', 'kill', 'cleanup']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -370,9 +379,6 @@ class CommandLineInterface(object):
         parser.add_argument(
             '-v', '--verbosity', dest='verbosity', action='count', default=0,
             help='increase logging verbosity to DEBUG (default: WARN)')
-        # parser.add_argument(
-        #     '-s', '--silent', action='store_true',
-        #     help='set logging verbosity to WARNING')
         parser.add_argument(
             '--version', action='version')
 
@@ -464,5 +470,13 @@ class CommandLineInterface(object):
             apply_parser.add_argument(
                 '-o', '--output_dir', type=str, required=True,
                 help='path to output directory')
+
+        if 'cleanup' in required_subparsers:
+            apply_parser = subparsers.add_parser(
+                'cleanup',
+                help='clean up output of previous runs')
+            apply_parser.description = '''
+                Remove files and folders generated by previous runs/submissions.
+            '''
 
         return (parser, subparsers)

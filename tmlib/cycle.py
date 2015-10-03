@@ -5,14 +5,12 @@ from natsort import natsorted
 from cached_property import cached_property
 from . import utils
 from .readers import ImageMetadataReader
-from .readers import ShiftDescriptionReader
 from .image import is_image_file
 from .image import ChannelImage
 from .image import IllumstatsImages
 from .metadata import ChannelImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .metadata import MosaicMetadata
-from .shift import ShiftDescription
 from .errors import RegexpError
 
 logger = logging.getLogger(__name__)
@@ -367,8 +365,8 @@ class Cycle(object):
             metadata = reader.read(self.image_metadata_file)
         names = [md['name'] for md in metadata]
         self._image_metadata = [
-            ChannelImageMetadata(metadata[i])
-            for i, f in enumerate(natsorted(names))
+            ChannelImageMetadata(metadata[names.index(f)])
+            for f in natsorted(names)
         ]
         return self._image_metadata
 

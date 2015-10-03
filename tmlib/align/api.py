@@ -102,7 +102,7 @@ class ImageRegistration(ClusterRoutines):
             for i in xrange(len(registration_batches))
         ]
 
-        joblist = {
+        job_descriptions = {
             'run': [{
                 'id': i+1,
                 'inputs': {
@@ -119,11 +119,12 @@ class ImageRegistration(ClusterRoutines):
                 'inputs': {
                     'registration_files': registration_files
                 },
-                'outputs': {}
+                'outputs': {
+                }
             }
         }
 
-        return joblist
+        return job_descriptions
 
     def run_job(self, batch):
         '''
@@ -173,23 +174,17 @@ class ImageRegistration(ClusterRoutines):
         top, bottom, right, left, no_shift = \
             reg.calculate_overhang(descriptions, batch['max_shift'])
 
-        for i, cycle in enumerate(self.cycles):
-
-            with ImageMetadataWriter() as writer:
+        with ImageMetadataWriter() as writer:
+            for i, cycle in enumerate(self.cycles):
 
                 metadata = cycle.image_metadata
-                output = [dict() for x in xrange(len(metadata))]
+                output = list()
 
                 for j in xrange(len(no_shift)):
 
-                    # md_index = [
-                    #     ix for ix, md in enumerate(metadata)
-                    #     if md.site == descriptions[i][j]['site']
-                    # ]
+                    for md in metadata:
 
-                    for index, md in enumerate(metadata):
-
-                        if (md.site != descriptions[i][j]['site']):
+                        if md.site != descriptions[i][j]['site']:
                             continue
 
                         md.lower_overhang = bottom
@@ -201,7 +196,7 @@ class ImageRegistration(ClusterRoutines):
                         md.x_shift = descriptions[i][j]['x_shift']
                         md.y_shift = descriptions[i][j]['y_shift']
 
-                        output[index] = md.serialize()
+                        output.append(md.serialize())
 
                 writer.write(
                     os.path.join(cycle.metadata_dir,
@@ -244,10 +239,6 @@ class ImageRegistration(ClusterRoutines):
                     for ix in channel_index
                 ]
                 if kwargs['illumcorr']:
-                    ix = [
-                        i for i, md in enumerate(cycle.stats_metadata)
-                        if md.channel == channel
-                    ][0]
                     stats = [
                         stats for stats in cycle.stats_images
                         if stats.metadata.channel == channel

@@ -24,31 +24,6 @@ class PyramidCreation(ClusterRoutines):
         self.experiment = experiment
         self.prog_name = prog_name
 
-    @property
-    def shift_dirs(self):
-        '''
-        Returns
-        -------
-        List[str]
-            name of directories, where shift descriptor files are stored
-        '''
-        self._shift_dirs = [c.shift_dir for c in self.cycles]
-        return self._shift_dirs
-
-    @property
-    def shift_files(self):
-        '''
-        Returns
-        -------
-        List[str]
-            absolute paths to the shift descriptor files
-        '''
-        self._shift_files = [os.path.join(c.shift_dir,
-                                          self.shift_file_format_string.format(
-                                                cycle=c.name))
-                             for c in self.cycles]
-        return self._shift_files
-
     def create_job_descriptions(self, **kwargs):
         '''
         Create job descriptions for parallel computing.
@@ -139,16 +114,10 @@ class PyramidCreation(ClusterRoutines):
         else:
             stats = None
 
-        if batch['shift']:
-            logger.info('align images between cycles')
-            shift = cycle.shift_descriptions
-        else:
-            shift = None
-
         logger.debug('create channel layer')
         layer = ChannelLayer.create_from_files(
                     cycle=cycle, channel=batch['channel'],
-                    stats=stats, shift=shift)
+                    stats=stats, shift=batch['shift'])
 
         if batch['thresh']:
             logger.info('threshold intensities')

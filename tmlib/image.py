@@ -242,8 +242,7 @@ class ChannelImage(Image):
         new_object = ChannelImage()
         new_object.metadata = self.metadata
         new_object.filename = self.filename
-        new_object.pixels = self.pixels.align(shift_description=self.metadata,
-                                              crop=crop)
+        new_object.pixels = self.pixels.align(self.metadata, crop=crop)
         new_object.metadata.is_aligned = True
         return new_object
 
@@ -405,6 +404,34 @@ class MaskImage(Image):
                             self.metadata)
         return self._outlines
 
+    def align(self, crop=True):
+        '''
+        Align, i.e. shift and crop, an image based on calculated shift
+        and overhang values.
+
+        Parameters
+        ----------
+        crop: bool, optional
+            whether images should cropped or rather padded
+            with zero valued pixels (default: ``True``)
+
+        Returns
+        -------
+        MaskImage
+            aligned image
+
+        Warning
+        -------
+        Alignment may change the dimensions of the image when `crop` is
+        ``True``.
+        '''
+        new_object = MaskImage()
+        new_object.metadata = self.metadata
+        new_object.filename = self.filename
+        new_object.pixels = self.pixels.align(self.metadata, crop=crop)
+        new_object.metadata.is_aligned = True
+        return new_object
+
 
 class SegmentationImage(Image):
 
@@ -516,6 +543,34 @@ class SegmentationImage(Image):
         '''
         return SegmentationImage(
                     self.pixels.remove_objects(ids), self.metadata)
+
+    def align(self, crop=True):
+        '''
+        Align, i.e. shift and crop, an image based on calculated shift
+        and overhang values.
+
+        Parameters
+        ----------
+        crop: bool, optional
+            whether images should cropped or rather padded
+            with zero valued pixels (default: ``True``)
+
+        Returns
+        -------
+        SegmentationImage
+            aligned image
+
+        Warning
+        -------
+        Alignment may change the dimensions of the image when `crop` is
+        ``True``.
+        '''
+        new_object = SegmentationImage()
+        new_object.metadata = self.metadata
+        new_object.filename = self.filename
+        new_object.pixels = self.pixels.align(self.metadata, crop=crop)
+        new_object.metadata.is_aligned = True
+        return new_object
 
     def local_to_global_ids(self, max_id):
         '''
