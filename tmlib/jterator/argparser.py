@@ -3,7 +3,9 @@ from .cli import Jterator
 
 
 parser, subparsers = Jterator.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'kill', 'collect'])
+    required_subparsers=[
+        'init', 'run', 'submit', 'kill', 'collect', 'cleanup'
+    ])
 
 parser.description = '''
     Image analysis pipeline engine for applying a sequence of algorithms

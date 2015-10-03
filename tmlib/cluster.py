@@ -336,7 +336,7 @@ class ClusterRoutines(BasicClusterRoutines):
             if all([isinstance(f, list) for f in collect_files]):
                 files.extend(utils.flatten(collect_files))
             else:
-                files.extend(collect_files)   
+                files.extend(collect_files)
         return files
 
     def list_input_files(self, job_descriptions):
@@ -355,6 +355,11 @@ class ClusterRoutines(BasicClusterRoutines):
             ])
             if all([isinstance(f, list) for f in run_files]):
                 files.extend(utils.flatten(run_files))
+            elif any([isinstance(f, dict) for f in run_files]):
+                files.extend(utils.flatten([
+                    utils.flatten(f.values()) for f in run_files
+                    if isinstance(f, dict)
+                ]))
             else:
                 files.extend(run_files)
         return files
