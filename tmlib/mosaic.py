@@ -138,7 +138,7 @@ class Mosaic(StichedImage):
         return grid
 
     @staticmethod
-    def create_from_images(images, dx=0, dy=0, stats=None, shift=None):
+    def create_from_images(images, dx=0, dy=0, stats=None, shift=False):
         '''
         Create a Mosaic object from image objects.
 
@@ -155,9 +155,8 @@ class Mosaic(StichedImage):
         stats: IllumstatsImages, optional
             illumination statistics to correct images for
             illumination artifacts
-        shift: List[ShiftDescription], optional
-            shift descriptions, when provided images are aligned between
-            cycles
+        shift: bool, optional
+            whether images should be aligned between cycles
 
         Returns
         -------
