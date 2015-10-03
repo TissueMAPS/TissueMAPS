@@ -191,10 +191,7 @@ class Mosaic(StichedImage):
                 if stats:
                     img = img.correct(stats)
                 if shift:
-                    shift_description = [
-                        s for s in shift if s.site == img.metadata.site
-                    ][0]
-                    img = img.align(shift_description, crop=False)
+                    img = img.align(crop=False)
                 current_row.append(img.pixels.array)
             rows.append(reduce(lambda x, y:
                         x.merge(y, 'horizontal', -x.width-dx, 0), current_row))
@@ -307,10 +304,7 @@ class Collage(StichedImage):
                 if stats:
                     img = img.correct(stats)
                 if shift:
-                    shift_description = [
-                        s for s in shift if s.site == img.metadata.site
-                    ][0]
-                    img = img.align(shift_description, crop=False)
+                    img = img.align(crop=False)
                 # pad image with zeros if necessary
                 height_diff = im_height - img.pixels.dimensions[0]
                 if height_diff > 0:

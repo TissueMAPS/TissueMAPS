@@ -335,8 +335,8 @@ class Cycle(object):
             metadata = reader.read(self.image_metadata_file)
         names = [md['name'] for md in metadata]
         self._image_metadata = [
-            ChannelImageMetadata(metadata[i])
-            for i, f in enumerate(natsorted(names))
+            ChannelImageMetadata(metadata[names.index(f)])
+            for f in natsorted(names)
         ]
         return self._image_metadata
 
@@ -472,76 +472,6 @@ class Cycle(object):
                     library=self.library)
             self._images.append(img)
         return self._images
-
-    @cached_property
-    def shift_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to directory holding shift descriptor file
-
-        Note
-        ----
-        Creates the directory if it doesn't exist.
-        '''
-        self._shift_dir = self.cfg.SHIFT_DIR.format(
-                                                cycle_dir=self.dir,
-                                                sep=os.path.sep)
-        if not os.path.exists(self._shift_dir):
-            logger.debug('create directory for shift files: %s'
-                         % self._shift_dir)
-            os.mkdir(self._shift_dir)
-        return self._shift_dir
-
-    @cached_property
-    def shift_file(self):
-        '''
-        Returns
-        -------
-        str
-            name of shift descriptor file in `shift_dir`
-
-        Raises
-        ------
-        OSError
-            when `shift_dir` does not exist or when no
-            shift descriptor file is found
-        '''
-        shift_pattern = self.cfg.SHIFT_FILE.format(cycle=self.name)
-        if not os.path.exists(self.shift_dir):
-            raise OSError('Shift directory does not exist: %s'
-                          % self.shift_dir)
-        files = [f for f in os.listdir(self.shift_dir)
-                 if re.search(shift_pattern, f)]
-        if len(files) == 0:
-            raise OSError(
-                'No shift descriptor file found in "%s"' % self.shift_dir)
-        self._shift_file = natsorted(files)[-1]
-        return self._shift_file
-
-    @property
-    def shift_descriptions(self):
-        '''
-        Returns
-        -------
-        List[ShiftDescription]
-            shift description for each image file in `image_dir`
-
-        See also
-        --------
-        `shift.ShiftDescription`_
-        '''
-        with ShiftDescriptionReader(self.shift_dir) as reader:
-            content = reader.read(self.shift_file)
-        # by matching the sites, we ensure that the correct shift
-        # description is assigned to each image
-        sites = [e['site'] for e in content]
-        self._shift_descriptions = [
-            ShiftDescription(content[sites.index(m.site)])
-            for m in self.image_metadata
-        ]
-        return self._shift_descriptions
 
     @property
     def layer_names(self):

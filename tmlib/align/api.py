@@ -1,12 +1,9 @@
 import os
 import re
-import numpy as np
 import logging
-from natsort import natsorted
 from . import registration as reg
-from ..writers import ShiftDescriptionWriter
+from ..writers import ImageMetadataWriter
 from ..cluster import ClusterRoutines
-from ..shift import ShiftDescription
 from ..image import ChannelImage
 
 logger = logging.getLogger(__name__)
@@ -133,7 +130,7 @@ class ImageRegistration(ClusterRoutines):
             for i in xrange(len(registration_batches))
         ]
 
-        joblist = {
+        job_descriptions = {
             'run': [{
                 'id': i+1,
                 'inputs': {
@@ -150,12 +147,11 @@ class ImageRegistration(ClusterRoutines):
                     'registration_files': registration_files
                 },
                 'outputs': {
-                    'shift_descriptor_files': self.shift_files
                 }
             }
         }
 
-        return joblist
+        return job_descriptions
 
     def run_job(self, batch):
         '''
@@ -205,34 +201,34 @@ class ImageRegistration(ClusterRoutines):
         top, bottom, right, left, no_shift = \
             reg.calculate_overhang(shift_descriptions, batch['max_shift'])
 
-        with ShiftDescriptionWriter() as writer:
-            for i, cycle_name in enumerate(cycle_names):
+        with ImageMetadataWriter() as writer:
+            for i, cycle in enumerate(self.cycles):
 
-                description = list()
+                metadata = cycle.image_metadata
+                output = [dict() for x in xrange(len(metadata))]
+
                 for j in xrange(len(no_shift)):
 
-                    shift = ShiftDescription()
-                    shift.lower_overhang = bottom
-                    shift.upper_overhang = top
-                    shift.right_overhang = right
-                    shift.left_overhang = left
-                    shift.max_shift = batch['max_shift']
-                    shift.omit = bool(no_shift[j])
-                    shift.cycle = self.cycles[i].name
-                    shift.filename = shift_descriptions[i][j]['filename']
-                    shift.x_shift = shift_descriptions[i][j]['x_shift']
-                    shift.y_shift = shift_descriptions[i][j]['y_shift']
-                    shift.site = shift_descriptions[i][j]['site']
+                    for md in metadata:
 
-                    description.append(shift.serialize())
+                        if md.site != shift_descriptions[i][j]['site']:
+                            continue
 
-                # Sort entries according to site
-                sites = [(d['site'], j) for j, d in enumerate(description)]
-                order = np.array(natsorted(sites))
-                description = [description[j] for j in order[:, 1]]
+                        md.lower_overhang = bottom
+                        md.upper_overhang = top
+                        md.right_overhang = right
+                        md.left_overhang = left
+                        md.max_shift = batch['max_shift']
+                        md.omit = bool(no_shift[j])
+                        md.x_shift = shift_descriptions[i][j]['x_shift']
+                        md.y_shift = shift_descriptions[i][j]['y_shift']
 
-                shift_file = batch['outputs']['shift_descriptor_files'][i]
-                writer.write(shift_file, description)
+                        output.append(md.serialize())
+
+                writer.write(
+                    os.path.join(cycle.metadata_dir,
+                                 cycle.image_metadata_file),
+                    output)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
@@ -269,12 +265,7 @@ class ImageRegistration(ClusterRoutines):
                         cycle.image_metadata[ix])
                     for ix in channel_index
                 ]
-                shifts = [cycle.shift_descriptions[ix] for ix in channel_index]
                 if kwargs['illumcorr']:
-                    ix = [
-                        i for i, md in enumerate(cycle.stats_metadata)
-                        if md.channel == channel
-                    ][0]
                     stats = [
                         stats for stats in cycle.stats_images
                         if stats.metadata.channel == channel
@@ -299,6 +290,6 @@ class ImageRegistration(ClusterRoutines):
                         output_filename = re.sub(
                             r'\%s$' % suffix, '_aligned%s' % suffix,
                             image.metadata.name)
-                    aligned_image = image.align(shifts[i])
+                    aligned_image = image.align()
                     output_filename = os.path.join(output_dir, output_filename)
                     aligned_image.save_as_png(output_filename)

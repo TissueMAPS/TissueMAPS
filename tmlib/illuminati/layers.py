@@ -34,7 +34,7 @@ class ChannelLayer(object):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @staticmethod
-    def create_from_files(cycle, channel, dx=0, dy=0, stats=None, shift=None):
+    def create_from_files(cycle, channel, dx=0, dy=0, stats=None, shift=False):
         '''
         Load individual images and stitch them together.
 
@@ -53,9 +53,8 @@ class ChannelLayer(object):
         stats: IllumstatsImages, optional
             illumination statistics, when provided images are corrected for
             illumination artifacts
-        shift: List[ShiftDescription], optional
-            shift descriptions, when provided images are aligned between
-            cycles
+        shift: bool, optional
+            whether images should be aligned between cycles
 
         Returns
         -------
@@ -126,7 +125,7 @@ class ChannelLayer(object):
         images = [img for img in wellplate.images
                   if img.metadata.channel == channel
                   and img.metadata.well == wellplate.wells[0]]
-        mosaic = Mosaic.create_from_images(images, dx, dy, stats)
+        mosaic = Mosaic.create_from_images(images, dx, dy, stats, shift)
         gap_size = 750
         empty_well_spacer = image_utils.create_spacer_image(
                 mosaic.dimensions[0], mosaic.dimensions[1],
