@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import logging
 import tempfile
 import random
@@ -9,7 +10,7 @@ from tmlib.logging_utils import map_logging_verbosity
 from tmlib.testing.argparser import parser
 from tmlib.testing import logo
 
-logger = logging.getLogger('tmlib.testing')
+logger = logging.getLogger(__name__)
 
 
 class TestDatasetReaderWriter(object):
