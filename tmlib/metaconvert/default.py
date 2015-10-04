@@ -90,26 +90,31 @@ class MetadataHandler(object):
         # Add new *Plane* elements to an existing OMEXML *Pixels* object,
         # such that z-stacks are grouped by channel.
         n_channels = pixels.SizeC
-        n_zstacks = pixels.SizeZ
-        pixels.plane_count = n_channels * n_zstacks
+        n_stacks = pixels.SizeZ
+        n_timepoints = pixels.SizeT
+        pixels.plane_count = n_channels * n_stacks * n_timepoints
+
         channel_position = pixels.DimensionOrder.index('C')
-        zstack_position = pixels.DimensionOrder.index('Z')
-        if zstack_position < channel_position:
-            count = -1
-            for z in xrange(n_zstacks):
-                for c in xrange(n_channels):
+        stack_position = pixels.DimensionOrder.index('Z')
+        time_position = pixels.DimensionOrder.index('T')
+
+        sorted_attributes = sorted([(channel_position, 'TheC'),
+                                    (stack_position, 'TheZ'),
+                                    (time_position, 'TheT')])
+
+        sorted_counts = sorted([(channel_position, n_channels),
+                                (stack_position, n_stacks),
+                                (time_position, n_stacks)])
+
+        count = 0
+        for i in xrange(sorted_counts[0][1]):
+            for j in xrange(sorted_counts[1][1]):
+                for k in xrange(sorted_counts[2][1]):
+                    setattr(pixels.Plane(count), sorted_attributes[0][1], i)
+                    setattr(pixels.Plane(count), sorted_attributes[1][1], j)
+                    setattr(pixels.Plane(count), sorted_attributes[2][1], k)
                     count += 1
-                    pixels.Plane(count).TheZ = z
-                    pixels.Plane(count).TheC = c
-                    pixels.Plane(0).TheT = 0
-        else:
-            count = -1
-            for c in xrange(n_channels):
-                for z in xrange(n_zstacks):
-                    count += 1
-                    pixels.Plane(count).TheZ = z
-                    pixels.Plane(count).TheC = c
-                    pixels.Plane(0).TheT = 0
+
         return pixels
 
     def _create_custom_image_metadata(self, ome_image_element):
@@ -117,35 +122,27 @@ class MetadataHandler(object):
         # specified in an OMEXML *Image* element.
         # It is assumed that all *Plane* elements where
         # acquired at the same site, i.e. microscope stage position.
-        image_metadata = list()
         pixels = ome_image_element.Pixels
-
-        n_timepoints = pixels.SizeT
-        if n_timepoints > 1:
-            raise NotSupportedError('Only images with a single timepoint '
-                                    'are supported.')
-
         n_planes = pixels.plane_count
         if n_planes == 0:
-            # Sometimes an image doesn't have any planes, but still
-            # contains multiple channels and/or z-stacks.
-            # Let's create new plane elements for consistency.
+            # Sometimes an image doesn't have plane elements.
+            # Let's create them for consistency.
             pixels = self._create_channel_planes(pixels)
             n_planes = pixels.plane_count  # update plane count
 
-        n_channels = pixels.SizeC
-        for c in xrange(n_channels):
+        image_metadata = list()
+        for p in xrange(n_planes):
+            plane = pixels.Plane(p)
             md = ChannelImageMetadata()
-            md.cycle = self.cycle_name
-            md.name = ome_image_element.Name
+            md.original_planes = [p]
             md.original_dtype = pixels.PixelType
             md.original_dimensions = (pixels.SizeY, pixels.SizeX)
-            md.channel = pixels.Channel(c).Name
-            planes = {p: pixels.Plane(p) for p in xrange(n_planes)
-                      if c == pixels.Plane(p).TheC}
-            md.original_planes = planes.keys()
-            md.position = (planes.values()[0].PositionY,
-                           planes.values()[0].PositionX)
+            md.cycle = self.cycle_name
+            md.name = ome_image_element.Name
+            md.channel = pixels.Channel(plane.TheC).Name
+            md.stack = plane.TheZ + 1
+            md.time = plane.TheT + 1
+            md.position = (plane.PositionY, plane.PositionX)
             image_metadata.append(md)
 
         return image_metadata
@@ -162,12 +159,7 @@ class MetadataHandler(object):
             raise AssertionError('Number of channels must be identical.')
         for c in xrange(n_channels):
             md = updated_metadata[c]
-            # There must be a naicer way...
-            if not md.name:
-                try:
-                    md.name = ome_image_element.Name
-                except:
-                    pass
+            # There must be a more elegant way...
             if not md.original_dtype:
                 try:
                     md.original_dtype = pixels.PixelType
@@ -176,6 +168,11 @@ class MetadataHandler(object):
             if not any(md.original_dimensions):
                 try:
                     md.original_dimensions = (pixels.SizeY, pixels.SizeX)
+                except:
+                    pass
+            if not md.name:
+                try:
+                    md.name = ome_image_element.Name
                 except:
                     pass
             if not md.channel:
@@ -214,17 +211,7 @@ class MetadataHandler(object):
         together as a *series* per acquisition site, i.e. microscope stage
         position (but this doesn't have to be the case).
         Ultimately, we would like to create image files that contain only
-        a single-channel plane image per file. To this end, we group planes per
-        channel. In the simplest case, there is only one plane per
-        channel for a given *Image* element. If images were acquired at
-        multiple z resolutions, they will be subsequently projected to 2D.
-        Multiple timepoints are not supported.
-
-        Raises
-        ------
-        NotSupportedError
-            when metadata specifies more than one timepoint for an *Image*
-            element
+        a single-channel plane image per file.
 
         See also
         --------
@@ -279,19 +266,19 @@ class MetadataHandler(object):
         ----
         Since image-specific information is stored in *Image* elements and
         plate-specific information in a separate *Plate* element, one needs
-        references from wells to individual images. This can be achieved by
-        via *ImageRef* elements, which have to be set for each *WellSample*
-        element in a plate. These references must be provided as substrings of
-        the image filenames together with a matching regular expression string.
+        references from individual images to the corresponding wells.
+        This can be achieved via *ImageRef* elements, which have to be set
+        for each *WellSample* element in a plate. These references must be
+        provided as substrings of the image filenames together with a matching
+        regular expression string.
 
-        Warning
-        -------
         There must be only one *OMEXML* object for all image files.
         This is in contrast to the metadata for individual images, where there
         is a separate *OMEXML* object for each image file. The
         microscope-specific readers are responsible to ensure that the *image
         count* matches.
-        *image count* = *number of channels* x *number of sites*
+        *image count* = *number of channels* x *number of focal planes*
+        x *number of time series* x *number of sites*
 
         Warning
         -------
@@ -302,9 +289,8 @@ class MetadataHandler(object):
         Raises
         ------
         NotSupportedError
-            when metadata specifies more than one *Plate* element or more
-            than one timepoint for an *Image* element or when *Plane* elements
-            have different x, y positions
+            when metadata specifies more than one *Plate* element
+            or when *Plane* elements have different x, y positions
         MetadataError
             when *Plate* element provide no or incorrect references to
             image files or when no additional metadata is available
@@ -512,22 +498,18 @@ class MetadataHandler(object):
         Returns
         -------
         List[ChannelImageMetadata]
-            metadata, where "filename" attribute has been set
+            metadata, where "name" attribute has been set
 
         See also
         --------
         `tmlib.cfg`_
         '''
         complemented_metadata = list(metadata)
-        required_attributes = {'well', 'site', 'row', 'column', 'channel'}
         for md in complemented_metadata:
-            if not all([hasattr(md, a) for a in required_attributes]):
-                raise MetadataError('Filenames cannot be build because '
-                                    'required information is missing: %s' % a)
             md.name = image_file_format_string.format(
-                                    cycle=md.cycle, well=md.well,
-                                    site=md.site, row=md.row, column=md.column,
-                                    channel=md.channel)
+                        cycle=md.cycle, well=md.well,
+                        site=md.site, row=md.row, column=md.column,
+                        stack=md.stack, time=md.time, channel=md.channel)
         return complemented_metadata
 
 

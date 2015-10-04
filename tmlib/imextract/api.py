@@ -1,8 +1,15 @@
 import os
 import numpy as np
+import logging
+from copy import copy
 from .. import image_utils
+from .. import utils
 from ..readers import BioformatsImageReader
 from ..cluster import ClusterRoutines
+from ..writers import ImageMetadataWriter
+from ..errors import NotSupportedError
+
+logger = logging.getLogger(__name__)
 
 
 class ImageExtractor(ClusterRoutines):
@@ -31,6 +38,25 @@ class ImageExtractor(ClusterRoutines):
         super(ImageExtractor, self).__init__(experiment, prog_name)
         self.experiment = experiment
         self.prog_name = prog_name
+        self._update_experiment_layout()
+
+    def _update_experiment_layout(self):
+        time_points = set([md.time for md in self.cycles[0].image_metadata])
+        if len(self.cycles) > 1 and len(time_points) > 1:
+            raise NotSupportedError('Only one time points per cycle supported')
+        elif len(self.cycles) == 1 and len(time_points) > 1:
+            # Create a separate cycle for each time point
+            for t in sorted(list(time_points)):
+                metadata = [
+                    md.serialize()
+                    for md in self.cycles[0].image_metadata if md.time == t
+                ]
+                if t > 0:
+                    cycle = self.experiment.create_additional_cycle()
+                else:
+                    cycle = self.cycles[0]
+                with ImageMetadataWriter(cycle.metadata_dir) as writer:
+                    writer.write(cycle.image_metadata_file, metadata)
 
     def _create_output_dirs(self):
         for cycle in self.cycles:
@@ -57,7 +83,11 @@ class ImageExtractor(ClusterRoutines):
         joblist['run'] = list()
         count = 0
         for cycle in self.cycles:
-            md_batches = self._create_batches(cycle.image_metadata,
+            if kwargs['projection']:
+                metadata = self._update_metadata_for_projection(cycle)
+            else:
+                metadata = cycle.image_metadata
+            md_batches = self._create_batches(metadata,
                                               kwargs['batch_size'])
             for batch in md_batches:
                 count += 1
@@ -76,11 +106,45 @@ class ImageExtractor(ClusterRoutines):
                             for md in batch
                         ]
                     },
+                    'dimensions': [md.original_dimensions for md in batch],
+                    'dtype': [md.original_dtype for md in batch],
+                    'series': [md.original_series for md in batch],
+                    'planes': [md.original_planes for md in batch],
                     'metadata': [md.serialize() for md in batch],
                     'cycle': cycle.name
 
                 })
         return joblist
+
+    @staticmethod
+    def _update_metadata_for_projection(cycle):
+        stacks = set([md.stack for md in cycle.image_metadata])
+        if len(stacks) == 1:
+            return cycle.image_metadata
+        # Combine metadata for z-stacks
+        sites = set([md.site for md in cycle.image_metadata])
+        time_points = set([md.time for md in cycle.image_metadata])
+        channels = set([md.channel for md in cycle.image_metadata]) 
+        modified_metadata = list()
+        for s in sites:
+            for c in channels:
+                for t in time_points:
+                    matching_metadata = [
+                        md for md in cycle.image_metadata
+                        if md.site == s
+                        and md.channel == c and md.time == t
+                    ]
+                    mod_md = copy(matching_metadata[0])
+                    mod_md.original_planes = utils.flatten([
+                        md.original_planes for md in matching_metadata
+                    ])
+                    mod_md.stack = 1
+                    modified_metadata.append(mod_md)
+        # Update the corresponding file, too
+        with ImageMetadataWriter(cycle.metadata_dir) as writer:
+            writer.write(cycle.image_metadata_file,
+                         [md.serialize() for md in modified_metadata])
+        return modified_metadata
 
     def run_job(self, batch):
         '''
@@ -94,21 +158,21 @@ class ImageExtractor(ClusterRoutines):
             joblist element, i.e. description of a single job
         '''
         with BioformatsImageReader() as reader:
-            for i, md in enumerate(batch['metadata']):
-                # Perform maximum intensity projection to reduce
-                # dimensionality to 2D if there is more than 1 z-stack
-                stack = np.empty((md['original_dimensions'][0],
-                                  md['original_dimensions'][1],
-                                  len(md['original_planes'])),
-                                 dtype=md['original_dtype'])
-                for z in md['original_planes']:
-                    filename = batch['inputs']['image_files'][i]
-                    stack[:, :, z] = reader.read_subset(
-                                        filename, plane=z,
-                                        series=md['original_series'])
-                img = np.max(stack, axis=2)
+            for i, filename in enumerate(batch['outputs']['image_files']):
+                focal_planes = batch['planes'][i]
+                stack = np.empty((len(focal_planes),
+                                  batch['dimensions'][i][0],
+                                  batch['dimensions'][i][1]),
+                                 dtype=batch['dtype'][i])
+                # If intensity projection should be performed there will
+                # be multiple planes per output filename and the stack will
+                # be multi-dimensional, i.e. stack.shape[0] > 1
+                for z in xrange(len(focal_planes)):
+                    stack[z, :, :] = reader.read_subset(
+                                        batch['inputs']['image_files'][i],
+                                        plane=z, series=batch['series'][i])
+                img = np.max(stack, axis=0)
                 # Write plane (2D single-channel image) to file
-                filename = batch['outputs']['image_files'][i]
                 image_utils.save_image_png(img, filename)
 
     def collect_job_output(self, batch):

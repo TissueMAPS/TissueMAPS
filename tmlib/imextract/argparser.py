@@ -12,9 +12,12 @@ parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_parser.add_argument(
-    '-b', '--batch_size', dest='batch_size', type=int, default=10,
+    '-b', '--batch_size', type=int, default=10,
     help='number of image files that should be processed per job'
          '(default: 10)')
+init_parser.add_argument(
+    '-p', '--projection', action='store_true',
+    help='when maximum intensity project should be performed')
 
 for name in subparsers.choices:
     subparsers.choices[name].set_defaults(handler=Imextract.call)

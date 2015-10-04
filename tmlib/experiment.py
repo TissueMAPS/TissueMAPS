@@ -26,25 +26,18 @@ class Experiment(object):
 
     An experiment consists of one or more *cycles*. A *cycle* represents a
     particular time point of image acquisition for a given sample.
-    In the simplest case, the experiment represents a *cycle* itself, i.e. a
-    single round of image acquisition. However, the experiment may also
-    represent a time series, consisting of several iterative rounds of
-    image acquisitions. In this case each *cycle* should be represented by a
+    In the simplest case, there is only a single round of image acquisition.
+    However, the experiment may also represent a time series,
+    consisting of several iterative rounds of image acquisitions.
+    In this case each *cycle* should be represented by a
     separate subfolder on disk. The names of these folders should encode the
     name of the experiment as well as the *cycle* identifier number,
     i.e. the one-based index of the time series sequence.
-    For example, given an experiment called "myExperiment",
-    the directory tree could be structured as follows::
-
-        myExperiment           # experiment folder
-            myExperiment-1     # subexperiment folder of cycle #1
-            myExperiment-2     # subexperiment folder of cycle #2
-            ...
 
     See also
     --------
     `cycle.Cycle`_
-    `tmlib.cfg`_
+    `cfg`_
     `user.cfg`_
     '''
 
@@ -130,7 +123,7 @@ class Experiment(object):
         Returns
         -------
         List[WellPlate or Slide]
-            cycle objects
+            configured cycle objects
 
         Raises
         ------
@@ -182,10 +175,32 @@ class Experiment(object):
         '''
         if 'REFERENCE_CYCLE' in self.user_cfg.keys():
             self._reference_cycle = self.user_cfg.REFERENCE_CYCLE
+            logger.debug('set reference cycle according to user configuration')
         else:
             cycle_names = natsorted([cycle.name for cycle in self.cycles])
             self._reference_cycle = cycle_names[-1]
+            logger.debug('take last cycle as reference cycle')
         return self._reference_cycle
+
+    def create_additional_cycle(self):
+        '''
+        Create a new cycle object and add it to the list of existing cycles.
+        '''
+        new_cycle_name = self.cfg.CYCLE_DIR.format(
+                                            experiment=self.name,
+                                            cycle_id=self.cycles[-1].id+1)
+        logger.info('create an additional cycle: %s' % new_cycle_name)
+        new_cycle_dir = os.path.join(self.dir, new_cycle_name)
+        logger.debug('create directory for new cycle')
+        os.mkdir(new_cycle_dir)
+        if self.user_cfg.WELLPLATE_FORMAT:
+            new_cycle = WellPlate(new_cycle_dir, self.cfg, self.user_cfg,
+                                  self.library)
+        else:
+            new_cycle = Slide(new_cycle_dir, self.cfg, self.user_cfg,
+                              self.library)
+        self.cycles.append(new_cycle)
+        return new_cycle
 
     @cached_property
     def layers_dir(self):

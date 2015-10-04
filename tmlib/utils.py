@@ -36,26 +36,26 @@ def regex_from_format_string(format_string):
     return regex
 
 
-def indices(seq, item):
+def indices(data, item):
     '''
     Determine all indices of an item in a list.
 
     Parameters
     ----------
-    seq: list
+    data: list
     item:
         the element whose index position should be determined
 
     Returns
     -------
     list
-        all indices of `item` in `seq`
+        all indices of `item` in `data`
     '''
     start_at = -1
     locs = []
     while True:
         try:
-            loc = seq.index(item, start_at+1)
+            loc = data.index(item, start_at+1)
         except ValueError:
             break
         else:
@@ -64,16 +64,38 @@ def indices(seq, item):
     return locs
 
 
-def flatten(seq):
+def flatten(data):
     '''
-    Flatten a list of lists into a list.
+    Transform a list of lists into a flat list.
 
     Parameters
     ----------
-    seq: List[list]
+    data: List[list]
 
     Returns
     -------
     list
     '''
-    return [item for sublist in seq for item in sublist]
+    return [item for sublist in data for item in sublist]
+
+
+def common_substring(data):
+    '''
+    Find longest common substring across a collection of strings.
+
+    Parameters
+    ----------
+    data: List[str]
+
+    Returns
+    -------
+    str
+    '''
+    # NOTE: code taken from stackoverflow (question 2892931)
+    substr = ''
+    if len(data) > 1 and len(data[0]) > 0:
+        for i in range(len(data[0])):
+            for j in range(len(data[0])-i+1):
+                if j > len(substr) and all(data[0][i:i+j] in x for x in data):
+                    substr = data[0][i:i+j]
+    return substr

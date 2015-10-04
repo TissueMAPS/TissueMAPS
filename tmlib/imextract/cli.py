@@ -47,6 +47,7 @@ class Imextract(CommandLineInterface):
     def _variable_init_args(self):
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
+        kwargs['projection'] = self.args.projection
         return kwargs
 
     @staticmethod

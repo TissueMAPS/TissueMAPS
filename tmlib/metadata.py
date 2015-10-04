@@ -14,15 +14,15 @@ class ImageMetadata(object):
 
     initially_required = {
         'original_filename', 'original_dtype', 'original_dimensions',
-        'name', 'cycle', 'position', 'well'
+        'original_planes', 'name', 'cycle', 'position', 'well'
     }
 
     persistent = {
         'original_filename', 'original_dtype', 'original_dimensions',
-        'original_series', 'cycle', 'name', 'site', 'row', 'column', 'well',
+        'original_series', 'original_planes', 'is_aligned',
+        'name', 'cycle', 'well', 'site', 'row', 'column', 'stack', 'time',
         'x_shift', 'y_shift', 'lower_overhang', 'upper_overhang',
         'left_overhang', 'right_overhang', 'omit', 'max_tolerated_shift',
-        'is_aligned', 'is_corrected'
     }
 
     def __init__(self, metadata=None):
@@ -54,13 +54,87 @@ class ImageMetadata(object):
         Returns
         -------
         str
-            name of the original image file
+            name of the original file, in which the image was stored
         '''
         return self._original_filename
 
     @original_filename.setter
     def original_filename(self, value):
         self._original_filename = value
+
+    @property
+    def original_series(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based index of the image element in the original file
+        '''
+        return self._original_series
+
+    @original_series.setter
+    def original_series(self, value):
+        self._original_series = value
+
+    @property
+    def original_planes(self):
+        '''
+        Returns
+        -------
+        List[int]
+            zero-based index of the plane elements within the image element
+            in the original file
+        '''
+        return self._original_planes
+
+    @original_planes.setter
+    def original_planes(self, value):
+        self._original_planes = value
+
+    @property
+    def original_dtype(self):
+        '''
+        Returns
+        -------
+        int
+            data type of the original image
+        '''
+        return self._original_dtype
+
+    @original_dtype.setter
+    def original_dtype(self, value):
+        self._original_dtype = value
+
+    @property
+    def original_dimensions(self):
+        '''
+        Returns
+        -------
+        int
+            y, x dimensions of the original image
+        '''
+        return self._original_dimensions
+
+    @original_dimensions.setter
+    def original_dimensions(self, value):
+        self._original_dimensions = value
+
+    # TODO: Unfortunately, "PhysicalSize" attributes are not implemented
+    # in python-bioformats
+
+    # @property
+    # def physical_dimensions(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     int
+    #         y, x dimensions of the image in micrometer
+    #     '''
+    #     return self._physical_dimensions
+
+    # @physical_dimensions.setter
+    # def physical_dimensions(self, value):
+    #     self._physical_dimensions = value
 
     @property
     def name(self):
@@ -103,65 +177,6 @@ class ImageMetadata(object):
     @cycle_id.setter
     def cycle_id(self, value):
         self._cycle_id = value
-
-    @property
-    def original_series(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based index of the image within the original image file
-        '''
-        return self._original_series
-
-    @original_series.setter
-    def original_series(self, value):
-        self._original_series = value
-
-    @property
-    def original_dtype(self):
-        '''
-        Returns
-        -------
-        int
-            data type of the image pixel array
-        '''
-        return self._original_dtype
-
-    @original_dtype.setter
-    def original_dtype(self, value):
-        self._original_dtype = value
-
-    @property
-    def original_dimensions(self):
-        '''
-        Returns
-        -------
-        int
-            y, x dimensions of the image in pixels
-        '''
-        return self._original_dimensions
-
-    @original_dimensions.setter
-    def original_dimensions(self, value):
-        self._original_dimensions = value
-
-    # TODO: Unfortunately, "PhysicalSize" attributes are not implemented
-    # in python-bioformats
-
-    # @property
-    # def physical_dimensions(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     int
-    #         y, x dimensions of the image in micrometer
-    #     '''
-    #     return self._physical_dimensions
-
-    # @physical_dimensions.setter
-    # def physical_dimensions(self, value):
-    #     self._physical_dimensions = value
 
     @property
     def site(self):
@@ -248,6 +263,34 @@ class ImageMetadata(object):
     @well.setter
     def well(self, value):
         self._well = value
+
+    @property
+    def stack(self):
+        '''
+        Returns
+        -------
+        int
+            one-based z index of the image within a three dimensional stack
+        '''
+        return self._stack
+
+    @stack.setter
+    def stack(self, value):
+        self._stack = value
+
+    @property
+    def time(self):
+        '''
+        Returns
+        -------
+        int
+            one-based index of the image within a time series
+        '''
+        return self._time
+
+    @time.setter
+    def time(self, value):
+        self._time = value
 
     @property
     def x_shift(self):
@@ -421,7 +464,7 @@ class ChannelImageMetadata(ImageMetadata):
     '''
 
     persistent = ImageMetadata.persistent.union({
-                    'channel', 'original_planes', 'is_corrected'
+                    'channel', 'is_corrected'
     })
 
     def __init__(self, metadata=None):
@@ -452,20 +495,6 @@ class ChannelImageMetadata(ImageMetadata):
     @channel.setter
     def channel(self, value):
         self._channel = value
-
-    @property
-    def original_planes(self):
-        '''
-        Returns
-        -------
-        List[int]
-            zero-based index of channel planes within the image element
-        '''
-        return self._original_planes
-
-    @original_planes.setter
-    def original_planes(self, value):
-        self._original_planes = value
 
     @property
     def is_corrected(self):
@@ -521,8 +550,9 @@ class ChannelImageMetadata(ImageMetadata):
         #     raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in metadata.iteritems():
             if k not in ChannelImageMetadata.persistent:
-                raise AttributeError('Class "%s" has no attribute "%s"'
-                                     % (ChannelImageMetadata.__class__.__name__, k))
+                raise AttributeError(
+                        'Class "%s" has no attribute "%s"'
+                        % (ChannelImageMetadata.__class__.__name__, k))
             setattr(self, k, v)
 
 

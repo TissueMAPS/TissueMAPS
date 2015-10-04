@@ -42,7 +42,7 @@ ADDITIONAL_UPLOAD_DIR = '{cycle_dir}{sep}additional_uploads'
 OME_XML_DIR = '{cycle_dir}{sep}ome_xml'
 
 IMAGE_DIR = '{cycle_dir}{sep}images'
-IMAGE_FILE = '{cycle}_{well}_s{site:0>3}_r{row:0>2}_c{column:0>2}_{channel}.png'
+IMAGE_FILE = '{cycle}_{well}_s{site:0>3}_r{row:0>3}_c{column:0>3}_z{stack:0>3}_t{time:0>3}_{channel}.png'
 
 METADATA_DIR = '{cycle_dir}{sep}metadata'
 IMAGE_METADATA_FILE = 'images.metadata'
