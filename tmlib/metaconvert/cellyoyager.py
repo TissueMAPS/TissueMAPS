@@ -152,7 +152,9 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     Cellvoyager 7000 microscope.
     '''
 
-    formats = {'.mlf', '.mrf'}
+    SUPPORTED_FILE_EXTENSIONS = {'.mlf', '.mrf'}
+
+    REGEXP_PATTERN = ''
 
     def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
@@ -179,21 +181,6 @@ class CellvoyagerMetadataHandler(MetadataHandler):
         self.cycle_name = cycle_name
 
     @property
-    def updated_additional_files(self):
-        files = [f for f in self.additional_files
-                 if os.path.splitext(f)[1] in self.formats]
-        if (len(files) > len(self.formats) or len(files) == 0
-                or (len(files) < len(self.formats) and len(files) > 0)):
-            raise OSError('%d metadata files are required: "%s"'
-                          % (len(self.formats), '", "'.join(self.formats)))
-        else:
-            self._additional_files = dict()
-            for md in self.formats:
-                self._additional_files[md] = [f for f in files
-                                              if f.endswith(md)]
-        return self._additional_files
-
-    @property
     def ome_additional_metadata(self):
         '''
         Returns
@@ -205,15 +192,23 @@ class CellvoyagerMetadataHandler(MetadataHandler):
         --------
         `CellvoyagerMetadataReader`_
         '''
+        files = [
+            f for f in self.additional_files
+            if os.path.splitext(f)[1] in self.SUPPORTED_FILE_EXTENSIONS
+        ]
+        if len(files) != len(self.SUPPORTED_FILE_EXTENSIONS):
+            raise OSError('%d metadata files are required: "%s"'
+                          % (len(self.SUPPORTED_FILE_EXTENSIONS),
+                             '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
+        mlf_file = [f for f in files if f.endswith('.mlf')][0]
+        mrf_file = [f for f in files if f.endswith('.mrf')][0]
         with CellvoyagerMetadataReader() as reader:
-            mlf_path = self.updated_additional_files['.mlf'][0]
-            mrf_path = self.updated_additional_files['.mrf'][0]
-            self._ome_additional_metadata = reader.read(mlf_path, mrf_path)
+            self._ome_additional_metadata = reader.read(mlf_file, mrf_file)
         return self._ome_additional_metadata
 
     @staticmethod
     def _calculate_coordinates(positions):
         # y axis is inverted
-        coordinates = stitch.calc_image_coordinates(positions,
-                                                    reverse_rows=True)
+        coordinates = stitch.calc_image_coordinates(
+                        positions, reverse_rows=True)
         return coordinates

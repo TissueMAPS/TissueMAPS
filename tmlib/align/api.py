@@ -5,13 +5,14 @@ from . import registration as reg
 from ..writers import ImageMetadataWriter
 from ..cluster import ClusterRoutines
 from ..image import ChannelImage
+from ..errros import NotSupportedError
 
 logger = logging.getLogger(__name__)
 
 
 class ImageRegistration(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment, prog_name, verbosity):
         '''
         Instantiate an instance of class ImageRegistration.
 
@@ -21,10 +22,14 @@ class ImageRegistration(ClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
         '''
-        super(ImageRegistration, self).__init__(experiment, prog_name)
+        super(ImageRegistration, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
+        self.verbosity = verbosity
 
     @property
     def registration_dir(self):
@@ -71,11 +76,17 @@ class ImageRegistration(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        def get_refs(x):
-            return [f for i, f in enumerate(x.image_files)
-                    if x.image_metadata[i].channel == kwargs['ref_channel']]
+        def get_refs(cycle):
+            if any([md.stack > 1 for md in cycle.image_metadata]):
+                raise NotSupportedError(
+                        'Alignment is only supported for 2D datasets.')
+            return [
+                f for i, f in enumerate(cycle.image_files)
+                if cycle.image_metadata[i].channel == kwargs['ref_channel']
+            ]
         im_batches = [self._create_batches(get_refs(c), kwargs['batch_size'])
                       for c in self.cycles]
+        # TODO: 3D
         sites = [md.site for md in self.cycles[0].image_metadata
                  if md.channel == kwargs['ref_channel']]
         site_batches = self._create_batches(sites, kwargs['batch_size'])

@@ -14,7 +14,7 @@ class Formats(object):
     Class for providing information on file formats supported by Bio-Formats.
     '''
 
-    SUPPORTED_ADDITIONAL_FILES = {'metamorph', 'cellvoyager'}
+    SUPPORT_FOR_ADDITIONAL_FILES = {'metamorph', 'cellvoyager'}
 
     @property
     def filename(self):

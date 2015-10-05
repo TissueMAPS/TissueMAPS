@@ -12,12 +12,12 @@ class ImageMetadata(object):
 
     __metaclass__ = ABCMeta
 
-    initially_required = {
+    INITIALLY_REQUIRED = {
         'original_filename', 'original_dtype', 'original_dimensions',
         'original_planes', 'name', 'cycle', 'position', 'well'
     }
 
-    persistent = {
+    PERSISTENT = {
         'original_filename', 'original_dtype', 'original_dimensions',
         'original_series', 'original_planes', 'is_aligned',
         'name', 'cycle', 'well', 'site', 'row', 'column', 'stack', 'time',
@@ -54,7 +54,7 @@ class ImageMetadata(object):
         Returns
         -------
         str
-            name of the original file, in which the image was stored
+            absolute path to the original file that contains the image
         '''
         return self._original_filename
 
@@ -463,7 +463,7 @@ class ChannelImageMetadata(ImageMetadata):
     Class for metadata specific to channel images.
     '''
 
-    persistent = ImageMetadata.persistent.union({
+    PERSISTENT = ImageMetadata.PERSISTENT.union({
                     'channel', 'is_corrected'
     })
 
@@ -526,7 +526,7 @@ class ChannelImageMetadata(ImageMetadata):
         '''
         serialized_metadata = dict()
         for a in dir(self):
-            if a in ChannelImageMetadata.persistent:
+            if a in ChannelImageMetadata.PERSISTENT:
                 serialized_metadata[a] = getattr(self, a)
         return serialized_metadata
 
@@ -544,12 +544,12 @@ class ChannelImageMetadata(ImageMetadata):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        # missing_keys = [a for a in ChannelImageMetadata.persistent
+        # missing_keys = [a for a in ChannelImageMetadata.PERSISTENT
         #                 if a not in metadata.keys()]
         # if len(missing_keys) > 0:
         #     raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in metadata.iteritems():
-            if k not in ChannelImageMetadata.persistent:
+            if k not in ChannelImageMetadata.PERSISTENT:
                 raise AttributeError(
                         'Class "%s" has no attribute "%s"'
                         % (ChannelImageMetadata.__class__.__name__, k))
@@ -562,7 +562,7 @@ class SegmentationImageMetadata(ImageMetadata):
     Class for metadata specific to segmentation images.
     '''
 
-    persistent = ImageMetadata.persistent.union({'objects'})
+    PERSISTENT = ImageMetadata.PERSISTENT.union({'objects'})
 
     def __init__(self, metadata=None):
         '''
@@ -609,7 +609,7 @@ class SegmentationImageMetadata(ImageMetadata):
         '''
         serialized_metadata = dict()
         for a in dir(self):
-            if a in SegmentationImageMetadata.persistent:
+            if a in SegmentationImageMetadata.PERSISTENT:
                 if not hasattr(self, a):
                     raise AttributeError('Object "%s" has no attribute "%s"'
                                          % (self.__name__, a))
@@ -632,12 +632,12 @@ class SegmentationImageMetadata(ImageMetadata):
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        missing_keys = [a for a in SegmentationImageMetadata.persistent
+        missing_keys = [a for a in SegmentationImageMetadata.PERSISTENT
                         if a not in metadata.keys()]
         if len(missing_keys) > 0:
             raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in metadata:
-            if k not in SegmentationImageMetadata.persistent:
+            if k not in SegmentationImageMetadata.PERSISTENT:
                 raise AttributeError('Object "%s" has no attribute "%s"'
                                      % (self.__name__, k))
             setattr(self, k, v)
@@ -649,7 +649,7 @@ class IllumstatsImageMetadata(object):
     Class for metadata specific to illumination statistics images.
     '''
 
-    persistent = {'channel', 'cycle'}
+    PERSISTENT = {'channel', 'cycle'}
 
     def __init__(self):
         '''

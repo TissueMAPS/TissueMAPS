@@ -47,23 +47,6 @@ def register_images(sites, target_files, reference_files, output_file):
     reference image) from two different acquisition cycles
     and store the results in an HDF5 file.
 
-    The HDF5 file will have the following internal hierarchical structure::
-
-        /
-        /cycle1                Group
-        /cycle1/x_shift        Dataset {n}  : INTEGER
-        /cycle1/y_shift        Dataset {n}  : INTEGER
-        /cycle1/filename       Dataset {n}  : STRING
-        /cycle1/site           Dataset {n}  : INTEGER
-        /cycle2                Group
-        /cycle2/x_shift        Dataset {n}  : INTEGER
-        /cycle2/y_shift        Dataset {n}  : INTEGER
-        /cycle2/filename       Dataset {n}  : STRING
-        /cycle2/site           Dataset {n}  : INTEGER
-        ...
-
-    where `n` is the number of image sites per cycle.
-
     Parameters
     ----------
     sites: List[int]
@@ -86,9 +69,9 @@ def register_images(sites, target_files, reference_files, output_file):
         out[cycle]['site'] = list()
         for i in xrange(len(files)):
             target_filename = files[i]
-            logger.debug('registration file: %s' % target_filename)
+            logger.info('registration file: %s' % target_filename)
             ref_filename = reference_files[i]
-            logger.debug('reference file: %s' % ref_filename)
+            logger.info('reference file: %s' % ref_filename)
 
             # Calculate shift between images
             x, y = calculate_shift(target_filename, ref_filename)

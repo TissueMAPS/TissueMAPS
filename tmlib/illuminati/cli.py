@@ -33,7 +33,8 @@ class Illuminati(CommandLineInterface):
         logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
         self.__api_instance = PyramidCreation(
-                                experiment=experiment, prog_name=self.name)
+                                experiment=experiment, prog_name=self.name,
+                                verbosity=self.args.verbosity)
         logger.debug(
             'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)

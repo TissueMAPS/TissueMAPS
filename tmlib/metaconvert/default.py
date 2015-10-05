@@ -1,9 +1,9 @@
 import os
 import re
 import bioformats
+import logging
 from abc import ABCMeta
 from abc import abstractproperty
-from ..formats import Formats
 from ..metadata import ChannelImageMetadata
 from ..illuminati import stitch
 from .. import utils
@@ -11,6 +11,8 @@ from ..errors import MetadataError
 from ..errors import NotSupportedError
 from ..plates import WellPlate
 from ..readers import MetadataReader
+
+logger = logging.getLogger(__name__)
 
 
 class MetadataHandler(object):
@@ -54,17 +56,6 @@ class MetadataHandler(object):
         self.cycle_name = cycle_name
 
     @property
-    def supported_extensions(self):
-        '''
-        Returns
-        -------
-        Set[str]
-            file extensions of supported formats
-        '''
-        self._supported_extensions = Formats().supported_extensions
-        return self._supported_extensions
-
-    @property
     def ome_image_metadata(self):
         '''
         Read the OMEXML metadata extracted from image files.
@@ -81,7 +72,7 @@ class MetadataHandler(object):
         self._ome_image_metadata = dict()
         with DefaultMetadataReader() as reader:
             for i, f in enumerate(self.ome_xml_files):
-                k = os.path.basename(self.image_files[i])
+                k = self.image_files[i]
                 self._ome_image_metadata[k] = reader.read(f)
         return self._ome_image_metadata
 
@@ -350,14 +341,15 @@ class MetadataHandler(object):
 
         if all(well_inf.keys()):
             for md in complemented_metadata:
-                ref_img = re.search(ref_regexp, md.original_filename)
+                ref_img = re.search(ref_regexp,
+                                    os.path.basename(md.original_filename))
                 if ref_img:
                     ref_img = ref_img.group(1)
                 else:
                     raise MetadataError('Incorrect reference to image files.')
                 ref_well = [well for ref_well, well in well_inf.iteritems()
                             if ref_well == ref_img]
-                if len(ref_well) > 1:
+                if len(ref_well) != 1:
                     raise MetadataError('Incorrect reference to image files.')
                 else:
                     md.well = WellPlate.well_position_to_id(ref_well[0])
@@ -385,11 +377,10 @@ class MetadataHandler(object):
         --------
         `tmlib.metadata.ChannelImageMetadata`_
         '''
-        missing = {i: k for i, md in enumerate(metadata)
-                   for k, v in md.iteritems()
-                   if k in ChannelImageMetadata.required and v is None}
-        self.missing_metadata = missing
-        return self.missing_metadata
+        for i, md in enumerate(metadata):
+            for attr in ChannelImageMetadata.INITIALLY_REQUIRED:
+                if not hasattr(md, attr):
+                    logger.warning('"%s" misses attribute "%s"' % (md.name, attr))
 
     def add_user_metadata(self, metadata):
         '''
@@ -411,7 +402,7 @@ class MetadataHandler(object):
             complemented metadata
         '''
         print 'TODO'
-        # TODO: user input saved as json, which we can read here
+        # TODO: use regular expression pattern to extract metadata from filenames
 
     @staticmethod
     def _calculate_coordinates(positions):

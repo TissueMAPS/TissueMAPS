@@ -1,4 +1,5 @@
 import re
+import os
 
 '''Utility functions for standard routines.'''
 
@@ -99,3 +100,18 @@ def common_substring(data):
                 if j > len(substr) and all(data[0][i:i+j] in x for x in data):
                     substr = data[0][i:i+j]
     return substr
+
+
+def list_directory_tree(start_dir):
+    '''
+    Capture the whole directory tree downstream of `start_dir`.
+
+    Parameters
+    ----------
+    start_dir: str
+        absolute path to the directory whose content should be listed
+    '''
+    for root, dirs, files in os.walk(start_dir):
+        level = root.replace(start_dir, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        print('{}{}/'.format(indent, os.path.basename(root)))

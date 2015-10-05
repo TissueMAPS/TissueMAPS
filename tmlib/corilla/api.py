@@ -11,7 +11,7 @@ class IllumstatsGenerator(ClusterRoutines):
     Class for calculating illumination statistics.
     '''
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment, prog_name, verbosity):
         '''
         Instantiate an instance of class IllumstatsGenerator.
 
@@ -21,10 +21,14 @@ class IllumstatsGenerator(ClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
         '''
-        super(IllumstatsGenerator, self).__init__(experiment, prog_name)
+        super(IllumstatsGenerator, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
+        self.verbosity = verbosity
 
     @property
     def stats_file_format_string(self):
@@ -37,7 +41,7 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         self._stats_file_format_string = self.experiment.cfg.STATS_FILE
         return self._stats_file_format_string
-    
+
     def create_job_descriptions(self, **kwargs):
         '''
         Create job descriptions for parallel computing.

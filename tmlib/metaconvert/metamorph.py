@@ -210,7 +210,9 @@ class MetamorphMetadataHandler(MetadataHandler):
     i.e. placed in another folder.
     '''
 
-    formats = {'.nd'}
+    SUPPORTED_FILE_EXTENSIONS = {'.nd'}
+
+    REGEXP_PATTERN = ''
 
     def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
@@ -232,24 +234,9 @@ class MetamorphMetadataHandler(MetadataHandler):
         super(MetamorphMetadataHandler, self).__init__(
                 image_files, additional_files, ome_xml_files, cycle_name)
         self.image_files = image_files
-        self.additional_files = additional_files
         self.ome_xml_files = ome_xml_files
         self.cycle_name = cycle_name
-
-    @property
-    def updated_additional_files(self):
-        files = [f for f in self.additional_files
-                 if os.path.splitext(f)[1] in self.formats]
-        if (len(files) > len(self.formats) or len(files) == 0
-                or (len(files) < len(self.formats) and len(files) > 0)):
-            raise OSError('%d metadata files are required: "%s"'
-                          % (len(self.formats), '", "'.join(self.formats)))
-        else:
-            self._additional_files = dict()
-            for mdf in self.formats:
-                self._additional_files[mdf] = [f for f in files
-                                               if f.endswith(mdf)]
-        return self._additional_files
+        self.additional_files = additional_files
 
     @property
     def ome_additional_metadata(self):
@@ -263,7 +250,15 @@ class MetamorphMetadataHandler(MetadataHandler):
         --------
         `MetamorphMetadataReader`_
         '''
+        files = [
+            f for f in self.additional_files
+            if os.path.splitext(f)[1] in self.SUPPORTED_FILE_EXTENSIONS
+        ]
+        if len(files) != len(self.SUPPORTED_FILE_EXTENSIONS):
+            raise OSError('%d metadata files are required: "%s"'
+                          % (len(self.SUPPORTED_FILE_EXTENSIONS),
+                             '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
+        nd_file = files[0]
         with MetamorphMetadataReader() as reader:
-            nd_path = self.updated_additional_files['.nd'][0]
-            self._ome_additional_metadata = reader.read(nd_path)
+            self._ome_additional_metadata = reader.read(nd_file)
         return self._ome_additional_metadata

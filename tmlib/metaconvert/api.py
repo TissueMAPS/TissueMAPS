@@ -1,6 +1,5 @@
 import os
 import logging
-from glob import glob
 from .default import DefaultMetadataHandler
 from .cellyoyager import CellvoyagerMetadataHandler
 from .metamorph import MetamorphMetadataHandler
@@ -32,7 +31,7 @@ class MetadataConverter(ClusterRoutines):
     separate JSON file.
     '''
 
-    def __init__(self, experiment, prog_name, file_format):
+    def __init__(self, experiment, prog_name, verbosity, file_format):
         '''
         Instantiate an instance of class MetadataConverter.
 
@@ -42,6 +41,8 @@ class MetadataConverter(ClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
         file_format: str
             name of the microscope file format for which additional files
             are provided, e.g. "metamorph"
@@ -55,11 +56,13 @@ class MetadataConverter(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataConverter, self).__init__(experiment, prog_name)
+        super(MetadataConverter, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
+        self.verbosity = verbosity
         self.file_format = file_format
         if self.file_format:
-            if self.file_format not in Formats.SUPPORTED_ADDITIONAL_FILES:
+            if self.file_format not in Formats.SUPPORT_FOR_ADDITIONAL_FILES:
                 raise NotSupportedError('Additional metadata files are not '
                                         'supported for the provided format')
 
@@ -91,16 +94,26 @@ class MetadataConverter(ClusterRoutines):
         '''
         joblist = dict()
         joblist['run'] = list()
-        for i, cycle in enumerate(self.cycles):
+        for i, upload in enumerate(self.experiment.uploads):
+            try:
+                cycle = self.experiment.cycles[i]
+            except IndexError:
+                cycle = self.experiment.create_additional_cycle()
             joblist['run'].extend([{
                 'id': i+1,
                 'inputs': {
-                    'uploaded_image_files':
-                        glob(os.path.join(cycle.image_upload_dir, '*')),
-                    'uploaded_additional_files':
-                        glob(os.path.join(cycle.additional_upload_dir, '*')),
-                    'ome_xml_files':
-                        glob(os.path.join(cycle.ome_xml_dir, '*'))
+                    'uploaded_image_files': [
+                        os.path.join(upload.image_dir, f)
+                        for f in upload.image_files
+                    ],
+                    'uploaded_additional_files': [
+                        os.path.join(upload.additional_dir, f)
+                        for f in upload.additional_files
+                    ],
+                    'ome_xml_files': [
+                        os.path.join(upload.ome_xml_dir, f)
+                        for f in upload.ome_xml_files
+                    ]
                 },
                 'outputs': {
                     'metadata_files': [
@@ -115,6 +128,7 @@ class MetadataConverter(ClusterRoutines):
     def _build_run_command(self, batch):
         job_id = batch['id']
         command = [self.prog_name]
+        command.extend(['-v' for x in xrange(self.verbosity)])
         if self.file_format:
             command.extend(['-f', self.file_format])
         command.append(self.experiment.dir)
@@ -150,7 +164,8 @@ class MetadataConverter(ClusterRoutines):
                             batch['cycle'])
         meta = handler.format_image_metadata()
         meta = handler.add_additional_metadata(meta)
-        # TODO: how shall we deal with user input?
+        handler.determine_missing_ome_image_metadata(meta)
+        # user input required
         meta = handler.determine_grid_coordinates(meta)
         meta = handler.build_filenames_for_extracted_images(
                     meta, self.image_file_format_string)
@@ -161,7 +176,7 @@ class MetadataConverter(ClusterRoutines):
         with ImageMetadataWriter() as writer:
             f = filenames[0]
             data = [md.serialize() for md in metadata]
-            logger.info('write metadata to file: %s' % f)
+            logger.info('write metadata to file')
             writer.write(f, data)
 
     def collect_job_output(self, batch):

@@ -24,7 +24,7 @@ class ImageExtractor(ClusterRoutines):
     formats (often extended TIFF formats).
     '''
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment, prog_name, verbosity):
         '''
         Instantiate an instance of class ImageExtractor.
 
@@ -34,16 +34,19 @@ class ImageExtractor(ClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
         '''
-        super(ImageExtractor, self).__init__(experiment, prog_name)
+        super(ImageExtractor, self).__init__(experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
+        self.verbosity = verbosity
         self._update_experiment_layout()
 
     def _update_experiment_layout(self):
         time_points = set([md.time for md in self.cycles[0].image_metadata])
         if len(self.cycles) > 1 and len(time_points) > 1:
-            raise NotSupportedError('Only one time points per cycle supported')
+            raise NotSupportedError('Only one time point per cycle supported')
         elif len(self.cycles) == 1 and len(time_points) > 1:
             # Create a separate cycle for each time point
             for t in sorted(list(time_points)):
@@ -84,8 +87,10 @@ class ImageExtractor(ClusterRoutines):
         count = 0
         for cycle in self.cycles:
             if kwargs['projection']:
+                logger.info('an intensity projection will be performed')
                 metadata = self._update_metadata_for_projection(cycle)
             else:
+                logger.info('individual z-stacks will be kept')
                 metadata = cycle.image_metadata
             md_batches = self._create_batches(metadata,
                                               kwargs['batch_size'])
@@ -95,9 +100,7 @@ class ImageExtractor(ClusterRoutines):
                     'id': count,
                     'inputs': {
                         'image_files': [
-                            os.path.join(cycle.image_upload_dir,
-                                         md.original_filename)
-                            for md in batch
+                            md.original_filename for md in batch
                         ]
                     },
                     'outputs': {
@@ -159,6 +162,7 @@ class ImageExtractor(ClusterRoutines):
         '''
         with BioformatsImageReader() as reader:
             for i, filename in enumerate(batch['outputs']['image_files']):
+                logger.info('extract image: %s' % os.path.basename(filename))
                 focal_planes = batch['planes'][i]
                 stack = np.empty((len(focal_planes),
                                   batch['dimensions'][i][0],

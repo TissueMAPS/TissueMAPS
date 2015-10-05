@@ -227,7 +227,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment, prog_name, verbosity):
         '''
         Instantiate an instance of class ClusterRoutines.
 
@@ -237,6 +237,8 @@ class ClusterRoutines(BasicClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
         '''
         super(ClusterRoutines, self).__init__(experiment)
         self.experiment = experiment
@@ -483,12 +485,14 @@ class ClusterRoutines(BasicClusterRoutines):
         # https://docs.python.org/2/library/subprocess.html.
         job_id = batch['id']
         command = [self.prog_name]
+        command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
         command.extend(['run', '--job', str(job_id)])
         return command
 
     def _build_collect_command(self):
         command = [self.prog_name]
+        command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
         command.extend(['collect'])
         return command

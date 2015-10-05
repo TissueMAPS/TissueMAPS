@@ -306,7 +306,7 @@ class BrightfieldLayer(object):
         '''
         with OpenslideImageReader() as reader:
             mosaic = reader.read(slide_file)
-        name = os.path.splittext(os.path.basename(slide_file))[0]
+        name = os.path.splitext(os.path.basename(slide_file))[0]
         return BrightfieldLayer(mosaic, cycle=None, name=name)
 
     def create_pyramid(self, layer_dir):

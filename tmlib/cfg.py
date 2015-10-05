@@ -35,11 +35,13 @@ DATA_FILE = '{experiment_dir}{sep}data.h5'
 USER_CFG_FILE = '{experiment_dir}{sep}user.cfg'
 
 CYCLE_DIR = '{experiment}-{cycle_id}'
+UPLOAD_DIR = '{experiment_dir}{sep}uploads'
+UPLOAD_SUBDIR = '{cycle_id}'
 LAYER_NAME = '{cycle}-{channel}'
 
-IMAGE_UPLOAD_DIR = '{cycle_dir}{sep}image_uploads'
-ADDITIONAL_UPLOAD_DIR = '{cycle_dir}{sep}additional_uploads'
-OME_XML_DIR = '{cycle_dir}{sep}ome_xml'
+IMAGE_UPLOAD_DIR = '{upload_subdir}{sep}image_uploads'
+ADDITIONAL_UPLOAD_DIR = '{upload_subdir}{sep}additional_uploads'
+OME_XML_DIR = '{upload_subdir}{sep}ome_xml'
 
 IMAGE_DIR = '{cycle_dir}{sep}images'
 IMAGE_FILE = '{cycle}_{well}_s{site:0>3}_r{row:0>3}_c{column:0>3}_z{stack:0>3}_t{time:0>3}_{channel}.png'

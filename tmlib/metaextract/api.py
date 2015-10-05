@@ -3,7 +3,6 @@ import re
 import shutil
 from glob import glob
 from natsort import natsorted
-from ..formats import Formats
 from ..cluster import ClusterRoutines
 
 
@@ -19,7 +18,7 @@ class MetadataExtractor(ClusterRoutines):
     and written to XML files.
     '''
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment, prog_name, verbosity):
         '''
         Instantiate an instance of class MetadataExtractor.
 
@@ -29,14 +28,18 @@ class MetadataExtractor(ClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
 
         See also
         --------
         `tmlib.cfg`_
         '''
-        super(MetadataExtractor, self).__init__(experiment, prog_name)
+        super(MetadataExtractor, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
+        self.verbosity = verbosity
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):
@@ -63,32 +66,25 @@ class MetadataExtractor(ClusterRoutines):
         joblist['run'] = list()
         output_files = list()
         count = 0
-        for i, cycle in enumerate(self.cycles):
-            image_filenames = [
-                f for f in os.listdir(cycle.image_upload_dir)
-                if os.path.splitext(f)[1] in Formats().supported_extensions
-            ]
-            input_files = [
-                os.path.join(cycle.image_upload_dir, f)
-                for f in image_filenames
-            ]
-            if not input_files:
-                raise IOError('No image files of supported formats '
-                              'found in upload directory.')
+        for upload in self.experiment.uploads:
             output_files.extend([
-                os.path.join(cycle.ome_xml_dir, self._get_ome_xml_filename(f))
-                for f in image_filenames
+                os.path.join(upload.ome_xml_dir,
+                             self._get_ome_xml_filename(f))
+                for f in upload.image_files
             ])
 
-            for j in xrange(len(input_files)):
+            for j in xrange(len(upload.image_files)):
                 count += 1
                 joblist['run'].append({
                     'id': count,
                     'inputs': {
-                        'image_files': [input_files[j]]
+                        'image_files': [
+                            os.path.join(upload.image_dir,
+                                         upload.image_files[j])
+                        ]
                     },
-                    'outputs': {'bla': list()},
-                    'cycle': cycle.name
+                    'outputs': {
+                    }
                 })
 
         joblist['collect'] = {
@@ -114,6 +110,7 @@ class MetadataExtractor(ClusterRoutines):
 
     def _build_collect_command(self):
         command = [self.prog_name]
+        command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
         command.extend(['collect'])
         return command

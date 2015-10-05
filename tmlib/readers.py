@@ -681,6 +681,7 @@ class BioformatsImageReader(ImageReader):
         '''
         if self.directory:
             filename = os.path.join(self.directory, filename)
+        logger.debug('read data from file: %s' % filename)
         if not os.path.exists(filename):
             raise OSError('Image file does not exist: %s' % filename)
         image = bioformats.load_image(filename, rescale=False,

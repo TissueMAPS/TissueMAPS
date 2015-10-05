@@ -1,4 +1,5 @@
 import sys
+import os
 import h5py
 import numpy as np
 import logging
@@ -90,6 +91,9 @@ class JsonWriter(TextWriter):
         ----
         `filename` will be truncated in case it already exists.
         '''
+        if self.directory:
+            filename = os.path.join(self.directory, filename)
+        logger.debug('write data to file: %s' % filename)
         if 'naicify' in kwargs:
             naicify = kwargs['naicify']
         else:
@@ -133,23 +137,6 @@ class JobDescriptionWriter(JsonWriter):
             absolute path to a directory where files are located
         '''
         super(JobDescriptionWriter, self).__init__(directory)
-        self.directory = directory
-
-
-class ShiftDescriptionWriter(JsonWriter):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
-        '''
-        Instantiate an object of class ShiftDescriptionWriter.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(ShiftDescriptionWriter, self).__init__(directory)
         self.directory = directory
 
 
@@ -203,6 +190,9 @@ class YamlWriter(TextWriter):
         ----
         `filename` will be truncated in case it already exists.
         '''
+        if self.directory:
+            filename = os.path.join(self.directory, filename)
+        logger.debug('write data to file: %s' % filename)
         if 'use_ruamel' in kwargs:
             use_ruamel = kwargs['use_ruamel']
         else:

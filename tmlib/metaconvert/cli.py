@@ -46,6 +46,7 @@ class Metaconvert(CommandLineInterface):
         experiment = Experiment(self.args.experiment_dir)
         self.__api_instance = MetadataConverter(
                             experiment=experiment, prog_name=self.name,
+                            verbosity=self.args.verbosity,
                             file_format=self.args.format,)
         logger.debug(
             'instantiated API class "%s" with parsed arguments'

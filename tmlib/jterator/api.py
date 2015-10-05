@@ -25,7 +25,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     Class for running a Jterator image processing pipeline.
     '''
 
-    def __init__(self, experiment, prog_name, pipe_name,
+    def __init__(self, experiment, prog_name, verbosity, pipe_name,
                  pipe=None, handles=None):
         '''
         Instantiate an instance of class ImageAnalysisPipeline.
@@ -36,6 +36,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
         pipe_name: str
             name of the pipeline that is being processed
         pipe: dict, optional
@@ -61,10 +63,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         --------
         `tmlib.cfg`_
         '''
-        super(ImageAnalysisPipeline, self).__init__(experiment, prog_name)
+        super(ImageAnalysisPipeline, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.pipe_name = pipe_name
         self.prog_name = prog_name
+        self.verbosity = verbosity
         self.project = JtProject(
                     project_dir=self.project_dir, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
@@ -339,6 +343,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def _build_run_command(self, batch):
         # Overwrite method to account for additional "--pipeline" argument
         command = [self.prog_name]
+        command.extend(['-v' for x in xrange(self.verbosity)])
         command.extend(['-p', self.pipe_name])
         command.append(self.experiment.dir)
         command.extend(['run', '-j', str(batch['id'])])
@@ -357,7 +362,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         checker = PipelineChecker(
                 project_dir=self.project_dir,
                 pipe_description=self.project.pipe['description'],
-                handles_descriptions=[h['description'] for h in self.project.handles]
+                handles_descriptions=[
+                    h['description'] for h in self.project.handles
+                ]
         )
         checker.check_all()
         self.start_engines()

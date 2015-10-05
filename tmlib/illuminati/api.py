@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class PyramidCreation(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name):
+    def __init__(self, experiment, prog_name, verbosity):
         '''
         Instantiate an instance of class PyramidCreation.
 
@@ -19,10 +19,13 @@ class PyramidCreation(ClusterRoutines):
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
+        verbosity: int
+            logging level
         '''
-        super(PyramidCreation, self).__init__(experiment, prog_name)
+        super(PyramidCreation, self).__init__(experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
+        self.verbosity = verbosity
 
     def create_job_descriptions(self, **kwargs):
         '''

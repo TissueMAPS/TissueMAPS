@@ -8,6 +8,7 @@ from .readers import UserConfigurationReader
 from . import utils
 from .plates import WellPlate
 from .plates import Slide
+from .upload import Upload
 from .cfg_setters import UserConfiguration
 from .cfg_setters import TmlibConfiguration
 
@@ -56,6 +57,10 @@ class Experiment(object):
         library: str, optional
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
+
+        See also
+        --------
+        `tmlib.cfg_setters.TmlibConfiguration`_
         '''
         self.experiment_dir = os.path.expandvars(experiment_dir)
         self.experiment_dir = os.path.expanduser(self.experiment_dir)
@@ -84,6 +89,10 @@ class Experiment(object):
         -------
         UserConfiguration
             experiment-specific configuration settings provided by the user
+
+        See also
+        --------
+        `tmlib.cfg_setters.UserConfiguration`_
         '''
         # TODO: shall we do this via the database instead?
         logger.debug('user configuration file: %s' % self.user_cfg_file)
@@ -113,7 +122,7 @@ class Experiment(object):
         '''
         return self.experiment_dir
 
-    def _is_cycle(self, folder):
+    def _is_cycle_dir(self, folder):
         regexp = utils.regex_from_format_string(self.cfg.CYCLE_DIR)
         return True if re.match(regexp, folder) else False
 
@@ -125,38 +134,77 @@ class Experiment(object):
         List[WellPlate or Slide]
             configured cycle objects
 
-        Raises
-        ------
-        OSError
-            when no cycle directories are found
-
         See also
         --------
-        `plates.WellPlate`_
-        `plates.Slide`_
+        `tmlib.cycle.Cycle`_
+        `tmlib.plates.WellPlate`_
+        `tmlib.plates.Slide`_
         `tmlib.cfg`_
         '''
-        cycle_dirs = [os.path.join(self.dir, f) for f in os.listdir(self.dir)
-                      if os.path.isdir(os.path.join(self.dir, f))
-                      and self._is_cycle(f)]
+        cycle_dirs = [
+            os.path.join(self.dir, d)
+            for d in os.listdir(self.dir)
+            if os.path.isdir(os.path.join(self.dir, d))
+            and self._is_cycle_dir(d)
+        ]
         cycle_dirs = natsorted(cycle_dirs)
         if not cycle_dirs:
-            raise OSError('Experiment has no cycles.')
+            self._cycles = list()
             # # in this case, the *cycle* directory is the same as the
             # # the experiment directory
             # cycle_dirs = self.experiment_dir
         if self.user_cfg.WELLPLATE_FORMAT:
-            cycles = [
+            self._cycles = [
                 WellPlate(d, self.cfg, self.user_cfg, self.library)
                 for d in cycle_dirs
             ]
         else:
-            cycles = [
+            self._cycles = [
                 Slide(d, self.cfg, self.user_cfg, self.library)
                 for d in cycle_dirs
             ]
-        self._cycles = cycles
         return self._cycles
+
+    @property
+    def upload_dir(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the directory, where uploaded files are located
+        '''
+        self._upload_dir = self.cfg.UPLOAD_DIR.format(
+                                            experiment_dir=self.dir,
+                                            sep=os.path.sep)
+        return self._upload_dir
+
+    def _is_upload_subdir(self, folder):
+        regexp = utils.regex_from_format_string(self.cfg.UPLOAD_SUBDIR)
+        return True if re.match(regexp, folder) else False
+
+    @property
+    def uploads(self):
+        '''
+        Returns
+        -------
+        List[UploadContainer]
+            configured upload objects
+
+        See also
+        --------
+        `tmlib.upload.Upload`_
+        `tmlib.cfg`_
+        '''
+        upload_subdirs = natsorted([
+            os.path.join(self.upload_dir, d)
+            for d in os.listdir(self.upload_dir)
+            if os.path.isdir(os.path.join(self.upload_dir, d))
+            and self._is_upload_subdir(d)
+        ])
+        self._uploads = [
+            Upload(d, self.cfg, self.user_cfg) for d in upload_subdirs
+        ]
+        return self._uploads
 
     @property
     def reference_cycle(self):
@@ -188,8 +236,8 @@ class Experiment(object):
         '''
         new_cycle_name = self.cfg.CYCLE_DIR.format(
                                             experiment=self.name,
-                                            cycle_id=self.cycles[-1].id+1)
-        logger.info('create an additional cycle: %s' % new_cycle_name)
+                                            cycle_id=len(self.cycles)+1)
+        logger.info('create additional cycle: %s' % new_cycle_name)
         new_cycle_dir = os.path.join(self.dir, new_cycle_name)
         logger.debug('create directory for new cycle')
         os.mkdir(new_cycle_dir)
