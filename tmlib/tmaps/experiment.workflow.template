@@ -1,15 +1,8 @@
 metaextract {experiment_dir} init
-metaextract {experiment_dir} submit
-metaconvert -f {format} {experiment_dir} init -b {batch_size}
-metaconvert -f {format} {experiment_dir} submit
+metaconvert {experiment_dir} init -b {batch_size} -f {format} 
 imextract {experiment_dir} init
-imextract {experiment_dir} submit
 align {experiment_dir} init --ref_channel {ref_channel} --ref_cycle {ref_cycle} -b {batch_size}
-align {experiment_dir} submit
 corilla {experiment_dir} init
-corilla {experiment_dir} submit
 illuminati {experiment_dir} -sit --thresh_value {thresh_value} --thresh_percent {thresh_percent}
-illuminati {experiment_dir} submit
-jterator -p {pipeline} {experiment_dir} init
-jterator -p {pipeline} {experiment_dir} submit
+jterator {experiment_dir} -p {pipeline} init
 
