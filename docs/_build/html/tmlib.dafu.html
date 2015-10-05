@@ -46,150 +46,11 @@
 <div class="section" id="tmlib-dafu-checkdata-module">
 <h2>tmlib.dafu.checkdata module<a class="headerlink" href="#tmlib-dafu-checkdata-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmlib.dafu.utils">
-<span id="tmlib-dafu-utils-module"></span><h2>tmlib.dafu.utils module<a class="headerlink" href="#module-tmlib.dafu.utils" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="tmlib.dafu.utils.build_global_ids">
-<code class="descclassname">tmlib.dafu.utils.</code><code class="descname">build_global_ids</code><span class="sig-paren">(</span><em>ids</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/dafu/utils.html#build_global_ids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.dafu.utils.build_global_ids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build global, continuous ids from local, image site specific ids.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ids</strong> (<em>pandas.core.frame.DataFrame</em>) &#8211; dataset of size nx4 with the following columns:
-&#8220;{object name}_ID_site&#8221;
-&#8220;{object name}_ID_row&#8221;
-&#8220;{object name}_ID_column&#8221;
-&#8220;{object name}_ID_object&#8221;</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pandas.core.series.Series</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmlib.dafu.utils.calc_global_centroids">
-<code class="descclassname">tmlib.dafu.utils.</code><code class="descname">calc_global_centroids</code><span class="sig-paren">(</span><em>local_centroids</em>, <em>ids</em>, <em>image_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/dafu/utils.html#calc_global_centroids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.dafu.utils.calc_global_centroids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate global centroids from local, image site specific coordinates.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>local_centroids</strong> (<em>pandas.core.frame.DataFrame</em>) &#8211; size nx2, where n is the number of
-objects, and the columns are the y, x coordinates
-of each object at the local site (i.e. in the image)</li>
-<li><strong>ids</strong> (<em>pandas.core.frame.DataFrame</em>) &#8211; dataset of size nx4 with the following columns:
-&#8220;{object name}_ID_site&#8221;
-&#8220;{object name}_ID_row&#8221;
-&#8220;{object name}_ID_column&#8221;
-&#8220;{object name}_ID_object&#8221;</li>
-<li><strong>image_size</strong> (<em>Tuple[int]</em>) &#8211; dimensions of an individual image, i.e. site</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">dataset with dimensions nx2 and columns &#8220;y&#8221; and &#8220;x&#8221;</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.core.frame.DataFrame</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmlib.dafu.utils.extract_ids">
-<code class="descclassname">tmlib.dafu.utils.</code><code class="descname">extract_ids</code><span class="sig-paren">(</span><em>data_file</em>, <em>current_obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/dafu/utils.html#extract_ids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.dafu.utils.extract_ids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract ids of the currently analyzed objects and their parent objects
-from the dataset. They represent the original local ids, i.e. they map to
-objects in single acquisition site images rather in contrast to global ids
-which map to objects in the stitched mosaic image.
-These local ids can be used to discard certain objects,
-such as border objects, from single site images before stitching.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>data_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; path to data.h5 HDF5 file that contains the dataset</li>
-<li><strong>current_obj</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; name of currently analyzed objects</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">with ids for current objects and their corresponding parent objects</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Tuple[pandas.core.frame.DataFrame]</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmlib.dafu.utils.image_name_from_joblist">
-<code class="descclassname">tmlib.dafu.utils.</code><code class="descname">image_name_from_joblist</code><span class="sig-paren">(</span><em>joblist</em>, <em>data_filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/dafu/utils.html#image_name_from_joblist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.dafu.utils.image_name_from_joblist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Determine the name of an image file from a YAML joblist description.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>joblist</strong> (<em>List[Dict[str, str]]</em>) &#8211; joblist description for each job</li>
-<li><strong>data_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; name of a data HDF5 file that encodes the job id</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">filename</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmlib.dafu.utils.list_data_files">
-<code class="descclassname">tmlib.dafu.utils.</code><code class="descname">list_data_files</code><span class="sig-paren">(</span><em>project_dir</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/dafu/utils.html#list_data_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.dafu.utils.list_data_files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Provide a sorted list of data HDF5 files of a given Jterator project.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>project_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; path to a Jterator project directory</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">names of data files</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">List[str]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmlib.dafu.utils.list_jtprojects">
-<code class="descclassname">tmlib.dafu.utils.</code><code class="descname">list_jtprojects</code><span class="sig-paren">(</span><em>cycle_dir</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/dafu/utils.html#list_jtprojects"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.dafu.utils.list_jtprojects" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">names of Jterator projects</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">List[str]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
+<div class="section" id="tmlib-dafu-utils-module">
+<h2>tmlib.dafu.utils module<a class="headerlink" href="#tmlib-dafu-utils-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmlib.dafu">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tmlib.dafu" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -207,8 +68,8 @@ such as border objects, from single site images before stitching.</p>
 <li><a class="reference internal" href="#">tmlib.dafu package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#tmlib-dafu-checkdata-module">tmlib.dafu.checkdata module</a></li>
-<li><a class="reference internal" href="#module-tmlib.dafu.utils">tmlib.dafu.utils module</a></li>
-<li><a class="reference internal" href="#module-tmlib.dafu">Module contents</a></li>
+<li><a class="reference internal" href="#tmlib-dafu-utils-module">tmlib.dafu.utils module</a></li>
+<li><a class="reference internal" href="#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

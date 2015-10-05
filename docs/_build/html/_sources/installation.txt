@@ -32,9 +32,13 @@ Activate the virtual environment and run the installation of required packages::
     $ pip install -r ~/tmlib/requirements-1.txt
     $ pip install -r ~/tmlib/requirements-2.txt
 
-Then, clone the repository from Github into the virtual environment::
+Clone the repository from Github into the virtual environment::
 
-    $ git clone https://github.com/TissueMAPS/TmLibrary.git $WORKON_HOME/tmaps/lib/python2.7/site-packages/tmlib
+    $ git clone https://github.com/TissueMAPS/TmLibrary.git $HOME/tmlibrary
+
+and create a link for the `tmlib` package that's contained in the repository in order to be able to call it from the virtual environment::
+
+    $ ln -s $HOME/tmlibrary/tmlib $WORKON_HOME/tmaps/lib/python2.7/site-packages/tmlib
 
 
 .. _dependencies:

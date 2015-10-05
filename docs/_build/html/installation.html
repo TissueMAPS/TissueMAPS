@@ -68,8 +68,12 @@ source /usr/local/bin/virtualenvwrapper.sh
 $ pip install -r ~/tmlib/requirements-1.txt
 $ pip install -r ~/tmlib/requirements-2.txt</dd>
 </dl>
-<p>Then, clone the repository from Github into the virtual environment:</p>
-<div class="highlight-python"><div class="highlight"><pre>$ git clone https://github.com/TissueMAPS/TmLibrary.git $WORKON_HOME/tmaps/lib/python2.7/site-packages/tmlib
+<p>Clone the repository from Github into the virtual environment:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ git clone https://github.com/TissueMAPS/TmLibrary.git $HOME/tmlibrary
+</pre></div>
+</div>
+<p>and create a link for the <cite>tmlib</cite> package that&#8217;s contained in the repository in order to be able to call it from the virtual environment:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ ln -s $HOME/tmlibrary/tmlib $WORKON_HOME/tmaps/lib/python2.7/site-packages/tmlib
 </pre></div>
 </div>
 <div class="section" id="dependencies">

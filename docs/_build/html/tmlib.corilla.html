@@ -52,130 +52,14 @@
 <div class="section" id="tmlib-corilla-cli-module">
 <h2>tmlib.corilla.cli module<a class="headerlink" href="#tmlib-corilla-cli-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmlib.corilla.illumcorr">
-<span id="tmlib-corilla-illumcorr-module"></span><h2>tmlib.corilla.illumcorr module<a class="headerlink" href="#module-tmlib.corilla.illumcorr" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="tmlib.corilla.illumcorr.illum_correct_numpy">
-<code class="descclassname">tmlib.corilla.illumcorr.</code><code class="descname">illum_correct_numpy</code><span class="sig-paren">(</span><em>orig_image</em>, <em>mean_mat</em>, <em>std_mat</em>, <em>log_transform=True</em>, <em>smooth=True</em>, <em>sigma=5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/corilla/illumcorr.html#illum_correct_numpy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.corilla.illumcorr.illum_correct_numpy" title="Permalink to this definition">¶</a></dt>
-<dd><p>Correct fluorescence microscopy image for illumination artifacts.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>orig_image</strong> (<em>numpy.ndarray</em>) &#8211; image that should be corrected</li>
-<li><strong>mean_mat</strong> (<em>numpy.ndarray[numpy.float64]</em>) &#8211; matrix of mean values (same dimensions as <cite>orig_image</cite>)</li>
-<li><strong>std_mat</strong> (<em>numpy.ndarray[numpy.float64]</em>) &#8211; matrix of standard deviation values (same dimensions as <cite>orig_image</cite>)</li>
-<li><strong>log_transform</strong> (<em>bool, optional</em>) &#8211; log10 transform <cite>orig_image</cite> (defaults to True)</li>
-<li><strong>smooth</strong> (<em>bool, optional</em>) &#8211; blur <cite>mean_mat</cite> and <cite>std_mat</cite> with a Gaussian filter (defaults to False)</li>
-<li><strong>sigma</strong> (<em>int, optional</em>) &#8211; standard deviation of the Gaussian kernel (defaults to 5)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">corrected image (same data type as <cite>orig_image</cite>)</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">numpy.ndarray</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="tmlib.corilla.illumcorr.illum_correct_vips">
-<code class="descclassname">tmlib.corilla.illumcorr.</code><code class="descname">illum_correct_vips</code><span class="sig-paren">(</span><em>orig_image</em>, <em>mean_mat</em>, <em>std_mat</em>, <em>log_transform=True</em>, <em>smooth=True</em>, <em>sigma=5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/corilla/illumcorr.html#illum_correct_vips"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.corilla.illumcorr.illum_correct_vips" title="Permalink to this definition">¶</a></dt>
-<dd><p>Correct fluorescence microscopy image for illumination artifacts
-using the image processing library Vips.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>orig_image</strong> (<em>Vips.Image[Vips.BandFormat.USHORT]</em>) &#8211; image that should be corrected</li>
-<li><strong>mean_mat</strong> (<em>Vips.Image[Vips.BandFormat.DOUBLE]</em>) &#8211; matrix of mean values (same dimensions as <cite>orig_image</cite>)</li>
-<li><strong>std_mat</strong> (<em>Vips.Image[Vips.BandFormat.DOUBLE]</em>) &#8211; matrix of standard deviation values (same dimensions as <cite>orig_image</cite>)</li>
-<li><strong>log_transform</strong> (<em>bool, optional</em>) &#8211; log10 transform <cite>orig_image</cite> (defaults to True)</li>
-<li><strong>smooth</strong> (<em>bool, optional</em>) &#8211; blur <cite>mean_mat</cite> and <cite>std_mat</cite> with a Gaussian filter (defaults to False)</li>
-<li><strong>sigma</strong> (<em>int, optional</em>) &#8211; size of the standard deviation of the Gaussian kernel (defaults to 5)</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">corrected image (same data type as <cite>orig_image</cite>)</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Vips.Image</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
+<div class="section" id="tmlib-corilla-illumcorr-module">
+<h2>tmlib.corilla.illumcorr module<a class="headerlink" href="#tmlib-corilla-illumcorr-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmlib.corilla.stats">
-<span id="tmlib-corilla-stats-module"></span><h2>tmlib.corilla.stats module<a class="headerlink" href="#module-tmlib.corilla.stats" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="tmlib.corilla.stats.OnlineStatistics">
-<em class="property">class </em><code class="descclassname">tmlib.corilla.stats.</code><code class="descname">OnlineStatistics</code><span class="sig-paren">(</span><em>image_dimensions</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/corilla/stats.html#OnlineStatistics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.corilla.stats.OnlineStatistics" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class for calculating online statistics based on Welford&#8217;s method:</p>
-<p>B. P. Welford (1962). &#8220;Note on a method for calculating corrected sums of
-squares and products&#8221;. Technometrics 4(3):419-420.</p>
-<p>Code adapted from Wikipedia article &#8220;Algorithms for calculating variance&#8221;.
-<a class="reference external" href="https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm">https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm</a></p>
-<dl class="attribute">
-<dt id="tmlib.corilla.stats.OnlineStatistics.std">
-<code class="descname">std</code><a class="headerlink" href="#tmlib.corilla.stats.OnlineStatistics.std" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">standard deviation</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray[float]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="tmlib.corilla.stats.OnlineStatistics.update">
-<code class="descname">update</code><span class="sig-paren">(</span><em>x</em>, <em>log_transform=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/corilla/stats.html#OnlineStatistics.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.corilla.stats.OnlineStatistics.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update statistics with new matrix.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>x</strong> (<em>numpy.ndarray[float]</em>) &#8211; new matrix</li>
-<li><strong>log_transform</strong> (<em>bool, optional</em>) &#8211; log10 transform matrix (defaults to True)</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="tmlib.corilla.stats.OnlineStatistics.var">
-<code class="descname">var</code><a class="headerlink" href="#tmlib.corilla.stats.OnlineStatistics.var" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">variance</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray[float]</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
+<div class="section" id="tmlib-corilla-stats-module">
+<h2>tmlib.corilla.stats module<a class="headerlink" href="#tmlib-corilla-stats-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-tmlib.corilla">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tmlib.corilla" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -195,9 +79,9 @@ squares and products&#8221;. Technometrics 4(3):419-420.</p>
 <li><a class="reference internal" href="#tmlib-corilla-api-module">tmlib.corilla.api module</a></li>
 <li><a class="reference internal" href="#tmlib-corilla-argparser-module">tmlib.corilla.argparser module</a></li>
 <li><a class="reference internal" href="#tmlib-corilla-cli-module">tmlib.corilla.cli module</a></li>
-<li><a class="reference internal" href="#module-tmlib.corilla.illumcorr">tmlib.corilla.illumcorr module</a></li>
-<li><a class="reference internal" href="#module-tmlib.corilla.stats">tmlib.corilla.stats module</a></li>
-<li><a class="reference internal" href="#module-tmlib.corilla">Module contents</a></li>
+<li><a class="reference internal" href="#tmlib-corilla-illumcorr-module">tmlib.corilla.illumcorr module</a></li>
+<li><a class="reference internal" href="#tmlib-corilla-stats-module">tmlib.corilla.stats module</a></li>
+<li><a class="reference internal" href="#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>
