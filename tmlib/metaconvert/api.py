@@ -31,7 +31,7 @@ class MetadataConverter(ClusterRoutines):
     separate JSON file.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, file_format):
+    def __init__(self, experiment, prog_name, verbosity):
         '''
         Instantiate an instance of class MetadataConverter.
 
@@ -43,9 +43,6 @@ class MetadataConverter(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        file_format: str
-            name of the microscope file format for which additional files
-            are provided, e.g. "metamorph"
 
         Raises
         ------
@@ -59,12 +56,8 @@ class MetadataConverter(ClusterRoutines):
         super(MetadataConverter, self).__init__(
                 experiment, prog_name, verbosity)
         self.experiment = experiment
+        self.prog_name = prog_name
         self.verbosity = verbosity
-        self.file_format = file_format
-        if self.file_format:
-            if self.file_format not in Formats.SUPPORT_FOR_ADDITIONAL_FILES:
-                raise NotSupportedError('Additional metadata files are not '
-                                        'supported for the provided format')
 
     @property
     def image_file_format_string(self):
@@ -92,6 +85,12 @@ class MetadataConverter(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
+        if kwargs['format']:
+            if kwargs['format'] not in Formats.SUPPORT_FOR_ADDITIONAL_FILES:
+                raise NotSupportedError(
+                        'The specified format is not supported.\n'
+                        'Possible options are: "%s"'.format(
+                            '", "'.join(Formats.SUPPORT_FOR_ADDITIONAL_FILES)))
         joblist = dict()
         joblist['run'] = list()
         for i, upload in enumerate(self.experiment.uploads):
@@ -101,6 +100,7 @@ class MetadataConverter(ClusterRoutines):
                 cycle = self.experiment.create_additional_cycle()
             joblist['run'].extend([{
                 'id': i+1,
+                'format': kwargs['format'],
                 'inputs': {
                     'uploaded_image_files': [
                         os.path.join(upload.image_dir, f)
@@ -129,8 +129,8 @@ class MetadataConverter(ClusterRoutines):
         job_id = batch['id']
         command = [self.prog_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        if self.file_format:
-            command.extend(['-f', self.file_format])
+        # if self.file_format:
+        #     command.extend(['-f', self.file_format])
         command.append(self.experiment.dir)
         command.extend(['run', '-j', str(job_id)])
         return command
@@ -141,14 +141,14 @@ class MetadataConverter(ClusterRoutines):
         with metadata retrieved from additional files and/or user input
         and write the formatted metadata to a JSON file.
         '''
-        if self.file_format == 'metamorph':
+        if batch['format'] == 'metamorph':
             logger.debug('use "metamorph" reader')
             handler = MetamorphMetadataHandler(
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
                             batch['inputs']['ome_xml_files'],
                             batch['cycle'])
-        elif self.file_format == 'cellvoyager':
+        elif batch['format'] == 'cellvoyager':
             logger.debug('use "cellvoyager" reader')
             handler = CellvoyagerMetadataHandler(
                             batch['inputs']['uploaded_image_files'],

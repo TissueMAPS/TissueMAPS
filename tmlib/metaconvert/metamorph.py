@@ -1,9 +1,13 @@
 import os
 import re
+import logging
 import bioformats
+from cached_property import cached_property
 from .default import MetadataHandler
 from ..readers import MetadataReader
 from ..plates import WellPlate
+
+logger = logging.getLogger(__name__)
 
 
 class MetamorphMetadataReader(MetadataReader):
@@ -238,7 +242,7 @@ class MetamorphMetadataHandler(MetadataHandler):
         self.cycle_name = cycle_name
         self.additional_files = additional_files
 
-    @property
+    @cached_property
     def ome_additional_metadata(self):
         '''
         Returns
@@ -259,6 +263,7 @@ class MetamorphMetadataHandler(MetadataHandler):
                           % (len(self.SUPPORTED_FILE_EXTENSIONS),
                              '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
         nd_file = files[0]
+        logger.info('read metadata from provided files')
         with MetamorphMetadataReader() as reader:
             self._ome_additional_metadata = reader.read(nd_file)
         return self._ome_additional_metadata

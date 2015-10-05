@@ -2,6 +2,7 @@ import os
 import re
 import bioformats
 import logging
+from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from ..metadata import ChannelImageMetadata
@@ -55,7 +56,7 @@ class MetadataHandler(object):
         self.ome_xml_files = ome_xml_files
         self.cycle_name = cycle_name
 
-    @property
+    @cached_property
     def ome_image_metadata(self):
         '''
         Read the OMEXML metadata extracted from image files.
@@ -70,6 +71,7 @@ class MetadataHandler(object):
         `tmlib.metareaders.DefaultMetadataReader`_
         '''
         self._ome_image_metadata = dict()
+        logger.info('read OMEXML metadata')
         with DefaultMetadataReader() as reader:
             for i, f in enumerate(self.ome_xml_files):
                 k = self.image_files[i]
@@ -80,6 +82,7 @@ class MetadataHandler(object):
     def _create_channel_planes(pixels):
         # Add new *Plane* elements to an existing OMEXML *Pixels* object,
         # such that z-stacks are grouped by channel.
+        logger.debug('create channel planes')
         n_channels = pixels.SizeC
         n_stacks = pixels.SizeZ
         n_timepoints = pixels.SizeT
@@ -209,6 +212,7 @@ class MetadataHandler(object):
         `metadata.ChannelImageMetadata`_
         '''
         formatted_metadata = list()
+        logger.info('convert OMEXML metadata to custom format')
         for i, f in enumerate(self.ome_image_metadata.keys()):
             n_series = self.ome_image_metadata[f].image_count
             # The number of series corresponds to the number of planes
@@ -367,11 +371,10 @@ class MetadataHandler(object):
         metadata: List[ChannelMetadata]
             image metadata
 
-        Returns
-        -------
-        Dict[int, str]
-            index of the element and the name of attribute for which
-            information is missing
+        Raises
+        ------
+        AttributeError
+            when a required attribute is not set
 
         See also
         --------
@@ -380,7 +383,8 @@ class MetadataHandler(object):
         for i, md in enumerate(metadata):
             for attr in ChannelImageMetadata.INITIALLY_REQUIRED:
                 if not hasattr(md, attr):
-                    logger.warning('"%s" misses attribute "%s"' % (md.name, attr))
+                    raise AttributeError(
+                            'Image metadata requires attribute "%s"' % attr)
 
     def add_user_metadata(self, metadata):
         '''

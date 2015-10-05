@@ -1,9 +1,13 @@
 import os
+import logging
 import bioformats
+from cached_property import cached_property
 from lxml import etree
 from .default import MetadataHandler
 from ..readers import MetadataReader
 from ..illuminati import stitch
+
+logger = logging.getLogger(__name__)
 
 
 class CellvoyagerMetadataReader(MetadataReader):
@@ -180,7 +184,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
         self.ome_xml_files = ome_xml_files
         self.cycle_name = cycle_name
 
-    @property
+    @cached_property
     def ome_additional_metadata(self):
         '''
         Returns
@@ -202,6 +206,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
                              '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
         mlf_file = [f for f in files if f.endswith('.mlf')][0]
         mrf_file = [f for f in files if f.endswith('.mrf')][0]
+        logger.info('read metadata from provided files')
         with CellvoyagerMetadataReader() as reader:
             self._ome_additional_metadata = reader.read(mlf_file, mrf_file)
         return self._ome_additional_metadata
@@ -209,6 +214,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     @staticmethod
     def _calculate_coordinates(positions):
         # y axis is inverted
+        logger.debug('flip y axis for calculation of grid coordinates')
         coordinates = stitch.calc_image_coordinates(
                         positions, reverse_rows=True)
         return coordinates

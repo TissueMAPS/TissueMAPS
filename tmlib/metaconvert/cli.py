@@ -41,13 +41,18 @@ class Metaconvert(CommandLineInterface):
         return self.__class__.__name__.lower()
 
     @property
+    def _variable_init_args(self):
+        kwargs = dict()
+        kwargs['format'] = self.args.format
+        return kwargs
+
+    @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
         self.__api_instance = MetadataConverter(
                             experiment=experiment, prog_name=self.name,
-                            verbosity=self.args.verbosity,
-                            file_format=self.args.format,)
+                            verbosity=self.args.verbosity)
         logger.debug(
             'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
