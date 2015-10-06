@@ -21,6 +21,8 @@ def expdata_file(experiment_id, layer_name, filename):
     This route is accessed by openlayers.
 
     """
+    print experiment_id
+    print layer_name
     # TODO: This method should also be flagged with `@jwt_required()`.
     # openlayers needs to send the token along with its request for files s.t.
     # the server can check if the user is authorized to access the experiment
