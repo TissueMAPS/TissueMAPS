@@ -9,8 +9,8 @@ from matplotlib import cm
 @register_tool('SVM')
 class SVMTool(Tool):
     def process_request(self, payload):
-        request_type = payload.get('request_type', None)
-        return 'Hello'
+        message = payload.get('message', 'no message given')
+        return message
 
         # self.client_proxy.log('Request received.')
 
