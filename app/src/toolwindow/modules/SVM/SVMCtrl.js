@@ -1,20 +1,23 @@
 angular.module('tmaps.toolwindow')
-.controller('SVMCtrl', ['$scope', '$rootScope', 'tmapsProxy', 'toolInstance',
-            function($scope, $rootScope, tmapsProxy, toolInstance) {
+.controller('SVMCtrl', ['$scope', '$rootScope', 'tmapsProxy',
+            function($scope, $rootScope, tmapsProxy) {
 
-    $scope.selections = tmapsProxy.viewport.selectionHandler.selections;
-    $scope.numClasses = $scope.selections.length;
+    // $scope.selections = tmapsProxy.viewport.selectionHandler.selections;
+    // $scope.numClasses = $scope.selections.length;
 
     $scope.sendRequest = function() {
-        var cls = $scope.classes;
+        // var cls = $scope.classes;
+        // var payload = {
+        //     request_type: 'fit_model',
+        //     training_cell_ids: cls,
+        //     selected_features: $scope.selectedFeatures
+        // };
         var payload = {
-            request_type: 'fit_model',
-            training_cell_ids: cls,
-            selected_features: $scope.selectedFeatures
+            message: 'o hai there'
         };
 
-        toolInstance.sendRequest(payload).then(function(response) {
-            // console.log(response);
+        tmapsProxy.tool.sendRequest(payload).then(function(response) {
+
         });
     };
 

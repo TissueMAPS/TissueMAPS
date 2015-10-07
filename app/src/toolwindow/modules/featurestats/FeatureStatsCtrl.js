@@ -1,7 +1,7 @@
 angular.module('tmaps.toolwindow')
 .controller('FeatureStatsCtrl',
-            ['$scope', '$rootScope', 'colorUtil', 'toolInstance', 'tmapsProxy',
-            function($scope, $rootScope, colorUtil, toolInstance, tmapsProxy) {
+            ['$scope', '$rootScope', 'toolInstance', 'tmapsProxy',
+            function($scope, $rootScope, toolInstance, tmapsProxy) {
 
     var lastSelection = {};
 

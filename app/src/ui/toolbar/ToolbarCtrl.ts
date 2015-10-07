@@ -32,13 +32,7 @@ class ToolbarCtrl {
      * This function is called when the Tool's button is pressed.
      */
     openTool(tool: Tool) {
-        if (this.appstateService.hasCurrentState()) {
-            var appstate = this.appstateService.currentState;
-            var exp = this.$scope.appInstance.experiment;
-            tool.createNewWindow(appstate, exp);
-        } else {
-            throw new Error('Can\'t open window when appstate hasn\'t been saved');
-        }
+        tool.createNewWindow();
     }
 }
 angular.module('tmaps.ui').controller('ToolbarCtrl', ToolbarCtrl);

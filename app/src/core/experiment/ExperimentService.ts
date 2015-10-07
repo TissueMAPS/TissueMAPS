@@ -1,9 +1,9 @@
 class ExperimentService {
-    static $inject = ['$modal', '$http', 'Cell', '$q'];
+    static $inject = ['$http', 'Cell', '$q'];
 
     private cachedCells: { [experimentId: string]: Cell[]; } = {};
 
-    constructor(private $modal, private $http: ng.IHttpService, private Cell, private $q) {}
+    constructor(private $http: ng.IHttpService, private Cell, private $q) {}
 
     getAvailableExperiments(): ng.IPromise<Experiment[]> {
         return this.$http

@@ -36,10 +36,17 @@
         "app/src/core/selection/SelectionLayer.ts",
         "app/src/core/selection/typedefs.d.ts",
         "app/src/core/serialize/typedefs.ts",
+
         "app/src/core/tools/Tool.ts",
         "app/src/core/tools/ToolFactory.ts",
         "app/src/core/tools/ToolLoader.ts",
-        "app/src/core/tools/ToolResult.ts",
+        "app/src/core/tools/result/ToolResult.ts",
+        "app/src/core/tools/result/handler/ToolResultHandler.ts",
+        "app/src/core/tools/result/handler/EchoResultHandler.ts",
+        "app/src/core/tools/result/handler/ClassificationResultHandler.ts",
+        "app/src/core/tools/classes/FeatureStatsTool.ts",
+        "app/src/core/tools/classes/SVMTool.ts",
+
         "app/src/core/util/Color.ts",
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/ViewportFactory.ts",

@@ -6,27 +6,14 @@ class ToolFactory {
                 private $rootScope: ng.IRootScopeService) {}
 
     create(appInstance: AppInstance,
-           id: string,
-           name: string,
-           description: string,
-           template: string,
-           icon: string,
-           defaultWindowHeight: number,
-           defaultWindowWidth: number) {
-
-        return new Tool(
+           className: string) {
+        var cls = window[className];
+        return new cls(
             this.$,
             this.$http,
             this.$window,
             this.$rootScope,
-            appInstance,
-            id,
-            name,
-            description,
-            template,
-            icon,
-            defaultWindowHeight,
-            defaultWindowWidth
+            appInstance
         );
    }
 }

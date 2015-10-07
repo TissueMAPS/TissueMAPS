@@ -176,7 +176,7 @@ describe('In Viewport', function() {
             tileOpt = {
                 name: 'Test',
                 imageSize: [123, 123],
-                pyramidPath: '/some/path'
+                pyramidPath: '/experiments/D5YAKwe7/layers/Cell_Mask/'
             };
             l = channelLayerFactory.create(tileOpt);
         });
@@ -221,7 +221,7 @@ describe('In Viewport', function() {
             tileOpt = {
                 name: 'Test',
                 imageSize: [123, 123],
-                pyramidPath: '/some/path'
+                pyramidPath: '/experiments/D5YAKwe7/layers/Cell_Mask/'
             };
             l = channelLayerFactory.create(tileOpt);
             vp.addChannelLayer(l);
@@ -305,7 +305,8 @@ describe('In Viewport', function() {
             var red = colorFactory.create(255, 0, 0);
             // Create a channel layer with some additional properties
             var tileOpt = {
-                name: 'Test', imageSize: [123, 123], pyramidPath: '/some/path',
+                name: 'Test', imageSize: [123, 123],
+                pyramidPath: '/experiments/D5YAKwe7/layers/Cell_Mask/',
                 max: 0.5, min: 0.1, color: red
             };
             var l = channelLayerFactory.create(tileOpt);
@@ -382,5 +383,3 @@ describe('In Viewport', function() {
         });
     });
 });
-
-

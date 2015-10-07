@@ -413,6 +413,7 @@ module.exports = function(grunt) {
                 singleRun: true,
                 files: [
                     // Files to include everywhere
+                    'node_modules/ng-midway-tester/src/ngMidwayTester.js',
                     // Library code
                     'app/assets/libs/bower_components/jquery/dist/jquery.js',
                     'app/assets/libs/unmanaged/jquery-ui.min.js',

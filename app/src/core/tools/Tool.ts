@@ -1,22 +1,24 @@
 type ToolWindowId = string;
 
-interface ServerToolWindow {
-    id: ToolWindowId;
+interface ServerToolResponse {
+    tool_id: string;
+    result: any;
 }
 
-class ToolWindow {
-    constructor(public id: ToolWindowId,
-                public windowHeight: number,
-                public windowWidth: number) {}
+interface ToolWindow {
+    windowObject: Window
 }
 
 class Tool {
-    toolWindows: ToolWindow[];
+    windows: ToolWindow[];
+    results: ToolResult[];
 
-    constructor(private $: JQueryStatic,
-                private $http: ng.IHttpService,
-                private $window: Window,
-                private $rootScope: ng.IRootScopeService,
+    private resultHandler: ToolResultHandler;
+
+    constructor(protected $: JQueryStatic,
+                protected $http: ng.IHttpService,
+                protected $window: Window,
+                protected $rootScope: ng.IRootScopeService,
                 public appInstance: AppInstance,
                 public id: string,
                 public name: string,
@@ -24,8 +26,11 @@ class Tool {
                 public templateUrl: string,
                 public icon: string,
                 public defaultWindowHeight: number,
-                public defaultWindowWidth: number) {
-        this.toolWindows = [];
+                public defaultWindowWidth: number,
+                resultHandler: ToolResultHandler) {
+        this.windows = [];
+        this.results = [];
+        this.resultHandler = resultHandler;
     }
 
     getIdSlug(): string {
@@ -34,54 +39,22 @@ class Tool {
                       .replace(/(^-|-$)/g, '');
     }
 
-    createNewWindow(appstate: Appstate, exp: Experiment) {
-        return this.createToolWindowOnServer(appstate, exp).then((inst) => {
-            return this.openWindow(inst);
+    createNewWindow() {
+        var windowObj = this.openWindow();
+        var toolWindow = {
+            windowObject: windowObj
+        };
+        this.windows.push(toolWindow);
+
+        this.$(windowObj).bind('beforeunload', (event) => {
+            var idx = this.windows.indexOf(toolWindow);
+            this.windows.splice(idx, 1);
         });
+
+        return toolWindow;
     }
 
-    removeToolWindow(win: ToolWindow) {
-        this.deleteToolWindowOnServer(win).then((remoteDeletionOK) => {
-            if (remoteDeletionOK) {
-                var win = _(this.toolWindows).find((w) => {
-                    return w.id === win.id;
-                });
-                if (win !== undefined) {
-                    var idx = this.toolWindows.indexOf(win);
-                    this.toolWindows.splice(idx, 1);
-                } else {
-                    console.log('SHAZBOT, no local window with this id');
-                }
-            } else {
-                console.log('SHAZBOT, could not delete remote window');
-            }
-        });
-    }
-
-    private createToolWindowOnServer(appstate: Appstate, experiment: Experiment): ng.IPromise<ServerToolWindow> {
-        return this.$http.post('/api/tools/' + this.id + '/instances', {
-            'appstate_id': appstate.id,
-            'experiment_id': experiment.id
-        }).then((resp) => {
-            console.log('Successfully created a tool instance.');
-            return resp.data;
-        }, (err) => {
-            console.log('Server refused to create a tool instance.', err);
-        });
-    }
-
-    private deleteToolWindowOnServer(id): ng.IPromise<boolean> {
-        return this.$http.delete('/api/tool_instances/' + id).then((resp) => {
-            console.log('Successfully deleted tool instance with id', id);
-            return true;
-        }, function(err) {
-            console.log('There was an error when trying to delete the',
-                        'tool instance with ', id, ':', err);
-            return false;
-        });
-    }
-
-    private openWindow(instance: ServerToolWindow) {
+    private openWindow() {
         // Without appending the current date to the title, the browser (chrome)
         // won't open multiple tool windows of the same type.
         var toolWindow = this.$window.open(
@@ -93,17 +66,6 @@ class Tool {
         if (_.isUndefined(toolWindow)) {
             throw new Error('Could not create tool window! Is your browser blocking popups?');
         }
-
-        this.$(toolWindow).bind('beforeunload', (event) => {
-            this.$http.delete('/tool_instances/' + instance.id)
-            .then(function(resp) {
-                console.log('Successfully deleted tool instance with id',
-                            instance.id);
-            }, function(err) {
-                console.log('There was an error when trying to delete the',
-                            'tool instance with ', instance.id, ':', err);
-            });
-        });
 
         // Create a container object that includes ressources that the tool may
         // need.
@@ -121,4 +83,37 @@ class Tool {
 
         return toolWindow;
     }
+
+    handleResult(result: ToolResult) {
+        this.results.push(result);
+        this.resultHandler.handle(result);
+    }
+
+    sendRequest(payload: any): ng.IPromise<ToolResult> {
+        var url = '/api/tools/' + this.id + '/request';
+
+        this.appInstance.viewport.elementScope.then((vpScope) => {
+            vpScope.$broadcast('toolRequestSent');
+        });
+
+        return this.$http.post(url, {
+            'payload': payload
+        }).then(
+        (resp) => {
+            this.appInstance.viewport.elementScope.then((vpScope) => {
+                vpScope.$broadcast('toolRequestDone');
+                vpScope.$broadcast('toolRequestSuccess');
+            });
+            var data = <ServerToolResponse> resp.data;
+            this.handleResult(data.result);
+            return data.result;
+        },
+        (err) => {
+            this.appInstance.viewport.elementScope.then((vpScope) => {
+                vpScope.$broadcast('toolRequestDone');
+                vpScope.$broadcast('toolRequestFailed', err.data);
+            });
+            return err.data;
+        });
+    };
 }
