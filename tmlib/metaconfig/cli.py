@@ -1,7 +1,7 @@
 import logging
 from . import logo
 from . import __version__
-from .api import MetadataConverter
+from .api import MetadataConfigurator
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
@@ -16,7 +16,7 @@ class Metaconvert(CommandLineInterface):
 
     def __init__(self, args):
         '''
-        Instantiate an instance of class Metaconvert.
+        Initialize an instance of class Metaconvert.
 
         Parameters
         ----------
@@ -35,7 +35,7 @@ class Metaconvert(CommandLineInterface):
         '''
         Returns
         -------
-        str
+        st
             name of the program
         '''
         return self.__class__.__name__.lower()
@@ -44,13 +44,19 @@ class Metaconvert(CommandLineInterface):
     def _variable_init_args(self):
         kwargs = dict()
         kwargs['format'] = self.args.format
+        kwargs['projection'] = self.args.projection
+        kwargs['regex'] = self.args.regex
+        kwargs['stitch_layout'] = self.args.stitch_layout
+        kwargs['stitch_major_axis'] = self.args.stitch_major_axis
+        kwargs['stitch_vertical'] = self.args.stitch_vertical
+        kwargs['stitch_horizontal'] = self.args.stitch_horizontal
         return kwargs
 
     @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        self.__api_instance = MetadataConverter(
+        self.__api_instance = MetadataConfigurator(
                             experiment=experiment, prog_name=self.name,
                             verbosity=self.args.verbosity)
         logger.debug(
@@ -61,7 +67,7 @@ class Metaconvert(CommandLineInterface):
     @staticmethod
     def call(args):
         '''
-        Instantiates an instance of class Metaconvert and calls the method
+        Initializes an instance of class Metaconvert and calls the method
         that matches the name of the subparser with the parsed command
         line arguments.
 

@@ -15,7 +15,7 @@ class OnlineStatistics(object):
 
     def __init__(self, image_dimensions):
         '''
-        Instantiate class OnlineStatistics.
+        Initialize class OnlineStatistics.
 
         Calculate online statistics (mean, variance, and standard deviation)
         element-by-element on a series of numpy arrays.

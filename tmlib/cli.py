@@ -77,7 +77,7 @@ class CommandLineInterface(object):
 
     def __init__(self, args):
         '''
-        Instantiate an instance of class CommandLineInterface.
+        Initialize an instance of class CommandLineInterface.
 
         Parameters
         ----------
@@ -121,7 +121,7 @@ class CommandLineInterface(object):
         '''
         Handler function that can be called by a subparser.
 
-        Instantiates an instance of the class and calls the method matching the
+        Initializes an instance of the class and calls the method matching the
         name of the specified subparser with the parsed arguments.
 
         Parameters
@@ -172,7 +172,7 @@ class CommandLineInterface(object):
 
     def cleanup(self):
         '''
-        Instantiate an instance of the API class corresponding to the program
+        Initialize an instance of the API class corresponding to the program
         and process arguments of the "cleanup" subparser.
         '''
         self.print_logo()
@@ -180,7 +180,7 @@ class CommandLineInterface(object):
 
     def init(self):
         '''
-        Instantiate an instance of the API class corresponding to the program
+        Initialize an instance of the API class corresponding to the program
         and process arguments of the "init" subparser.
 
         Returns
@@ -226,7 +226,7 @@ class CommandLineInterface(object):
 
     def run(self):
         '''
-        Instantiate an instance of the API class corresponding to the program
+        Initialize an instance of the API class corresponding to the program
         and process arguments of the "run" subparser.
         '''
         self.print_logo()
@@ -293,7 +293,7 @@ class CommandLineInterface(object):
 
     def submit(self):
         '''
-        Instantiate an instance of the API class corresponding to the program
+        Initialize an instance of the API class corresponding to the program
         and process arguments of the "submit" subparser.
         '''
         self.print_logo()
@@ -304,7 +304,7 @@ class CommandLineInterface(object):
 
     def kill(self):
         '''
-        Instantiate an instance of the API class corresponding to the program
+        Initialize an instance of the API class corresponding to the program
         and process arguments of the "kill" subparser.
         '''
         self.print_logo()
@@ -320,7 +320,7 @@ class CommandLineInterface(object):
 
     def apply(self):
         '''
-        Instantiate an instance of the API class corresponding to the program
+        Initialize an instance of the API class corresponding to the program
         and process arguments of the "apply" subparser.
         '''
         self.print_logo()
@@ -337,7 +337,7 @@ class CommandLineInterface(object):
 
     def collect(self):
         '''
-        Instantiate an instance of the API class corresponding to the program
+        Initialize an instance of the API class corresponding to the program
         and process arguments of the "collect" subparser.
         '''
         self.print_logo()
@@ -392,7 +392,7 @@ class CommandLineInterface(object):
             init_parser = subparsers.add_parser(
                 'init', help='instantiate the program with required arguments')
             init_parser.description = '''
-                Instantiate a step: Create a list of persistent job
+                Initialize a step: Create a list of persistent job
                 descriptions (batches) for parallel processing, which are
                 stored as ".job" JSON files. Note that in
                 case of the existence of a previous submission, the job
@@ -401,8 +401,8 @@ class CommandLineInterface(object):
             '''
             init_parser.add_argument(
                 '--show', action='store_true', dest='print_job_descriptions',
-                help='print joblist to standard output '
-                     'without writing it to file')
+                help='print job descriptions to standard output '
+                     'without writing them to file')
             init_parser.add_argument(
                 '--backup', action='store_true',
                 help='create a backup of the output of a previous submission')
@@ -430,7 +430,7 @@ class CommandLineInterface(object):
             '''
             submit_parser.add_argument(
                 '--interval', type=int, default=5,
-                help='monitoring interval in seconds'
+                help='job monitoring interval in seconds'
             )
             submit_parser.add_argument(
                 '--virtualenv', type=str, default='tmaps',

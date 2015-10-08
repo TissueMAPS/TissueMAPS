@@ -47,7 +47,7 @@ class JtProject(object):
     '''
     def __init__(self, project_dir, pipe_name, pipe=None, handles=None):
         '''
-        Instantiate an instance of class Jtproject.
+        Initialize an instance of class Jtproject.
 
         Parameters
         ----------
@@ -401,7 +401,7 @@ class JtAvailableModules(object):
 
     def __init__(self, repo_dir):
         '''
-        Instantiate an instance of class JtAvailableModules.
+        Initialize an instance of class JtAvailableModules.
 
         Parameters
         ----------

@@ -5,7 +5,7 @@ import bioformats
 from cached_property import cached_property
 from .default import MetadataHandler
 from ..readers import MetadataReader
-from ..plates import WellPlate
+from ..experiment import WellPlate
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ class MetamorphMetadataReader(MetadataReader):
         wells = zip(rows, columns, sites)
         for w in set(wells):
             # Create a "Well" instance for each imaged well in the plate
-            row_index = WellPlate.name_to_index(w[0])
+            row_index = WellPlate.map_letter_to_number(w[0])
             col_index = w[1]
             well = metadata.WellsDucktype(plate).new(row=row_index,
                                                      column=col_index)
@@ -216,12 +216,12 @@ class MetamorphMetadataHandler(MetadataHandler):
 
     SUPPORTED_FILE_EXTENSIONS = {'.nd'}
 
-    REGEXP_PATTERN = ''
+    REGEXP = ''
 
     def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
         '''
-        Instantiate an instance of class MetadataHandler.
+        Initialize an instance of class MetadataHandler.
 
         Parameters
         ----------

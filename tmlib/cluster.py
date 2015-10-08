@@ -24,7 +24,7 @@ class BasicClusterRoutines(object):
 
     def __init__(self, experiment):
         '''
-        Instantiate an instance of class ClusterRoutines.
+        Initialize an instance of class ClusterRoutines.
 
         Parameters
         ----------
@@ -179,10 +179,9 @@ class BasicClusterRoutines(object):
                     logger.info('step "%s": %s '
                                 % (task.jobname, task.execution.state))
 
-                # for task in jobs.iter_tasks():
                 for j, task in enumerate(jobs_level_2):
-                    logger.debug('job "%s": %s '
-                                 % (task.jobname, task.execution.state))
+                    # logger.debug('job "%s": %s '
+                    #              % (task.jobname, task.execution.state))
                     status['jobs'][j].update({
                         'name': task.jobname,
                         'state': task.execution.state
@@ -229,7 +228,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     def __init__(self, experiment, prog_name, verbosity):
         '''
-        Instantiate an instance of class ClusterRoutines.
+        Initialize an instance of class ClusterRoutines.
 
         Parameters
         ----------

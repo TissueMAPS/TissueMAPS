@@ -203,8 +203,8 @@ class ChannelImage(Image):
             when metadata of illumination statistic images and channel image
             do not match
         '''
-        if (stats.mean.metadata.channel != self.metadata.channel
-                or stats.std.metadata.channel != self.metadata.channel):
+        if (stats.mean.metadata.channel_name != self.metadata.channel
+                or stats.std.metadata.channel_name != self.metadata.channel_name):
             raise ValueError('Channel names must match.')
         if (stats.mean.pixels.type != self.pixels.type
                 or stats.std.pixels.type != self.pixels.type):
@@ -588,7 +588,7 @@ class IllumstatsImage(object):
 
     def __init__(self, pixels, metadata):
         '''
-        Instantiate an instance of class IllumstatsImage.
+        Initialize an instance of class IllumstatsImage.
 
         Parameters
         ----------

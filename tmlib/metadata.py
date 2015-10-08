@@ -12,112 +12,24 @@ class ImageMetadata(object):
 
     __metaclass__ = ABCMeta
 
-    INITIALLY_REQUIRED = {
-        'original_filename', 'original_dtype', 'original_dimensions',
-        'original_planes', 'name', 'cycle', 'position', 'well'
+    BASIC = {
+        'id', 'name', 'well_id', 'plane_id', 'time_id',
+        'orig_dtype', 'orig_dimensions'
     }
 
-    PERSISTENT = {
-        'original_filename', 'original_dtype', 'original_dimensions',
-        'original_series', 'original_planes', 'is_aligned',
-        'name', 'cycle', 'well', 'site', 'row', 'column', 'stack', 'time',
-        'x_shift', 'y_shift', 'lower_overhang', 'upper_overhang',
-        'left_overhang', 'right_overhang', 'omit', 'max_tolerated_shift',
+    POSITIONAL = {
+        'site_id', 'row_index', 'col_index'
     }
 
-    def __init__(self, metadata=None):
-        '''
-        Instantiate an instance of class ImageMetadata.
+    PERSISTENT = BASIC.union(POSITIONAL)
 
-        Parameters
-        ----------
-        metadata: dict
-            metadata for an individual image
+    def __init__(self):
         '''
-        self.y_shift = 0
-        self.x_shift = 0
-        self.lower_overhang = 0
-        self.upper_overhang = 0
-        self.right_overhang = 0
-        self.left_overhang = 0
-        self.max_tolerated_shift = None
+        Initialize an instance of class ImageMetadata.
+        '''
         self.is_aligned = False
         self.is_corrected = False
-        self.omit = False
-        self.metadata = metadata
-        if self.metadata:
-            self.set(self.metadata)
-
-    @property
-    def original_filename(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the original file that contains the image
-        '''
-        return self._original_filename
-
-    @original_filename.setter
-    def original_filename(self, value):
-        self._original_filename = value
-
-    @property
-    def original_series(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based index of the image element in the original file
-        '''
-        return self._original_series
-
-    @original_series.setter
-    def original_series(self, value):
-        self._original_series = value
-
-    @property
-    def original_planes(self):
-        '''
-        Returns
-        -------
-        List[int]
-            zero-based index of the plane elements within the image element
-            in the original file
-        '''
-        return self._original_planes
-
-    @original_planes.setter
-    def original_planes(self, value):
-        self._original_planes = value
-
-    @property
-    def original_dtype(self):
-        '''
-        Returns
-        -------
-        int
-            data type of the original image
-        '''
-        return self._original_dtype
-
-    @original_dtype.setter
-    def original_dtype(self, value):
-        self._original_dtype = value
-
-    @property
-    def original_dimensions(self):
-        '''
-        Returns
-        -------
-        int
-            y, x dimensions of the original image
-        '''
-        return self._original_dimensions
-
-    @original_dimensions.setter
-    def original_dimensions(self, value):
-        self._original_dimensions = value
+        self.is_omitted = False
 
     # TODO: Unfortunately, "PhysicalSize" attributes are not implemented
     # in python-bioformats
@@ -137,6 +49,22 @@ class ImageMetadata(object):
     #     self._physical_dimensions = value
 
     @property
+    def id(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based unique image identifier number
+        '''
+        return self._id
+    
+    @id.setter
+    def id(self, value):
+        if not(isinstance(value, int)):
+            raise TypeError('Attribute "id" must have type int')
+        self._id = value
+
+    @property
     def name(self):
         '''
         Returns
@@ -148,96 +76,80 @@ class ImageMetadata(object):
 
     @name.setter
     def name(self, value):
+        if not(isinstance(value, basestring)) and value is not None:
+            raise TypeError('Attribute "name" must have type basestring')
         self._name = value
 
     @property
-    def cycle(self):
-        '''
-        Returns
-        -------
-        str
-            name of the corresponding cycle
-        '''
-        return self._cycle
-
-    @cycle.setter
-    def cycle(self, value):
-        self._cycle = value
-
-    @property
-    def cycle_id(self):
-        '''
-        Returns
-        -------
-        str
-            identifier number of the corresponding cycle
-        '''
-        return self._cycle_id
-
-    @cycle_id.setter
-    def cycle_id(self, value):
-        self._cycle_id = value
-
-    @property
-    def site(self):
+    def site_id(self):
         '''
         Returns
         -------
         int
-            one-based unique position identifier, sorted row-wise over all
-            image acquisition sites
+            zero-based globally unique position identifier number, sorted
+            row-wise over all image acquisition sites
 
         Note
         ----
-        Sites are not necessarily sorted according to acquisition time.
+        Order of sites is not necessarily according to acquisition time.
         '''
-        return self._site
+        return self._site_id
 
-    @site.setter
-    def site(self, value):
-        self._site = value
+    @site_id.setter
+    def site_id(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "site_int" must have type int')
+        self._site_id = value
 
     @property
-    def position(self):
+    def stage_position(self):
         '''
         Returns
         -------
         Tuple[float]
             absolute y, x microscope stage positions
         '''
-        return self._position
+        return self._stage_position
 
-    @position.setter
-    def position(self, value):
-        self._position = value
+    @stage_position.setter
+    def stage_position(self, value):
+        if isinstance(value, list) and len(value) == 2:
+            value = tuple(value)
+        if not(isinstance(value, tuple)) and value is not None:
+            raise TypeError('Attribute "stage_position" must have type tuple')
+        self._stage_position = value
 
     @property
-    def row(self):
+    def row_index(self):
         '''
         Returns
         -------
         int
-            one-based row index of the image in the acquisition grid
+            zero-based row index of the image in the acquisition grid
         '''
-        return self._row
+        return self._row_index
 
-    @row.setter
-    def row(self, value):
-        self._row = value
+    @row_index.setter
+    def row_index(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "row_index" must have type int')
+        self._row_index = value
 
     @property
-    def column(self):
+    def col_index(self):
         '''
         Returns
         -------
         int
-            one-based column index of the image in the acquisition grid
+            zero-based column index of the image in the acquisition grid
         '''
-        return self._column
+        return self._col_index
 
-    @column.setter
-    def column(self, value):
-        self._column = value
+    @col_index.setter
+    def col_index(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "col_index" must have type int')
+        self._col_index = value
 
     @property
     def grid_coordinates(self):
@@ -247,144 +159,60 @@ class ImageMetadata(object):
         Tuple[int]
             zero-based row, column indices of the image in the acquisition grid
         '''
-        self._coordinates = (self.row-1, self.column-1)
+        self._coordinates = (self.row_index, self.col_index)
         return self._coordinates
 
     @property
-    def well(self):
+    def well_id(self):
         '''
         Returns
         -------
         str
             well identifier string, e.g. "A01"
         '''
-        return self._well
+        return self._well_id
 
-    @well.setter
-    def well(self, value):
-        self._well = value
+    @well_id.setter
+    def well_id(self, value):
+        if not(isinstance(value, basestring)) and value is not None:
+            raise TypeError('Attribute "well_id" must have type str')
+        self._well_id = value
 
     @property
-    def stack(self):
+    def plane_id(self):
         '''
         Returns
         -------
         int
-            one-based z index of the image within a three dimensional stack
+            zero-based z index of the focal plane within a three dimensional
+            stack
         '''
-        return self._stack
+        return self._plane_id
 
-    @stack.setter
-    def stack(self, value):
-        self._stack = value
+    @plane_id.setter
+    def plane_id(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "plane_id" must have type int')
+        self._plane_id = value
 
     @property
-    def time(self):
+    def time_id(self):
         '''
         Returns
         -------
         int
-            one-based index of the image within a time series
+            one-based time point identifier number
         '''
-        return self._time
+        return self._time_id
 
-    @time.setter
-    def time(self, value):
-        self._time = value
+    @time_id.setter
+    def time_id(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "time_id" must have type int')
+        self._time_id = value
 
     @property
-    def x_shift(self):
-        '''
-        Returns
-        -------
-        int
-            shift of the image in pixels in x direction relative to its
-            reference (positive value -> to the left; negative value -> to the
-            right)
-        '''
-        return self._x_shift
-
-    @x_shift.setter
-    def x_shift(self, value):
-        self._x_shift = value
-
-    @property
-    def y_shift(self):
-        '''
-        Returns
-        -------
-        int
-            shift of the image in pixels in y direction relative to its
-            reference (positive value -> downwards; negative value -> upwards)
-        '''
-        return self._y_shift
-
-    @y_shift.setter
-    def y_shift(self, value):
-        self._y_shift = value
-
-    @property
-    def lower_overhang(self):
-        '''
-        Returns
-        -------
-        int
-            overhang in pixels at the top side (bottom) of the image relative
-            to its reference: pixels to crop at the top of the image
-        '''
-        return self._lower_overhang
-
-    @lower_overhang.setter
-    def lower_overhang(self, value):
-        self._lower_overhang = value
-
-    @property
-    def upper_overhang(self):
-        '''
-        Returns
-        -------
-        int
-            overhang in pixels at the bottom side (top) of the image relative
-            to its reference: pixels to crop at the bottom of the image
-        '''
-        return self._upper_overhang
-
-    @upper_overhang.setter
-    def upper_overhang(self, value):
-        self._upper_overhang = value
-
-    @property
-    def right_overhang(self):
-        '''
-        Returns
-        -------
-        int
-            overhang in pixels at the left side of the image relative
-            to its reference: pixels to crop at the right side of the image
-        '''
-        return self._right_overhang
-
-    @right_overhang.setter
-    def right_overhang(self, value):
-        self._right_overhang = value
-
-    @property
-    def left_overhang(self):
-        '''
-        Returns
-        -------
-        int
-            overhang in pixels at the right side of the image relative
-            to its reference: pixels to crop at the left side of the image
-        '''
-        return self._left_overhang
-
-    @left_overhang.setter
-    def left_overhang(self, value):
-        self._left_overhang = value
-
-    @property
-    def omit(self):
+    def is_omitted(self):
         '''
         Returns
         -------
@@ -394,25 +222,13 @@ class ImageMetadata(object):
              shift or the image contains artifacts that would cause problems
              for image analysis algorithms)
         '''
-        return self._omit
+        return self._is_omitted
 
-    @omit.setter
-    def omit(self, value):
-        self._omit = value
-
-    @property
-    def max_tolerated_shift(self):
-        '''
-        Returns
-        -------
-        int
-            maximally tolerated shift values in pixels
-        '''
-        return self._max_tolerated_shift
-
-    @max_tolerated_shift.setter
-    def max_tolerated_shift(self, value):
-        self._max_tolerated_shift = value
+    @is_omitted.setter
+    def is_omitted(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "omit" must have type bool')
+        self._is_omitted = value
 
     @property
     def is_aligned(self):
@@ -426,21 +242,43 @@ class ImageMetadata(object):
 
     @is_aligned.setter
     def is_aligned(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "is_aligned" must have type bool')
         self._is_aligned = value
 
     @property
-    def is_corrected(self):
+    def orig_dtype(self):
         '''
         Returns
         -------
-        bool
-            indicates whether the image has been illumination corrected
+        str
+            original image data type as stored by the microscope
         '''
-        return self._is_corrected
+        return self._orig_dtype
 
-    @is_corrected.setter
-    def is_corrected(self, value):
-        self._is_corrected = value
+    @orig_dtype.setter
+    def orig_dtype(self, value):
+        if not(isinstance(value, basestring)) and value is not None:
+            raise TypeError('Attribute "orig_dtype" must have type basestring')
+        self._orig_dtype = value
+
+    @property
+    def orig_dimensions(self):
+        '''
+        Returns
+        -------
+        str
+            original image dimensions as stored by the microscope
+        '''
+        return self._orig_dimensions
+
+    @orig_dimensions.setter
+    def orig_dimensions(self, value):
+        if isinstance(value, list) and len(value) == 2:
+            value = tuple(value)
+        if not(isinstance(value, tuple)) and value is not None:
+            raise TypeError('Attribute "orig_dimensions" must have type tuple')
+        self._orig_dimensions = value
 
     @abstractmethod
     def serialize(self):
@@ -464,37 +302,53 @@ class ChannelImageMetadata(ImageMetadata):
     '''
 
     PERSISTENT = ImageMetadata.PERSISTENT.union({
-                    'channel', 'is_corrected'
+        'channel_name', 'is_corrected', 'is_projected', 'channel_id'
     })
 
-    def __init__(self, metadata=None):
+    def __init__(self):
         '''
-        Instantiate an instance of class ChannelImageMetadata.
+        Initialize an instance of class ChannelImageMetadata.
 
         Parameters
         ----------
         metadata: Dict[str, int or str]
             image metadata read from the *.metadata* JSON file
         '''
-        super(ChannelImageMetadata, self).__init__(metadata)
+        super(ChannelImageMetadata, self).__init__()
         self.is_corrected = False
-        self.metadata = metadata
-        if self.metadata:
-            self.set(self.metadata)
+        self.is_projected = False
 
     @property
-    def channel(self):
+    def channel_name(self):
         '''
         Returns
         -------
         str
             name given to the channel
         '''
-        return self._channel
+        return self._channel_name
 
-    @channel.setter
-    def channel(self, value):
-        self._channel = value
+    @channel_name.setter
+    def channel_name(self, value):
+        if not(isinstance(value, basestring)) and value is not None:
+            raise TypeError('Attribute "channel_name" must have type basestring')
+        self._channel_name = value
+
+    @property
+    def channel_id(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based channel identifier number
+        '''
+        return self._channel_id
+
+    @channel_id.setter
+    def channel_id(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "channel_id" must have type int')
+        self._channel_id = value
 
     @property
     def is_corrected(self):
@@ -508,7 +362,27 @@ class ChannelImageMetadata(ImageMetadata):
 
     @is_corrected.setter
     def is_corrected(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "is_corrected" must have type bool')
         self._is_corrected = value
+
+    @property
+    def is_projected(self):
+        '''
+        Returns
+        -------
+        bool
+            in case the image is a 2D projection of a z-stack, i.e.
+            a collection of multiple focal planes with the same `channel_id`
+            and `time_id`
+        '''
+        return self._is_projected
+
+    @is_projected.setter
+    def is_projected(self, value):
+        if not(isinstance(value, bool)):
+            raise TypeError('Attribute "is_projected" must have type bool')
+        self._is_projected = value
 
     def serialize(self):
         '''
@@ -525,12 +399,18 @@ class ChannelImageMetadata(ImageMetadata):
             when instance doesn't have a required attribute
         '''
         serialized_metadata = dict()
-        for a in dir(self):
+        attribs = [
+            a for a in dir(self)
+            if not a.startswith('_') and not a.isupper()
+            and a not in {'set', 'serialize'}
+        ]
+        for a in attribs:
             if a in ChannelImageMetadata.PERSISTENT:
                 serialized_metadata[a] = getattr(self, a)
         return serialized_metadata
 
-    def set(self, metadata):
+    @staticmethod
+    def set(metadata):
         '''
         Set attributes based on key-value pairs in dictionary.
 
@@ -539,108 +419,104 @@ class ChannelImageMetadata(ImageMetadata):
         metadata: dict
             metadata as key-value pairs
 
+        Returns
+        -------
+        ChannelImageMetadata
+            metadata object with attributes set with values of dictionary
+
         Raises
         ------
         AttributeError
             when keys are provided that don't have a corresponding attribute
         '''
-        # missing_keys = [a for a in ChannelImageMetadata.PERSISTENT
-        #                 if a not in metadata.keys()]
-        # if len(missing_keys) > 0:
-        #     raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
+        inst = ChannelImageMetadata()
+        missing_keys = [
+            a for a in ChannelImageMetadata.PERSISTENT
+            if a not in metadata.keys()
+        ]
+        if len(missing_keys) > 0:
+            raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
         for k, v in metadata.iteritems():
             if k not in ChannelImageMetadata.PERSISTENT:
                 raise AttributeError(
                         'Class "%s" has no attribute "%s"'
                         % (ChannelImageMetadata.__class__.__name__, k))
-            setattr(self, k, v)
+            setattr(inst, k, v)
+        return inst
 
 
-class SegmentationImageMetadata(ImageMetadata):
+class FileFormatMapper(object):
 
     '''
-    Class for metadata specific to segmentation images.
+    Container for metadata corresponding to the original image files.
     '''
 
-    PERSISTENT = ImageMetadata.PERSISTENT.union({'objects'})
-
-    def __init__(self, metadata=None):
-        '''
-        Instantiate an instance of class SegmentationImageMetadata.
-
-        Parameters
-        ----------
-        metadata: Dict[str, int or str]
-            image metadata read from the *.metadata* JSON file
-        '''
-        super(SegmentationImageMetadata, self).__init__(metadata)
-        self.metadata = metadata
-        if self.metadata:
-            self.set(self.metadata)
+    def __init__(self):
+        self._series_count = 0
 
     @property
-    def objects(self):
+    def name(self):
         '''
         Returns
         -------
         str
-            name given to the objects in the image
-
+            name of the image given by the microscope
         '''
-        return self._objects
+        return self._name
 
-    @objects.setter
-    def objects(self, value):
-        self._objects = value
+    @name.setter
+    def name(self, value):
+        if not(isinstance(value, basestring)):
+            raise TypeError('Attribute "name" must have type basestring')
+        self._name = value
 
-    def serialize(self):
+    @property
+    def filename(self):
         '''
-        Serialize required metadata attributes to key-value pairs.
-
         Returns
         -------
-        Dict[str, str or int or tuple]
-            metadata as key-value pairs
-
-        Raises
-        ------
-        AttributeError
-            when instance doesn't have a required attribute
+        str
+            absolute path to the image file
         '''
-        serialized_metadata = dict()
-        for a in dir(self):
-            if a in SegmentationImageMetadata.PERSISTENT:
-                if not hasattr(self, a):
-                    raise AttributeError('Object "%s" has no attribute "%s"'
-                                         % (self.__name__, a))
-                serialized_metadata[a] = getattr(self, a)
-        return serialized_metadata
+        return self._filename
 
-    def set(self, metadata):
+    @filename.setter
+    def filename(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "filename" must have type basestring')
+        self._filename = value
+
+    @property
+    def series(self):
         '''
-        Set attributes based on values in dictionary.
-
-        Parameters
-        ----------
-        metadata: Dict[str, str or int or tuple]
-            metadata as key-value pairs
-
-        Raises
-        ------
-        KeyError
-            when keys for required attributes are not provided
-        AttributeError
-            when keys are provided that don't have a corresponding attribute
+        Returns
+        -------
+        int
+            zero-based position index in the file
         '''
-        missing_keys = [a for a in SegmentationImageMetadata.PERSISTENT
-                        if a not in metadata.keys()]
-        if len(missing_keys) > 0:
-            raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
-        for k, v in metadata:
-            if k not in SegmentationImageMetadata.PERSISTENT:
-                raise AttributeError('Object "%s" has no attribute "%s"'
-                                     % (self.__name__, k))
-            setattr(self, k, v)
+        return self._series
+
+    @series.setter
+    def series(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "series" must have type int')
+        self._series = value
+
+    @property
+    def planes(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based position index in the file
+        '''
+        return self._planes
+
+    @planes.setter
+    def planes(self, value):
+        if not isinstance(value, list):
+            raise TypeError('Attribute "planes" must have type list')
+        self._planes = value
 
 
 class IllumstatsImageMetadata(object):
@@ -649,11 +525,11 @@ class IllumstatsImageMetadata(object):
     Class for metadata specific to illumination statistics images.
     '''
 
-    PERSISTENT = {'channel', 'cycle'}
+    # PERSISTENT = {'channel', 'cycle'}
 
     def __init__(self):
         '''
-        Instantiate an instance of class IllumstatsMetadata.
+        Initialize an instance of class IllumstatsMetadata.
         '''
 
     @property
@@ -721,46 +597,60 @@ class MosaicMetadata(object):
         self._name = value
 
     @property
-    def cycle(self):
+    def cycle_name(self):
         '''
         Returns
         -------
         str
             name of the corresponding cycle
         '''
-        return self._cycle
+        return self._cycle_name
 
-    @cycle.setter
-    def cycle(self, value):
-        self._cycle = value
+    @cycle_name.setter
+    def cycle_name(self, value):
+        self._cycle_name = value
 
     @property
-    def sites(self):
+    def channel_name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the corresponding channel
+        '''
+        return self._channel_name
+
+    @channel_name.setter
+    def channel_name(self, value):
+        self._channel_name = value
+
+    @property
+    def site_ids(self):
         '''
         Returns
         -------
         List[int]
             site identifier numbers of images contained in the mosaic
         '''
-        return self._sites
+        return self._site_ids
 
-    @sites.setter
-    def sites(self, value):
-        self._sites = value
+    @site_ids.setter
+    def site_ids(self, value):
+        self._site_ids = value
 
     @property
-    def files(self):
+    def filenames(self):
         '''
         Returns
         -------
         List[str]
             names of the individual image files, which make up the mosaic
         '''
-        return self._files
+        return self._filenames
 
-    @files.setter
-    def files(self, value):
-        self._files = value
+    @filenames.setter
+    def filenames(self, value):
+        self._filenames = value
 
     @staticmethod
     def create_from_images(images, layer_name):
@@ -781,20 +671,24 @@ class MosaicMetadata(object):
         MetadataError
             when `images` are not of same *cycle* or *channel*
         '''
-        cycles = list(set([im.metadata.cycle for im in images]))
+        cycles = list(set([im.metadata.cycle_name for im in images]))
         if len(cycles) > 1:
             raise MetadataError('All images must be of the same cycle')
-        channels = list(set([im.metadata.channel for im in images]))
+        channels = list(set([im.metadata.channel_name for im in images]))
         if len(channels) > 1:
             raise MetadataError('All images must be of the same channel')
+        planes = list(set([im.metadata.plane_id for im in images]))
+        if len(planes) > 1:
+            raise MetadataError('All images must be of the same focal plane')
         metadata = MosaicMetadata()
         metadata.name = layer_name
-        metadata.channel = channels[0]
-        # sort files according to sites
-        sites = [im.metadata.site for im in images]
+        metadata.cycle_name = cycles[0]
+        metadata.channel_name = channels[0]
+        metadata.plane_id = planes[0]
+        # sort filenames according to sites
+        sites = [im.metadata.site_id for im in images]
         sort_order = [sites.index(s) for s in sorted(sites)]
-        metadata.sites = sorted(sites)
-        metadata.cycle = cycles[0]
+        metadata.site_ids = sorted(sites)
         files = [im.metadata.name for im in images]
-        metadata.files = [files[ix] for ix in sort_order]
+        metadata.filenames = [files[ix] for ix in sort_order]
         return metadata

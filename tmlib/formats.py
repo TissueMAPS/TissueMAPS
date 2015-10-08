@@ -14,21 +14,14 @@ class Formats(object):
     Class for providing information on file formats supported by Bio-Formats.
     '''
 
-    SUPPORT_FOR_ADDITIONAL_FILES = {'metamorph', 'cellvoyager'}
+    SUPPORT_FOR_ADDITIONAL_FILES = {'metamorph', 'cellvoyager', 'visiview'}
 
     @property
-    def filename(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the file, where information about supported
-            formats is stored
-        '''
+    def _filename(self):
         location = os.path.dirname(os.path.abspath(__file__))
-        self.__json_filename = os.path.join(location, 'formats',
-                                            'supported-formats.json')
-        return self.__json_filename
+        self.__filename = os.path.join(location, 'formats',
+                                       'supported-formats.json')
+        return self.__filename
 
     @property
     def supported_formats(self):
@@ -39,7 +32,9 @@ class Formats(object):
             names and file extensions of supported formats as key-value pairs
         '''
         with SupportedFormatsReader() as reader:
-            self._supported_formats = reader.read(self.filename)
+            self._supported_formats = reader.read(self._filename)
+        self._supported_formats.update({u'Visiview': [u'.tiff']})
+        self._supported_formats.update({u'Visiview (STK)': [u'.stk', u'.nd']})
         return self._supported_formats
 
     @property

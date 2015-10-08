@@ -19,7 +19,7 @@ class PipelineChecker(object):
     def __init__(self, project_dir, pipe_description,
                  handles_descriptions=None):
         '''
-        Instantiate an instance of class JtChecker.
+        Initialize an instance of class JtChecker.
 
         project_dir: str
             path to Jterator project folder

@@ -13,6 +13,65 @@ import utils
 from tmlib.image import Image
 from tmlib.experiment import Experiment
 
+# def _update_hashmap_for_projection(self, hashmap, metadata):
+    #     # By default each plane in the original file would be extracted as an
+    #     # individual image and stored in a separate file. In case the
+    #     # dimensionality should be reduced in the z dimensions by applying
+    #     # an intensity projection, the number of images and consequently the
+    #     # number of files will change. Here we account for this, by grouping
+    #     # all planes within a file that belong to a projection of a stack
+    #     # together and update the mapping of filenames accordingly.
+    #     lut = {
+    #         name: k for k, v in hashmap.iteritems() for name in v['name']
+    #     }
+
+    #     hmap = dict()
+    #     for s in set(metadata['site_id']):
+    #         for t in set(metadata['time_id']):
+    #             for c in set(metadata['channel_id']):
+    #                 # All planes in a z-stack must have the same channel,
+    #                 # time point and site
+    #                 index = (
+    #                     (metadata['time_id'] == t) &
+    #                     (metadata['site_id'] == s) &
+    #                     (metadata['channel_id'] == c)
+    #                 )
+    #                 md = metadata[index]
+    #                 # Collect the names of the files that belong to the stack
+    #                 old_names = md['name'].tolist()
+    #                 cycle_name = md['cycle_name'].tolist()[0]
+    #                 # Build a new name for the file that will contain the
+    #                 # projected image (set the focal plane id to zero)
+    #                 mip_name = self.experiment.cfg.IMAGE_FILE.format(
+    #                         cycle_name=cycle_name,
+    #                         site_id=s, channel_id=c,
+    #                         plane_id=0, time_id=t)
+    #                 # TODO: update the metadata
+    #                 # Update the names of the output files in the corresponding
+    #                 # hashmap entry
+    #                 k = lut[old_names[0]]
+    #                 names = hashmap[k]['name']
+    #                 series = hashmap[k]['series']
+    #                 planes = hashmap[k]['plane']
+    #                 index = [names.index(o) for o in old_names]
+    #                 for i in index:
+    #                     names[i] = mip_name
+    #                 # Change the filename to plane mapping from
+    #                 # 1 -> 1 to 1 -> n, where n is the number of planes in the
+    #                 # z-stack
+    #                 unique_names = list(set(names))
+    #                 unique_index = [
+    #                     utils.indices(names, n) for n in unique_names
+    #                 ]
+    #                 hmap[k] = defaultdict(list)
+    #                 for i, index in enumerate(unique_index):
+    #                     hmap[k]['name'].append(unique_names[i])
+    #                     hmap[k]['plane'].append([planes[ix] for ix in index])
+    #                     hmap[k]['series'].append([series[ix] for ix in index])
+
+    #     return hmap
+
+
 
 header_mapper = dafu.config['CHANNEL_MAPPER']
 

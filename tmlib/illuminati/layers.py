@@ -20,7 +20,7 @@ class ChannelLayer(object):
 
     def __init__(self, mosaic, metadata):
         '''
-        Instantiate an instance of class Layer.
+        Initialize an instance of class Layer.
 
         Parameters
         ----------
@@ -34,16 +34,21 @@ class ChannelLayer(object):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @staticmethod
-    def create_from_files(cycle, channel, dx=0, dy=0, stats=None, shift=False):
+    def create_from_files(experiment, cycle, channel, plane,
+                          dx=0, dy=0, stats=None, shift=False):
         '''
         Load individual images and stitch them together.
 
         Parameters
         ----------
-        cycle: Slide or WellPlate
-            cycle object
+        experiment: Slide or WellPlate
+            configured experiment object
+        cycle: str
+            name of the cycle for which a layer should be created
         channel: str
             name of the channel for which a layer should be created
+        plane: int
+            id of the focal plane for which a layer should be created
         dx: int, optional
             displacement in x direction in pixels; useful when images are
             acquired with an overlap in x direction (negative integer value)
@@ -71,21 +76,27 @@ class ChannelLayer(object):
         Raises
         ------
         MetadataError
-            when images are not all of the same cycle, channel, or well
+            when images are not all of the same cycle, channel, plane, or well
         '''
-        if isinstance(cycle, Slide):
+        if isinstance(experiment, Slide):
             layer = ChannelLayer._create_from_slide(
-                        cycle, channel, dx, dy, stats, shift)
-        elif isinstance(cycle, WellPlate):
+                        experiment, cycle, channel, plane,
+                        dx, dy, stats, shift)
+        elif isinstance(experiment, WellPlate):
             layer = ChannelLayer._create_from_wellplate(
-                        cycle, channel, dx, dy, stats, shift)
+                        experiment, cycle, channel, plane,
+                        dx, dy, stats, shift)
         return layer
 
     @staticmethod
-    def _create_from_slide(slide, channel, dx, dy, stats, shift):
-        images = [im for im in slide.images
-                  if im.metadata.channel == channel]
-        layer_name = slide.layer_names[channel]
+    def _create_from_slide(slide, cycle, channel, plane, dx, dy, stats, shift):
+        images = [
+            im for c in slide.cycles for im in c.images
+            if c.name == cycle
+            and im.metadata.channel_name == channel
+            and im.metadata.plane_id == plane
+        ]
+        layer_name = slide.layer_names[channel, plane]
         mosaic = Mosaic.create_from_images(images, dx, dy, stats, shift)
         metadata = MosaicMetadata.create_from_images(images, layer_name)
         layer = ChannelLayer(mosaic, metadata)
@@ -94,7 +105,7 @@ class ChannelLayer(object):
 
     @staticmethod
     def _build_plate_grid(wellplate):
-        plate_cooridinates = wellplate.plate_coordinates
+        plate_cooridinates = wellplate.well_coordinates
         height, width = wellplate.dimensions  # one-based
         plate_grid = np.empty((height, width), dtype=object)
         for i, c in enumerate(plate_cooridinates):
@@ -102,12 +113,13 @@ class ChannelLayer(object):
         return plate_grid
 
     @staticmethod
-    def _create_from_wellplate(wellplate, channel, dx, dy, stats, shift):
+    def _create_from_wellplate(wellplate, cycle, channel, plane,
+                               dx, dy, stats, shift):
         # Determine the dimensions of each well from one well (they should all
         # have the same dimensions) in order to create spacer images, which can
         # be used to fill gaps in the well plate (i.e. empty wells) and to
         # visually separate wells from each other
-        layer_name = wellplate.layer_names[channel]
+        layer_name = wellplate.layer_names[channel, plane]
 
         plate_grid = ChannelLayer._build_plate_grid(wellplate)
 
@@ -122,9 +134,13 @@ class ChannelLayer(object):
             for j in xrange(plate_grid.shape[1])
         ]
 
-        images = [img for img in wellplate.images
-                  if img.metadata.channel == channel
-                  and img.metadata.well == wellplate.wells[0]]
+        images = [
+            im for c in wellplate.cycles for im in c.images
+            if c.name == cycle
+            and im.metadata.channel_name == channel
+            and im.metadata.plane_id == plane
+            and im.metadata.well_id == wellplate.wells[0]
+        ]
         mosaic = Mosaic.create_from_images(images, dx, dy, stats, shift)
         gap_size = 750
         empty_well_spacer = image_utils.create_spacer_image(
@@ -138,6 +154,9 @@ class ChannelLayer(object):
                 mosaic.dimensions[1]*plate_grid.shape[1] +
                 column_spacer.width*(plate_grid.shape[1]-1),
                 dtype=mosaic.dtype, bands=1)
+
+        # TODO: looping over the columns may be more efficient because of the
+        # way Vips works
 
         rows = list()
         for i in xrange(plate_grid.shape[0]):
@@ -159,9 +178,13 @@ class ChannelLayer(object):
                 if not well:
                     current_row.append(empty_well_spacer)
                 else:
-                    images = [img for img in wellplate.images
-                              if img.metadata.channel == channel
-                              and img.metadata.well == well]
+                    images = [
+                        im for c in wellplate.cycles for im in c.images
+                        if c.name == cycle
+                        and im.metadata.channel_name == channel
+                        and im.metadata.plane_id == plane
+                        and im.metadata.well_id == well
+                    ]
                     mosaic = Mosaic.create_from_images(
                                     images, dx, dy, stats, shift)
                     metadata = MosaicMetadata.create_from_images(
@@ -262,7 +285,7 @@ class BrightfieldLayer(object):
 
     def __init__(self, image_file):
         '''
-        Instantiate an instance of class BrightfieldLayer.
+        Initialize an instance of class BrightfieldLayer.
 
         Parameters
         ----------

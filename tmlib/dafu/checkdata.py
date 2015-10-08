@@ -60,7 +60,7 @@ if __name__ == '__main__':
     cycles = Experiment(args.exp_dir, config).subexperiments
 
     images = [f.image for f in cycles[0].project.segmentation_files
-              if f.site == args.site_number and f.objects == 'Cells']
+              if f.site_id == args.site_number and f.objects == 'Cells']
     if len(images) == 1:
         im = images[0]
     elif len(images) > 1:

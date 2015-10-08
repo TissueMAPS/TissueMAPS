@@ -43,7 +43,7 @@ class Jterator(CommandLineInterface):
 
     def create(self):
         '''
-        Instantiate an instance of the API class corresponding to the specific
+        Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "create" subparser.
         '''
         self.print_logo()
@@ -53,7 +53,7 @@ class Jterator(CommandLineInterface):
 
     def remove(self):
         '''
-        Instantiate an instance of the API class corresponding to the specific
+        Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "remove" subparser.
         '''
         self.print_logo()
@@ -63,7 +63,7 @@ class Jterator(CommandLineInterface):
 
     def check(self):
         '''
-        Instantiate an instance of the API class corresponding to the specific
+        Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "check" subparser.
         '''
         self.print_logo()

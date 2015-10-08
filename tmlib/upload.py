@@ -3,6 +3,8 @@ import logging
 from cached_property import cached_property
 from natsort import natsorted
 from .formats import Formats
+from .readers import JsonReader
+from .metadata import ChannelImageMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +15,7 @@ class Upload(object):
     '''
     def __init__(self, upload_subdir, cfg, user_cfg):
         '''
-        Instantiate an instance of class Cycle.
+        Initialize an instance of class Cycle.
 
         Parameters
         ----------
@@ -179,3 +181,65 @@ class Upload(object):
             if not os.path.isdir(os.path.join(self.additional_dir, f))
         ]
         return self._additional_files
+
+    @property
+    def image_metadata_file(self):
+        '''
+        Returns
+        -------
+        str
+            name of the file that contains image related metadata
+        '''
+        self._image_metadata_file = self.cfg.IMAGE_UPLOAD_METADATA_FILE.format(
+                                            upload_subdir=self.dir,
+                                            sep=os.path.sep)
+        return self._image_metadata_file
+
+    @property
+    def image_metadata(self):
+        '''
+        Returns
+        -------
+        List[Dict[str, dict]]
+            metadata as key-value pairs for each image that should be extracted
+            form the original image files
+        '''
+        with JsonReader(self.dir) as reader:
+            metadata = reader.read(self.image_metadata_file)
+        self._image_metadata = [
+            ChannelImageMetadata.set(metadata[f])
+            for f in natsorted(metadata.keys())
+        ]
+        return self._image_metadata
+
+    @property
+    def image_hashmap_file(self):
+        '''
+        Returns
+        -------
+        str
+            name of the file that contains key-value pairs for mapping
+            the images stored in the original image files to the
+            the filenames of extracted images
+        '''
+        self._image_hashmap_file = self.cfg.IMAGE_UPLOAD_HASHMAP_FILE.format(
+                                            upload_subdir=self.dir,
+                                            sep=os.path.sep)
+        return self._image_hashmap_file
+
+    @cached_property
+    def image_hashmap(self):
+        '''
+        Returns
+        -------
+        Dict[str, Dict[str, List[str]]]
+            key-value pairs to map the location of planes within the original
+            image file to the output files, which will each contain a plane
+            after extraction;
+            the mapping is either 1 -> 1 in case individual focal planes are
+            kept, or n -> 1, where n is the number of focal planes per z-stack,
+            in case intensity projection is performed
+        '''
+        with JsonReader(self.dir) as reader:
+            self._image_hashmap = reader.read(self.image_hashmap_file)
+        return self._image_hashmap

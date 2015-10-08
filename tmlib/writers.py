@@ -61,9 +61,9 @@ class TextWriter(Writer):
 
 class JsonWriter(TextWriter):
 
-    def __init__(self, directory):
+    def __init__(self, directory=None):
         '''
-        Instantiate an object of class JsonWriter.
+        Initialize an object of class JsonWriter.
 
         Parameters
         ----------
@@ -112,7 +112,7 @@ class ImageMetadataWriter(JsonWriter):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class ImageMetadataWriter.
+        Initialize an object of class ImageMetadataWriter.
 
         Parameters
         ----------
@@ -129,7 +129,7 @@ class JobDescriptionWriter(JsonWriter):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class JobDescriptionWriter.
+        Initialize an object of class JobDescriptionWriter.
 
         Parameters
         ----------
@@ -146,7 +146,7 @@ class SupportedFormatsWriter(JsonWriter):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class SupportedFormatsWriter.
+        Initialize an object of class SupportedFormatsWriter.
 
         Parameters
         ----------
@@ -159,9 +159,9 @@ class SupportedFormatsWriter(JsonWriter):
 
 class YamlWriter(TextWriter):
 
-    def __init__(self, directory):
+    def __init__(self, directory=None):
         '''
-        Instantiate an object of class YamlWriter.
+        Initialize an object of class YamlWriter.
 
         Parameters
         ----------
@@ -208,13 +208,28 @@ class YamlWriter(TextWriter):
                         explicit_start=True))
 
 
+class ImageWriter(Writer):
+
+    def __init__(self, directory=None):
+        '''
+        Initialize an object of class ImageWriter.
+
+        Parameters
+        ----------
+        directory: str, optional
+            absolute path to a directory where files are located
+        '''
+        super(ImageWriter, self).__init__(directory)
+        self.directory = directory
+
+
 class PipeWriter(YamlWriter):
     '''
     Class for reading image related metadata.
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class PipeWriter.
+        Initialize an object of class PipeWriter.
 
         Parameters
         ----------
@@ -231,7 +246,7 @@ class HandlesWriter(YamlWriter):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class HandlesWriter.
+        Initialize an object of class HandlesWriter.
 
         Parameters
         ----------
@@ -250,7 +265,7 @@ class DatasetWriter(object):
 
     def __init__(self, filename, truncate=False):
         '''
-        Instantiate an instance of class DatasetWriter.
+        Initialize an instance of class DatasetWriter.
 
         Parameters
         ----------

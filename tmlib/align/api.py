@@ -14,7 +14,7 @@ class ImageRegistration(ClusterRoutines):
 
     def __init__(self, experiment, prog_name, verbosity):
         '''
-        Instantiate an instance of class ImageRegistration.
+        Initialize an instance of class ImageRegistration.
 
         Parameters
         ----------
@@ -77,18 +77,18 @@ class ImageRegistration(ClusterRoutines):
             job descriptions
         '''
         def get_refs(cycle):
-            if any([md.stack > 1 for md in cycle.image_metadata]):
+            if any([md.plane_id > 1 for md in cycle.image_metadata]):
                 raise NotSupportedError(
                         'Alignment is only supported for 2D datasets.')
             return [
                 f for i, f in enumerate(cycle.image_files)
-                if cycle.image_metadata[i].channel == kwargs['ref_channel']
+                if cycle.image_metadata[i].channel_name == kwargs['ref_channel']
             ]
         im_batches = [self._create_batches(get_refs(c), kwargs['batch_size'])
                       for c in self.cycles]
         # TODO: 3D
-        sites = [md.site for md in self.cycles[0].image_metadata
-                 if md.channel == kwargs['ref_channel']]
+        sites = [md.site_id for md in self.cycles[0].image_metadata
+                 if md.channel_name == kwargs['ref_channel']]
         site_batches = self._create_batches(sites, kwargs['batch_size'])
         registration_batches = list()
         for i in xrange(len(im_batches[0])):
@@ -195,7 +195,7 @@ class ImageRegistration(ClusterRoutines):
 
                     for md in metadata:
 
-                        if md.site != descriptions[i][j]['site']:
+                        if md.site_id != descriptions[i][j]['site']:
                             continue
 
                         md.lower_overhang = bottom
@@ -239,7 +239,7 @@ class ImageRegistration(ClusterRoutines):
             for channel in channels:
                 channel_index = [
                     i for i, md in enumerate(cycle.image_metadata)
-                    if md.channel == channel
+                    if md.channel_name == channel
                 ]
                 if not channel_index:
                     raise ValueError('Channel name is not valid: %s' % channel)
@@ -251,18 +251,18 @@ class ImageRegistration(ClusterRoutines):
                 ]
                 if kwargs['illumcorr']:
                     stats = [
-                        stats for stats in cycle.stats_images
-                        if stats.metadata.channel == channel
+                        stats for stats in cycle.illumstats_images
+                        if stats.metadata.channel_name == channel
                     ][0]
 
                 for i, image in enumerate(channel_images):
                     if sites:
-                        if image.metadata.site not in sites:
+                        if image.metadata.site_id not in sites:
                             continue
                     if wells:
-                        if not image.metadata.well:  # may not be a well plate
+                        if not image.metadata.well_id:  # may not be a well plate
                             continue
-                        if image.metadata.well not in wells:
+                        if image.metadata.well_id not in wells:
                             continue
                     suffix = os.path.splitext(image.metadata.name)[1]
                     if kwargs['illumcorr']:

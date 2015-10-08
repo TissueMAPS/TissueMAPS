@@ -249,7 +249,7 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
         height of each site
     offset: int
         value that is added to all ids in sitemat
-        (maximum id in the previously processed site)
+        (maximum id in the previously processed .site_id)
 
     Returns
     -------

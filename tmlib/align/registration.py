@@ -4,7 +4,7 @@ import logging
 import image_registration
 from ..readers import DatasetReader
 from ..writers import DatasetWriter
-from ..readers import OpencvImageReader
+from ..readers import NumpyImageReader
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def calculate_shift(target_filename, reference_filename):
     ----------
     .. [1] http://image-registration.readthedocs.org/en/latest/
     '''
-    with OpencvImageReader() as reader:
+    with NumpyImageReader() as reader:
         # Load image that should be registered
         target_image = reader.read(target_filename)
         # Load reference image

@@ -11,7 +11,7 @@ class PyramidCreation(ClusterRoutines):
 
     def __init__(self, experiment, prog_name, verbosity):
         '''
-        Instantiate an instance of class PyramidCreation.
+        Initialize an instance of class PyramidCreation.
 
         Parameters
         ----------
@@ -57,17 +57,28 @@ class PyramidCreation(ClusterRoutines):
         count = 0
         for i, cycle in enumerate(self.cycles):
             logger.debug('create job descriptions for cycle "%s"' % cycle.name)
-            channels = list(set([md.channel for md in cycle.image_metadata]))
+            channels = cycle.channels
+            planes = self.experiment.focal_planes
             img_batches = list()
+            channel_batches = list()
+            plane_batches = list()
             for c in channels:
-                logger.debug('create job descriptions for channel "%s"' % c)
-                image_files = [md.name for md in cycle.image_metadata
-                               if md.channel == c]
-                if len(image_files) == 0:
-                    logger.warn(
-                        'No image files found for cycle "%s" and channel "%s"'
-                        % (cycle, c))
-                img_batches.append(image_files)
+                for p in planes:
+                    logger.debug(
+                            'create job descriptions for channel "%s" '
+                            'and plane "%d"' % (c, p))
+                    image_files = [
+                        md.name for md in cycle.image_metadata
+                        if md.channel_name == c
+                        and md.plane_id == p
+                    ]
+                    if len(image_files) == 0:
+                        logger.warn(
+                            'No image files found for cycle "%s", '
+                            'channel "%s" and plane "%d"' % (cycle, c, p))
+                    img_batches.append(image_files)
+                    channel_batches.append(c)
+                    plane_batches.append(p)
 
             for j, batch in enumerate(img_batches):
                 count += 1
@@ -81,12 +92,14 @@ class PyramidCreation(ClusterRoutines):
                     'outputs': {
                         'pyramid_dir':
                             os.path.join(self.experiment.layers_dir,
-                                         '{cycle}_{channel}'.format(
-                                                cycle=cycle.name,
-                                                channel=channels[j]))
+                                         self.experiment.layer_names[(
+                                                cycle.name,
+                                                channel_batches[j],
+                                                plane_batches[j])])
                     },
-                    'channel': channels[j],
                     'cycle': cycle.name,
+                    'channel': channel_batches[j],
+                    'plane': plane_batches[j],
                     'shift': kwargs['shift'],
                     'illumcorr': kwargs['illumcorr'],
                     'thresh': kwargs['thresh'],
@@ -110,7 +123,7 @@ class PyramidCreation(ClusterRoutines):
             stats_file, stats_metadata = [
                 (os.path.join(cycle.stats_dir, md.filename), md)
                 for md in cycle.stats_metadata
-                if md.channel == batch['channel']
+                if md.channel_name == batch['channel']
             ][0]
             stats = IllumstatsImages.create_from_file(
                         stats_file, stats_metadata)
@@ -119,7 +132,8 @@ class PyramidCreation(ClusterRoutines):
 
         logger.debug('create channel layer')
         layer = ChannelLayer.create_from_files(
-                    cycle=cycle, channel=batch['channel'],
+                    experiment=self.experiment, cycle=batch['cycle'],
+                    channel=batch['channel'], plane=batch['plane'],
                     stats=stats, shift=batch['shift'])
 
         if batch['thresh']:

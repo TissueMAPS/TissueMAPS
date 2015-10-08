@@ -1,13 +1,11 @@
 import os
 import numpy as np
 import logging
-from copy import copy
 from .. import image_utils
 from .. import utils
 from ..readers import BioformatsImageReader
 from ..cluster import ClusterRoutines
 from ..writers import ImageMetadataWriter
-from ..errors import NotSupportedError
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +24,7 @@ class ImageExtractor(ClusterRoutines):
 
     def __init__(self, experiment, prog_name, verbosity):
         '''
-        Instantiate an instance of class ImageExtractor.
+        Initialize an instance of class ImageExtractor.
 
         Parameters
         ----------
@@ -41,25 +39,6 @@ class ImageExtractor(ClusterRoutines):
         self.experiment = experiment
         self.prog_name = prog_name
         self.verbosity = verbosity
-        self._update_experiment_layout()
-
-    def _update_experiment_layout(self):
-        time_points = set([md.time for md in self.cycles[0].image_metadata])
-        if len(self.cycles) > 1 and len(time_points) > 1:
-            raise NotSupportedError('Only one time point per cycle supported')
-        elif len(self.cycles) == 1 and len(time_points) > 1:
-            # Create a separate cycle for each time point
-            for t in sorted(list(time_points)):
-                metadata = [
-                    md.serialize()
-                    for md in self.cycles[0].image_metadata if md.time == t
-                ]
-                if t > 0:
-                    cycle = self.experiment.create_additional_cycle()
-                else:
-                    cycle = self.cycles[0]
-                with ImageMetadataWriter(cycle.metadata_dir) as writer:
-                    writer.write(cycle.image_metadata_file, metadata)
 
     def _create_output_dirs(self):
         for cycle in self.cycles:
@@ -81,79 +60,110 @@ class ImageExtractor(ClusterRoutines):
         -------
         Dict[str, List[dict] or dict]
             job descriptions
+
+        Note
+        ----
+        There is some black magic happening behind the scenes:
+        We want images from different cycles (time points) in separate
+        folders, because they may be pre-processing independently.
+        For example, illumination correction statistics are calculated
+        for each cycle separately and cycles may have to be aligned
+        relative to each other. In addition, the number of files that can
+        (should be) stored in a directory is limited and we may end up having
+        a lot of image files across the whole experiment.
+        Each cycle can be uploaded separately, which is adequate when
+        images were acquired and stored in separate files
+        along with their corresponding metadata. However, often images
+        of a time series acquisition are grouped together and in some
+        cases are even all stored in a single file.
+        If multiple time points are encountered in an upload folder, the
+        mapping of upload folder to cycle is no longer 1 ->1 but 1 -> n,
+        where n is the number of time points.
+        A separate cycle folder is then created for each time point and
+        the configured metadata for the corresponding images is dumped to
+        this folder. The extracted images will subsequently also be written
+        into the same cycle folder.
         '''
         joblist = dict()
         joblist['run'] = list()
-        count = 0
-        for cycle in self.cycles:
-            if kwargs['projection']:
-                logger.info('an intensity projection will be performed')
-                metadata = self._update_metadata_for_projection(cycle)
-            else:
-                logger.info('individual z-stacks will be kept')
-                metadata = cycle.image_metadata
-            md_batches = self._create_batches(metadata,
-                                              kwargs['batch_size'])
-            for batch in md_batches:
-                count += 1
-                joblist['run'].append({
-                    'id': count,
-                    'inputs': {
-                        'image_files': [
-                            md.original_filename for md in batch
-                        ]
-                    },
-                    'outputs': {
-                        'image_files': [
-                            os.path.join(cycle.image_dir, md.name)
-                            for md in batch
-                        ]
-                    },
-                    'dimensions': [md.original_dimensions for md in batch],
-                    'dtype': [md.original_dtype for md in batch],
-                    'series': [md.original_series for md in batch],
-                    'planes': [md.original_planes for md in batch],
-                    'metadata': [md.serialize() for md in batch],
-                    'cycle': cycle.name
+        job_count = 0
+        cycle_count = 0
+        for upload in self.experiment.uploads:
+            logger.debug('process images in upload directory "%s"'
+                         % upload.dir)
+            tpoints = [md.time_id for md in upload.image_metadata]
+            unique_tpoints = sorted(set(tpoints))
+            logger.debug('%d time points found' % len(unique_tpoints))
+            hashmap = upload.image_hashmap
+            lut = {
+                i: k for k, v in hashmap.iteritems() for i in v['id']
+            }
+            # Create a cycle for each time point
+            for t in unique_tpoints:
+                logger.debug('process images belonging to time point %d' % t)
+                try:
+                    cycle = self.experiment.cycles[cycle_count]
+                except IndexError:
+                    cycle = self.experiment.append_cycle()
+                index = utils.indices(tpoints, t)
+                cycle_metadata = dict()
+                logger.debug('update metadata attributes "time_id" and "name"')
+                for i, md in enumerate(upload.image_metadata):
+                    if i not in index:
+                        continue
+                    # Update time point identifiers
+                    md.time_id = cycle.id
+                    # Update the name of the image accordingly
+                    fn = md.serialize()
+                    fn.update({'experiment_name': self.experiment.name})
+                    md.name = self.experiment.cfg.IMAGE_FILE.format(**fn)
+                    ix = hashmap[lut[md.id]]['id'].index(md.id)
+                    hashmap[lut[md.id]]['name'][ix] = md.name
+                    cycle_metadata.update({md.name: md.serialize()})
+                # Place the updated cycle metadata into the cycle folder
+                with ImageMetadataWriter() as writer:
+                    filename = os.path.join(cycle.dir,
+                                            cycle.image_metadata_file)
+                    writer.write(filename, cycle_metadata)
 
-                })
+                # Take files that contain images belonging to the current cycle
+                files = [lut[md['id']] for md in cycle_metadata.values()]
+                img_batches = self._create_batches(files,
+                                                   kwargs['batch_size'])
+                md = self.experiment.cycles[0].image_metadata[0]
+                for batch in img_batches:
+                    job_count += 1
+                    joblist['run'].append({
+                        'id': job_count,
+                        'inputs': {
+                            'image_files': [
+                                os.path.join(upload.image_dir, b)
+                                for b in batch
+                            ]
+                        },
+                        'outputs': {
+                            'image_files': [
+                                os.path.join(cycle.image_dir, name)
+                                for b in batch
+                                for name in hashmap[b]['name']
+                            ]
+                        },
+                        'dimensions': md.orig_dimensions,
+                        'dtype': md.orig_dtype,
+                        'series': [
+                            s for b in batch for s in hashmap[b]['series']
+                        ],
+                        'planes': [
+                            p for b in batch for p in hashmap[b]['plane']
+                        ],
+                    })
+                cycle_count += 1
         return joblist
-
-    @staticmethod
-    def _update_metadata_for_projection(cycle):
-        stacks = set([md.stack for md in cycle.image_metadata])
-        if len(stacks) == 1:
-            return cycle.image_metadata
-        # Combine metadata for z-stacks
-        sites = set([md.site for md in cycle.image_metadata])
-        time_points = set([md.time for md in cycle.image_metadata])
-        channels = set([md.channel for md in cycle.image_metadata]) 
-        modified_metadata = list()
-        for s in sites:
-            for c in channels:
-                for t in time_points:
-                    matching_metadata = [
-                        md for md in cycle.image_metadata
-                        if md.site == s
-                        and md.channel == c and md.time == t
-                    ]
-                    mod_md = copy(matching_metadata[0])
-                    mod_md.original_planes = utils.flatten([
-                        md.original_planes for md in matching_metadata
-                    ])
-                    mod_md.stack = 1
-                    modified_metadata.append(mod_md)
-        # Update the corresponding file, too
-        with ImageMetadataWriter(cycle.metadata_dir) as writer:
-            writer.write(cycle.image_metadata_file,
-                         [md.serialize() for md in modified_metadata])
-        return modified_metadata
 
     def run_job(self, batch):
         '''
-        For each channel, extract all corresponding planes, perform maximum
-        intensity projection in case there are more than one plane per channel,
-        and write each resulting 2D channel plane to a separate PNG file.
+        Extract individual planes from an image file and write each of them
+        to a separate PNG file.
 
         Parameters
         ----------
@@ -161,23 +171,27 @@ class ImageExtractor(ClusterRoutines):
             joblist element, i.e. description of a single job
         '''
         with BioformatsImageReader() as reader:
-            for i, filename in enumerate(batch['outputs']['image_files']):
-                logger.info('extract image: %s' % os.path.basename(filename))
+            for i, filename in enumerate(batch['inputs']['image_files']):
+                logger.info('extract images from file: %s'
+                            % os.path.basename(filename))
                 focal_planes = batch['planes'][i]
                 stack = np.empty((len(focal_planes),
-                                  batch['dimensions'][i][0],
-                                  batch['dimensions'][i][1]),
-                                 dtype=batch['dtype'][i])
+                                  batch['dimensions'][0],
+                                  batch['dimensions'][1]),
+                                 dtype=batch['dtype'])
                 # If intensity projection should be performed there will
                 # be multiple planes per output filename and the stack will
                 # be multi-dimensional, i.e. stack.shape[0] > 1
                 for z in xrange(len(focal_planes)):
                     stack[z, :, :] = reader.read_subset(
-                                        batch['inputs']['image_files'][i],
+                                        filename,
                                         plane=z, series=batch['series'][i])
                 img = np.max(stack, axis=0)
                 # Write plane (2D single-channel image) to file
-                image_utils.save_image_png(img, filename)
+                output_filename = batch['outputs']['image_files'][i]
+                logger.info('extracted image: %s'
+                            % os.path.basename(output_filename))
+                image_utils.save_image_png(img, output_filename)
 
     def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'

@@ -86,7 +86,7 @@ class JsonReader(TextReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class JsonReader.
+        Initialize an object of class JsonReader.
 
         Parameters
         ----------
@@ -137,7 +137,7 @@ class ImageMetadataReader(JsonReader):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class ImageMetadataReader.
+        Initialize an object of class ImageMetadataReader.
 
         Parameters
         ----------
@@ -154,7 +154,7 @@ class JobDescriptionReader(JsonReader):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class JobDescriptionReader.
+        Initialize an object of class JobDescriptionReader.
 
         Parameters
         ----------
@@ -171,7 +171,7 @@ class ShiftDescriptionReader(JsonReader):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class ShiftDescriptionReader.
+        Initialize an object of class ShiftDescriptionReader.
 
         Parameters
         ----------
@@ -188,7 +188,7 @@ class SupportedFormatsReader(JsonReader):
     '''
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class SupportedFormatsReader.
+        Initialize an object of class SupportedFormatsReader.
 
         Parameters
         ----------
@@ -227,7 +227,7 @@ class YamlReader(TextReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class YamlReader.
+        Initialize an object of class YamlReader.
 
         Parameters
         ----------
@@ -281,7 +281,7 @@ class UserConfigurationReader(YamlReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class UserConfigurationReader.
+        Initialize an object of class UserConfigurationReader.
 
         Parameters
         ----------
@@ -296,7 +296,7 @@ class PipeReader(YamlReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class PipeReader.
+        Initialize an object of class PipeReader.
 
         Parameters
         ----------
@@ -311,7 +311,7 @@ class HandlesReader(YamlReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class HandlesReader.
+        Initialize an object of class HandlesReader.
 
         Parameters
         ----------
@@ -535,7 +535,7 @@ class ImageReader(Reader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class ImageReader.
+        Initialize an object of class ImageReader.
 
         Parameters
         ----------
@@ -600,7 +600,7 @@ class BioformatsImageReader(ImageReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class BioformatsImageReader.
+        Initialize an object of class BioformatsImageReader.
 
         Parameters
         ----------
@@ -699,16 +699,17 @@ class BioformatsImageReader(ImageReader):
                 sys.stdout.write(tb)
 
 
-class OpencvImageReader(ImageReader):
+class NumpyImageReader(ImageReader):
 
     '''
-    Class for reading images using the `OpenCV <http://docs.opencv.org>`_
-    library.
+    Class for reading images from files on disk as numpy arrays.
+
+    Uses the `OpenCV <http://docs.opencv.org>`_ library.
 
     Examples
     --------
     >>> filename = '/path/to/image/file'
-    >>> with OpencvReader() as reader:
+    >>> with NumpyImageReader() as reader:
     ...     img = reader.read(filename)
     >>> type(img)
     numpy.ndarray
@@ -716,14 +717,14 @@ class OpencvImageReader(ImageReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class OpencvImageReader.
+        Initialize an object of class NumpyImageReader.
 
         Parameters
         ----------
         directory: str, optional
             absolute path to a directory where files are located
         '''
-        super(OpencvImageReader, self).__init__(directory)
+        super(NumpyImageReader, self).__init__(directory)
         self.directory = directory
 
     def read(self, filename):
@@ -767,7 +768,9 @@ class OpencvImageReader(ImageReader):
 class VipsImageReader(ImageReader):
 
     '''
-    Class for reading images using the
+    Class for reading images from files on disk as Vips images.
+
+    Uses the
     `Vips <http://www.vips.ecs.soton.ac.uk/index.php?title=Libvips>`_ library.
 
     Examples
@@ -781,7 +784,7 @@ class VipsImageReader(ImageReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class VipsImageReader.
+        Initialize an object of class VipsImageReader.
 
         Parameters
         ----------
@@ -882,7 +885,7 @@ class WorkflowDescriptionReader(TextReader):
 
     def __init__(self, directory=None):
         '''
-        Instantiate an object of class WorkflowDescriptionReader.
+        Initialize an object of class WorkflowDescriptionReader.
 
         Parameters
         ----------

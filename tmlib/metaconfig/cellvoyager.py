@@ -152,18 +152,19 @@ class CellvoyagerMetadataReader(MetadataReader):
 class CellvoyagerMetadataHandler(MetadataHandler):
 
     '''
-    Class for reading additional metadata files specific to the Yokogawa
-    Cellvoyager 7000 microscope.
+    Class for metadata handling specific to the Yokogawa Cellvoyager 7000
+    microscope.
     '''
 
     SUPPORTED_FILE_EXTENSIONS = {'.mlf', '.mrf'}
 
-    REGEXP_PATTERN = ''
+    REGEX = ('(?P<cycle_name>[^_]+)_(?P<well_id>[A-Z]\d{2})_T(?P<time_id>\d+)'
+             'F(?P<site_id>\d+)L\d+A\d+Z(?P<plane_id>\d+)C(?P<channel_name>\d+)\.')
 
     def __init__(self, image_files, additional_files, ome_xml_files,
                  cycle_name):
         '''
-        Instantiate an instance of class MetadataHandler.
+        Initialize an instance of class MetadataHandler.
 
         Parameters
         ----------
@@ -201,20 +202,22 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             if os.path.splitext(f)[1] in self.SUPPORTED_FILE_EXTENSIONS
         ]
         if len(files) != len(self.SUPPORTED_FILE_EXTENSIONS):
-            raise OSError('%d metadata files are required: "%s"'
-                          % (len(self.SUPPORTED_FILE_EXTENSIONS),
-                             '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
-        mlf_file = [f for f in files if f.endswith('.mlf')][0]
-        mrf_file = [f for f in files if f.endswith('.mrf')][0]
-        logger.info('read metadata from provided files')
-        with CellvoyagerMetadataReader() as reader:
-            self._ome_additional_metadata = reader.read(mlf_file, mrf_file)
+            logging.warning('%d metadata files would be required: "%s"'
+                            % (len(self.SUPPORTED_FILE_EXTENSIONS),
+                               '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
+            self._ome_additional_metadata = bioformats.OMEXML()
+        else:
+            mlf_file = [f for f in files if f.endswith('.mlf')][0]
+            mrf_file = [f for f in files if f.endswith('.mrf')][0]
+            logger.info('read metadata from provided files')
+            with CellvoyagerMetadataReader() as reader:
+                self._ome_additional_metadata = reader.read(mlf_file, mrf_file)
         return self._ome_additional_metadata
 
     @staticmethod
     def _calculate_coordinates(positions):
         # y axis is inverted
         logger.debug('flip y axis for calculation of grid coordinates')
-        coordinates = stitch.calc_image_coordinates(
+        coordinates = stitch.calc_grid_coordinates_from_positions(
                         positions, reverse_rows=True)
         return coordinates

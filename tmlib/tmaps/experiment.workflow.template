@@ -1,5 +1,5 @@
 metaextract {experiment_dir} init
-metaconvert {experiment_dir} init -b {batch_size} -f {format} 
+metaconfig {experiment_dir} init -b {batch_size} -f {format} 
 imextract {experiment_dir} init
 align {experiment_dir} init --ref_channel {ref_channel} --ref_cycle {ref_cycle} -b {batch_size}
 corilla {experiment_dir} init

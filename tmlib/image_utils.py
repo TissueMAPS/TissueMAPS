@@ -2,7 +2,8 @@ import random as rand
 from gi.repository import Vips
 from scipy.misc import imread, bytescale
 import numpy as np
-import png
+import cv2
+# import png
 import logging
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ def save_image_png_vips(im, filename, bitdepth=16):
     im.cast('ushort').write_to_file(filename)
 
 
-def save_image_png_numpy(im, filename, bitdepth=16):
+def save_image_png_numpy(im, filename):
     '''
     Save the `numpy` array to file as PNG image.
 
@@ -53,15 +54,8 @@ def save_image_png_numpy(im, filename, bitdepth=16):
         image
     filename: str
         name of the output file
-    bitdepth: int, optional
-        bit depth of the PNG image (defaults to 16)
     '''
-    # img = Image.fromarray(image)
-    with open(filename, 'wb') as f:
-        height, width = im.shape
-        w = png.Writer(width=width, height=height,
-                       bitdepth=bitdepth, greyscale=True)
-        w.write(f, im.astype(np.uint16))
+    cv2.imwrite(filename, im)
 
 
 def save_image_png(im, filename):

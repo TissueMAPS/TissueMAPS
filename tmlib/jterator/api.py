@@ -28,7 +28,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def __init__(self, experiment, prog_name, verbosity, pipe_name,
                  pipe=None, handles=None):
         '''
-        Instantiate an instance of class ImageAnalysisPipeline.
+        Initialize an instance of class ImageAnalysisPipeline.
 
         Parameters
         ----------
@@ -298,8 +298,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
         for cycle in self.cycles:
             # image files for each layer
             image_files.update({
-                md.name: [os.path.join(cycle.image_dir, f) for f in md.files]
-                for md in cycle.layer_metadata if md.name in layer_names
+                md.name: [
+                    os.path.join(cycle.image_dir, f) for f in md.filenames
+                ]
+                for md in cycle.layer_metadata
+                if md.name in layer_names
             })
 
         batches = [

@@ -2,7 +2,7 @@ import os
 import re
 from .stats import OnlineStatistics
 from ..writers import DatasetWriter
-from ..readers import OpencvImageReader
+from ..readers import NumpyImageReader
 from ..cluster import ClusterRoutines
 
 
@@ -13,7 +13,7 @@ class IllumstatsGenerator(ClusterRoutines):
 
     def __init__(self, experiment, prog_name, verbosity):
         '''
-        Instantiate an instance of class IllumstatsGenerator.
+        Initialize an instance of class IllumstatsGenerator.
 
         Parameters
         ----------
@@ -60,11 +60,11 @@ class IllumstatsGenerator(ClusterRoutines):
         joblist['run'] = list()
         count = 0
         for i, cycle in enumerate(self.cycles):
-            channels = list(set([md.channel for md in cycle.image_metadata]))
+            channels = list(set([md.channel_name for md in cycle.image_metadata]))
             img_batches = list()
             for c in channels:
                 image_files = [md.name for md in cycle.image_metadata
-                               if md.channel == c]
+                               if md.channel_name == c]
                 img_batches.append(image_files)
 
             for j, batch in enumerate(img_batches):
@@ -98,7 +98,7 @@ class IllumstatsGenerator(ClusterRoutines):
             joblist element
         '''
         image_files = batch['inputs']['image_files']
-        with OpencvImageReader() as reader:
+        with NumpyImageReader() as reader:
             img = reader.read(image_files[0])
             stats = OnlineStatistics(image_dimensions=img.shape)
             for f in image_files:
@@ -139,8 +139,8 @@ class IllumstatsGenerator(ClusterRoutines):
                 if cycle.name == b['cycle']
             ][0]
             stats = [
-                stats for stats in cycle.stats_images
-                if stats.metadata.channel == b['channel']
+                stats for stats in cycle.illumstats_images
+                if stats.metadata.channel_name == b['channel']
             ][0]
             for f in image_files:
                 image = [
@@ -148,10 +148,10 @@ class IllumstatsGenerator(ClusterRoutines):
                     if img.metadata.name == os.path.basename(f)
                 ][0]
                 if sites:
-                    if image.metadata.site not in sites:
+                    if image.metadata.site_id not in sites:
                         continue
-                if wells and image.metadata.well:  # may not be a well plate
-                    if image.metadata.well not in wells:
+                if wells and image.metadata.well_id:  # may not be a well plate
+                    if image.metadata.well_id not in wells:
                         continue
                 corrected_image = image.correct(stats)
                 suffix = os.path.splitext(image.metadata.name)[1]

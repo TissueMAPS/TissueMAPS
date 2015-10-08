@@ -34,7 +34,7 @@ def calc_sites_number(image_files, regexp):
     return n_sites
 
 
-def guess_stitch_dimensions(n_sites, more_rows_than_columns=True):
+def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
     '''
     Simple algorithm to guess correct dimensions of a stitched mosaic image.
 
@@ -42,15 +42,16 @@ def guess_stitch_dimensions(n_sites, more_rows_than_columns=True):
     ----------
     n_sites: int
         total number of sites (individual images) in the stitched mosaic image
-    more_rows_than_columns: bool, optional
-        whether there are more rows than columns (default)
+    stitch_major_axis: str, optional
+        ``"horizontal"`` if there are more columns than rows and
+        ``"vertical"`` otherwise (default: ``"vertical"``)
 
     Returns
     -------
     Tuple[int]
         number of rows and columns of the stitched mosaic image
     '''
-    if more_rows_than_columns:
+    if stitch_major_axis == 'vertical':
         decent = True
     else:
         decent = False
@@ -59,7 +60,7 @@ def guess_stitch_dimensions(n_sites, more_rows_than_columns=True):
                      (int(np.sqrt(n_sites)) + 5))
     tmpII = np.matrix(tmpI).conj().T * np.matrix(tmpI)
     (a, b) = np.where(np.triu(tmpII) == n_sites)
-    stitch_dims = sorted([tmpI[a[0]], tmpI[b[0]]], reverse=decent)
+    stitch_dims = sorted([abs(tmpI[a[0]]), abs(tmpI[b[0]])], reverse=decent)
     return (stitch_dims[0], stitch_dims[1])
 
 
@@ -146,7 +147,7 @@ def calc_stitch_layout(stitch_dims, stage_positions):
     return layout
 
 
-def calc_image_position(stitch_dims, stitch_layout):
+def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
     '''
     Determine the position of each image in the stitched mosaic image.
 
@@ -161,7 +162,7 @@ def calc_image_position(stitch_dims, stitch_layout):
     Returns
     -------
     List[Tuple[int]]
-        pair of one-based "row" (y) and "column" (x) position indices for each
+        pair of zero-based "row" (y) and "column" (x) position indices for each
         individual image in the stitched mosaic image in the order of
         acquisition, i.e. sorted according to image *site*
 
@@ -190,25 +191,26 @@ def calc_image_position(stitch_dims, stitch_layout):
         for i in xrange(stitch_dims[0]):  # loop over rows
             if i % 2 and 'zigzag' in stitch_layout:
                 # Reverse order of sites in columns every other iteration
-                cols += range(stitch_dims[1], 0, -1)
+                cols += range(stitch_dims[1]-1, -1, -1)
             else:
                 # Preserve order of sites in columns
-                cols += range(1, stitch_dims[1]+1, 1)
+                cols += range(0, stitch_dims[1], 1)
             rows += [i+1 for x in range(stitch_dims[1])]
     elif 'vertical' in stitch_layout:
         for i in xrange(stitch_dims[1]):  # loop over columns
             if i % 2 and 'zigzag' in stitch_layout:
                 # Reverse order of sites in rows every other iteration
-                rows += range(stitch_dims[0], 0, -1)
+                rows += range(stitch_dims[0]-1, -1, -1)
             else:
                 # Preserve order of sites in rows
-                rows += range(1, stitch_dims[0]+1, 1)
+                rows += range(0, stitch_dims[0], 1)
             cols += [i+1 for x in range(stitch_dims[0])]
     return zip(rows, cols)
 
 
-def calc_image_coordinates(stage_positions,
-                           reverse_rows=False, reverse_columns=False):
+def calc_grid_coordinates_from_positions(stage_positions,
+                                         reverse_rows=False,
+                                         reverse_columns=False):
     '''
     Calculate the relative position of each image within the acquisition grid.
     The coordinates are one-based to be consistent with the OME data model.
@@ -231,7 +233,7 @@ def calc_image_coordinates(stage_positions,
     Returns
     -------
     List[Tuple[int]]
-        relative positions (one-based coordinates) within the grid
+        relative positions (zero-based coordinates) within the grid
 
     TODO
     ----
@@ -263,7 +265,7 @@ def calc_image_coordinates(stage_positions,
             for ix in pos_index:
                 if len(ix) == 0:
                     continue
-                unique_coordinates[ix[0]] = (i+1, j+1)  # one-based!
+                unique_coordinates[ix[0]] = (i, j)
 
     # Map the unique coordinates back.
     coordinates = [unique_coordinates[i] for i in unique_indices]

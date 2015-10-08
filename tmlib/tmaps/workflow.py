@@ -19,7 +19,7 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
 
     def __init__(self, experiment, virtualenv, verbosity):
         '''
-        Instantiate an instance of class ClusterWorkflowManager.
+        Initialize an instance of class ClusterWorkflowManager.
 
         Parameters
         ----------
@@ -182,7 +182,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
 
     def __init__(self, experiment, prog_name):
         '''
-        Instantiate an instance of class WorkflowClusterRoutines.
+        Initialize an instance of class WorkflowClusterRoutines.
 
         Parameters
         ----------

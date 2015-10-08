@@ -20,7 +20,7 @@ class StichedImage(object):
 
     def __init__(self, array):
         '''
-        Instantiate an instance of class Mosaic.
+        Initialize an instance of class Mosaic.
 
         Parameters
         ----------
@@ -118,7 +118,7 @@ class Mosaic(StichedImage):
 
     def __init__(self, array):
         '''
-        Instantiate an instance of class Mosaic.
+        Initialize an instance of class Mosaic.
 
         Parameters
         ----------
@@ -174,10 +174,10 @@ class Mosaic(StichedImage):
         if not isinstance(dy, int) or dy > 0:
             raise ValueError('"dy" has to be a negative integer value')
 
-        cycles = set([im.metadata.cycle for im in images])
+        cycles = set([im.metadata.cycle_name for im in images])
         if len(cycles) > 1:
             raise MetadataError('All images must be of the same cycle')
-        channels = set([im.metadata.channel for im in images])
+        channels = set([im.metadata.channel_name for im in images])
         if len(channels) > 1:
             raise MetadataError('All images must be of the same channel')
 
@@ -204,7 +204,7 @@ class Collage(StichedImage):
 
     def __init__(self, array):
         '''
-        Instantiate an instance of class Mosaic.
+        Initialize an instance of class Mosaic.
 
         Parameters
         ----------
@@ -270,10 +270,10 @@ class Collage(StichedImage):
         if not isinstance(dy, int) or dy < 0:
             raise ValueError('"dy" has to be a positive integer value')
 
-        cycles = set([im.metadata.cycle for im in images])
+        cycles = set([im.metadata.cycle_name for im in images])
         if len(cycles) > 1:
             raise MetadataError('All images must be of the same cycle')
-        channels = set([im.metadata.channel for im in images])
+        channels = set([im.metadata.channel_name for im in images])
         if len(channels) > 1:
             raise MetadataError('All images must be of the same channel')
         dtypes = np.unique([im.pixels.dtype for im in images])
