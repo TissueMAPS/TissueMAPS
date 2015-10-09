@@ -751,6 +751,22 @@ declare module olx {
           fill?: ol.style.Fill;
           stroke?: ol.style.Stroke;
         }
+
+        interface CircleOptions {
+            fill?: ol.style.Fill;
+            radius: number;
+            snapToPixel?: boolean;
+            stroke?: ol.style.Stroke;
+        }
+
+        interface StrokeOptions {
+            color?: ol.Color | string;
+            lineCap?: string;
+            lineJoin?: string;
+            lineDash?: number[];
+            miterLimit?: number;
+            width?: number;
+        }
     }
 
     module tilegrid {
@@ -4030,6 +4046,7 @@ declare module ol {
         }
 
         class Circle {
+            constructor(options: olx.style.CircleOptions);
         }
 
         /**
@@ -4063,7 +4080,7 @@ declare module ol {
         }
 
         class Stroke {
-            constructor();
+            constructor(options: olx.style.StrokeOptions);
         }
 
         /**
