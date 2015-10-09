@@ -1,10 +1,8 @@
 class ToolLoader {
-    static $inject = ['$http', '$q', 'toolFactory'];
+    static $inject = ['$http', '$q'];
 
     constructor(private $http: ng.IHttpService,
-                private $q: ng.IQService,
-                private toolFactory: ToolFactory) {
-    }
+                private $q: ng.IQService) {}
 
     loadTools(appInstance: AppInstance) {
         var toolsDef = this.$q.defer();
@@ -13,10 +11,14 @@ class ToolLoader {
             var classNames: string[] = toolsConfig.loadClasses;
             console.log(classNames);
             var tools = _.map(classNames, (clsName: string) => {
-                var t = this.toolFactory.create(
-                    appInstance,
-                    clsName
-                );
+                var constr = window[clsName];
+                console.log(constr);
+                if (constr === undefined) {
+                    throw Error('No such tool constructor: ' + clsName);
+                } else {
+                    var t = new constr(appInstance);
+                    return t;
+                }
                 return t;
             });
             toolsDef.resolve(tools);
