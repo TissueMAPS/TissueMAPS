@@ -51,6 +51,10 @@
         $httpProvider.interceptors.push('authInterceptor');
     }]);
 
+    tmaps.run(['$injector', function($injector) {
+        window.$injector = $injector;
+    }]);
+
     // Run this code after all providers have been registered
     tmaps.run(['$rootScope', 'authService', 'loginDialogService', '$state', 'application', '$websocket',
               function($rootScope, authService, loginDialogService, $state, application, $websocket) {
