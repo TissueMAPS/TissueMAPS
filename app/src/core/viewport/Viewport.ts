@@ -42,7 +42,6 @@ class Viewport implements Serializable<Viewport> {
                 private channelLayerFactory: ChannelLayerFactory,
                 private $http: ng.IHttpService,
                 private Cell,
-                private objectLayerFactory: ObjectLayerFactory,
                 private $controller: ng.IControllerService,
                 private $compile: ng.ICompileService,
                 private $: JQueryStatic,
