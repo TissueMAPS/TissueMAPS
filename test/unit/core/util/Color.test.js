@@ -1,0 +1,107 @@
+var $injector;
+
+describe('In Color', function() {
+    beforeEach(module('tmaps.core'));
+
+    var $rootScope;
+
+    beforeEach(inject(function(_$injector_, _$rootScope_) {
+        $injector = _$injector_;
+        $rootScope = _$rootScope_;
+    }));
+
+    var color;
+    var r, g, b, a;
+
+    beforeEach(function() {
+        r = 255;
+        g = 50;
+        b = 50;
+        a = 1;
+        color = new Color(r, g, b, a);
+    });
+
+    describe('for creating colors', function() {
+        it('colors should be creatable from hex strings', function() {
+            expect(Color.createFromHex('FF00FF').equals(new Color(255, 0, 255))).toEqual(true);
+        });
+
+        it('colors should be creatable from normalized rgb arrays (as used by webgl)', function() {
+            expect(Color.createFromNormalizedRGBArray([1, 0, 1]).equals(new Color(255, 0, 255, 1))).toEqual(true);
+        });
+
+        it('colors should be creatable from rgb strings (as used by openlayers)',
+        function() {
+            expect(Color.createFromRGBString('rgb(255, 0, 0)').equals(new Color(255, 0, 0))).toEqual(true);
+            expect(Color.createFromRGBString('rgb(255,      255,0)').equals(new Color(255, 255, 0))).toEqual(true);
+            expect(Color.createFromRGBString('rgb(255, 0)')).not.toBeDefined();
+        });
+
+        it('colors should be creatable from rgba objects (e.g. as output by "serialize")', function(done) {
+            color.serialize().then(function(col) {
+                expect(Color.createFromObject(col).equals(color)).toEqual(true);
+                done();
+            })
+            $rootScope.$apply();
+
+            expect(Color.createFromObject({r: 255, g: 0, b: 0}).equals(new Color(255, 0, 0, 1))).toEqual(true);
+        });
+    });
+
+    describe('the function toOlColor', function() {
+        it('should convert the color into an openlayers color', function() {
+            var ol = color.toOlColor();
+            expect(ol).toEqual([r, g, b, a]);
+        });
+    });
+
+    describe('the function toRGBAString', function() {
+        it('should convert the color into an rgba string', function() {
+            var c = color.toRGBAString();
+            expect(c).toEqual('rgba(255, 50, 50, 1)');
+        });
+    });
+
+    describe('the function toHex', function() {
+        it('should convert the color into a hex string', function() {
+            var h = (new Color(255, 0, 0)).toHex();
+            expect(h).toEqual('#ff0000');
+
+            var h = (new Color(255, 0, 255)).toHex();
+            expect(h).toEqual('#ff00ff');
+
+            var h = (new Color(0, 0, 0)).toHex();
+            expect(h).toEqual('#000000');
+        });
+    });
+
+    describe('the function toNormalizedRGBArray', function() {
+        it('should convert the color to an array as used by webgl', function() {
+            expect((new Color(0, 0, 0)).toNormalizedRGBArray()).toEqual([0, 0, 0]);
+            expect((new Color(255, 0, 0)).toNormalizedRGBArray()).toEqual([1, 0, 0]);
+            expect((new Color(255, 0, 255)).toNormalizedRGBArray()).toEqual([1, 0, 1]);
+            expect((new Color(255, 0, 127.5)).toNormalizedRGBArray()).toEqual([1, 0, 0.5]);
+        });
+    });
+
+    describe('the function equals', function() {
+        it('should compare to colors', function() {
+            expect((new Color(255, 0, 0)).equals(new Color(255, 0, 0))).toEqual(true);
+            expect((new Color(255, 0, 0)).equals(new Color(255, 0, 0, 0.5))).toEqual(false);
+            expect((new Color(255, 0, 0)).equals(new Color(255, 0, 255))).toEqual(false);
+        });
+    });
+
+    describe('the function serialize', function() {
+        it('should serialize the color', function() {
+            color.serialize().then(function(col) {
+                expect(col.r).toEqual(r);
+                expect(col.g).toEqual(g);
+                expect(col.b).toEqual(b);
+                expect(col.a).toEqual(a);
+            });
+            $rootScope.$apply();
+        });
+    });
+
+});
