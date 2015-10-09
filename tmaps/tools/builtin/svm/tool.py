@@ -10,7 +10,25 @@ from matplotlib import cm
 class SVMTool(Tool):
     def process_request(self, payload):
         message = payload.get('message', 'no message given')
-        return message
+        return {
+            'classes': [
+                {
+                    'label': 'class1',
+                    'color': {'r': 255, 'g': 0, 'b': 0},
+                    'cell_ids': map(str, range(0, 100))
+                },
+                {
+                    'label': 'class2',
+                    'color': {'r': 0, 'g': 255, 'b': 0},
+                    'cell_ids': map(str, range(100, 200))
+                },
+                {
+                    'label': 'class3',
+                    'color': {'r': 0, 'g': 0, 'b': 255},
+                    'cell_ids': map(str, range(100, 200))
+                }
+            ]
+        }
 
         # self.client_proxy.log('Request received.')
 
