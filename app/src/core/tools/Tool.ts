@@ -9,29 +9,23 @@ interface ToolWindow {
     windowObject: Window
 }
 
-class Tool {
+abstract class Tool {
     windows: ToolWindow[];
     results: ToolResult[];
 
-    private resultHandler: ToolResultHandler;
-
-    constructor(protected $: JQueryStatic,
-                protected $http: ng.IHttpService,
-                protected $window: Window,
-                protected $rootScope: ng.IRootScopeService,
-                public appInstance: AppInstance,
+    constructor(public appInstance: AppInstance,
                 public id: string,
                 public name: string,
                 public description: string,
                 public templateUrl: string,
                 public icon: string,
                 public defaultWindowHeight: number,
-                public defaultWindowWidth: number,
-                resultHandler: ToolResultHandler) {
+                public defaultWindowWidth: number) {
         this.windows = [];
         this.results = [];
-        this.resultHandler = resultHandler;
     }
+
+    abstract handleResult(result: ToolResult);
 
     getIdSlug(): string {
         return this.id.toLowerCase()
@@ -46,7 +40,7 @@ class Tool {
         };
         this.windows.push(toolWindow);
 
-        this.$(windowObj).bind('beforeunload', (event) => {
+        $injector.get<JQueryStatic>('$')(windowObj).bind('beforeunload', (event) => {
             var idx = this.windows.indexOf(toolWindow);
             this.windows.splice(idx, 1);
         });
@@ -57,7 +51,7 @@ class Tool {
     private openWindow() {
         // Without appending the current date to the title, the browser (chrome)
         // won't open multiple tool windows of the same type.
-        var toolWindow = this.$window.open(
+        var toolWindow = $injector.get<ng.IWindowService>('$window').open(
             '/src/toolwindow/', this.id, // + Date.now(),
             'toolbar=no,menubar=no,titebar=no,location=no,directories=no,replace=no,' +
             'width=' + this.defaultWindowWidth + ',height=' + this.defaultWindowHeight
@@ -72,7 +66,7 @@ class Tool {
         var init = {
             appInstance: this.appInstance,
             viewportScope: this.appInstance.viewport.elementScope,
-            applicationScope: this.$rootScope,
+            applicationScope: $injector.get<ng.IRootScopeService>('$rootScope'),
             toolWindow: toolWindow,
             tool: this
         };
@@ -84,11 +78,6 @@ class Tool {
         return toolWindow;
     }
 
-    handleResult(result: ToolResult) {
-        this.results.push(result);
-        this.resultHandler.handle(result);
-    }
-
     sendRequest(payload: any): ng.IPromise<ToolResult> {
         var url = '/api/tools/' + this.id + '/request';
 
@@ -96,7 +85,7 @@ class Tool {
             vpScope.$broadcast('toolRequestSent');
         });
 
-        return this.$http.post(url, {
+        return $injector.get<ng.IHttpService>('$http').post(url, {
             'payload': payload
         }).then(
         (resp) => {
@@ -105,6 +94,7 @@ class Tool {
                 vpScope.$broadcast('toolRequestSuccess');
             });
             var data = <ServerToolResponse> resp.data;
+            this.results.push(data.result);
             this.handleResult(data.result);
             return data.result;
         },
