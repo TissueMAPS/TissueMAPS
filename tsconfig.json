@@ -9,6 +9,12 @@
         "out": "app/build/compiled-ts.js"
     },
     "files": [
+        "app/typedefs/DefinitelyTyped/underscore/underscore.d.ts",
+        "app/typedefs/DefinitelyTyped/angularjs/angular.d.ts",
+        "app/typedefs/DefinitelyTyped/bluebird/bluebird.d.ts",
+        "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
+        "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
+
         "app/src/core/AppInstance.ts",
         "app/src/core/Application.ts",
         "app/src/core/appstate/Appstate.ts",
@@ -56,11 +62,6 @@
         "app/src/toolwindow/ToolContentCtrl.ts",
 
         "app/src/ui/toolbar/tmToolbar.ts",
-        "app/src/ui/toolbar/ToolbarCtrl.ts",
-
-        "app/typedefs/DefinitelyTyped/underscore/underscore.d.ts",
-        "app/typedefs/DefinitelyTyped/angularjs/angular.d.ts",
-        "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
-        "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts"
+        "app/src/ui/toolbar/ToolbarCtrl.ts"
     ]
 }
