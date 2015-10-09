@@ -1,3 +1,5 @@
+var $injector;
+
 describe('In Viewport', function() {
     // Load the module of ObjectLayer and its dependencies
     beforeEach(module('tmaps.core'));
@@ -6,18 +8,20 @@ describe('In Viewport', function() {
 
     // Injected services and factories
     var viewportFactory, $httpBackend, $rootScope, $document, application;
-    var objectLayerFactory, channelLayerFactory, colorFactory;
+    var channelLayerFactory, colorFactory;
 
-    beforeEach(inject(function(_viewportFactory_, _$httpBackend_, _$rootScope_, _$document_, _application_, _objectLayerFactory_, _channelLayerFactory_, _colorFactory_) {
+    beforeEach(inject(function(_viewportFactory_, _$httpBackend_, _$rootScope_,
+        _$document_, _application_, _channelLayerFactory_, _colorFactory_,
+        _$injector_) {
         // Assign to variables
         viewportFactory = _viewportFactory_;
         $httpBackend = _$httpBackend_;
         $rootScope = _$rootScope_;
         $document = _$document_;
         application = _application_;
-        objectLayerFactory = _objectLayerFactory_;
         channelLayerFactory = _channelLayerFactory_;
         colorFactory = _colorFactory_;
+        $injector = _$injector_;
     }));
 
     beforeEach(function() {
@@ -122,7 +126,7 @@ describe('In Viewport', function() {
 
         beforeEach(function() {
             var options = {};
-            l = objectLayerFactory.create('name', options);
+            l = new ObjectLayer('name', options);
         });
 
         it('should add an object layer to the viewport', function() {
@@ -147,7 +151,7 @@ describe('In Viewport', function() {
 
         beforeEach(function() {
             var options = {};
-            l = objectLayerFactory.create('name', options);
+            l = new ObjectLayer('name', options);
             vp.addObjectLayer(l);
         });
 

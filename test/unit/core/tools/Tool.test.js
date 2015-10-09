@@ -1,23 +1,27 @@
+var $injector;
+
+// var $injector = angular.injector(['tmaps.core']);
 describe('In Tool', function() {
     // Load the module of ObjectLayer and its dependencies
     beforeEach(module('tmaps.core'));
 
+
     // Injected services and factories
-    var toolFactory, $window, $rootScope, $httpBackend;
+    var $window, $rootScope, $httpBackend;
     var $http, $q;
 
     // Call inject function to get ahold of services, assign to declared
     // variables. Angular will strip underscores from function arguments to
     // resolve actual service.
-    beforeEach(inject(function(_toolFactory_, _$window_, _$rootScope_,
-                               _$httpBackend_, _$http_, _$q_) {
+    beforeEach(inject(function(_$window_, _$rootScope_,
+                               _$httpBackend_, _$http_, _$q_, _$injector_) {
         // Assign to variables
-        toolFactory = _toolFactory_;
         $window = _$window_;
         $rootScope = _$rootScope_;
         $httpBackend = _$httpBackend_;
         $http = _$http_;
         $q = _$q_;
+        $injector = _$injector_;
 
         spyOn($window, 'open').and.callThrough();
     }));
@@ -48,11 +52,7 @@ describe('In Tool', function() {
             id: 10
         };
 
-        tool = toolFactory.create(
-            appInstance,
-            'FeatureStatsTool'
-        );
-        spyOn(tool.resultHandler, 'handle').and.callThrough();
+        tool = new FeatureStatsTool(appInstance);
     });
 
     // Setup the server endpoints (without setting up expectations)
@@ -70,7 +70,6 @@ describe('In Tool', function() {
     describe('the function getIdSlug', function() {
         function createToolGivenId(id) {
             var t = new Tool(
-                {}, {}, {}, {}, // the injected services
                 {},
                 id,
                 'some name',
@@ -242,12 +241,6 @@ describe('In Tool', function() {
             });
 
             $rootScope.$apply();
-        });
-
-        it('should call the response handler\'s handle method', function() {
-            tool.sendRequest(payload);
-            $httpBackend.flush();
-            expect(tool.resultHandler.handle).toHaveBeenCalledWith(response.result);
         });
 
         it('should add the result to the results array', function() {

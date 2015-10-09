@@ -6,11 +6,10 @@ describe('In ObjectLayer', function() {
     var mapObject1, mapObject2, mapObjects;
 
     // Injected services and factories
-    var objectLayerFactory, Cell;
+    var Cell;
 
-    beforeEach(inject(function(_objectLayerFactory_, _Cell_) {
+    beforeEach(inject(function(_Cell_) {
         // Assign to variables
-        objectLayerFactory = _objectLayerFactory_;
         Cell = _Cell_;
 
         // Some fake data (assign again before each test in case functions would
@@ -22,7 +21,7 @@ describe('In ObjectLayer', function() {
 
     describe('the constructor', function() {
         it('will accept an objects argument that will set the objects', function() {
-            var l = objectLayerFactory.create('cellLayer', {
+            var l = new ObjectLayer('cellLayer', {
                 objects: mapObjects
             });
 
@@ -34,7 +33,7 @@ describe('In ObjectLayer', function() {
         var layer;
 
         beforeEach(function() {
-            layer = objectLayerFactory.create('Cell layer')
+            layer = new ObjectLayer('Cell layer')
         });
 
         it('should add a feature to the openlayers layer', function() {
@@ -56,7 +55,7 @@ describe('In ObjectLayer', function() {
 
     describe('the function getObjects', function() {
         it('should get the objects', function() {
-            var l = objectLayerFactory.create('cellLayer', {
+            var l = new ObjectLayer('cellLayer', {
                 objects: mapObjects
             });
 

@@ -1,3 +1,4 @@
+var $injector;
 
 describe('In restoreAppstateService', function() {
     // Some fake data
@@ -13,7 +14,9 @@ describe('In restoreAppstateService', function() {
     // declaring the module!).
     beforeEach(module('tmaps.core'));
 
-    beforeEach(inject(function(_restoreAppstateService_, _$httpBackend_, _application_, _$q_, _$rootScope_, _colorFactory_) {
+    beforeEach(inject(function(_restoreAppstateService_, _$httpBackend_,
+                               _application_, _$q_, _$rootScope_, _colorFactory_,
+                               _$injector_) {
         // Assign the injected variables to the variables s.t. they can be used
         // in the specs
         restoreAppstateService = _restoreAppstateService_;
@@ -22,6 +25,7 @@ describe('In restoreAppstateService', function() {
         $q = _$q_;
         $rootScope = _$rootScope_;
         colorFactory = _colorFactory_;
+        $injector = _$injector_;
 
         // Reparse each time a text is executed since code may alter the
         // appstate object in the process.
