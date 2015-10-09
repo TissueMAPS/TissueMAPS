@@ -11,7 +11,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
 
     constructor(private $q: ng.IQService,
                 private viewportFty: ViewportFactory,
-                private objectLayerFactory: ObjectLayerFactory,
+                private colorFty: ColorFactory,
                 private channelLayerFactory: ChannelLayerFactory,
                 private toolLoader: ToolLoader,
                 experiment: Experiment) {
@@ -75,20 +75,20 @@ class AppInstanceFactory {
     static $inject = [
         '$q',
         'viewportFactory',
-        'objectLayerFactory',
+        'colorFactory',
         'channelLayerFactory',
         'toolLoader',
     ];
     constructor(private $q,
                 private viewportFactory,
-                private objectLayerFactory,
+                private colorFty,
                 private channelLayerFactory,
                 private toolLoader) {}
 
     create(e: Experiment): AppInstance {
         return new AppInstance(
-            this.$q, this.viewportFactory, this.objectLayerFactory,
-            this.channelLayerFactory, this.toolLoader, e
+            this.$q, this.viewportFactory,
+            this.colorFty, this.channelLayerFactory, this.toolLoader, e
         );
     }
 }
