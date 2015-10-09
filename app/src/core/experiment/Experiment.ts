@@ -36,7 +36,7 @@ class Experiment implements Serializable<Experiment> {
                 private experimentService: ExperimentService,
                 private $q: ng.IQService) {
 
-        var $q = $injector.get<IQService>('$q');
+        var $q = $injector.get<ng.IQService>('$q');
         var expService = $injector.get<ExperimentService>('experimentService');
 
         this.id = opt.id;
