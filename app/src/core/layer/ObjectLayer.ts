@@ -1,19 +1,22 @@
 interface ObjectLayerArgs {
     objects?: MapObject[];
-    strokeColor?: string;
-    fillColor?: string;
+    strokeColor?: Color;
+    fillColor?: Color;
 }
 
 class ObjectLayer extends Layer {
     olLayer: ol.layer.Vector;
     styles: any;
 
-    defaultStrokeColor = 'rgba(0, 0, 255, 1)';
-    defaultFillColor = 'rgba(0, 0, 255, 0.5)';
+    private strokeColor: Color;
+    private fillColor: Color;
+
+    private defaultStrokeColor = new Color(255, 0, 0);
+    private defaultFillColor = new Color(255, 0, 0, 0.1);
 
     private _objects: MapObject[] = [];
 
-    constructor(private ol, name: string, opt: ObjectLayerArgs = {}) {
+    constructor(name: string, opt: ObjectLayerArgs = {}) {
         super(name);
 
         var vectorSource = new ol.source.Vector({
@@ -33,22 +36,41 @@ class ObjectLayer extends Layer {
             this.addObjects(opt.objects);
         }
 
+        if (opt.strokeColor === undefined) {
+            this.strokeColor = this.defaultStrokeColor;
+        } else if (opt.strokeColor === null) {
+            this.strokeColor = new Color(0, 0, 0, 0);
+        } else {
+            this.strokeColor = opt.strokeColor;
+        }
+
+        if (opt.fillColor === undefined) {
+            this.fillColor = this.defaultFillColor;
+        } else if (opt.fillColor === null) {
+            this.fillColor = new Color(0, 0, 0, 0);
+        } else {
+            this.fillColor = opt.fillColor;
+        }
+
+        var olStrokeColor = this.strokeColor === null ? null : this.strokeColor.toRGBAString();
+        var olFillColor = this.fillColor === null ? null : this.fillColor.toRGBAString();
+
         this.styles = {
-            'Point': [new this.ol.style.Style({
-                image: new this.ol.style.Circle({
+            'Point': [new ol.style.Style({
+                image: new ol.style.Circle({
                     radius: 5,
                     fill: null,
-                    stroke: new this.ol.style.Stroke({color: 'red', width: 1})
+                    stroke: new ol.style.Stroke({color: olStrokeColor, width: 1})
                 })
             })],
-            'Polygon': [new this.ol.style.Style({
-                stroke: new this.ol.style.Stroke({
-                    color: opt.strokeColor || this.defaultStrokeColor,
+            'Polygon': [new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: olStrokeColor,
                     lineDash: [1],
                     width: 1
                 }),
-                fill: new this.ol.style.Fill({
-                    color: opt.fillColor || this.defaultFillColor
+                fill: new ol.style.Fill({
+                    color: olFillColor
                 })
             })]
         };
@@ -59,25 +81,23 @@ class ObjectLayer extends Layer {
     }
 
     addObject(obj: MapObject) {
-        this._objects.push(obj);
-        this.olLayer.getSource().addFeature(obj.getOLFeature());
+        if (obj !== undefined && obj !== null) {
+            this._objects.push(obj);
+            var src = this.olLayer.getSource();
+            src.addFeature(obj.getOLFeature());
+        } else {
+            console.log('Warning: trying to add undefined or null MapObject.');
+        }
     }
 
     addObjects(objs: MapObject[]) {
-        objs.forEach((o) => {
+        var objects = _(objs).filter((o) => {
+            return o !== undefined && o !==  null;
+        });
+        objects.forEach((o) => {
             this._objects.push(o);
         });
-        var features = _(objs).map((o) => { return o.getOLFeature(); });
+        var features = _(objects).map((o) => { return o.getOLFeature(); });
         this.olLayer.getSource().addFeatures(features);
     }
 }
-
-class ObjectLayerFactory {
-    static $inject = ['openlayers'];
-    constructor(private ol) {}
-    create(name: string, opt: ObjectLayerArgs = {}) {
-        return new ObjectLayer(this.ol, name, opt);
-    }
-}
-
-angular.module('tmaps.core').service('objectLayerFactory', ObjectLayerFactory);
