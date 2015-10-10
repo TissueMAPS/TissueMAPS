@@ -15,6 +15,14 @@
        |                             JS                               |
        ================================================================ -->
 
+    <script type="text/javascript" charset="utf-8">
+        // There are some vector layer render issues when loading the page on a HighDPI
+        // display like that of the MBP. In that case devicePixelRatio is set to 2, which will
+        // cause the vectors to appear twice as large.
+        // As a temp. workaround we set the pixelratio to 1 before openlayers is loaded.
+        devicePixelRatio = 1;
+    </script>
+
   <!-- build:js script-main.min.js -->
       <script src="/assets/libs/bower_components/jquery/dist/jquery.js" type="text/javascript" charset="utf-8"></script>
       <!-- Custom jquery build with required components for slider and sortable widget -->
