@@ -253,10 +253,10 @@ module.exports = function(grunt) {
                 ]
             },
 
-            ts: {
-                files: ['app/src/**/*.ts'],
-                tasks: ['typescript']
-            },
+            // ts: {
+            //     files: ['app/src/**/*.ts'],
+            //     tasks: ['typescript']
+            // },
 
 
             // jsTest: {
