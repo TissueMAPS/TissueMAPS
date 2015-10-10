@@ -31,7 +31,7 @@ class TmlibConfiguration(object):
             setattr(self, name, getattr(cfg_settings, name))
             for name in dir(cfg_settings)
             if not name.startswith('__') and not name.endswith('__')
-         ]
+        ]
 
 
 class UserConfiguration(object):

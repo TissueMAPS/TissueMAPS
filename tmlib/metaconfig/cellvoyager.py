@@ -1,9 +1,12 @@
 import os
+import re
 import logging
 import bioformats
+from collections import defaultdict
 from cached_property import cached_property
 from lxml import etree
 from .default import MetadataHandler
+from .. import utils
 from ..readers import MetadataReader
 from ..illuminati import stitch
 
@@ -25,25 +28,6 @@ class CellvoyagerMetadataReader(MetadataReader):
     reads the XML from "MeasurementDetail.mrf" and "MeasurmentData.mlf" files,
     extracts the relevant data and stores them in an OMEXML object according to
     the Bio-Formats convention.
-
-    Note
-    ----
-    The OME schema doesn't provide information about wells at the individual
-    *Image* level: see `OME data model <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
-    Instead, it provides a *Plate* element, which contains *Well* elements.
-    *Well* elements contain the positional information, such as row and
-    column index of each well within the plate. The *WellSample* elements
-    represent individual image acquisition sites within a well and can hold
-    metadata, such as the x and y stage positions. In addition, there is an
-    *ImageRef* element, which can be used to map a *WellSample* to an
-    individual *Image* element.
-    However, the Yokogawa microscope stores all well information per
-    individual image file (which makes more sense if you ask me).
-    Therefore, we have to first create a *Plate* object in order to be able to
-    store well information in the OMEXML schema and then later extract this
-    information from the *Plate* element and map it back to individual *Image*
-    or *Plane* elements. This results in a lot of recursive indexing,
-    but we'll stick to it for sake of Bio-Formats compatibility.
 
     Examples
     --------
@@ -81,29 +65,34 @@ class CellvoyagerMetadataReader(MetadataReader):
         mlf_ns = mlf_root.nsmap['bts']
 
         metadata.image_count = len(mlf_elements)
-        well_info = list()
+        lut = defaultdict(list)
+        r = re.compile(CellvoyagerMetadataHandler.REGEX)
         for i, e in enumerate(mlf_elements):
-            metadata.image(i).Name = e.text
-            pixels = metadata.image(i).Pixels
-            pixels.SizeT = 1
-            pixels.SizeC = 1
-            pixels.SizeZ = 1
-            pixels.plane_count = 1
-            pixels.Plane(0).TheT = 0
-            pixels.Plane(0).TheZ = 0
-            pixels.Plane(0).TheC = 0  # this is what most microscopes do
+            img = metadata.image(i)
+            # A name has to be set as a flag for the handler to update
+            # the metadata
+            img.Name = e.text
+            # Image files always contain only a single plane
+            img.Pixels.SizeT = 1
+            img.Pixels.SizeC = 1
+            img.Pixels.SizeZ = 1
+            img.Pixels.plane_count = 1
             if e.attrib['{%s}Type' % mlf_ns] == 'IMG':
-                pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
+                img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
             else:
-                # In case of "ERR" the channel information is not provided
-                pixels.Channel(0).Name = None
-            pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
-            pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
-            well_info.append({
-                'well_index': int(e.attrib['{%s}FieldIndex' % mlf_ns]),
-                'well_position': (int(e.attrib['{%s}Row' % mlf_ns]),
-                                  int(e.attrib['{%s}Column' % mlf_ns]))
-            })
+                logger.error('No channel information available for image "%s"'
+                             % img.Name)
+                img.Pixels.Channel(0).Name = None
+            img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
+            img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
+
+            matches = r.search(img.Name)
+            captures = matches.groupdict()
+            well_row = utils.map_number_to_letter(
+                            int(e.attrib['{%s}Row' % mlf_ns]))
+            well_col = int(e.attrib['{%s}Column' % mlf_ns])
+            well_id = '%s%.2d' % (well_row, well_col)
+            lut[well_id].append(captures)
 
         # 2) Obtain the general experiment information and well plate format
         #    specifications from the ".mrf" file and store them in the OMEXML
@@ -114,37 +103,22 @@ class CellvoyagerMetadataReader(MetadataReader):
         e = mrf_root
         name = e.attrib['{%s}Title' % mrf_ns]
         plate = metadata.PlatesDucktype(metadata.root_node).newPlate(name=name)
-        plate.RowNamingConvention = 'number'
+        plate.RowNamingConvention = 'letter'
         plate.ColumnNamingConvention = 'number'
         plate.Rows = e.attrib['{%s}RowCount' % mrf_ns]
         plate.Columns = e.attrib['{%s}ColumnCount' % mrf_ns]
-        wells = [wi['well_position'] for wi in well_info]
+        wells = lut.keys()
         for w in set(wells):
-            # Create a "Well" instance for each imaged well in the plate
-            row_index = w[0]  # TODO: should this be zero-based?
+            # Create a *Well* element for each imaged well in the plate
+            row_index = utils.map_letter_to_number(w[0])
             col_index = w[1]
             well = metadata.WellsDucktype(plate).new(row=row_index,
                                                      column=col_index)
             well_samples = metadata.WellSampleDucktype(well.node)
-            well_sample_indices = [wi['well_index'] for wi in well_info
-                                   if wi['well_position'] == w]
-            for s in set(well_sample_indices):
-                file_indices = [i for i, x in enumerate(well_info)
-                                if x['well_index'] == s
-                                and x['well_position'] == w]
-                i = file_indices[0]  # they were all acquired at the same site
-                # Create a "WellSample" instance for each acquisition site
-                ix = s-1  # zero-based
-                well_samples.new(index=ix)
-                # Store positional information for each acquisition site
-                well_samples[ix].PositionX = \
-                    metadata.image(i).Pixels.Plane(0).PositionX
-                well_samples[ix].PositionY = \
-                    metadata.image(i).Pixels.Plane(0).PositionY
-                # Provide the names of the reference images that are located
-                # at this WellSample index position
-                filenames = [metadata.image(i).Name for i in file_indices]
-                well_samples[ix].ImageRef = {r'(.*)': filenames}
+            for i, reference in enumerate(lut[w]):
+                # Create a *WellSample* element for each acquisition site
+                well_samples.new(index=i)
+                well_samples[i].ImageRef = reference
 
         return metadata
 
@@ -158,11 +132,11 @@ class CellvoyagerMetadataHandler(MetadataHandler):
 
     SUPPORTED_FILE_EXTENSIONS = {'.mlf', '.mrf'}
 
-    REGEX = ('(?P<cycle_name>[^_]+)_(?P<well_id>[A-Z]\d{2})_T(?P<time_id>\d+)'
-             'F(?P<site_id>\d+)L\d+A\d+Z(?P<plane_id>\d+)C(?P<channel_name>\d+)\.')
+    REGEX = ('[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)'
+             'F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.')
 
     def __init__(self, image_files, additional_files, ome_xml_files,
-                 cycle_name):
+                 experiment_name, plate_dimensions):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -174,16 +148,20 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         ome_xml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        cycle_name: str
+        experiment_name: str
             name of the cycle, i.e. the name of the folder of the corresponding
             experiment or subexperiment
+        plate_dimensions: Tuple[int]
+            number of rows and column in the plate
         '''
         super(CellvoyagerMetadataHandler, self).__init__(
-                image_files, additional_files, ome_xml_files, cycle_name)
+                image_files, additional_files, ome_xml_files,
+                experiment_name, plate_dimensions)
         self.image_files = image_files
         self.additional_files = additional_files
         self.ome_xml_files = ome_xml_files
-        self.cycle_name = cycle_name
+        self.experiment_name = experiment_name
+        self.plate_dimensions = plate_dimensions
 
     @cached_property
     def ome_additional_metadata(self):
@@ -202,10 +180,14 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             if os.path.splitext(f)[1] in self.SUPPORTED_FILE_EXTENSIONS
         ]
         if len(files) != len(self.SUPPORTED_FILE_EXTENSIONS):
-            logging.warning('%d metadata files would be required: "%s"'
-                            % (len(self.SUPPORTED_FILE_EXTENSIONS),
-                               '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
+            logger.warning('%d metadata files would be required: "%s"'
+                           % (len(self.SUPPORTED_FILE_EXTENSIONS),
+                              '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
             self._ome_additional_metadata = bioformats.OMEXML()
+            # Add an empty *Plate* element
+            self._ome_additional_metadata.PlatesDucktype(
+                        self._ome_additional_metadata.root_node).newPlate(
+                        name='default')
         else:
             mlf_file = [f for f in files if f.endswith('.mlf')][0]
             mrf_file = [f for f in files if f.endswith('.mrf')][0]

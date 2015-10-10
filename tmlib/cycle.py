@@ -29,7 +29,7 @@ class Cycle(object):
     `experiment.Experiment`_
     '''
 
-    def __init__(self, cycle_dir, cfg, user_cfg, library='vips'):
+    def __init__(self, cycle_dir, cfg, user_cfg, library):
         '''
         Initialize an instance of class Cycle.
 
@@ -41,9 +41,9 @@ class Cycle(object):
             configuration settings for names of directories and files on disk
         user_cfg: Dict[str, str]
             additional user configuration settings
-        library: str, optional
+        library: str
             image library that should be used
-            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
+            (options: ``"vips"`` or ``"numpy"``)
 
         Raises
         ------
@@ -183,8 +183,7 @@ class Cycle(object):
             name of the file holding image related metadata
         '''
         self._image_metadata_file = self.cfg.IMAGE_METADATA_FILE.format(
-                                            cycle_name=self.name,
-                                            sep=os.path.sep)
+                                                cycle_name=self.name)
         return self._image_metadata_file
 
     @cached_property
@@ -214,7 +213,7 @@ class Cycle(object):
         return self._image_metadata
 
     @cached_property
-    def image_metadata_table(self):
+    def image_metadata_hashtable(self):
         '''
         Metadata in tabular form, where each row represents an image
         and the columns the different metadata attributes.
@@ -227,8 +226,8 @@ class Cycle(object):
         metadata_file = os.path.join(self.dir, self.image_metadata_file)
         with ImageMetadataReader() as reader:
             metadata = reader.read(metadata_file)
-        self._image_metadata_table = pd.DataFrame(metadata.values())
-        return self._image_metadata_table
+        self._image_metadata_hashtable = pd.DataFrame(metadata.values())
+        return self._image_metadata_hashtable
 
     @property
     def images(self):
@@ -367,8 +366,17 @@ class Cycle(object):
         return self._illumstats_images
 
     @property
-    def registration_metadata(self):
-        return self._registration_metadata
+    def align_descriptor_file(self):
+        '''
+        Returns
+        -------
+        str
+            name of the file that contains the descriptions required for
+            alignment of images between cycles
+        '''
+        self._align_descriptor_file = self.cfg.ALIGN_DESCRIPTOR_FILE.format(
+                                                    cycle_name=self.name)
+        return self._align_descriptor_file
 
     @cached_property
     def channels(self):

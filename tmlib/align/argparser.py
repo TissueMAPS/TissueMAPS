@@ -19,11 +19,11 @@ init_parser.add_argument(
     help='number of image files that should be processed per job '
          '(default: 10)')
 init_parser.add_argument(
-    '--ref_cycle', type=str, required=True,
-    help='name of the reference cycle')
+    '--ref_cycle', type=int, required=True,
+    help='id of the reference cycle')
 init_parser.add_argument(
-    '--ref_channel', type=str, required=True,
-    help='name of the reference channel')
+    '--ref_channel', type=int, required=True,
+    help='id of the reference channel')
 init_parser.add_argument(
     '-m', '--max_shift', type=int, default=300,
     help='maximally tolerated shift in pixels (default: 300)')

@@ -14,12 +14,8 @@ class ImageExtractor(ClusterRoutines):
 
     '''
     Class for extraction of pixel arrays (planes) stored in image files using
-    the Bio-Formats library via
     `python-bioformats <https://github.com/CellProfiler/python-bioformats>`_.
-    The extracted arrays are written to PNG files. This is done to save disk
-    space due to (lossless) file compression and for downstream compatibility,
-    since not many libraries are able to read images from the original file
-    formats (often extended TIFF formats).
+    The extracted arrays are written to PNG files.
     '''
 
     def __init__(self, experiment, prog_name, verbosity):

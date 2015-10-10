@@ -8,10 +8,10 @@ class AlignmentDescription(object):
     align images between cycles.
     '''
 
+    PERSISTENT = {'cycle_id', 'ref_cycle_id'}
+
     def __init__(self, description=None):
         self.description = description
-
-    # TODO: prevent setting additional attributes: __slot__ or __setattr__??
 
     @property
     def cycle_id(self):
@@ -25,73 +25,45 @@ class AlignmentDescription(object):
 
     @cycle_id.setter
     def cycle_id(self, value):
-        if not(isinstance(value, int) or value is None):
+        if not isinstance(value, int):
             raise TypeError(
                     'Attribute "cycle_id" must have type int')
         self._cycle_id = value
 
     @property
-    def reference_cycle_id(self):
+    def ref_cycle_id(self):
         '''
         Returns
         -------
         str
             identifier number of the corresponding reference cycle
         '''
-        return self._reference_cycle_name
+        return self._ref_cycle_id
 
-    @reference_cycle_id.setter
-    def reference_cycle_id(self, value):
+    @ref_cycle_id.setter
+    def ref_cycle_id(self, value):
         if not(isinstance(value, int) or value is None):
             raise TypeError(
-                    'Attribute "reference_cycle_id" must have type int')
-        self._reference_cycle_id = value
-
-    @cached_property
-    def site_ids(self):
-        '''
-        Returns
-        -------
-        Set[int]
-            site identifier numbers, for which shift values are available
-        '''
-        self._site_ids = set([s.id for s in self.shifts])
-        return self._site_ids
+                    'Attribute "ref_cycle_id" must have type int')
+        self._ref_cycle_id = value
 
     @property
-    def max_tolerated_shift(self):
-        '''
-        Returns
-        -------
-        int
-            maximally tolerated shift values in pixels (setting this value
-            helps preventing artifacts, e.g. when empty images containing only
-            Gaussian noise are registered)
-        '''
-        return self._max_tolerated_shift
-
-    @max_tolerated_shift.setter
-    def max_tolerated_shift(self, value):
-        if not(isinstance(value, int) or value is None):
-            raise TypeError(
-                    'Attribute "max_tolerated_shift" must have type int')
-        self._max_tolerated_shift = value
-
-    @property
-    def overhangs(self):
+    def overhang(self):
         '''
         Returns
         -------
         OverhangDescription
+            overhang at each site of the image in pixels relative to the
+            reference images 
         '''
-        return self._overhangs
+        return self._overhang
 
-    @overhangs.setter
-    def overhangs(self, value):
-        if not(isinstance(value, OverhangDesciption) or value is None):
+    @overhang.setter
+    def overhang(self, value):
+        if not(isinstance(value, OverhangDescription) or value is None):
             raise TypeError(
                     'Attribute "overhangs" must have type OverhangDescription')
-        self._overhangs = value
+        self._overhang = value
 
     @property
     def shifts(self):
@@ -124,25 +96,32 @@ class AlignmentDescription(object):
         '''
         description = dict()
         for attrib in dir(self):
-            if attrib.startswith('_'):
+            if attrib.startswith('_') or attrib.isupper():
                 continue
+
+            if attrib in self.PERSISTENT:
+                description[attrib] = getattr(self, attrib)
+
             if attrib == 'shifts':
                 description[attrib] = list()
-                for i, shifts in enumerate(attrib):
+                shifts = getattr(self, attrib)
+                for i, sh in enumerate(shifts):
                     description[attrib].append(dict())
-                    for shift_attrib in dir(shifts):
-                        if shift_attrib.startswith('_'):
+                    for a in dir(sh):
+                        if a.startswith('_') or a.isupper():
                             continue
-                        description[attrib][i][shift_attrib] = \
-                            getattr(shifts, shift_attrib)
-            if attrib == 'overhangs':
+                        description[attrib][i][a] = getattr(sh, a)
+
+            if attrib == 'overhang':
                 description[attrib] = dict()
-                for overhang_attrib in dir(attrib):
-                    if overhang_attrib.startswith('_'):
+                oh = getattr(self, attrib)
+                for a in dir(oh):
+                    if a.startswith('_') or a.isupper():
                             continue
-                    description[attrib][overhang_attrib] = \
-                        getattr(self, overhang_attrib)
-            description[attrib] = getattr(self, attrib)
+                    if a in oh.PERSISTENT:
+                        description[attrib][a] = getattr(oh, a)
+
+        return description
 
     def set(self, description):
         '''
@@ -177,13 +156,15 @@ class AlignmentDescription(object):
         setattr(self, 'shifts', shift_descriptions)
 
 
-class OverhangDesciption(object):
+class OverhangDescription(object):
 
     '''
     Container for overhang values. These values represent the maximum shift
     values across all acquisition sites in each direction and are identical
     between all images of an experiment. 
     '''
+
+    PERSISTENT = {'lower', 'upper', 'right', 'left'}
 
     @property
     def lower(self):
@@ -272,6 +253,8 @@ class ShiftDescription(object):
     for images of the reference cycle.
     '''
 
+    PERSISTENT = {'site_id', 'x', 'y', 'is_above_max_shift'}
+
     @property
     def site_id(self):
         '''
@@ -327,7 +310,7 @@ class ShiftDescription(object):
         self._y = value
 
     @property
-    def exceeds_max_shift(self):
+    def is_above_max_shift(self):
         '''
         Returns
         -------
@@ -335,11 +318,11 @@ class ShiftDescription(object):
             ``True`` when either `x` or `y` shift exceed
             `maximally_tolerated_shift` and ``False`` otherwise
         '''
-        return self._exceeds_max_shift
+        return self._is_above_max_shift
 
-    @exceeds_max_shift.setter
-    def exceeds_max_shift(self, value):
+    @is_above_max_shift.setter
+    def is_above_max_shift(self, value):
         if not isinstance(value, bool):
             raise TypeError(
-                    'Attribute "exceeds_max_shift" must have type bool')
-        self._exceeds_max_shift = value
+                    'Attribute "is_above_max_shift" must have type bool')
+        self._is_above_max_shift = value

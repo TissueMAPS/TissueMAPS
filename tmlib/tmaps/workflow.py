@@ -3,7 +3,7 @@ import logging
 import importlib
 from gc3libs import Run
 from gc3libs.workflow import SequentialTaskCollection
-from gc3libs.workflow import AbortOnError
+from gc3libs.workflow import StopOnError
 from ..readers import WorkflowDescriptionReader
 from ..cluster import BasicClusterRoutines
 from ..errors import WorkflowNextStepError
@@ -11,7 +11,7 @@ from ..errors import WorkflowNextStepError
 logger = logging.getLogger(__name__)
 
 
-class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
+class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
 
     '''
     Class for reading workflow descriptions from a YAML file.
@@ -39,8 +39,6 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         self.experiment = experiment
         self.virtualenv = virtualenv
         self.verbosity = verbosity
-        # Forcing StagedTaskCollection to stop inside next()
-        self.__stopped = False
         self.tasks = list()
         self.expected_outputs = list()
         self._add_step(0)
@@ -126,6 +124,7 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
                      'for the "submit" method: {0}'.format(submit_command))
         args = parser.parse_args(submit_command)
         cli_class_inst = getattr(cli_module, prog_name.capitalize())(args)
+        # Calling the "jobs" method returns a SequentialTaskCollection
         return cli_class_inst.jobs
 
     def _add_step(self, index):
@@ -153,9 +152,12 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
         -------
         gc3libs.Run.State
         '''
-        # TODO: resubmission and all the related shizzle
-        # TODO: start not always at step one, but figure out which steps have
-        # already been performed and allow restart at later stages
+        # TODO: resubmission
+        # RetriableTask: overwrite "retry" method and adapt resubmission
+        # criteria such as memory or time requirements
+        # Workflow description: YAML mapping for each step with "command",
+        # "time", "memory", "resubmit", "active" keys
+
         if done+1 < len(self.workflow_description):
             logger.info('progress to next step ({0} of {1}): "{2}"'.format(
                             (done+1), len(self.workflow_description),
@@ -163,19 +165,13 @@ class ClusterWorkflowManager(SequentialTaskCollection, AbortOnError):
             try:
                 self._add_step(done+1)
             except Exception as error:
-                logger.error('adding next step failed: %s' % str(error))
-                self.exitcode = 0
-                logger.debug('exitcode set to zero')
-                if self.__stopped:
-                    return Run.State.STOPPED
-                else:
-                    return Run.State.TERMINATED
-        state = super(ClusterWorkflowManager, self).next(done)
-        if state == Run.State.TERMINATED:
-            self.exitcode = 0
-            if self.__stopped:
-                return Run.State.STOPPED
-        return state
+                logger.error('adding next step failed: %s', error)
+                self.execution.exitcode = 1
+                logger.debug('set exitcode to one')
+                logger.debug('set state to TERMINATED')
+                return Run.State.TERMINATED
+
+        return super(ClusterWorkflowManager, self).next(done)
 
 
 class WorkflowClusterRoutines(BasicClusterRoutines):

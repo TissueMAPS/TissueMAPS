@@ -1,4 +1,3 @@
-# encoding: utf-8
 import os
 import sys
 import traceback
@@ -35,12 +34,6 @@ def command_line_call(parser):
     '''
     args = parser.parse_args()
 
-    # if args.verbosity > 0:
-    #     level = logging.DEBUG
-    # else:
-    #     level = logging.INFO
-    # if args.silent:
-    #     level = logging.CRITICAL
     level = map_logging_verbosity(args.verbosity)
     configure_logging(level)
     logger.debug('running program: %s' % parser.prog)
@@ -51,15 +44,13 @@ def command_line_call(parser):
     try:
         if args.handler:
             args.handler(args)
-            sys.stdout.write('🍺  Done!')
         else:
             parser.print_help()
     except Exception as error:
-        sys.stdout.write('😞  Failed!\n')
         sys.stderr.write('%s\n' % str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):
             sys.stderr.write(tb)
-        raise
+        sys.exit(1)
 
 
 class CommandLineInterface(object):

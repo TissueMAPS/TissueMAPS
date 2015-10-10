@@ -1,10 +1,10 @@
 import os
 import logging
+import bioformats
 from cached_property import cached_property
 from natsort import natsorted
 from .formats import Formats
 from .readers import JsonReader
-from .metadata import ChannelImageMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class Upload(object):
         str
             name of the upload folder
         '''
-        return self._name
+        return os.path.basename(os.path.abspath(self.upload_subdir))
 
     @property
     def dir(self):
@@ -55,8 +55,7 @@ class Upload(object):
         str
             absolute path to the upload folder
         '''
-        self._dir = self.upload_subdir
-        return self._dir
+        return self.upload_subdir
 
     @cached_property
     def image_dir(self):
@@ -108,6 +107,7 @@ class Upload(object):
         -------
         str
             absolute path to directory that contains the extracted OMEXML files
+            for each uploaded image in `image_dir`
 
         Note
         ----
@@ -190,10 +190,8 @@ class Upload(object):
         str
             name of the file that contains image related metadata
         '''
-        self._image_metadata_file = self.cfg.IMAGE_UPLOAD_METADATA_FILE.format(
-                                            upload_subdir=self.dir,
-                                            sep=os.path.sep)
-        return self._image_metadata_file
+        return self.cfg.IMAGE_UPLOAD_METADATA_FILE.format(
+                    upload_name=self.name, sep=os.path.sep)
 
     @property
     def image_metadata(self):
@@ -206,14 +204,11 @@ class Upload(object):
         '''
         with JsonReader(self.dir) as reader:
             metadata = reader.read(self.image_metadata_file)
-        self._image_metadata = [
-            ChannelImageMetadata.set(metadata[f])
-            for f in natsorted(metadata.keys())
-        ]
+        self._image_metadata = bioformats.OMEXML(metadata)
         return self._image_metadata
 
     @property
-    def image_hashmap_file(self):
+    def image_mapper_file(self):
         '''
         Returns
         -------
@@ -222,10 +217,21 @@ class Upload(object):
             the images stored in the original image files to the
             the filenames of extracted images
         '''
-        self._image_hashmap_file = self.cfg.IMAGE_UPLOAD_HASHMAP_FILE.format(
-                                            upload_subdir=self.dir,
-                                            sep=os.path.sep)
-        return self._image_hashmap_file
+        return self.cfg.IMAGE_UPLOAD_IMGMAPPER_FILE.format(
+                        upload_name=self.name, sep=os.path.sep)
+
+    @property
+    def position_descriptor_file(self):
+        '''
+        Returns
+        -------
+        str
+            name of the file that contains key-value pairs for mapping
+            the positional information on image acquisition sites to the
+            image metadata
+        '''
+        return self.cfg.IMAGE_UPLOAD_POSMAPPER_FILE.format(
+                        upload_name=self.name, sep=os.path.sep)
 
     @cached_property
     def image_hashmap(self):
@@ -241,5 +247,15 @@ class Upload(object):
             in case intensity projection is performed
         '''
         with JsonReader(self.dir) as reader:
-            self._image_hashmap = reader.read(self.image_hashmap_file)
-        return self._image_hashmap
+            return reader.read(self.image_hashmap_file)
+
+    @cached_property
+    def position_description(self):
+        '''
+        Returns
+        -------
+        Dict[str, Dict[str, List[str]]]
+            key-value pairs to map image acquisition sites to individual images
+        '''
+        with JsonReader(self.dir) as reader:
+            return reader.read(self.image_hashmap_file)

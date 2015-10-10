@@ -263,10 +263,10 @@ class ClusterRoutines(BasicClusterRoutines):
             directory where *.job* files and log output will be stored
         '''
         self._project_dir = os.path.join(self.experiment.dir,
-                                         'tmaps_%s' % self.prog_name)
+                                         'tmaps', self.prog_name)
         if not os.path.exists(self._project_dir):
             logger.debug('create project directory: %s' % self._project_dir)
-            os.mkdir(self._project_dir)
+            os.makedirs(self._project_dir)
         return self._project_dir
 
     @cached_property

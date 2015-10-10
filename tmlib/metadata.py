@@ -13,13 +13,11 @@ class ImageMetadata(object):
     __metaclass__ = ABCMeta
 
     BASIC = {
-        'id', 'name', 'well_id', 'plane_id', 'time_id',
+        'id', 'name', 'plane_id', 'time_id',
         'orig_dtype', 'orig_dimensions'
     }
 
-    POSITIONAL = {
-        'site_id', 'row_index', 'col_index'
-    }
+    POSITIONAL = {'site_id'}
 
     PERSISTENT = BASIC.union(POSITIONAL)
 
@@ -57,7 +55,7 @@ class ImageMetadata(object):
             zero-based unique image identifier number
         '''
         return self._id
-    
+
     @id.setter
     def id(self, value):
         if not(isinstance(value, int)):
@@ -81,102 +79,39 @@ class ImageMetadata(object):
         self._name = value
 
     @property
-    def site_id(self):
+    def site(self):
         '''
         Returns
         -------
-        int
-            zero-based globally unique position identifier number, sorted
-            row-wise over all image acquisition sites
-
-        Note
-        ----
-        Order of sites is not necessarily according to acquisition time.
+        ImageAcquisitionSite
+            information about the position of the image within the
+            image acquisition grid
         '''
-        return self._site_id
+        return self._site
 
-    @site_id.setter
-    def site_id(self, value):
-        if not(isinstance(value, int)) and value is not None:
-            raise TypeError('Attribute "site_int" must have type int')
-        self._site_id = value
+    @site.setter
+    def site(self, value):
+        if not(isinstance(value, ImageAcquisitionSite)):
+            raise TypeError('Attribute "site" must have type ImageAcquisitionSite')
+        self._site = value
 
-    @property
-    def stage_position(self):
-        '''
-        Returns
-        -------
-        Tuple[float]
-            absolute y, x microscope stage positions
-        '''
-        return self._stage_position
+    # @property
+    # def stage_position(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     Tuple[float]
+    #         absolute y, x microscope stage positions
+    #     '''
+    #     return self._stage_position
 
-    @stage_position.setter
-    def stage_position(self, value):
-        if isinstance(value, list) and len(value) == 2:
-            value = tuple(value)
-        if not(isinstance(value, tuple)) and value is not None:
-            raise TypeError('Attribute "stage_position" must have type tuple')
-        self._stage_position = value
-
-    @property
-    def row_index(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based row index of the image in the acquisition grid
-        '''
-        return self._row_index
-
-    @row_index.setter
-    def row_index(self, value):
-        if not(isinstance(value, int)) and value is not None:
-            raise TypeError('Attribute "row_index" must have type int')
-        self._row_index = value
-
-    @property
-    def col_index(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based column index of the image in the acquisition grid
-        '''
-        return self._col_index
-
-    @col_index.setter
-    def col_index(self, value):
-        if not(isinstance(value, int)) and value is not None:
-            raise TypeError('Attribute "col_index" must have type int')
-        self._col_index = value
-
-    @property
-    def grid_coordinates(self):
-        '''
-        Returns
-        -------
-        Tuple[int]
-            zero-based row, column indices of the image in the acquisition grid
-        '''
-        self._coordinates = (self.row_index, self.col_index)
-        return self._coordinates
-
-    @property
-    def well_id(self):
-        '''
-        Returns
-        -------
-        str
-            well identifier string, e.g. "A01"
-        '''
-        return self._well_id
-
-    @well_id.setter
-    def well_id(self, value):
-        if not(isinstance(value, basestring)) and value is not None:
-            raise TypeError('Attribute "well_id" must have type str')
-        self._well_id = value
+    # @stage_position.setter
+    # def stage_position(self, value):
+    #     if isinstance(value, list) and len(value) == 2:
+    #         value = tuple(value)
+    #     if not(isinstance(value, tuple)) and value is not None:
+    #         raise TypeError('Attribute "stage_position" must have type tuple')
+    #     self._stage_position = value
 
     @property
     def plane_id(self):
@@ -445,14 +380,13 @@ class ChannelImageMetadata(ImageMetadata):
         return inst
 
 
-class FileFormatMapper(object):
+class ImageFileLayout(object):
 
     '''
-    Container for metadata corresponding to the original image files.
+    Container for information about the location of individual images (planes)
+    within the original image file and references to the files in which they
+    will be stored upon extraction.
     '''
-
-    def __init__(self):
-        self._series_count = 0
 
     @property
     def name(self):
@@ -517,6 +451,122 @@ class FileFormatMapper(object):
         if not isinstance(value, list):
             raise TypeError('Attribute "planes" must have type list')
         self._planes = value
+
+
+class AcquisitionSiteDescription(object):
+
+    '''
+    Container for image metadata related to acquisition sites, i.e.
+    row and column positions of the image in the acquisition grid.
+    '''
+
+    PERSISTENT = {
+        'id', 'image_ids', 'well_id', 'row_index', 'col_index'
+    }
+
+    @property
+    def id(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based globally unique position identifier number, sorted
+            row-wise over all image acquisition sites
+
+        Note
+        ----
+        Order of sites is not necessarily according to acquisition time.
+        '''
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        if not(isinstance(value, int)):
+            raise TypeError('Attribute "site_int" must have type int')
+        self._id = value
+
+    @property
+    def image_ids(self):
+        '''
+        Returns
+        -------
+        List[int]
+            identifier numbers of images that share the same site
+        '''
+        return self._image_ids
+
+    @image_ids.setter
+    def image_ids(self, value):
+        if not(isinstance(value, list)):
+            raise TypeError('Attribute "image_ids" must have type list')
+        if not all([isinstance(e, int) for e in value]):
+            raise TypeError('Elements of attribute "image_ids" must have type int')
+        self._image_ids = value
+
+    @property
+    def row_index(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based row index of the image in the acquisition grid
+        '''
+        return self._row_index
+
+    @row_index.setter
+    def row_index(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "row_index" must have type int')
+        self._row_index = value
+
+    @property
+    def col_index(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based column index of the image in the acquisition grid
+        '''
+        return self._col_index
+
+    @col_index.setter
+    def col_index(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "col_index" must have type int')
+        self._col_index = value
+
+    @property
+    def grid_coordinates(self):
+        '''
+        Returns
+        -------
+        Tuple[int]
+            zero-based row, column indices of the image in the acquisition grid
+        '''
+        self._coordinates = (self.row_index, self.col_index)
+        return self._coordinates
+
+    @property
+    def well_id(self):
+        '''
+        Returns
+        -------
+        str
+            well identifier string, e.g. "A01"
+        '''
+        return self._well_id
+
+    @well_id.setter
+    def well_id(self, value):
+        if not(isinstance(value, basestring)) and value is not None:
+            raise TypeError('Attribute "well_id" must have type str')
+        self._well_id = value
+
+    def set(self, description):
+        pass
+
+    def serialize(self):
+        pass
 
 
 class IllumstatsImageMetadata(object):

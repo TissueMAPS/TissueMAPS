@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def calculate_shift(target_filename, reference_filename):
     '''
-    Calculate shift between two images based on fast Fourier transform.
+    Calculate displacement between two images based on fast Fourier transform.
 
     "Apparently astronomical images look a lot like microscopic images." [1]_
 
@@ -32,11 +32,8 @@ def calculate_shift(target_filename, reference_filename):
     .. [1] http://image-registration.readthedocs.org/en/latest/
     '''
     with NumpyImageReader() as reader:
-        # Load image that should be registered
         target_image = reader.read(target_filename)
-        # Load reference image
         reference_image = reader.read(reference_filename)
-    # Calculate shift between images
     x, y, a, b = image_registration.chi2_shift(target_image, reference_image)
     return (x, y)
 
@@ -69,9 +66,11 @@ def register_images(sites, target_files, reference_files, output_file):
         out[cycle]['site'] = list()
         for i in xrange(len(files)):
             target_filename = files[i]
-            logger.info('registration file: %s' % target_filename)
+            logger.info('target: %s'
+                        % os.path.basename(target_filename))
             ref_filename = reference_files[i]
-            logger.info('reference file: %s' % ref_filename)
+            logger.info('reference: %s'
+                        % os.path.basename(ref_filename))
 
             # Calculate shift between images
             x, y = calculate_shift(target_filename, ref_filename)
@@ -82,7 +81,7 @@ def register_images(sites, target_files, reference_files, output_file):
             out[cycle]['filename'].append(os.path.basename(target_filename))
             out[cycle]['site'].append(sites[i])
 
-    logger.info('write registration to file: %s' % output_file)
+    logger.debug('write registration to file: %s' % output_file)
     with DatasetWriter(output_file, truncate=True) as writer:
         for cycle, data in out.iteritems():
             for feature, values in data.iteritems():

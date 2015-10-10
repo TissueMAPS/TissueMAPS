@@ -41,16 +41,14 @@ LAYER_NAME = '{experiment_name}_c{channel_id:0>3}_z{plane_id:0>3}_t{time_id:>3}'
 IMAGE_UPLOAD_DIR = '{upload_subdir}{sep}image_uploads'
 ADDITIONAL_UPLOAD_DIR = '{upload_subdir}{sep}additional_uploads'
 OME_XML_DIR = '{upload_subdir}{sep}ome_xml'
-IMAGE_UPLOAD_HASHMAP_FILE = '{upload_subdir}{sep}hashmap.json'
-IMAGE_UPLOAD_METADATA_FILE = '{upload_subdir}{sep}metadata.json'
+IMAGE_UPLOAD_IMGMAPPER_FILE = '{upload_name}{sep}file_mapper.json'
+IMAGE_UPLOAD_METADATA_FILE = '{upload_name}{sep}configured_metadata.ome.xml'
 
 IMAGE_DIR = '{cycle_dir}{sep}images'
 IMAGE_FILE = '{experiment_name}_s{site_id:0>5}_c{channel_id:0>3}_z{plane_id:0>3}_t{time_id:0>3}.png'
 
-IMAGE_METADATA_FILE = '{cycle_name}.metadata.json'
-ALIGN_DESCRIPTOR_FILE = '{cycle_name}.alignment.json'
-
-# METADATA_FILE = '{experiment_dir}{sep}{experiment_name}.metadata.xml'
+IMAGE_METADATA_FILE = '{cycle_name}.ome.xml'
+ALIGN_DESCRIPTOR_FILE = '{cycle_name}.align.json'
 
 STATS_DIR = '{cycle_dir}{sep}stats'
 STATS_FILE = '{cycle}_{channel}.stat.h5'

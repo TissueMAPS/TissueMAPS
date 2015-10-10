@@ -1,21 +1,120 @@
 import re
 import os
 import logging
-import json
 from lxml import etree
 from natsort import natsorted
 from cached_property import cached_property
-from . import cfg
+from . import config
 from . import utils
 from .upload import Upload
 from .cycle import Cycle
 from .metadata import MosaicMetadata
-from .cfg_setters import UserConfiguration
-from .cfg_setters import TmlibConfiguration
-from .errors import NotSupporteError
+from .config_setters import UserConfiguration
+from .config_setters import TmlibConfiguration
+from .errors import NotSupportedError
 from .readers import UserConfigurationReader
 
 logger = logging.getLogger(__name__)
+
+
+class ExperimentFactory(object):
+
+    '''
+    Factory class to create an experiment object.
+
+    The type of the returned object depends on the user configuration
+    and the experimental setup.
+    '''
+
+    def __init__(self, experiment_dir, library='vips'):
+        '''
+        Initialize an instance of class ExperimentFactory.
+
+        Parameters
+        ----------
+        experiment_dir: str
+            absolute path to experiment folder
+        library: str, optional
+            image library that should be used
+            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
+        '''
+        self.experiment_dir = os.path.expandvars(experiment_dir)
+        self.experiment_dir = os.path.expanduser(self.experiment_dir)
+        self.experiment_dir = os.path.abspath(self.experiment_dir)
+        self.library = library
+
+    @property
+    def user_cfg_file(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to experiment-specific user configuration file
+        '''
+        return self.cfg.USER_CFG_FILE.format(
+                    experiment_dir=self.experiment_dir, sep=os.path.sep)
+
+    @property
+    def cfg(self):
+        '''
+        Returns
+        -------
+        TmlibConfiguration
+            file system configuration settings
+
+        See also
+        --------
+        `tmlib.cfg_setters.TmlibConfiguration`_
+        '''
+        return TmlibConfiguration(config)
+
+    @cached_property
+    def user_cfg(self):
+        '''
+        Returns
+        -------
+        UserConfiguration
+            experiment-specific configuration settings provided by the user
+            in YAML format
+
+        See also
+        --------
+        `tmlib.cfg_setters.UserConfiguration`_
+        '''
+        # TODO: shall we do this via the database instead?
+        logger.debug('loading user configuration file: %s', self.user_cfg_file)
+        with UserConfigurationReader() as reader:
+            config_settings = reader.read(self.user_cfg_file)
+        return UserConfiguration(config_settings)
+
+    def create(self):
+        '''
+        Create an instance of an instance of a subclass of the `Experiment`
+        base class. The type depends on the experiment-specific user
+        configuration settings.
+
+        Parameters
+        ----------
+        experiment_dir: str
+            absolute path to experiment folder
+        cfg: TmlibConfigurations, optional
+            configuration settings for names of directories and files on disk
+            (default: settings provided by `cfg` module)
+        library: str, optional
+            image library that should be used
+            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
+
+        Returns
+        -------
+        Slide or WellPlate
+        '''
+        logger.debug('using the "%s" image library', self.library)
+        if self.user_cfg.WELLPLATE_FORMAT:
+            return WellPlate(
+                    self.experiment_dir, self.cfg, self.user_cfg, self.library)
+        else:
+            return Slide(
+                    self.experiment_dir, self.cfg, self.user_cfg, self.library)
 
 
 class Experiment(object):
@@ -46,8 +145,7 @@ class Experiment(object):
     `tmlib.cfg`_
     '''
 
-    def __init__(self, experiment_dir, cfg=TmlibConfiguration(cfg),
-                 library='vips'):
+    def __init__(self, experiment_dir, cfg, user_cfg, library):
         '''
         Initialize an instance of class Experiment.
 
@@ -55,24 +153,21 @@ class Experiment(object):
         ----------
         experiment_dir: str
             absolute path to experiment folder
-        cfg: TmlibConfigurations, optional
+        cfg: TmlibConfigurations
             configuration settings for names of directories and files on disk
-            (default: settings provided by `cfg` module)
-        library: str, optional
+        library: str
             image library that should be used
-            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
+            (options: ``"vips"`` or ``"numpy"``)
 
         See also
         --------
         `tmlib.cfg_setters.TmlibConfiguration`_
         `tmlib.cfg`_
         '''
-        self.experiment_dir = os.path.expandvars(experiment_dir)
-        self.experiment_dir = os.path.expanduser(self.experiment_dir)
-        self.experiment_dir = os.path.abspath(self.experiment_dir)
+        self.experiment_dir = experiment_dir
         self.cfg = cfg
+        self.user_cfg = user_cfg
         self.library = library
-        logger.debug('using the "%s" image library' % self.library)
 
     @property
     def name(self):
@@ -94,38 +189,6 @@ class Experiment(object):
             absolute path to the experiment directory
         '''
         return self.experiment_dir
-
-    @property
-    def user_cfg_file(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to experiment-specific user configuration file
-        '''
-        self._user_cfg_file = self.cfg.USER_CFG_FILE.format(
-                                            experiment_dir=self.dir,
-                                            sep=os.path.sep)
-        return self._user_cfg_file
-
-    @cached_property
-    def user_cfg(self):
-        '''
-        Returns
-        -------
-        UserConfiguration
-            experiment-specific configuration settings provided by the user
-
-        See also
-        --------
-        `tmlib.cfg_setters.UserConfiguration`_
-        '''
-        # TODO: shall we do this via the database instead?
-        logger.debug('user configuration file: %s' % self.user_cfg_file)
-        with UserConfigurationReader() as reader:
-            configuration_settings = reader.read(self.user_cfg_file)
-        self._user_cfg = UserConfiguration(configuration_settings)
-        return self._user_cfg
 
     def _is_cycle_dir(self, folder):
         format_string = self.cfg.CYCLE_DIR.format(
@@ -291,7 +354,7 @@ class Experiment(object):
         '''
         if hasattr(self.user_cfg, 'LAYER_NAMES'):
             # self._layer_names = self.user_cfg.LAYER_NAMES
-            raise NotSupporteError('TODO')
+            raise NotSupportedError('TODO')
         else:
             self._layer_names = dict()
             for cycle in self.cycles:
@@ -458,8 +521,7 @@ class WellPlate(Experiment):
 
     SUPPORTED_PLATE_FORMATS = {96, 384}
 
-    def __init__(self, experiment_dir, cfg=TmlibConfiguration(cfg),
-                 library='vips'):
+    def __init__(self, experiment_dir, cfg, user_cfg, library):
         '''
         Initialize an instance of class WellPlate.
 
@@ -467,23 +529,21 @@ class WellPlate(Experiment):
         ----------
         experiment_dir: str
             absolute path to experiment folder
-        cfg: TmlibConfigurations, optional
+        cfg: TmlibConfigurations
             configuration settings for names of directories and files on disk
-            (default: settings provided by `cfg` module)
-        library: str, optional
+        library: str
             image library that should be used
-            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
+            (options: ``"vips"`` or ``"numpy"``)
 
         See also
         --------
         `tmlib.cfg_setters.TmlibConfiguration`_
         `tmlib.cfg`_
         '''
-        super(WellPlate, self).__init__(experiment_dir, cfg, library)
-        self.experiment_dir = os.path.expandvars(experiment_dir)
-        self.experiment_dir = os.path.expanduser(self.experiment_dir)
-        self.experiment_dir = os.path.abspath(self.experiment_dir)
+        super(WellPlate, self).__init__(experiment_dir, cfg, user_cfg, library)
+        self.experiment_dir = experiment_dir
         self.cfg = cfg
+        self.user_cfg = user_cfg
         self.library = library
 
     @property
@@ -571,50 +631,6 @@ class WellPlate(Experiment):
         return self._n_wells
 
     @staticmethod
-    def map_letter_to_number(letter):
-        '''
-        Map capital letter representation of a row to one-based index position.
-
-        Parameters
-        ----------
-        letter: str
-            capital letter
-
-        Returns
-        -------
-        int
-            one-based index number
-
-        Examples
-        --------
-        >>>WellPlate.map_letter_to_number("A")
-        1
-        '''
-        return ord(letter) - 64
-
-    @staticmethod
-    def map_number_to_letter(number):
-        '''
-        Map one-based index number representation of a row to capital letter.
-
-        Parameters
-        ----------
-        number: int
-            one-based index number
-
-        Returns
-        -------
-        str
-            capital letter
-
-        Examples
-        --------
-        >>>WellPlate.map_number_to_letter(1)
-        "A"
-        '''
-        return chr(number+64)
-
-    @staticmethod
     def map_well_id_to_position(well_id):
         '''
         Mapping of the identifier string representation to the
@@ -636,7 +652,7 @@ class WellPlate(Experiment):
         (1, 2)
         '''
         row_name, col_name = re.match(r'([A-Z])(\d{2})', well_id).group(1, 2)
-        row_index = WellPlate.map_letter_to_number(row_name)
+        row_index = utils.map_letter_to_number(row_name)
         col_index = int(col_name)
         return (row_index, col_index)
 
@@ -662,7 +678,7 @@ class WellPlate(Experiment):
         "A02"
         '''
         row_index, col_index = well_position[0], well_position[1]
-        row_name = WellPlate.map_number_to_letter(row_index)
+        row_name = utils.map_number_to_letter(row_index)
         return '%s%.2d' % (row_name, col_index)
 
 
@@ -673,8 +689,7 @@ class Slide(Experiment):
     same conditions.
     '''
 
-    def __init__(self, experiment_dir, cfg=TmlibConfiguration(cfg),
-                 library='vips'):
+    def __init__(self, experiment_dir, cfg, user_cfg, library):
         '''
         Initialize an instance of class Slide.
 
@@ -682,23 +697,24 @@ class Slide(Experiment):
         ----------
         experiment_dir: str
             absolute path to experiment folder
-        cfg: TmlibConfigurations, optional
+        cfg: TmlibConfigurations
             configuration settings for names of directories and files on disk
-            (default: settings provided by `cfg` module)
-        library: str, optional
+        library: str
             image library that should be used
-            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
+            (options: ``"vips"`` or ``"numpy"``)
 
         See also
         --------
         `tmlib.cfg_setters.TmlibConfiguration`_
         `tmlib.cfg`_
         '''
-        super(Slide, self).__init__(experiment_dir, cfg, library)
+        super(Slide, self).__init__(
+            experiment_dir, cfg, user_cfg, library)
         self.experiment_dir = os.path.expandvars(experiment_dir)
         self.experiment_dir = os.path.expanduser(self.experiment_dir)
         self.experiment_dir = os.path.abspath(self.experiment_dir)
         self.cfg = cfg
+        self.user_cfg = cfg
         self.library = library
 
     @property

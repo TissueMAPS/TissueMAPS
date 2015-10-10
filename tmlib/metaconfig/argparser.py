@@ -1,9 +1,9 @@
 from . import __version__
-from .cli import Metaconvert
+from .cli import Metaconfig
 from ..formats import Formats
 
 
-parser, subparsers = Metaconvert.get_parser_and_subparsers()
+parser, subparsers = Metaconfig.get_parser_and_subparsers()
 
 parser.description = '''
         Convert metadata extracted from image files to a custom format
@@ -20,8 +20,9 @@ init_auto_group.add_argument(
     help='specify a microscope-specific file format for which special '
          'readers are available (default: "default")')
 init_auto_group.add_argument(
-    '-p', '--projection', action='store_true',
-    help='if maximum intensity project should be performed')
+    '-z', '--z_stacks', action='store_true',
+    help='if individual focal planes should be kept, '
+         'i.e. no intensity project should be performed')
 
 init_manual_group = init_parser.add_argument_group(
     'arguments for manual formatting')
@@ -47,4 +48,4 @@ init_manual_group.add_argument(
          'which images are arrayed on the grid (default: "zigzag_horizontal")')
 
 for name in subparsers.choices:
-    subparsers.choices[name].set_defaults(handler=Metaconvert.call)
+    subparsers.choices[name].set_defaults(handler=Metaconfig.call)

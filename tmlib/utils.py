@@ -92,7 +92,7 @@ def common_substring(data):
     -------
     str
     '''
-    # NOTE: code taken from stackoverflow (question 2892931)
+    # NOTE: code taken from stackoverflow.com (question 2892931)
     substr = ''
     if len(data) > 1 and len(data[0]) > 0:
         for i in range(len(data[0])):
@@ -115,3 +115,74 @@ def list_directory_tree(start_dir):
         level = root.replace(start_dir, '').count(os.sep)
         indent = ' ' * 4 * (level)
         print('{}{}/'.format(indent, os.path.basename(root)))
+
+
+def is_number(s):
+    '''
+    Check whether a string can be represented by a number.
+
+    Parameters
+    ----------
+    s: str
+
+    Returns
+    -------
+    bool
+
+    Examples
+    --------
+    >>>is_number('blabla')
+    False
+    >>>is_number('007')
+    True
+    '''
+    # NOTE: code taken from stackoverflow.com (question 354038)
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
+def map_letter_to_number(letter):
+    '''
+    Map capital letter to number.
+
+    Parameters
+    ----------
+    letter: str
+        capital letter
+
+    Returns
+    -------
+    int
+        one-based index number
+
+    Examples
+    --------
+    >>>map_letter_to_number("A")
+    1
+    '''
+    return ord(letter) - 64
+
+
+def map_number_to_letter(number):
+    '''
+    Map number to capital letter.
+
+    Parameters
+    ----------
+    number: int
+        one-based index number
+
+    Returns
+    -------
+    str
+        capital letter
+
+    Examples
+    --------
+    >>>map_number_to_letter(1)
+    "A"
+    '''
+    return chr(number+64)

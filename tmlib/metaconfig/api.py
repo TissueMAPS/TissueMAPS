@@ -2,9 +2,9 @@ import os
 import re
 import logging
 import importlib
-from .. import utils
 from ..cluster import ClusterRoutines
 from ..writers import JsonWriter
+from ..writers import TextWriter
 from ..errors import NotSupportedError
 from ..errors import MetadataError
 from ..formats import Formats
@@ -115,11 +115,11 @@ class MetadataConfigurator(ClusterRoutines):
                     'metadata_files': [
                         os.path.join(upload.dir, upload.image_metadata_file)
                     ],
-                    'hashmap_files': [
-                        os.path.join(upload.dir, upload.image_hashmap_file)
+                    'mapper_files': [
+                        os.path.join(upload.dir, upload.image_mapper_file)
                     ]
                 },
-                'projection': kwargs['projection']
+                'z_stacks': kwargs['z_stacks']
             }
             description.update(kwargs)
             job_descriptions['run'].append(description)
@@ -171,27 +171,29 @@ class MetadataConfigurator(ClusterRoutines):
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
                             batch['inputs']['ome_xml_files'],
-                            self.experiment.name)
-        if batch['projection']:
-            logger.info('focal planes will be projected to a single 2D plane')
+                            self.experiment.name,
+                            self.experiment.dimensions)
+        if batch['z_stacks']:
+            logger.info('focal planes will be kept')
         else:
-            logger.info('focal planes will be preserved')
-        md = handler.format_omexml_metadata(batch['projection'])
-        md = handler.format_metadata_from_additional_files(md)
-        missing_md = handler.determine_missing_basic_metadata(md)
+            logger.info('focal planes will be projected to a 2D plane')
+        handler.configure_ome_metadata_from_image_files()
+        # batch['keep_zstacks']
+        handler.configure_ome_metadata_from_additional_files()
+        missing_md = handler.determine_missing_metadata()
         if missing_md:
             if batch['regex'] or handler.REGEX:
                 logger.warning('required metadata information is missing')
                 logger.info('try to retrieve missing metadata from filenames '
                             'using regular expression')
-                md = handler.format_metadata_from_filenames(md, batch['regex'])
+                handler.configure_metadata_from_filenames(batch['regex'])
             else:
                 raise MetadataError(
                     'The following metadata information is missing:\n"%s"\n'
                     'You can provide a regular expression in order to '
                     'retrieve the missing information from filenames '
                     % '", "'.join(missing_md))
-        missing_md = handler.determine_missing_basic_metadata(md)
+        missing_md = handler.determine_missing_metadata()
         if missing_md:
             raise MetadataError(
                     'The following metadata information is missing:\n"%s"\n'
@@ -202,32 +204,32 @@ class MetadataConfigurator(ClusterRoutines):
         try:
             logger.info('try to determine grid coordinates from microscope '
                         'stage positions')
-            md = handler.determine_grid_coordinates_from_positions(md)
+            handler.determine_grid_coordinates_from_stage_positions()
         except MetadataError as error:
             logger.warning('microscope stage positions are not available: "%s"'
                            % str(error))
             logger.info('try to determine grid coordinates from provided '
                         'stitch layout')
-            md = handler.determine_grid_coordinates_from_layout(
-                    md, stitch_layout=batch['stitch_layout'],
+            handler.determine_grid_coordinates_from_layout(
+                    stitch_layout=batch['stitch_layout'],
                     stitch_major_axis=batch['stitch_major_axis'],
                     stitch_dimensions=(batch['stitch_vertical'],
                                        batch['stitch_horizontal']))
 
-        md = handler.create_channel_ids(md)
-        md = handler.create_plane_ids(md)
-        md = handler.build_image_filenames(
-                    md, self.image_file_format_string)
-        hashmap = handler.create_file_hashmap(md)
+        handler.update_channel_ids()
+        import ipdb; ipdb.set_trace()
+        handler.update_plane_ids()
+        md = handler.build_image_filenames(self.image_file_format_string)
+        imgmap = handler.create_image_hashmap()
 
         self._write_metadata_to_file(batch['outputs']['metadata_files'], md)
-        self._write_hashmap_to_file(batch['outputs']['hashmap_files'], hashmap)
+        self._write_mapper_to_file(batch['outputs']['mapper_files'][0], imgmap)
 
     @staticmethod
     def _write_metadata_to_file(filenames, metadata):
-        with JsonWriter() as writer:
+        with TextWriter() as writer:
             f = filenames[0]
-            data = {md.name: md.serialize() for md in metadata}
+            data = metadata.to_xml()
             logger.info('write metadata to file')
             writer.write(f, data)
 
