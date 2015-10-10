@@ -39,7 +39,6 @@
         "app/src/core/object/MapObject.ts",
         "app/src/core/selection/CellSelection.ts",
         "app/src/core/selection/CellSelectionHandler.ts",
-        "app/src/core/selection/CellSelectionHandlerFactory.ts",
         "app/src/core/selection/SelectionLayer.ts",
         "app/src/core/selection/typedefs.d.ts",
         "app/src/core/serialize/typedefs.ts",

@@ -111,6 +111,8 @@ class Application {
             this.setActiveAppInstance(inst);
         }
 
+        window['inst'] = inst;
+
         return inst;
     }
 

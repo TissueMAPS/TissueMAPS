@@ -8,19 +8,17 @@ class CellSelection implements Serializable<CellSelection> {
     layer: SelectionLayer;
     cells: { [cellId: string]: MapPosition; } = {};
 
-    constructor(private $q: ng.IQService,
-                private ol,
-                private selectionLayerFactory: SelectionLayerFactory,
-                private $rootScope: ng.IRootScopeService,
+    private $rootScope: ng.IRootScopeService;
 
-                id: CellSelectionId,
-                color: Color) {
+    constructor(id: CellSelectionId, color: Color) {
 
         this.id = id;
         this.color = color;
         this.name = 'Selection #' + id;
 
-        this.layer = this.selectionLayerFactory.create(this.name, this.color);
+        this.layer = new SelectionLayer(this.name, this.color);
+
+        this.$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
     }
 
     addToMap(map: ol.Map) {
@@ -94,32 +92,3 @@ interface SerializedCellSelection extends Serialized<CellSelection> {
     cells: { [cellId: string]: MapPosition; };
     color: SerializedColor;
 }
-
-
-class CellSelectionFactory {
-
-    static $inject = [
-        '$q',
-        'openlayers',
-        'selectionLayerFactory',
-        '$rootScope'
-    ];
-
-    constructor(private $q: ng.IQService,
-                private ol,
-                private selectionLayerFactory: SelectionLayerFactory,
-                private $rootScope: ng.IRootScopeService) {}
-
-    create(id: CellSelectionId, color: Color) {
-        return new CellSelection(
-            this.$q,
-            this.ol,
-            this.selectionLayerFactory,
-            this.$rootScope,
-            id,
-            color
-        );
-    }
-}
-
-angular.module('tmaps.core').service('cellSelectionFactory', CellSelectionFactory);

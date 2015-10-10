@@ -38,7 +38,6 @@ class Viewport implements Serializable<Viewport> {
 
     constructor(private ol,
                 private $q: ng.IQService,
-                private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private $http: ng.IHttpService,
                 private Cell,
                 private $controller: ng.IControllerService,
@@ -57,7 +56,7 @@ class Viewport implements Serializable<Viewport> {
         this.elementScope = this.elementScopeDef.promise;
 
         // Helper class to manage the differently marker selections
-        this.selectionHandler = this.cellSelectionHandlerFty.create(this);
+        this.selectionHandler = new CellSelectionHandler(this);
 
         // var createDemoRectangles = function(startx, starty) {
         //     var side = 100;

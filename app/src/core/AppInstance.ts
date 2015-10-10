@@ -19,7 +19,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.viewport = this.viewportFty.create();
         this.viewport.injectIntoDocumentAndAttach(this);
         this.tools = this.toolLoader.loadTools(this);
-        window['appInst'] = this;
     }
 
     setActive() {
@@ -51,13 +50,9 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         });
 
         this.experiment.cells.then((cells) => {
-            var cellLayer = new ObjectLayer('Cells', {
-                objects: cells,
-                fillColor: Color.RED,
-                strokeColor: Color.RED
-            });
-            this.viewport.addObjectLayer(cellLayer);
+            this.viewport.selectionHandler.addCellOutlines(cells);
         });
+
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {

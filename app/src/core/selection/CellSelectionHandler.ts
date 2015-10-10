@@ -10,11 +10,7 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
     selections: CellSelection[] = [];
     availableColors: Color[];
 
-    constructor(private cellSelectionFty: CellSelectionFactory,
-                private $q: ng.IQService,
-                private $http: ng.IHttpService,
-                private $rootScope: ng.IRootScopeService,
-                viewport) {
+    constructor(viewport) {
 
         this.viewport = viewport;
 
@@ -36,7 +32,8 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
             // Upon testing 0.002 was the lowest alpha value which still caused to
             // hitDetection mechanism to find the cell. Lower values get probably floored to 0.
             fillColor: Color.RED.withAlpha(0.002),
-            strokeColor: Color.RED
+            strokeColor: Color.RED,
+            visible: false
         });
         this.viewport.addObjectLayer(cellLayer);
         this.viewport.map.then((map) => {
@@ -54,7 +51,7 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
 
     serialize() {
         var selectionsPr = _(this.selections).map((sel) => { return sel.serialize(); });
-        return this.$q.all(selectionsPr).then((selections) => {
+        return $injector.get<ng.IQService>('$q').all(selectionsPr).then((selections) => {
             var ser = {
                 activeSelectionId: this.activeSelectionId,
                 selections: selections
@@ -85,7 +82,7 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
     addNewCellSelection() {
         var id = this.selections.length;
         var color = this.getNextColor();
-        var newSel = this.cellSelectionFty.create(id, color);
+        var newSel = new CellSelection(id, color);
         this.selections.push(newSel);
         return newSel;
     }

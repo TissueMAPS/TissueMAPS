@@ -2,6 +2,7 @@ interface ObjectLayerArgs {
     objects?: MapObject[];
     strokeColor?: Color;
     fillColor?: Color;
+    visible?: boolean;
 }
 
 class ObjectLayer extends Layer {
@@ -29,7 +30,8 @@ class ObjectLayer extends Layer {
 
         this.olLayer = new ol.layer.Vector({
             source: vectorSource,
-            style: styleFunction
+            style: styleFunction,
+            visible: opt.visible === undefined ? true : false
         });
 
         if (opt.objects !== undefined) {

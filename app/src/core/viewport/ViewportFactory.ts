@@ -2,7 +2,6 @@ class ViewportFactory {
     static $inject = [
         'openlayers',
         '$q',
-        'cellSelectionHandlerFactory',
         '$http',
         'Cell',
         '$controller',
@@ -14,7 +13,6 @@ class ViewportFactory {
 
     constructor(private ol,
                 private $q: ng.IQService,
-                private cellSelectionHandlerFty: CellSelectionHandlerFactory,
                 private $http: ng.IHttpService,
                 private Cell,
                 private $controller: ng.IControllerService,
@@ -27,7 +25,6 @@ class ViewportFactory {
         return new Viewport(
             this.ol,
             this.$q,
-            this.cellSelectionHandlerFty,
             this.$http,
             this.Cell,
             this.$controller,

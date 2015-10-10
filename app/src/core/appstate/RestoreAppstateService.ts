@@ -4,8 +4,6 @@ class RestoreAppstateService {
         'appInstanceFactory',
         'experimentFactory',
         'colorFactory',
-        'cellSelectionHandlerFactory',
-        'cellSelectionFactory',
         '$q'
     ];
 
@@ -13,8 +11,6 @@ class RestoreAppstateService {
                 private appInstanceFty: AppInstanceFactory,
                 private experimentFty: ExperimentFactory,
                 private colorFty: ColorFactory,
-                private cellSelectionHandlerFty: CellSelectionHandlerFactory,
-                private cellSelectionFty: CellSelectionFactory,
                 private $q: ng.IQService) {
     }
 
@@ -32,19 +28,14 @@ class RestoreAppstateService {
 
     private restoreAppInstance(inst: AppInstance, ai: SerializedAppInstance) {
         this.restoreViewport(inst.viewport, ai.viewport);
-        // this.experiment.cells.then((cells) => {
-        //     var cellLayer = this.objectLayerFactory.create('Cells', {
-        //         objects: cells,
-        //         fillColor: 'rgba(255, 0, 0, 0)',
-        //         strokeColor: 'rgba(255, 0, 0, 1)'
-        //     });
-        //     this.viewport.addObjectLayer(cellLayer);
-        // });
+        inst.experiment.cells.then((cells) => {
+            inst.viewport.selectionHandler.addCellOutlines(cells);
+        });
     }
 
     private restoreViewport(vp: Viewport, vpState: SerializedViewport) {
         // Create and initialize the selection handler
-        var selHandler = this.cellSelectionHandlerFty.create(vp);
+        var selHandler = new CellSelectionHandler(vp);
         this.restoreCellSelectionHandler(selHandler, vpState.selectionHandler);
         vp.setSelectionHandler(selHandler);
 
@@ -74,7 +65,7 @@ class RestoreAppstateService {
         var selections = cshState.selections;
         selections.forEach((ser) => {
             var selColor = this.colorFty.createFromRGBAObject(ser.color);
-            var sel = this.cellSelectionFty.create(ser.id, selColor);
+            var sel = new CellSelection(ser.id, selColor);
             for (var cellId in ser.cells) {
                 var markerPos = ser.cells[cellId];
                 sel.addCell(markerPos, cellId);

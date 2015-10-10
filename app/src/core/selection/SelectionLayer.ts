@@ -3,8 +3,7 @@ class SelectionLayer extends Layer {
     color: Color;
     cellMarkers = {};
 
-    constructor(private ol,
-                name: string,
+    constructor(name: string,
                 color: Color) {
 
         super(name);
@@ -37,8 +36,8 @@ class SelectionLayer extends Layer {
 
     addCellMarker(cellId: CellId, position: MapPosition) {
         if (!this.cellMarkers.hasOwnProperty(cellId)) {
-            var feat = new this.ol.Feature({
-                geometry: new this.ol.geom.Point([position.x, position.y])
+            var feat = new ol.Feature({
+                geometry: new ol.geom.Point([position.x, position.y])
             });
             var src = <ol.source.Vector> this.olLayer.getSource();
             src.addFeature(feat);
@@ -56,15 +55,3 @@ class SelectionLayer extends Layer {
     }
 
 }
-
-class SelectionLayerFactory {
-
-    static $inject = ['openlayers'];
-    constructor(private ol) {}
-
-    create(name: string, color: Color): SelectionLayer {
-        return new SelectionLayer(this.ol, name, color);
-    }
-}
-
-angular.module('tmaps.core').service('selectionLayerFactory', SelectionLayerFactory);

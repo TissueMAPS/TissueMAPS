@@ -47,6 +47,8 @@ describe('In restoreAppstateService', function() {
             $httpBackend.whenGET('/src/core/tools/tools.json')
             .respond(200, {});
 
+            spyOn(CellSelectionHandler.prototype, 'addCellOutlines').and.callThrough();
+
             restoreAppstateService.restoreAppstate(appstate);
             $httpBackend.flush();
         });
@@ -55,6 +57,12 @@ describe('In restoreAppstateService', function() {
             expect(application.appInstances.length == 1);
             application.appInstances.forEach(function(inst) {
                 expect(inst.constructor.name).toEqual('AppInstance');
+            });
+        });
+
+        it('should add the cell outline layers', function() {
+            application.appInstances.forEach(function(inst) {
+                expect(inst.viewport.selectionHandler.addCellOutlines).toHaveBeenCalled();
             });
         });
 
