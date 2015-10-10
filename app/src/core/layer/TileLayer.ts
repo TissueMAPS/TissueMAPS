@@ -37,10 +37,7 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
     imageSize: ImageSize;
     olLayer: ModifiedOlTileLayer;
 
-    constructor(protected ol,
-                protected $q: ng.IQService,
-                protected colorFty: ColorFactory,
-                opt: TileLayerArgs) {
+    constructor(opt: TileLayerArgs) {
         super(opt.name);
 
         // Add trailing slash if not already present
@@ -72,13 +69,13 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
         olLayerArgs.color = olLayerColor;
 
         olLayerArgs.source = new ol.source.Zoomify({
-            size: this.imageSize,
+            size: <ol.Size> this.imageSize,
             url: '/api' + pyramidPath,
             crossOrigin: 'anonymous'
         });
 
         // Create the underlying openlayers layer object
-        this.olLayer = new this.ol.layer.Tile(olLayerArgs);
+        this.olLayer = <ModifiedOlTileLayer> new ol.layer.Tile(olLayerArgs);
 
     }
 
@@ -93,7 +90,7 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
             return val;
         } else {
             var arrayCol: number[] = this.olLayer.getColor();
-            var col: Color = this.colorFty.createFromNormalizedRGBArray(arrayCol);
+            var col: Color = Color.createFromNormalizedRGBArray(arrayCol);
             return col;
         }
     }
@@ -163,7 +160,8 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
 
     serialize() {
         return this.color().serialize().then((c) => {
-            return this.$q.when({
+            var $q = $injector.get<ng.IQService>('$q');
+            return $q.when({
                 name: this.name,
                 pyramidPath: this.pyramidPath,
                 imageSize: this.imageSize,

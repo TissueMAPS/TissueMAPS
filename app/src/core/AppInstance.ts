@@ -12,7 +12,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     constructor(private $q: ng.IQService,
                 private viewportFty: ViewportFactory,
                 private colorFty: ColorFactory,
-                private channelLayerFactory: ChannelLayerFactory,
                 private toolLoader: ToolLoader,
                 experiment: Experiment) {
         this.experiment = experiment;
@@ -47,18 +46,18 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             opt = _.defaults(opt, {
                 visible: i === 0
             });
-            var layer = this.channelLayerFactory.create(opt);
+            var layer = new ChannelLayer(opt);
             this.viewport.addChannelLayer(layer);
         });
 
-        // this.experiment.cells.then((cells) => {
-        //     var cellLayer = this.objectLayerFactory.create('Cells', {
-        //         objects: cells,
-        //         fillColor: 'rgba(255, 0, 0, 0)',
-        //         strokeColor: 'rgba(255, 0, 0, 1)'
-        //     });
-        //     this.viewport.addObjectLayer(cellLayer);
-        // });
+        this.experiment.cells.then((cells) => {
+            var cellLayer = new ObjectLayer('Cells', {
+                objects: cells,
+                fillColor: Color.RED,
+                strokeColor: Color.RED
+            });
+            this.viewport.addObjectLayer(cellLayer);
+        });
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {
@@ -76,19 +75,17 @@ class AppInstanceFactory {
         '$q',
         'viewportFactory',
         'colorFactory',
-        'channelLayerFactory',
         'toolLoader',
     ];
     constructor(private $q,
                 private viewportFactory,
                 private colorFty,
-                private channelLayerFactory,
                 private toolLoader) {}
 
     create(e: Experiment): AppInstance {
         return new AppInstance(
             this.$q, this.viewportFactory,
-            this.colorFty, this.channelLayerFactory, this.toolLoader, e
+            this.colorFty, this.toolLoader, e
         );
     }
 }

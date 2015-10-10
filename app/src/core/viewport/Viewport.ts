@@ -39,7 +39,6 @@ class Viewport implements Serializable<Viewport> {
     constructor(private ol,
                 private $q: ng.IQService,
                 private cellSelectionHandlerFty: CellSelectionHandlerFactory,
-                private channelLayerFactory: ChannelLayerFactory,
                 private $http: ng.IHttpService,
                 private Cell,
                 private $controller: ng.IControllerService,

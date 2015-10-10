@@ -8,10 +8,10 @@ describe('In Viewport', function() {
 
     // Injected services and factories
     var viewportFactory, $httpBackend, $rootScope, $document, application;
-    var channelLayerFactory, colorFactory;
+    var colorFactory;
 
     beforeEach(inject(function(_viewportFactory_, _$httpBackend_, _$rootScope_,
-        _$document_, _application_, _channelLayerFactory_, _colorFactory_,
+        _$document_, _application_, _colorFactory_,
         _$injector_) {
         // Assign to variables
         viewportFactory = _viewportFactory_;
@@ -19,7 +19,6 @@ describe('In Viewport', function() {
         $rootScope = _$rootScope_;
         $document = _$document_;
         application = _application_;
-        channelLayerFactory = _channelLayerFactory_;
         colorFactory = _colorFactory_;
         $injector = _$injector_;
     }));
@@ -182,7 +181,7 @@ describe('In Viewport', function() {
                 imageSize: [123, 123],
                 pyramidPath: '/experiments/D5YAKwe7/layers/Cell_Mask/'
             };
-            l = channelLayerFactory.create(tileOpt);
+            l = new ChannelLayer(tileOpt);
         });
 
         it('should add a channel layer to the viewport', function() {
@@ -227,7 +226,7 @@ describe('In Viewport', function() {
                 imageSize: [123, 123],
                 pyramidPath: '/experiments/D5YAKwe7/layers/Cell_Mask/'
             };
-            l = channelLayerFactory.create(tileOpt);
+            l = new ChannelLayer(tileOpt);
             vp.addChannelLayer(l);
         });
 
@@ -313,7 +312,7 @@ describe('In Viewport', function() {
                 pyramidPath: '/experiments/D5YAKwe7/layers/Cell_Mask/',
                 max: 0.5, min: 0.1, color: red
             };
-            var l = channelLayerFactory.create(tileOpt);
+            var l = new ChannelLayer(tileOpt);
             vp.addChannelLayer(l);
 
             var serializedVp = vp.serialize();
