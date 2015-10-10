@@ -8,16 +8,12 @@ class Application {
     static $inject = [
         '$q',
         '$',
-        'openlayers',
-        'experimentFactory',
-        'appInstanceFactory'
+        'openlayers'
     ];
 
     constructor(private $q: ng.IQService,
                 private $: JQueryStatic,
-                private ol,
-                private experimentFty: ExperimentFactory,
-                private appInstanceFty: AppInstanceFactory) {
+                private ol) {
         // Check if the executing browser is PhantomJS (= code runs in
         // testing mode.
         var isPhantom = /PhantomJS/.test(window.navigator.userAgent);
@@ -102,8 +98,8 @@ class Application {
     addExperiment(experiment: ExperimentAPIObject) {
         // TODO: Depending on the experiment's type, create a different type of appInstance.
         // TODO: Class viewport and experiment should be abstract.
-        var exp = this.experimentFty.createFromServerResponse(experiment);
-        var inst = this.appInstanceFty.create(exp);
+        var exp = Experiment.fromServerResponse(experiment);
+        var inst = new AppInstance(exp);
         inst.addExperimentToViewport();
 
         this.appInstances.push(inst);

@@ -32,9 +32,7 @@ class Experiment implements Serializable<Experiment> {
     cellMap: ng.IPromise<{ [cellId: number]: Cell }>;
     features: ng.IPromise<any>;
 
-    constructor(opt: ExperimentArgs,
-                private experimentService: ExperimentService,
-                private $q: ng.IQService) {
+    constructor(opt: ExperimentArgs) {
 
         var $q = $injector.get<ng.IQService>('$q');
         var expService = $injector.get<ExperimentService>('experimentService');
@@ -71,5 +69,21 @@ class Experiment implements Serializable<Experiment> {
             channels: this.channels
         };
         return $injector.get<ng.IQService>('$q').when(ser);
+    }
+
+    static fromServerResponse(e: ExperimentAPIObject) {
+        var channels = _.map(e.layers, (l) => {
+            return {
+                name: l.name,
+                imageSize: l.imageSize,
+                pyramidPath: l.pyramidPath
+            };
+        });
+        return new Experiment({
+            id: e.id,
+            name: e.name,
+            description: e.description,
+            channels: channels
+        });
     }
 }

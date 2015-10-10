@@ -26,7 +26,6 @@
         "app/src/core/appstate/ctrl/ShareAppstateCtrl.ts",
         "app/src/core/appstate/api.ts",
         "app/src/core/experiment/Experiment.ts",
-        "app/src/core/experiment/ExperimentFactory.ts",
         "app/src/core/experiment/ExperimentService.ts",
         "app/src/core/experiment/Feature.ts",
         "app/src/core/experiment/api.ts",
@@ -54,7 +53,6 @@
 
         "app/src/core/util/Color.ts",
         "app/src/core/viewport/Viewport.ts",
-        "app/src/core/viewport/ViewportFactory.ts",
         "app/src/core/viewport/MapPosition.ts",
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
 

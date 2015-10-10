@@ -36,15 +36,13 @@ class Viewport implements Serializable<Viewport> {
     private elementDef: ng.IDeferred<JQuery>;
     private elementScopeDef: ng.IDeferred<ViewportElementScope>;
 
-    constructor(private ol,
-                private $q: ng.IQService,
-                private $http: ng.IHttpService,
-                private Cell,
-                private $controller: ng.IControllerService,
-                private $compile: ng.ICompileService,
-                private $: JQueryStatic,
-                private $document: ng.IDocumentService,
-                private $rootScope: ng.IRootScopeService) {
+    private $q: ng.IQService;
+    private $rootScope: ng.IRootScopeService;
+
+    constructor() {
+
+        this.$q = $injector.get<ng.IQService>('$q');
+        this.$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
 
         this.mapDef = this.$q.defer();
         this.map = this.mapDef.promise;
@@ -139,9 +137,9 @@ class Viewport implements Serializable<Viewport> {
             var width = channelLayer.imageSize[0];
             var height = channelLayer.imageSize[1];
             var center = [width / 2, - height / 2];
-            var view = new this.ol.View({
+            var view = new ol.View({
                 // We create a custom (dummy) projection that is based on pixels
-                projection: new this.ol.proj.Projection({
+                projection: new ol.proj.Projection({
                     code: 'ZOOMIFY',
                     units: 'pixels',
                     extent: [0, 0, width, height]
@@ -249,7 +247,7 @@ class Viewport implements Serializable<Viewport> {
 
     private getTemplate(templateUrl): ng.IPromise<string> {
         var deferred = this.$q.defer();
-        this.$http({method: 'GET', url: templateUrl, cache: true})
+        $injector.get<ng.IHttpService>('$http')({method: 'GET', url: templateUrl, cache: true})
         .then(function(result) {
             deferred.resolve(result.data);
         })
@@ -264,7 +262,7 @@ class Viewport implements Serializable<Viewport> {
             var newScope = <ViewportElementScope> this.$rootScope.$new();
             newScope.viewport = this;
             newScope.appInstance = appInstance;
-            var ctrl = this.$controller('ViewportCtrl', {
+            var ctrl = $injector.get<any>('$controller')('ViewportCtrl', {
                 '$scope': newScope,
                 'viewport': this
             });
@@ -275,16 +273,16 @@ class Viewport implements Serializable<Viewport> {
             var elem = angular.element(template);
 
             // Compile the element (expand directives)
-            var linkFunc = this.$compile(elem);
+            var linkFunc = $injector.get<ng.ICompileService>('$compile')(elem);
             // Link to scope
             var viewportElem = linkFunc(newScope);
 
             // Append to viewports
-            this.$document.find('#viewports').append(viewportElem);
+            $injector.get<ng.IDocumentService>('$document').find('#viewports').append(viewportElem);
             // Append map after the element has been added to the DOM.
             // Otherwise the viewport size calculation of openlayers gets
             // messed up.
-            var map = new this.ol.Map({
+            var map = new ol.Map({
                 layers: [],
                 controls: [],
                 renderer: 'webgl',

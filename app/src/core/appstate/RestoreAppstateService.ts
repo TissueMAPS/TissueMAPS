@@ -1,16 +1,10 @@
 class RestoreAppstateService {
     static $inject = [
         'application',
-        'appInstanceFactory',
-        'experimentFactory',
-        'colorFactory',
         '$q'
     ];
 
     constructor(private app: Application,
-                private appInstanceFty: AppInstanceFactory,
-                private experimentFty: ExperimentFactory,
-                private colorFty: ColorFactory,
                 private $q: ng.IQService) {
     }
 
@@ -18,8 +12,8 @@ class RestoreAppstateService {
         var bp = appstate.blueprint;
         bp.appInstances.forEach((ai) => {
             var expArgs = <ExperimentArgs> ai.experiment;
-            var exp = this.experimentFty.create(expArgs);
-            var inst = this.appInstanceFty.create(exp);
+            var exp = new Experiment(expArgs);
+            var inst = new AppInstance(exp);
             this.app.appInstances.push(inst);
             this.restoreAppInstance(inst, ai);
         });
@@ -43,7 +37,7 @@ class RestoreAppstateService {
         vpState.channelLayerOptions.forEach((ch) => {
             // Colors were serialized as mere objects holding r, g, b.
             // We need to restore them to a full Color object.
-            var color = this.colorFty.create(ch.color.r, ch.color.g, ch.color.b, ch.color.a);
+            var color = new Color(ch.color.r, ch.color.g, ch.color.b, ch.color.a);
             ch.color = color;
             var layer = new ChannelLayer(ch);
             vp.addChannelLayer(layer);
@@ -64,7 +58,7 @@ class RestoreAppstateService {
         var activeSelId = cshState.activeSelectionId;
         var selections = cshState.selections;
         selections.forEach((ser) => {
-            var selColor = this.colorFty.createFromRGBAObject(ser.color);
+            var selColor = Color.fromObject(ser.color);
             var sel = new CellSelection(ser.id, selColor);
             for (var cellId in ser.cells) {
                 var markerPos = ser.cells[cellId];

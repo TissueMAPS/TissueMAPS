@@ -7,14 +7,13 @@ describe('In Viewport', function() {
     var appInstance;
 
     // Injected services and factories
-    var viewportFactory, $httpBackend, $rootScope, $document, application;
+    var $httpBackend, $rootScope, $document, application;
     var colorFactory;
 
-    beforeEach(inject(function(_viewportFactory_, _$httpBackend_, _$rootScope_,
+    beforeEach(inject(function(_$httpBackend_, _$rootScope_,
         _$document_, _application_, _colorFactory_,
         _$injector_) {
         // Assign to variables
-        viewportFactory = _viewportFactory_;
         $httpBackend = _$httpBackend_;
         $rootScope = _$rootScope_;
         $document = _$document_;
@@ -50,7 +49,7 @@ describe('In Viewport', function() {
     var vp;
 
     beforeEach(function() {
-        vp = viewportFactory.create();
+        vp = new Viewport();
         vp.injectIntoDocumentAndAttach(appInstance);
         // Perform requests for templates
         $httpBackend.flush();
@@ -113,7 +112,7 @@ describe('In Viewport', function() {
     describe('the function setSelectionHandler', function() {
         it('should set the CellSelectionHandler', function() {
             var selHandler = {};
-            var vp = viewportFactory.create(appInstance);
+            var vp = new Viewport();
 
             vp.setSelectionHandler(selHandler);
             expect(vp.selectionHandler).toEqual(selHandler);

@@ -9,16 +9,12 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     viewport: Viewport;
     tools: ng.IPromise<Tool[]>;
 
-    constructor(private $q: ng.IQService,
-                private viewportFty: ViewportFactory,
-                private colorFty: ColorFactory,
-                private toolLoader: ToolLoader,
-                experiment: Experiment) {
+    constructor(experiment: Experiment) {
         this.experiment = experiment;
         this.name = experiment.name;
-        this.viewport = this.viewportFty.create();
+        this.viewport = new Viewport();
         this.viewport.injectIntoDocumentAndAttach(this);
-        this.tools = this.toolLoader.loadTools(this);
+        this.tools = $injector.get<ToolLoader>('toolLoader').loadTools(this);
     }
 
     setActive() {
@@ -56,7 +52,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {
-        return this.$q.all({
+        return $injector.get<ng.IQService>('$q').all({
             experiment: this.experiment.serialize(),
             viewport: this.viewport.serialize()
         }).then((res: any) => {
@@ -64,24 +60,3 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         });
     }
 }
-
-class AppInstanceFactory {
-    static $inject = [
-        '$q',
-        'viewportFactory',
-        'colorFactory',
-        'toolLoader',
-    ];
-    constructor(private $q,
-                private viewportFactory,
-                private colorFty,
-                private toolLoader) {}
-
-    create(e: Experiment): AppInstance {
-        return new AppInstance(
-            this.$q, this.viewportFactory,
-            this.colorFty, this.toolLoader, e
-        );
-    }
-}
-angular.module('tmaps.core').service('appInstanceFactory', AppInstanceFactory);
