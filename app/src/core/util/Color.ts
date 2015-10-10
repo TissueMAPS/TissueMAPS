@@ -86,6 +86,17 @@ class Color implements Serializable<Color> {
         return new Color(o.r, o.g, o.b, alpha);
     }
 
+    static get RED() {
+        return new Color(255, 0, 0);
+    }
+
+    static get GREEN() {
+        return new Color(0, 255, 0);
+    }
+
+    static get BLUE() {
+        return new Color(0, 0, 255);
+    }
 }
 
 // TODO: Remove this class
