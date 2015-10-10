@@ -25,7 +25,7 @@ class SVMTool extends Tool {
     handleResult(res: ClassificationResult) {
         res.classes.forEach((cls) => {
             this.appInstance.experiment.cellMap.then((cellMap) => {
-                var color = Color.createFromObject(cls.color);
+                var color = Color.fromObject(cls.color);
                 var cells = _(cls.cell_ids).map((id) => {
                     return cellMap[id];
                 });

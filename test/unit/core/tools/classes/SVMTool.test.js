@@ -69,7 +69,7 @@ describe('In SVMTool', function() {
 
             for (var i = 0; i < classificationResult.classes.length; i++) {
                 var cls = classificationResult.classes[i];
-                var color = Color.createFromObject(cls.color);
+                var color = Color.fromObject(cls.color);
                 expect(appInstance.viewport.addObjectLayer).toHaveBeenCalledWith(
                     jasmine.objectContaining({
                         strokeColor: color,

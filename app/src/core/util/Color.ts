@@ -62,7 +62,7 @@ class Color implements Serializable<Color> {
      * Convert a hex string like '#ffffff' to a RGB
      * color given as an array of numbers between 0 and 1.
      */
-    static createFromHex(hex: string, alpha: number): Color {
+    static fromHex(hex: string, alpha: number): Color {
         hex = hex.toLowerCase();
         // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
         var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
@@ -81,14 +81,14 @@ class Color implements Serializable<Color> {
         }
     }
 
-    static createFromNormalizedRGBArray(arr: number[]): Color {
+    static fromNormalizedRGBArray(arr: number[]): Color {
         var denorm = _.map(arr, function(component) {
             return Math.floor(component * 255);
         });
         return new Color(denorm[0], denorm[1], denorm[2], 1.0);
     }
 
-    static createFromRGBString(rgb: string) {
+    static fromRGBString(rgb: string) {
         var res = /^\s*rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)\s*$/.exec(rgb);
         if (res === null || res.length != 4) {
             return undefined;
@@ -97,7 +97,7 @@ class Color implements Serializable<Color> {
         }
     }
 
-    static createFromObject(o: {r: number; g: number; b: number; a?: number;}): Color {
+    static fromObject(o: {r: number; g: number; b: number; a?: number;}): Color {
         var alpha = o.a === undefined ? 1 : o.a;
         return new Color(o.r, o.g, o.b, alpha);
     }

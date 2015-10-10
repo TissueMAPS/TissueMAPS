@@ -90,7 +90,7 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
             return val;
         } else {
             var arrayCol: number[] = this.olLayer.getColor();
-            var col: Color = Color.createFromNormalizedRGBArray(arrayCol);
+            var col: Color = Color.fromNormalizedRGBArray(arrayCol);
             return col;
         }
     }

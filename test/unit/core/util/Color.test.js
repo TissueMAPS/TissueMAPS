@@ -23,28 +23,28 @@ describe('In Color', function() {
 
     describe('for creating colors', function() {
         it('colors should be creatable from hex strings', function() {
-            expect(Color.createFromHex('FF00FF').equals(new Color(255, 0, 255))).toEqual(true);
+            expect(Color.fromHex('FF00FF').equals(new Color(255, 0, 255))).toEqual(true);
         });
 
         it('colors should be creatable from normalized rgb arrays (as used by webgl)', function() {
-            expect(Color.createFromNormalizedRGBArray([1, 0, 1]).equals(new Color(255, 0, 255, 1))).toEqual(true);
+            expect(Color.fromNormalizedRGBArray([1, 0, 1]).equals(new Color(255, 0, 255, 1))).toEqual(true);
         });
 
         it('colors should be creatable from rgb strings (as used by openlayers)',
         function() {
-            expect(Color.createFromRGBString('rgb(255, 0, 0)').equals(new Color(255, 0, 0))).toEqual(true);
-            expect(Color.createFromRGBString('rgb(255,      255,0)').equals(new Color(255, 255, 0))).toEqual(true);
-            expect(Color.createFromRGBString('rgb(255, 0)')).not.toBeDefined();
+            expect(Color.fromRGBString('rgb(255, 0, 0)').equals(new Color(255, 0, 0))).toEqual(true);
+            expect(Color.fromRGBString('rgb(255,      255,0)').equals(new Color(255, 255, 0))).toEqual(true);
+            expect(Color.fromRGBString('rgb(255, 0)')).not.toBeDefined();
         });
 
         it('colors should be creatable from rgba objects (e.g. as output by "serialize")', function(done) {
             color.serialize().then(function(col) {
-                expect(Color.createFromObject(col).equals(color)).toEqual(true);
+                expect(Color.fromObject(col).equals(color)).toEqual(true);
                 done();
             })
             $rootScope.$apply();
 
-            expect(Color.createFromObject({r: 255, g: 0, b: 0}).equals(new Color(255, 0, 0, 1))).toEqual(true);
+            expect(Color.fromObject({r: 255, g: 0, b: 0}).equals(new Color(255, 0, 0, 1))).toEqual(true);
         });
 
         it('there should exist constats for red, green, and blue', function() {
