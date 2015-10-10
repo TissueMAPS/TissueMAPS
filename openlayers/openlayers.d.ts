@@ -755,6 +755,11 @@ declare module olx {
             color?: ol.Color | string;
         }
 
+        interface IconOptions {
+            anchor?: number[];
+            src: string;
+        }
+
         interface StyleOptions {
             geometry?: string | ol.geom.Geometry | ol.style.GeometryFunction;
             fill?: ol.style.Fill;
@@ -4020,7 +4025,7 @@ declare module ol {
         }
 
         class Vector {
-          constructor(opts: olx.source.VectorOptions)
+          constructor(opt_options?: olx.source.VectorOptions)
 
           /**
            * Get the extent of the features currently in the source.
@@ -4095,6 +4100,7 @@ declare module ol {
         }
 
         class Icon {
+            constructor(options: olx.style.IconOptions);
         }
 
         class Image {
