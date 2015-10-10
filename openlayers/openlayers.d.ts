@@ -663,6 +663,31 @@ declare module olx {
     }
 
     module source {
+        interface ZoomifyOptions {
+            /**
+             * Attributions.
+             */
+            attributions?: ol.Attribution[];
+
+            /*
+             * Size of the image. Required.
+             */
+            size: ol.Size;
+
+            /*
+             * Prefix of URL template. Required.
+             */
+            url: string;
+
+            /**
+             * The crossOrigin attribute for loaded images.
+             */
+            crossOrigin?: string;
+
+            logo?: string | olx.LogoOptions;
+
+            tierSizeCalculation?: string;
+        }
 
         interface VectorOptions {
             /**
@@ -767,6 +792,7 @@ declare module olx {
             miterLimit?: number;
             width?: number;
         }
+
     }
 
     module tilegrid {
@@ -881,7 +907,6 @@ declare module olx {
         }
 
         interface ZoomifyOptions {
-
             /**
              * Resolutions
              */
@@ -4028,6 +4053,7 @@ declare module ol {
         }
 
         class Zoomify {
+            constructor(options: olx.source.ZoomifyOptions);
         }
 
         // Namespaces
