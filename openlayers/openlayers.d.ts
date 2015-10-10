@@ -2170,6 +2170,8 @@ declare module ol {
          */
         fitExtent(extent: ol.Extent, size: ol.Size): void;
 
+        fit(geometry: ol.geom.SimpleGeometry | ol.Extent, sizse: ol.Size, options: any);
+
         /**
          * Fit the given geometry into the view based on the given map size and border.
          * @param geometry Geometry.
