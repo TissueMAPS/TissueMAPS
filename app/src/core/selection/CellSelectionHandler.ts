@@ -29,6 +29,23 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
         this.availableColors = availableColors;
     }
 
+    addCellOutlines(cells: Cell[]) {
+        window['cells'] = cells;
+        var cellLayer = new ObjectLayer('Cells', {
+            objects: cells,
+            // Upon testing 0.002 was the lowest alpha value which still caused to
+            // hitDetection mechanism to find the cell. Lower values get probably floored to 0.
+            fillColor: Color.RED.withAlpha(0.002),
+            strokeColor: Color.RED
+        });
+        this.viewport.addObjectLayer(cellLayer);
+        this.viewport.map.then((map) => {
+            map.on('singleclick', (evt) => {
+                map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
+                    console.log('Cell', feat.get('name'));
+                });
+            });
+        });
     }
 
     addSelection(sel: CellSelection) {
