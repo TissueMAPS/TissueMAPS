@@ -113,4 +113,29 @@ describe('In Color', function() {
         });
     });
 
+    describe('when modifying colors', function() {
+
+        var col;
+        beforeEach(function() {
+            col = new Color(100, 100, 100, 1);
+        });
+
+        it('the color\'s red channel can be changed', function() {
+            expect(col.withRed(255).equals(new Color(255, 100, 100, 1))).toEqual(true);
+        });
+
+        it('the color\'s green channel can be changed', function() {
+            expect(col.withGreen(255).equals(new Color(100, 255, 100, 1))).toEqual(true);
+        });
+
+        it('the color\'s blue channel can be changed', function() {
+            expect(col.withBlue(255).equals(new Color(100, 100, 255, 1))).toEqual(true);
+        });
+
+        it('the color\'s alpha channel can be changed', function() {
+            expect(col.withAlpha(0).equals(new Color(100, 100, 100, 0))).toEqual(true);
+        });
+
+    });
+
 });

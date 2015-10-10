@@ -36,6 +36,22 @@ class Color implements Serializable<Color> {
         return this.r == other.r && this.g == other.g && this.b == other.b && this.a == other.a;
     }
 
+    withRed(r: number) {
+        return new Color(r, this.g, this.b, this.a);
+    }
+
+    withGreen(g: number) {
+        return new Color(this.r, g, this.b, this.a);
+    }
+
+    withBlue(b: number) {
+        return new Color(this.r, this.g, b, this.a);
+    }
+
+    withAlpha(a: number) {
+        return new Color(this.r, this.g, this.b, a);
+    }
+
     serialize() {
         return $injector.get<ng.IQService>('$q').when({
             r: this.r, g: this.g, b: this.b, a: this.a
