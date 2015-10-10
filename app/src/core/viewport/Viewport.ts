@@ -208,6 +208,15 @@ class Viewport implements Serializable<Viewport> {
         });
     }
 
+    goToMapObject(obj: MapObject) {
+        this.map.then((map) => {
+            var feat = obj.getOLFeature();
+            map.getView().fit(<ol.geom.SimpleGeometry> feat.getGeometry(), map.getSize(), {
+                padding: [100, 100, 100, 100]
+            });
+        });
+    }
+
     serialize() {
         var bpPromise = this.map.then((map) => {
             var v = map.getView();

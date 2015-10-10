@@ -385,4 +385,25 @@ describe('In Viewport', function() {
             $rootScope.$apply();
         });
     });
+
+    describe('the function goToMapObject', function() {
+        it('should move the current view to the given map object', function() {
+            var pos = {x: 50, y: -50};
+            var cellOutline = [
+                [0, 0],
+                [100, 0],
+                [100, -100],
+                [0, -100],
+                [0, 0]
+            ];
+            var cell = new Cell('some id', pos, cellOutline);
+            vp.goToMapObject(cell);
+            vp.map.then(function(map) {
+                var v = map.getView();
+                expect(v.fit).toBeDefined(); // has to be the right ol version
+                expect(v.getCenter()).toEqual([pos.x, pos.y]);
+            });
+            $rootScope.$apply();
+        });
+    });
 });
