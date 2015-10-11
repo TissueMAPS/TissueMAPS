@@ -34,7 +34,7 @@ abstract class Tool {
     }
 
     createNewWindow() {
-        var windowObj = this.openWindow();
+        var windowObj = this._openWindow();
         var toolWindow = {
             windowObject: windowObj
         };
@@ -48,7 +48,7 @@ abstract class Tool {
         return toolWindow;
     }
 
-    private openWindow() {
+    private _openWindow() {
         // Without appending the current date to the title, the browser (chrome)
         // won't open multiple tool windows of the same type.
         var toolWindow = $injector.get<ng.IWindowService>('$window').open(

@@ -32,26 +32,26 @@ class Viewport implements Serializable<Viewport> {
 
     selectionHandler: CellSelectionHandler;
 
-    private mapDef: ng.IDeferred<ol.Map>;
-    private elementDef: ng.IDeferred<JQuery>;
-    private elementScopeDef: ng.IDeferred<ViewportElementScope>;
+    private _mapDef: ng.IDeferred<ol.Map>;
+    private _elementDef: ng.IDeferred<JQuery>;
+    private _elementScopeDef: ng.IDeferred<ViewportElementScope>;
 
-    private $q: ng.IQService;
-    private $rootScope: ng.IRootScopeService;
+    private _$q: ng.IQService;
+    private _$rootScope: ng.IRootScopeService;
 
     constructor() {
 
-        this.$q = $injector.get<ng.IQService>('$q');
-        this.$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
+        this._$q = $injector.get<ng.IQService>('$q');
+        this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
 
-        this.mapDef = this.$q.defer();
-        this.map = this.mapDef.promise;
+        this._mapDef = this._$q.defer();
+        this.map = this._mapDef.promise;
 
-        this.elementDef = this.$q.defer();
-        this.element = this.elementDef.promise;
+        this._elementDef = this._$q.defer();
+        this.element = this._elementDef.promise;
 
-        this.elementScopeDef = this.$q.defer();
-        this.elementScope = this.elementScopeDef.promise;
+        this._elementScopeDef = this._$q.defer();
+        this.elementScope = this._elementScopeDef.promise;
 
         // Helper class to manage the differently marker selections
         this.selectionHandler = new CellSelectionHandler(this);
@@ -225,7 +225,7 @@ class Viewport implements Serializable<Viewport> {
                 rotation: v.getRotation()
             };
 
-            var channelOptsPr = this.$q.all(_(this.channelLayers).map((l) => {
+            var channelOptsPr = this._$q.all(_(this.channelLayers).map((l) => {
                 return l.serialize();
             }));
             var selectionHandlerPr = this.selectionHandler.serialize();
@@ -233,7 +233,7 @@ class Viewport implements Serializable<Viewport> {
                 channels: channelOptsPr,
                 selHandler: selectionHandlerPr
             };
-            return this.$q.all(bundledPromises).then((res: any) => {
+            return this._$q.all(bundledPromises).then((res: any) => {
                 return {
                     channelLayerOptions: res.channels,
                     mapState: mapState,
@@ -246,7 +246,7 @@ class Viewport implements Serializable<Viewport> {
     }
 
     private getTemplate(templateUrl): ng.IPromise<string> {
-        var deferred = this.$q.defer();
+        var deferred = this._$q.defer();
         $injector.get<ng.IHttpService>('$http')({method: 'GET', url: templateUrl, cache: true})
         .then(function(result) {
             deferred.resolve(result.data);
@@ -259,7 +259,7 @@ class Viewport implements Serializable<Viewport> {
 
     injectIntoDocumentAndAttach(appInstance: AppInstance) {
         this.getTemplate('/templates/main/viewport.html').then((template) => {
-            var newScope = <ViewportElementScope> this.$rootScope.$new();
+            var newScope = <ViewportElementScope> this._$rootScope.$new();
             newScope.viewport = this;
             newScope.appInstance = appInstance;
             var ctrl = $injector.get<any>('$controller')('ViewportCtrl', {
@@ -289,9 +289,9 @@ class Viewport implements Serializable<Viewport> {
                 target: viewportElem.find('.map-container')[0],
                 logo: false
             });
-            this.elementDef.resolve(viewportElem);
-            this.elementScopeDef.resolve(newScope);
-            this.mapDef.resolve(map);
+            this._elementDef.resolve(viewportElem);
+            this._elementScopeDef.resolve(newScope);
+            this._mapDef.resolve(map);
         });
     }
 }

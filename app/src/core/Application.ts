@@ -2,8 +2,7 @@ class Application {
 
     appInstances: AppInstance[] = [];
 
-    private viewportContainerId = 'viewports';
-    private activeAppInstanceNumber = 0;
+    private _activeAppInstanceNumber = 0;
 
     static $inject = [
         '$q',
@@ -48,7 +47,7 @@ class Application {
     removeAppInstance(num: number) {
         this.appInstances[num].destroy();
         this.appInstances.splice(num, 1);
-        if (num === this.activeAppInstanceNumber) {
+        if (num === this._activeAppInstanceNumber) {
             if (num >= 1) {
                 // There are still insts with lower number
                 this.setActiveAppInstanceByNumber(num - 1);
@@ -66,12 +65,12 @@ class Application {
             this.appInstances[i].destroy();
             this.appInstances.splice(i, 1);
         }
-        this.activeAppInstanceNumber = -1;
+        this._activeAppInstanceNumber = -1;
     }
 
     setActiveAppInstanceByNumber(num: number) {
         var oldActive = this.getActiveAppInstance();
-        this.activeAppInstanceNumber = num;
+        this._activeAppInstanceNumber = num;
         var newActive = this.getActiveAppInstance();
         if (oldActive) {
             // If the inst wasn't deleted
@@ -86,13 +85,13 @@ class Application {
     }
 
     getActiveAppInstanceNumber(): number {
-        return this.activeAppInstanceNumber;
+        return this._activeAppInstanceNumber;
     }
 
     // TODO: Remove as many dependencies on this function as possible!
     // Widgets etc. should know the appInstance they belong to.
     getActiveAppInstance(): AppInstance {
-        return this.appInstances[this.activeAppInstanceNumber];
+        return this.appInstances[this._activeAppInstanceNumber];
     }
 
     addExperiment(experiment: ExperimentAPIObject) {
@@ -118,7 +117,7 @@ class Application {
         });
         return this.$q.all(instPromises).then((sers) => {
             var serApp =  {
-                activeAppInstanceNumber: this.activeAppInstanceNumber,
+                activeAppInstanceNumber: this._activeAppInstanceNumber,
                 appInstances: sers
             };
             return serApp;
