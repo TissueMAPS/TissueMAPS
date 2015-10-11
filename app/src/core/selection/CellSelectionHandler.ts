@@ -39,7 +39,14 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
         this.viewport.map.then((map) => {
             map.on('singleclick', (evt) => {
                 map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
-                    console.log('Cell', feat.get('name'));
+                    console.log(evt);
+                    // FIXME: Maybe we should save the whole mapobject on the feature, or
+                    // subclass Feature directly.
+                    var cellId = feat.get('name');
+                    var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
+                    if (this.activeSelectionId !== -1) {
+                        this.clickOnCell(clickPos, cellId);
+                    }
                 });
             });
         });
@@ -58,6 +65,12 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
             };
             return ser;
         })
+    }
+
+    clickOnCell(clickPos: MapPosition, cellId: CellId) {
+        if (this.activeSelectionId !== -1) {
+            this.addCellToSelection(clickPos, cellId, this.activeSelectionId);
+        }
     }
 
     addCellToSelection(markerPosition: MapPosition,
@@ -83,6 +96,9 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
         var id = this.selections.length;
         var color = this.getNextColor();
         var newSel = new CellSelection(id, color);
+        this.viewport.map.then((map) => {
+            newSel.addToMap(map);
+        });
         this.selections.push(newSel);
         return newSel;
     }

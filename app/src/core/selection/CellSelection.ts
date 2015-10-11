@@ -42,8 +42,8 @@ class CellSelection implements Serializable<CellSelection> {
 
     removeCell(cellId: CellId) {
         if (this.cells.hasOwnProperty(cellId)) {
-            this.layer.removeCellMarker(cellId);
             delete this.cells[cellId];
+            this.layer.removeCellMarker(cellId);
         };
         this.$rootScope.$broadcast('cellSelectionChanged', this);
     }
@@ -61,7 +61,7 @@ class CellSelection implements Serializable<CellSelection> {
 
     addCell(markerPos: MapPosition, cellId: CellId) {
         if (this.cells.hasOwnProperty(cellId)) {
-            return;
+            this.removeCell(cellId);
         } else {
             this.cells[cellId] = markerPos;
             this.layer.addCellMarker(cellId, markerPos);

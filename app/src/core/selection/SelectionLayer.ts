@@ -14,7 +14,9 @@ class SelectionLayer extends Layer {
         // changed according to the current resolution
         var styleFunc = (feature: ol.Feature, resolution: number) => {
             var size = 42; // Compute via resolution
-            var colorRgbString = color.toRGBString();
+            // Avoid whitespaces in image name
+            var colorRgbString = color.toRGBString().replace(/\s/g, '');
+            console.log('asdf');
             var imageSrc =
                 'resources/img/marker/marker-' + colorRgbString + '-' + size +'.png';
             var style = new ol.style.Style({
