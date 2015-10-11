@@ -1,60 +1,76 @@
 class Color implements Serializable<Color> {
 
-    private rgbComponentToHex(c: number): string {
+    private _rgbComponentToHex(c: number): string {
         var hex = c.toString(16);
         return hex.length == 1 ? "0" + hex : hex;
     }
 
-    constructor(public r: number,
-                public g: number,
-                public b: number,
-                public a: number = 1.0) {}
+    get r() {
+        return this._r;
+    }
+
+    get g() {
+        return this._g;
+    }
+
+    get b() {
+        return this._b;
+    }
+
+    get a() {
+        return this._a;
+    }
+
+    constructor(private _r: number,
+                private _g: number,
+                private _b: number,
+                private _a: number = 1.0) {}
 
     toOlColor(): ol.Color {
-        return [this.r, this.g, this.b, this.a];
+        return [this._r, this._g, this._b, this._a];
     }
 
     toRGBAString(): string {
-        return 'rgba(' + this.r + ', ' + this.g + ', ' + this.b + ', ' +  this.a + ')';
+        return 'rgba(' + this._r + ', ' + this._g + ', ' + this._b + ', ' +  this._a + ')';
     }
 
     toRGBString(): string {
-        return 'rgb(' + this.r + ', ' + this.g + ', ' + this.b + ')';
+        return 'rgb(' + this._r + ', ' + this._g + ', ' + this._b + ')';
     }
 
     toHex(): string {
-        return '#' + this.rgbComponentToHex(this.r) +
-                     this.rgbComponentToHex(this.g) +
-                     this.rgbComponentToHex(this.b);
+        return '#' + this._rgbComponentToHex(this._r) +
+                     this._rgbComponentToHex(this._g) +
+                     this._rgbComponentToHex(this._b);
     }
 
     toNormalizedRGBArray(): number[] {
-        return [this.r / 255, this.g / 255, this.b / 255];
+        return [this._r / 255, this._g / 255, this._b / 255];
     }
 
     equals(other: Color) {
-        return this.r == other.r && this.g == other.g && this.b == other.b && this.a == other.a;
+        return this._r == other.r && this._g == other.g && this._b == other.b && this._a == other.a;
     }
 
     withRed(r: number) {
-        return new Color(r, this.g, this.b, this.a);
+        return new Color(r, this._g, this._b, this._a);
     }
 
     withGreen(g: number) {
-        return new Color(this.r, g, this.b, this.a);
+        return new Color(this._r, g, this._b, this._a);
     }
 
     withBlue(b: number) {
-        return new Color(this.r, this.g, b, this.a);
+        return new Color(this._r, this._g, b, this._a);
     }
 
     withAlpha(a: number) {
-        return new Color(this.r, this.g, this.b, a);
+        return new Color(this._r, this._g, this._b, a);
     }
 
     serialize() {
         return $injector.get<ng.IQService>('$q').when({
-            r: this.r, g: this.g, b: this.b, a: this.a
+            r: this._r, g: this._g, b: this._b, a: this._a
         });
     }
 
