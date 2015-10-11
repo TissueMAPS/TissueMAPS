@@ -8,17 +8,15 @@ describe('In Viewport', function() {
 
     // Injected services and factories
     var $httpBackend, $rootScope, $document, application;
-    var colorFactory;
 
     beforeEach(inject(function(_$httpBackend_, _$rootScope_,
-        _$document_, _application_, _colorFactory_,
+        _$document_, _application_,
         _$injector_) {
         // Assign to variables
         $httpBackend = _$httpBackend_;
         $rootScope = _$rootScope_;
         $document = _$document_;
         application = _application_;
-        colorFactory = _colorFactory_;
         $injector = _$injector_;
     }));
 
@@ -304,7 +302,7 @@ describe('In Viewport', function() {
 
     describe('the function serialize', function() {
         it('should save all the layers\' state', function(done) {
-            var red = colorFactory.create(255, 0, 0);
+            var red = Color.RED;
             // Create a channel layer with some additional properties
             var tileOpt = {
                 name: 'Test', imageSize: [123, 123],

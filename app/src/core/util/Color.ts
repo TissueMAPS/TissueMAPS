@@ -1,3 +1,10 @@
+interface SerializedColor extends Serialized<Color> {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+}
+
 class Color implements Serializable<Color> {
 
     private _rgbComponentToHex(c: number): string {
@@ -139,62 +146,3 @@ class Color implements Serializable<Color> {
     }
 }
 
-// TODO: Remove this class
-class ColorFactory {
-    /*
-     * Convert a hex string like '#ffffff' to a RGB
-     * color given as an array of numbers between 0 and 1.
-     */
-    createFromHex(hex: string, alpha: number): Color {
-        // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-        var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthandRegex, function(m, r, g, b) {
-            return r + r + g + g + b + b;
-        });
-        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        if (result) {
-            return this.create(
-                parseInt(result[1], 16),
-                parseInt(result[2], 16),
-                parseInt(result[3], 16)
-            );
-        } else {
-            return null;
-        }
-    }
-
-    createFromNormalizedRGBArray(arr: number[]): Color {
-        var denorm = _.map(arr, function(component) {
-            return Math.floor(component * 255);
-        });
-        return this.create(denorm[0], denorm[1], denorm[2], 1.0);
-    }
-
-    create(r: number, g: number, b: number, a: number = 1.0): Color {
-        return new Color(r, g, b, a)
-    }
-
-    createFromRGBString(rgb: string) {
-        var res = /^\s*rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)\s*$/.exec(rgb);
-        if (res === null || res.length != 4) {
-            return undefined;
-        } else {
-            return this.create(parseInt(res[1]),
-                               parseInt(res[2]),
-                               parseInt(res[3]));
-        }
-    }
-
-    createFromRGBAObject(o: {r: number; g: number; b: number; a: number;}): Color {
-        return this.create(o.r, o.g, o.b, o.a);
-    }
-}
-
-angular.module('tmaps.core').service('colorFactory', ColorFactory);
-
-interface SerializedColor extends Serialized<Color> {
-    r: number;
-    g: number;
-    b: number;
-    a: number;
-}

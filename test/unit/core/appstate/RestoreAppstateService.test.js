@@ -7,15 +7,15 @@ describe('In restoreAppstateService', function() {
     var appstate;
     // Declare variables that will get assigned an actual instance after each
     // function that was passed to beforeEach is executed
-    var restoreAppstateService, $httpBackend, application, $q, $rootScope,
-        colorFactory;
+    var restoreAppstateService, $httpBackend, application, $q, $rootScope;
+
     // Load the appstate module, automatically loads all dependencies of
     // that module (as long as they are listed in the brackets when
     // declaring the module!).
     beforeEach(module('tmaps.core'));
 
     beforeEach(inject(function(_restoreAppstateService_, _$httpBackend_,
-                               _application_, _$q_, _$rootScope_, _colorFactory_,
+                               _application_, _$q_, _$rootScope_,
                                _$injector_) {
         // Assign the injected variables to the variables s.t. they can be used
         // in the specs
@@ -24,7 +24,6 @@ describe('In restoreAppstateService', function() {
         application = _application_;
         $q = _$q_;
         $rootScope = _$rootScope_;
-        colorFactory = _colorFactory_;
         $injector = _$injector_;
 
         // Reparse each time a text is executed since code may alter the
@@ -96,8 +95,8 @@ describe('In restoreAppstateService', function() {
             it('should restore the layers\' properties', function(done) {
                 // Check that colors were restored correctly.
                 vp.map.then(function(map) {
-                    var red = colorFactory.create(255, 0, 0, 1);
-                    var white = colorFactory.create(255, 255, 255, 1);
+                    var red = Color.RED;
+                    var white = Color.WHITE;
                     expect(vp.channelLayers[1].color().equals(red)).toEqual(true);
                     expect(vp.channelLayers[1].max()).toEqual(0.16862745098039217);
                     expect(vp.channelLayers[1].visible()).toEqual(true);

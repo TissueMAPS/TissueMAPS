@@ -1,5 +1,5 @@
 angular.module('tmaps.ui')
-.controller('ChannelCtrl', ['$scope', 'colorFactory', function($scope, colorFactory) {
+.controller('ChannelCtrl', ['$scope', function($scope) {
     var self = this;
 
     // Call the exposed method of the boxCtrl
@@ -8,9 +8,9 @@ angular.module('tmaps.ui')
     }
 
     this.color = {
-        RED:   colorFactory.create(255, 0, 0),
-        GREEN: colorFactory.create(0, 255, 0),
-        BLUE:  colorFactory.create(0, 0, 255)
+        RED:   Color.RED,
+        GREEN: Color.GREEN,
+        BLUE:  Color.BLUE
     };
 
     this.setColor = function(layer, color) {
