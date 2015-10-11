@@ -113,6 +113,14 @@ class Color implements Serializable<Color> {
     static get BLUE() {
         return new Color(0, 0, 255);
     }
+
+    static get WHITE() {
+        return new Color(255, 255, 255);
+    }
+
+    static get BLACK() {
+        return new Color(0, 0, 0);
+    }
 }
 
 // TODO: Remove this class

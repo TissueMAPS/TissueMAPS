@@ -32,7 +32,7 @@ class CellSelectionHandler implements Serializable<CellSelectionHandler> {
             // Upon testing 0.002 was the lowest alpha value which still caused to
             // hitDetection mechanism to find the cell. Lower values get probably floored to 0.
             fillColor: Color.RED.withAlpha(0.002),
-            strokeColor: Color.RED,
+            strokeColor: Color.WHITE,
             visible: false
         });
         this.viewport.addObjectLayer(cellLayer);

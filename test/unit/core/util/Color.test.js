@@ -47,13 +47,17 @@ describe('In Color', function() {
             expect(Color.fromObject({r: 255, g: 0, b: 0}).equals(new Color(255, 0, 0, 1))).toEqual(true);
         });
 
-        it('there should exist constats for red, green, and blue', function() {
+        it('there should exist constants for multiple often used colors', function() {
             expect(Color.RED).toBeDefined();
             expect(Color.RED.equals(new Color(255, 0, 0))).toEqual(true);
             expect(Color.GREEN).toBeDefined();
             expect(Color.GREEN.equals(new Color(0, 255, 0))).toEqual(true);
             expect(Color.BLUE).toBeDefined();
             expect(Color.BLUE.equals(new Color(0, 0, 255))).toEqual(true);
+            expect(Color.WHITE).toBeDefined();
+            expect(Color.WHITE.equals(new Color(255, 255, 255))).toEqual(true);
+            expect(Color.BLACK).toBeDefined();
+            expect(Color.BLACK.equals(new Color(0, 0, 0))).toEqual(true);
         });
     });
 
