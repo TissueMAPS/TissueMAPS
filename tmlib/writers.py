@@ -55,8 +55,30 @@ class TextWriter(Writer):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def write(self, filename, data):
+    def write(self, filename, data, **kwargs):
         pass
+
+
+class XmlWriter(Writer):
+
+    def __init__(self, directory=None):
+        '''
+        Initialize an object of class XmlWriter.
+
+        Parameters
+        ----------
+        directory: str, optional
+            absolute path to a directory where files are located
+        '''
+        super(XmlWriter, self).__init__(directory)
+        self.directory = directory
+
+    def write(self, filename, data, **kwargs):
+        if self.directory:
+            filename = os.path.join(self.directory, filename)
+        logger.debug('write data to file: %s' % filename)
+        with open(filename, 'w') as f:
+            f.write(data)
 
 
 class JsonWriter(TextWriter):

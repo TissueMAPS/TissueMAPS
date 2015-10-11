@@ -191,7 +191,7 @@ class Upload(object):
             name of the file that contains image related metadata
         '''
         return self.cfg.IMAGE_UPLOAD_METADATA_FILE.format(
-                    upload_name=self.name, sep=os.path.sep)
+                    upload_name=self.name)
 
     @property
     def image_metadata(self):
@@ -218,7 +218,7 @@ class Upload(object):
             the filenames of extracted images
         '''
         return self.cfg.IMAGE_UPLOAD_IMGMAPPER_FILE.format(
-                        upload_name=self.name, sep=os.path.sep)
+                        upload_name=self.name)
 
     @property
     def position_descriptor_file(self):
@@ -231,7 +231,7 @@ class Upload(object):
             image metadata
         '''
         return self.cfg.IMAGE_UPLOAD_POSMAPPER_FILE.format(
-                        upload_name=self.name, sep=os.path.sep)
+                        upload_name=self.name)
 
     @cached_property
     def image_hashmap(self):

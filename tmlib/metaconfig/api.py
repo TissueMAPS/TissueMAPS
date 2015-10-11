@@ -4,7 +4,7 @@ import logging
 import importlib
 from ..cluster import ClusterRoutines
 from ..writers import JsonWriter
-from ..writers import TextWriter
+from ..writers import XmlWriter
 from ..errors import NotSupportedError
 from ..errors import MetadataError
 from ..formats import Formats
@@ -217,24 +217,21 @@ class MetadataConfigurator(ClusterRoutines):
                                        batch['stitch_horizontal']))
 
         handler.update_channel_ids()
-        import ipdb; ipdb.set_trace()
-        handler.update_plane_ids()
-        md = handler.build_image_filenames(self.image_file_format_string)
+        md = handler.update_plane_ids()
         imgmap = handler.create_image_hashmap()
-
         self._write_metadata_to_file(batch['outputs']['metadata_files'], md)
-        self._write_mapper_to_file(batch['outputs']['mapper_files'][0], imgmap)
+        self._write_mapper_to_file(batch['outputs']['mapper_files'], imgmap)
 
     @staticmethod
     def _write_metadata_to_file(filenames, metadata):
-        with TextWriter() as writer:
+        with XmlWriter() as writer:
             f = filenames[0]
             data = metadata.to_xml()
             logger.info('write metadata to file')
             writer.write(f, data)
 
     @staticmethod
-    def _write_hashmap_to_file(filenames, hashmap):
+    def _write_mapper_to_file(filenames, hashmap):
         with JsonWriter() as writer:
             f = filenames[0]
             logger.info('write hashmap to file')
