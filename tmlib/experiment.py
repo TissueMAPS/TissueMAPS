@@ -13,6 +13,8 @@ from .config_setters import UserConfiguration
 from .config_setters import TmlibConfiguration
 from .errors import NotSupportedError
 from .readers import UserConfigurationReader
+from .readers import JsonReader
+from .metadata import ImageFileMapper
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,11 @@ class ExperimentFactory(object):
         self.experiment_dir = os.path.expandvars(experiment_dir)
         self.experiment_dir = os.path.expanduser(self.experiment_dir)
         self.experiment_dir = os.path.abspath(self.experiment_dir)
+        # Check that `experiment_dir` is actually the root directory
+        # of an experiment
+        if not os.path.exists(self.user_cfg_file):
+            raise ValueError(
+                'The provided directory is not a valid experiment root folder')
         self.library = library
 
     @property
@@ -283,6 +290,22 @@ class Experiment(object):
             per `cycles` upon extraction
         '''
         return os.path.join(self.uploads_dir, 'image_file_mapper.json')
+
+    @property
+    def image_mapper(self):
+        '''
+        Returns
+        -------
+        List[ImageFileMapper]
+            key-value pairs to map the location of individual planes within the
+            original files to the *Image* elements in the OMEXML
+        '''
+        self._image_mapper = list()
+        with JsonReader(self.uploads_dir) as reader:
+            hashmap = reader.read(self.image_mapper_file)
+        for element in hashmap:
+            self._image_mapper.append(ImageFileMapper.set(element))
+        return self._image_mapper
 
     @property
     def uploads(self):

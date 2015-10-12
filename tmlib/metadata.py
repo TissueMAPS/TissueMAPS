@@ -319,30 +319,23 @@ class ChannelImageMetadata(ImageMetadata):
             raise TypeError('Attribute "is_projected" must have type bool')
         self._is_projected = value
 
-    def serialize(self):
+    def __iter__(self):
         '''
-        Serialize attributes to key-value pairs.
+        Convert the object to a dictionary.
 
         Returns
         -------
         dict
-            metadata as key-value pairs
+            image metadata as key-value pairs
 
         Raises
         ------
         AttributeError
             when instance doesn't have a required attribute
         '''
-        serialized_metadata = dict()
-        attribs = [
-            a for a in dir(self)
-            if not a.startswith('_') and not a.isupper()
-            and a not in {'set', 'serialize'}
-        ]
-        for a in attribs:
-            if a in ChannelImageMetadata.PERSISTENT:
-                serialized_metadata[a] = getattr(self, a)
-        return serialized_metadata
+        for attr in dir(self):
+            if attr in ChannelImageMetadata.PERSISTENT:
+                yield (attr, getattr(self, attr))
 
     @staticmethod
     def set(metadata):
@@ -357,27 +350,13 @@ class ChannelImageMetadata(ImageMetadata):
         Returns
         -------
         ChannelImageMetadata
-            metadata object with attributes set with values of dictionary
-
-        Raises
-        ------
-        AttributeError
-            when keys are provided that don't have a corresponding attribute
+            metadata object with `PERSISTENT` attributes set
         '''
-        inst = ChannelImageMetadata()
-        missing_keys = [
-            a for a in ChannelImageMetadata.PERSISTENT
-            if a not in metadata.keys()
-        ]
-        if len(missing_keys) > 0:
-            raise KeyError('Missing keys: "%s"' % '", "'.join(missing_keys))
-        for k, v in metadata.iteritems():
-            if k not in ChannelImageMetadata.PERSISTENT:
-                raise AttributeError(
-                        'Class "%s" has no attribute "%s"'
-                        % (ChannelImageMetadata.__class__.__name__, k))
-            setattr(inst, k, v)
-        return inst
+        obj = ChannelImageMetadata()
+        for key, value in metadata.iteritems():
+            if key in ChannelImageMetadata.PERSISTENT:
+                setattr(obj, key, value)
+        return obj
 
 
 class ImageFileMapper(object):

@@ -219,7 +219,7 @@ class Upload(object):
         '''
         return 'image_file_mapper.json'
 
-    @cached_property
+    @property
     def image_mapper(self):
         '''
         Returns
