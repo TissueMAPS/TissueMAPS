@@ -388,37 +388,28 @@ class ImageFileMapper(object):
     will be stored upon extraction.
     '''
 
+    PERSISTENT = {
+        'files', 'series', 'planes',
+        'ref_index', 'ref_file', 'ref_id'
+    }
+
     @property
-    def name(self):
+    def files(self):
         '''
         Returns
         -------
         str
-            name of the image given by the microscope
+            absolute path to the required original image files
         '''
-        return self._name
+        return self._files
 
-    @name.setter
-    def name(self, value):
-        if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "name" must have type basestring')
-        self._name = value
-
-    @property
-    def filename(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the image file
-        '''
-        return self._filename
-
-    @filename.setter
-    def filename(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "filename" must have type basestring')
-        self._filename = value
+    @files.setter
+    def files(self, value):
+        if not isinstance(value, list):
+            raise TypeError('Attribute "files" must have type list')
+        if not all([isinstance(v, basestring) for v in value]):
+            raise TypeError('Elements of "files" must have type basestring')
+        self._files = value
 
     @property
     def series(self):
@@ -426,14 +417,17 @@ class ImageFileMapper(object):
         Returns
         -------
         int
-            zero-based position index in the file
+            zero-based position index of the required series in the original
+            file
         '''
         return self._series
 
     @series.setter
     def series(self, value):
-        if not isinstance(value, int):
-            raise TypeError('Attribute "series" must have type int')
+        if not isinstance(value, list):
+            raise TypeError('Attribute "series" must have type list')
+        if not all([isinstance(v, int) for v in value]):
+            raise TypeError('Elements of "series" must have type int')
         self._series = value
 
     @property
@@ -442,15 +436,34 @@ class ImageFileMapper(object):
         Returns
         -------
         int
-            zero-based position index in the file
+            zero-based position index of the required planes in the original
+            file
         '''
         return self._planes
 
     @planes.setter
     def planes(self, value):
-        if not isinstance(value, int):
-            raise TypeError('Attribute "int" must have type int')
+        if not isinstance(value, list):
+            raise TypeError('Attribute "planes" must have type list')
+        if not all([isinstance(v, int) for v in value]):
+            raise TypeError('Elements of "planes" must have type int')
         self._planes = value
+
+    @property
+    def ref_index(self):
+        '''
+        Returns
+        -------
+        List[str]
+            index of the image in the image *Series* in the OMEXML
+        '''
+        return self._ref_index
+
+    @ref_index.setter
+    def ref_index(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "ref_index" must have type int')
+        self._ref_index = value
 
     @property
     def ref_id(self):
@@ -458,8 +471,8 @@ class ImageFileMapper(object):
         Returns
         -------
         List[str]
-            unique identifier strings for the corresponding images
-            (the ones that will be extracted and stored separately)
+            identifier string of the image in the configured OMEXML
+            (pattern: (Image:\S+)); e.g. "Image:0")
         '''
         return self._ref_id
 
@@ -469,6 +482,65 @@ class ImageFileMapper(object):
             raise TypeError('Attribute "ref_id" must have type basestring')
         self._ref_id = value
 
+    @property
+    def ref_file(self):
+        '''
+        Returns
+        -------
+        List[str]
+            absolute path to the final image file
+        '''
+        return self._ref_file
+
+    @ref_file.setter
+    def ref_file(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "ref_file" must have type basestring')
+        self._ref_file = value
+
+    def __iter__(self):
+        '''
+        Returns
+        -------
+        dict
+            key-value representation of the object
+            (only `PERSISTENT` attributes)
+
+        Examples
+        --------
+        >>>obj = ImageFileMapper()
+        >>>obj.series = [0, 0]
+        >>>obj.planes = [0, 1]
+        >>>obj.files = ["a", "b"]
+        >>>obj.ref_index = 0
+        >>>obj.ref_file = "c"
+        >>>obj.ref_id = "Image:0"
+        >>>dict(obj)
+        {'series': [0, 0], 'planes': [0, 1], 'ref_id': 'Image:0', 'ref_index': 0, 'filenames': ['a', 'b'], 'ref_name': 'c'}
+        '''
+        for attr in dir(self):
+            if attr not in self.PERSISTENT:
+                continue
+            yield (attr, getattr(self, attr))
+
+    @staticmethod
+    def set(description):
+        '''
+        Parameters
+        ----------
+        description: dict
+            key-value representation of the object
+
+        Returns
+        -------
+        ImageFileMapper
+            object where `PERSISTENT` attributes where set with provided values
+        '''
+        obj = ImageFileMapper()
+        for key, value in description.iteritems():
+            if key in obj.PERSISTENT:
+                setattr(obj, key, value)
+        return obj
 
 
 # class AcquisitionSiteDescription(object):

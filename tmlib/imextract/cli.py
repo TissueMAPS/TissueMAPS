@@ -3,7 +3,7 @@ from . import logo
 from . import __version__
 from .api import ImageExtractor
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
+from ..experiment import ExperimentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class Imextract(CommandLineInterface):
     @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
-        experiment = Experiment(self.args.experiment_dir)
+        experiment = ExperimentFactory(self.args.experiment_dir).create()
         self.__api_instance = ImageExtractor(
                                 experiment=experiment, prog_name=self.name,
                                 verbosity=self.args.verbosity)

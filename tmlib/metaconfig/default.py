@@ -2,6 +2,7 @@ import os
 import re
 import bioformats
 import logging
+import pandas as pd
 from natsort import natsorted
 from collections import defaultdict
 from cached_property import cached_property
@@ -32,6 +33,8 @@ class MetadataHandler(object):
     The metadata that can be automatically retrieved form image files may not
     be sufficient, but may require additional microscope-specific metadata
     and/or user input.
+
+
     '''
 
     __metaclass__ = ABCMeta
@@ -62,7 +65,7 @@ class MetadataHandler(object):
         self.metadata = bioformats.OMEXML()
         self.file_mapper = list()
         self.id_to_image_ix_ref = dict()
-        self.id_to_well_ix_ref = dict()
+        self.id_to_well_id_ref = dict()
         self.id_to_wellsample_ix_ref = dict()
         self.channels = set()
         self.planes = set()
@@ -132,7 +135,7 @@ class MetadataHandler(object):
         Returns
         -------
         bioformats.OMEXML
-            metadata with an image element for each ultimately extracted image
+            metadata with one *Image* element for each 2D *Plane* element
 
         Note
         ----
@@ -140,13 +143,21 @@ class MetadataHandler(object):
         which is referred to as a *Series*.
         Each *Image*/*Pixels* element contains at least one *Plane* element.
         A *Plane* represents a 2-dimensional pixel array for a given channel,
-        z-section and time point. The different planes are generally grouped
+        z-resolution and time point. The different planes are often grouped
         together as a *Series* per acquisition site, i.e. microscope stage
         position.
-        Ultimately, we would like to create image files that contain only
-        a single plane per file for each channel, time point and z position.
-        To this end, the metadata hierarchy gets flattened, i.e. a separate
-        *Image* element will be created for each original *Plane* element.
+        The actual structure of the image dataset, i.e. the distribution of
+        images across files, is highly variable and microscope dependent.
+
+        In TissueMAPS, each *Plane* representing a unique combination of
+        channel, time point and z-resolution is ultimately stored in a
+        separate file. This is advantageous, because it makes it easy
+        for libraries to read the contained pixel array without the need for
+        specialized readers and prevents problems with parallel I/O on
+        the cluster, when remote nodes simultaneously try to read from or write
+        to an image file.
+        To this end, we create a flat metadata hierarchy of single-plane
+        *Image* elements.
         '''
         logger.info('configure OMEXML metadata extracted from image files')
         count = 0
@@ -187,6 +198,9 @@ class MetadataHandler(object):
                         new_img = self.metadata.image(count)
                     new_img.Name = image.Name
                     pxl = new_img.Pixels
+                    new_img.ID = 'Image:%d' % count
+                    # TODO: consistent IDs (all zero-based)
+                    # How are IDs for *Channel* and *Pixels* assigned?
                     pxl.plane_count = 1
                     pxl.Channel(0).Name = pixels.Channel(plane.TheC).Name
                     pxl.PixelType = pixels.PixelType
@@ -217,9 +231,11 @@ class MetadataHandler(object):
 
                     fm = ImageFileMapper()
                     fm.name = new_img.Name
-                    fm.filename = f
-                    fm.series = s
-                    fm.planes = p
+                    fm.id = new_img.ID
+                    fm.ref_index = count
+                    fm.files = [f]
+                    fm.series = [s]
+                    fm.planes = [p]
                     self.file_mapper.append(fm)
                     count += 1
 
@@ -245,23 +261,24 @@ class MetadataHandler(object):
         n_timepoints = pixels.SizeT
         n_planes = pixels.SizeZ
         n_total = n_channels * n_timepoints * n_planes
+        # TODO: this could be made more general
         if n_total is not len(metadata):
             raise AssertionError('Images mustn\'t have more than one plane.')
         for c in xrange(n_channels):
             img = metadata[c]
+            if hasattr(ome_image_element, 'AcquiredDate'):
+                # Something is wrong with "AcquiredData" attribute
+                img.AcquiredDate = ome_image_element.AcquiredDate
             if not img.Pixels.Channel(0).Name:
-                try:
+                if hasattr(pixels.Channel(c), 'Name'):
                     img.Pixels.Channel(0).Name = pixels.Channel(c).Name
                     self.channels.add(img.Pixels.Channel(0).Name)
-                except AttributeError:
-                    pass
             if not(hasattr(img.Pixels.Plane(0), 'PositionX')
                    and hasattr(img.Pixels.Plane(0), 'PositionY')):
-                try:
+                if (hasattr(pixels.Plane(0), 'PositionX')
+                        and hasattr(pixels.Plane(0), 'PositionY')):
                     img.Pixels.Plane(0).PositionX = pixels.Plane(0).PositionX
                     img.Pixels.Plane(0).PositionY = pixels.Plane(0).PositionY
-                except AttributeError:
-                    pass
             updated_metadata[c] = img
 
         return updated_metadata
@@ -278,7 +295,7 @@ class MetadataHandler(object):
         Returns
         -------
         bioformats.OMEXML
-            metadata with an image element for each ultimately extracted image
+            metadata with one *Image* element for each 2D *Plane* element
 
         Note
         ----
@@ -373,7 +390,9 @@ class MetadataHandler(object):
             # image file name and is able to extract the required information
             # Here we create a lookup table with a mapping of captured matches
             # to the ID of the corresponding image element.
-            filename = os.path.basename(self.file_mapper[i].filename)
+            if len(self.file_mapper[i].files) > 1:
+                raise ValueError('There should only be a single filename.')
+            filename = os.path.basename(self.file_mapper[i].files[0])
             match = r.search(filename)
             if not match:
                 raise MetadataError(
@@ -408,14 +427,13 @@ class MetadataHandler(object):
         # or additional metadata files and thus requires custom readers/handlers
         plate = self.ome_additional_metadata.plates[0]
         new_plate = self.metadata.PlatesDucktype(
-                        self.metadata.root_node).newPlate(name='plate')
+                        self.metadata.root_node).newPlate(name='default')
         new_plate.RowNamingConvention = plate.RowNamingConvention
         new_plate.ColumnNamingConvention = plate.ColumnNamingConvention
         new_plate.Rows = plate.Rows
         new_plate.Columns = plate.Columns
 
-        n_wells = len(plate.Well)
-        for w in xrange(n_wells):
+        for w, well_id in enumerate(plate.Well):
             new_well = self.metadata.WellsDucktype(new_plate).new(
                             row=plate.Well[w].Row, column=plate.Well[w].Column)
             new_samples = self.metadata.WellSampleDucktype(new_well.node)
@@ -430,8 +448,8 @@ class MetadataHandler(object):
                 key = tuple([reference[ix] for ix in index])
                 new_samples[s].ImageRef = lut[key]
                 # Create a reference from Image ID to Well and WellSample Index
+                self.id_to_well_id_ref[lut[key]] = well_id
                 self.id_to_wellsample_ix_ref[lut[key]] = s
-                self.id_to_well_ix_ref[lut[key]] = w
 
         return self.metadata
 
@@ -492,10 +510,10 @@ class MetadataHandler(object):
         Returns
         -------
         bioformats.OMEXML
-            metadata with an image element for each ultimately extracted image
+            metadata with one *Image* element for each 2D *Plane* element
         '''
         filenames = natsorted(list(set([
-            fm.filename for fm in self.file_mapper
+            f for fm in self.file_mapper for f in fm.files
         ])))
         if self.metadata.image_count != len(filenames):
             raise MetadataError(
@@ -563,7 +581,7 @@ class MetadataHandler(object):
                 well_samples[j].ImageRef = img_id
                 # Create a reference from Image ID to Well and WellSample Index
                 self.id_to_wellsample_ix_ref[img_id] = j
-                self.id_to_well_ix_ref[img_id] = i
+                self.id_to_well_id_ref[img_id] = i
 
         return self.metadata
 
@@ -581,7 +599,7 @@ class MetadataHandler(object):
         Returns
         -------
         bioformats.OMEXML
-            metadata with an image element for each ultimately extracted image
+            metadata with one *Image* element for each 2D *Plane* element
 
         Raises
         ------
@@ -652,7 +670,7 @@ class MetadataHandler(object):
         Returns
         -------
         bioformats.OMEXML
-            metadata with an image element for each ultimately extracted image
+            metadata with one *Image* element for each 2D *Plane* element
 
         See also
         --------
@@ -692,6 +710,122 @@ class MetadataHandler(object):
 
         return self.metadata
 
+    def reconfigure_ome_metadata_for_projection(self):
+        '''
+        Reconfigure metadata in order to account for subsequent intensity
+        projection.
+        To this end, each z-stack (all focal planes acquired at
+        at different z resolutions but at the same microscope stage position,
+        at the "same" time point and in the same channel) is reduced to a
+        single 2D plane.
+
+        Returns
+        -------
+        bioformats.OMEXML
+            metadata with an image element for each ultimately extracted image
+        '''
+        # Group focal planes per channel and time point for each
+        # image acquisition site (position within a well)
+        logger.info('build z-stacks from individual focal Plane elements')
+        zstacks = defaultdict(list)
+        plate = self.metadata.plates[0]
+        for w in plate.Well:
+            well = plate.Well[w]
+            for sample in well.Sample:
+                ref_id = sample.ImageRef
+                ref_ix = self.id_to_image_ix_ref[ref_id]
+                ref_im = self.metadata.image(ref_ix)
+                c = ref_im.Pixels.Channel(0).Name
+                t = ref_im.Pixels.Plane(0).TheT
+                k = (w, sample.PositionY, sample.PositionX, c, t)
+                zstacks[k].append(ref_id)
+
+        lut, ids = pd.DataFrame(zstacks.keys()), zstacks.values()
+        lut.columns = ['w', 'y', 'x', 'c', 't']
+
+        # Create a new metadata object, which only contains *Image* elements
+        # for the projected planes
+        logger.info('create a new metadata object that contains an Image '
+                    'element for each projected z-stack')
+        proj_metadata = bioformats.OMEXML()
+        proj_metadata.image_count = len(ids)
+        proj_id_to_image_ix_ref = dict()
+        proj_file_mapper = list()
+        for i in xrange(proj_metadata.image_count):
+            ref_id = ids[i][0]
+            ref_ix = self.id_to_image_ix_ref[ref_id]
+            ref_im = self.metadata.image(ref_ix)
+            proj_im = proj_metadata.image(i)
+            # TODO: this should go into a function! (see also "collect")
+            proj_im.ID = 'Image:%d' % i
+            proj_im.AcquiredDate = ref_im.AcquiredDate
+            pxl = proj_im.Pixels
+            pxl.plane_count = 1
+            pxl.Channel(0).Name = ref_im.Pixels.Channel(0).Name
+            pxl.PixelType = ref_im.Pixels.PixelType
+            pxl.SizeX = ref_im.Pixels.SizeX
+            pxl.SizeY = ref_im.Pixels.SizeY
+            pxl.SizeT = 1
+            pxl.SizeC = 1
+            pxl.SizeZ = 1
+            pln = pxl.Plane(0)
+            pln.TheT = ref_im.Pixels.Plane(0).TheT
+            pln.TheZ = 0  # projected!
+            pln.PositionY = ref_im.Pixels.Plane(0).PositionY
+            pln.PositionX = ref_im.Pixels.Plane(0).PositionX
+
+            proj_id_to_image_ix_ref[proj_im.ID] = i
+
+            fm = ImageFileMapper()
+            fm.ref_index = i
+            fm.files = list()
+            fm.series = list()
+            fm.planes = list()
+            fm.ref_index = i
+            for ref_id in ids[i]:
+                ref_ix = self.id_to_image_ix_ref[ref_id]
+                fm.files.extend(self.file_mapper[ref_ix].files)
+                fm.series.extend(self.file_mapper[ref_ix].series)
+                fm.planes.extend(self.file_mapper[ref_ix].planes)
+            proj_file_mapper.append(fm)
+
+        # Create a new *Plate* element, whose *WellSample* elements only
+        # contain the projected planes
+        logger.info('update the Plate element accordingly')
+        proj_plate = proj_metadata.PlatesDucktype(
+                        proj_metadata.root_node).newPlate(
+                        name=self.experiment_name)
+        p = self.metadata.plates[0]
+        proj_plate.RowNamingConvention = p.RowNamingConvention
+        proj_plate.ColumnNamingConvention = p.ColumnNamingConvention
+        proj_plate.Rows = p.Rows
+        proj_plate.Columns = p.Columns
+        proj_id_to_well_id_ref = dict()
+        proj_id_to_wellsample_ix_ref = dict()
+        for w, well_id in enumerate(p.Well):
+            well = proj_metadata.WellsDucktype(proj_plate).new(
+                            row=p.Well[w].Row, column=p.Well[w].Column)
+            samples = proj_metadata.WellSampleDucktype(well.node)
+            well_ix = lut[(lut['w'] == well_id)].index.tolist()
+            for s, ix in enumerate(well_ix):
+                samples.new(index=s)
+                samples[s].PositionX = lut.iloc[ix]['x']
+                samples[s].PositionY = lut.iloc[ix]['y']
+                im_id = proj_metadata.image(ix).ID
+                samples[s].ImageRef = im_id
+                proj_id_to_well_id_ref[im_id] = well_id
+                proj_id_to_wellsample_ix_ref[im_id] = s
+
+        # Update all other data that links to the metadata prior to 
+        # accounting for projection
+        self.metadata = proj_metadata
+        self.planes = set([0])  # projected!
+        self.file_mapper = proj_file_mapper
+        self.id_to_image_ix_ref = proj_id_to_image_ix_ref
+        self.id_to_well_id_ref = proj_id_to_well_id_ref
+        self.id_to_wellsample_ix_ref = proj_id_to_wellsample_ix_ref
+        return self.metadata
+
     def update_channel_ids(self):
         '''
         Create for each channel a zero-based unique identifier number.
@@ -705,7 +839,12 @@ class MetadataHandler(object):
         ----
         The id may not reflect the order in which the channels were acquired
         on the microscope.
+
+        Warning
+        -------
+        Apply this method only at the end of the configuration process.
         '''
+        logger.info('update channel ids')
         for i in xrange(self.metadata.image_count):
             for j, c in enumerate(self.channels):
                 if self.metadata.image(i).Pixels.Channel(0).Name == c:
@@ -725,7 +864,12 @@ class MetadataHandler(object):
         ----
         The id may not reflect the order in which the planes were acquired
         on the microscope.
+
+        Warning
+        -------
+        Apply this method only at the end of the configuration process.
         '''
+        logger.info('update plane ids')
         planes = sorted(set([
             self.metadata.image(i).Pixels.Plane(0).TheZ
             for i in xrange(self.metadata.image_count)
@@ -736,7 +880,49 @@ class MetadataHandler(object):
                     self.metadata.image(i).Pixels.Plane(0).TheZ = j
         return self.metadata
 
-    def create_image_hashmap(self):
+    def build_image_filenames(self, image_file_format_string):
+        '''
+        Build unique filenames for the extracted images based on a format
+        string  the extracted metadata.
+
+        Since the number of extracted images may be different than the number
+        of uploaded image files (because each image file can contain several
+        planes), we have to come up with names for the corresponding files.
+
+        Parameters
+        ----------
+        image_file_format_string: str
+            Python format string
+
+        Returns
+        -------
+        bioformats.OMEXML
+            metadata with an image element for each ultimately extracted image
+
+        See also
+        --------
+        `tmlib.cfg`_
+        '''
+        logger.info('build names for final image files')
+        for i in xrange(self.metadata.image_count):
+            img = self.metadata.image(i)
+            well_id = self.id_to_well_id_ref[img.ID]
+            site_ix = self.id_to_wellsample_ix_ref[img.ID]
+            site = self.metadata.plates[0].Well[well_id].Sample[site_ix]
+            fieldnames = {
+                'experiment_name': self.experiment_name,
+                'well_id': well_id,
+                'well_y': int(site.PositionY),
+                'well_x': int(site.PositionX),
+                'channel': img.Pixels.Plane(0).TheC,
+                'plane': img.Pixels.Plane(0).TheZ,
+                'time': img.Pixels.Plane(0).TheT
+            }
+            img.Name = image_file_format_string.format(**fieldnames)
+
+        return self.metadata
+
+    def create_image_file_mapper(self):
         '''
         Create a hashmap for the extraction of individual planes from the
         original image files.
@@ -749,18 +935,35 @@ class MetadataHandler(object):
             which specify the location in the original file, from where the
             image plane should be extracted
         '''
-        hashmap = dict()
-        filenames = [fm.filename for fm in self.file_mapper]
-        series = [fm.series for fm in self.file_mapper]
-        planes = [fm.planes for fm in self.file_mapper]
-        for f in set(filenames):
-            ix = utils.indices(filenames, f)
-            for i in ix:
-                hashmap[f] = defaultdict(list)
-                hashmap[f]['name'].append(self.metadata.image(i).Name)
-                hashmap[f]['ref_id'].append(self.metadata.image(i).ID)
-                hashmap[f]['series'].append(series[i])
-                hashmap[f]['plane'].append(planes[i])
+        hashmap = list()
+        if len(self.file_mapper[0].files) > 1:
+            # In this case individual focal planes that should be projected
+            # to the final 2D plane are distributed across several files.
+            # These files have to be loaded on the same node in order to be
+            # able to perform the projection.
+            for i in xrange(self.metadata.image_count):
+                element = ImageFileMapper()
+                element.ref_index = i
+                element.ref_id = self.metadata.image(i).ID
+                element.ref_file = self.metadata.image(i).Name
+                element.files = self.file_mapper[i].files
+                element.series = self.file_mapper[i].series
+                element.planes = self.file_mapper[i].planes
+                hashmap.append(dict(element))
+        else:
+            # In this case images files contain multiple planes
+            filenames = [f for fm in self.file_mapper for f in fm.files]
+            for f in filenames:
+                ix = utils.indices(filenames, f)
+                for i in ix:
+                    element = ImageFileMapper()
+                    element.ref_index = i
+                    element.ref_id = self.metadata.image(i).ID
+                    element.ref_file = self.metadata.image(i).Name
+                    element.files = [f]
+                    element.series = self.file_mapper[i].series
+                    element.planes = self.file_mapper[i].planes
+                    hashmap.append(dict(element))
 
         return hashmap
 

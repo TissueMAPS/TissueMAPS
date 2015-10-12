@@ -208,8 +208,8 @@ class VisiviewMetadataReader(MetadataReader):
 
         for w in set(wells):
             # Create a "Well" instance for each imaged well in the plate
-            row_index = utils.map_letter_to_number(w[0])
-            col_index = w[1]
+            row_index = utils.map_letter_to_number(w[0]) - 1
+            col_index = int(w[1:]) - 1
             well = metadata.WellsDucktype(plate).new(row=row_index,
                                                      column=col_index)
             well_samples = metadata.WellSampleDucktype(well.node)

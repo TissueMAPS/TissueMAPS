@@ -62,6 +62,51 @@ class TextReader(Reader):
     def read(self, filename, **kwargs):
         pass
 
+class XmlReader(Reader):
+
+    def __init__(self, directory=None):
+        '''
+        Initialize an object of class XmlReader.
+
+        Parameters
+        ----------
+        directory: str, optional
+            absolute path to a directory where files are located
+        '''
+        super(XmlReader, self).__init__(directory)
+        self.directory = directory
+
+    def read(self, filename, **kwargs):
+        '''
+        Read XML file.
+
+        Parameters
+        ----------
+        filename: str
+            path to the XML file
+        **kwargs: dict
+            additional arguments
+
+        Returns
+        -------
+
+        Note
+        ----
+        `filename` can be provided as relative path
+        when `directory` was set upon instantiation of the reader object.
+
+        Raises
+        ------
+        OSError
+            when `filename` does not exist
+        '''
+        if self.directory:
+            filename = os.path.join(self.directory, filename)
+        if not os.path.exists(filename):
+            raise OSError('File does not exist: %s' % filename)
+        with open(filename, 'r') as f:
+            return f.read()
+
 
 def load_json(string):
     '''
@@ -127,8 +172,7 @@ class JsonReader(TextReader):
         if not os.path.exists(filename):
             raise OSError('File does not exist: %s' % filename)
         with open(filename, 'r') as f:
-            json_content = load_json(f.read())
-        return json_content
+            return load_json(f.read())
 
 
 class ImageMetadataReader(JsonReader):

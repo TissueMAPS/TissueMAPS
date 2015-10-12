@@ -44,7 +44,7 @@ class Metaconfig(CommandLineInterface):
     def _variable_init_args(self):
         kwargs = dict()
         kwargs['format'] = self.args.format
-        kwargs['z_stacks'] = self.args.z_stacks
+        kwargs['z_stacks'] = self.args.format
         kwargs['regex'] = self.args.regex
         kwargs['stitch_layout'] = self.args.stitch_layout
         kwargs['stitch_major_axis'] = self.args.stitch_major_axis

@@ -182,8 +182,7 @@ class Cycle(object):
         str
             name of the file holding image related metadata
         '''
-        self._image_metadata_file = self.cfg.IMAGE_METADATA_FILE.format(
-                                                cycle_name=self.name)
+        self._image_metadata_file = self.cfg.IMAGE_METADATA_FILE
         return self._image_metadata_file
 
     @cached_property
@@ -289,9 +288,7 @@ class Cycle(object):
             when `stats_dir` does not exist or when no illumination statistic
             files are found in `stats_dir`
         '''
-        stats_pattern = self.cfg.STATS_FILE.format(
-                                            cycle_name=self.name,
-                                            channel_id='\w+')
+        stats_pattern = self.cfg.STATS_FILE.format(channel_id='\w+')
         stats_pattern = re.compile(stats_pattern)
         if not os.path.exists(self.stats_dir):
             raise OSError('Stats directory does not exist: %s'

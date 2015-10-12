@@ -33,22 +33,23 @@ DATA_FILE = '{experiment_dir}{sep}{experiment_name}.data.h5'
 
 USER_CFG_FILE = '{experiment_dir}{sep}user.cfg.yml'
 
-CYCLE_DIR = '{experiment_name}_{cycle_id}'
 UPLOAD_DIR = '{experiment_dir}{sep}uploads'
-UPLOAD_SUBDIR = '{cycle_id}'
+UPLOAD_SUBDIR = '{upload_id}'
+
+CYCLE_DIR = '{experiment_dir}{sep}cycles'
+CYCLE_SUBDIR = '{cycle_id}'
+
 LAYER_NAME = '{experiment_name}_t{time:0>3}_c{channel:0>3}_z{plane:0>3}'
 
 IMAGE_UPLOAD_DIR = '{upload_subdir}{sep}image_uploads'
 ADDITIONAL_UPLOAD_DIR = '{upload_subdir}{sep}additional_uploads'
 OME_XML_DIR = '{upload_subdir}{sep}ome_xml'
-IMAGE_UPLOAD_IMGMAPPER_FILE = '{upload_name}_file_mapper.json'
-IMAGE_UPLOAD_METADATA_FILE = '{upload_name}_configured_metadata.ome.xml'
 
 IMAGE_DIR = '{cycle_dir}{sep}images'
-IMAGE_FILE = '{experiment_name}_t{time:0>3}_w{well:0>3}_s{site:0>4}_c{channel:0>3}_z{plane:0>3}.png'
+IMAGE_FILE = '{experiment_name}_t{time:0>3}_{well_id}_y{well_y:0>3}_x{well_x:0>3}_c{channel:0>3}_z{plane:0>3}.png'
 
-IMAGE_METADATA_FILE = '{cycle_name}.ome.xml'
-ALIGN_DESCRIPTOR_FILE = '{cycle_name}.align.json'
+IMAGE_METADATA_FILE = 'image_metadata.ome.xml'
+ALIGN_DESCRIPTOR_FILE = 'alignment_description.json'
 
 STATS_DIR = '{cycle_dir}{sep}stats'
-STATS_FILE = '{cycle}_{channel}.stat.h5'
+STATS_FILE = '{channel}.stat.h5'

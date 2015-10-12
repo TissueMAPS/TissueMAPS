@@ -3,17 +3,19 @@ from .cli import Metaconfig
 from ..formats import Formats
 
 
-parser, subparsers = Metaconfig.get_parser_and_subparsers()
+parser, subparsers = Metaconfig.get_parser_and_subparsers(
+    required_subparsers=['init', 'run', 'submit', 'kill', 'cleanup', 'collect']
+)
 
 parser.description = '''
-        Convert metadata extracted from image files to a custom format
-        and complement it with additional information.
+        Configure metadata based on OMEXML extracted from image files
+        and complement it with additionally provided information.
     '''
 parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_auto_group = init_parser.add_argument_group(
-    'arguments for automatic formatting')
+    'arguments for automatic configuration')
 init_auto_group.add_argument(
     '-f', '--format', type=str, default='default',
     choices=Formats.SUPPORT_FOR_ADDITIONAL_FILES,
@@ -22,10 +24,10 @@ init_auto_group.add_argument(
 init_auto_group.add_argument(
     '-z', '--z_stacks', action='store_true',
     help='if individual focal planes should be kept, '
-         'i.e. no intensity project should be performed')
+         'i.e. no intensity project performed')
 
 init_manual_group = init_parser.add_argument_group(
-    'arguments for manual formatting')
+    'arguments for manual configuration')
 init_manual_group.add_argument(
     '-r', '--regex', type=str, default=None, metavar='expression',
     help='named regular expression that defines group names "(?P<name>...)" '

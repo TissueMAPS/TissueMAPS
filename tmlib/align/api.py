@@ -177,7 +177,7 @@ class ImageRegistration(ClusterRoutines):
 
         See also
         --------
-        `a.registration.register_images`_
+        `tmlib.align.registration.register_images`_
         '''
         reg.register_images(batch['sites'],
                             batch['inputs']['target_files'],
@@ -200,7 +200,7 @@ class ImageRegistration(ClusterRoutines):
         
         See also
         --------
-        `a.registration.fuse_registration`_
+        `tmlib.align.registration.fuse_registration`_
         '''
         output_files = batch['inputs']['registration_files']
         cycle_names = [c.name for c in self.cycles]

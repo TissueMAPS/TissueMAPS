@@ -6,7 +6,7 @@ parser, subparsers = Imextract.get_parser_and_subparsers()
 
 parser.description = '''
         Extract images from heterogeneous microscopic image file formats
-        using the Bio-Formats library.
+        and store each 2D plane in a separate PNG file.
     '''
 parser.version = __version__
 

@@ -3,7 +3,9 @@ import logging
 import bioformats
 from cached_property import cached_property
 from natsort import natsorted
+from .metadata import ImageFileMapper
 from .formats import Formats
+from .readers import XmlReader
 from .readers import JsonReader
 
 logger = logging.getLogger(__name__)
@@ -190,21 +192,19 @@ class Upload(object):
         str
             name of the file that contains image related metadata
         '''
-        return self.cfg.IMAGE_UPLOAD_METADATA_FILE.format(
-                    upload_name=self.name)
+        return 'configured_metadata.ome.xml'
 
     @property
     def image_metadata(self):
         '''
         Returns
         -------
-        List[Dict[str, dict]]
-            metadata as key-value pairs for each image that should be extracted
-            form the original image files
+        bioformats.OMEXML
+            configured image metadata
         '''
-        with JsonReader(self.dir) as reader:
-            metadata = reader.read(self.image_metadata_file)
-        self._image_metadata = bioformats.OMEXML(metadata)
+        with XmlReader(self.dir) as reader:
+            omexml = reader.read(self.image_metadata_file)
+        self._image_metadata = bioformats.OMEXML(omexml)
         return self._image_metadata
 
     @property
@@ -215,47 +215,22 @@ class Upload(object):
         str
             name of the file that contains key-value pairs for mapping
             the images stored in the original image files to the
-            the filenames of extracted images
+            the OME *Image* elements in `image_metadata`
         '''
-        return self.cfg.IMAGE_UPLOAD_IMGMAPPER_FILE.format(
-                        upload_name=self.name)
-
-    @property
-    def position_descriptor_file(self):
-        '''
-        Returns
-        -------
-        str
-            name of the file that contains key-value pairs for mapping
-            the positional information on image acquisition sites to the
-            image metadata
-        '''
-        return self.cfg.IMAGE_UPLOAD_POSMAPPER_FILE.format(
-                        upload_name=self.name)
+        return 'image_file_mapper.json'
 
     @cached_property
-    def image_hashmap(self):
+    def image_mapper(self):
         '''
         Returns
         -------
-        Dict[str, Dict[str, List[str]]]
-            key-value pairs to map the location of planes within the original
-            image file to the output files, which will each contain a plane
-            after extraction;
-            the mapping is either 1 -> 1 in case individual focal planes are
-            kept, or n -> 1, where n is the number of focal planes per z-stack,
-            in case intensity projection is performed
+        List[ImageFileMapper]
+            key-value pairs to map the location of individual planes within the
+            original files to the *Image* elements in the OMEXML
         '''
+        self._image_mapper = list()
         with JsonReader(self.dir) as reader:
-            return reader.read(self.image_hashmap_file)
-
-    @cached_property
-    def position_description(self):
-        '''
-        Returns
-        -------
-        Dict[str, Dict[str, List[str]]]
-            key-value pairs to map image acquisition sites to individual images
-        '''
-        with JsonReader(self.dir) as reader:
-            return reader.read(self.image_hashmap_file)
+            hashmap = reader.read(self.image_mapper_file)
+        for element in hashmap:
+            self._image_mapper.append(ImageFileMapper.set(element))
+        return self._image_mapper

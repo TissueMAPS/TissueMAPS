@@ -72,6 +72,9 @@ class CellvoyagerMetadataReader(MetadataReader):
             # A name has to be set as a flag for the handler to update
             # the metadata
             img.Name = e.text
+            # TODO: there is a bug that prevents setting the date for
+            # images with index > 0
+            img.AcquiredDate = e.attrib['{%s}Time' % mlf_ns]
             # Image files always contain only a single plane
             img.Pixels.SizeT = 1
             img.Pixels.SizeC = 1
@@ -80,8 +83,8 @@ class CellvoyagerMetadataReader(MetadataReader):
             if e.attrib['{%s}Type' % mlf_ns] == 'IMG':
                 img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
             else:
-                logger.error('No channel information available for image "%s"'
-                             % img.Name)
+                logger.error('erroneous acquisition - no channel information '
+                             'available for image "%s"', img.Name)
                 img.Pixels.Channel(0).Name = None
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
@@ -110,8 +113,8 @@ class CellvoyagerMetadataReader(MetadataReader):
         wells = lut.keys()
         for w in set(wells):
             # Create a *Well* element for each imaged well in the plate
-            row_index = utils.map_letter_to_number(w[0])
-            col_index = w[1]
+            row_index = utils.map_letter_to_number(w[0]) - 1
+            col_index = int(w[1:]) - 1
             well = metadata.WellsDucktype(plate).new(row=row_index,
                                                      column=col_index)
             well_samples = metadata.WellSampleDucktype(well.node)

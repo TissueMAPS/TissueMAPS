@@ -191,10 +191,32 @@ class Experiment(object):
         return self.experiment_dir
 
     def _is_cycle_dir(self, folder):
-        format_string = self.cfg.CYCLE_DIR.format(
-            experiment_name=self.name, cycle_id='{cycle_id}')
+        # format_string = self.cfg.CYCLE_DIR.format(
+        #     experiment_name=self.name, cycle_id='{cycle_id}')
+        format_string = self.cfg.CYCLE_SUBDIR
         regexp = utils.regex_from_format_string(format_string)
         return True if re.match(regexp, folder) else False
+
+    @cached_property
+    def cycles_dir(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the folder, where `cycles` are located
+            (`cycles` are represented by subfolders of `cycle_dir`)
+
+        Note
+        ----
+        The directory is created if it doesn't exist.
+        '''
+        self._cycles_dir = self.cfg.CYCLE_DIR.format(
+                                        experiment_dir=self.dir,
+                                        sep=os.path.sep)
+        if not os.path.exists(self._cycles_dir):
+            logger.debug('create directory for cycles: %s', self._cycles_dir)
+            os.mkdir(self._cycles_dir)
+        return self._cycles_dir
 
     @property
     def cycles(self):
@@ -212,9 +234,9 @@ class Experiment(object):
         `tmlib.cfg`_
         '''
         cycle_dirs = [
-            os.path.join(self.dir, d)
-            for d in os.listdir(self.dir)
-            if os.path.isdir(os.path.join(self.dir, d))
+            os.path.join(self.cycles_dir, d)
+            for d in os.listdir(self.cycles_dir)
+            if os.path.isdir(os.path.join(self.cycles_dir, d))
             and self._is_cycle_dir(d)
         ]
         cycle_dirs = natsorted(cycle_dirs)
@@ -225,21 +247,42 @@ class Experiment(object):
         return self._cycles
 
     @property
-    def upload_dir(self):
+    def uploads_dir(self):
         '''
         Returns
         -------
         str
             absolute path to the directory, where uploaded files are located
+            (each *upload* is stored in a separate subfolder of `uploads_dir`)
+
+        Raises
+        ------
+        OSError
+            when `uploads_dir` does not exist
         '''
-        self._upload_dir = self.cfg.UPLOAD_DIR.format(
+        self._uploads_dir = self.cfg.UPLOAD_DIR.format(
                                             experiment_dir=self.dir,
                                             sep=os.path.sep)
-        return self._upload_dir
+        if not os.path.exists(self._uploads_dir):
+            raise OSError('Uploads directory does not exist')
+        return self._uploads_dir
 
     def _is_upload_subdir(self, folder):
-        regexp = utils.regex_from_format_string(self.cfg.UPLOAD_SUBDIR)
+        format_string = self.cfg.UPLOAD_SUBDIR
+        regexp = utils.regex_from_format_string(format_string)
         return True if re.match(regexp, folder) else False
+
+    @property
+    def image_mapper_file(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the file that contains the mapping of original,
+            uploaded image files and final image files that are stored
+            per `cycles` upon extraction
+        '''
+        return os.path.join(self.uploads_dir, 'image_file_mapper.json')
 
     @property
     def uploads(self):
@@ -260,9 +303,9 @@ class Experiment(object):
         `tmlib.cfg`_
         '''
         upload_subdirs = natsorted([
-            os.path.join(self.upload_dir, d)
-            for d in os.listdir(self.upload_dir)
-            if os.path.isdir(os.path.join(self.upload_dir, d))
+            os.path.join(self.uploads_dir, d)
+            for d in os.listdir(self.uploads_dir)
+            if os.path.isdir(os.path.join(self.uploads_dir, d))
             and self._is_upload_subdir(d)
         ])
         self._uploads = [
@@ -304,12 +347,12 @@ class Experiment(object):
         WellPlate or Slide
             configured cycle object
         '''
-        new_cycle_name = self.cfg.CYCLE_DIR.format(
-                                            experiment_name=self.name,
-                                            cycle_id=len(self.cycles))
-        logger.info('create additional cycle: %s' % new_cycle_name)
+        new_cycle_name = os.path.join(self.cycles_dir,
+                                      self.cfg.CYCLE_SUBDIR.format(
+                                            cycle_id=len(self.cycles)))
         new_cycle_dir = os.path.join(self.dir, new_cycle_name)
-        logger.debug('create directory for new cycle')
+        logger.debug('add cycle: %s', os.path.basename(new_cycle_dir))
+        logger.debug('create directory for new cycle: %s', new_cycle_dir)
         os.mkdir(new_cycle_dir)
         new_cycle = Cycle(new_cycle_dir, self.cfg, self.user_cfg, self.library)
         self.cycles.append(new_cycle)
