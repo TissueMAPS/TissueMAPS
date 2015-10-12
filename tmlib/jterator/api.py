@@ -11,7 +11,7 @@ from .project import JtProject
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
 from .. import utils
-from ..readers import PipeReader
+from ..readers import YamlReader
 from ..cluster import ClusterRoutines
 from ..errors import PipelineDescriptionError
 from ..writers import DatasetWriter
@@ -184,7 +184,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         return self._pipeline_file
 
     def _read_pipe_file(self):
-        with PipeReader() as reader:
+        with YamlReader() as reader:
             content = reader.read(self.pipe_file, use_ruamel=True)
         # Make paths absolute
         content['project']['lib'] = path_utils.complete_path(

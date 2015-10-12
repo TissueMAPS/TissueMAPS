@@ -22,17 +22,20 @@ Reader classes.
 
 All readers make use of the 
 `with statement context manager <https://docs.python.org/2/reference/datamodel.html#context-managers>`_.
-and thus follow a similar syntax::
+and follow a similar syntax::
 
-    with ReaderClass('/path/to/directory') as reader:
-        reader.read('name_of_file')
+    with Reader('/path/to/folder') as reader:
+        data = reader.read('name_of_file')
+
+    with Reader() as reader:
+        data = reader.read('/path/to/file')
 '''
 
 
 class Reader(object):
 
     '''
-    Abstract base class for a reader.
+    Abstract reader base class.
     '''
 
     __metaclass__ = ABCMeta
@@ -62,7 +65,8 @@ class TextReader(Reader):
     def read(self, filename, **kwargs):
         pass
 
-class XmlReader(Reader):
+
+class XmlReader(TextReader):
 
     def __init__(self, directory=None):
         '''
@@ -85,7 +89,7 @@ class XmlReader(Reader):
         filename: str
             path to the XML file
         **kwargs: dict
-            additional arguments
+            additional arguments as key-value pairs (none implemented)
 
         Returns
         -------
@@ -150,7 +154,7 @@ class JsonReader(TextReader):
         filename: str
             path to the JSON file
         **kwargs: dict
-            additional arguments
+            additional arguments as key-value pairs (none implemented)
 
         Returns
         -------
@@ -189,57 +193,6 @@ class ImageMetadataReader(JsonReader):
             absolute path to a directory where files are located
         '''
         super(ImageMetadataReader, self).__init__(directory)
-        self.directory = directory
-
-
-class JobDescriptionReader(JsonReader):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class JobDescriptionReader.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(JobDescriptionReader, self).__init__(directory)
-        self.directory = directory
-
-
-class ShiftDescriptionReader(JsonReader):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class ShiftDescriptionReader.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(ShiftDescriptionReader, self).__init__(directory)
-        self.directory = directory
-
-
-class SupportedFormatsReader(JsonReader):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class SupportedFormatsReader.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(SupportedFormatsReader, self).__init__(directory)
         self.directory = directory
 
 
@@ -290,7 +243,7 @@ class YamlReader(TextReader):
         filename: str
             path to the YAML file
         **kwargs: dict
-            additional arguments
+            additional arguments as key-value pairs
             ("use_ruamel": *bool*, when `ruamel.yaml` library should be used)
 
         Returns
@@ -334,67 +287,6 @@ class UserConfigurationReader(YamlReader):
         '''
         super(UserConfigurationReader, self).__init__(directory)
         self.directory = directory
-
-
-class PipeReader(YamlReader):
-
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class PipeReader.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(PipeReader, self).__init__(directory)
-        self.directory = directory
-
-
-class HandlesReader(YamlReader):
-
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class HandlesReader.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(HandlesReader, self).__init__(directory)
-        self.directory = directory
-
-
-class MetadataReader(Reader):
-
-    '''
-    Abstract base class for reading metadata from additional (non-image) files.
-
-    They return metadata as OMEXML objects, according to the OME data model,
-    see `python-bioformats <http://pythonhosted.org/python-bioformats/#metadata>`_.
-
-    Unfortunately, the documentation is very sparse.
-    If you need additional information, refer to the relevant
-    `source code <https://github.com/CellProfiler/python-bioformats/blob/master/bioformats/omexml.py>`_.
-
-    Note
-    ----
-    In case custom readers provide a *Plate* element, they also have to specify
-    an *ImageRef* elements for each *WellSample* element, which serve as
-    references to OME *Image* elements. Each *ImageRef* attribute must be a
-    dictionary with a single entry. The value must be a list of strings, where
-    each element represents the reference information that can be used to map
-    the *WellSample* element to an individual *Image* element. The key must be
-    a regular expression string that can be used to extract the reference
-    information from the corresponding image filenames.
-    '''
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def read(self, filename):
-        pass
 
 
 class DatasetReader(object):

@@ -12,8 +12,8 @@ from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
 import logging
 from . import utils
-from .readers import JobDescriptionReader
-from .writers import JobDescriptionWriter
+from .readers import JsonReader
+from .writers import JsonWriter
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ class BasicClusterRoutines(object):
             'time': self.create_datetimestamp(),
         }
 
-        with JobDescriptionWriter() as writer:
+        with JsonWriter() as writer:
             while jobs.execution.state != gc3libs.Run.State.TERMINATED:
                 e.progress()
 
@@ -304,7 +304,7 @@ class ClusterRoutines(BasicClusterRoutines):
         collect_job_files = glob.glob(os.path.join(directory, '*_collect.job'))
         if not collect_job_files:
             logger.debug('No collect job descriptor file found')
-        with JobDescriptionReader() as reader:
+        with JsonReader() as reader:
             for f in run_job_files:
                 batch = reader.read(f)
                 job_descriptions['run'].append(batch)
@@ -414,7 +414,7 @@ class ClusterRoutines(BasicClusterRoutines):
         OSError
             when file does not exist
         '''
-        with JobDescriptionReader() as reader:
+        with JsonReader() as reader:
             batch = reader.read(filename)
         return batch
 
@@ -470,7 +470,7 @@ class ClusterRoutines(BasicClusterRoutines):
             os.makedirs(self.job_descriptions_dir)
         self._check_io_description(job_descriptions)
         logger.debug('write job descriptor files')
-        with JobDescriptionWriter() as writer:
+        with JsonWriter() as writer:
             for batch in job_descriptions['run']:
                 job_file = self.build_run_job_filename(batch['id'])
                 writer.write(job_file, batch)

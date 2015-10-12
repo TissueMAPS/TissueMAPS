@@ -4,8 +4,8 @@ import lxml
 import lxml.html
 import lxml.etree
 from .utils import flatten
-from .readers import SupportedFormatsReader
-from .writers import SupportedFormatsWriter
+from .readers import JsonReader
+from .writers import JsonWriter
 
 
 class Formats(object):
@@ -31,7 +31,7 @@ class Formats(object):
         Dict[str, List[str]]
             names and file extensions of supported formats as key-value pairs
         '''
-        with SupportedFormatsReader() as reader:
+        with JsonReader() as reader:
             self._supported_formats = reader.read(self._filename)
         self._supported_formats.update({u'Visiview': [u'.tiff']})
         self._supported_formats.update({u'Visiview (STK)': [u'.stk', u'.nd']})
@@ -125,5 +125,5 @@ class Formats(object):
                             extensions.append(extensions_element[0].split(', '))
                             names.append(name_elements[0])
 
-        with SupportedFormatsWriter() as writer:
+        with JsonWriter() as writer:
             writer.write(self.filename, dict(zip(names, extensions)))

@@ -5,10 +5,8 @@ import logging
 from copy import copy
 import shutil
 from natsort import natsorted
-from ..readers import PipeReader
-from ..readers import HandlesReader
-from ..writers import PipeWriter
-from ..writers import HandlesWriter
+from ..readers import YamlReader
+from ..writers import YamlWriter
 from ..errors import PipelineOSError
 
 logger = logging.getLogger(__name__)
@@ -179,7 +177,7 @@ class JtProject(object):
 
     def _create_pipe(self):
         pipe_file = self._get_pipe_file()
-        with PipeReader() as reader:
+        with YamlReader() as reader:
             pipe = {
                 'name': self._get_descriptor_name(pipe_file),
                 'description': reader.read(pipe_file)
@@ -202,7 +200,7 @@ class JtProject(object):
     def _create_handles(self):
         handles = list()
         handles_files = self._get_handles_files()
-        with HandlesReader() as reader:
+        with YamlReader() as reader:
             if handles_files:
                 for f in handles_files:
                     if not os.path.isabs(f):
@@ -234,7 +232,7 @@ class JtProject(object):
             },
             'pipeline': list()
         }
-        with PipeWriter() as writer:
+        with YamlWriter() as writer:
             writer.write(pipe_file, pipe_skeleton, use_ruamel=True)
 
     def _create_handles_folder(self):
@@ -247,12 +245,12 @@ class JtProject(object):
         if not repo_dir:
             shutil.copy(pipe_file, self.project_dir)
         else:
-            with PipeReader() as reader:
+            with YamlReader() as reader:
                 pipe_content = reader.read(pipe_file, use_ruamel=True)
             pipe_content['project']['lib'] = repo_dir
             new_pipe_file = os.path.join(self.project_dir,
                                          '%s.pipe' % self.pipe_name)
-            with PipeWriter() as writer:
+            with YamlWriter() as writer:
                 writer.write(new_pipe_file, pipe_content, use_ruamel=True)
         shutil.copytree(os.path.join(skel_dir, 'handles'),
                         os.path.join(self.project_dir, 'handles'))
@@ -267,7 +265,7 @@ class JtProject(object):
 
     def _modify_pipe(self):
         pipe_file = self._get_pipe_file()
-        with PipeReader() as reader:
+        with YamlReader() as reader:
             # Use ruamel.yaml to preserve comments in the pipe file
             old_pipe_content = reader.read(pipe_file, use_ruamel=True)
         new_pipe_content = self.pipe['description']
@@ -276,7 +274,7 @@ class JtProject(object):
             new_pipe_content['pipeline'][i].pop('name', None)
         mod_pipe_content = self._replace_values(old_pipe_content,
                                                 new_pipe_content)
-        with PipeWriter() as writer:
+        with YamlWriter() as writer:
             writer.write(pipe_file, mod_pipe_content, use_ruamel=True)
 
     def _modify_handles(self):
@@ -286,7 +284,7 @@ class JtProject(object):
             filename = os.path.join(self.project_dir, 'handles',
                                     '%s.handles' % h['name'])
             handles_files.append(filename)
-        with HandlesReader() as reader:
+        with YamlReader() as reader:
             for i, handles_file in enumerate(handles_files):
                 # If file already exists, modify its content
                 if os.path.exists(handles_file):
@@ -298,7 +296,7 @@ class JtProject(object):
                 # If file doesn't yet exist, create it and add content
                 else:
                     mod_handles_content = self.handles[i]['description']
-                with HandlesWriter() as writer:
+                with YamlWriter() as writer:
                     writer.write(handles_file, mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(os.path.join(self.project_dir,
@@ -479,7 +477,7 @@ class JtAvailableModules(object):
         --------
         `create_handles`
         '''
-        with HandlesReader() as reader:
+        with YamlReader() as reader:
             self._handles = [
                 {
                     'name': name,

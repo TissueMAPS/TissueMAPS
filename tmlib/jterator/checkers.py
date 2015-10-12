@@ -4,8 +4,7 @@ import logging
 from os.path import splitext, basename, exists, dirname
 from collections import Counter
 from . import path_utils
-from ..readers import PipeReader
-from ..readers import HandlesReader
+from ..readers import YamlReader
 from ..errors import PipelineDescriptionError
 
 logger = logging.getLogger(__name__)
@@ -297,7 +296,7 @@ class PipelineChecker(object):
         Ensure that module inputs have been produced upstream in the pipeline.
         '''
         outputs = list()
-        with HandlesReader() as reader:
+        with YamlReader() as reader:
             for i, module in enumerate(self.pipe_description['pipeline']):
                 handles_path = path_utils.complete_module_path(
                                 module['handles'], self.libpath,

@@ -1,14 +1,10 @@
 import os
 import numpy as np
 import logging
-import bioformats
-import re
 from collections import defaultdict
-from .. import image_utils
-from .. import utils
 from ..readers import BioformatsImageReader
 from ..cluster import ClusterRoutines
-from ..writers import ImageMetadataWriter
+from ..writers import ImageWriter
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +120,8 @@ class ImageExtractor(ClusterRoutines):
                 output_filename = batch['outputs']['image_files'][i]
                 logger.info('extracted image: %s',
                             os.path.basename(output_filename))
-                image_utils.save_image_png(img, output_filename)
+                with ImageWriter() as writer:
+                    writer.write(output_filename, img)
 
     def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'

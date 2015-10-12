@@ -1,6 +1,7 @@
 import sys
 import os
 import h5py
+import cv2
 import numpy as np
 import logging
 import json
@@ -18,16 +19,19 @@ Writer Classes.
 
 All writers make use of the 
 `with statement context manager <https://docs.python.org/2/reference/datamodel.html#context-managers>`_.
-and thus follow a similar syntax::
+and follow a similar syntax::
 
-    with WriterClass('/path/to/directory') as reader:
-        reader.read('name_of_file')
+    with Writer('/path/to/folder') as writer:
+        writer.write('name_of_file')
+
+    with Writer() as writer:
+        writer.write('/path/to/file')
 '''
 
 
 class Writer(object):
     '''
-    Abstract base class for a Writer.
+    Abstract writer base class.
     '''
 
     __metaclass__ = ABCMeta
@@ -59,7 +63,7 @@ class TextWriter(Writer):
         pass
 
 
-class XmlWriter(Writer):
+class XmlWriter(TextWriter):
 
     def __init__(self, directory=None):
         '''
@@ -74,6 +78,16 @@ class XmlWriter(Writer):
         self.directory = directory
 
     def write(self, filename, data, **kwargs):
+        '''
+        Parameters
+        ----------
+        filename: str
+            name of the XML file
+        data: list or dict
+            the XML string that should be written to the file
+        **kwargs: dict
+            additional arguments as key-value pairs (none implemented)
+        '''
         if self.directory:
             filename = os.path.join(self.directory, filename)
         logger.debug('write data to file: %s' % filename)
@@ -104,10 +118,10 @@ class JsonWriter(TextWriter):
         filename: str
             name of the JSON file
         data: list or dict
-            description that should be written to file
+            the JSON string that should be written to the file
         **kwargs: dict
-            additional arguments
-            ("naicify": *bool*, whether `data` should be naicely formatted)
+            additional arguments as key-value pairs
+            ("naicify": *bool*, whether `data` should be pretty-printed)
 
         Note
         ----
@@ -126,57 +140,6 @@ class JsonWriter(TextWriter):
                           indent=4, separators=(',', ': '))
             else:
                 json.dump(data, f, sort_keys=True)
-
-
-class ImageMetadataWriter(JsonWriter):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class ImageMetadataWriter.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(ImageMetadataWriter, self).__init__(directory)
-        self.directory = directory
-
-
-class JobDescriptionWriter(JsonWriter):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class JobDescriptionWriter.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(JobDescriptionWriter, self).__init__(directory)
-        self.directory = directory
-
-
-class SupportedFormatsWriter(JsonWriter):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
-        '''
-        Initialize an object of class SupportedFormatsWriter.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(SupportedFormatsWriter, self).__init__(directory)
-        self.directory = directory
 
 
 class YamlWriter(TextWriter):
@@ -202,9 +165,9 @@ class YamlWriter(TextWriter):
         filename: str
             name of the YAML file
         data: list or dict
-            description that should be written to file
+            the YAML string that should be written to the file
         **kwargs: dict
-            additional arguments
+            additional arguments as key-value pairs
             ("use_ruamel": *bool*, when `ruamel.yaml` library should be used)
 
 
@@ -244,39 +207,34 @@ class ImageWriter(Writer):
         super(ImageWriter, self).__init__(directory)
         self.directory = directory
 
-
-class PipeWriter(YamlWriter):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
+    def write(self, filename, data, **kwargs):
         '''
-        Initialize an object of class PipeWriter.
+        Write an image to file.
 
         Parameters
         ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(PipeWriter, self).__init__(directory)
-        self.directory = directory
+        data: numpy.ndarray or Vips.Image
+            image that should be saved
+        filename: str
+            path to the image file
+        **kwargs: dict
+            additional arguments as key-value pairs (none implemented)
 
-
-class HandlesWriter(YamlWriter):
-    '''
-    Class for reading image related metadata.
-    '''
-    def __init__(self, directory=None):
+        Raises
+        ------
+        TypeError
+            when `data` is not of type "numpy.ndarray" or "Vips.Image"
         '''
-        Initialize an object of class HandlesWriter.
-
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-        '''
-        super(HandlesWriter, self).__init__(directory)
-        self.directory = directory
+        if self.directory:
+            filename = os.path.join(self.directory, filename)
+        logger.debug('write image to file: %s' % filename)
+        if isinstance(data, np.ndarray):
+            cv2.imwrite(filename, data)
+        elif isinstance(data. Vips.Image):
+            data.write_to_file(filename)
+        else:
+            raise TypeError(
+                    'Image must have type "numpy.ndarray" or "Vips.Image"')
 
 
 class DatasetWriter(object):
