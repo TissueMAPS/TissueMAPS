@@ -12,14 +12,9 @@ class ImageMetadata(object):
 
     __metaclass__ = ABCMeta
 
-    BASIC = {
-        'id', 'name', 'plane_id', 'time_id',
-        'orig_dtype', 'orig_dimensions'
+    PERSISTENT = {
+        'id', 'name', 'plane_id', 'time_id', 'site_id'
     }
-
-    POSITIONAL = {'site_id'}
-
-    PERSISTENT = BASIC.union(POSITIONAL)
 
     def __init__(self):
         '''
@@ -28,23 +23,6 @@ class ImageMetadata(object):
         self.is_aligned = False
         self.is_corrected = False
         self.is_omitted = False
-
-    # TODO: Unfortunately, "PhysicalSize" attributes are not implemented
-    # in python-bioformats
-
-    # @property
-    # def physical_dimensions(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     int
-    #         y, x dimensions of the image in micrometer
-    #     '''
-    #     return self._physical_dimensions
-
-    # @physical_dimensions.setter
-    # def physical_dimensions(self, value):
-    #     self._physical_dimensions = value
 
     @property
     def id(self):
@@ -68,7 +46,8 @@ class ImageMetadata(object):
         Returns
         -------
         str
-            name of the image
+            name of the image (the same as the name of the corresponding file
+            on disk)
         '''
         return self._name
 
@@ -86,6 +65,10 @@ class ImageMetadata(object):
         ImageAcquisitionSite
             information about the position of the image within the
             image acquisition grid
+
+        See also
+        --------
+        `tmlib.metadata.ImageAcquisitionSite`_
         '''
         return self._site
 
@@ -94,24 +77,6 @@ class ImageMetadata(object):
         if not(isinstance(value, ImageAcquisitionSite)):
             raise TypeError('Attribute "site" must have type ImageAcquisitionSite')
         self._site = value
-
-    # @property
-    # def stage_position(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     Tuple[float]
-    #         absolute y, x microscope stage positions
-    #     '''
-    #     return self._stage_position
-
-    # @stage_position.setter
-    # def stage_position(self, value):
-    #     if isinstance(value, list) and len(value) == 2:
-    #         value = tuple(value)
-    #     if not(isinstance(value, tuple)) and value is not None:
-    #         raise TypeError('Attribute "stage_position" must have type tuple')
-    #     self._stage_position = value
 
     @property
     def plane_id(self):
@@ -181,40 +146,6 @@ class ImageMetadata(object):
             raise TypeError('Attribute "is_aligned" must have type bool')
         self._is_aligned = value
 
-    @property
-    def orig_dtype(self):
-        '''
-        Returns
-        -------
-        str
-            original image data type as stored by the microscope
-        '''
-        return self._orig_dtype
-
-    @orig_dtype.setter
-    def orig_dtype(self, value):
-        if not(isinstance(value, basestring)) and value is not None:
-            raise TypeError('Attribute "orig_dtype" must have type basestring')
-        self._orig_dtype = value
-
-    @property
-    def orig_dimensions(self):
-        '''
-        Returns
-        -------
-        str
-            original image dimensions as stored by the microscope
-        '''
-        return self._orig_dimensions
-
-    @orig_dimensions.setter
-    def orig_dimensions(self, value):
-        if isinstance(value, list) and len(value) == 2:
-            value = tuple(value)
-        if not(isinstance(value, tuple)) and value is not None:
-            raise TypeError('Attribute "orig_dimensions" must have type tuple')
-        self._orig_dimensions = value
-
     @abstractmethod
     def serialize(self):
         '''
@@ -237,7 +168,7 @@ class ChannelImageMetadata(ImageMetadata):
     '''
 
     PERSISTENT = ImageMetadata.PERSISTENT.union({
-        'channel_name', 'is_corrected', 'is_projected', 'channel_id'
+        'channel_name', 'is_corrected', 'channel_id'
     })
 
     def __init__(self):
@@ -301,24 +232,6 @@ class ChannelImageMetadata(ImageMetadata):
             raise TypeError('Attribute "is_corrected" must have type bool')
         self._is_corrected = value
 
-    @property
-    def is_projected(self):
-        '''
-        Returns
-        -------
-        bool
-            in case the image is a 2D projection of a z-stack, i.e.
-            a collection of multiple focal planes with the same `channel_id`
-            and `time_id`
-        '''
-        return self._is_projected
-
-    @is_projected.setter
-    def is_projected(self, value):
-        if not(isinstance(value, bool)):
-            raise TypeError('Attribute "is_projected" must have type bool')
-        self._is_projected = value
-
     def __iter__(self):
         '''
         Convert the object to a dictionary.
@@ -333,9 +246,14 @@ class ChannelImageMetadata(ImageMetadata):
         AttributeError
             when instance doesn't have a required attribute
         '''
+        # TODO: site
         for attr in dir(self):
-            if attr in ChannelImageMetadata.PERSISTENT:
+            if attr in self.PERSISTENT:
                 yield (attr, getattr(self, attr))
+
+    def __str__(self):
+        # TODO: pretty print
+        pass
 
     @staticmethod
     def set(metadata):
@@ -352,11 +270,100 @@ class ChannelImageMetadata(ImageMetadata):
         ChannelImageMetadata
             metadata object with `PERSISTENT` attributes set
         '''
+        # TODO: site
         obj = ChannelImageMetadata()
         for key, value in metadata.iteritems():
             if key in ChannelImageMetadata.PERSISTENT:
                 setattr(obj, key, value)
         return obj
+
+
+class ImageAcquisitionSite(object):
+
+    '''
+    Container for image metadata related to an acquisition site, such as
+    the well and row (y) and column (x) positions of the image within the
+    acquisition grid.
+    '''
+
+    PERSISTENT = {
+        'id', 'well_id', 'pos_y', 'pos_x'
+    }
+
+    @property
+    def id(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based globally unique position identifier number
+
+        Note
+        ----
+        Order of sites is not necessarily according to acquisition time.
+        '''
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        if not(isinstance(value, int)):
+            raise TypeError('Attribute "id" must have type int')
+        self._id = value
+
+    @property
+    def pos_y(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based row (y) index of the image within the well
+        '''
+        return self._pos_y
+
+    @pos_y.setter
+    def pos_y(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "pos_y" must have type int')
+        self._pos_y = value
+
+    @property
+    def pos_x(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based column (x) index of the image within the well
+        '''
+        return self._col_index
+
+    @pos_x.setter
+    def pos_x(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            self._coordinates = (self.pos_y, self.pos_x)
+        return self._coordinates
+
+    @property
+    def well_id(self):
+        '''
+        Returns
+        -------
+        str
+            well identifier string, e.g. "A01"
+        '''
+        return self._well_id
+
+    @well_id.setter
+    def well_id(self, value):
+        if not(isinstance(value, basestring)) and value is not None:
+            raise TypeError('Attribute "well_id" must have type basestring')
+        self._well_id = value
+
+    def set(self, description):
+        pass
+
+    def serialize(self):
+        pass
+        self._col_index = value
 
 
 class ImageFileMapper(object):
@@ -520,122 +527,6 @@ class ImageFileMapper(object):
             if key in obj.PERSISTENT:
                 setattr(obj, key, value)
         return obj
-
-
-# class AcquisitionSiteDescription(object):
-
-#     '''
-#     Container for image metadata related to acquisition sites, i.e.
-#     row and column positions of the image in the acquisition grid.
-#     '''
-
-#     PERSISTENT = {
-#         'id', 'image_ids', 'well_id', 'row_index', 'col_index'
-#     }
-
-#     @property
-#     def id(self):
-#         '''
-#         Returns
-#         -------
-#         int
-#             zero-based globally unique position identifier number, sorted
-#             row-wise over all image acquisition sites
-
-#         Note
-#         ----
-#         Order of sites is not necessarily according to acquisition time.
-#         '''
-#         return self._id
-
-#     @id.setter
-#     def id(self, value):
-#         if not(isinstance(value, int)):
-#             raise TypeError('Attribute "site_int" must have type int')
-#         self._id = value
-
-#     @property
-#     def image_ids(self):
-#         '''
-#         Returns
-#         -------
-#         List[int]
-#             identifier numbers of images that share the same site
-#         '''
-#         return self._image_ids
-
-#     @image_ids.setter
-#     def image_ids(self, value):
-#         if not(isinstance(value, list)):
-#             raise TypeError('Attribute "image_ids" must have type list')
-#         if not all([isinstance(e, int) for e in value]):
-#             raise TypeError('Elements of attribute "image_ids" must have type int')
-#         self._image_ids = value
-
-#     @property
-#     def row_index(self):
-#         '''
-#         Returns
-#         -------
-#         int
-#             zero-based row index of the image in the acquisition grid
-#         '''
-#         return self._row_index
-
-#     @row_index.setter
-#     def row_index(self, value):
-#         if not(isinstance(value, int)) and value is not None:
-#             raise TypeError('Attribute "row_index" must have type int')
-#         self._row_index = value
-
-#     @property
-#     def col_index(self):
-#         '''
-#         Returns
-#         -------
-#         int
-#             zero-based column index of the image in the acquisition grid
-#         '''
-#         return self._col_index
-
-#     @col_index.setter
-#     def col_index(self, value):
-#         if not(isinstance(value, int)) and value is not None:
-#             raise TypeError('Attribute "col_index" must have type int')
-#         self._col_index = value
-
-#     @property
-#     def grid_coordinates(self):
-#         '''
-#         Returns
-#         -------
-#         Tuple[int]
-#             zero-based row, column indices of the image in the acquisition grid
-#         '''
-#         self._coordinates = (self.row_index, self.col_index)
-#         return self._coordinates
-
-#     @property
-#     def well_id(self):
-#         '''
-#         Returns
-#         -------
-#         str
-#             well identifier string, e.g. "A01"
-#         '''
-#         return self._well_id
-
-#     @well_id.setter
-#     def well_id(self, value):
-#         if not(isinstance(value, basestring)) and value is not None:
-#             raise TypeError('Attribute "well_id" must have type str')
-#         self._well_id = value
-
-#     def set(self, description):
-#         pass
-
-#     def serialize(self):
-#         pass
 
 
 class IllumstatsImageMetadata(object):

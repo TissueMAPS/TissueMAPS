@@ -67,32 +67,33 @@ class MetadataExtractor(ClusterRoutines):
         output_files = list()
         count = 0
         for upload in self.experiment.uploads:
-            output_files.extend([
-                os.path.join(upload.ome_xml_dir,
-                             self._get_ome_xml_filename(f))
-                for f in upload.image_files
-            ])
+            for subupload in upload.subuploads:
+                output_files.extend([
+                    os.path.join(subupload.omexml_dir,
+                                 self._get_ome_xml_filename(f))
+                    for f in subupload.image_files
+                ])
 
-            for j in xrange(len(upload.image_files)):
-                count += 1
-                joblist['run'].append({
-                    'id': count,
-                    'inputs': {
-                        'image_files': [
-                            os.path.join(upload.image_dir,
-                                         upload.image_files[j])
-                        ]
-                    },
-                    'outputs': {
-                    }
-                })
+                for j in xrange(len(subupload.image_files)):
+                    count += 1
+                    joblist['run'].append({
+                        'id': count,
+                        'inputs': {
+                            'image_files': [
+                                os.path.join(subupload.image_dir,
+                                             subupload.image_files[j])
+                            ]
+                        },
+                        'outputs': {
+                        }
+                    })
 
-        joblist['collect'] = {
-            'inputs': {},
-            'outputs': {
-                'ome_xml_files': output_files
+            joblist['collect'] = {
+                'inputs': {},
+                'outputs': {
+                    'omexml_files': output_files
+                }
             }
-        }
         return joblist
 
     def _build_run_command(self, batch):
@@ -119,7 +120,7 @@ class MetadataExtractor(ClusterRoutines):
         '''
         The *showinf* command prints the OME-XML string to standard output.
         GC3Pie redirects the standard output to a log file. Here we copy the
-        content of the log file to the files specified by the `ome_xml_files`
+        content of the log file to the files specified by the `omexml_files`
         attribute.
 
         The extracted metadata is used to create custom metadata, which will be
@@ -132,7 +133,7 @@ class MetadataExtractor(ClusterRoutines):
         **kwargs: dict
             additional variable input arguments as key-value pairs
         '''
-        for i, f in enumerate(batch['outputs']['ome_xml_files']):
+        for i, f in enumerate(batch['outputs']['omexml_files']):
             output_files = glob(os.path.join(
                                 self.log_dir, '*_%.5d*.out' % (i+1)))
             # Take the most recent one, in case there are outputs of previous

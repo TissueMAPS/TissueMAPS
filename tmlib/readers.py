@@ -862,3 +862,34 @@ class WorkflowDescriptionReader(TextReader):
             if not line.startswith('#')
         ]
         return filtered_content
+
+
+class MetadataReader(Reader):
+
+    '''
+    Abstract base class for reading metadata from additional (non-image) files.
+
+    They return metadata as OMEXML objects, according to the OME data model,
+    see `python-bioformats <http://pythonhosted.org/python-bioformats/#metadata>`_.
+
+    Unfortunately, the documentation is very sparse.
+    If you need additional information, refer to the relevant
+    `source code <https://github.com/CellProfiler/python-bioformats/blob/master/bioformats/omexml.py>`_.
+
+    Note
+    ----
+    In case custom readers provide a *Plate* element, they also have to specify
+    an *ImageRef* elements for each *WellSample* element, which serve as
+    references to OME *Image* elements. Each *ImageRef* attribute must be a
+    dictionary with a single entry. The value must be a list of strings, where
+    each element represents the reference information that can be used to map
+    the *WellSample* element to an individual *Image* element. The key must be
+    a regular expression string that can be used to extract the reference
+    information from the corresponding image filenames.
+    '''
+
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def read(self, filename):
+        pass

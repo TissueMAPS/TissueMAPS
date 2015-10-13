@@ -5,6 +5,7 @@ import bioformats
 from collections import defaultdict
 from cached_property import cached_property
 from lxml import etree
+from .ome_xml import XML_DECLARATION
 from .default import MetadataHandler
 from .. import utils
 from ..readers import MetadataReader
@@ -55,7 +56,7 @@ class CellvoyagerMetadataReader(MetadataReader):
         bioformats.omexml.OMEXML
             image and plate metadata
         '''
-        metadata = bioformats.OMEXML()
+        metadata = bioformats.OMEXML(XML_DECLARATION)
         # 1) Obtain the positional information for each image acquisition site
         #    from the ".mlf" file:
         mlf_tree = etree.parse(mlf_filename)
@@ -74,7 +75,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             img.Name = e.text
             # TODO: there is a bug that prevents setting the date for
             # images with index > 0
-            img.AcquiredDate = e.attrib['{%s}Time' % mlf_ns]
+            img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
             # Image files always contain only a single plane
             img.Pixels.SizeT = 1
             img.Pixels.SizeC = 1
@@ -113,10 +114,9 @@ class CellvoyagerMetadataReader(MetadataReader):
         wells = lut.keys()
         for w in set(wells):
             # Create a *Well* element for each imaged well in the plate
-            row_index = utils.map_letter_to_number(w[0]) - 1
-            col_index = int(w[1:]) - 1
-            well = metadata.WellsDucktype(plate).new(row=row_index,
-                                                     column=col_index)
+            row = utils.map_letter_to_number(w[0]) - 1
+            col = int(w[1:]) - 1
+            well = metadata.WellsDucktype(plate).new(row=row, column=col)
             well_samples = metadata.WellSampleDucktype(well.node)
             for i, reference in enumerate(lut[w]):
                 # Create a *WellSample* element for each acquisition site
@@ -138,8 +138,8 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     REGEX = ('[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)'
              'F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.')
 
-    def __init__(self, image_files, additional_files, ome_xml_files,
-                 experiment_name, plate_dimensions):
+    def __init__(self, image_files, additional_files, omexml_files,
+                 plate_name):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -149,22 +149,17 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             full paths to image files
         additional_files: List[str]
             full paths to additional microscope-specific metadata files
-        ome_xml_files: List[str]
+        omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        experiment_name: str
-            name of the cycle, i.e. the name of the folder of the corresponding
-            experiment or subexperiment
-        plate_dimensions: Tuple[int]
-            number of rows and column in the plate
+        plate_name: str
+            name of the corresponding plate
         '''
         super(CellvoyagerMetadataHandler, self).__init__(
-                image_files, additional_files, ome_xml_files,
-                experiment_name, plate_dimensions)
+                image_files, additional_files, omexml_files, plate_name)
         self.image_files = image_files
         self.additional_files = additional_files
-        self.ome_xml_files = ome_xml_files
-        self.experiment_name = experiment_name
-        self.plate_dimensions = plate_dimensions
+        self.omexml_files = omexml_files
+        self.plate_name = plate_name
 
     @cached_property
     def ome_additional_metadata(self):
@@ -186,7 +181,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             logger.warning('%d metadata files would be required: "%s"'
                            % (len(self.SUPPORTED_FILE_EXTENSIONS),
                               '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
-            self._ome_additional_metadata = bioformats.OMEXML()
+            self._ome_additional_metadata = bioformats.OMEXML(XML_DECLARATION)
             # Add an empty *Plate* element
             self._ome_additional_metadata.PlatesDucktype(
                         self._ome_additional_metadata.root_node).newPlate(

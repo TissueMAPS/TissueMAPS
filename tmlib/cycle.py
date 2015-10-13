@@ -65,8 +65,7 @@ class Cycle(object):
         str
             name of the cycle folder
         '''
-        self._name = os.path.basename(self.cycle_dir)
-        return self._name
+        return os.path.basename(self.cycle_dir)
 
     @property
     def dir(self):
@@ -82,9 +81,9 @@ class Cycle(object):
     def id(self):
         '''
         A *cycle* represents a time point in a time series. The identifier
-        (*id*) is the one-based index of the cycle in this sequence.
-        The *id* is encoded in the name of *cycle* folder name and retrieved
-        from it using a regular expression.
+        (*id*) is the zero-based index of the cycle in this sequence.
+        The *id* is encoded in the *cycle* name and retrieved from it using a
+        regular expression.
 
         Returns
         -------
@@ -94,8 +93,7 @@ class Cycle(object):
         Raises
         ------
         RegexpError
-            when cycle identifier number cannot not be determined from folder
-            name
+            when identifier number cannot not be determined from folder name
         '''
         regexp = utils.regex_from_format_string(self.cfg.CYCLE_DIR)
         match = re.search(regexp, self.name)
@@ -103,7 +101,7 @@ class Cycle(object):
             raise RegexpError(
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
-                    % (self.name, self.cfg['CYCLE_DIR']))
+                    % (self.name, self.cfg.CYCLE_DIR))
         self._id = int(match.group('cycle_id'))
         return self._id
 

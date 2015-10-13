@@ -1,27 +1,31 @@
 import os
+import re
 import logging
 import bioformats
 from cached_property import cached_property
 from natsort import natsorted
+from . import utils
 from .metadata import ImageFileMapper
 from .formats import Formats
 from .readers import XmlReader
 from .readers import JsonReader
+from .errors import RegexpError
 
 logger = logging.getLogger(__name__)
 
 
 class Upload(object):
     '''
-    Class that serves as a container for uploaded files.
+    Class that serves as a container for uploaded files belonging to one
+    *plate*.
     '''
-    def __init__(self, upload_subdir, cfg, user_cfg):
+    def __init__(self, upload_dir, cfg, user_cfg):
         '''
         Initialize an instance of class Cycle.
 
         Parameters
         ----------
-        upload_subdir: str
+        upload_dir: str
             absolute path to the directory that contains uploaded files
         cfg: TmlibConfigurations
             configuration settings for names of directories and files on disk
@@ -31,23 +35,13 @@ class Upload(object):
         Raises
         ------
         OSError
-            when `upload_subdir` does not exist
+            when `upload_dir` does not exist
         '''
-        self.upload_subdir = upload_subdir
-        if not os.path.exists(self.upload_subdir):
+        self.upload_dir = upload_dir
+        if not os.path.exists(self.upload_dir):
             raise OSError('Upload sub-directory does not exist.')
         self.cfg = cfg
         self.user_cfg = user_cfg
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the upload folder
-        '''
-        return os.path.basename(os.path.abspath(self.upload_subdir))
 
     @property
     def dir(self):
@@ -57,7 +51,123 @@ class Upload(object):
         str
             absolute path to the upload folder
         '''
-        return self.upload_subdir
+        return self.upload_dir
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the upload folder
+        '''
+        return os.path.basename(self.upload_dir)
+
+    @property
+    def plate_name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the corresponding plate
+        '''
+        regexp = utils.regex_from_format_string(self.cfg.UPLOAD_DIR)
+        match = re.search(regexp, self.name)
+        if not match:
+            raise RegexpError(
+                    'Can\'t determine cycle id number from folder "%s" '
+                    'using format "%s" provided by the configuration settings.'
+                    % (self.name, self.cfg.CYCLE_DIR))
+        self._plate_name = match.group('plate_name')
+        return self._plate_name
+
+    def _is_upload_subdir(self, folder):
+        format_string = self.cfg.UPLOAD_SUBDIR
+        regexp = utils.regex_from_format_string(format_string)
+        return True if re.match(regexp, folder) else False
+
+    @property
+    def subuploads(self):
+        '''
+        Returns
+        -------
+        List[UploadedPlate]
+            containers for uploaded files that belong to one *plate*
+        '''
+        upload_subdirs = [
+            os.path.join(self.dir, d)
+            for d in os.listdir(self.dir)
+            if os.path.isdir(os.path.join(self.dir, d))
+            and self._is_upload_subdir(d)
+        ]
+        upload_subdirs = natsorted(upload_subdirs)
+        self._uploaded_plates = [
+                SubUpload(d, self.cfg, self.user_cfg)
+                for d in upload_subdirs
+            ]
+        return self._uploaded_plates
+
+    @property
+    def image_mapper_file(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the file that contains the mapping of original,
+            uploaded image files and final image files that are stored
+            per `cycles` upon extraction
+        '''
+        return os.path.join(self.dir, 'image_file_mapper.json')
+
+    @property
+    def image_mapper(self):
+        '''
+        Returns
+        -------
+        List[ImageFileMapper]
+            key-value pairs to map the location of individual planes within the
+            original files to the *Image* elements in the OMEXML
+        '''
+        self._image_mapper = list()
+        with JsonReader(self.dir) as reader:
+            hashmap = reader.read(self.image_mapper_file)
+        for element in hashmap:
+            self._image_mapper.append(ImageFileMapper.set(element))
+        return self._image_mapper
+
+
+class SubUpload(object):
+
+    def __init__(self, subupload_dir, cfg, user_cfg):
+        '''
+        Parameters
+        ----------
+        subupload_dir: str
+            absolute path to the subupload folder
+        '''
+        self.subupload_dir = subupload_dir
+        self.cfg = cfg
+        self.user_cfg = user_cfg
+
+    @property
+    def dir(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the subupload folder
+        '''
+        return self.subupload_dir
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the subupload folder
+        '''
+        return os.path.basename(self.dir)
 
     @cached_property
     def image_dir(self):
@@ -71,9 +181,8 @@ class Upload(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._image_dir = self.cfg.IMAGE_UPLOAD_DIR.format(
-                                                upload_subdir=self.dir,
-                                                sep=os.path.sep)
+        self._image_dir = self.cfg.UPLOAD_IMAGE_DIR.format(
+                                upload_subdir=self.dir, sep=os.path.sep)
         if not os.path.exists(self._image_dir):
             logger.debug('create directory for image file uploads: %s'
                          % self._image_dir)
@@ -93,9 +202,8 @@ class Upload(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._additional_dir = self.cfg.ADDITIONAL_UPLOAD_DIR.format(
-                                                upload_subdir=self.dir,
-                                                sep=os.path.sep)
+        self._additional_dir = self.cfg.UPLOAD_ADDITIONAL_DIR.format(
+                                upload_subdir=self.dir, sep=os.path.sep)
         if not os.path.exists(self._additional_dir):
             logger.debug('create directory for additional file uploads: %s'
                          % self._additional_dir)
@@ -103,7 +211,7 @@ class Upload(object):
         return self._additional_dir
 
     @cached_property
-    def ome_xml_dir(self):
+    def omexml_dir(self):
         '''
         Returns
         -------
@@ -115,37 +223,36 @@ class Upload(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._ome_xml_dir = self.cfg.OME_XML_DIR.format(
-                                                upload_subdir=self.dir,
-                                                sep=os.path.sep)
-        if not os.path.exists(self._ome_xml_dir):
+        self._omexml_dir = self.cfg.UPLOAD_OMEXML_DIR.format(
+                                upload_subdir=self.dir, sep=os.path.sep)
+        if not os.path.exists(self._omexml_dir):
             logger.debug('create directory for ome xml files: %s'
-                         % self._ome_xml_dir)
-            os.mkdir(self._ome_xml_dir)
-        return self._ome_xml_dir
+                         % self._omexml_dir)
+            os.mkdir(self._omexml_dir)
+        return self._omexml_dir
 
     @cached_property
-    def ome_xml_files(self):
+    def omexml_files(self):
         '''
         Returns
         -------
         List[str]
-            names of *OMEXML* files in `ome_xml_dir`
+            names of *OMEXML* files in `omexml_dir`
 
         Raises
         ------
         OSError
-            when no XML files are found in `ome_xml_dir`
+            when no XML files are found in `omexml_dir`
         '''
         files = [
-            f for f in os.listdir(self.ome_xml_dir)
+            f for f in os.listdir(self.omexml_dir)
             if f.endswith('.ome.xml')
         ]
         files = natsorted(files)
         if not files:
-            raise OSError('No XML files found in "%s"' % self.ome_xml_dir)
-        self._ome_xml_files = files
-        return self._ome_xml_files
+            raise OSError('No XML files found in "%s"' % self.omexml_dir)
+        self._omexml_files = files
+        return self._omexml_files
 
     @cached_property
     def image_files(self):

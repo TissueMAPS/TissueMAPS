@@ -56,33 +56,34 @@ class ImageExtractor(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        file_mapper = self.experiment.image_mapper
-        ix_batches = self._create_batches(range(len(file_mapper)),
-                                          kwargs['batch_size'])
-
         job_count = 0
         job_descriptions = defaultdict(list)
-        for indices in ix_batches:
-            job_count += 1
-            job_descriptions['run'].append({
-                'id': job_count,
-                'inputs': {
-                    'image_files': [
-                        file_mapper[ix].files for ix in indices
+        for upload in self.experiment.uploads:
+            mapper = upload.image_mapper
+            ix_batches = self._create_batches(range(len(mapper)),
+                                              kwargs['batch_size'])
+
+            for indices in ix_batches:
+                job_count += 1
+                job_descriptions['run'].append({
+                    'id': job_count,
+                    'inputs': {
+                        'image_files': [
+                            mapper[ix].files for ix in indices
+                        ]
+                    },
+                    'outputs': {
+                        'image_files': [
+                            mapper[ix].ref_file for ix in indices
+                        ]
+                    },
+                    'series': [
+                        mapper[ix].series for ix in indices
+                    ],
+                    'planes': [
+                        mapper[ix].planes for ix in indices
                     ]
-                },
-                'outputs': {
-                    'image_files': [
-                        file_mapper[ix].ref_file for ix in indices
-                    ]
-                },
-                'series': [
-                    file_mapper[ix].series for ix in indices
-                ],
-                'planes': [
-                    file_mapper[ix].planes for ix in indices
-                ]
-            })
+                })
 
         return job_descriptions
 

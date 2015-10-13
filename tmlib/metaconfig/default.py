@@ -8,6 +8,7 @@ from collections import defaultdict
 from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
+from .ome_xml import XML_DECLARATION
 from ..metadata import ImageFileMapper
 from ..illuminati import stitch
 from .. import utils
@@ -39,8 +40,7 @@ class MetadataHandler(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, image_files, additional_files, ome_xml_files,
-                 experiment_name, plate_dimensions):
+    def __init__(self, image_files, additional_files, omexml_files, plate_name):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -50,19 +50,16 @@ class MetadataHandler(object):
             full paths to image files
         additional_files: List[str]
             full paths to additional microscope-specific metadata files
-        ome_xml_files: List[str]
+        omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        experiment_name: str
-            name of the experiment
-        plate_dimensions: Tuple[int]
-            number of rows and column in the plate
+        plate_name: str
+            name of the corresponding plate
         '''
         self.image_files = image_files
         self.additional_files = additional_files
-        self.ome_xml_files = ome_xml_files
-        self.experiment_name = experiment_name
-        self.plate_dimensions = plate_dimensions
-        self.metadata = bioformats.OMEXML()
+        self.omexml_files = omexml_files
+        self.plate_name = plate_name
+        self.metadata = bioformats.OMEXML(XML_DECLARATION)
         self.file_mapper = list()
         self.id_to_image_ix_ref = dict()
         self.id_to_well_id_ref = dict()
@@ -88,7 +85,7 @@ class MetadataHandler(object):
         self._ome_image_metadata = dict()
         logger.info('read OMEXML metadata extracted from image files')
         with DefaultMetadataReader() as reader:
-            for i, f in enumerate(self.ome_xml_files):
+            for i, f in enumerate(self.omexml_files):
                 k = os.path.basename(self.image_files[i])
                 self._ome_image_metadata[k] = reader.read(f)
         return self._ome_image_metadata
@@ -190,12 +187,14 @@ class MetadataHandler(object):
                     plane = pixels.Plane(p)
                     # Create a separate *Image*/*Pixels* for each *Plane*
                     # in the original image file
-                    if count == 0:
-                        # There is already one image created by default
-                        new_img = self.metadata.image(count)
-                    else:
-                        self.metadata.set_image_count(count+1)
-                        new_img = self.metadata.image(count)
+                    # if count == 0:
+                    #     # There is already one image created by default
+                    #     new_img = self.metadata.image(count)
+                    # else:
+                    #     self.metadata.set_image_count(count+1)
+                    #     new_img = self.metadata.image(count)
+                    self.metadata.set_image_count(count+1)
+                    new_img = self.metadata.image(count)
                     new_img.Name = image.Name
                     pxl = new_img.Pixels
                     new_img.ID = 'Image:%d' % count
@@ -217,11 +216,6 @@ class MetadataHandler(object):
                     pln.TheZ = plane.TheZ
                     # "TheC" will be defined later on, because this information
                     # is often not yet available at this point
-
-                    # Collect this information in a list so that we don't have
-                    # to loop over the whole metadata
-                    self.time_points.add(pln.TheT)
-                    self.planes.add(pln.TheZ)
                     if pxl.Channel(0).Name is not None:
                         self.channels.add(pxl.Channel(0).Name)
 
@@ -266,9 +260,9 @@ class MetadataHandler(object):
             raise AssertionError('Images mustn\'t have more than one plane.')
         for c in xrange(n_channels):
             img = metadata[c]
-            if hasattr(ome_image_element, 'AcquiredDate'):
+            if hasattr(ome_image_element, 'AcquisitionDate'):
                 # Something is wrong with "AcquiredData" attribute
-                img.AcquiredDate = ome_image_element.AcquiredDate
+                img.AcquisitionDate = ome_image_element.AcquisitionDate
             if not img.Pixels.Channel(0).Name:
                 if hasattr(pixels.Channel(c), 'Name'):
                     img.Pixels.Channel(0).Name = pixels.Channel(c).Name
@@ -356,16 +350,12 @@ class MetadataHandler(object):
         `tmlib.metaconfig.visiview.VisiviewMetaDataHandler`_
         `tmlib.metaconfig.cellvoyager.CellvoyagerMetaDataHandler`_
         '''
-        if self.ome_additional_metadata.image_count == 1:
+        if self.ome_additional_metadata.image_count == 0:
             # One image is always added by default.
             logger.info('no additional metadata provided')
 
-            # In any case, there has to be one *Plate* element.
-            n_plates = len(self.ome_additional_metadata.plates)
-            if n_plates == 0:
-                raise MetadataError('No plate information provided.')
-            elif n_plates > 1:
-                raise NotSupportedError('Only one plate per experiment.')
+            self.metadata.PlatesDucktype(
+                        self.metadata.root_node).newPlate(name='default') 
             return self.metadata
 
         if not self.REGEX:
@@ -420,6 +410,10 @@ class MetadataHandler(object):
             for j, ix in enumerate(matched_elements.keys()):
                 img = self.metadata.image(ix)
                 img = updated_elements[j]
+                # Collect this information in a list so that we don't have
+                # to loop over the whole metadata
+                self.time_points.add(img.Pixels.Plane(0).TheT)
+                self.planes.add(img.Pixels.Plane(0).TheZ)
 
         logger.info('create a Plate element based on additional metadata')
 
@@ -475,7 +469,7 @@ class MetadataHandler(object):
             missing_metadata.add('plate')
         return missing_metadata
 
-    def configure_metadata_from_filenames(self, regex=None):
+    def configure_metadata_from_filenames(self, plate_dimensions, regex=None):
         '''
         Configure metadata based on information encoded in image filenames
         using a regular expression with named groups::
@@ -497,6 +491,8 @@ class MetadataHandler(object):
 
         Parameters
         ----------
+        plate_dimensions: Tuple[int]
+            number of rows and columns in the well plate
         regex: str
             named regular expression
 
@@ -557,22 +553,29 @@ class MetadataHandler(object):
             img.Pixels.Plane(0).TheT = capture['t']
             # Collect well and site information for each image file
             wells[capture['w']].append(i)
+            self.channels.add(img.Pixels.Channel(0).Name)
+            self.planes.add(img.Pixels.Plane(0).TheZ)
+            self.time_points.add(img.Pixels.Plane(0).TheT)
 
         logger.info('create a Plate element based on additional metadata')
 
         # Build a well plate description based on "well" and "site" information
-        plate = self.ome_additional_metadata.plates[0]
+        plate = self.metadata.plates[0]
         plate.RowNamingConvention = 'letter'
         plate.ColumnNamingConvention = 'number'
-        plate.Rows = self.plate_dimensions[0]
-        plate.Columns = self.plate_dimensions[1]
+        well_ids = wells.keys()
+        rows = [utils.map_letter_to_number(w[0]) - 1 for w in well_ids]
+        cols = [int(w[1:]) - 1 for w in well_ids]
+        # TODO: we need the actual dimensions
+        plate.Rows = len(set(rows))
+        plate.Columns = len(set(cols))
         well_ids = wells.keys()
         if not(utils.is_number(well_ids[0][1:]) and well_ids[0][0].isupper()):
             raise MetadataError('Plate naming convention is not understood.')
         for i, w in enumerate(well_ids):
-            well = well_ids[w]
-            row = utils.map_letter_to_number(w[0])
-            col = int(w[1:])
+            well = well_ids[i]
+            row = rows[i]
+            col = cols[i]
             well = self.metadata.WellsDucktype(plate).new(row=row, column=col)
             well_samples = self.metadata.WellSampleDucktype(well.node)
             for j, ix in enumerate(wells[w]):
@@ -581,7 +584,7 @@ class MetadataHandler(object):
                 well_samples[j].ImageRef = img_id
                 # Create a reference from Image ID to Well and WellSample Index
                 self.id_to_wellsample_ix_ref[img_id] = j
-                self.id_to_well_id_ref[img_id] = i
+                self.id_to_well_id_ref[img_id] = w
 
         return self.metadata
 
@@ -681,7 +684,19 @@ class MetadataHandler(object):
 
         logger.info('determine acquisition grid coordinates based on layout')
 
-        n_samples = len(plate.Well[0].Sample)
+        # Determine the number of unique positions per well
+        # NOTE: It's assumed that all wells have the same number of sites)
+        samples = defaultdict(list)
+        for i, s in enumerate(plate.Well[0].Sample):
+            ref_id = s.ImageRef
+            ref_ix = self.id_to_image_ix_ref[ref_id]
+            ref_im = self.metadata.image(ref_ix)
+            k = (ref_im.Pixels.Plane(0).TheZ,
+                 ref_im.Pixels.Plane(0).TheT,
+                 ref_im.Pixels.Channel(0).Name)
+            samples[k].append(i)
+        n_samples = len(samples.values()[0])
+
         if not any(stitch_dimensions):
             stitch_dimensions = stitch.guess_stitch_dimensions(
                                     n_samples, stitch_major_axis)
@@ -691,22 +706,20 @@ class MetadataHandler(object):
 
         for w in plate.Well:
 
-            # NOTE: It's assumed that all wells have the same stitch dimensions
             coordinates = stitch.calc_grid_coordinates_from_layout(
                                         stitch_dimensions, stitch_layout)
 
             for i, sample in enumerate(plate.Well[w].Sample):
-                sample.PositionY = coordinates[i][0]
-                sample.PositionX = coordinates[i][1]
-
-        # # create globally unique position identifier numbers
-        # pos = [
-        #     (pm.well_id, pm.row_index, pm.col_index)
-        #     for pm in self.position_mapper
-        # ]
-        # sites = [sorted(list(set(pos))).index(s) for s in pos]
-        # for i, s in enumerate(sites):
-        #     self.position_mapper[i].site_id = s
+                # Map coordinates back to the corresponding well samples
+                ref_id = sample.ImageRef
+                ref_ix = self.id_to_image_ix_ref[ref_id]
+                ref_im = self.metadata.image(ref_ix)
+                k = (ref_im.Pixels.Plane(0).TheZ,
+                     ref_im.Pixels.Plane(0).TheT,
+                     ref_im.Pixels.Channel(0).Name)
+                s_ix = samples[k].index(i)
+                sample.PositionY = coordinates[s_ix][0]
+                sample.PositionX = coordinates[s_ix][1]
 
         return self.metadata
 
@@ -747,7 +760,7 @@ class MetadataHandler(object):
         # for the projected planes
         logger.info('create a new metadata object that contains an Image '
                     'element for each projected z-stack')
-        proj_metadata = bioformats.OMEXML()
+        proj_metadata = bioformats.OMEXML(XML_DECLARATION)
         proj_metadata.image_count = len(ids)
         proj_id_to_image_ix_ref = dict()
         proj_file_mapper = list()
@@ -758,7 +771,7 @@ class MetadataHandler(object):
             proj_im = proj_metadata.image(i)
             # TODO: this should go into a function! (see also "collect")
             proj_im.ID = 'Image:%d' % i
-            proj_im.AcquiredDate = ref_im.AcquiredDate
+            proj_im.AcquisitionDate = ref_im.AcquisitionDate
             pxl = proj_im.Pixels
             pxl.plane_count = 1
             pxl.Channel(0).Name = ref_im.Pixels.Channel(0).Name
@@ -771,8 +784,10 @@ class MetadataHandler(object):
             pln = pxl.Plane(0)
             pln.TheT = ref_im.Pixels.Plane(0).TheT
             pln.TheZ = 0  # projected!
-            pln.PositionY = ref_im.Pixels.Plane(0).PositionY
-            pln.PositionX = ref_im.Pixels.Plane(0).PositionX
+            if (hasattr(ref_im.Pixels.Plane(0), 'PositionY')
+                    and hasattr(ref_im.Pixels.Plane(0), 'PositionX')):
+                pln.PositionY = ref_im.Pixels.Plane(0).PositionY
+                pln.PositionX = ref_im.Pixels.Plane(0).PositionX
 
             proj_id_to_image_ix_ref[proj_im.ID] = i
 
@@ -789,12 +804,13 @@ class MetadataHandler(object):
                 fm.planes.extend(self.file_mapper[ref_ix].planes)
             proj_file_mapper.append(fm)
 
+
         # Create a new *Plate* element, whose *WellSample* elements only
         # contain the projected planes
         logger.info('update the Plate element accordingly')
         proj_plate = proj_metadata.PlatesDucktype(
                         proj_metadata.root_node).newPlate(
-                        name=self.experiment_name)
+                        name=self.plate_name)
         p = self.metadata.plates[0]
         proj_plate.RowNamingConvention = p.RowNamingConvention
         proj_plate.ColumnNamingConvention = p.ColumnNamingConvention
@@ -910,7 +926,7 @@ class MetadataHandler(object):
             site_ix = self.id_to_wellsample_ix_ref[img.ID]
             site = self.metadata.plates[0].Well[well_id].Sample[site_ix]
             fieldnames = {
-                'experiment_name': self.experiment_name,
+                'plate_name': self.plate_name,
                 'well_id': well_id,
                 'well_y': int(site.PositionY),
                 'well_x': int(site.PositionX),
@@ -977,8 +993,7 @@ class DefaultMetadataHandler(MetadataHandler):
 
     REGEX = ''
 
-    def __init__(self, image_files, additional_files, ome_xml_files,
-                 experiment_name, plate_dimensions):
+    def __init__(self, image_files, additional_files, omexml_files, plate_name):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -988,21 +1003,17 @@ class DefaultMetadataHandler(MetadataHandler):
             full paths to image files
         additional_files: List[str]
             full paths to additional microscope-specific metadata files
-        ome_xml_files: List[str]
+        omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        experiment_name: str
-            name of the corresponding experiment
-        plate_dimensions: Tuple[int]
-            number of rows and column in the plate
+        plate_name: str
+            name of the corresponding plate
         '''
         super(DefaultMetadataHandler, self).__init__(
-                image_files, additional_files, ome_xml_files,
-                experiment_name, plate_dimensions)
+                image_files, additional_files, omexml_files, plate_name)
         self.image_files = image_files
         self.additional_files = additional_files
-        self.ome_xml_files = ome_xml_files
-        self.experiment_name = experiment_name
-        self.plate_dimensions = plate_dimensions
+        self.omexml_files = omexml_files
+        self.plate_name = plate_name
 
     @property
     def ome_additional_metadata(self):
@@ -1012,7 +1023,7 @@ class DefaultMetadataHandler(MetadataHandler):
         bioformats.omexml.OMEXML
             empty object
         '''
-        self._ome_additional_metadata = bioformats.OMEXML()
+        self._ome_additional_metadata = bioformats.OMEXML(XML_DECLARATION)
         # Add an empty *Plate* element
         self._ome_additional_metadata.PlatesDucktype(
                     self._ome_additional_metadata.root_node).newPlate(

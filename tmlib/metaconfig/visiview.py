@@ -4,6 +4,7 @@ import logging
 import bioformats
 from collections import defaultdict
 from cached_property import cached_property
+from .ome_xml import XML_DECLARATION
 from .default import MetadataHandler
 from .. import utils
 from ..readers import MetadataReader
@@ -143,7 +144,7 @@ class VisiviewMetadataReader(MetadataReader):
         bioformats.omexml.OMEXML
             plate metadata
         '''
-        metadata = bioformats.OMEXML()
+        metadata = bioformats.OMEXML(XML_DECLARATION)
         # 1) Obtain the general experiment information and well plate format
         #    specifications from the ".nd" file:
         nd = read_nd_file(nd_filename)
@@ -240,8 +241,8 @@ class VisiviewMetadataHandler(MetadataHandler):
 
     REGEX = '.+_?(?P<w>[A-Z]\d{2})?_(?P<c>\w+)_s(?P<s>\d+)_?t?(?P<t>\d+)?\.'
 
-    def __init__(self, image_files, additional_files, ome_xml_files,
-                 experiment_name, plate_dimensions):
+    def __init__(self, image_files, additional_files, omexml_files,
+                 plate_name):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -251,21 +252,17 @@ class VisiviewMetadataHandler(MetadataHandler):
             full paths to image files
         additional_files: List[str]
             full paths to additional microscope-specific metadata files
-        ome_xml_files: List[str]
+        omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
         experiment_name: str
-            name of the corresponding experiment
-        plate_dimensions: Tuple[int]
-            number of rows and column in the plate
+            name of the corresponding plate
         '''
         super(VisiviewMetadataHandler, self).__init__(
-                image_files, additional_files, ome_xml_files,
-                experiment_name, plate_dimensions)
+                image_files, additional_files, omexml_files, plate_name)
         self.image_files = image_files
-        self.ome_xml_files = ome_xml_files
+        self.omexml_files = omexml_files
         self.additional_files = additional_files
-        self.experiment_name = experiment_name
-        self.plate_dimensions = plate_dimensions
+        self.plate_name = plate_name
 
     @cached_property
     def ome_additional_metadata(self):

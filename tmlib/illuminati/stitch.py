@@ -195,7 +195,7 @@ def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
             else:
                 # Preserve order of sites in columns
                 cols += range(0, stitch_dims[1], 1)
-            rows += [i+1 for x in range(stitch_dims[1])]
+            rows += [i for x in range(stitch_dims[1])]
     elif 'vertical' in stitch_layout:
         for i in xrange(stitch_dims[1]):  # loop over columns
             if i % 2 and 'zigzag' in stitch_layout:
@@ -204,7 +204,7 @@ def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
             else:
                 # Preserve order of sites in rows
                 rows += range(0, stitch_dims[0], 1)
-            cols += [i+1 for x in range(stitch_dims[0])]
+            cols += [i for x in range(stitch_dims[0])]
     return zip(rows, cols)
 
 

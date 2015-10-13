@@ -60,11 +60,15 @@ class IllumstatsGenerator(ClusterRoutines):
         joblist['run'] = list()
         count = 0
         for i, cycle in enumerate(self.cycles):
-            channels = list(set([md.channel_name for md in cycle.image_metadata]))
+            channels = list(set([
+                im.metadata.channel_name for im in cycle.images
+            ]))
             img_batches = list()
             for c in channels:
-                image_files = [md.name for md in cycle.image_metadata
-                               if md.channel_name == c]
+                image_files = [
+                    im.metadata.name for im in cycle.images
+                    if im.metadata.channel_name == c
+                ]
                 img_batches.append(image_files)
 
             for j, batch in enumerate(img_batches):
@@ -150,14 +154,14 @@ class IllumstatsGenerator(ClusterRoutines):
                 if sites:
                     if image.metadata.site_id not in sites:
                         continue
-                if wells and image.metadata.well_id:  # may not be a well plate
+                if wells and image.metadata.well_id:
                     if image.metadata.well_id not in wells:
                         continue
                 corrected_image = image.correct(stats)
                 suffix = os.path.splitext(image.metadata.name)[1]
-                output_filename = re.sub(r'\%s$' % suffix,
-                                         '_corrected%s' % suffix,
-                                         image.metadata.name)
+                output_filename = re.sub(
+                    r'\%s$' % suffix, '_corrected%s' % suffix,
+                    image.metadata.name)
                 output_filename = os.path.join(output_dir, output_filename)
                 corrected_image.save_as_png(output_filename)
 
