@@ -3,7 +3,7 @@ from . import logo
 from . import __version__
 from .api import IllumstatsGenerator
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
+from ..experiment import ExperimentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class Corilla(CommandLineInterface):
     @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
-        experiment = Experiment(self.args.experiment_dir)
+        experiment = ExperimentFactory(self.args.experiment_dir).create()
         self.__api_instance = IllumstatsGenerator(
                                 experiment=experiment, prog_name=self.name,
                                 verbosity=self.args.verbosity)
@@ -39,6 +39,16 @@ class Corilla(CommandLineInterface):
             'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
         return self.__api_instance
+
+    @property
+    def _variable_apply_args(self):
+        kwargs = dict()
+        kwargs['plates'] = self.args.plates
+        kwargs['wells'] = self.args.wells
+        kwargs['channels'] = self.args.channels
+        kwargs['zplanes'] = self.args.zplanes
+        kwargs['tpoints'] = self.args.tpoints
+        return kwargs
 
     @staticmethod
     def call(args):
