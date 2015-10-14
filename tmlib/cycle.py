@@ -2,16 +2,21 @@ import re
 import os
 import logging
 import pandas as pd
+import bioformats
 from natsort import natsorted
+from collections import defaultdict
 from cached_property import cached_property
 from . import utils
-from .readers import ImageMetadataReader
+from .readers import XmlReader
+from .readers import JsonReader
 from .image import is_image_file
 from .image import ChannelImage
 from .image import IllumstatsImages
 from .metadata import ChannelImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .errors import RegexpError
+from metaconfig import ome_xml
+from align.descriptions import AlignmentDescription
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +153,7 @@ class Cycle(object):
             os.mkdir(self._image_dir)
         return self._image_dir
 
-    @cached_property
+    @property
     def image_files(self):
         '''
         Returns
@@ -165,11 +170,12 @@ class Cycle(object):
         --------
         `image.is_image_file`_
         '''
-        files = [f for f in os.listdir(self.image_dir) if is_image_file(f)]
-        files = natsorted(files)
-        if not files:
+        self._image_files = [
+            f for f in os.listdir(self.image_dir) if is_image_file(f)
+        ]
+        self._image_files = natsorted(self._image_files)
+        if not self._image_files:
             raise OSError('No image files found in "%s"' % self.image_dir)
-        self._image_files = files
         return self._image_files
 
     @property
@@ -178,53 +184,85 @@ class Cycle(object):
         Returns
         -------
         str
-            name of the file holding image related metadata
+            name of the OMEXML file containing cycle-specific image metadata
         '''
-        self._image_metadata_file = self.cfg.IMAGE_METADATA_FILE
-        return self._image_metadata_file
+        return self.cfg.IMAGE_METADATA_FILE
 
-    @cached_property
-    def image_metadata(self):
+    @property
+    def align_descriptor_file(self):
         '''
         Returns
         -------
-        List[ChannelImageMetadata]
-            metadata for each file in `image_dir`
+        str
+            name of the file that contains cycle-specific descriptions required
+            for the alignment of images of the current cycle relative to the
+            reference cycle
+        '''
+        return self.cfg.ALIGN_DESCRIPTOR_FILE
+
+    @cached_property
+    def image_metadata_table(self):
+        '''
+        Returns
+        -------
+        pandas.DataFrame
+            metadata for each file in `image_dir` in tabular form, where
+            rows represent images and columns hold the values for different
+            metadata attributes
 
         Raises
         ------
         OSError
             when metadata file does not exist
 
-        See also
-        --------
-        `metadata.ChannelImageMetadata`_
+        Note
+        ----
+        The table representation of metadata is cached in memory and allows
+        efficient indexing. See
+        `pandas docs <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
+        for details on indexing and selecting data.
         '''
         metadata_file = os.path.join(self.dir, self.image_metadata_file)
-        with ImageMetadataReader() as reader:
-            metadata = reader.read(metadata_file)
-        self._image_metadata = [
-            ChannelImageMetadata.set(metadata[f])
-            for f in natsorted(metadata.keys())
-        ]
-        return self._image_metadata
-
-    @cached_property
-    def image_metadata_hashtable(self):
-        '''
-        Metadata in tabular form, where each row represents an image
-        and the columns the different metadata attributes.
-
-        Returns
-        -------
-        pandas.DataFrame
-            metadata table
-        '''
-        metadata_file = os.path.join(self.dir, self.image_metadata_file)
-        with ImageMetadataReader() as reader:
-            metadata = reader.read(metadata_file)
-        self._image_metadata_hashtable = pd.DataFrame(metadata.values())
-        return self._image_metadata_hashtable
+        with XmlReader() as reader:
+            metadata = bioformats.OMEXML(reader.read(metadata_file))
+        # Bring metadata into the following format: List[dict], which makes
+        # it easy to convert it into a pandas.DataFrame
+        formatted_metadata = list()
+        site_mapper = defaultdict(list)
+        count = 0
+        plt = metadata.plates[0]
+        for w in plt.Well:
+            for s in plt.Well[w].Sample:
+                ref_id = s.ImageRef
+                ref_ix = ome_xml.get_image_ix(ref_id)
+                ref_im = metadata.image(ref_ix)
+                formatted_metadata.append({
+                    'name': ref_im.Name,
+                    'well_name': w,
+                    'well_pos_y': s.PositionY,
+                    'well_pos_x': s.PositionX,
+                    'channel_ix': ref_im.Pixels.Plane(0).TheC,
+                    'channel_name': ref_im.Pixels.Channel(0).Name,
+                    'zplane_ix': ref_im.Pixels.Plane(0).TheZ,
+                    'tpoint_ix': ref_im.Pixels.Plane(0).TheT
+                })
+                # Collect list indices per unique acquisition site
+                site_mapper[(w, s.PositionY, s.PositionX)].append(count)
+                count += 1
+        # Add the acquisition site index "site_ix" to each image element 
+        sites = range(len(site_mapper))
+        for i, indices in enumerate(site_mapper.values()):
+            for ix in indices:
+                formatted_metadata[ix]['site_ix'] = sites[i]
+        # Add the alignment description to each image element (if available)
+        alignment_file = os.path.join(self.dir, self.align_descriptor_file)
+        if os.path.exists(alignment_file):
+            with JsonReader() as reader:
+                description = reader.read(alignment_file)
+            import ipdb; ipdb.set_trace()
+            align_description = AlignmentDescription.set(description)
+            # TODO
+        return pd.DataFrame(formatted_metadata).sort(['name'])
 
     @property
     def images(self):
@@ -239,13 +277,26 @@ class Cycle(object):
         Image objects have lazy loading functionality, i.e. the actual image
         pixel array is only loaded into memory once the corresponding attribute
         (property) is accessed.
+
+        Raises
+        ------
+        ValueError
+            when names of image files and names in the image metadata are not
+            the same
         '''
         self._images = list()
-        image_filenames = [md.name for md in self.image_metadata]
-        for i, f in enumerate(image_filenames):
+        filenames = self.image_metadata_table['name']
+        if self.image_files != filenames.tolist():
+            raise ValueError('Names of images do not match')
+        for i, f in enumerate(self.image_files):
+            image_metadata = ChannelImageMetadata()
+            table = self.image_metadata_table[(filenames == f)]
+            for attr in table:
+                value = table.iloc[0][attr]
+                setattr(image_metadata, attr, value)
             img = ChannelImage.create_from_file(
                     filename=os.path.join(self.image_dir, f),
-                    metadata=self.image_metadata[i],
+                    metadata=image_metadata,
                     library=self.library)
             self._images.append(img)
         return self._images
@@ -286,7 +337,7 @@ class Cycle(object):
             when `stats_dir` does not exist or when no illumination statistic
             files are found in `stats_dir`
         '''
-        stats_pattern = self.cfg.STATS_FILE.format(channel_id='\w+')
+        stats_pattern = self.cfg.STATS_FILE.format(channel_ix='\w+')
         stats_pattern = re.compile(stats_pattern)
         if not os.path.exists(self.stats_dir):
             raise OSError('Stats directory does not exist: %s'
@@ -359,31 +410,3 @@ class Cycle(object):
                     library=self.library)
             self._illumstats_images.append(img)
         return self._illumstats_images
-
-    @property
-    def align_descriptor_file(self):
-        '''
-        Returns
-        -------
-        str
-            name of the file that contains the descriptions required for
-            alignment of images between cycles
-        '''
-        self._align_descriptor_file = self.cfg.ALIGN_DESCRIPTOR_FILE.format(
-                                                    cycle_name=self.name)
-        return self._align_descriptor_file
-
-    @cached_property
-    def channels(self):
-        '''
-        Returns
-        -------
-        Set[str]
-            names of channels in the cycle
-
-        Note
-        ----
-        Each image in the cycle must have the same number of channels.
-        '''
-        self._channels = set([md.channel_name for md in self.image_metadata])
-        return self._channels

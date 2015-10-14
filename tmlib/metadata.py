@@ -13,7 +13,7 @@ class ImageMetadata(object):
     __metaclass__ = ABCMeta
 
     PERSISTENT = {
-        'id', 'name', 'plane_id', 'time_id', 'site_id'
+        'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'
     }
 
     def __init__(self):
@@ -58,28 +58,77 @@ class ImageMetadata(object):
         self._name = value
 
     @property
-    def site(self):
+    def site_ix(self):
         '''
         Returns
         -------
-        ImageAcquisitionSite
-            information about the position of the image within the
-            image acquisition grid
+        int
+            zero-based global (plate-wide) acquisition-site index
 
-        See also
-        --------
-        `tmlib.metadata.ImageAcquisitionSite`_
+        Note
+        ----
+        The index doesn't follow any particular order, it just indicates which
+        images where acquired at the same "site", i.e. microscope stage
+        position.
         '''
-        return self._site
+        return self._site_ix
 
-    @site.setter
-    def site(self, value):
-        if not(isinstance(value, ImageAcquisitionSite)):
-            raise TypeError('Attribute "site" must have type ImageAcquisitionSite')
-        self._site = value
+    @site_ix.setter
+    def site_ix(self, value):
+        if not(isinstance(value, int)):
+            raise TypeError('Attribute "site_ix" must have type int')
+        self._site_ix = value
 
     @property
-    def plane_id(self):
+    def well_pos_y(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based row (y) index of the image within the well
+        '''
+        return self._well_pos_y
+
+    @well_pos_y.setter
+    def well_pos_y(self, value):
+        if not(isinstance(value, (int, float))):
+            raise TypeError('Attribute "well_pos_y" must have type int or float')
+        self._well_pos_y = int(value)
+
+    @property
+    def well_pos_x(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based column (x) index of the image within the well
+        '''
+        return self._well_pos_x
+
+    @well_pos_x.setter
+    def well_pos_x(self, value):
+        if not(isinstance(value, (int, float))):
+            raise TypeError('Attribute "well_pos_x" must have type int or float')
+        self._well_pos_x = int(value)
+
+    @property
+    def well_name(self):
+        '''
+        Returns
+        -------
+        str
+            well identifier string, e.g. "A01"
+        '''
+        return self._well_name
+
+    @well_name.setter
+    def well_name(self, value):
+        if not(isinstance(value, basestring)):
+            raise TypeError('Attribute "well_name" must have type basestring')
+        self._well_name = value
+
+    @property
+    def zplane_ix(self):
         '''
         Returns
         -------
@@ -87,29 +136,29 @@ class ImageMetadata(object):
             zero-based z index of the focal plane within a three dimensional
             stack
         '''
-        return self._plane_id
+        return self._zplane_ix
 
-    @plane_id.setter
-    def plane_id(self, value):
+    @zplane_ix.setter
+    def zplane_ix(self, value):
         if not(isinstance(value, int)) and value is not None:
-            raise TypeError('Attribute "plane_id" must have type int')
-        self._plane_id = value
+            raise TypeError('Attribute "zplane_ix" must have type int')
+        self._zplane_ix = value
 
     @property
-    def time_id(self):
+    def tpoint_ix(self):
         '''
         Returns
         -------
         int
             one-based time point identifier number
         '''
-        return self._time_id
+        return self._tpoint_ix
 
-    @time_id.setter
-    def time_id(self, value):
+    @tpoint_ix.setter
+    def tpoint_ix(self, value):
         if not(isinstance(value, int)) and value is not None:
-            raise TypeError('Attribute "time_id" must have type int')
-        self._time_id = value
+            raise TypeError('Attribute "tpoint_ix" must have type int')
+        self._tpoint_ix = value
 
     @property
     def is_omitted(self):
@@ -119,8 +168,7 @@ class ImageMetadata(object):
         bool
             whether the image should be omitted from further analysis
             (for example because the shift exceeds the maximally tolerated
-             shift or the image contains artifacts that would cause problems
-             for image analysis algorithms)
+             shift or because the image contains artifacts)
         '''
         return self._is_omitted
 
@@ -146,20 +194,6 @@ class ImageMetadata(object):
             raise TypeError('Attribute "is_aligned" must have type bool')
         self._is_aligned = value
 
-    @abstractmethod
-    def serialize(self):
-        '''
-        Serialize required metadata attributes to key-value pairs.
-        '''
-        pass
-
-    @abstractmethod
-    def set(metadata):
-        '''
-        Set attributes from key-value pairs in dictionary.
-        '''
-        pass
-
 
 class ChannelImageMetadata(ImageMetadata):
 
@@ -168,7 +202,7 @@ class ChannelImageMetadata(ImageMetadata):
     '''
 
     PERSISTENT = ImageMetadata.PERSISTENT.union({
-        'channel_name', 'is_corrected', 'channel_id'
+        'channel_name', 'is_corrected', 'channel_ix'
     })
 
     def __init__(self):
@@ -201,20 +235,20 @@ class ChannelImageMetadata(ImageMetadata):
         self._channel_name = value
 
     @property
-    def channel_id(self):
+    def channel_ix(self):
         '''
         Returns
         -------
         int
             zero-based channel identifier number
         '''
-        return self._channel_id
+        return self._channel_ix
 
-    @channel_id.setter
-    def channel_id(self, value):
+    @channel_ix.setter
+    def channel_ix(self, value):
         if not(isinstance(value, int)) and value is not None:
-            raise TypeError('Attribute "channel_id" must have type int')
-        self._channel_id = value
+            raise TypeError('Attribute "channel_ix" must have type int')
+        self._channel_ix = value
 
     @property
     def is_corrected(self):
@@ -276,94 +310,6 @@ class ChannelImageMetadata(ImageMetadata):
             if key in ChannelImageMetadata.PERSISTENT:
                 setattr(obj, key, value)
         return obj
-
-
-class ImageAcquisitionSite(object):
-
-    '''
-    Container for image metadata related to an acquisition site, such as
-    the well and row (y) and column (x) positions of the image within the
-    acquisition grid.
-    '''
-
-    PERSISTENT = {
-        'id', 'well_id', 'pos_y', 'pos_x'
-    }
-
-    @property
-    def id(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based globally unique position identifier number
-
-        Note
-        ----
-        Order of sites is not necessarily according to acquisition time.
-        '''
-        return self._id
-
-    @id.setter
-    def id(self, value):
-        if not(isinstance(value, int)):
-            raise TypeError('Attribute "id" must have type int')
-        self._id = value
-
-    @property
-    def pos_y(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based row (y) index of the image within the well
-        '''
-        return self._pos_y
-
-    @pos_y.setter
-    def pos_y(self, value):
-        if not(isinstance(value, int)) and value is not None:
-            raise TypeError('Attribute "pos_y" must have type int')
-        self._pos_y = value
-
-    @property
-    def pos_x(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based column (x) index of the image within the well
-        '''
-        return self._col_index
-
-    @pos_x.setter
-    def pos_x(self, value):
-        if not(isinstance(value, int)) and value is not None:
-            self._coordinates = (self.pos_y, self.pos_x)
-        return self._coordinates
-
-    @property
-    def well_id(self):
-        '''
-        Returns
-        -------
-        str
-            well identifier string, e.g. "A01"
-        '''
-        return self._well_id
-
-    @well_id.setter
-    def well_id(self, value):
-        if not(isinstance(value, basestring)) and value is not None:
-            raise TypeError('Attribute "well_id" must have type basestring')
-        self._well_id = value
-
-    def set(self, description):
-        pass
-
-    def serialize(self):
-        pass
-        self._col_index = value
 
 
 class ImageFileMapper(object):
@@ -635,18 +581,18 @@ class MosaicMetadata(object):
         self._channel_name = value
 
     @property
-    def site_ids(self):
+    def site_ixs(self):
         '''
         Returns
         -------
         List[int]
             site identifier numbers of images contained in the mosaic
         '''
-        return self._site_ids
+        return self._site_ixs
 
-    @site_ids.setter
-    def site_ids(self, value):
-        self._site_ids = value
+    @site_ixs.setter
+    def site_ixs(self, value):
+        self._site_ixs = value
 
     @property
     def filenames(self):
@@ -687,18 +633,18 @@ class MosaicMetadata(object):
         channels = list(set([im.metadata.channel_name for im in images]))
         if len(channels) > 1:
             raise MetadataError('All images must be of the same channel')
-        planes = list(set([im.metadata.plane_id for im in images]))
+        planes = list(set([im.metadata.zplane_ix for im in images]))
         if len(planes) > 1:
             raise MetadataError('All images must be of the same focal plane')
         metadata = MosaicMetadata()
         metadata.name = layer_name
         metadata.cycle_name = cycles[0]
         metadata.channel_name = channels[0]
-        metadata.plane_id = planes[0]
+        metadata.zplane_ix = planes[0]
         # sort filenames according to sites
-        sites = [im.metadata.site_id for im in images]
+        sites = [im.metadata.site_ix for im in images]
         sort_order = [sites.index(s) for s in sorted(sites)]
-        metadata.site_ids = sorted(sites)
+        metadata.site_ixs = sorted(sites)
         files = [im.metadata.name for im in images]
         metadata.filenames = [files[ix] for ix in sort_order]
         return metadata

@@ -15,13 +15,13 @@ values of attributes of the configuration classes::
 
 * *channel_name*: Name of the corresponding channel or wavelength (string).
 
-* *channel_id*: Zero-based channel identifier number (integer).
+* *channel_ix*: Zero-based channel identifier number (integer).
 
-* *site_id*: Zero-based acquisition site identifier number (integer).
+* *site_ix*: Zero-based acquisition site identifier number (integer).
 
-* *time_id*: Zero-based time point identifier number (integer).
+* *tpoint_ix*: Zero-based time point identifier number (integer).
 
-* *plane_id*: Zero-based focal plane identifier number (integer).
+* *zplane_ix*: Zero-based focal plane identifier number (integer).
 
 * *well_id*: Well identifier sting (string).
 
@@ -48,7 +48,7 @@ STATS_FILE = '{channel}.stat.h5'
 LAYER_NAME = '{experiment_name}_t{time:0>3}_c{channel:0>3}_z{plane:0>3}'
 
 IMAGE_DIR = '{cycle_dir}{sep}images'
-IMAGE_FILE = '{plate_name}_t{time:0>3}_{well_id}_y{well_y:0>3}_x{well_x:0>3}_c{channel:0>3}_z{plane:0>3}.png'
+IMAGE_FILE = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.png'
 
 LAYERS_DIR = '{experiment_dir}{sep}layers'
 DATA_FILE = '{experiment_dir}{sep}{experiment_name}.data.h5'

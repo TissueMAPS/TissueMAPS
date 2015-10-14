@@ -311,7 +311,7 @@ class Experiment(object):
         -------
         Dict[Tuple[str], str]
             unique name for each layer of this cycle, i.e. the set of images
-            with the same *channel_id*, *plane_id* and *time_id*
+            with the same *channel_ix*, *zplane_ix* and *tpoint_ix*
 
         Note
         ----
@@ -327,12 +327,12 @@ class Experiment(object):
             self._layer_names = dict()
             for cycle in self.cycles:
                 self._layer_names.update({
-                    (md.channel_name, md.plane_id, md.time_id):
+                    (md.channel_name, md.zplane_ix, md.tpoint_ix):
                         self.cfg.LAYER_NAME.format(
                             experiment_name=self.name,
-                            channel_id=md.channel_name,
-                            plane_id=md.plane_id,
-                            time_id=md.time_id)
+                            channel_ix=md.channel_name,
+                            zplane_ix=md.zplane_ix,
+                            tpoint_ix=md.tpoint_ix)
                     for md in cycle.image_metadata
                 })
         return self._layer_names
@@ -354,7 +354,7 @@ class Experiment(object):
                 images = [
                     img for img in self.images
                     if img.metadata.channel_name == c
-                    and img.metadata.plane_id == p
+                    and img.metadata.zplane_ix == p
                 ]
                 self._layer_metadata.append(
                     MosaicMetadata.create_from_images(images, layer_name))
@@ -391,7 +391,7 @@ class Experiment(object):
         Each cycle in the experiment must have the same number of sites.
         '''
         self._acquisition_sites = set([
-                md.site_id
+                md.site_ix
                 for cycle in self.cycles
                 for md in cycle.image_metadata
         ])
@@ -410,7 +410,7 @@ class Experiment(object):
         Each image in the experiment must have the same number of focal planes.
         '''
         self._focal_planes = set([
-                md.plane_id
+                md.zplane_ix
                 for cycle in self.cycles
                 for md in cycle.image_metadata
         ])
@@ -431,9 +431,9 @@ class Experiment(object):
     #         for i, md in enumerate(cycle.image_metadata):
     #             file_e = etree.SubElement(images_e, 'file')
     #             file_e.set('name', md.name)
-    #             file_e.set('site_id', str(md.site_id))
-    #             file_e.set('plane_id', str(md.plane_id))
-    #             file_e.set('channel_id', str(md.channel_name))
+    #             file_e.set('site_ix', str(md.site_ix))
+    #             file_e.set('zplane_ix', str(md.zplane_ix))
+    #             file_e.set('channel_ix', str(md.channel_name))
     #             file_e.set('source_file_id', str(md.original_filename))
 
     #         acq_sites_e = etree.SubElement(cycle_e, 'acquisition_sites')

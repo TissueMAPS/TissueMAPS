@@ -1,5 +1,30 @@
+import re
+from ..errors import RegexpError
+
+
+def get_image_ix(image_id):
+    '''
+    Get the index of an image within the OMEXML metadata object given the
+    ID of the image.
+
+    Parameters
+    ----------
+    image_id: str
+        image identifier in the format ``Image:\d+``
+
+    Returns
+    -------
+    int
+        zero-based index number
+    '''
+    match = re.search(r'^Image:(\d+)$', image_id)
+    if not match:
+        RegexpError('Index of image could not be determined from image ID.')
+    return int(match.group(1))
+
+
 '''
-OME-XML declaration configuration.
+OMEXML declaration configuration.
 For details see `OME model <http://www.openmicroscopy.org/site/support/ome-model/>`_
 '''
 

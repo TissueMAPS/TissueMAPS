@@ -842,7 +842,7 @@ class MetadataHandler(object):
         self.id_to_wellsample_ix_ref = proj_id_to_wellsample_ix_ref
         return self.metadata
 
-    def update_channel_ids(self):
+    def update_channel_ixs(self):
         '''
         Create for each channel a zero-based unique identifier number.
 
@@ -867,14 +867,14 @@ class MetadataHandler(object):
                     self.metadata.image(i).Pixels.Plane(0).TheC = j
         return self.metadata
 
-    def update_plane_ids(self):
+    def update_zplane_ixs(self):
         '''
         Create for each focal plane a zero-based unique identifier number.
 
         Returns
         -------
         List[ChannelImageMetadata]
-            metadata, where "time_id" attribute has been set
+            metadata, where "tpoint_ix" attribute has been set
 
         Note
         ----
@@ -927,12 +927,12 @@ class MetadataHandler(object):
             site = self.metadata.plates[0].Well[well_id].Sample[site_ix]
             fieldnames = {
                 'plate_name': self.plate_name,
-                'well_id': well_id,
-                'well_y': int(site.PositionY),
-                'well_x': int(site.PositionX),
-                'channel': img.Pixels.Plane(0).TheC,
-                'plane': img.Pixels.Plane(0).TheZ,
-                'time': img.Pixels.Plane(0).TheT
+                'w': well_id,
+                'y': int(site.PositionY),
+                'x': int(site.PositionX),
+                'c': img.Pixels.Plane(0).TheC,
+                'z': img.Pixels.Plane(0).TheZ,
+                't': img.Pixels.Plane(0).TheT
             }
             img.Name = image_file_format_string.format(**fieldnames)
 

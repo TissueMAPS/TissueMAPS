@@ -244,17 +244,6 @@ class ClusterRoutines(BasicClusterRoutines):
         self.prog_name = prog_name
 
     @cached_property
-    def cycles(self):
-        '''
-        Returns
-        -------
-        List[Wellplate or Slide]
-            configured cycle objects
-        '''
-        self._cycles = self.experiment.cycles
-        return self._cycles
-
-    @cached_property
     def project_dir(self):
         '''
         Returns

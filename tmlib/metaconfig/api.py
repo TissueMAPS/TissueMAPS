@@ -255,8 +255,8 @@ class MetadataConfigurator(ClusterRoutines):
             logger.info('keep individual focal planes')
         # Create consistent zero-based ids
         # (some microscopes use one-based indexing)
-        handler.update_channel_ids()
-        handler.update_plane_ids()
+        handler.update_channel_ixs()
+        handler.update_zplane_ixs()
         md = handler.build_image_filenames(self.experiment.cfg.IMAGE_FILE)
         fmap = handler.create_image_file_mapper()
         self._write_metadata_to_file(batch['outputs']['metadata_files'][0], md)
@@ -402,12 +402,12 @@ class MetadataConfigurator(ClusterRoutines):
                             # Update the name
                             fn = {
                                 'plate_name': upload.plate_name,
-                                'well_id': well_id,
-                                'well_y': int(samples[s].PositionY),
-                                'well_x': int(samples[s].PositionX),
-                                'channel': im.Pixels.Plane(0).TheC,
-                                'plane': im.Pixels.Plane(0).TheZ,
-                                'time': im.Pixels.Plane(0).TheT
+                                'w': well_id,
+                                'y': int(samples[s].PositionY),
+                                'x': int(samples[s].PositionX),
+                                'c': im.Pixels.Plane(0).TheC,
+                                'z': im.Pixels.Plane(0).TheZ,
+                                't': im.Pixels.Plane(0).TheT
                             }
                             im.Name = self.experiment.cfg.IMAGE_FILE.format(**fn)
                             samples[s].ImageRef = im.ID
