@@ -481,40 +481,33 @@ class IllumstatsImageMetadata(object):
     Class for metadata specific to illumination statistics images.
     '''
 
-    # PERSISTENT = {'channel', 'cycle'}
-
-    def __init__(self):
-        '''
-        Initialize an instance of class IllumstatsMetadata.
-        '''
-
     @property
-    def channel(self):
+    def cycle_ix(self):
         '''
         Returns
         -------
-        str
-            name of the corresponding channel
+        int
+            zero-based cycle index
         '''
-        return self._channel
+        return self._cycle_ix
 
-    @channel.setter
-    def channel(self, value):
-        self._channel = value
+    @cycle_ix.setter
+    def cycle_ix(self, value):
+        self._cycle_ix = value
 
     @property
-    def cycle(self):
+    def channel_ix(self):
         '''
         Returns
         -------
-        str
-            name of the corresponding cycle
+        int
+            zero-based channel index
         '''
-        return self._cycle
+        return self._channel_ix
 
-    @cycle.setter
-    def cycle(self, value):
-        self._cycle = value
+    @channel_ix.setter
+    def channel_ix(self, value):
+        self._channel_ix = value
 
     @property
     def filename(self):

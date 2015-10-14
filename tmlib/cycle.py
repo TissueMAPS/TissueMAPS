@@ -83,22 +83,22 @@ class Cycle(object):
         return self.cycle_dir
 
     @property
-    def id(self):
+    def index(self):
         '''
-        A *cycle* represents a time point in a time series. The identifier
-        (*id*) is the zero-based index of the cycle in this sequence.
-        The *id* is encoded in the *cycle* name and retrieved from it using a
-        regular expression.
+        A *cycle* represents a time point in a time series. The `index`
+        is the zero-based index of the *cycle* in this sequence.
+        It is encoded in the name of the *cycle* folder and is retrieved from
+        it using a regular expression.
 
         Returns
         -------
         int
-            cycle identifier number
+            zero-based cycle index
 
         Raises
         ------
         RegexpError
-            when identifier number cannot not be determined from folder name
+            when `index` cannot not be determined from folder name
         '''
         regexp = utils.regex_from_format_string(self.cfg.CYCLE_DIR)
         match = re.search(regexp, self.name)
@@ -107,7 +107,7 @@ class Cycle(object):
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
                     % (self.name, self.cfg.CYCLE_DIR))
-        self._id = int(match.group('cycle_id'))
+        self._id = int(match.group('cycle_ix'))
         return self._id
 
     @property
@@ -262,7 +262,11 @@ class Cycle(object):
             import ipdb; ipdb.set_trace()
             align_description = AlignmentDescription.set(description)
             # TODO
-        return pd.DataFrame(formatted_metadata).sort(['name'])
+        # Sort entries according to "name" to have the same order as the
+        # values of attribute "image_files"
+        metadata_table = pd.DataFrame(formatted_metadata).sort(['name'])
+        metadata_table.index = range(len(metadata_table))
+        return metadata_table
 
     @property
     def images(self):
@@ -375,8 +379,8 @@ class Cycle(object):
             regexp = utils.regex_from_format_string(self.cfg.STATS_FILE)
             match = re.search(regexp, f)
             if match:
-                md.channel_name = match.group('channel')
-                md.cycle_name = match.group('cycle')
+                md.channel_ix = int(match.group('channel_ix'))
+                md.cycle_ix = self.index
                 md.filename = f
             else:
                 raise RegexpError('Can\'t determine channel and cycle number '

@@ -307,6 +307,7 @@ class CommandLineInterface(object):
     @property
     def _variable_apply_args(self):
         kwargs = dict()
+        kwargs['plates']
         return kwargs
 
     def apply(self):
@@ -316,15 +317,9 @@ class CommandLineInterface(object):
         '''
         self.print_logo()
         api = self._api_instance
-        logger.info('read job descriptions from files')
-        job_descriptions = api.get_job_descriptions_from_files()
         logger.info('apply statistics')
         kwargs = self._variable_apply_args
-        api.apply_statistics(
-                job_descriptions=job_descriptions,
-                wells=self.args.wells, sites=self.args.sites,
-                channels=self.args.channels, output_dir=self.args.output_dir,
-                **kwargs)
+        api.apply_statistics(output_dir=self.args.output_dir, **kwargs)
 
     def collect(self):
         '''
@@ -444,23 +439,33 @@ class CommandLineInterface(object):
                 'apply',
                 help='apply the calculated statistics')
             apply_parser.description = '''
-                Apply the calculated statistics.
+                Apply the calculated statistics to images in order to correct
+                them for illumination artifacts. A subset of images can be
+                selected using additional arguments.
             '''
-            apply_parser.add_argument(
-                '-c', '--channels', nargs='+', type=str,
-                help='names of channels to process')
-            apply_parser.add_argument(
-                '-s', '--sites',  nargs='+', type=int,
-                help='numbers of sites to process')
-            apply_parser.add_argument(
-                '-w', '--wells', nargs='+', type=str,
-                help='ids of wells to process')
-            apply_parser.add_argument(
-                '-a', '--all', action='store_true',
-                help='when all images should be processed')
-            apply_parser.add_argument(
+            apply_required_group = apply_parser.add_argument_group(
+                'required arguments')
+            apply_required_group.add_argument(
                 '-o', '--output_dir', type=str, required=True,
-                help='path to output directory')
+                help='directory where corrected images should be saved')
+
+            apply_selection_group = apply_parser.add_argument_group(
+                'additional arguments for selection of images')
+            apply_selection_group.add_argument(
+                '-p', '--plates', nargs='+', type=str, metavar='P',
+                help='plate names')
+            apply_selection_group.add_argument(
+                '-w', '--wells', nargs='+', type=str, metavar='W',
+                help='well names, e.g. "A01"')
+            apply_selection_group.add_argument(
+                '-c', '--channels', nargs='+', type=int, metavar='C',
+                help='channel indices')
+            apply_selection_group.add_argument(
+                '-z', '--zplanes',  nargs='+', type=int, metavar='Z',
+                help='z-plane indices')
+            apply_selection_group.add_argument(
+                '-t', '--tpoints',  nargs='+', type=int, metavar='T',
+                help='time point (cycle) indices')
 
         if 'cleanup' in required_subparsers:
             apply_parser = subparsers.add_parser(

@@ -425,7 +425,7 @@ class Experiment(object):
     #     for cycle in self.cycles:
     #         cycle_e = etree.SubElement(cycles_e, 'cycle')
     #         cycle_e.set('name', cycle.name)
-    #         cycle_e.set('id', str(cycle.id))
+    #         cycle_e.set('index', str(cycle.index))
 
     #         images_e = etree.SubElement(cycle_e, 'images')
     #         for i, md in enumerate(cycle.image_metadata):

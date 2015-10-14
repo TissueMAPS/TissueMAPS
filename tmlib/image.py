@@ -203,9 +203,9 @@ class ChannelImage(Image):
             when metadata of illumination statistic images and channel image
             do not match
         '''
-        if (stats.mean.metadata.channel_name != self.metadata.channel
-                or stats.std.metadata.channel_name != self.metadata.channel_name):
-            raise ValueError('Channel names must match.')
+        if (stats.mean.metadata.channel_ix != self.metadata.channel_ix
+                or stats.std.metadata.channel_ix != self.metadata.channel_ix):
+            raise ValueError('Channel indices must match.')
         if (stats.mean.pixels.type != self.pixels.type
                 or stats.std.pixels.type != self.pixels.type):
             raise TypeError('Pixels type must match.')
@@ -716,11 +716,11 @@ class IllumstatsImages(object):
         with DatasetReader(self.filename) as reader:
             mean = self._factory(reader.read('images/mean'))
             std = self._factory(reader.read('images/std'))
-            cycle_name = reader.read('metadata/cycle')
-            channel_name = reader.read('metadata/channel')
-        if cycle_name != self.metadata.cycle:
+            cycle_ix = reader.read('metadata/cycle_ix')
+            channel_ix = reader.read('metadata/channel_ix')
+        if cycle_ix != self.metadata.cycle_ix:
             raise MetadataError('"cycle" metadata is incorrect')
-        if channel_name != self.metadata.channel:
+        if channel_ix != self.metadata.channel_ix:
             raise MetadataError('"channel" metadata is incorrect')
         return {
             'mean': IllumstatsImage(pixels=mean, metadata=self.metadata),

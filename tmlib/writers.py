@@ -10,6 +10,7 @@ import ruamel.yaml
 import traceback
 from abc import ABCMeta
 from abc import abstractmethod
+from gi.repository import Vips
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +214,7 @@ class ImageWriter(Writer):
 
         Parameters
         ----------
-        data: numpy.ndarray or Vips.Image
+        data: numpy.ndarray or Vips.Image 
             image that should be saved
         filename: str
             path to the image file
@@ -230,7 +231,7 @@ class ImageWriter(Writer):
         logger.debug('write image to file: %s' % filename)
         if isinstance(data, np.ndarray):
             cv2.imwrite(filename, data)
-        elif isinstance(data. Vips.Image):
+        elif isinstance(data, Vips.Image):
             data.write_to_file(filename)
         else:
             raise TypeError(
@@ -257,6 +258,7 @@ class DatasetWriter(object):
         '''
         self.filename = filename
         self.truncate = truncate
+        logger.debug('write data to file: %s', filename)
 
     def __enter__(self):
         if self.truncate:
@@ -291,10 +293,10 @@ class DatasetWriter(object):
         if isinstance(data, list):
             data = np.array(data)
         if isinstance(data, np.ndarray) and data.dtype == 'O':
-            logger.debug('write as variable length dataset')
+            logger.debug('write dataset "%s" as variable length', path)
             self._write_vlen(path, data)
         else:
-            logger.debug('write as normal dataset')
+            logger.debug('write dataset "%s"', path)
             self._stream.create_dataset(path, data=data)
 
     def _write_vlen(self, path, data):

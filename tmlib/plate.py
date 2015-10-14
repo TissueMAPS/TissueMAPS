@@ -162,7 +162,7 @@ class Plate(object):
         new_cycle_name = self.cfg.CYCLE_DIR.format(
                                     plate_dir=self.dir,
                                     sep=os.path.sep,
-                                    cycle_id=len(self.cycles))
+                                    cycle_ix=len(self.cycles))
         new_cycle_dir = os.path.join(self.dir, new_cycle_name)
         logger.debug('add cycle: %s', os.path.basename(new_cycle_dir))
         logger.debug('create directory for new cycle: %s', new_cycle_dir)
