@@ -43,7 +43,7 @@ CYCLE_DIR = '{plate_dir}{sep}cycle_{cycle_ix}'
 IMAGE_METADATA_FILE = 'image_metadata.ome.xml'
 ALIGN_DESCRIPTOR_FILE = 'alignment_description.json'
 STATS_DIR = '{cycle_dir}{sep}stats'
-STATS_FILE = 'channel_{channel_ix}.h5'
+STATS_FILE = 'channel_{channel_ix}.stat.h5'
 
 LAYER_NAME = '{experiment_name}_t{time:0>3}_c{channel:0>3}_z{plane:0>3}'
 

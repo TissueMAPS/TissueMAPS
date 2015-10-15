@@ -276,7 +276,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     def get_job_descriptions_from_files(self):
         '''
-        Get job descriptions from individual *.job* files and combine them into
+        Get job descriptions from files and combine them into
         the format required by the `build_jobs()` method.
 
         Returns
@@ -287,10 +287,12 @@ class ClusterRoutines(BasicClusterRoutines):
         directory = self.job_descriptions_dir
         job_descriptions = dict()
         job_descriptions['run'] = list()
-        run_job_files = glob.glob(os.path.join(directory, '*_run_*.job'))
+        run_job_files = glob.glob(os.path.join(
+                                  directory, '*_run_*.job.yml'))
         if not run_job_files:
             logger.debug('No run job descriptor files found')
-        collect_job_files = glob.glob(os.path.join(directory, '*_collect.job'))
+        collect_job_files = glob.glob(os.path.join(
+                                      directory, '*_collect.job.yml'))
         if not collect_job_files:
             logger.debug('No collect job descriptor file found')
         with JsonReader() as reader:
@@ -367,9 +369,9 @@ class ClusterRoutines(BasicClusterRoutines):
             absolute path to the file that holds the description of the
             job with the given `job_id`
         '''
-        filename = os.path.join(self.job_descriptions_dir,
-                                '%s_run_%.5d.job' % (self.prog_name, job_id))
-        return filename
+        return os.path.join(
+                    self.job_descriptions_dir,
+                    '%s_run_%.5d.job.yml' % (self.prog_name, job_id))
 
     def build_collect_job_filename(self):
         '''
@@ -379,9 +381,9 @@ class ClusterRoutines(BasicClusterRoutines):
             absolute path to the file that holds the description of the
             job with the given `job_id`
         '''
-        filename = os.path.join(self.job_descriptions_dir,
-                                '%s_collect.job' % self.prog_name)
-        return filename
+        return os.path.join(
+                    self.job_descriptions_dir,
+                    '%s_collect.job.yml' % self.prog_name)
 
     def read_job_file(self, filename):
         '''
@@ -404,8 +406,7 @@ class ClusterRoutines(BasicClusterRoutines):
             when file does not exist
         '''
         with JsonReader() as reader:
-            batch = reader.read(filename)
-        return batch
+            return reader.read(filename)
 
     @staticmethod
     def _check_io_description(job_descriptions):
@@ -416,7 +417,7 @@ class ClusterRoutines(BasicClusterRoutines):
         if not all([
                 isinstance(batch['inputs'].values(), list)
                 for batch in job_descriptions['run']]):
-            raise TypeError('Values of "inputs" must have type list')
+            raise TypeError('Elements of "inputs" must have type list')
         if not all([
                 isinstance(batch['outputs'], dict)
                 for batch in job_descriptions['run']]):
@@ -424,17 +425,17 @@ class ClusterRoutines(BasicClusterRoutines):
         if not all([
                 isinstance(batch['outputs'].values(), list)
                 for batch in job_descriptions['run']]):
-            raise TypeError('Values of "outputs" must have type list')
+            raise TypeError('Elements of "outputs" must have type list')
         if 'collect' in job_descriptions:
             batch = job_descriptions['collect']
             if not isinstance(batch['inputs'], dict):
                 raise TypeError('"inputs" must have type dictionary')
             if not isinstance(batch['inputs'].values(), list):
-                raise TypeError('Values of "inputs" must have type list')
+                raise TypeError('Elements of "inputs" must have type list')
             if not isinstance(batch['outputs'], dict):
                 raise TypeError('"outputs" must have type dictionary')
             if not isinstance(batch['outputs'].values(), list):
-                raise TypeError('Values of "outputs" must have type list')
+                raise TypeError('Elements of "outputs" must have type list')
 
     def write_job_files(self, job_descriptions):
         '''
