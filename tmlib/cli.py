@@ -471,7 +471,7 @@ class CommandLineInterface(object):
                 '-t', '--tpoints',  nargs='+', type=int, metavar='T',
                 help='time point (cycle) indices')
             apply_selection_group.add_argument(
-                '-s', '--sites',  nargs='+', type=int, metavar='T',
+                '-s', '--sites',  nargs='+', type=int, metavar='S',
                 help='acquisition site indices')
 
         if 'cleanup' in required_subparsers:

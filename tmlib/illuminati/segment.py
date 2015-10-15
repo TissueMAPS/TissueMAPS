@@ -100,14 +100,14 @@ def create_and_save_lookup_tables(image_grid, data_file, output_dir):
 
             # Which of the current objects are not in the dataset?
             # (Tracked via their parent object ids)
-            site_id = image_grid[i][j].site
+            site_ix = image_grid[i][j].site
             ids_image = image_grid[i][j].ids
-            ids_data = np.unique(current['ID_parent'][current.ID_site == site_id])
+            ids_data = np.unique(current['ID_parent'][current.ID_site == site_ix])
             ids_nodata = [o for o in ids_data if o not in ids_image]
 
             # Which parent objects lie at the border of the image?
             ids_border = parent['ID_object'][(parent.IX_border > 0) &
-                                             (parent.ID_site == site_id)]
+                                             (parent.ID_site == site_ix)]
             ids_border = ids_border.tolist()
 
             # Combine all object ids that should not be displayed and thus
@@ -249,7 +249,7 @@ def compute_cell_centroids(sitemat, site_row_nr, site_col_nr, offset):
         height of each site
     offset: int
         value that is added to all ids in sitemat
-        (maximum id in the previously processed .site_id)
+        (maximum id in the previously processed .site_ix)
 
     Returns
     -------

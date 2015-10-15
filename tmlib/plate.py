@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import numpy as np
 from natsort import natsorted
 from cached_property import cached_property
 from . import utils
@@ -176,7 +177,7 @@ class Plate(object):
         '''
         Returns
         -------
-        plate_format: int
+        int
             number of wells in the plate
 
         Note
@@ -189,7 +190,7 @@ class Plate(object):
             when provided plate format is not supported
         '''
         self._n_wells = self.user_cfg.NUMBER_OF_WELLS
-        if self._plate_format not in self.SUPPORTED_PLATE_FORMATS:
+        if self._n_wells not in self.SUPPORTED_PLATE_FORMATS:
             raise ValueError(
                     'Well plate format must be either "%s"' % '" or "'.join(
                             [str(e) for e in self.SUPPORTED_PLATE_FORMATS]))
@@ -226,13 +227,14 @@ class Plate(object):
         '''
         Returns
         -------
-        Set[str]
+        List[str]
             identifier string (capital letter for row position and
             one-based index number for column position) for each imaged
             well of the plate
         '''
         # TODO
-        self._wells = set([md.well_id for md in self.image_metadata])
+        md = self.cycles[0].image_metadata_table
+        self._wells = np.unique(md['well_name']).tolist()
         return self._wells
 
     @property

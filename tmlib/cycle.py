@@ -329,8 +329,7 @@ class Cycle(object):
         Creates the directory if it doesn't exist.
         '''
         self._stats_dir = self.cfg.STATS_DIR.format(
-                                            cycle_dir=self.dir,
-                                            sep=os.path.sep)
+                            cycle_dir=self.dir, sep=os.path.sep)
         if not os.path.exists(self._stats_dir):
             logger.debug(
                 'create directory for illumination statistics files: %s'
@@ -357,8 +356,10 @@ class Cycle(object):
         if not os.path.exists(self.stats_dir):
             raise OSError('Stats directory does not exist: %s'
                           % self.stats_dir)
-        files = [f for f in os.listdir(self.stats_dir)
-                 if re.search(stats_pattern, f)]
+        files = [
+            f for f in os.listdir(self.stats_dir)
+            if re.search(stats_pattern, f)
+        ]
         files = natsorted(files)
         if not files:
             raise OSError('No illumination statistic files found in "%s"'
@@ -391,7 +392,7 @@ class Cycle(object):
             match = re.search(regexp, f)
             if match:
                 md.channel_ix = int(match.group('channel_ix'))
-                md.cycle_ix = self.index
+                md.tpoint_ix = self.index
                 md.filename = f
             else:
                 raise RegexpError('Can\'t determine channel and cycle number '

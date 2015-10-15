@@ -590,18 +590,20 @@ class IllumstatsImageMetadata(object):
     '''
 
     @property
-    def cycle_ix(self):
+    def tpoint_ix(self):
         '''
         Returns
         -------
         int
-            zero-based cycle index
+            one-based time point identifier number
         '''
-        return self._cycle_ix
+        return self._tpoint_ix
 
-    @cycle_ix.setter
-    def cycle_ix(self, value):
-        self._cycle_ix = value
+    @tpoint_ix.setter
+    def tpoint_ix(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "tpoint_ix" must have type int')
+        self._tpoint_ix = value
 
     @property
     def channel_ix(self):
@@ -654,98 +656,117 @@ class MosaicMetadata(object):
         self._name = value
 
     @property
-    def cycle_name(self):
+    def zplane_ix(self):
         '''
         Returns
         -------
-        str
-            name of the corresponding cycle
+        int
+            zero-based z index of the focal plane within a three dimensional
+            stack
         '''
-        return self._cycle_name
+        return self._zplane_ix
 
-    @cycle_name.setter
-    def cycle_name(self, value):
-        self._cycle_name = value
+    @zplane_ix.setter
+    def zplane_ix(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "zplane_ix" must have type int')
+        self._zplane_ix = value
 
     @property
-    def channel_name(self):
+    def tpoint_ix(self):
         '''
         Returns
         -------
-        str
-            name of the corresponding channel
+        int
+            one-based time point identifier number
         '''
-        return self._channel_name
+        return self._tpoint_ix
 
-    @channel_name.setter
-    def channel_name(self, value):
-        self._channel_name = value
+    @tpoint_ix.setter
+    def tpoint_ix(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "tpoint_ix" must have type int')
+        self._tpoint_ix = value
 
     @property
-    def site_ixs(self):
+    def channel_ix(self):
         '''
         Returns
         -------
-        List[int]
-            site identifier numbers of images contained in the mosaic
+        int
+            channel index
         '''
-        return self._site_ixs
+        return self._channel_ix
 
-    @site_ixs.setter
-    def site_ixs(self, value):
-        self._site_ixs = value
+    @channel_ix.setter
+    def channel_ix(self, value):
+        self._channel_ix = value
 
-    @property
-    def filenames(self):
-        '''
-        Returns
-        -------
-        List[str]
-            names of the individual image files, which make up the mosaic
-        '''
-        return self._filenames
+    # @property
+    # def site_ixs(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     List[int]
+    #         site identifier numbers of images contained in the mosaic
+    #     '''
+    #     return self._site_ixs
 
-    @filenames.setter
-    def filenames(self, value):
-        self._filenames = value
+    # @site_ixs.setter
+    # def site_ixs(self, value):
+    #     self._site_ixs = value
 
-    @staticmethod
-    def create_from_images(images, layer_name):
-        '''
-        Create a MosaicMetadata object from image objects.
+    # @property
+    # def filenames(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     List[str]
+    #         names of the individual image files, which make up the mosaic
+    #     '''
+    #     return self._filenames
 
-        Parameters
-        ----------
-        images: List[ChannelImage]
-            set of images that are all of the same *cycle* and *channel*
+    # @filenames.setter
+    # def filenames(self, value):
+    #     self._filenames = value
 
-        Returns
-        -------
-        MosaicMetadata
+    # @staticmethod
+    # def create_from_images(images, layer_name):
+    #     '''
+    #     Create a MosaicMetadata object from image objects.
 
-        Raises
-        ------
-        MetadataError
-            when `images` are not of same *cycle* or *channel*
-        '''
-        cycles = list(set([im.metadata.cycle_name for im in images]))
-        if len(cycles) > 1:
-            raise MetadataError('All images must be of the same cycle')
-        channels = list(set([im.metadata.channel_name for im in images]))
-        if len(channels) > 1:
-            raise MetadataError('All images must be of the same channel')
-        planes = list(set([im.metadata.zplane_ix for im in images]))
-        if len(planes) > 1:
-            raise MetadataError('All images must be of the same focal plane')
-        metadata = MosaicMetadata()
-        metadata.name = layer_name
-        metadata.cycle_name = cycles[0]
-        metadata.channel_name = channels[0]
-        metadata.zplane_ix = planes[0]
-        # sort filenames according to sites
-        sites = [im.metadata.site_ix for im in images]
-        sort_order = [sites.index(s) for s in sorted(sites)]
-        metadata.site_ixs = sorted(sites)
-        files = [im.metadata.name for im in images]
-        metadata.filenames = [files[ix] for ix in sort_order]
-        return metadata
+    #     Parameters
+    #     ----------
+    #     images: List[ChannelImage]
+    #         set of images that are all of the same *cycle* and *channel*
+
+    #     Returns
+    #     -------
+    #     MosaicMetadata
+
+    #     Raises
+    #     ------
+    #     MetadataError
+    #         when `images` are not of same *cycle* or *channel*
+    #     '''
+    #     # cycles = list(set([im.metadata.cycle_ix for im in images]))
+    #     # if len(cycles) > 1:
+    #     #     raise MetadataError('All images must be of the same cycle')
+    #     # channels = list(set([im.metadata.channel_ix for im in images]))
+    #     # if len(channels) > 1:
+    #     #     raise MetadataError('All images must be of the same channel')
+    #     # planes = list(set([im.metadata.zplane_ix for im in images]))
+    #     # if len(planes) > 1:
+    #     #     raise MetadataError('All images must be of the same focal plane')
+    #     metadata = MosaicMetadata()
+    #     metadata.name = layer_name
+    #     # metadata.cycle_ix = cycles[0]
+    #     # metadata.channel_ix = channels[0]
+    #     # metadata.zplane_ix = planes[0]
+    #     # sort filenames according to sites
+    #     sites = [im.metadata.site_ix for im in images]
+    #     sort_order = [sites.index(s) for s in sorted(sites)]
+    #     metadata.site_ixs = sorted(sites)
+    #     files = [im.metadata.name for im in images]
+    #     metadata.filenames = [files[ix] for ix in sort_order]
+    #     return metadata

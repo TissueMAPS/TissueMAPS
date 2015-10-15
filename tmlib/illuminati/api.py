@@ -1,5 +1,6 @@
 import os
 import logging
+import numpy as np
 from .layers import ChannelLayer
 from ..cluster import ClusterRoutines
 from ..image import IllumstatsImages
@@ -7,11 +8,11 @@ from ..image import IllumstatsImages
 logger = logging.getLogger(__name__)
 
 
-class PyramidCreation(ClusterRoutines):
+class PyramidBuilder(ClusterRoutines):
 
     def __init__(self, experiment, prog_name, verbosity):
         '''
-        Initialize an instance of class PyramidCreation.
+        Initialize an instance of class PyramidBuilder.
 
         Parameters
         ----------
@@ -22,7 +23,7 @@ class PyramidCreation(ClusterRoutines):
         verbosity: int
             logging level
         '''
-        super(PyramidCreation, self).__init__(experiment, prog_name, verbosity)
+        super(PyramidBuilder, self).__init__(experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
         self.verbosity = verbosity
@@ -34,7 +35,7 @@ class PyramidCreation(ClusterRoutines):
         Parameters
         ----------
         **kwargs: dict
-            additional input arguments as key-value pairs:
+            additional arguments as key-value pairs:
             * "shift": whether images should be shifted (*bool*)
             * "illumcorr": whether images should be corrected for illumination
               artifacts (*bool*)
@@ -52,61 +53,55 @@ class PyramidCreation(ClusterRoutines):
             job descriptions
         '''
         logger.debug('create descriptions for "run" jobs')
-        joblist = dict()
-        joblist['run'] = list()
-        count = 0
-        for i, cycle in enumerate(self.cycles):
-            logger.debug('create job descriptions for cycle "%s"' % cycle.name)
-            channels = cycle.channels
-            planes = self.experiment.focal_planes
-            img_batches = list()
-            channel_batches = list()
-            plane_batches = list()
-            for c in channels:
-                for p in planes:
-                    logger.debug(
-                            'create job descriptions for channel "%s" '
-                            'and plane "%d"' % (c, p))
-                    image_files = [
-                        md.name for md in cycle.image_metadata
-                        if md.channel_name == c
-                        and md.plane_id == p
-                    ]
-                    if len(image_files) == 0:
-                        logger.warn(
-                            'No image files found for cycle "%s", '
-                            'channel "%s" and plane "%d"' % (cycle, c, p))
-                    img_batches.append(image_files)
-                    channel_batches.append(c)
-                    plane_batches.append(p)
+        job_descriptions = dict()
+        job_descriptions['run'] = list()
+        job_count = 0
+        for plate in self.experiment.plates:
+            for i, cycle in enumerate(plate.cycles):
+                md = cycle.image_metadata_table
+                channels = np.unique(md['channel_ix'])
+                zplanes = np.unique(md['zplane_ix'])
+                batch_indices = list()
+                for c in channels:
+                    for z in zplanes:
+                        ix = (md['channel_ix'] == c) & (md['zplane_ix'] == z)
+                        if len(ix) == 0:
+                            logger.warn(
+                                'No image files found for cycle "%s", '
+                                'channel "%s" and plane "%d"'
+                                % (cycle.index, c, z))
+                        batch_indices.append(md[ix].index.tolist())
 
-            for j, batch in enumerate(img_batches):
-                count += 1
-                joblist['run'].append({
-                    'id': count,
-                    'inputs': {
-                        'image_files': [
-                            os.path.join(cycle.image_dir, f) for f in batch
-                        ]
-                    },
-                    'outputs': {
-                        'pyramid_dir':
-                            os.path.join(self.experiment.layers_dir,
-                                         self.experiment.layer_names[(
-                                                cycle.name,
-                                                channel_batches[j],
-                                                plane_batches[j])])
-                    },
-                    'cycle': cycle.name,
-                    'channel': channel_batches[j],
-                    'plane': plane_batches[j],
-                    'shift': kwargs['shift'],
-                    'illumcorr': kwargs['illumcorr'],
-                    'thresh': kwargs['thresh'],
-                    'thresh_value': kwargs['thresh_value'],
-                    'thresh_percent': kwargs['thresh_percent']
-                })
-        return joblist
+                for j, indices in enumerate(batch_indices):
+                    image_files = md.loc[indices]['name']
+                    channel = np.unique(md.loc[indices]['channel_ix'])[0]
+                    zplane = np.unique(md.loc[indices]['zplane_ix'])[0]
+                    job_count += 1
+                    job_descriptions['run'].append({
+                        'id': job_count,
+                        'inputs': {
+                            'image_files': [
+                                os.path.join(cycle.image_dir, f)
+                                for f in image_files
+                            ]
+                        },
+                        'outputs': {
+                            'pyramid_dir':
+                                os.path.join(
+                                    self.experiment.layers_dir,
+                                    self.experiment.layer_names[(
+                                        cycle.index, channel, zplane)])
+                        },
+                        'cycle': cycle.index,
+                        'channel': channel,
+                        'zplane': zplane,
+                        'shift': kwargs['shift'],
+                        'illumcorr': kwargs['illumcorr'],
+                        'thresh': kwargs['thresh'],
+                        'thresh_value': kwargs['thresh_value'],
+                        'thresh_percent': kwargs['thresh_percent']
+                    })
+        return job_descriptions
 
     def run_job(self, batch):
         '''
@@ -116,25 +111,11 @@ class PyramidCreation(ClusterRoutines):
         --------
         `illuminati.layers.ChannelLayer`_
         '''
-        cycle = [c for c in self.cycles if c.name == batch['cycle']][0]
-
-        if batch['illumcorr']:
-            logger.info('correct images for illumination artifacts')
-            stats_file, stats_metadata = [
-                (os.path.join(cycle.stats_dir, md.filename), md)
-                for md in cycle.stats_metadata
-                if md.channel_name == batch['channel']
-            ][0]
-            stats = IllumstatsImages.create_from_file(
-                        stats_file, stats_metadata)
-        else:
-            stats = None
-
         logger.debug('create channel layer')
         layer = ChannelLayer.create_from_files(
-                    experiment=self.experiment, cycle=batch['cycle'],
-                    channel=batch['channel'], plane=batch['plane'],
-                    stats=stats, shift=batch['shift'])
+                    experiment=self.experiment, tpoint_ix=batch['cycle'],
+                    channel_ix=batch['channel'], zplane_ix=batch['zplane'],
+                    illumcorr=batch['illumcorr'], shift=batch['shift'])
 
         if batch['thresh']:
             logger.info('threshold intensities')
@@ -154,7 +135,7 @@ class PyramidCreation(ClusterRoutines):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
                              ' method' % self.__class__.__name__)
 
-    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
+    def apply_statistics(self, job_descriptions, wells, sites, channels, output_dir,
                          **kwargs):
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)

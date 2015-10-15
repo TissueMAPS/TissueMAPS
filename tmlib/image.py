@@ -716,10 +716,10 @@ class IllumstatsImages(object):
         with DatasetReader(self.filename) as reader:
             mean = self._factory(reader.read('images/mean'))
             std = self._factory(reader.read('images/std'))
-            cycle_ix = reader.read('metadata/cycle_ix')
+            tpoint_ix = reader.read('metadata/tpoint_ix')
             channel_ix = reader.read('metadata/channel_ix')
-        if cycle_ix != self.metadata.cycle_ix:
-            raise MetadataError('"cycle" metadata is incorrect')
+        if tpoint_ix != self.metadata.tpoint_ix:
+            raise MetadataError('"tpoint" metadata is incorrect')
         if channel_ix != self.metadata.channel_ix:
             raise MetadataError('"channel" metadata is incorrect')
         return {

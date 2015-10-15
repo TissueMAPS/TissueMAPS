@@ -119,7 +119,7 @@ class IllumstatsGenerator(ClusterRoutines):
         with DatasetWriter(stats_file, truncate=True) as writer:
             writer.write('/images/mean', data=stats.mean)
             writer.write('/images/std', data=stats.std)
-            writer.write('/metadata/cycle_ix', data=batch['cycle'])
+            writer.write('/metadata/tpoint_ix', data=batch['cycle'])
             writer.write('/metadata/channel_ix', data=batch['channel'])
 
     def apply_statistics(self, output_dir, **kwargs):

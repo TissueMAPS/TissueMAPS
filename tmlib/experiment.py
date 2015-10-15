@@ -1,6 +1,7 @@
 import re
 import os
 import logging
+import numpy as np
 from natsort import natsorted
 from cached_property import cached_property
 from . import config
@@ -325,16 +326,17 @@ class Experiment(object):
             raise NotSupportedError('TODO')
         else:
             self._layer_names = dict()
-            for cycle in self.cycles:
-                self._layer_names.update({
-                    (md.channel_name, md.zplane_ix, md.tpoint_ix):
-                        self.cfg.LAYER_NAME.format(
-                            experiment_name=self.name,
-                            channel_ix=md.channel_name,
-                            zplane_ix=md.zplane_ix,
-                            tpoint_ix=md.tpoint_ix)
-                    for md in cycle.image_metadata
-                })
+            for plate in self.plates:
+                for cycle in plate.cycles:
+                    md = cycle.image_metadata_table
+                    channels = np.unique(md['channel_ix'])
+                    zplanes = np.unique(md['zplane_ix'])
+                    for c in channels:
+                        for z in zplanes:
+                            k = (cycle.index, c, z)
+                            self._layer_names[k] = self.cfg.LAYER_NAME.format(
+                                experiment_name=self.name,
+                                t=cycle.index, c=c, z=z)
         return self._layer_names
 
     @property

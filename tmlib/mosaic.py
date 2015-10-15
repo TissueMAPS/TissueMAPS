@@ -130,7 +130,10 @@ class Mosaic(StichedImage):
 
     @staticmethod
     def _build_image_grid(images):
-        coordinates = [im.metadata.grid_coordinates for im in images]
+        coordinates = [
+            (im.metadata.well_pos_y, im.metadata.well_pos_x)
+            for im in images
+        ]
         height, width = np.max(coordinates, axis=0)  # zero-based
         grid = np.empty((height+1, width+1), dtype=object)
         for i, c in enumerate(coordinates):
@@ -166,20 +169,11 @@ class Mosaic(StichedImage):
         ------
         ValueError
             when `dx` or `dy` are positive
-        MetadataError
-            when `images` are not of same *cycle* or *channel*
         '''
         if not isinstance(dx, int) or dx > 0:
             raise ValueError('"dx" has to be a negative integer value')
         if not isinstance(dy, int) or dy > 0:
             raise ValueError('"dy" has to be a negative integer value')
-
-        cycles = set([im.metadata.cycle_name for im in images])
-        if len(cycles) > 1:
-            raise MetadataError('All images must be of the same cycle')
-        channels = set([im.metadata.channel_name for im in images])
-        if len(channels) > 1:
-            raise MetadataError('All images must be of the same channel')
 
         grid = Mosaic._build_image_grid(images)
         rows = list()
