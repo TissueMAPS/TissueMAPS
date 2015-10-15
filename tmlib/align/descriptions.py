@@ -1,4 +1,3 @@
-from cached_property import cached_property
 
 
 class AlignmentDescription(object):
@@ -8,44 +7,44 @@ class AlignmentDescription(object):
     align images between cycles.
     '''
 
-    PERSISTENT = {'cycle_id', 'ref_cycle_id'}
+    PERSISTENT = {'cycle_ix', 'ref_cycle_ix', 'overhang', 'shift'}
 
     def __init__(self, description=None):
         self.description = description
 
     @property
-    def cycle_id(self):
+    def cycle_ix(self):
         '''
         Returns
         -------
         str
             identifier number of the corresponding target cycle
         '''
-        return self._cycle_id
+        return self._cycle_ix
 
-    @cycle_id.setter
-    def cycle_id(self, value):
+    @cycle_ix.setter
+    def cycle_ix(self, value):
         if not isinstance(value, int):
             raise TypeError(
-                    'Attribute "cycle_id" must have type int')
-        self._cycle_id = value
+                    'Attribute "cycle_ix" must have type int')
+        self._cycle_ix = value
 
     @property
-    def ref_cycle_id(self):
+    def ref_cycle_ix(self):
         '''
         Returns
         -------
         str
             identifier number of the corresponding reference cycle
         '''
-        return self._ref_cycle_id
+        return self._ref_cycle_ix
 
-    @ref_cycle_id.setter
-    def ref_cycle_id(self, value):
+    @ref_cycle_ix.setter
+    def ref_cycle_ix(self, value):
         if not(isinstance(value, int) or value is None):
             raise TypeError(
-                    'Attribute "ref_cycle_id" must have type int')
-        self._ref_cycle_id = value
+                    'Attribute "ref_cycle_ix" must have type int')
+        self._ref_cycle_ix = value
 
     @property
     def overhang(self):
@@ -79,51 +78,54 @@ class AlignmentDescription(object):
         if not(isinstance(value, list) or value is None):
             raise TypeError(
                     'Attribute "shifts" must have type list')
-        if not all([isinstance(v, OverhangDesciption) for v in value]):
+        if not all([isinstance(v, ShiftDescription) for v in value]):
             raise TypeError(
                     'Elements of attribute "shifts" must have type '
-                    'OverhangDescription')
+                    'ShiftDescription')
         self._shifts = value
 
-    def serialize(self):
+    def __iter__(self):
         '''
-        Serialize attributes to description in form of key-value pair mappings.
+        Convert the object to a dictionary.
 
         Returns
         -------
-        description: dict
-            alignment descriptions
+        dict
+            alignment description as key-value pairs
+
+        Raises
+        ------
+        AttributeError
+            when instance doesn't have a required attribute
         '''
-        description = dict()
-        for attrib in dir(self):
-            if attrib.startswith('_') or attrib.isupper():
-                continue
+        for attr in dir(self):
 
-            if attrib in self.PERSISTENT:
-                description[attrib] = getattr(self, attrib)
-
-            if attrib == 'shifts':
-                description[attrib] = list()
-                shifts = getattr(self, attrib)
+            if attr == 'shifts':
+                shift_description = list()
+                shifts = getattr(self, attr)
                 for i, sh in enumerate(shifts):
-                    description[attrib].append(dict())
+                    shift_description.append(dict())
                     for a in dir(sh):
-                        if a.startswith('_') or a.isupper():
-                            continue
-                        description[attrib][i][a] = getattr(sh, a)
+                        if a in ShiftDescription.PERSISTENT:
+                            shift_description[i][a] = getattr(sh, a)
+                yield (attr, shift_description)
 
-            if attrib == 'overhang':
-                description[attrib] = dict()
-                oh = getattr(self, attrib)
+            elif attr == 'overhang':
+                overhang_description = dict()
+                oh = getattr(self, attr)
                 for a in dir(oh):
                     if a.startswith('_') or a.isupper():
                             continue
                     if a in oh.PERSISTENT:
-                        description[attrib][a] = getattr(oh, a)
+                        overhang_description[a] = getattr(oh, a)
+                yield (attr, overhang_description)
 
-        return description
+            else:
+                if attr in self.PERSISTENT:
+                    yield (attr, getattr(self, attr))
 
-    def set(self, description):
+    @staticmethod
+    def set(description):
         '''
         Set attribute values based on a description provided as key-value pair
         mappings.
@@ -132,6 +134,10 @@ class AlignmentDescription(object):
         ----------
         description: dict
             alignment descriptions
+
+        Returns
+        -------
+        AlignmentDescription
         '''
         if 'shifts' not in description.keys():
             raise KeyError('Aligment description requires key "shifts"')
@@ -142,18 +148,30 @@ class AlignmentDescription(object):
         if not isinstance(description['overhangs'], dict):
             raise TypeError('The value of "overhangs" must have type dict')
 
-        overhang_description = OverhangDesciption()
-        for k, v in description['overhangs'].iteritems():
-            setattr(overhang_description, k, v)
-        setattr(self, 'overhangs', overhang_description)
+        alignment = AlignmentDescription()
+        for key, value in description:
+            if key == 'overhangs':
+                overhang = OverhangDescription()
+                for k, v in value.iteritems():
+                    if k in overhang.PERSISTENT:
+                        setattr(overhang, k, v)
+                setattr(alignment, 'overhang', overhang)
 
-        shift_descriptions = list()
-        for s in description['shifts']:
-            shift = ShiftDescription()
-            for k, v in s.iteritems():
-                setattr(shift, k, v)
-            shift_descriptions.append(shift)
-        setattr(self, 'shifts', shift_descriptions)
+            elif key == 'shifts':
+                shifts = list()
+                for element in value:
+                    shift = ShiftDescription()
+                    for k, v in element.iteritems():
+                        if k in shift.PERSISTENT:
+                            setattr(shift, k, v)
+                    shifts.append(shift)
+                setattr(alignment, 'shifts', shifts)
+
+            else:
+                if value in alignment.PERSISTENT:
+                    setattr(alignment, key, value)
+
+        return alignment
 
 
 class OverhangDescription(object):
@@ -253,24 +271,24 @@ class ShiftDescription(object):
     for images of the reference cycle.
     '''
 
-    PERSISTENT = {'site_id', 'x', 'y', 'is_above_max_shift'}
+    PERSISTENT = {'site_ix', 'x', 'y', 'is_above_limit'}
 
     @property
-    def site_id(self):
+    def site_ix(self):
         '''
         Returns
         -------
         int
             one-based globally unique position identifier number
         '''
-        return self._site_id
+        return self._site_ix
 
-    @site_id.setter
-    def site_id(self, value):
+    @site_ix.setter
+    def site_ix(self, value):
         if not isinstance(value, int):
             raise TypeError(
-                    'Attribute "site_id" must have type int')
-        self._site_id = value
+                    'Attribute "site_ix" must have type int')
+        self._site_ix = value
 
     @property
     def x(self):
@@ -310,7 +328,7 @@ class ShiftDescription(object):
         self._y = value
 
     @property
-    def is_above_max_shift(self):
+    def is_above_limit(self):
         '''
         Returns
         -------
@@ -318,11 +336,11 @@ class ShiftDescription(object):
             ``True`` when either `x` or `y` shift exceed
             `maximally_tolerated_shift` and ``False`` otherwise
         '''
-        return self._is_above_max_shift
+        return self._is_above_limit
 
-    @is_above_max_shift.setter
-    def is_above_max_shift(self, value):
+    @is_above_limit.setter
+    def is_above_limit(self, value):
         if not isinstance(value, bool):
             raise TypeError(
-                    'Attribute "is_above_max_shift" must have type bool')
-        self._is_above_max_shift = value
+                    'Attribute "is_above_limit" must have type bool')
+        self._is_above_limit = value

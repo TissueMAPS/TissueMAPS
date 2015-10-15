@@ -1,6 +1,8 @@
 import os
 import re
 import logging
+import shutil
+import numpy as np
 from . import registration as reg
 from .descriptions import AlignmentDescription
 from .descriptions import OverhangDescription
@@ -57,7 +59,7 @@ class ImageRegistration(ClusterRoutines):
             format string for names of HDF5 files, where registration outputs
             are stored
         '''
-        self._reg_file_format_string = '{experiment}_{job}.reg'
+        self._reg_file_format_string = '{experiment}_{job}.reg.h5'
         return self._reg_file_format_string
 
     def create_job_descriptions(self, **kwargs):
@@ -80,86 +82,89 @@ class ImageRegistration(ClusterRoutines):
             job descriptions
         '''
         def get_targets(cycle):
-            ht = cycle.image_metadata_hashtable.sort('site_id')
-            ix = ht['channel_id'] == kwargs['ref_channel']
-            return ht[ix]['name'].tolist()
+            md = cycle.image_metadata_table.sort('site_ix')
+            ix = md['channel_ix'] == kwargs['ref_channel']
+            return md[ix]['name'].tolist()
 
-        im_batches = [
-            self._create_batches(get_targets(c), kwargs['batch_size'])
-            for c in self.cycles
-        ]
-        ht = self.cycles[0].image_metadata_hashtable
-        ix = ht['channel_id'] == kwargs['ref_channel']
-        sites = ht[ix]['site_id'].tolist()
-        site_batches = self._create_batches(sites, kwargs['batch_size'])
-        # def get_refs(cycle):
-        #     if any([md.plane_id > 1 for md in cycle.image_metadata]):
-        #         raise NotSupportedError(
-        #                 'Alignment is only supported for 2D datasets.')
-        #     return [
-        #         f for i, f in enumerate(cycle.image_files)
-        #         if cycle.image_metadata[i].channel_id == kwargs['ref_channel']
-        #     ]
-        # im_batches = [self._create_batches(natsorted(get_refs(c)), kwargs['batch_size'])
-        #               for c in self.cycles]
-        # # TODO: 3D
-        # sites = [md.site_id for md in self.cycles[0].image_metadata
-        #          if md.channel_id == kwargs['ref_channel']]
-        # site_batches = self._create_batches(sites, kwargs['batch_size'])
-        # TODO: create batches in such a way that all focal planes of the
-        # same site end up in the same batch; required to do MIP on the fly
-        registration_batches = list()
-        for i in xrange(len(im_batches[0])):
-            if any([i >= len(b) for b in im_batches]):
-                continue
-            registration_batches.append({
-                'targets': {c.name: [
-                        os.path.join(c.image_dir, b)
-                        for b in im_batches[j][i]
-                    ]
-                    for j, c in enumerate(self.cycles)
-                },
-                'references': [
-                    os.path.join(c.image_dir, b)
-                    for j, c in enumerate(self.cycles)
-                    if c.id == kwargs['ref_cycle']
-                    for b in im_batches[j][i]
-                ]
-            })
-
-        registration_files = [
-            os.path.join(self.registration_dir,
-                         self.reg_file_format_string.format(
-                            experiment=self.experiment.name, job=i+1))
-            for i in xrange(len(registration_batches))
-        ]
-
-        job_descriptions = {
-            'run': [{
-                'id': i+1,
-                'inputs': {
-                    'target_files': batch['targets'],
-                    'reference_files': batch['references']
-                },
-                'outputs': {
-                    'registration_files': [registration_files[i]]
-                },
-                'sites': site_batches[i]
-            } for i, batch in enumerate(registration_batches)],
-            'collect': {
-                'max_shift': kwargs['max_shift'],
-                'ref_cycle': kwargs['ref_cycle'],
-                'inputs': {
-                    'registration_files': registration_files
-                },
-                'outputs': {
-                    'align_descriptor_files': [
-                        os.path.join(c.dir, c.align_descriptor_file)
-                        for c in self.experiment.cycles
-                    ]
-                }
+        job_count = 0
+        job_descriptions = dict()
+        job_descriptions['run'] = list()
+        job_descriptions['collect'] = {
+            'plates': list(),
+            'limit': kwargs['limit'],
+            'ref_cycle': kwargs['ref_cycle'],
+            'inputs': {
+                'registration_files': list()
+            },
+            'outputs': {
+                'align_descriptor_files': list()
             }
         }
+        for plate in self.experiment.plates:
+            md = plate.cycles[0].image_metadata_table
+            if len(np.unique(md['zplane_ix'])) > 1:
+                raise NotSupportedError(
+                    'Alignment is currently only supported for 2D datasets.')
+            # TODO: group images per site
+            # (such that all z-planes end up in the same batch)
+            im_batches = [
+                self._create_batches(get_targets(c), kwargs['batch_size'])
+                for c in plate.cycles
+            ]
+            
+            ix = md['channel_ix'] == kwargs['ref_channel']
+            sites = md[ix]['site_ix'].tolist()
+            site_batches = self._create_batches(sites, kwargs['batch_size'])
+            
+            registration_batches = list()
+            for i in xrange(len(im_batches[0])):
+                if any([i >= len(b) for b in im_batches]):
+                    continue
+                registration_batches.append({
+                    'targets': {c.name: [
+                            os.path.join(c.image_dir, b)
+                            for b in im_batches[j][i]
+                        ]
+                        for j, c in enumerate(plate.cycles)
+                    },
+                    'references': [
+                        os.path.join(c.image_dir, b)
+                        for j, c in enumerate(plate.cycles)
+                        if c.index == kwargs['ref_cycle']
+                        for b in im_batches[j][i]
+                    ]
+                })
+
+            registration_files = [
+                os.path.join(self.registration_dir,
+                             self.reg_file_format_string.format(
+                                experiment=self.experiment.name, job=i+1))
+                for i in xrange(len(registration_batches))
+            ]
+
+            for i, batch in enumerate(registration_batches):
+                job_count += 1
+                job_descriptions['run'].append({
+                        'id': job_count,
+                        'inputs': {
+                            'target_files': batch['targets'],
+                            'reference_files': batch['references']
+                        },
+                        'outputs': {
+                            'registration_files': [registration_files[i]]
+                        },
+                        'sites': site_batches[i]
+                })
+
+            jdc = job_descriptions['collect']
+            jdc['plates'].append(plate.name)
+            jdc['inputs']['registration_files'].append(
+                registration_files
+            )
+            jdc['outputs']['align_descriptor_files'].append([
+                os.path.join(c.dir, c.align_descriptor_file)
+                for c in plate.cycles
+            ])
 
         return job_descriptions
 
@@ -202,45 +207,55 @@ class ImageRegistration(ClusterRoutines):
         --------
         `tmlib.align.registration.fuse_registration`_
         '''
-        output_files = batch['inputs']['registration_files']
-        cycle_names = [c.name for c in self.cycles]
+        for i, plate_name in enumerate(batch['plates']):
+            plate = [
+                p for p in self.experiment.plates if p.name == plate_name
+            ][0]
 
-        descriptions = reg.fuse_registration(output_files, cycle_names)
+            reg_files = batch['inputs']['registration_files'][i]
+            cycle_names = [c.name for c in plate.cycles]
 
-        # Calculate overhang between cycles
-        upper_oh, lower_oh, right_oh, left_oh, dont_shift = \
-            reg.calculate_overhang(descriptions, batch['max_shift'])
+            descriptions = reg.fuse_registration(reg_files, cycle_names)
 
-        with JsonWriter() as writer:
-            for i, cycle in enumerate(self.cycles):
-                logger.info('collect registration statistics for cycle %s'
-                            % cycle.name)
+            # Calculate overhang between cycles
+            upper_oh, lower_oh, right_oh, left_oh, dont_shift = \
+                reg.calculate_overhang(descriptions, batch['limit'])
 
-                a = AlignmentDescription()
-                a.cycle_id = cycle.id
-                a.ref_cycle_id = batch['ref_cycle']
+            with JsonWriter() as writer:
+                for j, cycle in enumerate(plate.cycles):
+                    logger.info('collect registration statistics for cycle %s'
+                                % cycle.name)
 
-                a.overhang = OverhangDescription()
-                a.overhang.lower = lower_oh
-                a.overhang.upper = upper_oh
-                a.overhang.right = right_oh
-                a.overhang.left = left_oh
+                    a = AlignmentDescription()
+                    a.cycle_ix = cycle.index
+                    a.ref_cycle_ix = batch['ref_cycle']
 
-                a.shifts = list()
+                    a.overhang = OverhangDescription()
+                    a.overhang.lower = lower_oh
+                    a.overhang.upper = upper_oh
+                    a.overhang.right = right_oh
+                    a.overhang.left = left_oh
 
-                for j in xrange(len(dont_shift)):
+                    a.shifts = list()
+                    for k in xrange(len(dont_shift)):
 
-                    sh = ShiftDescription()
-                    sh.x = descriptions[i][j]['x_shift']
-                    sh.y = descriptions[i][j]['y_shift']
-                    sh.site_id = descriptions[i][j]['site']
-                    sh.is_above_max_shift = bool(dont_shift[j])
+                        sh = ShiftDescription()
+                        sh.x = descriptions[j][k]['x_shift']
+                        sh.y = descriptions[j][k]['y_shift']
+                        sh.site_ix = descriptions[j][k]['site']
+                        sh.is_above_limit = bool(dont_shift[k])
 
-                    a.shifts.append(sh)
+                        a.shifts.append(sh)
 
-                logger.info('write alignment descriptor file')
-                writer.write(batch['outputs']['align_descriptor_files'][i],
-                             a.serialize())
+                    logger.info('write alignment descriptor file')
+                    writer.write(
+                        batch['outputs']['align_descriptor_files'][i][j],
+                        dict(a))
+
+            logger.info('remove registration files')
+            reg_dir = os.path.dirname(reg_files[0])
+            logger.debug('remove directory: %s', reg_dir)
+            shutil.rmtree(reg_dir)
 
     def apply_statistics(self, joblist, wells, sites, channels, output_dir,
                          **kwargs):
@@ -285,7 +300,7 @@ class ImageRegistration(ClusterRoutines):
 
                 for i, image in enumerate(channel_images):
                     if sites:
-                        if image.metadata.site_id not in sites:
+                        if image.metadata.site_ix not in sites:
                             continue
                     if wells:
                         if not image.metadata.well_id:  # may not be a well plate

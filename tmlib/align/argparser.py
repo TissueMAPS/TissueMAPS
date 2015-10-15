@@ -15,18 +15,21 @@ parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_parser.add_argument(
-    '-b', '--batch_size', dest='batch_size', type=int, default=10,
-    help='number of image files that should be processed per job '
-         '(default: 10)')
-init_parser.add_argument(
+    '-b', '--batch_size', dest='batch_size', type=int, default=5,
+    help='number of image files that should be registered per job '
+         '(default: 5)')
+
+init_registration_group = init_parser.add_argument_group(
+    'additional arguments for image registration')
+init_registration_group.add_argument(
     '--ref_cycle', type=int, required=True,
     help='id of the reference cycle')
-init_parser.add_argument(
+init_registration_group.add_argument(
     '--ref_channel', type=int, required=True,
     help='id of the reference channel')
-init_parser.add_argument(
-    '-m', '--max_shift', type=int, default=300,
-    help='maximally tolerated shift in pixels (default: 300)')
+init_registration_group.add_argument(
+    '-l', '--limit', type=int, default=300,
+    help='shift limit, i.e. maximally allowed shift in pixels (default: 300)')
 
 apply_parser = subparsers.choices['apply']
 apply_parser.add_argument(

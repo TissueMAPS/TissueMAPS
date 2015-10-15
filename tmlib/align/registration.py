@@ -66,7 +66,7 @@ def register_images(sites, target_files, reference_files, output_file):
         out[cycle]['site'] = list()
         for i in xrange(len(files)):
             target_filename = files[i]
-            logger.info('target: %s'
+            logger.info('target:    %s'
                         % os.path.basename(target_filename))
             ref_filename = reference_files[i]
             logger.info('reference: %s'

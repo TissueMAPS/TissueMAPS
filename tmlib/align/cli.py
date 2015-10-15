@@ -3,7 +3,7 @@ from . import logo
 from . import __version__
 from .api import ImageRegistration
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
+from ..experiment import ExperimentFactory
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class Align(CommandLineInterface):
     @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
-        experiment = Experiment(self.args.experiment_dir)
+        experiment = ExperimentFactory(self.args.experiment_dir).create()
         self.__api_instance = ImageRegistration(
                                 experiment=experiment, prog_name=self.name,
                                 verbosity=self.args.verbosity)
@@ -46,7 +46,7 @@ class Align(CommandLineInterface):
         kwargs['batch_size'] = self.args.batch_size
         kwargs['ref_cycle'] = self.args.ref_cycle
         kwargs['ref_channel'] = self.args.ref_channel
-        kwargs['max_shift'] = self.args.max_shift
+        kwargs['limit'] = self.args.limit
         return kwargs
 
     @property
