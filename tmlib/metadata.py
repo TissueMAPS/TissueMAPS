@@ -23,6 +23,12 @@ class ImageMetadata(object):
         self.is_aligned = False
         self.is_corrected = False
         self.is_omitted = False
+        self.upper_overhang = 0
+        self.lower_overhang = 0
+        self.right_overhang = 0
+        self.left_overhang = 0
+        self.x_shift = 0
+        self.y_shift = 0
 
     @property
     def id(self):
@@ -159,6 +165,108 @@ class ImageMetadata(object):
         if not(isinstance(value, int)) and value is not None:
             raise TypeError('Attribute "tpoint_ix" must have type int')
         self._tpoint_ix = value
+
+    @property
+    def upper_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the upper side of the image
+            relative to the corresponding image in the reference cycle
+        '''
+        return self._upper_overhang
+
+    @upper_overhang.setter
+    def upper_overhang(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "upper_overhang" must have type int')
+        self._upper_overhang = value
+
+    @property
+    def lower_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the lower side of the image
+            relative to the corresponding image in the reference cycle
+        '''
+        return self._lower_overhang
+
+    @lower_overhang.setter
+    def lower_overhang(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "lower_overhang" must have type int')
+        self._lower_overhang = value
+
+    @property
+    def left_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the left side of the image
+            relative to the corresponding image in the reference cycle
+        '''
+        return self._left_overhang
+
+    @left_overhang.setter
+    def left_overhang(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "left_overhang" must have type int')
+        self._left_overhang = value
+    
+    @property
+    def right_overhang(self):
+        '''
+        Returns
+        -------
+        int
+            overhang in pixels at the right side of the image
+            relative to the corresponding image in the reference cycle
+        '''
+        return self._right_overhang
+
+    @right_overhang.setter
+    def right_overhang(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "right_overhang" must have type int')
+        self._right_overhang = value
+
+    @property
+    def x_shift(self):
+        '''
+        Returns
+        -------
+        int
+            shift of the image in pixels in x direction relative to the
+            corresponding image in the reference cycle
+        '''
+        return self._x_shift
+
+    @x_shift.setter
+    def x_shift(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "x_shift" must have type int')
+        self._x_shift = value
+
+    @property
+    def y_shift(self):
+        '''
+        Returns
+        -------
+        int
+            shift of the image in pixels in y direction relative to the
+            corresponding image in the reference cycle
+        '''
+        return self._y_shift
+
+    @y_shift.setter
+    def y_shift(self, value):
+        if not(isinstance(value, int)) and value is not None:
+            raise TypeError('Attribute "y_shift" must have type int')
+        self._y_shift = value
 
     @property
     def is_omitted(self):

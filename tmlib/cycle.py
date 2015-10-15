@@ -259,9 +259,20 @@ class Cycle(object):
         if os.path.exists(alignment_file):
             with JsonReader() as reader:
                 description = reader.read(alignment_file)
-            import ipdb; ipdb.set_trace()
             align_description = AlignmentDescription.set(description)
-            # TODO
+            # Match shift descriptions via "site_ix"
+            fmd_sites = [fmd['site_ix'] for fmd in formatted_metadata]
+            align_sites = [shift.site_ix for shift in align_description.shifts]
+            for i, s in enumerate(fmd_sites):
+                overhang = align_description.overhang
+                formatted_metadata[i]['upper_overhang'] = overhang.upper
+                formatted_metadata[i]['lower_overhang'] = overhang.lower
+                formatted_metadata[i]['right_overhang'] = overhang.right
+                formatted_metadata[i]['left_overhang'] = overhang.left
+                ix = align_sites.index(s)
+                shift = align_description.shifts[ix]
+                formatted_metadata[i]['x_shift'] = shift.x
+                formatted_metadata[i]['y_shift'] = shift.y
         # Sort entries according to "name" to have the same order as the
         # values of attribute "image_files"
         metadata_table = pd.DataFrame(formatted_metadata).sort(['name'])
