@@ -136,8 +136,7 @@ class CommandLineInterface(object):
         # Since "init" requires more flexibility with respect to the number
         # of parsed arguments, we use a separate property, which can be
         # overwritten by subclasses to handle custom use cases
-        kwargs = dict()
-        return kwargs
+        return dict()
 
     def _cleanup(self):
         api = self._api_instance
@@ -307,7 +306,12 @@ class CommandLineInterface(object):
     @property
     def _variable_apply_args(self):
         kwargs = dict()
-        kwargs['plates']
+        kwargs['plates'] = self.args.plates
+        kwargs['wells'] = self.args.wells
+        kwargs['channels'] = self.args.channels
+        kwargs['zplanes'] = self.args.zplanes
+        kwargs['tpoints'] = self.args.tpoints
+        kwargs['sites'] = self.args.sites
         return kwargs
 
     def apply(self):
@@ -466,6 +470,9 @@ class CommandLineInterface(object):
             apply_selection_group.add_argument(
                 '-t', '--tpoints',  nargs='+', type=int, metavar='T',
                 help='time point (cycle) indices')
+            apply_selection_group.add_argument(
+                '-s', '--sites',  nargs='+', type=int, metavar='T',
+                help='acquisition site indices')
 
         if 'cleanup' in required_subparsers:
             apply_parser = subparsers.add_parser(

@@ -40,16 +40,6 @@ class Corilla(CommandLineInterface):
             % self.__api_instance.__class__.__name__)
         return self.__api_instance
 
-    @property
-    def _variable_apply_args(self):
-        kwargs = dict()
-        kwargs['plates'] = self.args.plates
-        kwargs['wells'] = self.args.wells
-        kwargs['channels'] = self.args.channels
-        kwargs['zplanes'] = self.args.zplanes
-        kwargs['tpoints'] = self.args.tpoints
-        return kwargs
-
     @staticmethod
     def call(args):
         '''

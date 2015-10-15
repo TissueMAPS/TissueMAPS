@@ -101,7 +101,7 @@ class ImageRegistration(ClusterRoutines):
             }
         }
         for plate in self.experiment.plates:
-            md = plate.cycles[0].image_metadata_table
+            md = plate.cycles[0].image_metadata_table.sort('site_ix')
             if len(np.unique(md['zplane_ix'])) > 1:
                 raise NotSupportedError(
                     'Alignment is currently only supported for 2D datasets.')
@@ -257,20 +257,18 @@ class ImageRegistration(ClusterRoutines):
             logger.debug('remove directory: %s', reg_dir)
             shutil.rmtree(reg_dir)
 
-    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
-                         **kwargs):
+    def apply_statistics(self, output_dir, **kwargs):
         '''
         Apply calculated statistics (shift and overhang values) to images
-        in order to align them between cycles.
+        in order to align them between cycles. A subset of images that should
+        be aligned can be selected based on following criteria:
+            * **plates**: plate names (*List[str]*)
+            * **wells**: cycle names (*List[str]*)
+            * **channels**: channel indices (*List[int]*)
+            * **zplanes**: z-plane indices (*List[int]*)
 
         Parameters
         ----------
-        wells: List[str]
-            well identifiers of images that should be aligned
-        sites: List[int]
-            one-based site indices of images that should be aligned
-        channels: List[str]
-            channel names of images that should be aligned
         output_dir: str
             absolute path to directory where the aligned images should be
             stored
@@ -278,45 +276,48 @@ class ImageRegistration(ClusterRoutines):
             additional variable input arguments as key-value pairs:
             * "illumcorr": also correct illumination artifacts (*bool*)
         '''
-        for cycle in self.cycles:
-            for channel in channels:
-                channel_index = [
-                    i for i, md in enumerate(cycle.image_metadata)
-                    if md.channel_name == channel
-                ]
-                if not channel_index:
-                    raise ValueError('Channel name is not valid: %s' % channel)
-                channel_images = [
-                    ChannelImage.create_from_file(
-                        os.path.join(cycle.image_dir, cycle.image_files[ix]),
-                        cycle.image_metadata[ix])
-                    for ix in channel_index
-                ]
-                if kwargs['illumcorr']:
-                    stats = [
-                        stats for stats in cycle.illumstats_images
-                        if stats.metadata.channel_name == channel
-                    ][0]
-
-                for i, image in enumerate(channel_images):
-                    if sites:
-                        if image.metadata.site_ix not in sites:
-                            continue
-                    if wells:
-                        if not image.metadata.well_id:  # may not be a well plate
-                            continue
-                        if image.metadata.well_id not in wells:
-                            continue
-                    suffix = os.path.splitext(image.metadata.name)[1]
+        logger.info('align images between cycles')
+        for plate in self.experiment.plates:
+            if kwargs['plates']:
+                if plate.name not in kwargs['plates']:
+                    continue
+            for cycle in plate.cycles:
+                if kwargs['tpoints']:
+                    if cycle.index not in kwargs['tpoints']:
+                        continue
+                md = cycle.image_metadata_table
+                sld = md.copy()
+                if kwargs['sites']:
+                    sld = sld[sld['site_ix'].isin(kwargs['sites'])]
+                if kwargs['wells']:
+                    sld = sld[sld['well_name'].isin(kwargs['wells'])]
+                if kwargs['channels']:
+                    sld = sld[sld['channel_ix'].isin(kwargs['channels'])]
+                if kwargs['zplanes']:
+                    sld = sld[sld['zplane_ix'].isin(kwargs['zplanes'])]
+                selected_channels = list(set(sld['channel_ix'].tolist()))
+                for c in selected_channels:
                     if kwargs['illumcorr']:
-                        image = image.correct(stats)
-                        output_filename = re.sub(
-                            r'\%s$' % suffix, '_corrected_aligned%s' % suffix,
-                            image.metadata.name)
-                    else:
+                        stats = [
+                            stats for stats in cycle.illumstats_images
+                            if stats.metadata.channel_ix == c
+                        ][0]
+                    sld = sld[sld['channel_ix'] == c]
+                    image_indices = sld['name'].index
+                    for i in image_indices:
+                        image = cycle.images[i]
+                        filename = image.metadata.name
+                        logger.info('align image: %s', filename)
+                        suffix = os.path.splitext(image.metadata.name)[1]
+                        if kwargs['illumcorr']:
+                            image = image.correct(stats)
+                            filename = re.sub(
+                                r'\%s$' % suffix, '_corrected%s' % suffix,
+                                filename)
+                        aligned_image = image.align()
                         output_filename = re.sub(
                             r'\%s$' % suffix, '_aligned%s' % suffix,
-                            image.metadata.name)
-                    aligned_image = image.align()
-                    output_filename = os.path.join(output_dir, output_filename)
-                    aligned_image.save_as_png(output_filename)
+                            filename)
+                        output_filename = os.path.join(
+                            output_dir, output_filename)
+                        aligned_image.save_as_png(output_filename)

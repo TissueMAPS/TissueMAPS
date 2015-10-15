@@ -61,7 +61,7 @@ class AlignmentDescription(object):
     def overhang(self, value):
         if not(isinstance(value, OverhangDescription) or value is None):
             raise TypeError(
-                    'Attribute "overhangs" must have type OverhangDescription')
+                    'Attribute "overhang" must have type OverhangDescription')
         self._overhang = value
 
     @property
@@ -143,14 +143,14 @@ class AlignmentDescription(object):
             raise KeyError('Aligment description requires key "shifts"')
         if not isinstance(description['shifts'], list):
             raise TypeError('The value of "shifts" must have type list')
-        if 'overhangs' not in description.keys():
-            raise KeyError('Aligment description requires key "overhangs"')
-        if not isinstance(description['overhangs'], dict):
-            raise TypeError('The value of "overhangs" must have type dict')
+        if 'overhang' not in description.keys():
+            raise KeyError('Aligment description requires key "overhang"')
+        if not isinstance(description['overhang'], dict):
+            raise TypeError('The value of "overhang" must have type dict')
 
         alignment = AlignmentDescription()
-        for key, value in description:
-            if key == 'overhangs':
+        for key, value in description.iteritems():
+            if key == 'overhang':
                 overhang = OverhangDescription()
                 for k, v in value.iteritems():
                     if k in overhang.PERSISTENT:
@@ -192,7 +192,7 @@ class OverhangDescription(object):
         int
             overhang in pixels at the lower side of the image
             relative to its reference:
-            pixels to crop at the bottom of the image
+            number of pixels to crop at the bottom of the image
         '''
         return self._lower
 
@@ -211,7 +211,7 @@ class OverhangDescription(object):
         int
             overhang in pixels at the upper side of the image
             relative to its reference:
-            pixels to crop at the top of the image
+            number of pixels to crop at the top of the image
         '''
         return self._upper
 
@@ -230,7 +230,7 @@ class OverhangDescription(object):
         int
             overhang in pixels at the left side of the image relative
             to its reference:
-            pixels to crop at the left side of the image
+            number of pixels to crop at the left side of the image
         '''
         return self._left
 
@@ -249,7 +249,7 @@ class OverhangDescription(object):
         int
             overhang in pixels at the right side of the image relative
             to its reference:
-            pixels to crop at the right side of the image
+            number of pixels to crop at the right side of the image
         '''
         return self._right
 

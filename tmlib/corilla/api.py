@@ -126,7 +126,7 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         Apply the calculated statistics to images in order to correct them for
         illumination artifacts. A subset of images that should be corrected can
-        be selected based on various criteria:
+        be selected based on following criteria:
             * **plates**: plate names (*List[str]*)
             * **wells**: cycle names (*List[str]*)
             * **channels**: channel indices (*List[int]*)
@@ -151,6 +151,8 @@ class IllumstatsGenerator(ClusterRoutines):
                         continue
                 md = cycle.image_metadata_table
                 sld = md.copy()
+                if kwargs['sites']:
+                    sld = sld[sld['site_ix'].isin(kwargs['sites'])]
                 if kwargs['wells']:
                     sld = sld[sld['well_name'].isin(kwargs['wells'])]
                 if kwargs['channels']:
@@ -167,13 +169,13 @@ class IllumstatsGenerator(ClusterRoutines):
                     image_indices = sld['name'].index
                     for i in image_indices:
                         image = cycle.images[i]
-                        input_filename = image.metadata.name
-                        logger.info('correct image: %s', input_filename)
+                        filename = image.metadata.name
+                        logger.info('correct image: %s', filename)
                         corrected_image = image.correct(stats)
                         suffix = os.path.splitext(image.metadata.name)[1]
                         output_filename = re.sub(
                             r'\%s$' % suffix, '_corrected%s' % suffix,
-                            input_filename)
+                            filename)
                         output_filename = os.path.join(
                             output_dir, output_filename)
                         corrected_image.save_as_png(output_filename)

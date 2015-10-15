@@ -52,6 +52,12 @@ class Align(CommandLineInterface):
     @property
     def _variable_apply_args(self):
         kwargs = dict()
+        kwargs['plates'] = self.args.plates
+        kwargs['wells'] = self.args.wells
+        kwargs['channels'] = self.args.channels
+        kwargs['zplanes'] = self.args.zplanes
+        kwargs['tpoints'] = self.args.tpoints
+        kwargs['sites'] = self.args.sites
         kwargs['illumcorr'] = self.args.illumcorr
         return kwargs
 
