@@ -3,6 +3,7 @@ import sys
 import h5py
 import logging
 import collections
+import numpy as np
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from . import path_utils
@@ -11,6 +12,7 @@ from .project import JtProject
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
 from .. import utils
+from .. import image_utils
 from ..readers import YamlReader
 from ..cluster import ClusterRoutines
 from ..errors import PipelineDescriptionError
@@ -22,7 +24,7 @@ logger = logging.getLogger(__name__)
 class ImageAnalysisPipeline(ClusterRoutines):
 
     '''
-    Class for running a Jterator image processing pipeline.
+    Class for running an image processing pipeline.
     '''
 
     def __init__(self, experiment, prog_name, verbosity, pipe_name,
@@ -39,7 +41,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         verbosity: int
             logging level
         pipe_name: str
-            name of the pipeline that is being processed
+            name of the pipeline that should be processed
         pipe: dict, optional
             name of the pipeline and the description of module order and
             paths to module code and descriptor files
@@ -72,8 +74,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.project = JtProject(
                     project_dir=self.project_dir, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
-        # self.project.pipe = pipe
-        # self.project.handles = handles
 
     @cached_property
     def project_dir(self):
@@ -84,9 +84,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
             directory where joblist file, pipeline and module descriptor files,
             log output, figures and data will be stored
         '''
-        self._project_dir = os.path.join(self.experiment.dir,
-                                         'tmaps_%s_%s' % (self.prog_name,
-                                                          self.pipe_name))
+        self._project_dir = os.path.join(self.experiment.dir, 'tmaps',
+                                         '%s_%s' % (self.prog_name,
+                                                    self.pipe_name))
         return self._project_dir
 
     @property
@@ -97,9 +97,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         JtProject
             jterator project object
         '''
-        # self._project = JtProject(
-        #             project_dir=self.project_dir, pipe_name=self.pipe_name,
-        #             pipe=self.pipe, handles=self.handles)
         return self._project
 
     @project.setter
@@ -107,6 +104,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self._project = value
 
     def check_pipeline(self):
+        '''
+        Check the content of the `pipe` and `handles` descriptor files.
+        '''
         handles_descriptions = [h['description'] for h in self.project.handles]
         checker = PipelineChecker(
                 project_dir=self.project_dir,
@@ -236,21 +236,26 @@ class ImageAnalysisPipeline(ClusterRoutines):
         do this only once, because they may have long startup times, which
         would slow down the execution of the pipeline, if we would have to do
         it repeatedly for each module.
+
+        Note
+        ----
+        For Matlab, you need to set the MATLABPATH environment variable
+        in order to add module dependencies to the Matlab path.
         '''
         languages = [m.language for m in self.pipeline]
         self.engines = dict()
         self.engines['Python'] = None
         self.engines['R'] = None
         if 'Matlab' in languages:
-            logger.debug('start Matlab engine')
+            logger.info('start Matlab engine')
             self.engines['Matlab'] = matlab.MatlabSession()
-            # We have to make sure code that may be called within the module,
-            # i.e. the module dependencies, are actually on the path.
-            # To this end, can make use of the MATLABPATH environment variable.
+            # We have to make sure that code which may be called by a module,
+            # are actually on the MATLAB path.
+            # To this end, the MATLABPATH environment variable can be used.
             # However, this only adds the folder specified
             # by the environment variable, but not its subfolders. To enable
-            # this we generate a Matlab path for each directory specified
-            # in the environment variable.
+            # this, we add each directory specified in the environment variable
+            # to the path.
             matlab_path = os.environ['MATLABPATH']
             matlab_path = matlab_path.split(':')
             for p in matlab_path:
@@ -288,29 +293,30 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job descriptions
         '''
         self.check_pipeline()
-        joblist = dict()
-        joblist['run'] = list()
+        job_descriptions = dict()
+        job_descriptions['run'] = list()
+
         layer_names = [
             layer['name']
             for layer in self.project.pipe['description']['images']['layers']
         ]
-        image_files = dict()
-        for cycle in self.cycles:
-            # image files for each layer
-            image_files.update({
-                md.name: [
-                    os.path.join(cycle.image_dir, f) for f in md.filenames
-                ]
-                for md in cycle.layer_metadata
-                if md.name in layer_names
-            })
+
+        if all([name is None for name in layer_names]):
+            raise PipelineDescriptionError(
+                    'At least one layer needs to be specified')
+
+        images = dict()
+        for name in layer_names:
+            if name is None:
+                continue
+            images[name] = self.experiment.layer_metadata[name]
 
         batches = [
-            {k: v[i] for k, v in image_files.iteritems()}
-            for i in xrange(len(image_files.values()[0]))
+            {k: v.filenames[i] for k, v in images.iteritems()}
+            for i in xrange(len(images.values()[0].filenames))
         ]
 
-        joblist['run'] = [{
+        job_descriptions['run'] = [{
             'id': i+1,
             'inputs': {
                 'image_files': batch
@@ -328,20 +334,27 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     for module in self.pipeline
                 ])
             }
+            # 'tpoint': [images[k].tpoint_ix for k in batch.keys()][0],
+            # 'zplane': [images[k].zplane_ix for k in batch.keys()][0],
+            # 'channel': [images[k].channel_ix for k in batch.keys()][0],
+            # 'site': [images[k].site_ixs[i] for k in batch.keys()][0]
         } for i, batch in enumerate(batches)]
 
-        joblist['collect'] = {
+        job_descriptions['collect'] = {
             'inputs': {
                 'data_files': [
                     self.build_data_filename(i+1) for i in xrange(len(batches))
                 ]
             },
             'outputs': {
-                'data_files': [self.experiment.data_file]
+                'data_files': [
+                    os.path.join(self.experiment.dir,
+                                 self.experiment.data_file)
+                ]
             }
         }
 
-        return joblist
+        return job_descriptions
 
     def _build_run_command(self, batch):
         # Overwrite method to account for additional "--pipeline" argument
@@ -374,13 +387,36 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_id = batch['id']
         data_file = self.build_data_filename(job_id)
         self._create_data_file(data_file)
+
+        # Load the image and correct/align it if required (requested)
+        layer_images = dict()
+        for layer in self.project.pipe['description']['images']['layers']:
+            filename = batch['inputs']['image_files'][layer['name']]
+            image = self.experiment.get_image_via_filename(filename)
+            if layer['correct']:
+                for plate in self.experiment.plates:
+                    if plate.name != image.metadata.plate_name:
+                        continue
+                    cycle = plate.cycles[image.metadata.tpoint_ix]
+                    stats = cycle.illumstats_images[image.metadata.channel_ix]
+                    image = image.correct(stats)
+            if layer['align']:
+                image = image.align()
+            if not isinstance(image.pixels, np.ndarray):
+                image_array = image_utils.vips_image_to_np_array(
+                                                image.pixels.array)
+            else:
+                image_array = image.pixels.array
+            layer_images[layer['name']] = image_array
+            import ipdb; ipdb.set_trace()
+
         outputs = collections.defaultdict(dict)
         outputs['data'] = dict()
         for module in self.pipeline:
             log_files = module.build_log_filenames(self.module_log_dir, job_id)
             figure_file = module.build_figure_filename(self.figures_dir, job_id)
             inputs = module.prepare_inputs(
-                        layers=batch['inputs']['image_files'],
+                        layers=layer_images,
                         upstream_output=outputs['data'],
                         data_file=data_file, figure_file=figure_file,
                         job_id=job_id)
@@ -399,6 +435,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def _build_collect_command(self):
         command = [self.prog_name]
+        command.extend(['-v' for x in xrange(self.verbosity)])
         command.extend(['-p', self.pipe_name])
         command.append(self.experiment.dir)
         command.extend(['collect'])
@@ -420,7 +457,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             for path, data in datasets.iteritems():
                 f.write(path, data)
 
-    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
-                         **kwargs):
+    def apply_statistics(self, output_dir, **kwargs):
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)
