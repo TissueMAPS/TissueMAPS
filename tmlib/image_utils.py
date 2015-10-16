@@ -167,16 +167,20 @@ def vips_image_to_np_array(vips_image):
 
     Returns
     -------
-    Vips.image
+    numpy.ndarray
+
+    Warning
+    -------
+    This seems to be buggy!!!
     '''
     nptype = vips_format_to_np_dtype(vips_image.get_format())
     mem_string = vips_image.write_to_memory()
     if vips_image.bands > 1:
         array = np.fromstring(mem_string, dtype=nptype).reshape(
-                    vips_image.width, vips_image.height, vips_image.bands)
+                    vips_image.height, vips_image.width, vips_image.bands)
     else:
         array = np.fromstring(mem_string, dtype=nptype).reshape(
-                    vips_image.width, vips_image.height)
+                    vips_image.height, vips_image.width)
     # TODO: 3D RGB images
     return array
 
