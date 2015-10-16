@@ -2,6 +2,7 @@ import os
 import numpy as np
 from ..mosaic import Mosaic
 from ..metadata import MosaicMetadata
+from .. import utils
 from .. import image_utils
 from ..readers import OpenslideImageReader
 from ..errors import NotSupportedError
@@ -79,12 +80,11 @@ class ChannelLayer(object):
         MetadataError
             when images are not all of the same cycle, channel, plane, or well
         '''
-        # Determine the dimensions of each well based on one example well
-        # in order to create spacer images, which can be used to fill gaps in
-        # the well plate (i.e. empty wells) and to visually separate wells from
-        # each other
+
         logger.info('stitch images to mosaic')
         layer_name = experiment.layer_names[(tpoint_ix, channel_ix, zplane_ix)]
+
+        # Plates are joined vertically:
 
         for p, plate in enumerate(experiment.plates):
             logger.info('stitching images of plate "%s" '
@@ -96,6 +96,8 @@ class ChannelLayer(object):
             # smaller spacer images to save disk space and computation time
             nonempty_rows, nonempty_columns = np.where(plate_grid)
 
+            # Determine the dimensions of wells based on one example well.
+            # NOTE: all wells in an experiment must have the same dimensions!
             cycle = plate.cycles[tpoint_ix]
             md = cycle.image_metadata_table
             wells = np.unique(md['well_name'])
@@ -108,30 +110,32 @@ class ChannelLayer(object):
             images = [cycle.images[ix] for ix in index]
 
             mosaic = Mosaic.create_from_images(images, dx, dy, None, shift)
-            gap_size = 750
-            # Start each row with a thin spacer image of 1 pixel width
-            init_spacer = image_utils.create_spacer_image(
-                    mosaic.dimensions[0], 1,
-                    dtype=mosaic.dtype, bands=1)
-            # Column spacer: inserted between two wells in each row
-            # (and instead of a well in case the whole column is empty)
+            gap_size = 500
+            # Column spacer: insert between two wells in each row
+            # (and instead of a well in case the whole column is empty
+            # and lies between other nonempty columns)
             column_spacer = image_utils.create_spacer_image(
                     mosaic.dimensions[0], gap_size,
                     dtype=mosaic.dtype, bands=1)
-            # Empty well spacer: inserted instead of a well in case the well
+            # Empty well spacer: insert instead of a well in case the well
             # is empty, but not the whole row or column is empty
             empty_well_spacer = image_utils.create_spacer_image(
                     mosaic.dimensions[0], mosaic.dimensions[1],
                     dtype=mosaic.dtype, bands=1)
-            # Row spacer: inserted between rows
-            # (and instead of wells in case the whole row is empty)
-            n_empty_cols = plate_grid.shape[1] - len(nonempty_columns)
+            # Row spacer: insert between rows
+            # (and instead of wells in case the whole row is empty and
+            # the empty row lies between other nonempty rows)
+            empty_columns_2fill = list(utils.missing_elements(
+                                        list(set(nonempty_columns))))
+            empty_rows_2fill = list(utils.missing_elements(
+                                        list(set(nonempty_rows))))
             n_nonempty_cols = len(nonempty_columns)
+            n_empty_cols_2fill = len(empty_columns_2fill)
             row_spacer = image_utils.create_spacer_image(
                     gap_size,
                     mosaic.dimensions[1]*n_nonempty_cols +
-                    column_spacer.width*n_empty_cols +
-                    column_spacer.width*(plate_grid.shape[1]-1) + 1,
+                    column_spacer.width*n_empty_cols_2fill +
+                    column_spacer.width*(plate_grid.shape[1]+1),
                     dtype=mosaic.dtype, bands=1)
 
             if illumcorr:
@@ -142,26 +146,34 @@ class ChannelLayer(object):
             else:
                 stats = None
 
+            # Start each plate with a spacer
+            layer_img = row_spacer
+
             for i in xrange(plate_grid.shape[0]):
 
                 if i not in nonempty_rows:
-                    if p == 0 and i == 0:
-                        layer_img = row_spacer
-                    else:
+                    if i in empty_rows_2fill:
+                        # Fill empty row with spacer
+                        # (if it lies between nonempty rows)
                         layer_img = layer_img.join(row_spacer, 'vertical')
                     continue
 
                 for j in xrange(plate_grid.shape[1]):
 
                     if j == 0:
-                        row_img = init_spacer
+                        # Start each row with a spacer
+                        row_img = column_spacer
 
                     if j not in nonempty_columns:
-                        row_img = row_img.join(column_spacer, 'horizontal')
+                        if j in empty_columns_2fill:
+                            # Fill empty column with spacer
+                            # (if it lies between nonempty columns)
+                            row_img = row_img.join(column_spacer, 'horizontal')
                         continue
 
                     well = plate_grid[i, j]
                     if well is None:
+                        # Fill empty well with spacer
                         row_img = row_img.join(empty_well_spacer, 'horizontal')
                     else:
                         index = np.where(
@@ -175,20 +187,22 @@ class ChannelLayer(object):
                                         images, dx, dy, stats, shift)
                         row_img = row_img.join(mosaic.array, 'horizontal')
 
-                    if j != (plate_grid.shape[1]-1):
-                        row_img = row_img.join(column_spacer, 'horizontal')
+                    # Add small vertical gab between wells
+                    row_img = row_img.join(column_spacer, 'horizontal')
 
-                # print 'ROW: height: %d, width: %d' % (row_img.height, row_img.width)
-
+                # Join rows together
                 if p == 0 and i == 0:
                     layer_img = row_img
                 else:
                     layer_img = layer_img.join(row_img, 'vertical')
 
-                if i != (plate_grid.shape[0]-1):
-                    layer_img = layer_img.join(row_spacer, 'vertical')
+                # Add small horizontal gab between rows of wells
+                layer_img = layer_img.join(row_spacer, 'vertical')
 
-                # print 'LAYER: height: %d, width: %d' % (layer_img.height, layer_img.width)
+            if len(experiment.plates) > 1:
+                # Add an additional vertical gab between plates
+                layer_img = layer_img.join(row_spacer, 'vertical')
+
 
         mosaic = Mosaic(layer_img)
         metadata = MosaicMetadata()

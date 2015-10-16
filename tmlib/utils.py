@@ -71,7 +71,7 @@ def flatten(data):
 
     Parameters
     ----------
-    data: List[list]
+    data: dataist[list]
 
     Returns
     -------
@@ -86,7 +86,7 @@ def common_substring(data):
 
     Parameters
     ----------
-    data: List[str]
+    data: dataist[str]
 
     Returns
     -------
@@ -186,3 +186,48 @@ def map_number_to_letter(number):
     "A"
     '''
     return chr(number+64)
+
+
+def missing_elements(data, start=None, end=None):
+    '''
+    Determine the missing elements in a sequence of integers.
+
+    Parameters
+    ----------
+    data: list
+    start: int, optional
+        lower limit of the range
+    end: int, optional
+        upper limit of the range
+
+    Examples
+    --------
+    >>>data = [10, 12, 13, 15, 16, 19, 20]
+    >>>list(missing_elements(data, 0, len(data)-1))
+    [11, 14, 17, 18]
+    '''
+    # NOTE: code adapted from stackoverflow.com (question 16974047)
+    if not start:
+        start = 0
+    if not end:
+        end = len(data)-1
+    
+    if end - start <= 1: 
+        if data[end] - data[start] > 1:
+            for d in range(data[start] + 1, data[end]):
+                yield d
+        return
+
+    index = start + (end - start) // 2
+
+    # is the lower half consecutive?
+    consecutive_low =  data[index] == data[start] + (index - start)
+    if not consecutive_low:
+        for s in missing_elements(data, start, index):
+            yield s
+
+    # is the upper part consecutive?
+    consecutive_high =  data[index] == data[end] - (end - index)
+    if not consecutive_high:
+        for e in missing_elements(data, index, end):
+            yield e
