@@ -12,6 +12,8 @@ from .metadata import MosaicMetadata
 from .config_setters import UserConfiguration
 from .config_setters import TmlibConfiguration
 from .errors import NotSupportedError
+from .errors import RegexError
+from .errors import MetadataError
 from .readers import UserConfigurationReader
 
 logger = logging.getLogger(__name__)
@@ -305,61 +307,90 @@ class Experiment(object):
             os.mkdir(self._layers_dir)
         return self._layers_dir
 
-    @cached_property
-    def layer_names(self):
+    # @cached_property
+    # def layer_image_files(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     Dict[str, List[str]]
+    #         absolute paths to the image files for each layer
+    #         (keys: names of the layers, values: paths to the files)
+    #     '''
+    #     self._layer_image_files = dict()
+    #     for lmd in self.layer_metadata:
+    #         self._layer_image_files[lmd.name] = lmd
+    #     return self._layer_image_files
+
+    def get_image_via_filename(self, filename):
         '''
+        Retrieve the image object for a given filename.
+
+        Parameters
+        ----------
+        filename: int
+            name of the image file
+
         Returns
         -------
-        Dict[Tuple[str], str]
-            unique name for each layer of this cycle, i.e. the set of images
-            with the same *channel_ix*, *zplane_ix* and *tpoint_ix*
-
-        Note
-        ----
-        If the attribute is not set, it will be attempted to retrieve the
-        information from the user configuration. If the information is
-        not available, default names are created, which are a unique
-        combination of *cycle* and *channel* names.
+        ChannelImage
+            image object
         '''
-        if hasattr(self.user_cfg, 'LAYER_NAMES'):
-            # self._layer_names = self.user_cfg.LAYER_NAMES
-            raise NotSupportedError('TODO')
-        else:
-            self._layer_names = dict()
-            for plate in self.plates:
-                for cycle in plate.cycles:
-                    md = cycle.image_metadata_table
-                    channels = np.unique(md['channel_ix'])
-                    zplanes = np.unique(md['zplane_ix'])
-                    for c in channels:
-                        for z in zplanes:
-                            k = (cycle.index, c, z)
-                            self._layer_names[k] = self.cfg.LAYER_NAME.format(
-                                experiment_name=self.name,
-                                t=cycle.index, c=c, z=z)
-        return self._layer_names
+        regex = utils.regex_from_format_string(self.cfg.IMAGE_FILE)
+        match = re.search(regex, os.path.basename(filename))
+        if not match:
+            raise RegexError('Metadata could not be determined from filename')
+        captures = match.groupdict()
+        for plate in self.plates:
+            if plate.name != captures['plate_name']:
+                continue
+            for cycle in plate.cycles:
+                if cycle.index != int(captures['t']):
+                    continue
+                md = cycle.image_metadata_table
+                ix = np.where(
+                        (md['channel_ix'] == int(captures['c'])) &
+                        (md['zplane_ix'] == int(captures['z'])) &
+                        (md['well_name'] == captures['w']) &
+                        (md['well_pos_x'] == int(captures['x'])) &
+                        (md['well_pos_y'] == int(captures['y'])))[0]
+                if len(ix) > 1:
+                    raise MetadataError(
+                            'A filename has to correspond to a single image.')
+                return cycle.images[ix]
 
     @property
     def layer_metadata(self):
         '''
         Returns
         -------
-        List[MosaicMetadata]
+        Dict[str, MosaicMetadata]
             metadata for each layer
         '''
-        self._layer_metadata = list()
-        channels = [cycle.channels for cycle in self.cycles]
-        planes = self.focal_planes
-        for c in channels:
-            for p in planes:
-                layer_name = self.layer_names[(c, p)]
-                images = [
-                    img for img in self.images
-                    if img.metadata.channel_name == c
-                    and img.metadata.zplane_ix == p
-                ]
-                self._layer_metadata.append(
-                    MosaicMetadata.create_from_images(images, layer_name))
+        if hasattr(self.user_cfg, 'LAYER_NAMES'):
+            raise NotSupportedError('TODO')
+        self._layer_metadata = dict()
+        for plate in self.plates:
+            for cycle in plate.cycles:
+                md = cycle.image_metadata_table
+                channels = np.unique(md['channel_ix'])
+                zplanes = np.unique(md['zplane_ix'])
+                for c in channels:
+                    for z in zplanes:
+                        metadata = MosaicMetadata()
+                        metadata.name = self.cfg.DEFAULT_LAYER_NAME.format(
+                                    experiment_name=self.name,
+                                    t=cycle.index, c=c, z=z)
+                        metadata.channel_ix = c
+                        metadata.zplane_ix = z
+                        metadata.tpoint_ix = cycle.index
+                        ix = ((md['channel_ix'] == c) & (md['zplane_ix'] == z))
+                        files = md[ix]['name'].tolist()
+                        metadata.filenames = [
+                            os.path.join(cycle.image_dir, f) for f in files
+                        ]
+                        sites = md[ix]['site_ix'].tolist()
+                        metadata.site_ixs = sites
+                        self._layer_metadata[metadata.name] = metadata
         return self._layer_metadata
 
     @property
@@ -379,44 +410,6 @@ class Experiment(object):
         self._data_filename = self.cfg.DATA_FILE.format(
                                 experiment_name=self.name, sep=os.path.sep)
         return self._data_filename
-
-    @cached_property
-    def acquisition_sites(self):
-        '''
-        Returns
-        -------
-        Set[int]
-            identifier numbers of image acquisition sites in the experiment
-
-        Note
-        ----
-        Each cycle in the experiment must have the same number of sites.
-        '''
-        self._acquisition_sites = set([
-                md.site_ix
-                for cycle in self.cycles
-                for md in cycle.image_metadata
-        ])
-        return self._acquisition_sites
-
-    @cached_property
-    def focal_planes(self):
-        '''
-        Returns
-        -------
-        Set[int]
-            identifier numbers of focal planes of images in the experiment
-
-        Note
-        ----
-        Each image in the experiment must have the same number of focal planes.
-        '''
-        self._focal_planes = set([
-                md.zplane_ix
-                for cycle in self.cycles
-                for md in cycle.image_metadata
-        ])
-        return self._focal_planes
 
     # def dump_metadata(self):
     #     experiment_e = etree.Element('experiment')

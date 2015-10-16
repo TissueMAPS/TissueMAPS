@@ -23,7 +23,7 @@ class CliArgError(Exception):
     '''
 
 
-class RegexpError(Exception):
+class RegexError(Exception):
     '''
     Error class that is raised when a regular expression pattern didn't match.
     '''

@@ -190,20 +190,21 @@ def map_number_to_letter(number):
 
 def missing_elements(data, start=None, end=None):
     '''
-    Determine the missing elements in a sequence of integers.
+    Determine missing elements in a sequence of integers.
 
     Parameters
     ----------
-    data: list
+    data: List[int]
+        sequence with potentially missing elements
     start: int, optional
-        lower limit of the range
+        lower limit of the range (defaults to ``0``)
     end: int, optional
-        upper limit of the range
+        upper limit of the range (defaults to ``len(data)-1``)
 
     Examples
     --------
     >>>data = [10, 12, 13, 15, 16, 19, 20]
-    >>>list(missing_elements(data, 0, len(data)-1))
+    >>>list(missing_elements(data))
     [11, 14, 17, 18]
     '''
     # NOTE: code adapted from stackoverflow.com (question 16974047)
@@ -211,7 +212,7 @@ def missing_elements(data, start=None, end=None):
         start = 0
     if not end:
         end = len(data)-1
-    
+
     if end - start <= 1: 
         if data[end] - data[start] > 1:
             for d in range(data[start] + 1, data[end]):

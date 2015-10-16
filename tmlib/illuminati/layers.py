@@ -82,10 +82,13 @@ class ChannelLayer(object):
         '''
 
         logger.info('stitch images to mosaic')
-        layer_name = experiment.layer_names[(tpoint_ix, channel_ix, zplane_ix)]
-
+        layer_name = [
+            lmd.name for lmd in experiment.layer_metadata
+            if lmd.tpoint_ix == tpoint_ix
+            and lmd.channel_ix == channel_ix
+            and lmd.zplane_ix == zplane_ix
+        ][0]
         # Plates are joined vertically:
-
         for p, plate in enumerate(experiment.plates):
             logger.info('stitching images of plate "%s" '
                         'for channel #%d and z-plane #%d',
@@ -139,10 +142,7 @@ class ChannelLayer(object):
                     dtype=mosaic.dtype, bands=1)
 
             if illumcorr:
-                stats = [
-                    stats for stats in cycle.illumstats_images
-                    if stats.metadata.channel_ix == channel_ix
-                ][0]
+                stats = cycle.illumstats_images[channel_ix]
             else:
                 stats = None
 
@@ -202,7 +202,6 @@ class ChannelLayer(object):
             if len(experiment.plates) > 1:
                 # Add an additional vertical gab between plates
                 layer_img = layer_img.join(row_spacer, 'vertical')
-
 
         mosaic = Mosaic(layer_img)
         metadata = MosaicMetadata()

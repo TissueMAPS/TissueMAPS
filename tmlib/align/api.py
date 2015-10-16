@@ -298,10 +298,7 @@ class ImageRegistration(ClusterRoutines):
                 selected_channels = list(set(sld['channel_ix'].tolist()))
                 for c in selected_channels:
                     if kwargs['illumcorr']:
-                        stats = [
-                            stats for stats in cycle.illumstats_images
-                            if stats.metadata.channel_ix == c
-                        ][0]
+                        stats = cycle.illumstats_images[c]
                     sld = sld[sld['channel_ix'] == c]
                     image_indices = sld['name'].index
                     for i in image_indices:

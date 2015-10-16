@@ -1,5 +1,5 @@
 import re
-from ..errors import RegexpError
+from ..errors import RegexError
 
 
 def get_image_ix(image_id):
@@ -19,7 +19,7 @@ def get_image_ix(image_id):
     '''
     match = re.search(r'^Image:(\d+)$', image_id)
     if not match:
-        RegexpError('Index of image could not be determined from image ID.')
+        RegexError('Index of image could not be determined from image ID.')
     return int(match.group(1))
 
 

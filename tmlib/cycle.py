@@ -14,7 +14,7 @@ from .image import ChannelImage
 from .image import IllumstatsImages
 from .metadata import ChannelImageMetadata
 from .metadata import IllumstatsImageMetadata
-from .errors import RegexpError
+from .errors import RegexError
 from metaconfig import ome_xml
 from align.descriptions import AlignmentDescription
 
@@ -63,16 +63,6 @@ class Cycle(object):
         self.library = library
 
     @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the cycle folder
-        '''
-        return os.path.basename(self.cycle_dir)
-
-    @property
     def dir(self):
         '''
         Returns
@@ -81,6 +71,26 @@ class Cycle(object):
             absolute path to the cycle folder
         '''
         return self.cycle_dir
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the cycle folder
+        '''
+        return os.path.basename(self.dir)
+
+    @property
+    def plate_name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the plate to which images of this cycle belong
+        '''
+        return os.path.dirname(self.dir)
 
     @property
     def index(self):
@@ -97,13 +107,13 @@ class Cycle(object):
 
         Raises
         ------
-        RegexpError
+        RegexError
             when `index` cannot not be determined from folder name
         '''
         regexp = utils.regex_from_format_string(self.cfg.CYCLE_DIR)
         match = re.search(regexp, self.name)
         if not match:
-            raise RegexpError(
+            raise RegexError(
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
                     % (self.name, self.cfg.CYCLE_DIR))
@@ -238,6 +248,7 @@ class Cycle(object):
                 ref_im = metadata.image(ref_ix)
                 formatted_metadata.append({
                     'name': ref_im.Name,
+                    'plate_name': self.plate_name,
                     'well_name': w,
                     'well_pos_y': s.PositionY,
                     'well_pos_x': s.PositionX,
@@ -382,7 +393,7 @@ class Cycle(object):
 
         Raises
         ------
-        RegexpError
+        RegexError
             when required information could not be retrieved from filename
         '''
         self._illumstats_metadata = list()
@@ -395,7 +406,7 @@ class Cycle(object):
                 md.tpoint_ix = self.index
                 md.filename = f
             else:
-                raise RegexpError('Can\'t determine channel and cycle number '
+                raise RegexError('Can\'t determine channel and cycle number '
                                   'from illumination statistic file "%s" '
                                   'using provided format "%s".\n'
                                   'Check your configuration settings!'
@@ -408,21 +419,21 @@ class Cycle(object):
         '''
         Returns
         -------
-        IllumstatsImages
-            illumination statistics images object for each image file in
-            `stats_dir`
+        Dict[int, IllumstatsImages]
+            illumination statistics images for each channel
 
         Note
         ----
         Image objects have lazy loading functionality, i.e. the actual image
         pixel array is only loaded into memory once the corresponding attribute
-        (property) is accessed.
+        is accessed.
         '''
-        self._illumstats_images = list()
+        self._illumstats_images = dict()
         for i, f in enumerate(self.illumstats_files):
             img = IllumstatsImages.create_from_file(
                     filename=os.path.join(self.stats_dir, f),
                     metadata=self.illumstats_metadata[i],
                     library=self.library)
-            self._illumstats_images.append(img)
+            channel = self.illumstats_metadata[i].channel_ix
+            self._illumstats_images[channel] = img
         return self._illumstats_images

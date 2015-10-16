@@ -9,7 +9,7 @@ from .metadata import ImageFileMapper
 from .formats import Formats
 from .readers import XmlReader
 from .readers import JsonReader
-from .errors import RegexpError
+from .errors import RegexError
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class Upload(object):
         regexp = utils.regex_from_format_string(self.cfg.UPLOAD_DIR)
         match = re.search(regexp, self.name)
         if not match:
-            raise RegexpError(
+            raise RegexError(
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
                     % (self.name, self.cfg.CYCLE_DIR))

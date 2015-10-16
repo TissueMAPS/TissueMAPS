@@ -161,10 +161,7 @@ class IllumstatsGenerator(ClusterRoutines):
                     sld = sld[sld['zplane_ix'].isin(kwargs['zplanes'])]
                 selected_channels = list(set(sld['channel_ix'].tolist()))
                 for c in selected_channels:
-                    stats = [
-                        stats for stats in cycle.illumstats_images
-                        if stats.metadata.channel_ix == c
-                    ][0]
+                    stats = cycle.illumstats_images[c]
                     sld = sld[sld['channel_ix'] == c]
                     image_indices = sld['name'].index
                     for i in image_indices:

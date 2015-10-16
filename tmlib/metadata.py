@@ -1,16 +1,11 @@
-from abc import ABCMeta
-from abc import abstractmethod
-from .errors import MetadataError
 
 
 class ImageMetadata(object):
 
     '''
-    Abstract base class for image metadata, such as the name of the channel or
+    Base class for image metadata, such as the name of the channel or
     the relative position of the image within the acquisition grid.
     '''
-
-    __metaclass__ = ABCMeta
 
     PERSISTENT = {
         'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'
@@ -59,9 +54,25 @@ class ImageMetadata(object):
 
     @name.setter
     def name(self, value):
-        if not(isinstance(value, basestring)) and value is not None:
+        if not(isinstance(value, basestring)):
             raise TypeError('Attribute "name" must have type basestring')
-        self._name = value
+        self._name = str(value)
+
+    @property
+    def plate_name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the plate to which the image belongs
+        '''
+        return self._plate_name
+
+    @plate_name.setter
+    def plate_name(self, value):
+        if not(isinstance(value, basestring)):
+            raise TypeError('Attribute "name" must have type basestring')
+        self._plate_name = str(value)
 
     @property
     def site_ix(self):
@@ -216,7 +227,7 @@ class ImageMetadata(object):
         if not(isinstance(value, int)) and value is not None:
             raise TypeError('Attribute "left_overhang" must have type int')
         self._left_overhang = value
-    
+
     @property
     def right_overhang(self):
         '''
@@ -653,7 +664,9 @@ class MosaicMetadata(object):
 
     @name.setter
     def name(self, value):
-        self._name = value
+        if not(isinstance(value, basestring)):
+            raise TypeError('Attribute "name" must have type basestring')
+        self._name = str(value)
 
     @property
     def zplane_ix(self):
@@ -668,7 +681,7 @@ class MosaicMetadata(object):
 
     @zplane_ix.setter
     def zplane_ix(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not(isinstance(value, int)):
             raise TypeError('Attribute "zplane_ix" must have type int')
         self._zplane_ix = value
 
@@ -684,7 +697,7 @@ class MosaicMetadata(object):
 
     @tpoint_ix.setter
     def tpoint_ix(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not(isinstance(value, int)):
             raise TypeError('Attribute "tpoint_ix" must have type int')
         self._tpoint_ix = value
 
@@ -700,73 +713,42 @@ class MosaicMetadata(object):
 
     @channel_ix.setter
     def channel_ix(self, value):
+        if not(isinstance(value, int)):
+            raise TypeError('Attribute "channel_ix" must have type int')
         self._channel_ix = value
 
-    # @property
-    # def site_ixs(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[int]
-    #         site identifier numbers of images contained in the mosaic
-    #     '''
-    #     return self._site_ixs
+    @property
+    def site_ixs(self):
+        '''
+        Returns
+        -------
+        List[int]
+            site identifier numbers of images contained in the mosaic
+        '''
+        return self._site_ixs
 
-    # @site_ixs.setter
-    # def site_ixs(self, value):
-    #     self._site_ixs = value
+    @site_ixs.setter
+    def site_ixs(self, value):
+        if not(isinstance(value, list)):
+            raise TypeError('Attribute "site_ixs" must have type list')
+        if not(all([isinstance(v, int) for v in value])):
+            raise TypeError('Elements of "site_ixs" must have type int')
+        self._site_ixs = value
 
-    # @property
-    # def filenames(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[str]
-    #         names of the individual image files, which make up the mosaic
-    #     '''
-    #     return self._filenames
+    @property
+    def filenames(self):
+        '''
+        Returns
+        -------
+        List[str]
+            absolute paths to the image files the mosaic is composed of
+        '''
+        return self._filenames
 
-    # @filenames.setter
-    # def filenames(self, value):
-    #     self._filenames = value
-
-    # @staticmethod
-    # def create_from_images(images, layer_name):
-    #     '''
-    #     Create a MosaicMetadata object from image objects.
-
-    #     Parameters
-    #     ----------
-    #     images: List[ChannelImage]
-    #         set of images that are all of the same *cycle* and *channel*
-
-    #     Returns
-    #     -------
-    #     MosaicMetadata
-
-    #     Raises
-    #     ------
-    #     MetadataError
-    #         when `images` are not of same *cycle* or *channel*
-    #     '''
-    #     # cycles = list(set([im.metadata.cycle_ix for im in images]))
-    #     # if len(cycles) > 1:
-    #     #     raise MetadataError('All images must be of the same cycle')
-    #     # channels = list(set([im.metadata.channel_ix for im in images]))
-    #     # if len(channels) > 1:
-    #     #     raise MetadataError('All images must be of the same channel')
-    #     # planes = list(set([im.metadata.zplane_ix for im in images]))
-    #     # if len(planes) > 1:
-    #     #     raise MetadataError('All images must be of the same focal plane')
-    #     metadata = MosaicMetadata()
-    #     metadata.name = layer_name
-    #     # metadata.cycle_ix = cycles[0]
-    #     # metadata.channel_ix = channels[0]
-    #     # metadata.zplane_ix = planes[0]
-    #     # sort filenames according to sites
-    #     sites = [im.metadata.site_ix for im in images]
-    #     sort_order = [sites.index(s) for s in sorted(sites)]
-    #     metadata.site_ixs = sorted(sites)
-    #     files = [im.metadata.name for im in images]
-    #     metadata.filenames = [files[ix] for ix in sort_order]
-    #     return metadata
+    @filenames.setter
+    def filenames(self, value):
+        if not(isinstance(value, list)):
+            raise TypeError('Attribute "filenames" must have type list')
+        if not(all([isinstance(v, basestring) for v in value])):
+            raise TypeError('Elements of "filenames" must have type basestring')
+        self._filenames = [str(v) for v in value]

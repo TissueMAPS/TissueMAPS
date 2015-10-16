@@ -45,10 +45,10 @@ ALIGN_DESCRIPTOR_FILE = 'alignment_description.json'
 STATS_DIR = '{cycle_dir}{sep}stats'
 STATS_FILE = 'channel_{channel_ix}.stat.h5'
 
-LAYER_NAME = '{experiment_name}_t{time:0>3}_c{channel:0>3}_z{plane:0>3}'
+DEFAULT_LAYER_NAME = '{experiment_name}_t{t:0>3}_c{c:0>3}_z{z:0>3}'
 
 IMAGE_DIR = '{cycle_dir}{sep}images'
 IMAGE_FILE = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.png'
 
 LAYERS_DIR = '{experiment_dir}{sep}layers'
-DATA_FILE = '{experiment_dir}{sep}{experiment_name}.data.h5'
+DATA_FILE = '{experiment_name}.data.h5'

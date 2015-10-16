@@ -14,7 +14,7 @@ from ..illuminati import stitch
 from .. import utils
 from ..errors import MetadataError
 from ..errors import NotSupportedError
-from ..errors import RegexpError
+from ..errors import RegexError
 from ..readers import MetadataReader
 
 logger = logging.getLogger(__name__)
@@ -359,7 +359,7 @@ class MetadataHandler(object):
             return self.metadata
 
         if not self.REGEX:
-            raise RegexpError('No regular expression available.')
+            raise RegexError('No regular expression available.')
 
         logger.info('configure OMEXML generated from additional files')
 
@@ -385,7 +385,7 @@ class MetadataHandler(object):
             filename = os.path.basename(self.file_mapper[i].files[0])
             match = r.search(filename)
             if not match:
-                raise MetadataError(
+                raise RegexError(
                         'Incorrect reference to image files in plate element.')
             captures = match.groupdict()
             if 'z' not in captures.keys():
@@ -519,19 +519,19 @@ class MetadataHandler(object):
         if not regex:
             regex = self.REGEX
         if not regex:
-            raise RegexpError('No regular expression provided.')
+            raise RegexError('No regular expression provided.')
 
         provided_names = re.findall(r'\(\?P\<(\w+)\>', regex)
         required_names = {'w', 'c', 'z', 's', 't'}
         for name in provided_names:
             if name not in required_names:
-                raise RegexpError(
+                raise RegexError(
                     '"%s" is not a supported group name.\n Supported are "%s"'
                     % (name, '", "'.join(required_names)))
 
         for name in required_names:
             if name not in provided_names:
-                raise RegexpError('Missing required group name "%s"', name)
+                raise RegexError('Missing required group name "%s"', name)
 
         logger.info('retrieve metadata from filenames via regular expression')
         logger.debug('expression: %s', regex)
@@ -544,7 +544,7 @@ class MetadataHandler(object):
             img = self.metadata.image(i)
             match = r.search(f)
             if not match:
-                raise RegexpError(
+                raise RegexError(
                         'Metadata could not be retrieved from filename "%s" '
                         'using regular expression "%s"' % (f, regex))
             capture = match.groupdict()

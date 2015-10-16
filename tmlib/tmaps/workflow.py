@@ -55,7 +55,7 @@ class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
         ----
         The file is located in the root directory of the experiment folder.
         '''
-        self._workflow_file = '{experiment}.workflow'.format(
+        self._workflow_file = '{experiment}.workflow.txt'.format(
                                     experiment=self.experiment.name)
         return self._workflow_file
 
