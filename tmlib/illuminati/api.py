@@ -135,7 +135,6 @@ class PyramidBuilder(ClusterRoutines):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
                              ' method' % self.__class__.__name__)
 
-    def apply_statistics(self, job_descriptions, wells, sites, channels, output_dir,
-                         **kwargs):
+    def apply_statistics(self, output_dir, **kwargs):
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)

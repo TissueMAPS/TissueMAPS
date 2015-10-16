@@ -109,22 +109,12 @@ class MetadataExtractor(ClusterRoutines):
         raise AttributeError('"%s" step has no "run" routine'
                              % self.prog_name)
 
-    def _build_collect_command(self):
-        command = [self.prog_name]
-        command.extend(['-v' for x in xrange(self.verbosity)])
-        command.append(self.experiment.dir)
-        command.extend(['collect'])
-        return command
-
     def collect_job_output(self, batch):
         '''
-        The *showinf* command prints the OME-XML string to standard output.
+        The *showinf* command prints the OMEXML string to standard output.
         GC3Pie redirects the standard output to a log file. Here we copy the
         content of the log file to the files specified by the `omexml_files`
         attribute.
-
-        The extracted metadata is used to create custom metadata, which will be
-        subsequently used by TissueMAPS.
 
         Parameters
         ----------
@@ -141,7 +131,6 @@ class MetadataExtractor(ClusterRoutines):
             output_files = natsorted(output_files)
             shutil.copyfile(output_files[0], f)
 
-    def apply_statistics(self, joblist, wells, sites, channels, output_dir,
-                         **kwargs):
+    def apply_statistics(self, output_dir, **kwargs):
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)
