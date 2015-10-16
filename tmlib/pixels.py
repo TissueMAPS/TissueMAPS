@@ -481,7 +481,7 @@ class NumpyPixels(Pixels):
                     self.array, y=sd.y_shift, x=sd.x_shift,
                     bottom=sd.upper_overhang, top=sd.lower_overhang,
                     right=sd.left_overhang, left=sd.right_overhang,
-                    shift=not(sd.omit), crop=crop))
+                    shift=not(sd.is_omitted), crop=crop))
 
     def correct_illumination(self, mean_image, std_image):
         '''
