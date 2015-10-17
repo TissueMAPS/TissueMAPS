@@ -48,5 +48,8 @@
     "load-grunt-tasks": "^3.1.0",
     "protractor": "^2.1.0",
     "time-grunt": "^1.1.0"
+  },
+  "dependencies": {
+    "typescript": "^1.6.2"
   }
 }
