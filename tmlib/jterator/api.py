@@ -271,7 +271,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Build name of the HDF5 file where pipeline data will be stored.
         '''
         data_file = os.path.join(self.data_dir,
-                                 '%s_%.5d.data' % (self.pipe_name, job_id))
+                                 '%s_%.5d.data.h5' % (self.pipe_name, job_id))
         return data_file
 
     def _create_data_file(self, data_file):
@@ -400,15 +400,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     cycle = plate.cycles[image.metadata.tpoint_ix]
                     stats = cycle.illumstats_images[image.metadata.channel_ix]
                     image = image.correct(stats)
-            if layer['align']:
-                image = image.align()
+            image = image.align()
             if not isinstance(image.pixels, np.ndarray):
                 image_array = image_utils.vips_image_to_np_array(
                                                 image.pixels.array)
             else:
                 image_array = image.pixels.array
             layer_images[layer['name']] = image_array
-            import ipdb; ipdb.set_trace()
 
         outputs = collections.defaultdict(dict)
         outputs['data'] = dict()

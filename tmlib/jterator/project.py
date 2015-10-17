@@ -71,7 +71,8 @@ class JtProject(object):
         str
             name of the corresponding experiment
         '''
-        self._experiment = os.path.basename(os.path.dirname(self.project_dir))
+        self._experiment = os.path.basename(
+                            os.path.dirname(os.path.dirname(self.project_dir)))
         return self._experiment
 
     @property
@@ -228,7 +229,9 @@ class JtProject(object):
                 'description': str()
             },
             'images': {
-                'layers': list()
+                'layers': [
+                    {'name': str(), 'correct': True}
+                ]
             },
             'pipeline': list()
         }

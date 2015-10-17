@@ -5,11 +5,10 @@ project:
 images:
   layers:
   - name: 150820-Testset-CV-1-1
+    correct: true
   - name: 150820-Testset-CV-2-1
+    correct: true
 pipeline:
-- active: true
-  handles: handles/load_image.handles
-  module: '{lib}/load_image.py'
 - active: true
   handles: handles/threshold_image.handles
   module: '{lib}/threshold_image.py'

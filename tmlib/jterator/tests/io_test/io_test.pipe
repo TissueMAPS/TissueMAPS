@@ -16,6 +16,7 @@ project:
 images:
   layers:
   - name: 
+    correct:
 
 
 # Define path to modules (executable files) and handles (YAML files)
