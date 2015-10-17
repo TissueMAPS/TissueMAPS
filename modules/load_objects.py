@@ -1,64 +1,62 @@
 import numpy as np
+import mahotas as mh
+from scipy import ndimage as ndi
 import pylab as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import mpld3
 import collections
-from tmt.project import Project
-from tmt.image import Image
-from jterator import jtapi
+from tmlib.jterator import jtapi
+from tmlib.readers import DatasetReader
+from tmlib.experiment import Experiment
+from tmlib import cfg
 
 
-def load_objects(RefImageFilename, ObjectsName, Config, **kwargs):
+def load_objects(objects_name, **kwargs):
     '''
-    Jterator module for loading a "label" image for particular objects
-    from disk into memory in order to make it available to downstream modules.
+    Jterator module for loading outline coordinates of segmented objects from
+    a HDF5 file on disk. A mask image is then reconstructed from the outlines
+    and labeled so that all pixels of an object (connected components) have a
+    unique identifier number.
 
     Parameters
     ----------
-    RefImageFilename: str
-        filename of the reference image
-    ObjectsName: str
-        name of the objects in the labeled segmentation image that should be
-        loaded
-    Config: dict
-        configuration settings
+    objects_name: str
+        name of the objects in the label image that should be loaded
     **kwargs: dict
         additional arguments provided by Jterator:
-        "ProjectDir", "DataFile", "FigureFile", "Plot"
+        "data_file", "figure_file", "experiment_dir", "plot", "job_id"
 
     Returns
     -------
-    namedtuple[numpy.ndarray[int32]]
-        loaded image: "Objects"
+    namedtuple[numpy.ndarray[uint]]
+        label image that encodes the objects: "loaded_objects"
     '''
-    Config['USE_VIPS_LIBRARY'] = False  # use numpy
+    experiment = Experiment(kwargs['experiment_dir'], cfg)
 
-    # determine current site from reference image
-    current_site = Image(RefImageFilename, Config).site
-    # load corresponding segmentation image for the specified objects
-    project = Project(kwargs['ProjectDir'], Config)
-    img = [f.image for f in project.segmentation_files
-           if f.objects == ObjectsName and f.site == current_site][0]
+    # Does job_id do it? Consider matching metadata such site, channel, ...
 
-    if len(img) > 0 or not img:
-        raise IOError('Filename of the labeled segmentation image could not'
-                      'be determined correctly from reference image filename '
-                      'and objects name. Check your settings!')
-    else:
-        img = img[0]
+    with DatasetReader(experiment.data_file) as f:
+        sites = f.read('%s/segmentation/site_ids' % objects_name)
+        site_index = sites == kwargs['job_id']
+        y_coordinates = f.read('%s/segmentation/y_coordinates' % objects_name,
+                               index=site_index)
+        x_coordinates = f.read('%s/segmentation/x_coordinates' % objects_name,
+                               index=site_index)
+        image_dims = f.read('%s/segmentation/image_dimensions' % objects_name,
+                            index=site_index)
+
+    outline_image = np.zeros(image_dims)
+    outline_image[y_coordinates, x_coordinates] = 1
+    mask_image = ndi.binary_fill_holes(outline_image)
+    labeled_image, n_objects = mh.label(mask_image)
 
     if kwargs['plot']:
 
         fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(1, 1, 1)
 
-        rescale_lower = np.percentile(img, 0.1)
-        rescale_upper = np.percentile(img, 99.9)
-
-        im = ax.imshow(img, cmap='gray',
-                       vmin=rescale_lower,
-                       vmax=rescale_upper)
-        ax.set_title(ObjectsName, size=20)
+        im = ax.imshow(labeled_image)
+        ax.set_title(objects_name, size=20)
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -69,7 +67,7 @@ def load_objects(RefImageFilename, ObjectsName, Config, **kwargs):
         mpld3.plugins.connect(fig, mousepos)
         mpld3.fig_to_html(fig, template_type='simple')
 
-        jtapi.savefigure(fig, kwargs['FigureFile'])
+        jtapi.savefigure(fig, kwargs['figure_file'])
 
-    output = collections.namedtuple('Output', 'LoadedObjects')
-    return output(img)
+    output = collections.namedtuple('Output', 'loaded_objects')
+    return output(labeled_image)

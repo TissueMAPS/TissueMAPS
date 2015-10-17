@@ -1,0 +1,54 @@
+---
+input:
+
+    - name: input_image
+      class: pipeline
+      value: 
+      help: Image that should be smoothed.
+
+    - name: filter
+      class: parameter
+      value: 
+      options:
+        - average
+        - gaussian
+        - median
+        - bilateral
+      help: Filter kernel that should be applied.
+
+    - name: filter_size
+      class: parameter
+      value: 
+      help: >
+          Size (width and height) of the kernel.
+          Provide a single positive and odd integer value.
+
+    - name: sigma
+      class: parameter
+      value:
+      help: >
+        Standard deviation of the Gaussian kernel,
+        only relevant for "gaussian" filter
+
+    - name: sigma_color
+      class: parameter
+      value:
+      help: >
+        Gaussian component applied in the intensity domain (color space),
+        only relevant for "bilateral" filter
+
+    - name: sigma_space
+      class: parameter
+      value:
+      help: >
+        Gaussian component applied in the spatial domain (coordinate space),
+        only relevant for "bilateral" filter
+
+output:
+
+    - name: smoothed_image
+      class: pipeline
+      value:
+      help: Smoothed image.
+
+plot: false

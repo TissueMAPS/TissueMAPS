@@ -1,0 +1,21 @@
+---
+input:
+
+    - name: image_filename
+      class: pipeline
+      value:
+      help: Name of the image file.
+
+    - name: illumcorr
+      class: parameter
+      value: Yes
+      help: Should the image be corrected for illumination artifacts?
+
+output:
+
+    - name: loaded_image
+      class: pipeline
+      value:
+      help: Loaded channel image. 
+
+plot: false

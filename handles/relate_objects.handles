@@ -1,0 +1,26 @@
+---
+input:
+
+    - name: parent_objects_image
+      class: pipeline
+      value: 
+      help: Label image containing parent objects.
+
+    - name: parent_objects_name
+      class: parameter
+      value:
+      help: Name of the parent objects.
+
+    - name: children_objects_image
+      class: pipeline
+      value: 
+      help: Label image containing children objects.
+
+    - name: children_objects_name
+      class: parameter
+      value: 
+      help: Name of the children objects.
+
+output:
+
+plot: false

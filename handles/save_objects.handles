@@ -1,0 +1,16 @@
+---
+input:
+
+    - name: labeled_image
+      class: pipeline
+      value:
+      help: Labeled image that contains the objects.
+
+    - name: objects_name
+      class: parameter
+      value: 
+      help: Name of should be given to the objects.
+
+output:
+
+plot: false

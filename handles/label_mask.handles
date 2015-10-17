@@ -1,0 +1,18 @@
+---
+input:
+
+    - name: mask
+      class: pipeline
+      value: 
+      help: Binary image that should be labeled.
+
+output:
+
+    - name: objects
+      class: pipeline
+      value: 
+      help: >
+        Labeled image, where pixels of each connected component (object)
+        have a unique non-zero value (label).
+
+plot: false

@@ -1,26 +1,27 @@
 from skimage import measure
-import jtapi
+from tmlib.jterator import jtapi
 from jtlib import utils
 from jtlib import features
 
 
-def measure_morphology(InputImage, ObjectsName, Zernike=False, **kwargs):
+def measure_morphology(objects_image, objects_name, zernike=False, **kwargs):
     '''
-    Jterator module for measuring morhological features in a labeled image.
+    Jterator module for measuring morhological features of objects
+    (connected components) in a labeled image.
     For more details see
     `mahotas docs <http://mahotas.readthedocs.org/en/latest/features.html>`_.
 
     Parameters
     ----------
-    InputImage: numpy.ndarray[int]
-        labeled input image
-    ObjectsName: str
-        name of the objects (labeled connected components) in `InputImage`
-    Zernike: bool, optional
+    objects_image: numpy.ndarray[int]
+        input label image
+    objects_name: str
+        name of the objects (labeled connected components) in `objects_image`
+    zernike: bool, optional
         whether Zernike moments should be measured (defaults to False)
     **kwargs: dict
         additional arguments provided by Jterator:
-        "ProjectDir", "DataFile", "FigureFile", "Plot"
+        "data_file", "figure_file", "experiment_dir", "plot", "job_id"
 
     See also
     --------
@@ -28,13 +29,13 @@ def measure_morphology(InputImage, ObjectsName, Zernike=False, **kwargs):
     '''
     measurement_names = []
     measurement_names.append('morphology')  # measure by default
-    if Zernike:
+    if zernike:
         measurement_names.append('zernike')
 
     data = dict()
 
     # Get coordinates of region containing individual objects
-    regions = measure.regionprops(InputImage)
+    regions = measure.regionprops(objects_image)
 
     # Calculate threshold across the whole image
     RADIUS = 100
@@ -46,14 +47,14 @@ def measure_morphology(InputImage, ObjectsName, Zernike=False, **kwargs):
     for j, r in enumerate(regions):
 
         # Crop images to region of current object
-        mask = utils.crop_image(InputImage, bbox=r.bbox)
+        mask = utils.crop_image(objects_image, bbox=r.bbox)
         mask = mask == (j+1)  # only current object
 
         # Morphological features
         feats = features.measure_morphology(r)
         measurements['morphology'].append(feats)
 
-        # Zernike moments
+        # zernike moments
         if 'zernike' in measurement_names:
             feats = features.measure_zernike(mask, radius=RADIUS)
             measurements['zernike'].append(feats)
@@ -62,10 +63,10 @@ def measure_morphology(InputImage, ObjectsName, Zernike=False, **kwargs):
         feature_names = measurements[m][0].keys()
         for f in feature_names:
             feats = [item[f] for item in measurements[m]]
-            data['%s_AreaShape_%s' % (ObjectsName, f)] = feats
+            data['%s_AreaShape_%s' % (objects_name, f)] = feats
 
     # TODO: make a nice plot showing the label image and some features
     # in form of a scatterplot with the data points colored the same
     # as the objects in the label image
 
-    jtapi.writedata(data, kwargs['DataFile'])
+    jtapi.writedata(data, kwargs['data_file'])

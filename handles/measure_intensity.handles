@@ -1,0 +1,26 @@
+---
+input:
+
+    - name: objects_image
+      class: pipeline
+      value: 
+      help: Label input image.
+
+    - name: objects_name
+      class: parameter
+      value: 
+      help: Name of the objects that should be measured.
+
+    - name: channel_image
+      class: pipeline
+      value: 
+      help: Greyscale input image.
+
+    - name: channel_name
+      class: parameter
+      value: 
+      help: Name of the channel that should be used for the measurements.
+
+output:
+
+plot: false

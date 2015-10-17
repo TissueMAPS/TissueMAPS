@@ -1,0 +1,16 @@
+---
+input:
+
+    - name: objects_name
+      class: parameter
+      value: 
+      help: Name of the objects that should be loaded.
+
+output:
+
+    - name: loaded_objects
+      class: pipeline
+      value: 
+      help: Loaded objects.
+
+plot: false
