@@ -3,8 +3,8 @@ from gi.repository import Vips
 from scipy.misc import imread, bytescale
 import numpy as np
 import cv2
-# import png
 import logging
+from skimage.exposure import rescale_intensity
 
 logger = logging.getLogger(__name__)
 
@@ -338,3 +338,23 @@ def create_thresholding_LUT(threshold):
     lut = condition_image.ifthenelse(threshold, identity_image)
 
     return lut
+
+
+def convert_to_uint8(img):
+    '''
+    Convert a 16-bit image to 8-bit by linearly scaling from the range between
+    the minimum value and the 99.9th percentile value to 0-255.
+    
+    This can be useful for display of the image.
+
+    Parameters
+    ----------
+    image: numpy.ndarray[uint16]
+
+    Returns
+    -------
+    numpy.ndarray[uint8]
+    '''
+    in_range = (np.min(img), np.percentile(img, 99.9))  # np.max(img)
+    img_rescaled = rescale_intensity(img, out_range='uint8', in_range=in_range).astype(np.uint8)
+    return img_rescaled
