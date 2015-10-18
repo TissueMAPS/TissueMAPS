@@ -451,9 +451,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         # NOTE: the job id should correspond to the site number
         datasets = fusion.fuse_datasets(batch['inputs']['data_files'])
-        with DatasetWriter(batch['outputs']['data_files'][0]) as f:
+        with DatasetWriter(batch['outputs']['data_files'][0], truncate=True) as f:
             for path, data in datasets.iteritems():
                 f.write(path, data)
+
+        # TODO: create the JSON file required by the client
 
     def apply_statistics(self, output_dir, **kwargs):
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'

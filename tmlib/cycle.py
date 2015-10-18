@@ -90,7 +90,7 @@ class Cycle(object):
         str
             name of the plate to which images of this cycle belong
         '''
-        return os.path.dirname(self.dir)
+        return os.path.basename(os.path.dirname(self.dir))
 
     @property
     def index(self):
