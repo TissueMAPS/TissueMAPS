@@ -232,7 +232,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
             title('Labeled separated mask');
             freezeColors
 
-            jtapi.savefigure(fig, varargin{2})
+            jtapi.save_mpl_figure(fig, varargin{2})
 
         end
 

@@ -1,6 +1,7 @@
 from scipy import ndimage as ndi
 import collections
 import pylab as plt
+import numpy as np
 from tmlib.jterator import jtapi
 
 
@@ -27,18 +28,18 @@ def fill_mask(mask, **kwargs):
     if kwargs['plot']:
 
         fig = plt.figure(figsize=(10, 10))
-        ax1 = fig.add_subplot(1, 2, 1)
-        ax2 = fig.add_subplot(1, 2, 2)
+        ax1 = fig.add_subplot(1, 1, 1)
 
-        ax1.imshow(mask)
-        ax1.set_title('input mask', size=20)
+        img_obj = np.zeros(img.shape)
+        img_obj[img > 0] = 1
+        img_obj[img == 0] = np.nan
 
-        ax2.imshow(img)
-        ax2.set_title('filled mask', size=20)
+        ax1.imshow(img_obj, cmap=plt.cm.Set1)
+        ax1.set_title('filled mask', size=20)
 
         fig.tight_layout()
 
-        jtapi.savefigure(fig, kwargs['figure_file'])
+        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'filled_mask')
     return output(img)

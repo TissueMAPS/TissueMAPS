@@ -1,5 +1,6 @@
 import pylab as plt
 import collections
+import numpy as np
 from tmlib.jterator import jtapi
 from jtlib import utils
 
@@ -34,18 +35,17 @@ def label_mask(mask, **kwargs):
     if kwargs['plot']:
 
         fig = plt.figure(figsize=(10, 10))
-        ax1 = fig.add_subplot(1, 2, 1)
-        ax2 = fig.add_subplot(1, 2, 2)
+        ax1 = fig.add_subplot(1, 1, 1)
 
-        ax1.imshow(mask)
-        ax1.set_title('input image', size=20)
+        img_obj = labeled_image.copy().astype(float)
+        img_obj[labeled_image == 0] = np.nan
 
-        ax2.imshow(labeled_image)
-        ax2.set_title('labeled objects', size=20)
+        ax1.imshow(img_obj, cmap=plt.cm.jet)
+        ax1.set_title('labeled objects', size=20)
 
         fig.tight_layout()
 
-        jtapi.savefigure(fig, kwargs['figure_file'])
+        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'objects')
     return output(labeled_image)

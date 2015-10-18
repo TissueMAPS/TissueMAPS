@@ -7,7 +7,7 @@ import mpld3
 import collections
 from tmlib.jterator import jtapi
 from tmlib.readers import DatasetReader
-from tmlib.experiment import Experiment
+from tmlib.experiment import ExperimentFactory
 from tmlib import cfg
 
 
@@ -31,16 +31,16 @@ def load_objects(objects_name, **kwargs):
     namedtuple[numpy.ndarray[uint]]
         label image that encodes the objects: "loaded_objects"
     '''
-    experiment = Experiment(kwargs['experiment_dir'], cfg)
+    experiment = ExperimentFactory(kwargs['experiment_dir'], cfg).create()
 
     # Does job_id do it? Consider matching metadata such site, channel, ...
 
     with DatasetReader(experiment.data_file) as f:
         sites = f.read('%s/segmentation/site_ids' % objects_name)
         site_index = sites == kwargs['job_id']
-        y_coordinates = f.read('%s/segmentation/y_coordinates' % objects_name,
+        y_coordinates = f.read('%s/segmentation/coordinates/y' % objects_name,
                                index=site_index)
-        x_coordinates = f.read('%s/segmentation/x_coordinates' % objects_name,
+        x_coordinates = f.read('%s/segmentation/coordinates/x' % objects_name,
                                index=site_index)
         image_dims = f.read('%s/segmentation/image_dimensions' % objects_name,
                             index=site_index)
@@ -67,7 +67,7 @@ def load_objects(objects_name, **kwargs):
         mpld3.plugins.connect(fig, mousepos)
         mpld3.fig_to_html(fig, template_type='simple')
 
-        jtapi.savefigure(fig, kwargs['figure_file'])
+        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'loaded_objects')
     return output(labeled_image)
