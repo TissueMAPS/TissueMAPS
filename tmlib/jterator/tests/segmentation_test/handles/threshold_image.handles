@@ -31,5 +31,3 @@ output:
       help: >
         Binary image where pixels above threshold are assigned to foreground
         and pixels below threshold to background.
-
-plot: Yes

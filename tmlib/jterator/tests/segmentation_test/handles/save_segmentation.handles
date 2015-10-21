@@ -11,5 +11,3 @@ input:
       help: Name that should be given to the objects in the image.
 
 output:
-
-plot: No

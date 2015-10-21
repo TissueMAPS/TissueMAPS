@@ -12,5 +12,3 @@ output:
       class: pipeline
       value: 150820-Testset-CV-1-1.filled
       help: Filled binary image.
-
-plot: Yes

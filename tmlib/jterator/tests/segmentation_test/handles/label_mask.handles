@@ -13,5 +13,3 @@ output:
       help: >
         Labeled image, where pixels of each connected component (object)
         have a unique non-zero identifier number.
-
-plot: Yes

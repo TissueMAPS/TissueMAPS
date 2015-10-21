@@ -22,5 +22,5 @@ pipeline:
   handles: handles/label_mask.handles
   module: '{lib}/label_mask.py'
 - active: true
-  handles: handles/save_objects.handles
-  module: '{lib}/save_objects.py'
+  handles: handles/save_segmentation.handles
+  module: '{lib}/save_segmentation.py'

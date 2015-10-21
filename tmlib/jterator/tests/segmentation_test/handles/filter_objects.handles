@@ -33,5 +33,3 @@ output:
       class: pipeline
       value: 
       help: Filtered label image.
-
-plot: Yes
