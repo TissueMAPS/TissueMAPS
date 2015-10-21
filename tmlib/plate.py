@@ -6,6 +6,7 @@ from natsort import natsorted
 from cached_property import cached_property
 from . import utils
 from .cycle import Cycle
+from .errors import RegexError
 
 logger = logging.getLogger(__name__)
 
@@ -76,25 +77,29 @@ class Plate(object):
         self.library = library
 
     @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the experiment
-        '''
-        self._name = os.path.basename(self.plate_dir)
-        return self._name
-
-    @property
     def dir(self):
         '''
         Returns
         -------
         str
-            absolute path to the experiment directory
+            absolute path to the plate directory
         '''
         return self.plate_dir
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the plate
+        '''
+        regex = utils.regex_from_format_string(self.PLATE_DIR_FORMAT)
+        match = re.search(regex, self.dir)
+        if not match:
+            raise RegexError(
+                    'Plate name could not be determined from folder name')
+        return match.group('plate_name')
 
     def _is_cycle_dir(self, folder):
         format_string = Cycle.CYCLE_DIR_FORMAT
