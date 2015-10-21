@@ -4,168 +4,84 @@ import logging
 import numpy as np
 from natsort import natsorted
 from cached_property import cached_property
-from . import config
+from . import cfg
 from . import utils
 from .plate import Plate
-from .upload import Upload
+from .source import PlateSource
 from .metadata import MosaicMetadata
-from .config_setters import UserConfiguration
-from .config_setters import TmlibConfiguration
 from .errors import NotSupportedError
 from .errors import RegexError
 from .errors import MetadataError
-from .readers import UserConfigurationReader
+from .readers import YamlReader
 
 logger = logging.getLogger(__name__)
 
 
-class ExperimentFactory(object):
-
-    '''
-    Factory class to create an experiment object.
-
-    The type of the returned object depends on the user configuration
-    and the experimental setup.
-    '''
-
-    def __init__(self, experiment_dir, library='vips'):
-        '''
-        Initialize an instance of class ExperimentFactory.
-
-        Parameters
-        ----------
-        experiment_dir: str
-            absolute path to experiment folder
-        library: str, optional
-            image library that should be used
-            (options: ``"vips"`` or ``"numpy"``, default: ``"vips"``)
-        '''
-        self.experiment_dir = os.path.expandvars(experiment_dir)
-        self.experiment_dir = os.path.expanduser(self.experiment_dir)
-        self.experiment_dir = os.path.abspath(self.experiment_dir)
-        # Check that `experiment_dir` is actually the root directory
-        # of an experiment
-        if not os.path.exists(self.user_cfg_file):
-            raise ValueError(
-                'The provided directory is not a valid experiment root folder')
-        self.library = library
-
-    @property
-    def user_cfg_file(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to experiment-specific user configuration file
-        '''
-        return self.cfg.USER_CFG_FILE.format(
-                    experiment_dir=self.experiment_dir, sep=os.path.sep)
-
-    @property
-    def cfg(self):
-        '''
-        Returns
-        -------
-        TmlibConfiguration
-            file system configuration settings
-
-        See also
-        --------
-        `tmlib.cfg_setters.TmlibConfiguration`_
-        '''
-        return TmlibConfiguration(config)
-
-    @cached_property
-    def user_cfg(self):
-        '''
-        Returns
-        -------
-        UserConfiguration
-            experiment-specific configuration settings provided by the user
-            in YAML format
-
-        See also
-        --------
-        `tmlib.cfg_setters.UserConfiguration`_
-        '''
-        # TODO: shall we do this via the database instead?
-        logger.debug('loading user configuration file: %s', self.user_cfg_file)
-        with UserConfigurationReader() as reader:
-            config_settings = reader.read(self.user_cfg_file)
-        return UserConfiguration(config_settings)
-
-    def create(self):
-        '''
-        Returns
-        -------
-        Experiment
-            object configured with default settings
-        '''
-        logger.debug('using the "%s" image library', self.library)
-        return Experiment(
-                    self.experiment_dir, self.cfg, self.user_cfg, self.library)
-
-
 class Experiment(object):
     '''
-    An *experiment* represents a folder on disk that contains a set of image
-    files and additional data associated with the images, such as metadata
-    or measurement data, for example.
-    The structure of the directory tree and the names of files are defined
-    via Python format strings in the configuration settings file.
+    An *experiment* is a repository for images and associated data.
 
-    An *experiment* consists of one or more *cycles*. A *cycle* represents a
-    particular time point of image acquisition for a given sample and
-    corresponds to a subfolder in the *experiment* directory.
-    In the simplest case, the experiments consists only of a single round of
-    image acquisition. However, it may also consist of a time series,
-    i.e. several iterative rounds of image acquisitions, where the same
-    the sample is repeatedly imaged at the same positions.
-
-    The names of the *cycle* folders encode the name of the experiment
-    as well as the *cycle* identifier number, i.e. the one-based index of
-    the time series sequence.
+    An *experiment* consists of one or more *plates*. A *plate* is a container
+    for the imaged biological samples and can be associated with one or more
+    *cycles*, where a *cycle* represents a particular time point of image
+    acquisition. In the simplest case, an *experiment* is composed of a single
+    *plate* with only one *cycle*.
+    
+    The experiment and its elements are represented by directories on the
+    file system and their locations are defined by the corresponding
+    configuration classes.
 
     See also
     --------
+    `tmlib.plate.Plate`_
     `tmlib.cycle.Cycle`_
-    `tmlib.cfg`_
     '''
 
-    def __init__(self, experiment_dir, cfg, user_cfg, library):
+    def __init__(self, experiment_dir, user_cfg=None, library='vips'):
         '''
         Initialize an instance of class Experiment.
 
         Parameters
         ----------
         experiment_dir: str
-            absolute path to experiment folder
-        cfg: TmlibConfigurations
-            configuration settings for names of directories and files on disk
-        library: str
+            absolute path to the experiment root folder
+        user_cfg: UserConfiguration, optional
+            user configuration settings (default: ``None``)
+        library: str, optional
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
 
         See also
         --------
-        `tmlib.cfg_setters.TmlibConfiguration`_
         `tmlib.cfg`_
-        '''
-        self.experiment_dir = experiment_dir
-        self.cfg = cfg
-        self.user_cfg = user_cfg
-        self.library = library
 
-    @property
-    def name(self):
+        Note
+        ----
+        When no user configuration settings are provided, the program tries
+        to read them from a file.
         '''
-        Returns
-        -------
-        str
-            name of the experiment
-        '''
-        self._name = os.path.basename(self.experiment_dir)
-        return self._name
+        self.experiment_dir = os.path.expandvars(experiment_dir)
+        self.experiment_dir = os.path.expanduser(self.experiment_dir)
+        self.experiment_dir = os.path.abspath(self.experiment_dir)
+        self.library = library
+        if self.library not in {'vips', 'numpy'}:
+            raise ValueError(
+                    'Argument "library" must be either "numpy" or "vips"')
+        self.user_cfg = user_cfg
+        if self.user_cfg is None:
+            logger.debug('loading user configuration settings from file: %s',
+                         self.user_cfg_file)
+            if not os.path.exists(self.user_cfg_file):
+                raise OSError(
+                    'User configuration settings file does not exist: %s'
+                    % self.user_cfg_file)
+            with YamlReader() as reader:
+                config_settings = reader.read(self.user_cfg_file)
+            self.user_cfg = cfg.UserConfiguration.set(
+                                self.experiment_dir, config_settings)
+        if not isinstance(self.user_cfg, cfg.UserConfiguration):
+            raise TypeError(
+                    'Argument "user_cfg" must have type UserConfiguration')
 
     @property
     def dir(self):
@@ -177,27 +93,49 @@ class Experiment(object):
         '''
         return self.experiment_dir
 
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the experiment
+        '''
+        return os.path.basename(self.experiment_dir)
+
+    @property
+    def user_cfg_file(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to an experiment-specific user configuration settings
+            file
+        '''
+        return cfg.USER_CFG_FILE_FORMAT.format(
+                    experiment_dir=self.experiment_dir, sep=os.path.sep)
+
     @cached_property
     def plates_dir(self):
         '''
         Returns
         -------
         str
-            absolute path to the *plates* subdirectory
+            absolute path to the directory, where extracted image files and
+            additional metadata files are located (grouped per plate)
 
         Note
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._plates_dir = self.cfg.PLATES_DIR.format(
-                                experiment_dir=self.dir, sep=os.path.sep)
+        self._plates_dir = self.user_cfg.plates_dir
         if not os.path.exists(self._plates_dir):
             logger.debug('create directory for plates: %s', self._plates_dir)
             os.mkdir(self._plates_dir)
         return self._plates_dir
 
     def _is_plate_dir(self, folder):
-        format_string = self.cfg.PLATE_DIR
+        format_string = Plate.PLATE_DIR_FORMAT
         regexp = utils.regex_from_format_string(format_string)
         return True if re.match(regexp, folder) else False
 
@@ -207,85 +145,110 @@ class Experiment(object):
         Returns
         -------
         List[Plate]
-            configured plate objects (the exact subtype depends on the user
-            configuration settings, e.g. `WellPlate` or `Slide`)
+            configured plate objects
         '''
         plate_dirs = [
             os.path.join(self.plates_dir, d)
             for d in os.listdir(self.plates_dir)
             if os.path.isdir(os.path.join(self.plates_dir, d))
-            and not d.startswith('.')
+            and self._is_plate_dir(d)
         ]
         plate_dirs = natsorted(plate_dirs)
-        self._plates = [
-                Plate(d, self.cfg, self.user_cfg, self.library)
-                for d in plate_dirs
-            ]
-        return self._plates
+        return [Plate(d, self.user_cfg, self.library) for d in plate_dirs]
 
-    @property
-    def uploads_dir(self):
+    def add_plate(self, plate_name):
         '''
+        Add a plate to the experiment, i.e. create a subdirectory in
+        `plates_dir`.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the new plate
+
         Returns
         -------
-        str
-            absolute path to the *uploads* subdirectory, where uploaded files
-            are located
+        Plate
+            configured plate object
 
         Raises
         ------
         OSError
-            when `uploads_dir` does not exist
+            when the plate already exists
+        '''
+        new_plate_dir = Plate.PLATE_DIR_FORMAT.format(
+                                plates_dir=self.plates_dir,
+                                plate_name=plate_name,
+                                sep=os.path.sep)
+        if os.path.exists(new_plate_dir):
+            raise OSError('Plate "%s" already exists.' % plate_name)
+        logger.debug('add plate: %s', plate_name)
+        logger.debug('create directory for plate "%s": %s',
+                     plate_name, new_plate_dir)
+        os.mkdir(new_plate_dir)
+        new_plate = Plate(new_plate_dir, self.user_cfg, self.library)
+        self.plates.append(new_plate)
+        return new_plate
+
+    @cached_property
+    def sources_dir(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the directory, where source files
+            (original microscope files) are located
+
+        Raises
+        ------
+        OSError
+            when `source_dir` does not exist
 
         Note
         ----
-        Each *plate* is uploaded into a separate subfolder of `uploads_dir`.
+        The user has to create the directory and provide its location.
         '''
-        self._uploads_dir = self.cfg.UPLOADS_DIR.format(
-                                experiment_dir=self.dir, sep=os.path.sep)
-        if not os.path.exists(self._uploads_dir):
-            raise OSError('Uploads directory does not exist')
-        return self._uploads_dir
+        print self.user_cfg.sources_dir
+        self._sources_dir = self.user_cfg.sources_dir
+        if not os.path.exists(self._sources_dir):
+            raise OSError('PlateSources directory does not exist')
+        return self._sources_dir
 
-    def _is_upload_dir(self, folder):
-        format_string = self.cfg.UPLOAD_DIR
+    def _is_plate_source_dir(self, folder):
+        format_string = PlateSource.PLATE_SOURCE_DIR_FORMAT
         regexp = utils.regex_from_format_string(format_string)
         return True if re.match(regexp, folder) else False
 
     @property
-    def uploads(self):
+    def sources(self):
         '''
-        The user can upload image files and optionally additional metadata
-        files. If the experiment consists of multiple *plates*, the files
-        for each plate are uploaded individually and stored in separate
-        upload folders. Each *plate* can itself contain multiple *cycles*.
+        An experiment consists of one or multiple *plates*. Each *plate* itself
+        is composed of one or multiple *acquisitions*, which contain the actual
+        source files.
 
         Returns
         -------
-        List[UploadContainer]
-            configured upload objects
+        List[PlateSource]
+            configured plate acquisitions objects
 
         See also
         --------
-        `tmlib.upload.Upload`_
-        `tmlib.upload.UploadedPlate`_
-        `tmlib.config`_
+        `tmlib.source.PlateSource`_
 
         Note
         ----
-        All *plates* belonging to one experiment must have the same format, e.g.
-        all 384-well plates.
+        All *plates* belonging to one experiment must have the same layout,
+        i.e. contain the same number of image acquisition sites. However, the
+        number of acquired images may differ between plates, for example due to
+        a different number of channels.
         '''
-        upload_dirs = natsorted([
-            os.path.join(self.uploads_dir, d)
-            for d in os.listdir(self.uploads_dir)
-            if os.path.isdir(os.path.join(self.uploads_dir, d))
-            and self._is_upload_dir(d)
+        plate_source_dirs = natsorted([
+            os.path.join(self.sources_dir, d)
+            for d in os.listdir(self.sources_dir)
+            if os.path.isdir(os.path.join(self.sources_dir, d))
+            and self._is_plate_source_dir(d)
         ])
-        self._uploads = [
-            Upload(d, self.cfg, self.user_cfg) for d in upload_dirs
-        ]
-        return self._uploads
+        return [PlateSource(d, self.user_cfg) for d in plate_source_dirs]
 
     @cached_property
     def layers_dir(self):
@@ -293,70 +256,19 @@ class Experiment(object):
         Returns
         -------
         str
-            absolute path to the folder holding the layers (image pyramids)
+            absolute path to the folder holding the layers
+            (image pyramids and associated data)
 
         See also
         --------
         `tmlib.illuminati`_
         '''
-        self._layers_dir = self.cfg.LAYERS_DIR.format(
-                                experiment_dir=self.dir, sep=os.path.sep)
-        if not os.path.exists(self._layers_dir):
+        layers_dir = self.user_cfg.layers_dir
+        if not os.path.exists(layers_dir):
             logger.debug('create directory for layers pyramid directories: %s'
-                         % self._layers_dir)
-            os.mkdir(self._layers_dir)
-        return self._layers_dir
-
-    # @cached_property
-    # def layer_image_files(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     Dict[str, List[str]]
-    #         absolute paths to the image files for each layer
-    #         (keys: names of the layers, values: paths to the files)
-    #     '''
-    #     self._layer_image_files = dict()
-    #     for lmd in self.layer_metadata:
-    #         self._layer_image_files[lmd.name] = lmd
-    #     return self._layer_image_files
-
-    def get_image_via_filename(self, filename):
-        '''
-        Retrieve the image object for a given filename.
-
-        Parameters
-        ----------
-        filename: int
-            name of the image file
-
-        Returns
-        -------
-        ChannelImage
-            image object
-        '''
-        regex = utils.regex_from_format_string(self.cfg.IMAGE_FILE)
-        match = re.search(regex, os.path.basename(filename))
-        if not match:
-            raise RegexError('Metadata could not be determined from filename')
-        captures = match.groupdict()
-        for plate in self.plates:
-            if plate.name != captures['plate_name']:
-                continue
-            for cycle in plate.cycles:
-                if cycle.index != int(captures['t']):
-                    continue
-                md = cycle.image_metadata_table
-                ix = np.where(
-                        (md['channel_ix'] == int(captures['c'])) &
-                        (md['zplane_ix'] == int(captures['z'])) &
-                        (md['well_name'] == captures['w']) &
-                        (md['well_pos_x'] == int(captures['x'])) &
-                        (md['well_pos_y'] == int(captures['y'])))[0]
-                if len(ix) > 1:
-                    raise MetadataError(
-                            'A filename has to correspond to a single image.')
-                return cycle.images[ix]
+                         % layers_dir)
+            os.mkdir(layers_dir)
+        return layers_dir
 
     @property
     def layer_metadata(self):
@@ -377,9 +289,8 @@ class Experiment(object):
                 for c in channels:
                     for z in zplanes:
                         metadata = MosaicMetadata()
-                        metadata.name = self.cfg.DEFAULT_LAYER_NAME.format(
-                                    experiment_name=self.name,
-                                    t=cycle.index, c=c, z=z)
+                        metadata.name = self.user_cfg.LAYER_NAME_FORMAT.format(
+                                            t=cycle.index, c=c, z=z)
                         metadata.channel_ix = c
                         metadata.zplane_ix = z
                         metadata.tpoint_ix = cycle.index
@@ -399,72 +310,45 @@ class Experiment(object):
         Returns
         -------
         str
-            name of the HDF5 file holding the measurement datasets,
+            absolute path to the HDF5 file holding the measurement datasets,
             i.e. the results of an image analysis pipeline such as
             segmentations and features for the segmented objects
-
-        See also
-        --------
-        `tmlib.jterator`_
         '''
-        self._data_filename = self.cfg.DATA_FILE.format(
-                                experiment_name=self.name, sep=os.path.sep)
-        return self._data_filename
+        return os.path.join(self.layers_dir, 'data.h5')
 
-    # def dump_metadata(self):
-    #     experiment_e = etree.Element('experiment')
-    #     experiment_e.set('name', self.name)
+    def get_image_by_name(self, name):
+        '''
+        Retrieve an image object for a given name.
 
-    #     cycles_e = etree.SubElement(experiment_e, 'cycles')
+        Parameters
+        ----------
+        name: str
+            name of the image
 
-    #     for cycle in self.cycles:
-    #         cycle_e = etree.SubElement(cycles_e, 'cycle')
-    #         cycle_e.set('name', cycle.name)
-    #         cycle_e.set('index', str(cycle.index))
-
-    #         images_e = etree.SubElement(cycle_e, 'images')
-    #         for i, md in enumerate(cycle.image_metadata):
-    #             file_e = etree.SubElement(images_e, 'file')
-    #             file_e.set('name', md.name)
-    #             file_e.set('site_ix', str(md.site_ix))
-    #             file_e.set('zplane_ix', str(md.zplane_ix))
-    #             file_e.set('channel_ix', str(md.channel_name))
-    #             file_e.set('source_file_id', str(md.original_filename))
-
-    #         acq_sites_e = etree.SubElement(cycle_e, 'acquisition_sites')
-    #         acq_sites_e.set('upper_overhang', str(md.upper_overhang))
-    #         acq_sites_e.set('lower_overhang', str(md.lower_overhang))
-    #         acq_sites_e.set('left_overhang', str(md.left_overhang))
-    #         acq_sites_e.set('right_overhang', str(md.right_overhang))
-    #         sites = [md.site for md in cycle.image_metadata]
-    #         for i, s in enumerate(self.acquisition_sites):
-    #             ix = sites.index(s)
-    #             md = cycle.image_metadata[ix]
-    #             site_e = etree.SubElement(acq_sites_e, 'site')
-    #             site_e.set('id', str(i+1))
-    #             site_e.set('y_shift', str(md.y_shift))
-    #             site_e.set('x_shift', str(md.x_shift))
-    #             site_e.set('well_id', str(md.well_id))
-    #             site_e.set('row_index', str(md.row_index))
-    #             site_e.set('col_index', str(md.col_index))
-
-    #         channels_e = etree.SubElement(cycle_e, 'channels')
-    #         for i, c in enumerate(cycle.channels):
-    #             channel_e = etree.SubElement(channels_e, 'channel')
-    #             channel_e.set('id', str(i+1))
-    #             channel_e.set('name', c)
-
-    #         focal_planes_e = etree.SubElement(cycle_e, 'focal_planes')
-    #         for i, p in enumerate(self.focal_planes):
-    #             plane_e = etree.SubElement(focal_planes_e, 'plane')
-    #             plane_e.set('id', str(i+1))
-
-    #     uploads_e = etree.SubElement(experiment_e, 'uploads')
-    #     # TODO
-
-    #     print etree.tostring(experiment_e, pretty_print=True,
-    #                          xml_declaration=True)
-
-    #     doc = etree.ElementTree(experiment_e)
-    #     with open(os.path.join(self.dir, self.metadata_file), 'w') as f:
-    #         doc.write(f, pretty_print=True, xml_declaration=True)
+        Returns
+        -------
+        ChannelImage
+            corresponding image object
+        '''
+        regex = utils.regex_from_format_string(self.user_cfg.IMAGE_NAME_FORMAT)
+        match = re.search(regex, os.path.basename(name))
+        if not match:
+            raise RegexError('Metadata could not be determined from filename')
+        captures = match.groupdict()
+        for plate in self.plates:
+            if plate.name != captures['plate_name']:
+                continue
+            for cycle in plate.cycles:
+                if cycle.index != int(captures['t']):
+                    continue
+                md = cycle.image_metadata_table
+                ix = np.where(
+                        (md['channel_ix'] == int(captures['c'])) &
+                        (md['zplane_ix'] == int(captures['z'])) &
+                        (md['well_name'] == captures['w']) &
+                        (md['well_pos_x'] == int(captures['x'])) &
+                        (md['well_pos_y'] == int(captures['y'])))[0]
+                if len(ix) > 1:
+                    raise MetadataError(
+                            'A filename has to correspond to a single image.')
+                return cycle.images[ix]

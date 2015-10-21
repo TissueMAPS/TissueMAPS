@@ -3,7 +3,7 @@ from . import logo
 from . import __version__
 from .api import MetadataExtractor
 from ..cli import CommandLineInterface
-from ..experiment import ExperimentFactory
+from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class Metaextract(CommandLineInterface):
     @property
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
-        experiment = ExperimentFactory(self.args.experiment_dir).create()
+        experiment = Experiment(self.args.experiment_dir)
         self.__api_instance = MetadataExtractor(
                                 experiment=experiment, prog_name=self.name,
                                 verbosity=self.args.verbosity)

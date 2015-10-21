@@ -42,7 +42,7 @@ from tmlib.experiment import Experiment
     #                 cycle_name = md['cycle_name'].tolist()[0]
     #                 # Build a new name for the file that will contain the
     #                 # projected image (set the focal plane id to zero)
-    #                 mip_name = self.experiment.cfg.IMAGE_FILE.format(
+    #                 mip_name = self.experiment.cfg.IMAGE_NAME_FORMAT.format(
     #                         cycle_name=cycle_name,
     #                         site_id=s, channel_id=c,
     #                         plane_id=0, time_id=t)

@@ -8,7 +8,7 @@ input:
     - name: objects_name
       class: parameter
       value: Nuclei
-      help: Name of should be given to the objects.
+      help: Name that should be given to the objects in the image.
 
 output:
 

@@ -62,39 +62,39 @@ class MetadataExtractor(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        joblist = dict()
-        joblist['run'] = list()
+        job_descriptions = dict()
+        job_descriptions['run'] = list()
         output_files = list()
         count = 0
-        for upload in self.experiment.uploads:
-            for subupload in upload.subuploads:
+        for source in self.experiment.sources:
+            for acquisition in source.acquisitions:
                 output_files.extend([
-                    os.path.join(subupload.omexml_dir,
+                    os.path.join(acquisition.omexml_dir,
                                  self._get_ome_xml_filename(f))
-                    for f in subupload.image_files
+                    for f in acquisition.image_files
                 ])
 
-                for j in xrange(len(subupload.image_files)):
+                for j in xrange(len(acquisition.image_files)):
                     count += 1
-                    joblist['run'].append({
+                    job_descriptions['run'].append({
                         'id': count,
                         'inputs': {
                             'image_files': [
-                                os.path.join(subupload.image_dir,
-                                             subupload.image_files[j])
+                                os.path.join(acquisition.image_dir,
+                                             acquisition.image_files[j])
                             ]
                         },
                         'outputs': {
                         }
                     })
 
-            joblist['collect'] = {
+            job_descriptions['collect'] = {
                 'inputs': {},
                 'outputs': {
                     'omexml_files': output_files
                 }
             }
-        return joblist
+        return job_descriptions
 
     def _build_run_command(self, batch):
         input_filename = batch['inputs']['image_files'][0]

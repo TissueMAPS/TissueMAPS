@@ -1,8 +1,4 @@
-FILE_FORMAT: default
-REGEXP_PATTERN: ''
-REFERENCE_CYCLE_ID: 1
-REFRENCE_CHANNEL: 0
-MAX_SHIFT: 300
-WELLPLATE_FORMAT: Yes
-NUMBER_OF_WELLS: 384
-SCREEN: Yes
+plates_dir:
+sources_dir:
+layers_dir:
+plate_format:

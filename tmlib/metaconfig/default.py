@@ -13,7 +13,6 @@ from ..metadata import ImageFileMapper
 from ..illuminati import stitch
 from .. import utils
 from ..errors import MetadataError
-from ..errors import NotSupportedError
 from ..errors import RegexError
 from ..readers import MetadataReader
 
@@ -46,7 +45,7 @@ class MetadataHandler(object):
 
         Parameters
         ----------
-        image_upload_files: List[str]
+        image_files: List[str]
             full paths to image files
         additional_files: List[str]
             full paths to additional microscope-specific metadata files
@@ -898,17 +897,17 @@ class MetadataHandler(object):
 
     def build_image_filenames(self, image_file_format_string):
         '''
-        Build unique filenames for the extracted images based on a format
-        string  the extracted metadata.
+        Build unique filenames for extracted images.
 
         Since the number of extracted images may be different than the number
-        of uploaded image files (because each image file can contain several
-        planes), we have to come up with names for the corresponding files.
+        of image source files (because each image file can contain multiple
+        planes), new names have to be build for the target files.
 
         Parameters
         ----------
         image_file_format_string: str
-            Python format string
+            Python format string with the following fieldnames: "plate_name",
+            "w", x", "y", "c", "z", "t"
 
         Returns
         -------
@@ -999,7 +998,7 @@ class DefaultMetadataHandler(MetadataHandler):
 
         Parameters
         ----------
-        image_upload_files: List[str]
+        image_files: List[str]
             full paths to image files
         additional_files: List[str]
             full paths to additional microscope-specific metadata files

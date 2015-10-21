@@ -308,9 +308,7 @@ def compute_outline_polygons(im, offset_y=0, offset_x=0,
     '''
     outlines = {}
     cell_ids = set(np.unique(im)).difference({0})
-    print '* Computing outlines ....'
     for i, cell_id in enumerate(cell_ids):
-        print '|_ cell {:0>5} / {}'.format(i + 1, len(cell_ids))
 
         # Create a bounding box around the cell id of interest
         # The bounding box should have a frame of thickness 1 matrix cell
@@ -343,14 +341,14 @@ def compute_outline_polygons(im, offset_y=0, offset_x=0,
         if len(contours) != 1:
             # Not really a big problem since in almost all cases
             # the true (largest) contour is the first one
-            print '  warning: %d contours found for cell with id %d' \
-                % (len(contours), cell_id)
+            logger.warn('%d contours found for cell with id %d',
+                        len(contours), cell_id)
 
         contour = contours[0]
 
         poly = approximate_polygon(contour, poly_tol).astype(np.int32)
         if poly is None:
-            print '  warning: polygon was None for cell with id  %d' % cell_id
+            logger.warn('polygon was None for cell with id  %d', cell_id)
             continue
 
         # Add the offset of this subimage to all coordinates

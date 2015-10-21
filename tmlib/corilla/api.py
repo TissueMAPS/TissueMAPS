@@ -3,7 +3,6 @@ import re
 import logging
 from .stats import OnlineStatistics
 from ..writers import DatasetWriter
-from ..writers import ImageWriter
 from ..readers import NumpyImageReader
 from ..cluster import ClusterRoutines
 
@@ -43,8 +42,7 @@ class IllumstatsGenerator(ClusterRoutines):
             format string that specifies how the names of the statistics files
             should be formatted
         '''
-        self._stats_file_format_string = self.experiment.cfg.STATS_FILE
-        return self._stats_file_format_string
+        return self.experiment.plates[0].cycles[0].STATS_FILE_FORMAT
 
     def create_job_descriptions(self, **kwargs):
         '''

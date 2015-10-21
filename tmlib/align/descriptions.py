@@ -7,7 +7,7 @@ class AlignmentDescription(object):
     align images between cycles.
     '''
 
-    PERSISTENT = {'cycle_ix', 'ref_cycle_ix', 'overhang', 'shift'}
+    PERSISTENT_ATTRS = {'cycle_ix', 'ref_cycle_ix', 'overhang', 'shift'}
 
     def __init__(self, description=None):
         self.description = description
@@ -106,7 +106,7 @@ class AlignmentDescription(object):
                 for i, sh in enumerate(shifts):
                     shift_description.append(dict())
                     for a in dir(sh):
-                        if a in ShiftDescription.PERSISTENT:
+                        if a in ShiftDescription.PERSISTENT_ATTRS:
                             shift_description[i][a] = getattr(sh, a)
                 yield (attr, shift_description)
 
@@ -116,12 +116,12 @@ class AlignmentDescription(object):
                 for a in dir(oh):
                     if a.startswith('_') or a.isupper():
                             continue
-                    if a in oh.PERSISTENT:
+                    if a in oh.PERSISTENT_ATTRS:
                         overhang_description[a] = getattr(oh, a)
                 yield (attr, overhang_description)
 
             else:
-                if attr in self.PERSISTENT:
+                if attr in self.PERSISTENT_ATTRS:
                     yield (attr, getattr(self, attr))
 
     @staticmethod
@@ -153,7 +153,7 @@ class AlignmentDescription(object):
             if key == 'overhang':
                 overhang = OverhangDescription()
                 for k, v in value.iteritems():
-                    if k in overhang.PERSISTENT:
+                    if k in overhang.PERSISTENT_ATTRS:
                         setattr(overhang, k, v)
                 setattr(alignment, 'overhang', overhang)
 
@@ -162,13 +162,13 @@ class AlignmentDescription(object):
                 for element in value:
                     shift = ShiftDescription()
                     for k, v in element.iteritems():
-                        if k in shift.PERSISTENT:
+                        if k in shift.PERSISTENT_ATTRS:
                             setattr(shift, k, v)
                     shifts.append(shift)
                 setattr(alignment, 'shifts', shifts)
 
             else:
-                if value in alignment.PERSISTENT:
+                if value in alignment.PERSISTENT_ATTRS:
                     setattr(alignment, key, value)
 
         return alignment
@@ -182,7 +182,7 @@ class OverhangDescription(object):
     between all images of an experiment. 
     '''
 
-    PERSISTENT = {'lower', 'upper', 'right', 'left'}
+    PERSISTENT_ATTRS = {'lower', 'upper', 'right', 'left'}
 
     @property
     def lower(self):
@@ -271,7 +271,7 @@ class ShiftDescription(object):
     for images of the reference cycle.
     '''
 
-    PERSISTENT = {'site_ix', 'x', 'y', 'is_above_limit'}
+    PERSISTENT_ATTRS = {'site_ix', 'x', 'y', 'is_above_limit'}
 
     @property
     def site_ix(self):

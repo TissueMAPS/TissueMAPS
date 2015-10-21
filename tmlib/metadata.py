@@ -7,9 +7,7 @@ class ImageMetadata(object):
     the relative position of the image within the acquisition grid.
     '''
 
-    PERSISTENT = {
-        'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'
-    }
+    PERSISTENT_ATTRS = {'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'}
 
     def __init__(self):
         '''
@@ -55,7 +53,7 @@ class ImageMetadata(object):
     @name.setter
     def name(self, value):
         if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "name" must have type basestring')
+            raise TypeError('Attribute "name" must have type str')
         self._name = str(value)
 
     @property
@@ -71,7 +69,7 @@ class ImageMetadata(object):
     @plate_name.setter
     def plate_name(self, value):
         if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "name" must have type basestring')
+            raise TypeError('Attribute "name" must have type str')
         self._plate_name = str(value)
 
     @property
@@ -141,7 +139,7 @@ class ImageMetadata(object):
     @well_name.setter
     def well_name(self, value):
         if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "well_name" must have type basestring')
+            raise TypeError('Attribute "well_name" must have type str')
         self._well_name = value
 
     @property
@@ -320,7 +318,7 @@ class ChannelImageMetadata(ImageMetadata):
     Class for metadata specific to channel images.
     '''
 
-    PERSISTENT = ImageMetadata.PERSISTENT.union({
+    PERSISTENT_ATTRS = ImageMetadata.PERSISTENT_ATTRS.union({
         'channel_name', 'is_corrected', 'channel_ix'
     })
 
@@ -350,7 +348,7 @@ class ChannelImageMetadata(ImageMetadata):
     @channel_name.setter
     def channel_name(self, value):
         if not(isinstance(value, basestring)) and value is not None:
-            raise TypeError('Attribute "channel_name" must have type basestring')
+            raise TypeError('Attribute "channel_name" must have type str')
         self._channel_name = value
 
     @property
@@ -401,7 +399,7 @@ class ChannelImageMetadata(ImageMetadata):
         '''
         # TODO: site
         for attr in dir(self):
-            if attr in self.PERSISTENT:
+            if attr in self.PERSISTENT_ATTRS:
                 yield (attr, getattr(self, attr))
 
     def __str__(self):
@@ -421,12 +419,12 @@ class ChannelImageMetadata(ImageMetadata):
         Returns
         -------
         ChannelImageMetadata
-            metadata object with `PERSISTENT` attributes set
+            metadata object with `PERSISTENT_ATTRS` attributes set
         '''
         # TODO: site
         obj = ChannelImageMetadata()
         for key, value in metadata.iteritems():
-            if key in ChannelImageMetadata.PERSISTENT:
+            if key in ChannelImageMetadata.PERSISTENT_ATTRS:
                 setattr(obj, key, value)
         return obj
 
@@ -439,7 +437,7 @@ class ImageFileMapper(object):
     will be stored upon extraction.
     '''
 
-    PERSISTENT = {
+    PERSISTENT_ATTRS = {
         'files', 'series', 'planes',
         'ref_index', 'ref_file', 'ref_id'
     }
@@ -459,7 +457,7 @@ class ImageFileMapper(object):
         if not isinstance(value, list):
             raise TypeError('Attribute "files" must have type list')
         if not all([isinstance(v, basestring) for v in value]):
-            raise TypeError('Elements of "files" must have type basestring')
+            raise TypeError('Elements of "files" must have type str')
         self._files = value
 
     @property
@@ -530,7 +528,7 @@ class ImageFileMapper(object):
     @ref_id.setter
     def ref_id(self, value):
         if not isinstance(value, basestring):
-            raise TypeError('Attribute "ref_id" must have type basestring')
+            raise TypeError('Attribute "ref_id" must have type str')
         self._ref_id = value
 
     @property
@@ -546,7 +544,7 @@ class ImageFileMapper(object):
     @ref_file.setter
     def ref_file(self, value):
         if not isinstance(value, basestring):
-            raise TypeError('Attribute "ref_file" must have type basestring')
+            raise TypeError('Attribute "ref_file" must have type str')
         self._ref_file = value
 
     def __iter__(self):
@@ -555,7 +553,7 @@ class ImageFileMapper(object):
         -------
         dict
             key-value representation of the object
-            (only `PERSISTENT` attributes)
+            (only `PERSISTENT_ATTRS` attributes)
 
         Examples
         --------
@@ -570,7 +568,7 @@ class ImageFileMapper(object):
         {'series': [0, 0], 'planes': [0, 1], 'ref_id': 'Image:0', 'ref_index': 0, 'filenames': ['a', 'b'], 'ref_name': 'c'}
         '''
         for attr in dir(self):
-            if attr not in self.PERSISTENT:
+            if attr not in self.PERSISTENT_ATTRS:
                 continue
             yield (attr, getattr(self, attr))
 
@@ -585,11 +583,11 @@ class ImageFileMapper(object):
         Returns
         -------
         ImageFileMapper
-            object where `PERSISTENT` attributes where set with provided values
+            object where `PERSISTENT_ATTRS` attributes where set with provided values
         '''
         obj = ImageFileMapper()
         for key, value in description.iteritems():
-            if key in obj.PERSISTENT:
+            if key in obj.PERSISTENT_ATTRS:
                 setattr(obj, key, value)
         return obj
 
@@ -665,7 +663,7 @@ class MosaicMetadata(object):
     @name.setter
     def name(self, value):
         if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "name" must have type basestring')
+            raise TypeError('Attribute "name" must have type str')
         self._name = str(value)
 
     @property
@@ -750,5 +748,5 @@ class MosaicMetadata(object):
         if not(isinstance(value, list)):
             raise TypeError('Attribute "filenames" must have type list')
         if not(all([isinstance(v, basestring) for v in value])):
-            raise TypeError('Elements of "filenames" must have type basestring')
+            raise TypeError('Elements of "filenames" must have type str')
         self._filenames = [str(v) for v in value]

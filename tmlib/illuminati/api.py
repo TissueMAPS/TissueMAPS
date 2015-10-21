@@ -3,7 +3,6 @@ import logging
 import numpy as np
 from .layers import ChannelLayer
 from ..cluster import ClusterRoutines
-from ..image import IllumstatsImages
 
 logger = logging.getLogger(__name__)
 

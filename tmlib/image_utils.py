@@ -342,10 +342,10 @@ def create_thresholding_LUT(threshold):
 
 def convert_to_uint8(img):
     '''
-    Convert a 16-bit image to 8-bit by linearly scaling from the range between
-    the minimum value and the 99.9th percentile value to 0-255.
+    Convert a 16-bit image to 8-bit by linearly scaling from 0-``max(img)``
+    to 0-255.
     
-    This can be useful for display of the image.
+    This can be useful for the display of an image in a figure.
 
     Parameters
     ----------
@@ -354,7 +354,11 @@ def convert_to_uint8(img):
     Returns
     -------
     numpy.ndarray[uint8]
+
+    Note
+    ----
+    This is equivalent to Image > Type > 8-bit in ImageJ.
     '''
-    in_range = (np.min(img), np.percentile(img, 99.9))  # np.max(img)
+    in_range = (np.min(img), np.max(img))
     img_rescaled = rescale_intensity(img, out_range='uint8', in_range=in_range).astype(np.uint8)
     return img_rescaled

@@ -296,6 +296,14 @@ class DatasetReader(object):
     '''
 
     def __init__(self, filename):
+        '''
+        Initialize an instance of class DatasetReader.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to an HDF5 file
+        '''
         self.filename = filename
 
     def __enter__(self):
@@ -332,6 +340,7 @@ class DatasetReader(object):
 
     @staticmethod
     def _is_group(element):
+        # TODO: this doesn't work, also lists datasets
         if isinstance(element.id, h5py.h5g.GroupID):
             return True
         else:
@@ -370,7 +379,7 @@ class DatasetReader(object):
         '''
         names = list()
         for name, value in self._stream[path].iteritems():
-            if self._is_group(value):
+            if not self._is_dataset(value):
                 names.append(name)
 
         return names

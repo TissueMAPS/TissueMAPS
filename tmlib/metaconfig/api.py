@@ -7,6 +7,7 @@ import bioformats
 from collections import defaultdict
 from .ome_xml import XML_DECLARATION
 from .. import utils
+from .. import cfg
 from ..plate import determine_plate_dimensions
 from ..metadata import ImageFileMapper
 from ..cluster import ClusterRoutines
@@ -73,11 +74,10 @@ class MetadataConfigurator(ClusterRoutines):
         Returns
         -------
         image_file_format_string: str
-            format string that specifies how the names of the final image PNG
+            format string that specifies how the names of the final image
             files should be formatted
         '''
-        self._image_file_format_string = self.experiment.cfg.IMAGE_FILE
-        return self._image_file_format_string
+        return cfg.IMAGE_NAME_FORMAT
 
     def create_job_descriptions(self, **kwargs):
         '''
@@ -102,37 +102,37 @@ class MetadataConfigurator(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
-        for upload in self.experiment.uploads:
-            for subupload in upload.subuploads:
+        for source in self.experiment.sources:
+            for acquisition in source.acquisitions:
                 job_count += 1
                 description = {
                     'id': job_count,
                     'inputs': {
                         'uploaded_image_files': [
-                            os.path.join(subupload.image_dir, f)
-                            for f in subupload.image_files
+                            os.path.join(acquisition.image_dir, f)
+                            for f in acquisition.image_files
                         ],
                         'uploaded_additional_files': [
-                            os.path.join(subupload.additional_dir, f)
-                            for f in subupload.additional_files
+                            os.path.join(acquisition.metadata_dir, f)
+                            for f in acquisition.additional_files
                         ],
                         'omexml_files': [
-                            os.path.join(subupload.omexml_dir, f)
-                            for f in subupload.omexml_files
+                            os.path.join(acquisition.omexml_dir, f)
+                            for f in acquisition.omexml_files
                         ]
                     },
                     'outputs': {
                         'metadata_files': [
-                            os.path.join(subupload.dir,
-                                         subupload.image_metadata_file)
+                            os.path.join(acquisition.dir,
+                                         acquisition.image_metadata_file)
                         ],
                         'mapper_files': [
-                            os.path.join(subupload.dir,
-                                         subupload.image_mapper_file)
+                            os.path.join(acquisition.dir,
+                                         acquisition.image_mapper_file)
                         ]
                     },
                     'z_stacks': kwargs['z_stacks'],
-                    'plate': upload.plate_name
+                    'plate': source.name
                 }
                 description.update(kwargs)
                 job_descriptions['run'].append(description)
@@ -140,14 +140,14 @@ class MetadataConfigurator(ClusterRoutines):
         job_descriptions['collect'] = {
             'inputs': {
                 'metadata_files': [
-                    os.path.join(subupload.dir, subupload.image_metadata_file)
-                    for upload in self.experiment.uploads
-                    for subupload in upload.subuploads
+                    os.path.join(acquisition.dir, acquisition.image_metadata_file)
+                    for source in self.experiment.sources
+                    for acquisition in source.acquisitions
                 ],
                 'mapper_files': [
-                    os.path.join(subupload.dir, subupload.image_mapper_file)
-                    for upload in self.experiment.uploads
-                    for subupload in upload.subuploads
+                    os.path.join(acquisition.dir, acquisition.image_mapper_file)
+                    for source in self.experiment.sources
+                    for acquisition in source.acquisitions
                 ]
             },
             'outputs': {
@@ -215,7 +215,7 @@ class MetadataConfigurator(ClusterRoutines):
                 logger.warning('required metadata information is missing')
                 logger.info('try to retrieve missing metadata from filenames '
                             'using regular expression')
-                n_wells = self.experiment.user_cfg.NUMBER_OF_WELLS
+                n_wells = self.experiment.user_cfg.plate_format
                 plate_dimensions = determine_plate_dimensions(n_wells)
                 handler.configure_metadata_from_filenames(
                     plate_dimensions=plate_dimensions, regex=batch['regex'])
@@ -257,7 +257,7 @@ class MetadataConfigurator(ClusterRoutines):
         # (some microscopes use one-based indexing)
         handler.update_channel_ixs()
         handler.update_zplane_ixs()
-        md = handler.build_image_filenames(self.experiment.cfg.IMAGE_FILE)
+        md = handler.build_image_filenames(self.image_file_format_string)
         fmap = handler.create_image_file_mapper()
         self._write_metadata_to_file(batch['outputs']['metadata_files'][0], md)
         self._write_mapper_to_file(batch['outputs']['mapper_files'][0], fmap)
@@ -277,16 +277,16 @@ class MetadataConfigurator(ClusterRoutines):
 
     def collect_job_output(self, batch):
         '''
-        Collect the configured image metadata from different uploads and
-        assign them to separate *cycles*. If an upload contains images from
+        Collect the configured image metadata from different sources and
+        assign them to separate *cycles*. If a source contains images from
         more than one time points, a separate *cycle* is created for each time
-        point. The mapping from upload directories to cycle directories is thus
-        1 -> n, where n is the number of time points per upload for n >= 1.
+        point. The mapping from *acquisitions* to *cycles* is consequently
+        1 -> n, where n is the number of time points per acquisition (n >= 1).
 
-        The file mappings created for each upload are also collected and fused.
+        The file mappings created for each source are also collected and fused.
         They final mapping contains all the information required for the
-        extraction of images from the original image files in the `imextract`
-        step.
+        extraction of images from the original source image files in the
+        `imextract` step.
 
         Parameters
         ----------
@@ -294,17 +294,13 @@ class MetadataConfigurator(ClusterRoutines):
             description of the *collect* job
         '''
         plate_file_mapper = list()
-        for i, upload in enumerate(self.experiment.uploads):
+        for i, source in enumerate(self.experiment.sources):
+            # Create new plate
+            self.experiment.add_plate(source.name)
             cycle_count = 0
-            for subupload in upload.subuploads:
+            for acquisition in source.acquisitions:
 
-                # Create plate folder
-                plate_dir = os.path.join(self.experiment.plates_dir,
-                                         upload.plate_name)
-                if not os.path.exists(plate_dir):
-                    os.mkdir(plate_dir)
-
-                metadata = subupload.image_metadata
+                metadata = acquisition.image_metadata
 
                 # Create a lookup tables for well information
                 tpoint_samples = defaultdict(list)
@@ -327,10 +323,11 @@ class MetadataConfigurator(ClusterRoutines):
 
                 tpoints = lut['t'].tolist()
                 unique_tpoints = set(tpoints)
-                logger.info('%d time points found in upload directory "%s"',
-                            len(unique_tpoints), os.path.basename(subupload.dir))
+                logger.info('%d time points found in source directory "%s"',
+                            len(unique_tpoints),
+                            os.path.basename(acquisition.dir))
 
-                # Create a cycle for each time point
+                # Create a cycle for each acquired time point
                 for t in unique_tpoints:
 
                     logger.info('update metadata information for cycle #%d',
@@ -339,7 +336,7 @@ class MetadataConfigurator(ClusterRoutines):
                         cycle = self.experiment.plates[i].cycles[cycle_count]
                     except IndexError:
                         # Create cycle if it doesn't exist
-                        cycle = self.experiment.plates[i].append_cycle()
+                        cycle = self.experiment.plates[i].add_cycle()
 
                     cycle_indices = lut[lut['t'] == t].index.tolist()
 
@@ -401,7 +398,7 @@ class MetadataConfigurator(ClusterRoutines):
                             im.Pixels.Plane(0).TheT = cycle_count
                             # Update the name
                             fn = {
-                                'plate_name': upload.plate_name,
+                                'plate_name': source.name,
                                 'w': well_id,
                                 'y': int(samples[s].PositionY),
                                 'x': int(samples[s].PositionX),
@@ -409,7 +406,7 @@ class MetadataConfigurator(ClusterRoutines):
                                 'z': im.Pixels.Plane(0).TheZ,
                                 't': im.Pixels.Plane(0).TheT
                             }
-                            im.Name = self.experiment.cfg.IMAGE_FILE.format(**fn)
+                            im.Name = self.image_file_format_string.format(**fn)
                             samples[s].ImageRef = im.ID
                             # Map original index to new cycle-specific index
                             fm_lut[ref_ix] = im_count
@@ -426,14 +423,15 @@ class MetadataConfigurator(ClusterRoutines):
                     # full path to the final image file (in the respective cycle
                     # folder) and store it in the main upload directory
                     # TODO
-                    file_mapper = subupload.image_mapper
+                    file_mapper = acquisition.image_mapper
                     for element in file_mapper:
                         new_element = ImageFileMapper()
                         ix = fm_lut[element.ref_index]
                         new_element.series = element.series
                         new_element.planes = element.planes
                         new_element.files = [
-                            os.path.join(subupload.dir, subupload.image_dir, f)
+                            os.path.join(acquisition.dir,
+                                         acquisition.image_dir, f)
                             for f in element.files
                         ]
                         new_element.ref_index = ix
@@ -445,14 +443,14 @@ class MetadataConfigurator(ClusterRoutines):
                         plate_file_mapper.append(dict(new_element))
 
                     # Remove the intermediate cycle-specific mapper file
-                    os.remove(os.path.join(subupload.dir,
-                              subupload.image_mapper_file))
+                    os.remove(os.path.join(acquisition.dir,
+                              acquisition.image_mapper_file))
 
                     cycle_count += 1
 
                 with JsonWriter() as writer:
-                    filename = os.path.join(upload.dir,
-                                            upload.image_mapper_file)
+                    filename = os.path.join(source.dir,
+                                            source.image_mapper_file)
                     data = plate_file_mapper
                     writer.write(filename, data)
 

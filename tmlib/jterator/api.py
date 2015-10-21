@@ -7,7 +7,7 @@ import numpy as np
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from . import path_utils
-from . import fusion
+from . import data_fusion
 from .project import JtProject
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
@@ -392,7 +392,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         layer_images = dict()
         for layer in self.project.pipe['description']['images']['layers']:
             filename = batch['inputs']['image_files'][layer['name']]
-            image = self.experiment.get_image_via_filename(filename)
+            image = self.experiment.get_image_by_name(filename)
             if layer['correct']:
                 for plate in self.experiment.plates:
                     if plate.name != image.metadata.plate_name:
@@ -450,7 +450,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job description  
         '''
         # NOTE: the job id should correspond to the site number
-        datasets = fusion.fuse_datasets(batch['inputs']['data_files'])
+        datasets = data_fusion.fuse_datasets(batch['inputs']['data_files'])
         with DatasetWriter(batch['outputs']['data_files'][0], truncate=True) as f:
             for path, data in datasets.iteritems():
                 f.write(path, data)

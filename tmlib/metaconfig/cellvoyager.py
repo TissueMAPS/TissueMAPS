@@ -145,7 +145,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
 
         Parameters
         ----------
-        image_upload_files: List[str]
+        image_files: List[str]
             full paths to image files
         additional_files: List[str]
             full paths to additional microscope-specific metadata files

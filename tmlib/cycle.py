@@ -34,7 +34,11 @@ class Cycle(object):
     `experiment.Experiment`_
     '''
 
-    def __init__(self, cycle_dir, cfg, user_cfg, library):
+    CYCLE_DIR_FORMAT = '{plate_dir}{sep}cycle_{cycle_ix:0>2}'
+
+    STATS_FILE_FORMAT = 'channel_{channel_ix}.stat.h5'
+
+    def __init__(self, cycle_dir, user_cfg, library):
         '''
         Initialize an instance of class Cycle.
 
@@ -42,8 +46,6 @@ class Cycle(object):
         ----------
         cycle_dir: str
             absolute path to the cycle directory
-        cfg: TmlibConfigurations
-            configuration settings for names of directories and files on disk
         user_cfg: Dict[str, str]
             additional user configuration settings
         library: str
@@ -58,7 +60,6 @@ class Cycle(object):
         self.cycle_dir = os.path.abspath(cycle_dir)
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
-        self.cfg = cfg
         self.user_cfg = user_cfg
         self.library = library
 
@@ -110,15 +111,14 @@ class Cycle(object):
         RegexError
             when `index` cannot not be determined from folder name
         '''
-        regexp = utils.regex_from_format_string(self.cfg.CYCLE_DIR)
+        regexp = utils.regex_from_format_string(self.CYCLE_DIR_FORMAT)
         match = re.search(regexp, self.name)
         if not match:
             raise RegexError(
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
-                    % (self.name, self.cfg.CYCLE_DIR))
-        self._id = int(match.group('cycle_ix'))
-        return self._id
+                    % (self.name, self.CYCLE_DIR_FORMAT))
+        return int(match.group('cycle_ix'))
 
     @property
     def experiment_dir(self):
@@ -128,8 +128,7 @@ class Cycle(object):
         str
             absolute path to the parent experiment directory
         '''
-        self.experiment_dir = os.path.dirname(self.dir)
-        return self._experiment_dir
+        return os.path.dirname(self.dir)
 
     @property
     def experiment(self):
@@ -139,8 +138,7 @@ class Cycle(object):
         str
             name of the corresponding parent experiment folder
         '''
-        self._experiment = os.path.basename(os.path.dirname(self.dir))
-        return self._experiment
+        return os.path.basename(os.path.dirname(self.dir))
 
     @cached_property
     def image_dir(self):
@@ -154,14 +152,11 @@ class Cycle(object):
         ----
         The directory is created if it doesn't exist.
         '''
-        self._image_dir = self.cfg.IMAGE_DIR.format(
-                                                cycle_dir=self.dir,
-                                                sep=os.path.sep)
-        if not os.path.exists(self._image_dir):
-            logger.debug('create directory for image files: %s'
-                         % self._image_dir)
-            os.mkdir(self._image_dir)
-        return self._image_dir
+        image_dir = os.path.join(self.dir, 'images')
+        if not os.path.exists(image_dir):
+            logger.debug('create directory for image files: %s', image_dir)
+            os.mkdir(image_dir)
+        return image_dir
 
     @property
     def image_files(self):
@@ -180,13 +175,13 @@ class Cycle(object):
         --------
         `image.is_image_file`_
         '''
-        self._image_files = [
+        files = [
             f for f in os.listdir(self.image_dir) if is_image_file(f)
         ]
-        self._image_files = natsorted(self._image_files)
-        if not self._image_files:
+        files = natsorted(files)
+        if not files:
             raise OSError('No image files found in "%s"' % self.image_dir)
-        return self._image_files
+        return files
 
     @property
     def image_metadata_file(self):
@@ -196,7 +191,7 @@ class Cycle(object):
         str
             name of the OMEXML file containing cycle-specific image metadata
         '''
-        return self.cfg.IMAGE_METADATA_FILE
+        return 'image_metadata.ome.xml'
 
     @property
     def align_descriptor_file(self):
@@ -208,7 +203,7 @@ class Cycle(object):
             for the alignment of images of the current cycle relative to the
             reference cycle
         '''
-        return self.cfg.ALIGN_DESCRIPTOR_FILE
+        return 'alignment_description.json'
 
     @cached_property
     def image_metadata_table(self):
@@ -310,7 +305,7 @@ class Cycle(object):
             when names of image files and names in the image metadata are not
             the same
         '''
-        self._images = list()
+        images = list()
         filenames = self.image_metadata_table['name']
         if self.image_files != filenames.tolist():
             raise ValueError('Names of images do not match')
@@ -324,8 +319,8 @@ class Cycle(object):
                     filename=os.path.join(self.image_dir, f),
                     metadata=image_metadata,
                     library=self.library)
-            self._images.append(img)
-        return self._images
+            images.append(img)
+        return images
 
     @cached_property
     def stats_dir(self):
@@ -339,14 +334,13 @@ class Cycle(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        self._stats_dir = self.cfg.STATS_DIR.format(
-                            cycle_dir=self.dir, sep=os.path.sep)
-        if not os.path.exists(self._stats_dir):
+        stats_dir = os.path.join(self.dir, 'stats')
+        if not os.path.exists(stats_dir):
             logger.debug(
-                'create directory for illumination statistics files: %s'
-                % self._stats_dir)
-            os.mkdir(self._stats_dir)
-        return self._stats_dir
+                'create directory for illumination statistics files: %s',
+                stats_dir)
+            os.mkdir(stats_dir)
+        return stats_dir
 
     @cached_property
     def illumstats_files(self):
@@ -362,7 +356,7 @@ class Cycle(object):
             when `stats_dir` does not exist or when no illumination statistic
             files are found in `stats_dir`
         '''
-        stats_pattern = self.cfg.STATS_FILE.format(channel_ix='\w+')
+        stats_pattern = self.STATS_FILE_FORMAT.format(channel_ix='\w+')
         stats_pattern = re.compile(stats_pattern)
         if not os.path.exists(self.stats_dir):
             raise OSError('Stats directory does not exist: %s'
@@ -375,8 +369,8 @@ class Cycle(object):
         if not files:
             raise OSError('No illumination statistic files found in "%s"'
                           % self.stats_dir)
-        self._illumstats_files = files
-        return self._illumstats_files
+        illumstats_files = files
+        return illumstats_files
 
     @property
     def illumstats_metadata(self):
@@ -396,10 +390,10 @@ class Cycle(object):
         RegexError
             when required information could not be retrieved from filename
         '''
-        self._illumstats_metadata = list()
+        illumstats_metadata = list()
         for f in self.illumstats_files:
             md = IllumstatsImageMetadata()
-            regexp = utils.regex_from_format_string(self.cfg.STATS_FILE)
+            regexp = utils.regex_from_format_string(self.STATS_FILE_FORMAT)
             match = re.search(regexp, f)
             if match:
                 md.channel_ix = int(match.group('channel_ix'))
@@ -410,9 +404,9 @@ class Cycle(object):
                                   'from illumination statistic file "%s" '
                                   'using provided format "%s".\n'
                                   'Check your configuration settings!'
-                                  % (f, self.cfg['STATS_FILE']))
-            self._illumstats_metadata.append(md)
-        return self._illumstats_metadata
+                                  % (f, self.STATS_FILE_FORMAT))
+            illumstats_metadata.append(md)
+        return illumstats_metadata
 
     @property
     def illumstats_images(self):
@@ -428,12 +422,12 @@ class Cycle(object):
         pixel array is only loaded into memory once the corresponding attribute
         is accessed.
         '''
-        self._illumstats_images = dict()
+        illumstats_images = dict()
         for i, f in enumerate(self.illumstats_files):
             img = IllumstatsImages.create_from_file(
                     filename=os.path.join(self.stats_dir, f),
                     metadata=self.illumstats_metadata[i],
                     library=self.library)
             channel = self.illumstats_metadata[i].channel_ix
-            self._illumstats_images[channel] = img
-        return self._illumstats_images
+            illumstats_images[channel] = img
+        return illumstats_images

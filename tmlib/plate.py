@@ -50,7 +50,9 @@ class Plate(object):
 
     SUPPORTED_PLATE_FORMATS = {1, 96, 384}
 
-    def __init__(self, plate_dir, cfg, user_cfg, library):
+    PLATE_DIR_FORMAT = '{plates_dir}{sep}plate_{plate_name}'
+
+    def __init__(self, plate_dir, user_cfg, library):
         '''
         Initialize an instance of class WellPlate.
 
@@ -58,8 +60,8 @@ class Plate(object):
         ----------
         plate_dir: str
             absolute path to plate folder
-        cfg: TmlibConfigurations
-            configuration settings for names of directories and files on disk
+        user_cfg: UserConfigurations
+            user configuration settings
         library: str
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
@@ -70,7 +72,6 @@ class Plate(object):
         `tmlib.cfg`_
         '''
         self.plate_dir = plate_dir
-        self.cfg = cfg
         self.user_cfg = user_cfg
         self.library = library
 
@@ -96,7 +97,7 @@ class Plate(object):
         return self.plate_dir
 
     def _is_cycle_dir(self, folder):
-        format_string = self.cfg.CYCLE_DIR
+        format_string = Cycle.CYCLE_DIR_FORMAT
         regexp = utils.regex_from_format_string(format_string)
         return True if re.match(regexp, folder) else False
 
@@ -120,55 +121,53 @@ class Plate(object):
             and not d.startswith('.')
         ]
         cycle_dirs = natsorted(cycle_dirs)
-        self._cycles = [
-                Cycle(d, self.cfg, self.user_cfg, self.library)
-                for d in cycle_dirs
-            ]
-        return self._cycles
+        return [Cycle(d, self.user_cfg, self.library) for d in cycle_dirs]
 
-    @property
-    def reference_cycle(self):
-        '''
-        Returns
-        -------
-        str
-            name of the reference cycle
+    # @property
+    # def reference_cycle(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     str
+    #         name of the reference cycle
 
-        Note
-        ----
-        If the attribute is not set, an attempt will be made to retrieve the
-        information from the user configuration file. If the information is
-        not available via the file, the last cycle is by default assigned as
-        reference.
-        '''
-        if 'REFERENCE_CYCLE' in self.user_cfg.keys():
-            self._reference_cycle = self.user_cfg.REFERENCE_CYCLE
-            logger.debug('set reference cycle according to user configuration')
-        else:
-            cycle_names = natsorted([cycle.name for cycle in self.cycles])
-            self._reference_cycle = cycle_names[-1]
-            logger.debug('take last cycle as reference cycle')
-        return self._reference_cycle
+    #     Note
+    #     ----
+    #     If the attribute is not set, an attempt will be made to retrieve the
+    #     information from the user configuration file. If the information is
+    #     not available via the file, the last cycle is by default assigned as
+    #     reference.
+    #     '''
+    #     if 'REFERENCE_CYCLE' in self.user_cfg.keys():
+    #         self._reference_cycle = self.user_cfg.REFERENCE_CYCLE
+    #         logger.debug('set reference cycle according to user configuration')
+    #     else:
+    #         cycle_names = natsorted([cycle.name for cycle in self.cycles])
+    #         self._reference_cycle = cycle_names[-1]
+    #         logger.debug('take last cycle as reference cycle')
+    #     return self._reference_cycle
 
-    def append_cycle(self):
+    def add_cycle(self):
         '''
-        Create a new cycle object and add it to the end of the list of
-        existing cycles.
+        Add a cycle to the plate, i.e. create a folder on disk and append the
+        list of existing cycle objects.
 
         Returns
         -------
         WellPlate or Slide
             configured cycle object
         '''
-        new_cycle_name = self.cfg.CYCLE_DIR.format(
+        new_cycle_name = Cycle.CYCLE_DIR_FORMAT.format(
                                     plate_dir=self.dir,
                                     sep=os.path.sep,
                                     cycle_ix=len(self.cycles))
         new_cycle_dir = os.path.join(self.dir, new_cycle_name)
-        logger.debug('add cycle: %s', os.path.basename(new_cycle_dir))
+        if os.path.exists(new_cycle_dir):
+            raise OSError('Cycle "%s" already exists.')
+        logger.debug('add cycle: %s', len(self.cycles))
         logger.debug('create directory for new cycle: %s', new_cycle_dir)
         os.mkdir(new_cycle_dir)
-        new_cycle = Cycle(new_cycle_dir, self.cfg, self.user_cfg, self.library)
+        new_cycle = Cycle(new_cycle_dir, self.user_cfg, self.library)
         self.cycles.append(new_cycle)
         return new_cycle
 
@@ -189,7 +188,7 @@ class Plate(object):
         ValueError
             when provided plate format is not supported
         '''
-        self._n_wells = self.user_cfg.NUMBER_OF_WELLS
+        self._n_wells = self.user_cfg.number_of_wells
         if self._n_wells not in self.SUPPORTED_PLATE_FORMATS:
             raise ValueError(
                     'Well plate format must be either "%s"' % '" or "'.join(
