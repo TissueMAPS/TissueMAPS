@@ -289,7 +289,7 @@ class Experiment(object):
                 for c in channels:
                     for z in zplanes:
                         metadata = MosaicMetadata()
-                        metadata.name = self.user_cfg.LAYER_NAME_FORMAT.format(
+                        metadata.name = cfg.LAYER_NAME_FORMAT.format(
                                             t=cycle.index, c=c, z=z)
                         metadata.channel_ix = c
                         metadata.zplane_ix = z
