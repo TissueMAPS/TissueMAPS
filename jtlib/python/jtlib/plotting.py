@@ -6,9 +6,8 @@ from bokeh.plotting import save
 from bokeh.palettes import Reds5, Greens5, Blues5, Oranges5, BuPu5
 import matplotlib as mpl
 from matplotlib import cm
-import mpl.cm
 import logging
-from .. import image_utils
+from tmlib import image_utils
 # import os
 # import re
 # from lxml import etree
