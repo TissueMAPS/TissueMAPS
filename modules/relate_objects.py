@@ -1,5 +1,5 @@
 import numpy as np
-from tmlib.jterator import jtapi
+from jtlib import plotting
 
 
 def relate_objects(parent_objects_image, parent_objects_name,
@@ -40,4 +40,4 @@ def relate_objects(parent_objects_image, parent_objects_name,
         parent_ids.append(p)
     data['%s_ParentName' % children_objects_name] = parent_objects_name
     data['%s_ParentId' % children_objects_name] = parent_ids
-    jtapi.writedata(data, kwargs['data_file'])
+    plotting.writedata(data, kwargs['data_file'])

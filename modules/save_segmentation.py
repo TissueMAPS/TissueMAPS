@@ -4,7 +4,7 @@ from skimage import measure, morphology
 from tmlib.writers import DatasetWriter
 from tmlib.illuminati import segment
 from tmlib.image_utils import find_border_objects
-from tmlib.jterator import jtapi
+from jtlib import plotting
 
 
 def save_segmentation(labeled_image, objects_name, **kwargs):
@@ -44,7 +44,7 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
     regions = measure.regionprops(labeled_image)
     centroids = np.array([r.centroid for r in regions])
 
-    with DatasetWriter(kwargs['data_file'], truncate=True) as f:
+    with DatasetWriter(kwargs['data_file']) as f:
         f.write('objects/%s/object_ids' % objects_name,
                 data=objects_ids)
         f.write('objects/%s/is_border' % objects_name,
@@ -81,4 +81,4 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
 
         fig.tight_layout()
 
-        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])

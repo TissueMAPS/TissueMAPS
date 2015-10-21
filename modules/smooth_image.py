@@ -4,7 +4,7 @@ from skimage.filters.rank import median
 import collections
 import numpy as np
 import pylab as plt
-from tmlib.jterator import jtapi
+from jtlib import plotting
 
 
 def smooth_image(image, filter, filter_size, sigma=0, sigma_color=0,
@@ -91,7 +91,7 @@ def smooth_image(image, filter, filter_size, sigma=0, sigma_color=0,
 
         fig.tight_layout()
 
-        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'smoothed_image')
     return output(img.astype(input_dtype))

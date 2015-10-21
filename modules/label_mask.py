@@ -1,7 +1,7 @@
 import pylab as plt
 import collections
 import numpy as np
-from tmlib.jterator import jtapi
+from jtlib import plotting
 from jtlib import utils
 
 
@@ -45,7 +45,7 @@ def label_mask(mask, **kwargs):
 
         fig.tight_layout()
 
-        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'objects')
     return output(labeled_image)

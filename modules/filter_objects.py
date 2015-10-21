@@ -2,7 +2,7 @@ from skimage import measure
 import collections
 import pylab as plt
 import numpy as np
-from tmlib.jterator import jtapi
+from jtlib import plotting
 from jtlib import utils
 
 
@@ -78,7 +78,7 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
 
         fig.tight_layout()
 
-        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'filtered_objects')
     return output(filtered_image)

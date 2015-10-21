@@ -5,7 +5,7 @@ import pylab as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import mpld3
 import collections
-from tmlib.jterator import jtapi
+from jtlib import plotting
 from tmlib.readers import DatasetReader
 from tmlib.experiment import ExperimentFactory
 from tmlib import cfg
@@ -67,7 +67,7 @@ def load_objects(objects_name, **kwargs):
         mpld3.plugins.connect(fig, mousepos)
         mpld3.fig_to_html(fig, template_type='simple')
 
-        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'loaded_objects')
     return output(labeled_image)

@@ -1,9 +1,9 @@
 import mahotas as mh
+from bokeh.plotting import figure
+from bokeh.palettes import Reds3
 import collections
 import numpy as np
-import pylab as plt
-# import matplotlib
-from tmlib.jterator import jtapi
+from jtlib import plotting
 from tmlib import image_utils
 
 
@@ -61,42 +61,34 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
     if kwargs['plot']:
 
-        fig = plt.figure(figsize=(10, 10))
-        ax1 = fig.add_subplot(1, 2, 1)
-        ax2 = fig.add_subplot(1, 2, 2)
-
+        # Get the contours of the mask
         img_border = mh.labeled.borders(thresh_image)
-        # matplotlib cannot handle uint16 images:
-        # https://github.com/matplotlib/matplotlib/issues/2499
-        # so let's rescale the image to 8-bit for display
+
+        # Convert the image to 8-bit for display
         rescaled_image = image_utils.convert_to_uint8(image)
-        img_overlay = mh.overlay(rescaled_image, img_border)
-        ax1.imshow(img_overlay)
-        ax1.set_title('overlay of outlines', size=20)
 
-        # rescaled_image = image_utils.convert_to_uint8(image)
-        # img_border = segment.compute_outlines_numpy(thresh_image)
-        # img_mask = np.ma.array(rescaled_image, mask=~img_border)
+        dims = rescaled_image.shape
+        fig = figure(x_range=(0, dims[1]), y_range=(0, dims[0]),
+                     tools=["reset, resize, save, pan, box_zoom, wheel_zoom"],
+                     webgl=True)
 
-        # figargs = {
-        #     'interpolation': 'none',
-        #     'vmin': rescaled_image.min(),
-        #     'vmax': rescaled_image.max()
-        # }
-        # ax1.imshow(rescaled_image, cmap=plt.cm.Greys_r, **figargs)
-        # ax1.imshow(img_mask, cmap=plt.cm.jet, **figargs)
-        # ax1.set_title('mask trick', size=20)
+        # Bokeh cannot deal with RGB images in form of 3D numpy arrays.
+        # Therefore, we have to work around it by adapting the color palette.
+        img_rgb = rescaled_image.copy()
+        img_rgb[rescaled_image == 255] = 254
+        img_rgb[img_border] = 255
+        # border pixels will be colored red, all others get gray colors
+        palette = plotting.create_bokeh_palette('greys')
+        palette_rgb = np.array(palette)
+        palette_rgb[-1] = Reds3[0]
+        fig.image(image=[img_rgb[::-1]],
+                  x=[0], y=[0], dw=[dims[1]], dh=[dims[0]],
+                  palette=palette_rgb)
+        fig.grid.grid_line_color = None
+        fig.title = 'overlay of mask contours'
+        fig.axis.visible = None
 
-        img_obj = np.zeros(thresh_image.shape)
-        img_obj[thresh_image] = 1
-        img_obj[~thresh_image] = np.nan
-
-        ax2.imshow(img_obj, cmap=plt.cm.Set1)
-        ax2.set_title('thresholded image', size=20)
-
-        fig.tight_layout()
-
-        jtapi.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_bk_figure(fig, kwargs['figure_file'])
 
     output = collections.namedtuple('Output', 'thresholded_image')
     return output(thresh_image)

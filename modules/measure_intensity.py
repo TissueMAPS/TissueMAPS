@@ -1,7 +1,7 @@
 from skimage import measure
-import jtapi
 from jtlib import utils
 from jtlib import features
+from tmlib.writers import DatasetWriter
 
 
 def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
@@ -68,6 +68,9 @@ def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
     feature_names = measurements[0].keys()
     for f in feature_names:
         feats = [item[f] for item in measurements]
-        data['%s_Intensity_%s_%s' % (objects_name, layer_name, f)] = feats
+        data['Intensity_%s_%s' % (layer_name, f)] = feats
 
-    jtapi.writedata(data, kwargs['data_file'])
+    with DatasetWriter(kwargs['data_file']) as f:
+        for k, v in data.iteritems():
+            f.write('%s/features/%s' % (objects_name, k), data=v)
+

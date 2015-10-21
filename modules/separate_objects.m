@@ -69,7 +69,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
     import jtlib.rplabel;
     import jtlib.removeSmallObjects;
     import jtlib.freezeColors;
-    import jtapi.*;
+    import plotting.*;
 
     if perimeter_test_mode && selection_test_mode
         error('Only one test mode can be active at a time.');
@@ -232,7 +232,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
             title('Labeled separated mask');
             freezeColors
 
-            jtapi.save_mpl_figure(fig, varargin{2})
+            plotting.save_mpl_figure(fig, varargin{2})
 
         end
 
