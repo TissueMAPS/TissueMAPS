@@ -161,9 +161,7 @@ class PipelineChecker(object):
 
                     ...
 
-                ],
-
-                'plot': bool
+                ]
             }
         '''
         self.libpath = self.pipe_description['project']['lib']
@@ -215,17 +213,11 @@ class PipelineChecker(object):
                 handles = self.handles_descriptions[i]
 
             # Check "input" section
-            required_keys = ['input', 'output', 'plot']
+            required_keys = ['input', 'output']
             for key in required_keys:
                 if key not in handles:
                     raise PipelineDescriptionError(
                             'Handles file must contain the key "%s".' % key)
-                if key == 'plot':
-                    if not isinstance(handles[key], bool):
-                        raise PipelineDescriptionError(
-                                'The value of "%s" in the '
-                                '"input" section of the handles '
-                                'file must be boolean.' % key)
                 elif key == 'input':
                     if not isinstance(handles[key], list):
                         raise TypeError(
@@ -283,11 +275,6 @@ class PipelineChecker(object):
             if repeated:
                 raise PipelineDescriptionError(
                         'Output names need to be unique.')
-
-            if not isinstance(handles['plot'], bool):
-                raise PipelineDescriptionError(
-                        'Plot argument in handles file '
-                        '"%s" needs to be boolean.' % handles_path)
 
         logger.info('Handles descriptions check successful!')
 

@@ -462,8 +462,9 @@ class JtAvailableModules(object):
             raise ValueError('No handles file found for module "%s"'
                              % module_name)
         elif len(handles_files) == 1:
-            handles_file = handles_files[0]
-        return handles_file
+            # NOTE: we assume that handles are stored within a subfolder of the
+            # project folder, which is called "handles"
+            return handles_files[0]
 
     @property
     def handles(self):
@@ -509,10 +510,15 @@ class JtAvailableModules(object):
         for i, f in enumerate(self.module_files):
             name = self.module_names[i]
             if name in available_modules:
+                repo_handles_path = self._get_corresponding_handles_file(name)
+                # We have to provide the path to handles files for the
+                # currently processed project
+                new_handles_path = os.path.join(
+                    'handles', os.path.basename(repo_handles_path))
                 element = {
                     'name': name,
                     'description': {
-                        'handles': self._get_corresponding_handles_file(name),
+                        'handles': new_handles_path,
                         'module': f,
                         'active': True
                     }

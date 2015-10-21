@@ -28,7 +28,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     '''
 
     def __init__(self, experiment, prog_name, verbosity, pipe_name,
-                 pipe=None, handles=None):
+                 pipe=None, handles=None, headless=True):
         '''
         Initialize an instance of class ImageAnalysisPipeline.
 
@@ -47,6 +47,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
             paths to module code and descriptor files
         handles: List[dict], optional
             name of each module and the description of its input/output
+        headless: bool, optional
+            whether plotting should be disabled (default: ``True``)
 
         Note
         ----
@@ -71,6 +73,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.pipe_name = pipe_name
         self.prog_name = prog_name
         self.verbosity = verbosity
+        self.headless = headless
         self.project = JtProject(
                     project_dir=self.project_dir, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
@@ -223,7 +226,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
             module = ImageProcessingModule(
                         name=module_name, module_file=module_path,
                         handles_description=handles_description,
-                        experiment_dir=self.experiment.dir)
+                        experiment_dir=self.experiment.dir,
+                        headless=self.headless)
             self._pipeline.append(module)
         if not self._pipeline:
             raise PipelineDescriptionError(

@@ -47,7 +47,8 @@ class ImageProcessingModule(object):
     Class for a Jterator module, the building block of a Jterator pipeline.
     '''
 
-    def __init__(self, name, module_file, handles_description, experiment_dir):
+    def __init__(self, name, module_file, handles_description, experiment_dir,
+                 headless):
         '''
         Initiate Module class.
 
@@ -61,11 +62,20 @@ class ImageProcessingModule(object):
             description of module input/output
         experiment_dir: str
             path to experiment directory
+        headless: bool
+            whether plotting should be disabled
+
+        Warning
+        -------
+        Be careful when activating plotting because plots are saved as html
+        files on disk. Their generation requires memory and computation time
+        and they occupy quite some disk space.
         '''
         self.name = name
         self.module_file = module_file
         self.handles_description = handles_description
         self.experiment_dir = experiment_dir
+        self.headless = headless
         self.outputs = dict()
 
     def build_log_filenames(self, log_dir, job_id):
@@ -318,7 +328,7 @@ class ImageProcessingModule(object):
         inputs['data_file'] = data_file
         inputs['figure_file'] = figure_file
         inputs['experiment_dir'] = self.experiment_dir
-        inputs['plot'] = self.handles_description['plot']
+        inputs['plot'] = not self.headless
         inputs['job_id'] = job_id
         return inputs
 
