@@ -47,8 +47,7 @@ class ImageProcessingModule(object):
     Class for a Jterator module, the building block of a Jterator pipeline.
     '''
 
-    def __init__(self, name, module_file, handles_description, experiment_dir,
-                 headless):
+    def __init__(self, name, module_file, handles_description):
         '''
         Initiate Module class.
 
@@ -60,22 +59,10 @@ class ImageProcessingModule(object):
             path to program file that should be executed
         handles_description: dict
             description of module input/output
-        experiment_dir: str
-            path to experiment directory
-        headless: bool
-            whether plotting should be disabled
-
-        Warning
-        -------
-        Be careful when activating plotting because plots are saved as html
-        files on disk. Their generation requires memory and computation time
-        and they occupy quite some disk space.
         '''
         self.name = name
         self.module_file = module_file
         self.handles_description = handles_description
-        self.experiment_dir = experiment_dir
-        self.headless = headless
         self.outputs = dict()
 
     def build_log_filenames(self, log_dir, job_id):
@@ -280,7 +267,7 @@ class ImageProcessingModule(object):
             raise PipelineRunError('Language not supported.')
 
     def prepare_inputs(self, layers, upstream_output, data_file, figure_file,
-                       job_id):
+                       job_id, experiment_dir, headless):
         '''
         Prepare input data that will be parsed to the module.
 
@@ -296,15 +283,25 @@ class ImageProcessingModule(object):
             absolute path to the figure file
         job_id: str
             one-based job identifier number
+        experiment_dir: str
+            path to experiment directory
+        headless: bool
+            whether plotting should be disabled
+
+        Note
+        ----
+        Images are automatically aligned on the fly.
+
+        Warning
+        -------
+        Be careful when activating plotting because plots are saved as html
+        files on disk. Their generation requires memory and computation time
+        and they occupy quite some disk space.
 
         Returns
         -------
         dict
             keys: name of the input argument, values: input data
-
-        Note
-        ----
-        The image is automatically aligned on the fly.
         '''
         # Prepare input provided by handles
         inputs = collections.OrderedDict()
@@ -327,8 +324,8 @@ class ImageProcessingModule(object):
         # Add additional stuff => kwargs
         inputs['data_file'] = data_file
         inputs['figure_file'] = figure_file
-        inputs['experiment_dir'] = self.experiment_dir
-        inputs['plot'] = not self.headless
+        inputs['experiment_dir'] = experiment_dir
+        inputs['plot'] = not headless
         inputs['job_id'] = job_id
         return inputs
 

@@ -225,9 +225,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             handles_description = self.project.handles[i]['description']
             module = ImageProcessingModule(
                         name=module_name, module_file=module_path,
-                        handles_description=handles_description,
-                        experiment_dir=self.experiment.dir,
-                        headless=self.headless)
+                        handles_description=handles_description)
             self._pipeline.append(module)
         if not self._pipeline:
             raise PipelineDescriptionError(
@@ -338,10 +336,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     for module in self.pipeline
                 ])
             }
-            # 'tpoint': [images[k].tpoint_ix for k in batch.keys()][0],
-            # 'zplane': [images[k].zplane_ix for k in batch.keys()][0],
-            # 'channel': [images[k].channel_ix for k in batch.keys()][0],
-            # 'site': [images[k].site_ixs[i] for k in batch.keys()][0]
         } for i, batch in enumerate(batches)]
 
         job_descriptions['collect'] = {
@@ -367,6 +361,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         command.extend(['-p', self.pipe_name])
         command.append(self.experiment.dir)
         command.extend(['run', '-j', str(batch['id'])])
+        if not self.headless:
+            command.append('--plot')
         return command
 
     def run_job(self, batch):
@@ -421,7 +417,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         layers=layer_images,
                         upstream_output=outputs['data'],
                         data_file=data_file, figure_file=figure_file,
-                        job_id=job_id)
+                        job_id=job_id,
+                        experiment_dir=self.experiment.dir,
+                        headless=self.headless)
             logger.info('run module "%s": %s'
                         % (module.name, module.module_file))
             out = module.run(inputs, self.engines[module.language])

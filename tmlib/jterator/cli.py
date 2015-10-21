@@ -35,7 +35,8 @@ class Jterator(CommandLineInterface):
         self.__api_instance = ImageAnalysisPipeline(
                                 experiment=experiment, prog_name=self.name,
                                 verbosity=self.args.verbosity,
-                                pipe_name=self.args.pipeline)
+                                pipe_name=self.args.pipeline,
+                                headless=self.args.headless)
         logger.debug(
             'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)

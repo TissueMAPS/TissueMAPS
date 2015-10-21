@@ -44,5 +44,11 @@ check_parser.description = '''
     Check content of the .pipe and .handles files descriptor files.
 '''
 
+run_parser = subparsers.choices['run']
+run_parser.add_argument(
+    '--plot', dest='headless', action='store_false',
+    help='whether plots should be generated'
+)
+
 for name in subparsers.choices:
     subparsers.choices[name].set_defaults(handler=Jterator.call)
