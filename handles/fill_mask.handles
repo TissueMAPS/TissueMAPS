@@ -14,4 +14,4 @@ output:
       value: 
       help: Filled binary image.
 
-plot: false
+

@@ -103,5 +103,5 @@ output:
     help: Binary output image.
 
 
-plot: false
+
 

@@ -18,4 +18,4 @@ output:
       value:
       help: Loaded channel image. 
 
-plot: false
+

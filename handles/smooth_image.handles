@@ -51,4 +51,4 @@ output:
       value:
       help: Smoothed image.
 
-plot: false
+
