@@ -15,17 +15,17 @@ class SVMTool(Tool):
                 {
                     'label': 'class1',
                     'color': {'r': 255, 'g': 0, 'b': 0},
-                    'cell_ids': map(str, range(0, 100))
+                    'cell_ids': map(str, range(0, 200))
                 },
                 {
                     'label': 'class2',
                     'color': {'r': 0, 'g': 255, 'b': 0},
-                    'cell_ids': map(str, range(100, 200))
+                    'cell_ids': map(str, range(400, 600))
                 },
                 {
                     'label': 'class3',
                     'color': {'r': 0, 'g': 0, 'b': 255},
-                    'cell_ids': map(str, range(100, 200))
+                    'cell_ids': map(str, range(800, 1000))
                 }
             ]
         }
