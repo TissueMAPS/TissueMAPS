@@ -48,4 +48,16 @@ else:
         'It has to be either "DEV", "TEST" or "PROD". Aborting...' % _execmode
     )
 
+
 app = create_app(cfg)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='TissueMAPS server')
+    parser.add_argument(
+        '--port', action='store', type=int, default=8080,
+        help='the port on which the server should listen')
+    args = parser.parse_args()
+
+    app.run(port=args.port, debug=True)
