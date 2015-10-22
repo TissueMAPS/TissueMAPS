@@ -322,8 +322,8 @@ describe('In Viewport', function() {
                 expect(lopt.name).toEqual(l.name);
                 expect(lopt.pyramidPath).toEqual(l.pyramidPath);
                 expect(lopt.imageSize).toEqual(l.imageSize);
-                expect(lopt.max).toEqual(l.max());
-                expect(lopt.min).toEqual(l.min());
+                expect(lopt.max).toEqual(l.max);
+                expect(lopt.min).toEqual(l.min);
                 expect(red.equals(lopt.color)).toEqual(true);
                 done();
             });

@@ -1,6 +1,6 @@
 class AppstateService {
 
-    private currentState: Appstate;
+    private _currentState: Appstate;
     lastSavedAt: Date;
 
     static $inject = [
@@ -18,8 +18,8 @@ class AppstateService {
                 private restoreAppstateService: RestoreAppstateService) {
     }
 
-    private setCurrentState = (st: Appstate) => {
-        this.currentState = st;
+    private setCurrentState(st: Appstate) {
+        this._currentState = st;
         if (st.isSnapshot) {
             this.$location.search({'snapshot': st.id});
         } else {
@@ -37,12 +37,12 @@ class AppstateService {
         };
     }
 
-    getCurrentState() {
-        return this.currentState;
+    get currentState() {
+        return this._currentState;
     }
 
     hasCurrentState() {
-        return this.currentState !== undefined && this.currentState.id !== undefined;
+        return this._currentState !== undefined && this._currentState.id !== undefined;
     }
 
     /**
@@ -90,12 +90,12 @@ class AppstateService {
      * If no app state is active, a 'Save as'-dialog will appear.
      */
     saveState() {
-        if (this.hasCurrentState() && this.currentState.isSnapshot) {
+        if (this.hasCurrentState() && this._currentState.isSnapshot) {
             throw new Error('Can\'t save snapshots!');
         } else if (!this.hasCurrentState()) {
             this.promptForSaveAs();
         } else {
-            var id = this.currentState.id;
+            var id = this._currentState.id;
             this.application.serialize()
             .then((bp) => {
                 return this.$http.put('/api/appstates/' + id, {
@@ -134,7 +134,7 @@ class AppstateService {
      * Ask the server to save an appstate under a new name.
      */
     saveStateAs(name: string, description: string) {
-        if (this.hasCurrentState() && this.currentState.isSnapshot) {
+        if (this.hasCurrentState() && this._currentState.isSnapshot) {
             throw new Error('A snapshot can\'t be saved under a different name');
         }
         return this.application.serialize()
@@ -157,10 +157,10 @@ class AppstateService {
     // TODO: Currently only snapshot-sharing is enabled,
     // Split this function into one for normal sharing and one for snapshot sharing
     shareState() {
-        if (this.hasCurrentState() && this.currentState.isSnapshot) {
+        if (this.hasCurrentState() && this._currentState.isSnapshot) {
             throw new Error('A snapshot can\'t be shared again');
         } else if (this.hasCurrentState()) {
-            var url = '/api/appstates/' + this.currentState.id + '/snapshots';
+            var url = '/api/appstates/' + this._currentState.id + '/snapshots';
             var instance = this.$modal.open({
                 templateUrl: '/templates/main/appstate/share-appstate-dialog.html',
                 controller: 'ShareAppstateCtrl',

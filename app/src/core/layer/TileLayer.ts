@@ -32,10 +32,9 @@ interface TileLayerArgs {
     max?: number;
 }
 
-class TileLayer extends Layer implements Serializable<TileLayer> {
+class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<TileLayer> {
     pyramidPath: string;
     imageSize: ImageSize;
-    olLayer: ModifiedOlTileLayer;
 
     constructor(opt: TileLayerArgs) {
         super(opt.name);
@@ -78,101 +77,93 @@ class TileLayer extends Layer implements Serializable<TileLayer> {
         this.olLayer = <ModifiedOlTileLayer> new ol.layer.Tile(olLayerArgs);
     }
 
-    color(val?: Color): Color {
-        if (val !== undefined) {
-            if (val !== null) {
-                var newCol = val.toNormalizedRGBArray();
-                this.olLayer.setColor(newCol);
-            } else {
-                this.olLayer.setColor(null);
-            }
-            return val;
+    get color(): Color {
+        var arrayCol: number[] = this.olLayer.getColor();
+        var col: Color = Color.fromNormalizedRGBArray(arrayCol);
+        return col;
+    }
+
+    set color(val: Color) {
+        if (val !== null) {
+            var newCol = val.toNormalizedRGBArray();
+            this.olLayer.setColor(newCol);
         } else {
-            var arrayCol: number[] = this.olLayer.getColor();
-            var col: Color = Color.fromNormalizedRGBArray(arrayCol);
-            return col;
+            this.olLayer.setColor(null);
         }
     }
 
-    opacity(val?: number): number {
-        if (angular.isDefined(val)) {
-            this.olLayer.setOpacity(val);
-            return val;
-        } else {
-            return this.olLayer.getOpacity();
-        }
+    get opacity(): number {
+        return this.olLayer.getOpacity();
     }
 
-    min(val?: number): number {
-        if (angular.isDefined(val)) {
-            this.olLayer.setMin(val);
-            return val;
-        } else {
-            return this.olLayer.getMin();
-        }
+    set opacity(val: number) {
+        this.olLayer.setOpacity(val);
     }
 
-    max(val?: number): number {
-        if (angular.isDefined(val)) {
-            this.olLayer.setMax(val);
-            return val;
-        } else {
-            return this.olLayer.getMax();
-        }
+    get min(): number {
+        return this.olLayer.getMin();
     }
 
-    brightness(val?: number): number {
-        if (angular.isDefined(val)) {
-            this.olLayer.setBrightness(val);
-            return val;
-        } else {
-            return this.olLayer.getBrightness();
-        }
+    set min(val: number) {
+        this.olLayer.setMin(val);
     }
 
-    additiveBlend(val?: boolean): boolean {
-        if (angular.isDefined(val)) {
-            this.olLayer.setAdditiveBlend(val);
-            return val;
-        } else {
-            return this.olLayer.getAdditiveBlend();
-        }
+    get max(): number {
+        return this.olLayer.getMax();
     }
 
-    drawBlackPixels(val?: boolean): boolean {
-        if (angular.isDefined(val)) {
-            this.olLayer.setDrawBlackPixels(val);
-            return val;
-        } else {
-            return this.olLayer.getDrawBlackPixels();
-        }
+    set max(val: number) {
+        this.olLayer.setMax(val);
     }
 
-    drawWhitePixels(val?: boolean): boolean {
-        if (angular.isDefined(val)) {
-            this.olLayer.setDrawWhitePixels(val);
-            return val;
-        } else {
-            return this.olLayer.getDrawWhitePixels();
-        }
+    get brightness(): number {
+        return this.olLayer.getBrightness();
+    }
+
+    set brightness(val: number) {
+        this.olLayer.setBrightness(val);
+    }
+
+    get additiveBlend(): boolean {
+        return this.olLayer.getAdditiveBlend();
+    }
+
+    set additiveBlend(val: boolean) {
+        this.olLayer.setAdditiveBlend(val);
+    }
+
+    get drawBlackPixels(): boolean {
+        return this.olLayer.getDrawBlackPixels();
+    }
+
+    set drawBlackPixels(val: boolean) {
+        this.olLayer.setDrawBlackPixels(val);
+    }
+
+    get drawWhitePixels(): boolean {
+        return this.olLayer.getDrawWhitePixels();
+    }
+
+    set drawWhitePixels(val: boolean) {
+        this.olLayer.setDrawWhitePixels(val);
     }
 
     serialize() {
-        return this.color().serialize().then((c) => {
+        return this.color.serialize().then((c) => {
             var $q = $injector.get<ng.IQService>('$q');
             return $q.when({
                 name: this.name,
                 pyramidPath: this.pyramidPath,
                 imageSize: this.imageSize,
                 color: c,
-                additiveBlend: this.additiveBlend(),
-                drawBlackPixels: this.drawBlackPixels(),
-                drawWhitePixels: this.drawWhitePixels(),
-                visible: this.visible(),
-                brightness: this.brightness(),
-                min: this.min(),
-                max: this.max(),
-                opacity: this.opacity()
+                additiveBlend: this.additiveBlend,
+                drawBlackPixels: this.drawBlackPixels,
+                drawWhitePixels: this.drawWhitePixels,
+                visible: this.visible,
+                brightness: this.brightness,
+                min: this.min,
+                max: this.max,
+                opacity: this.opacity
             });
         });
     }

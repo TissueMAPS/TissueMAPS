@@ -14,22 +14,22 @@ angular.module('tmaps.ui')
     };
 
     this.setColor = function(layer, color) {
-        if (layer.color().equals(color)) {
+        if (layer.color.equals(color)) {
             // Same color was selected, unselect it by setting null.
-            layer.color(null);
+            layer.color = null;
         } else {
-            layer.color(color);
+            layer.color = color;
         }
     };
 
     this.isRed = function(layer) {
-        return layer.color().equals(this.color.RED);
+        return layer.color.equals(this.color.RED);
     };
     this.isGreen = function(layer) {
-        return layer.color().equals(this.color.GREEN);
+        return layer.color.equals(this.color.GREEN);
     };
     this.isBlue = function(layer) {
-        return layer.color().equals(this.color.BLUE);
+        return layer.color.equals(this.color.BLUE);
     };
 
     // Since two-way data binding isn't possible on the layer properties
@@ -40,26 +40,26 @@ angular.module('tmaps.ui')
     // multiplying times 100 so that 0.5 * 100 = 50).
 
     // Initialize the input models
-    this.maxInput = $scope.layer.max() * 255;
-    this.minInput = $scope.layer.min() * 255;
-    this.brightnessInput = $scope.layer.brightness() * 100;
-    this.opacityInput = $scope.layer.opacity() * 100;
+    this.maxInput = $scope.layer.max * 255;
+    this.minInput = $scope.layer.min * 255;
+    this.brightnessInput = $scope.layer.brightness * 100;
+    this.opacityInput = $scope.layer.opacity * 100;
 
     // Setup watches
     // TODO: the slider for MAXIMUM doesn't work correctly. Isn't it set up properly?
-    $scope.$watch('layer.max()', function(newVal) {
+    $scope.$watch('layer.max', function(newVal) {
         self.maxInput = newVal * 255;
     });
 
-    $scope.$watch('layer.min()', function(newVal) {
+    $scope.$watch('layer.min', function(newVal) {
         self.minInput = newVal * 255;
     });
 
-    $scope.$watch('layer.brightness()', function(newVal) {
+    $scope.$watch('layer.brightness', function(newVal) {
         self.brightnessInput = newVal * 100;
     });
 
-    $scope.$watch('layer.opacity()', function(newVal) {
+    $scope.$watch('layer.opacity', function(newVal) {
         self.opacity = newVal * 100;
     });
 
@@ -77,40 +77,40 @@ angular.module('tmaps.ui')
     this.setLayerMin = function(layer, val) {
         if (_(getSelectedLayers()).contains(layer)) {
             getSelectedLayers().forEach(function(l) {
-                l.min(val);
+                l.min = val;
             });
         } else {
-            layer.min(val);
+            layer.min = val;
         }
     };
 
     this.setLayerMax = function(layer, val) {
         if (_(getSelectedLayers()).contains(layer)) {
             getSelectedLayers().forEach(function(l) {
-                l.max(val);
+                l.max = val;
             });
         } else {
-            layer.max(val);
+            layer.max = val;
         }
     };
 
     this.setLayerBrightness = function(layer, val) {
         if (_(getSelectedLayers()).contains(layer)) {
             getSelectedLayers().forEach(function(l) {
-                l.brightness(val);
+                l.brightness = val;
             });
         } else {
-            layer.brightness(val);
+            layer.brightness = val;
         }
     };
 
     this.setLayerOpacity = function(layer, val) {
         if (_(getSelectedLayers()).contains(layer)) {
             getSelectedLayers().forEach(function(l) {
-                l.opacity(val);
+                l.opacity = val;
             });
         } else {
-            layer.opacity(val);
+            layer.opacity = val;
         }
     };
 }]);

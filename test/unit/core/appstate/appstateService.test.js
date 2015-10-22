@@ -70,7 +70,7 @@ describe('In appstateService', function() {
     describe('the function hasCurrentState', function() {
 
         it('should return true if the state has been saved', function() {
-            appstateService.currentState = appstate;
+            appstateService.setCurrentState(appstate);
 
             expect(appstateService.hasCurrentState()).toBe(true);
         });
@@ -174,7 +174,7 @@ describe('In appstateService', function() {
             appstateService.saveStateAs('some name', 'some description');
             $httpBackend.flush();
 
-            expect(appstateService.getCurrentState().id).toEqual(appstateServerResponse.id);
+            expect(appstateService.currentState.id).toEqual(appstateServerResponse.id);
         });
 
         it('should update the current location', function() {
@@ -188,7 +188,7 @@ describe('In appstateService', function() {
             appstateService.saveStateAs('some name', 'some description');
             $httpBackend.flush();
 
-            expect(appstateService.getCurrentState().id).toEqual(appstateServerResponse.id);
+            expect(appstateService.currentState.id).toEqual(appstateServerResponse.id);
         });
 
         it('should set the last saved at date ', function() {
@@ -224,7 +224,7 @@ describe('In appstateService', function() {
             appstateService.saveState();
             $httpBackend.flush();
 
-            expect(appstateService.getCurrentState().id).toEqual(appstateServerResponse.id);
+            expect(appstateService.currentState.id).toEqual(appstateServerResponse.id);
         });
 
         it('should throw en error if the user tries to resave a snapshot', function() {

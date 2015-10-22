@@ -1,15 +1,21 @@
-class Layer {
-    olLayer: ol.layer.Layer;
+interface Layer {
+    name: string;
+    addToMap(map: ol.Map);
+    removeFromMap(map: ol.Map);
+    visible: boolean;
+}
+
+class BaseLayer<LayerT extends ol.layer.Layer> implements Layer {
+    protected olLayer: LayerT;
 
     constructor(public name: string) {}
 
-    visible(val?: boolean): boolean {
-        if (val !== undefined) {
-            this.olLayer.setVisible(val);
-            return val;
-        } else {
-            return this.olLayer.getVisible();
-        }
+    get visible(): boolean {
+        return this.olLayer.getVisible();
+    }
+
+    set visible(val: boolean) {
+        this.olLayer.setVisible(val);
     }
 
     /*
@@ -25,6 +31,5 @@ class Layer {
     removeFromMap(olMap: ol.Map) {
         olMap.removeLayer(this.olLayer);
     }
-
 }
 

@@ -5,8 +5,7 @@ interface ObjectLayerArgs {
     visible?: boolean;
 }
 
-class ObjectLayer extends Layer {
-    olLayer: ol.layer.Vector;
+class ObjectLayer extends BaseLayer<ol.layer.Vector> {
     styles: any;
 
     private strokeColor: Color;
