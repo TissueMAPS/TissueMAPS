@@ -56,7 +56,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='TissueMAPS server')
     parser.add_argument(
-        '--port', action='store', type=int, default=8080,
+        '--port', action='store', type=int, default=5002,
         help='the port on which the server should listen')
     args = parser.parse_args()
 
