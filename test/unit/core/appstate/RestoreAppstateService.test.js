@@ -97,13 +97,13 @@ describe('In restoreAppstateService', function() {
                 vp.map.then(function(map) {
                     var red = Color.RED;
                     var white = Color.WHITE;
-                    expect(vp.channelLayers[1].color().equals(red)).toEqual(true);
-                    expect(vp.channelLayers[1].max()).toEqual(0.16862745098039217);
-                    expect(vp.channelLayers[1].visible()).toEqual(true);
+                    expect(vp.channelLayers[1].color.equals(red)).toEqual(true);
+                    expect(vp.channelLayers[1].max).toEqual(0.16862745098039217);
+                    expect(vp.channelLayers[1].visible).toEqual(true);
 
-                    expect(vp.channelLayers[2].color().equals(white)).toEqual(true);
-                    expect(vp.channelLayers[2].max()).toEqual(1);
-                    expect(vp.channelLayers[2].visible()).toEqual(false);
+                    expect(vp.channelLayers[2].color.equals(white)).toEqual(true);
+                    expect(vp.channelLayers[2].max).toEqual(1);
+                    expect(vp.channelLayers[2].visible).toEqual(false);
                     done();
                 });
                 // Propagate promise resolution to 'then' functions using $apply().

@@ -1,11 +1,10 @@
-class SelectionLayer extends Layer {
+class SelectionLayer extends BaseLayer<ol.layer.Vector> {
 
     color: Color;
     cellMarkers = {};
 
     constructor(name: string,
                 color: Color) {
-
         super(name);
 
         this.color = color;

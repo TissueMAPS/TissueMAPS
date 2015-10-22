@@ -45,8 +45,8 @@
 
         <tm-selectable-tab-content>
           <span class="inline-layer-control" tm-stop-click>
-              <i ng-show="layer.visible()" ng-click="layer.visible(false)" class="fa fa-eye"></i>
-              <i ng-hide="layer.visible()" ng-click="layer.visible(true)" class="fa fa-circle-thin"></i>
+              <i ng-show="layer.visible" ng-click="layer.visible = false" class="fa fa-eye"></i>
+              <i ng-hide="layer.visible" ng-click="layer.visible = true" class="fa fa-circle-thin"></i>
           </span>
 
           <div class="inline-color-switcher" tm-stop-click>
