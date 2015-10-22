@@ -13,9 +13,7 @@ CLIENT_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'client')
 EXPDATA_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'expdata')
 
 
-# Execute the modules auth and models after having defined
-# the plugin instances.
-import models
+# import models
 
 
 def create_app(config_object=dev):

@@ -1,4 +1,3 @@
-import h5py
 import os
 from xml.dom import minidom
 import os.path as p
@@ -55,6 +54,7 @@ class Experiment(db.Model):
 
     @property
     def dataset(self):
+        import h5py
         fpath = self.dataset_path
         if os.path.exists(fpath):
             print 'LOADING DATA SET'
