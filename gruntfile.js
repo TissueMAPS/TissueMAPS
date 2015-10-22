@@ -231,7 +231,9 @@ module.exports = function(grunt) {
 
             // Auto-reload browser when a html changes
             html: {
-                options: { livereload: true },
+                options: {
+                    livereload: 35730
+                },
                 files: [
                     'app/index.html',
                     'app/templates/**/*.html',
@@ -279,7 +281,7 @@ module.exports = function(grunt) {
         connect: {
             server: {
                 options: {
-                    port: 8000, // default
+                    port: 8002,
                     base: 'app', // from where to serve files
                     livereload: true, // port
                     // open: 'http://localhost:8000/index.html',
@@ -303,7 +305,7 @@ module.exports = function(grunt) {
                     {
                         context: '/api',
                         host: 'localhost',
-                        port: 8080,
+                        port: 5002,
                         https: false,
                         xforward: false,
                         ws: true // proxy websockets
@@ -311,7 +313,7 @@ module.exports = function(grunt) {
                     {
                         context: '/auth',
                         host: 'localhost',
-                        port: 8080,
+                        port: 5002,
                         https: false,
                         xforward: false,
                         ws: true // proxy websockets
