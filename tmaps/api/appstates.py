@@ -2,7 +2,7 @@ import json
 
 from flask import jsonify, request
 from flask_jwt import jwt_required
-from flask.ext.jwt import current_user
+from flask.ext.jwt import current_identity
 from tmaps.models import AppState, AppStateSnapshot, AppStateBase, AppStateShare, User
 
 from tmaps.extensions.database import db
@@ -31,7 +31,7 @@ def get_appstate(appstate_id):
 
     if not state:
         return 'No appstate found', 404
-    if not state.is_editable_by_user(current_user):
+    if not state.is_editable_by_user(current_identity):
         return 'You do not have permission to access this state', 401
 
     return jsonify(state.as_dict())
@@ -66,9 +66,9 @@ def get_appstates():
 
     """
 
-    states_owned = [st.as_dict() for st in current_user.appstates]
+    states_owned = [st.as_dict() for st in current_identity.appstates]
     shares = AppStateShare.query.\
-        filter_by(recipient_user_id=current_user.id).\
+        filter_by(recipient_user_id=current_identity.id).\
         all()
     states_received = [sh.appstate.as_dict() for sh in shares]
 
@@ -128,7 +128,7 @@ def delete_appstate(appstate_id):
     st = AppState.query.get(appstate_id)
     if not st:
         return 'No appstate found', 404
-    if st.is_editable_by_user(current_user):
+    if st.is_editable_by_user(current_identity):
         db.session.delete(st)
         db.session.commit()
     else:
@@ -167,7 +167,7 @@ def save_appstate():
         return 'No "name" or no "blueprint" in request', 400
 
     app = AppState(
-        name=name, blueprint=bp, owner_id=current_user.id,
+        name=name, blueprint=bp, owner_id=current_identity.id,
         description=description
     )
     db.session.add(app)
@@ -189,7 +189,7 @@ def share_appstate_by_link(appstate_id):
     appstate = AppState.query.get(appstate_id)
     if not appstate:
         return 'No appstate found', 404
-    if appstate.is_editable_by_user(current_user):
+    if appstate.is_editable_by_user(current_identity):
         snapshot = appstate.create_snapshot()
         return jsonify(snapshot.as_dict()), 200
     else:
@@ -204,7 +204,7 @@ def deactivate_share_appstate_by_link(appstate_id):
     appstate = AppState.query.get(appstate_id)
     if not appstate:
         return 'No appstate found', 404
-    if appstate.is_editable_by_user(current_user):
+    if appstate.is_editable_by_user(current_identity):
         appstate.shared_by_link = False
         appstate.uuid = None
         db.session.commit()
@@ -242,7 +242,7 @@ def share_appstate_with_users(appstate_id):
     appstate = AppState.query.get(appstate_id)
     if not appstate:
         return 'No appstate found', 404
-    if not appstate.is_editable_by_user(current_user):
+    if not appstate.is_editable_by_user(current_identity):
         return 'You have no permission to share this appstate', 401
 
     data = json.loads(request.data)
@@ -257,7 +257,7 @@ def share_appstate_with_users(appstate_id):
     for user in users:
         share = AppStateShare(
             recipient_user_id=user.id,
-            donor_user_id=current_user.id,
+            donor_user_id=current_identity.id,
             appstate_id=appstate.id)
         db.session.add(share)
 

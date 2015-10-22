@@ -4,7 +4,7 @@ import os.path as p
 
 from flask import jsonify, request, send_from_directory, send_file
 from flask_jwt import jwt_required
-from flask.ext.jwt import current_user
+from flask.ext.jwt import current_identity
 
 import numpy as np
 
@@ -130,9 +130,9 @@ def get_experiments():
 
     """
 
-    experiments_owned = [e.as_dict() for e in current_user.experiments]
+    experiments_owned = [e.as_dict() for e in current_identity.experiments]
     experiments_shared = [e.as_dict()
-                          for e in current_user.received_experiments]
+                          for e in current_identity.received_experiments]
     return jsonify({
         'owned': experiments_owned,
         'shared': experiments_shared
@@ -171,7 +171,7 @@ def get_experiment(experiment_id):
 
     experiment_id = decode(experiment_id)
 
-    experiments = current_user.experiments + current_user.received_experiments
+    experiments = current_identity.experiments + current_identity.received_experiments
     ex = filter(lambda e: e.id == experiment_id, experiments)
 
     if ex:

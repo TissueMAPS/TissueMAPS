@@ -2,7 +2,7 @@ import json
 
 from flask import jsonify, request
 from flask_jwt import jwt_required
-from flask.ext.jwt import current_user
+from flask.ext.jwt import current_identity
 
 from tmaps.extensions.database import db
 from tmaps.extensions.encrypt import decode
@@ -103,7 +103,7 @@ def process_tool_request(tool_id):
 #             tool_id=tool_id,
 #             appstate_id=appstate_id,
 #             experiment_id=experiment_id,
-#             user_id=current_user.id
+#             user_id=current_identity.id
 #         )
 #         db.session.add(inst)
 #         db.session.commit()
@@ -117,7 +117,7 @@ def process_tool_request(tool_id):
 #     inst = ToolInstance.query.get(instance_id)
 #     if not inst:
 #         return 'No ToolInstance found with id %d' % instance_id, 404
-#     if inst.appstate.is_editable_by_user(current_user):
+#     if inst.appstate.is_editable_by_user(current_identity):
 #         db.session.delete(inst)
 #         db.session.commit()
 #         return 'ToolInstance was removed successfully', 200

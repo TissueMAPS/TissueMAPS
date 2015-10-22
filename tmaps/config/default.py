@@ -9,6 +9,7 @@ DEBUG = True
 
 # TODO: Set this to an appropriate time
 JWT_EXPIRATION_DELTA = datetime.timedelta(minutes=30)
+JWT_NOT_BEFORE_DELTA = datetime.timedelta(seconds=0)
 
 POSTGRES_DB_USER = None
 POSTGRES_DB_PASSWORD = None
