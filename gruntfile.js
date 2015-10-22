@@ -231,7 +231,7 @@ module.exports = function(grunt) {
 
             // Auto-reload browser when a html changes
             html: {
-                options: { livereload: true },
+                options: { livereload: 35760},
                 files: [
                     'app/index.html',
                     'app/templates/**/*.html',
@@ -281,7 +281,7 @@ module.exports = function(grunt) {
                 options: {
                     port: 8000, // default
                     base: 'app', // from where to serve files
-                    livereload: true, // port
+                    livereload: 35761, // port
                     // open: 'http://localhost:8000/index.html',
                     middleware: function(connect, options) {
                         if (!Array.isArray(options.base)) {
