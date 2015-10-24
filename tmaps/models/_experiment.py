@@ -1,8 +1,8 @@
 import os
-from xml.dom import minidom
 import os.path as p
+from xml.dom import minidom
 from ..extensions.database import db
-from ..extensions.encrypt import auto_generate_hash
+from utils import auto_generate_hash
 
 # EXPERIMENT_ACCESS_LEVELS = (
 #     'read',
@@ -35,7 +35,7 @@ class Experiment(db.Model):
 
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_on = db.Column(db.DateTime, default=db.func.now())
-    owner = db.relationship('User', backref="experiments")
+    owner = db.relationship('User', backref='experiments')
 
     def __init__(self, name, location, description, owner_id):
         self.name = name
@@ -51,6 +51,13 @@ class Experiment(db.Model):
     @property
     def dataset_path(self):
         return os.path.join(self.location, 'data.h5')
+
+    @property
+    def plates_location(self):
+        return os.path.join(self.location, 'plates')
+
+    def belongs_to(self, user):
+        return self.owner == user
 
     @property
     def dataset(self):

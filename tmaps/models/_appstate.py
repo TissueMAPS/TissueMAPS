@@ -1,7 +1,7 @@
 from ..extensions.database import db
 from sqlalchemy.dialects.postgresql import JSON
 from _tool import ToolInstance, LayerMod
-from ..extensions.encrypt import auto_generate_hash
+from .utils import auto_generate_hash
 
 class AppStateShare(db.Model):
     __tablename__ = 'appstate_share'

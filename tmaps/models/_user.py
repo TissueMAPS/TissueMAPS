@@ -3,7 +3,7 @@ from passlib.hash import sha256_crypt
 
 from _appstate import AppStateShare
 from _experiment import ExperimentShare
-from ..extensions.encrypt import auto_generate_hash
+from .utils import auto_generate_hash
 
 
 @auto_generate_hash
