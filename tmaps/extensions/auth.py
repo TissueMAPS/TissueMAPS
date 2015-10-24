@@ -1,7 +1,7 @@
-from flask import current_app
-from passlib.hash import sha256_crypt
 import datetime
 
+from flask import current_app
+from passlib.hash import sha256_crypt
 from flask_jwt import JWT
 
 from tmaps.models import User
@@ -10,6 +10,7 @@ from tmaps.models import User
 jwt = JWT()
 
 
+# TODO: Use HTTPS for connections to /auth
 @jwt.authentication_handler
 def authenticate(username, password):
     """Check if there is a user with this username-pw-combo
@@ -25,7 +26,6 @@ def authenticate(username, password):
 def load_user(payload):
     """Lookup the user for a token payload."""
     user = User.query.get(payload['uid'])
-    print payload
     return user
 
 
@@ -48,6 +48,4 @@ def make_payload(user):
 @jwt.jwt_error_handler
 def error_handler(e):
     """This function is called whenever flask-jwt encounters an error."""
-    print e
     return 'No valid access token in header', 401
-

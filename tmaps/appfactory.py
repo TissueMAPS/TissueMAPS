@@ -9,11 +9,9 @@ from config import dev
 
 
 MAIN_DIR_LOCATION = abspath(join(dirname(__file__), os.pardir, os.pardir))
-CLIENT_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'client')
+_CLIENT_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'client')
 EXPDATA_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'expdata')
 
-
-# import models
 
 
 def create_app(config_object=dev):
@@ -30,7 +28,7 @@ def create_app(config_object=dev):
     # TODO: The static folder shouldn't for production and is for debug
     # purposes only. The static files will be served by NGINX or similar.
     app = Flask('wsgi',
-                static_folder=join(CLIENT_DIR_LOCATION, 'app'),
+                static_folder=join(_CLIENT_DIR_LOCATION, 'app'),
                 static_url_path='')
 
     app.config.from_object(config_object)
