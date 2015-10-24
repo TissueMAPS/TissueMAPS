@@ -2,7 +2,7 @@ import os
 import os.path as p
 from xml.dom import minidom
 from ..extensions.database import db
-from utils import auto_generate_hash
+from utils import auto_generate_hash, auto_create_directory
 
 # EXPERIMENT_ACCESS_LEVELS = (
 #     'read',
@@ -22,6 +22,7 @@ class ExperimentShare(db.Model):
     #                                  name='access_level'))
 
 
+@auto_create_directory(lambda e: e.location)
 @auto_generate_hash
 class Experiment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
