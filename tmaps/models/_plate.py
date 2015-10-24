@@ -63,6 +63,13 @@ class Acquisition(db.Model):
     def location(self):
         return _get_dirpath_for_acquisition(self.id, self.name, self.plate)
 
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description
+        }
+
 
 @auto_create_directory(_get_dirpath_for_plate_target)
 @auto_remove_directory(lambda target: target.location)
@@ -77,7 +84,6 @@ class Plate(db.Model):
 
     created_on = db.Column(db.DateTime, default=db.func.now())
 
-
     def __init__(self, name, description, experiment):
         self.name = name
         self.description = description
@@ -86,3 +92,11 @@ class Plate(db.Model):
     @property
     def location(self):
         return _get_dirpath_for_plate(self.id, self.name, self.experiment)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'acquisitions': [a.as_dict() for a in self.acquisitions]
+        }
