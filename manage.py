@@ -20,6 +20,21 @@ manager.add_command('migrate', MigrateCommand)
 
 
 @manager.command
+def repl():
+    import sys
+    from werkzeug import script
+    def make_shell():
+        from tmaps.appfactory import create_app
+        app = create_app()
+        ctx = app.test_request_context()
+        ctx.push()
+        from tmaps import models
+        from tmaps.extensions.database import db
+        return dict(app=app, ctx=ctx, models=models, db=db)
+    script.make_shell(make_shell, use_ipython=True)()
+
+
+@manager.command
 def create_tables():
     """A command to initialize the tables in the database specified by the
     config key 'SQLALCHEMY_DATABASE_URI'.
