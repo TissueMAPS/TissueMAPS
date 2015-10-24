@@ -109,5 +109,6 @@ class Experiment(db.Model):
             'name': self.name,
             'description': self.description,
             'owner': self.owner.name,
-            'layers': self.layers
+            'layers': self.layers,
+            'plates': [pl.as_dict() for pl in self.plates]
         }
