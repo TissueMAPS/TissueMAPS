@@ -5,6 +5,7 @@ from werkzeug import secure_filename
 from ..extensions.database import db
 from utils import auto_remove_directory, auto_create_directory
 from tmaps.models import Experiment
+import shutil
 
 
 def _get_dirpath(id, name, prefix):
@@ -63,11 +64,29 @@ class Acquisition(db.Model):
     def location(self):
         return _get_dirpath_for_acquisition(self.id, self.name, self.plate)
 
+    @property
+    def files(self):
+        return os.listdir(self.location)
+
+    @property
+    def is_ready_for_processing(self):
+        # TODO: Files might be uploading, this is only checked client-side!
+        return len(self.files) != 0
+
+    def remove_files(self):
+        paths = [p.join(self.location, f) for f in os.listdir(self.location)]
+        for pth in paths:
+            if p.isdir(pth):
+                shutil.rmtree(pth)
+            else:
+                os.remove(pth)
+
     def as_dict(self):
         return {
             'id': self.id,
             'name': self.name,
-            'description': self.description
+            'description': self.description,
+            'files': self.files
         }
 
 
@@ -92,6 +111,11 @@ class Plate(db.Model):
     @property
     def location(self):
         return _get_dirpath_for_plate(self.id, self.name, self.experiment)
+
+    @property
+    def is_ready_for_processing(self):
+        aqs_ready = all([aq.is_ready_for_processing for aq in self.acquisitions])
+        return len(self.acquisitions) != 0 and aqs_ready
 
     def as_dict(self):
         return {
