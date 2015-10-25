@@ -4,6 +4,7 @@ import glob
 import logging
 from copy import copy
 import shutil
+from cached_property import cached_property
 from natsort import natsorted
 from ..readers import YamlReader
 from ..writers import YamlWriter
@@ -425,12 +426,11 @@ class JtAvailableModules(object):
         modules_dir = os.path.join(self.repo_dir, 'modules')
         search_string = '\.(%s)$' % '|'.join(self.MODULE_FILE_EXT)
         regexp_pattern = re.compile(search_string)
-        self._module_files = natsorted([
+        return natsorted([
             os.path.join(modules_dir, f)
             for f in os.listdir(modules_dir)
             if re.search(regexp_pattern, f)
         ])
-        return self._module_files
 
     @property
     def module_names(self):
@@ -443,11 +443,10 @@ class JtAvailableModules(object):
         List[str]
             names of the modules
         '''
-        self._module_names = [
+        return [
             os.path.splitext(os.path.basename(f))[0]
             for f in self.module_files
         ]
-        return self._module_names
 
     def _get_corresponding_handles_file(self, module_name):
         handles_dir = os.path.join(self.repo_dir, 'handles')

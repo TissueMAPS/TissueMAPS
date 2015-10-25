@@ -1,6 +1,7 @@
 import os
 import sys
 import h5py
+import shutil
 import logging
 import collections
 import numpy as np
@@ -173,6 +174,18 @@ class ImageAnalysisPipeline(ClusterRoutines):
                          % self._module_log_dir)
             os.mkdir(self._module_log_dir)
         return self._module_log_dir
+
+    def remove_previous_output(self):
+        '''
+        Remove all figure and module log files.
+
+        Note
+        ----
+        These files are only produced in the first place when `headless` is set
+        to ``False``.
+        '''
+        shutil.rmtree(self.module_log_dir)
+        shutil.rmtree(self.figures_dir)
 
     @property
     def pipe_file(self):
@@ -423,8 +436,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
             logger.info('run module "%s": %s'
                         % (module.name, module.module_file))
             out = module.run(inputs, self.engines[module.language])
-            module.write_output_and_errors(log_files['stdout'], out['stdout'],
-                                           log_files['stderr'], out['stderr'])
+            if not self.headless:
+                # The output is also included in log report of the job.
+                # It is mainly used for setting up a pipeline in the GUI.
+                module.write_output_and_errors(
+                    log_files['stdout'], out['stdout'],
+                    log_files['stderr'], out['stderr'])
             if not out['success']:
                 sys.exit(out['error_message'])
             for k, v in out.iteritems():
