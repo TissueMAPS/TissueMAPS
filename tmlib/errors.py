@@ -62,10 +62,19 @@ class PipelineOSError(PipelineError):
     on disk.
     '''
 
+
 class WorkflowError(Exception):
     '''
     Base class for workflow errors.
     '''
+
+
+class WorkflowArgsError(WorkflowError):
+    '''
+    Error class that is raised when arguments of a workflow step are
+    not correctly specified.
+    '''
+
 
 class WorkflowNextStepError(WorkflowError):
     '''
