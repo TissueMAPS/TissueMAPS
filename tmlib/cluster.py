@@ -288,11 +288,11 @@ class ClusterRoutines(BasicClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         run_job_files = glob.glob(os.path.join(
-                                  directory, '*_run_*.job.yml'))
+                                  directory, '*_run_*.job.json'))
         if not run_job_files:
             logger.debug('No run job descriptor files found')
         collect_job_files = glob.glob(os.path.join(
-                                      directory, '*_collect.job.yml'))
+                                      directory, '*_collect.job.json'))
         if not collect_job_files:
             logger.debug('No collect job descriptor file found')
         with JsonReader() as reader:
@@ -371,7 +371,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         return os.path.join(
                     self.job_descriptions_dir,
-                    '%s_run_%.5d.job.yml' % (self.prog_name, job_id))
+                    '%s_run_%.5d.job.json' % (self.prog_name, job_id))
 
     def build_collect_job_filename(self):
         '''
@@ -383,7 +383,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         return os.path.join(
                     self.job_descriptions_dir,
-                    '%s_collect.job.yml' % self.prog_name)
+                    '%s_collect.job.json' % self.prog_name)
 
     def read_job_file(self, filename):
         '''
