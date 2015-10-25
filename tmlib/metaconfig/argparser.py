@@ -4,7 +4,7 @@ from ..formats import Formats
 
 
 parser, subparsers = Metaconfig.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'kill', 'cleanup', 'collect']
+    required_subparsers=['init', 'run', 'submit', 'cleanup', 'collect']
 )
 
 parser.description = '''
@@ -19,7 +19,7 @@ init_auto_group = init_parser.add_argument_group(
 init_auto_group.add_argument(
     '-f', '--format', type=str, default='default',
     choices=Formats.SUPPORT_FOR_ADDITIONAL_FILES,
-    help='specify a microscope-specific file format for which special '
+    help='microscope-specific file format for which custom '
          'readers are available (default: "default")')
 init_auto_group.add_argument(
     '-z', '--z_stacks', action='store_true',

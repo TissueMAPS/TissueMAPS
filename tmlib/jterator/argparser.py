@@ -4,7 +4,7 @@ from .cli import Jterator
 
 parser, subparsers = Jterator.get_parser_and_subparsers(
     required_subparsers=[
-        'init', 'run', 'submit', 'kill', 'collect', 'cleanup'
+        'init', 'run', 'submit', 'collect', 'cleanup'
     ])
 
 parser.description = '''
