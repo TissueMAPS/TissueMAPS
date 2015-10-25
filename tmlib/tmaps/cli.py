@@ -3,7 +3,7 @@ import argparse
 from . import logo
 from . import __version__
 from .workflow import Workflow
-from .workflow import WorkflowClusterRoutines
+from .api import WorkflowClusterRoutines
 from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
