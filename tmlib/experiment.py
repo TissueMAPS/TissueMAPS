@@ -68,20 +68,6 @@ class Experiment(object):
             raise ValueError(
                     'Argument "library" must be either "numpy" or "vips"')
         self.user_cfg = user_cfg
-        if self.user_cfg is None:
-            logger.debug('loading user configuration settings from file: %s',
-                         self.user_cfg_file)
-            if not os.path.exists(self.user_cfg_file):
-                raise OSError(
-                    'User configuration settings file does not exist: %s'
-                    % self.user_cfg_file)
-            with YamlReader() as reader:
-                config_settings = reader.read(self.user_cfg_file)
-            self.user_cfg = cfg.UserConfiguration.set(
-                                self.experiment_dir, config_settings)
-        if not isinstance(self.user_cfg, cfg.UserConfiguration):
-            raise TypeError(
-                    'Argument "user_cfg" must have type UserConfiguration')
 
     @property
     def dir(self):
@@ -114,6 +100,44 @@ class Experiment(object):
         '''
         return cfg.USER_CFG_FILE_FORMAT.format(
                     experiment_dir=self.experiment_dir, sep=os.path.sep)
+
+    @property
+    def user_cfg(self):
+        '''
+        Returns
+        -------
+        tmlib.cfg.UserConfiguration
+            experiment-specific user configuration settings
+
+        Note
+        ----
+        If not set, the settings are loaded from a configuration file.
+        Its location is specified by the `user_cfg_file` attribute.
+
+        Raises
+        ------
+        OSError
+            when value is ``None`` and configuration settings file does not
+            exist
+        '''
+        if self._user_cfg is None:
+            logger.debug('loading user configuration settings from file: %s',
+                         self.user_cfg_file)
+            if not os.path.exists(self.user_cfg_file):
+                raise OSError(
+                    'User configuration settings file does not exist: %s'
+                    % self.user_cfg_file)
+            with YamlReader() as reader:
+                config_settings = reader.read(self.user_cfg_file)
+            self._user_cfg = cfg.UserConfiguration(self.dir, config_settings)
+        return self._user_cfg
+
+    @user_cfg.setter
+    def user_cfg(self, value):
+        if not(isinstance(value, cfg.UserConfiguration) or value is None):
+            raise TypeError(
+                    'Attribute "user_cfg" must have type UserConfiguration')
+        self._user_cfg = value
 
     @cached_property
     def plates_dir(self):
@@ -330,7 +354,7 @@ class Experiment(object):
         ChannelImage
             corresponding image object
         '''
-        regex = utils.regex_from_format_string(self.user_cfg.IMAGE_NAME_FORMAT)
+        regex = utils.regex_from_format_string(cfg.IMAGE_NAME_FORMAT)
         match = re.search(regex, os.path.basename(name))
         if not match:
             raise RegexError('Metadata could not be determined from filename')

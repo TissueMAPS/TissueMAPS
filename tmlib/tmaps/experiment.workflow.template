@@ -1,8 +1,0 @@
-metaextract {experiment_dir} init
-metaconfig {experiment_dir} init -b {batch_size} -f {format} 
-imextract {experiment_dir} init
-align {experiment_dir} init --ref_channel {ref_channel} --ref_cycle {ref_cycle} -b {batch_size}
-corilla {experiment_dir} init
-illuminati {experiment_dir} -sit --thresh_value {thresh_value} --thresh_percent {thresh_percent}
-jterator {experiment_dir} -p {pipeline} init
-

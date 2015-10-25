@@ -1,15 +1,16 @@
 import os
 import logging
 from .plate import Plate
+from .tmaps.workflow import WorkflowStepArgs
 
 logger = logging.getLogger(__name__)
 
 '''
-CONFIGURATION SETTINGS
+Configuration settings constants:
 
 Describe the experimental layout (directory structure and filename nomenclature)
-by Python format strings. The keywords are replaced by the program with the
-values of attributes of the configuration classes.
+by Python format strings. The fieldnames are replaced by the program with the
+values of configuration class attributes.
 '''
 
 USER_CFG_FILE_FORMAT = '{experiment_dir}{sep}user.cfg.yml'
@@ -22,14 +23,14 @@ IMAGE_NAME_FORMAT = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>
 class UserConfiguration(object):
 
     '''
-    Class for configuration settings provided by the user.
+    Class for experiment-specific configuration settings provided by the user.
     '''
 
     PERSISTENT_ATTRS = {
-        'sources_dir', 'plates_dir', 'layers_dir', 'plate_format'
+        'sources_dir', 'plates_dir', 'layers_dir', 'plate_format', 'workflow'
     }
 
-    def __init__(self, experiment_dir):
+    def __init__(self, experiment_dir, cfg_settings):
         '''
         Initialize an instance of class UserConfiguration.
 
@@ -37,11 +38,23 @@ class UserConfiguration(object):
         ----------
         experiment_dir: str
             absolute path to experiment directory
+        cfg_settings: dict, optional
+            user configuration settings as key-value pairs
+
+        Returns
+        -------
+        UserConfiguration
+            experiment-specific user configuration object
         '''
         self.experiment_dir = experiment_dir
         self._sources_dir = None
         self._plates_dir = None
         self._layers_dir = None
+        for k, v in cfg_settings.iteritems():
+            if k in self.PERSISTENT_ATTRS:
+                if k == 'workflow':
+                    v = [WorkflowStepArgs(**step) for step in v]
+                setattr(self, k, v)
 
     @property
     def sources_dir(self):
@@ -50,6 +63,11 @@ class UserConfiguration(object):
         -------
         str
             absolute path to the directory where source files are located
+
+        Note
+        ----
+        Defaults to "sources" subdirectory of the experiment directory if not
+        set.
 
         See also
         --------
@@ -80,6 +98,11 @@ class UserConfiguration(object):
             absolute path to the directory where extracted files are located
             (grouped per *plate* and *cycle*)
 
+        Note
+        ----
+        Defaults to "plates" subdirectory of the experiment directory if not
+        set.
+
         See also
         --------
         `tmlib.plate.Plate`_
@@ -108,6 +131,11 @@ class UserConfiguration(object):
         str
             absolute path to the directory where image pyramids and associated
             data are stored
+
+        Note
+        ----
+        Defaults to "layers" subdirectory of the experiment directory if
+        not set.
 
         See also
         --------
@@ -149,28 +177,33 @@ class UserConfiguration(object):
                     % '"or "'.join(Plate.SUPPORTED_PLATE_FORMATS))
         self._plate_format = value
 
-    def __iter__(self):
-        pass
-
-    @staticmethod
-    def set(experiment_dir, cfg_settings):
+    @property
+    def workflow(self):
         '''
-        Set user configuration based on key-value pairs of dictionary.
-
-        Parameters
-        ----------
-        experiment_dir: str
-            absolute path to experiment directory
-        cfg_settings: dict
-            user configuration settings
-
         Returns
         -------
-        UserConfiguration
-            experiment-specific user configuration object
+        List[WorkflowStepArgs]
+            name and required arguments of each step in the workflow
+
+        See also
+        --------
+        `tmaps.workflow.WorkflowStepArgs`_
         '''
-        cfg = UserConfiguration(experiment_dir)
-        for k, v in cfg_settings.iteritems():
-            if k in cfg.PERSISTENT_ATTRS:
-                setattr(cfg, k, v)
-        return cfg
+        return self._workflow
+
+    @workflow.setter
+    def workflow(self, value):
+        if not isinstance(value, list):
+            raise TypeError('Attribute "workflow" must have type list')
+        if not all([isinstance(v, WorkflowStepArgs) for v in value]):
+            raise TypeError(
+                    'Elements of "workflow" must have type WorkflowStepArgs')
+        self._workflow = value
+
+    def __iter__(self):
+        for attr in dir(self):
+            if attr in self.PERSISTENT_ATTRS:
+                value = getattr(self, attr)
+                if attr == 'workflow':
+                    value = dict(value)
+                yield (attr, value)

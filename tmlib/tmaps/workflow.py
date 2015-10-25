@@ -1,25 +1,99 @@
 import os
+import re
 import logging
 import importlib
+from cached_property import cached_property
 from gc3libs import Run
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import StopOnError
-from ..readers import WorkflowDescriptionReader
 from ..cluster import BasicClusterRoutines
 from ..errors import WorkflowNextStepError
+from ..errors import WorkflowArgsError
+# from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
-class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
+# def submit_workflow(experiment_dir, virtualenv, verbosity=1):
+#     experiment = Experiment(experiment_dir)
+#     workflow = Workflow(experiment, virtualenv, verbosity)
+#     clst = WorkflowClusterRoutines(experiment, 'tmaps')
+#     clst.submit_jobs(workflow, 5)
 
-    '''
-    Class for reading workflow descriptions from a YAML file.
-    '''
+
+class WorkflowStepArgs(object):
+
+    def __init__(self, name=None, args=None):
+        '''
+        Initialize an instance of class WorkflowStep.
+
+        Parameters
+        ----------
+        name: str, optional
+            the name of the step
+        args: dict, optional
+            the arguments required for the step
+        '''
+        self._name = name
+        self._args = args
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the step
+
+        Note
+        ----
+        Must correspond to a name of a `tmlib` command line program
+        (subpackage).
+        '''
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "value" must have type basestring')
+        self._name = str(value)
+
+    @property
+    def args(self):
+        '''
+        Returns
+        -------
+        dict
+            arguments required by the step (arguments that can be parsed
+            to the "init" method of the corresponding *cli* class)
+
+        Note
+        ----
+        Default values defined by the corresponding *init* subparser will
+        be used in case an optional argument is not provided.
+
+        See also
+        --------
+        `tmlib.cli`_
+        '''
+        return self._args
+
+    @args.setter
+    def args(self, value):
+        if not isinstance(value, dict) or value is not None:
+            raise TypeError('Attribute "args" must have type dict')
+        self._args = value
+
+    def __iter__(self):
+        yield ('name', getattr(self, 'name'))
+        yield ('args', getattr(self, 'args'))
+
+
+class Workflow(SequentialTaskCollection, StopOnError):
 
     def __init__(self, experiment, virtualenv, verbosity):
         '''
-        Initialize an instance of class ClusterWorkflowManager.
+        Initialize an instance of class Workflow.
 
         Parameters
         ----------
@@ -32,9 +106,9 @@ class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
 
         Returns
         -------
-        ClusterWorkflowManager
+        Workflow
         '''
-        super(ClusterWorkflowManager, self).__init__(
+        super(Workflow, self).__init__(
             tasks=None, jobname='tmaps')
         self.experiment = experiment
         self.virtualenv = virtualenv
@@ -43,89 +117,101 @@ class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
         self.expected_outputs = list()
         self._add_step(0)
 
-    @property
-    def workflow_file(self):
+    @cached_property
+    def commands(self):
         '''
+        Build a command in the form of a list of argument strings as required
+        by the
+        `parse_args() <https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.parse_args>`_
+        method.
+
         Returns
         -------
-        str
-            name of the file that describes the workflow
+        List[List[str]]
+            command for each step of the workflow
 
         Note
         ----
-        The file is located in the root directory of the experiment folder.
+        Arguments can be set in the user configuration file.
         '''
-        self._workflow_file = '{experiment}.workflow.txt'.format(
-                                    experiment=self.experiment.name)
-        return self._workflow_file
+        workflow = self.experiment.user_cfg.workflow
+        commands = list()
+        logger.info('build workflow based on user configuration')
+        for step in workflow:
+            logger.debug('add step "%s" to workflow', step.name)
+            cmd = [step.name]
+            cmd.extend(['-v' for x in xrange(self.verbosity)])
+            cmd.append(self.experiment.dir)
+            cmd.append('init')
+            if step.args:
+                for k, v in step.args.iteritems():
+                    if v or v == 0:  # zero would be considered ``False``
+                        cmd.append('--%s' % k)
+                    if not isinstance(v, bool) and v is not None:
+                        cmd.append(str(v))
+            # Test whether arguments are specified correctly.
+            parser = self._get_argparser(cmd[0])
+            try:
+                parser.parse_args(cmd[1:])
+            except SystemExit:
+                raise WorkflowArgsError(
+                        'Arguments for step "%s" are specified incorrectly'
+                        % step.name)
+            commands.append(cmd)
+        return commands
 
     @property
-    def workflow_description(self):
-        '''
-        Returns
-        -------
-        List[str]
-            commands for each individual step of the workflow
-        '''
-        logger.debug('read workflow description from file: {0}'.format(
-                        self.workflow_file))
-        with WorkflowDescriptionReader(self.experiment.dir) as reader:
-            workflow = reader.read(self.workflow_file)
-        self._workflow_description = [
-            step.format(experiment_dir=self.experiment.dir).split()
-            for step in workflow
-        ]
-        return self._workflow_description
+    def _package_name(self):
+        return re.search('^([^.]+)', self.__module__).group(1)
 
-    def _create_jobs_for_step(self, step_desciption):
-        package_name = 'tmlib'
-        prog_name = step_desciption[0]
+    def _get_argparser(self, prog_name):
+        package_name = self._package_name
+        module_name = '%s.%s.argparser' % (package_name, prog_name)
+        logger.debug('load argparser module "%s"' % module_name)
+        module = importlib.import_module(module_name)
+        parser = module.parser
+        return parser
+
+    def _create_jobs_for_step(self, init_command):
+        prog_name = init_command[0]
         logger.debug('create jobs for step {0}'.format(prog_name))
-        argparser_module_name = '%s.%s.argparser' % (package_name, prog_name)
-        logger.debug('load argparser module "%s"' % argparser_module_name)
-        argparser_module = importlib.import_module(argparser_module_name)
-        parser = argparser_module.parser
-        parser.prog = prog_name
-        cli_module_name = '%s.%s.cli' % (package_name, prog_name)
-        logger.debug('load cli module "%s"' % cli_module_name)
-        cli_module = importlib.import_module(cli_module_name)
+        package_name = self._package_name
+        module_name = '%s.%s.cli' % (package_name, prog_name)
+        logger.debug('load cli module "%s"' % module_name)
+        module = importlib.import_module(module_name)
+        class_name = prog_name.capitalize()
 
-        init_command = step_desciption[1:]
-        logger.debug('parse arguments to cli class instance '
-                     'for the "init" method: {0}'.format(init_command))
-        # TODO: add additional arguments using the format string method
-        # with a dictionary read from the user.cfg file
-        args = parser.parse_args(init_command)
-        cli_class_inst = getattr(cli_module, prog_name.capitalize())(args)
+        parser = self._get_argparser(prog_name)
+        init_args = parser.parse_args(init_command[1:])
+        init_cli_instance = getattr(module, class_name)(init_args)
 
-        # Check whether inputs of current step were produced upstream
-        if not all([os.path.exists(i) for i in cli_class_inst.required_inputs]):
-            logger.error('required inputs were not produced upstream')
+        # Check whether inputs of current step were generated by previous steps
+        if not all([
+                    os.path.exists(i)
+                    for i in init_cli_instance.required_inputs
+                ]):
+            logger.error('required inputs were not generated')
             raise WorkflowNextStepError('required inputs do not exist')
 
         # Create job_descriptions for new step
-        getattr(cli_class_inst, args.method_name)()
+        getattr(init_cli_instance, init_args.method_name)()
 
         # Store the expected outputs to be later able to check whether they
         # were actually generated
-        self.expected_outputs.append(cli_class_inst.expected_outputs)
+        self.expected_outputs.append(init_cli_instance.expected_outputs)
 
-        # Take the base of the "init" command to get the positional arguments
-        # of the main program parser and extend it with additional
-        # arguments required for submit subparser
+        # Build "submit" command
         submit_command = list()
-        if self.verbosity > 0:
-            submit_command.append('-v')
         submit_command.extend(init_command[:init_command.index('init')])
         submit_command.append('submit')
         if self.virtualenv:
             submit_command.extend(['--virtualenv', self.virtualenv])
-        logger.debug('parse arguments to cli class instance '
-                     'for the "submit" method: {0}'.format(submit_command))
-        args = parser.parse_args(submit_command)
-        cli_class_inst = getattr(cli_module, prog_name.capitalize())(args)
-        # Calling the "jobs" method returns a SequentialTaskCollection
-        return cli_class_inst.jobs
+
+        parser = self._get_argparser(prog_name)
+        submit_args = parser.parse_args(submit_command[1:])
+        submit_cli_instance = getattr(module, class_name)(submit_args)
+        # The "jobs" attribute returns a SequentialTaskCollection
+        return submit_cli_instance.jobs
 
     def _add_step(self, index):
         if index > 0:
@@ -134,9 +220,9 @@ class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
                 raise WorkflowNextStepError(
                              'outputs of previous step do not exist')
         logger.debug('create job descriptions for next step')
-        step_desciption = self.workflow_description[index]
+        init_command = self.commands[index]
         logger.debug('create jobs for next step and add them to the task list')
-        task = self._create_jobs_for_step(step_desciption)
+        task = self._create_jobs_for_step(init_command)
         self.tasks.append(task)
 
     def next(self, done):
@@ -158,10 +244,10 @@ class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
         # Workflow description: YAML mapping for each step with "command",
         # "time", "memory", "resubmit", "active" keys
 
-        if done+1 < len(self.workflow_description):
+        if done+1 < len(self.commands):
             logger.info('progress to next step ({0} of {1}): "{2}"'.format(
-                            (done+1), len(self.workflow_description),
-                            self.workflow_description[done+1][0]))
+                            (done+1), len(self.commands),
+                            self.commands[done+1][0]))
             try:
                 self._add_step(done+1)
             except Exception as error:
@@ -171,7 +257,7 @@ class ClusterWorkflowManager(SequentialTaskCollection, StopOnError):
                 logger.debug('set state to TERMINATED')
                 return Run.State.TERMINATED
 
-        return super(ClusterWorkflowManager, self).next(done)
+        return super(Workflow, self).next(done)
 
 
 class WorkflowClusterRoutines(BasicClusterRoutines):
@@ -199,7 +285,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         str
             directory where *.job* files and log output will be stored
         '''
-        self._project_dir = os.path.join(self.experiment.dir, 'tmaps')
+        self._project_dir = os.path.join(self.experiment.dir, self.prog_name)
         if not os.path.exists(self._project_dir):
             logging.debug('create project directory: %s' % self._project_dir)
             os.mkdir(self._project_dir)

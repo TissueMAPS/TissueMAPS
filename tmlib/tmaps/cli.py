@@ -2,7 +2,7 @@ import logging
 import argparse
 from . import logo
 from . import __version__
-from .workflow import ClusterWorkflowManager
+from .workflow import Workflow
 from .workflow import WorkflowClusterRoutines
 from ..experiment import Experiment
 
@@ -33,10 +33,7 @@ class Tmaps(object):
     def _api_instance(self):
         logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        self.__api_instance = ClusterWorkflowManager(
-                    experiment=experiment,
-                    virtualenv=self.args.virtualenv,
-                    verbosity=self.args.verbosity)
+        self.__api_instance = WorkflowClusterRoutines(experiment, self.name)
         logger.debug(
             'instantiated API class "%s" with parsed arguments'
             % self.__api_instance.__class__.__name__)
@@ -63,9 +60,16 @@ class Tmaps(object):
         getattr(cli, args.method_name)()
 
     def submit(self):
+        '''
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "submit" subparser.
+        '''
         api = self._api_instance
-        clst = WorkflowClusterRoutines(api.experiment, self.name)
-        clst.submit_jobs(api, 5)
+        jobs = Workflow(
+                    experiment=api.experiment,
+                    virtualenv=self.args.virtualenv,
+                    verbosity=self.args.verbosity)
+        api.submit_jobs(jobs, 5)
 
     @staticmethod
     def get_parser_and_subparsers(

@@ -1,8 +1,7 @@
 from . import __version__
 from .cli import Tmaps
 
-parser, subparsers = Tmaps.get_parser_and_subparsers(
-    required_subparsers=['submit', 'kill'])
+parser, subparsers = Tmaps.get_parser_and_subparsers()
 
 parser.description = '''
         Build and manage TissueMAPS workflows.
