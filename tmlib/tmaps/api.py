@@ -13,7 +13,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)

@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 class Tmaps(object):
 
     def __init__(self, args):
+        '''
+        Initialize an instance of class Tmaps.
+
+        
+        '''
         self.args = args
         self.logger = logger
 
@@ -25,25 +30,20 @@ class Tmaps(object):
         Returns
         -------
         str
-            name of the program
+            name of the command line program
         '''
         return self.__class__.__name__.lower()
 
     @property
     def _api_instance(self):
-        logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        self.__api_instance = WorkflowClusterRoutines(experiment, self.name)
-        logger.debug(
-            'instantiated API class "%s" with parsed arguments'
-            % self.__api_instance.__class__.__name__)
-        return self.__api_instance
+        return WorkflowClusterRoutines(experiment, self.name)
 
     @staticmethod
     def call(args):
         '''
-        Calls the method that matches the name of the specified subparser with
-        the parsed command line arguments.
+        Initialize an instance of the cli class with the parsed command
+        line arguments and call the method matching the name of the subparser.
 
         Parameters
         ----------
@@ -52,7 +52,7 @@ class Tmaps(object):
 
         See also
         --------
-        `tmlib.illuminati.argparser`_
+        `tmlib.tmaps.argparser`_
         '''
         cli = Tmaps(args)
         logger.debug('call "%s" method of class "%s"'

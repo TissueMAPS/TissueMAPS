@@ -132,7 +132,7 @@ class CommandLineInterface(object):
         pass
 
     @property
-    def _variable_init_args(self):
+    def _init_args(self):
         # Since "init" requires more flexibility with respect to the number
         # of parsed arguments, we use a separate property, which can be
         # overwritten by subclasses to handle custom use cases
@@ -205,7 +205,7 @@ class CommandLineInterface(object):
             shutil.rmtree(api.status_dir)
 
         logger.info('create job descriptions')
-        kwargs = self._variable_init_args
+        kwargs = self._init_args
         job_descriptions = api.create_job_descriptions(**kwargs)
         if self.args.print_job_descriptions:
             api.print_job_descriptions(job_descriptions)
@@ -398,7 +398,7 @@ class CommandLineInterface(object):
                 '--backup', action='store_true',
                 help='create a backup of the output of a previous submission')
             # NOTE: when additional arguments are provided, the property
-            # `_variable_init_args` has to be overwritten
+            # `_init_args` has to be overwritten
 
         if 'run' in required_subparsers:
             run_parser = subparsers.add_parser(

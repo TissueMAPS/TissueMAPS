@@ -23,12 +23,16 @@ class ImageExtractor(ClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+
+        Returns
+        -------
+        tmlib.imextract.api.ImageExtractor
         '''
         super(ImageExtractor, self).__init__(experiment, prog_name, verbosity)
         self.experiment = experiment

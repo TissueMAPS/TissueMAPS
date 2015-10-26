@@ -9,7 +9,6 @@ from .descriptions import OverhangDescription
 from .descriptions import ShiftDescription
 from ..writers import JsonWriter
 from ..cluster import ClusterRoutines
-from ..image import ChannelImage
 from ..errors import NotSupportedError
 
 logger = logging.getLogger(__name__)
@@ -23,12 +22,16 @@ class ImageRegistration(ClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+
+        Returns
+        -------
+        tmlib.align.api.ImageRegistration
         '''
         super(ImageRegistration, self).__init__(
                 experiment, prog_name, verbosity)

@@ -47,8 +47,8 @@ class Metaextract(CommandLineInterface):
     @staticmethod
     def call(args):
         '''
-        Calls the method that matches the name of the specified subparser with
-        the parsed command line arguments.
+        Initialize an instance of the cli class with the parsed command
+        line arguments and call the method matching the name of the subparser.
 
         Parameters
         ----------

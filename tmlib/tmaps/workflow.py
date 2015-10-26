@@ -8,16 +8,8 @@ from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import StopOnError
 from ..errors import WorkflowNextStepError
 from ..errors import WorkflowArgsError
-# from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
-
-
-# def submit_workflow(experiment_dir, virtualenv, verbosity=1):
-#     experiment = Experiment(experiment_dir)
-#     workflow = Workflow(experiment, virtualenv, verbosity)
-#     clst = WorkflowClusterRoutines(experiment, 'tmaps')
-#     clst.submit_jobs(workflow, 5)
 
 
 class WorkflowStepArgs(object):

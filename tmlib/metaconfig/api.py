@@ -46,12 +46,16 @@ class MetadataConfigurator(ClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+
+        Returns
+        -------
+        tmlib.metaconfig.api.MetadataConfigurator
 
         Raises
         ------

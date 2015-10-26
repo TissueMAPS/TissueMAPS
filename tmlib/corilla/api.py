@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class IllumstatsGenerator(ClusterRoutines):
+
     '''
     Class for calculating illumination statistics.
     '''
@@ -20,12 +21,16 @@ class IllumstatsGenerator(ClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+
+        Returns
+        -------
+        tmlib.corilla.api.IllumstatsGenerator
         '''
         super(IllumstatsGenerator, self).__init__(
                 experiment, prog_name, verbosity)
@@ -174,7 +179,6 @@ class IllumstatsGenerator(ClusterRoutines):
                         output_filename = os.path.join(
                             output_dir, output_filename)
                         corrected_image.save_as_png(output_filename)
-
 
     def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'

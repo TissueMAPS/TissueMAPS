@@ -1,0 +1,39 @@
+# Template for a user configuration settings file
+
+plates_dir:
+sources_dir:
+layers_dir:
+plate_format: 384
+workflow:
+  stages:
+    - name: conversion
+      steps:
+        - name: metaextract
+          args:
+        - name: metaconfig
+          args:
+            format: cellvoyager
+        - name: imextract
+          args:
+    - name: preprocessing
+      steps:
+        - name: align
+          args:
+            ref_channel: 1
+            ref_cycle: 2
+        - name: corilla
+          args:
+    - name: pyramid_creation
+      steps:
+        - name: illuminati
+          args:
+            shift: Yes
+            illumcorr: Yes
+            thresh: Yes
+    - name: image_analysis
+      steps:
+        - name: jterator_segment
+          args:
+        - name: jterator_measure
+          args:
+

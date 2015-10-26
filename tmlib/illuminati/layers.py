@@ -42,7 +42,7 @@ class ChannelLayer(object):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         tpoint_ix: int
             time point (cycle) index

@@ -15,6 +15,18 @@ class Imextract(CommandLineInterface):
     '''
 
     def __init__(self, args):
+        '''
+        Initialize an instance of class Imextract.
+
+        Parameters
+        ----------
+        args: argparse.Namespace
+            parsed command line arguments
+
+        Returns
+        -------
+        tmlib.imextract.cli.Imextract
+        '''
         super(Imextract, self).__init__(args)
         self.args = args
 
@@ -34,18 +46,14 @@ class Imextract(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        self.__api_instance = ImageExtractor(
-                                experiment=experiment, prog_name=self.name,
-                                verbosity=self.args.verbosity)
-        logger.debug(
-            'instantiated API class "%s" with parsed arguments'
-            % self.__api_instance.__class__.__name__)
-        return self.__api_instance
+        return ImageExtractor(
+                experiment=experiment,
+                prog_name=self.name,
+                verbosity=self.args.verbosity)
 
     @property
-    def _variable_init_args(self):
+    def _init_args(self):
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         return kwargs
@@ -53,8 +61,8 @@ class Imextract(CommandLineInterface):
     @staticmethod
     def call(args):
         '''
-        Calls the method that matches the name of the specified subparser with
-        the parsed command line arguments.
+        Initialize an instance of the cli class with the parsed command
+        line arguments and call the method matching the name of the subparser.
 
         Parameters
         ----------

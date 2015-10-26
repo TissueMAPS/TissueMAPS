@@ -22,6 +22,10 @@ class Metaconfig(CommandLineInterface):
         ----------
         args: arparse.Namespace
             parsed command line arguments
+
+        Returns
+        -------
+        tmlib.metaconfig.cli.Metaconfig
         '''
         super(Metaconfig, self).__init__(args)
         self.args = args
@@ -36,12 +40,12 @@ class Metaconfig(CommandLineInterface):
         Returns
         -------
         st
-            name of the program
+            name of the command line program
         '''
         return self.__class__.__name__.lower()
 
     @property
-    def _variable_init_args(self):
+    def _init_args(self):
         kwargs = dict()
         kwargs['format'] = self.args.format
         kwargs['z_stacks'] = self.args.format
@@ -54,27 +58,25 @@ class Metaconfig(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        self.__api_instance = MetadataConfigurator(
+        return MetadataConfigurator(
                             experiment=experiment, prog_name=self.name,
                             verbosity=self.args.verbosity)
-        logger.debug(
-            'instantiated API class "%s" with parsed arguments'
-            % self.__api_instance.__class__.__name__)
-        return self.__api_instance
 
     @staticmethod
     def call(args):
         '''
-        Initializes an instance of class Metaconfig and calls the method
-        that matches the name of the subparser with the parsed command
-        line arguments.
+        Initialize an instance of the cli class with the parsed command
+        line arguments and call the method matching the name of the subparser.
 
         Parameters
         ----------
         args: arparse.Namespace
             parsed command line arguments
+
+        See also
+        --------
+        `tmlib.metaconfig.argparser`_
         '''
         cli = Metaconfig(args)
         logger.debug('call "%s" method of class "%s"'

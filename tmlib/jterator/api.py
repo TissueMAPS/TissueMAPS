@@ -35,7 +35,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
@@ -50,6 +50,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             name of each module and the description of its input/output
         headless: bool, optional
             whether plotting should be disabled (default: ``True``)
+
+        Returns
+        -------
+        tmlib.jterator.api.ImageAnalysisPipeline
 
         Note
         ----

@@ -15,12 +15,16 @@ class PyramidBuilder(ClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+
+        Returns
+        -------
+        tmlib.illuminati.api.PyramidBuilder
         '''
         super(PyramidBuilder, self).__init__(experiment, prog_name, verbosity)
         self.experiment = experiment
@@ -104,7 +108,7 @@ class PyramidBuilder(ClusterRoutines):
 
     def run_job(self, batch):
         '''
-        Create 8bit greyscale JPEG zoomify pyramid layer of "channel" images.
+        Create 8-bit greyscale JPEG zoomify pyramid layer of "channel" images.
 
         See also
         --------

@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 def determine_plate_dimensions(n_wells):
     '''
-    Determine the dimensions of a well plate.
+    Determine the dimensions of a well plate given the number of wells in the
+    plate.
 
     Parameters
     ----------
@@ -25,12 +26,12 @@ def determine_plate_dimensions(n_wells):
     Tuple[int]
         number of rows and column in the well plate
     '''
-    if n_wells == 96:
-        return (8, 12)
-    elif n_wells == 384:
-        return (16, 24)
-    elif n_wells == 1:
-        return (1, 1)
+    plate_dimensions = {
+        1: (1, 1),
+        96: (8, 12),
+        384: (16, 24)
+    }
+    return plate_dimensions[n_wells]
 
 
 class Plate(object):
@@ -40,13 +41,14 @@ class Plate(object):
     samples (wells) that might be stained independently, but imaged under the
     same conditions.
 
-    There are different well plate *formats*, which encode the number of wells
-    in the well, e.g. "384".
+    There are different plate *formats*, which encode the number of wells
+    in the plate, e.g. "384".
 
     Note
     ----
-    For consistency, a *slide* also represents a plate, which has only a single
-    well with one sample that is stained and imaged under the same conditions.
+    For consistency, a *slide* is also represented as a plate, which has only
+    a single well with one sample that is stained and imaged under the same
+    conditions.
     '''
 
     SUPPORTED_PLATE_FORMATS = {1, 96, 384}

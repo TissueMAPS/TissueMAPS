@@ -28,7 +28,7 @@ class BasicClusterRoutines(object):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         '''
         self.experiment = experiment
@@ -232,7 +232,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Parameters
         ----------
-        experiment: Experiment
+        experiment: tmlib.experiment.Experiment
             configured experiment object
         prog_name: str
             name of the corresponding program (command line interface)

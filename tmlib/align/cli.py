@@ -11,6 +11,18 @@ logger = logging.getLogger(__name__)
 class Align(CommandLineInterface):
 
     def __init__(self, args):
+        '''
+        Initialize an instance of class Align.
+
+        Parameters
+        ----------
+        args: argparse.Namespace
+            parsed command line arguments
+
+        Returns
+        -------
+        tmlib.align.cli.Align
+        '''
         super(Align, self).__init__(args)
         self.args = args
 
@@ -24,24 +36,20 @@ class Align(CommandLineInterface):
         Returns
         -------
         str
-            name of the program
+            name of the command line program
         '''
         return self.__class__.__name__.lower()
 
     @property
     def _api_instance(self):
-        logger.debug('parsed arguments: {0}'.format(self.args))
         experiment = Experiment(self.args.experiment_dir)
-        self.__api_instance = ImageRegistration(
-                                experiment=experiment, prog_name=self.name,
-                                verbosity=self.args.verbosity)
-        logger.debug(
-            'instantiated API class "%s" with parsed arguments'
-            % self.__api_instance.__class__.__name__)
-        return self.__api_instance
+        return ImageRegistration(
+                experiment=experiment,
+                prog_name=self.name,
+                verbosity=self.args.verbosity)
 
     @property
-    def _variable_init_args(self):
+    def _init_args(self):
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         kwargs['ref_cycle'] = self.args.ref_cycle
@@ -64,8 +72,8 @@ class Align(CommandLineInterface):
     @staticmethod
     def call(args):
         '''
-        Calls the method that matches the name of the specified subparser with
-        the parsed command line arguments.
+        Initialize an instance of the cli class with the parsed command
+        line arguments and call the method matching the name of the subparser.
 
         Parameters
         ----------
