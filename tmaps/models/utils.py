@@ -1,4 +1,5 @@
 import shutil
+import os.path as p
 import os
 from sqlalchemy import event
 from tmaps.extensions.encrypt import encode
@@ -56,7 +57,10 @@ def auto_create_directory(get_location_func):
     def class_decorator(cls):
         def after_insert_callback(mapper, connection, target):
             loc = get_location_func(target)
-            os.mkdir(loc)
+            if not p.exists(loc):
+                os.mkdir(loc)
+            else:
+                print 'WARNING: Tried to create location %s but it exists already!' % loc
         event.listen(cls, 'after_insert', after_insert_callback)
         return cls
     return class_decorator
