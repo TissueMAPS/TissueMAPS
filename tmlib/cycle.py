@@ -34,7 +34,7 @@ class Cycle(object):
     `experiment.Experiment`_
     '''
 
-    CYCLE_DIR_FORMAT = '{plate_dir}{sep}cycle_{cycle_ix:0>2}'
+    CYCLE_DIR_FORMAT = 'cycle_{cycle_ix:0>2}'
 
     STATS_FILE_FORMAT = 'channel_{channel_ix}.stat.h5'
 
@@ -51,6 +51,10 @@ class Cycle(object):
         library: str
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
+
+        Returns
+        -------
+        tmlib.cycle.Cycle
 
         Raises
         ------

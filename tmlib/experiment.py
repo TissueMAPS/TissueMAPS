@@ -45,11 +45,15 @@ class Experiment(object):
         ----------
         experiment_dir: str
             absolute path to the experiment root folder
-        user_cfg: UserConfiguration, optional
+        user_cfg: tmlib.cfg.UserConfiguration, optional
             user configuration settings (default: ``None``)
         library: str, optional
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
+
+        Returns
+        -------
+        tmlib.experiment.Experiment
 
         See also
         --------
@@ -168,7 +172,7 @@ class Experiment(object):
         '''
         Returns
         -------
-        List[Plate]
+        List[tmlib.plate.Plate]
             configured plate objects
         '''
         plate_dirs = [
@@ -200,10 +204,8 @@ class Experiment(object):
         OSError
             when the plate already exists
         '''
-        new_plate_dir = Plate.PLATE_DIR_FORMAT.format(
-                                plates_dir=self.plates_dir,
-                                plate_name=plate_name,
-                                sep=os.path.sep)
+        new_plate_name = Plate.PLATE_DIR_FORMAT.format(name=plate_name)
+        new_plate_dir = os.path.join(self.plates_dir, new_plate_name)
         if os.path.exists(new_plate_dir):
             raise OSError('Plate "%s" already exists.' % plate_name)
         logger.debug('add plate: %s', plate_name)
@@ -252,7 +254,7 @@ class Experiment(object):
 
         Returns
         -------
-        List[PlateSource]
+        List[tmlib.source.PlateSource]
             configured plate acquisitions objects
 
         See also
@@ -299,7 +301,7 @@ class Experiment(object):
         '''
         Returns
         -------
-        Dict[str, MosaicMetadata]
+        Dict[str, tmlib.metadata.MosaicMetadata]
             metadata for each layer
         '''
         if hasattr(self.user_cfg, 'LAYER_NAMES'):

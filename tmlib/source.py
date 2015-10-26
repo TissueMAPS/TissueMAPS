@@ -25,7 +25,7 @@ class PlateSource(object):
     `tmlib.plate.Plate`_
     '''
 
-    PLATE_SOURCE_DIR_FORMAT = '{sources_dir}{sep}plate_{plate_name}'
+    PLATE_SOURCE_DIR_FORMAT = 'plate_{name}'
 
     def __init__(self, plate_source_dir, user_cfg):
         '''
@@ -152,10 +152,14 @@ class PlateAcquisition(object):
     are part of the same image acquisition process.
 
     Files are separated by acquisitions, because microscopes usually generate
-    separate sets of metadata files for each acquisition.
+    separate metadata files for each acquisition.
     '''
 
-    ACQUISITION_DIR_FORMAT = '{plate_source_dir}{sep}acquisition_{index:0>2}'
+    ACQUISITION_DIR_FORMAT = 'acquisition_{index:0>2}'
+
+    OMEXML_DIR_NAME = 'omexml'
+    IMAGE_DIR_NAME = 'images'
+    METADATA_DIR_NAME = 'metadata'
 
     def __init__(self, acquisition_dir, user_cfg):
         '''
@@ -189,7 +193,7 @@ class PlateAcquisition(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        image_dir = os.path.join(self.dir, 'images')
+        image_dir = os.path.join(self.dir, self.IMAGE_DIR_NAME)
         if not os.path.exists(image_dir):
             logger.debug('create directory for image source files: %s',
                          image_dir)
@@ -208,7 +212,7 @@ class PlateAcquisition(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        metadata_dir = os.path.join(self.dir, 'metadata')
+        metadata_dir = os.path.join(self.dir, self.METADATA_DIR_NAME)
         if not os.path.exists(metadata_dir):
             logger.debug('create directory for metadata source files: %s',
                          metadata_dir)
@@ -228,7 +232,7 @@ class PlateAcquisition(object):
         ----
         Creates the directory if it doesn't exist.
         '''
-        omexml_dir = os.path.join(self.dir, 'omexml')
+        omexml_dir = os.path.join(self.dir, self.OMEXML_DIR_NAME)
         if not os.path.exists(omexml_dir):
             logger.debug('create directory for OMEXML files: %s',
                          omexml_dir)
