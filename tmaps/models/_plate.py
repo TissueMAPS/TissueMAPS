@@ -42,12 +42,22 @@ def _get_dirpath_for_acquisition_target(acquisition_target):
         acquisition_target.id, acquisition_target.name, pl)
 
 
+ACQUISITION_UPLOAD_STATUS = (
+    'UPLOADING',
+    'WAITING',
+    'SUCCESSFUL',
+    'FAILED'
+)
+
 @auto_create_directory(_get_dirpath_for_acquisition_target)
 @auto_remove_directory(lambda target: target.location)
 class Acquisition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), index=True)
     description = db.Column(db.Text)
+
+    upload_status = db.Column(db.Enum(*ACQUISITION_UPLOAD_STATUS,
+                              name='upload_status'))
 
     plate_id = db.Column(db.Integer, db.ForeignKey('plate.id'))
 
@@ -59,6 +69,7 @@ class Acquisition(db.Model):
         self.name = name
         self.description = description
         self.plate_id = plate.id
+        self.upload_status = 'WAITING'
 
     @property
     def location(self):
@@ -71,7 +82,7 @@ class Acquisition(db.Model):
     @property
     def is_ready_for_processing(self):
         # TODO: Files might be uploading, this is only checked client-side!
-        return len(self.files) != 0
+        return len(self.files) != 0 and self.upload_status == 'SUCCESSFUL'
 
     def remove_files(self):
         paths = [p.join(self.location, f) for f in os.listdir(self.location)]
@@ -80,13 +91,20 @@ class Acquisition(db.Model):
                 shutil.rmtree(pth)
             else:
                 os.remove(pth)
+        self.upload_status = 'WAITING'
+        db.session.commit()
+
+    def mark_upload_successful(self):
+        self.upload_status = 'SUCCESSFUL'
+        db.session.commit()
 
     def as_dict(self):
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'files': self.files
+            'files': self.files,
+            'upload_status': self.upload_status
         }
 
 
