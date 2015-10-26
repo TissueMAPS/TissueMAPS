@@ -142,14 +142,14 @@
 
             <span class="c"># Which of the current objects are not in the dataset?</span>
             <span class="c"># (Tracked via their parent object ids)</span>
-            <span class="n">site_id</span> <span class="o">=</span> <span class="n">image_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">site</span>
+            <span class="n">site_ix</span> <span class="o">=</span> <span class="n">image_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">site</span>
             <span class="n">ids_image</span> <span class="o">=</span> <span class="n">image_grid</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">ids</span>
-            <span class="n">ids_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="s">&#39;ID_parent&#39;</span><span class="p">][</span><span class="n">current</span><span class="o">.</span><span class="n">ID_site</span> <span class="o">==</span> <span class="n">site_id</span><span class="p">])</span>
+            <span class="n">ids_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="s">&#39;ID_parent&#39;</span><span class="p">][</span><span class="n">current</span><span class="o">.</span><span class="n">ID_site</span> <span class="o">==</span> <span class="n">site_ix</span><span class="p">])</span>
             <span class="n">ids_nodata</span> <span class="o">=</span> <span class="p">[</span><span class="n">o</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">ids_data</span> <span class="k">if</span> <span class="n">o</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ids_image</span><span class="p">]</span>
 
             <span class="c"># Which parent objects lie at the border of the image?</span>
             <span class="n">ids_border</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="s">&#39;ID_object&#39;</span><span class="p">][(</span><span class="n">parent</span><span class="o">.</span><span class="n">IX_border</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span>
-                                             <span class="p">(</span><span class="n">parent</span><span class="o">.</span><span class="n">ID_site</span> <span class="o">==</span> <span class="n">site_id</span><span class="p">)]</span>
+                                             <span class="p">(</span><span class="n">parent</span><span class="o">.</span><span class="n">ID_site</span> <span class="o">==</span> <span class="n">site_ix</span><span class="p">)]</span>
             <span class="n">ids_border</span> <span class="o">=</span> <span class="n">ids_border</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
             <span class="c"># Combine all object ids that should not be displayed and thus</span>
@@ -291,7 +291,7 @@
 <span class="sd">        height of each site</span>
 <span class="sd">    offset: int</span>
 <span class="sd">        value that is added to all ids in sitemat</span>
-<span class="sd">        (maximum id in the previously processed site)</span>
+<span class="sd">        (maximum id in the previously processed .site_ix)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -350,9 +350,7 @@
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">outlines</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">cell_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">im</span><span class="p">))</span><span class="o">.</span><span class="n">difference</span><span class="p">({</span><span class="mi">0</span><span class="p">})</span>
-    <span class="k">print</span> <span class="s">&#39;* Computing outlines ....&#39;</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cell_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cell_ids</span><span class="p">):</span>
-        <span class="k">print</span> <span class="s">&#39;|_ cell {:0&gt;5} / {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">cell_ids</span><span class="p">))</span>
 
         <span class="c"># Create a bounding box around the cell id of interest</span>
         <span class="c"># The bounding box should have a frame of thickness 1 matrix cell</span>
@@ -385,14 +383,14 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">contours</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="c"># Not really a big problem since in almost all cases</span>
             <span class="c"># the true (largest) contour is the first one</span>
-            <span class="k">print</span> <span class="s">&#39;  warning: </span><span class="si">%d</span><span class="s"> contours found for cell with id </span><span class="si">%d</span><span class="s">&#39;</span> \
-                <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">contours</span><span class="p">),</span> <span class="n">cell_id</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%d</span><span class="s"> contours found for cell with id </span><span class="si">%d</span><span class="s">&#39;</span><span class="p">,</span>
+                        <span class="nb">len</span><span class="p">(</span><span class="n">contours</span><span class="p">),</span> <span class="n">cell_id</span><span class="p">)</span>
 
         <span class="n">contour</span> <span class="o">=</span> <span class="n">contours</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="n">poly</span> <span class="o">=</span> <span class="n">approximate_polygon</span><span class="p">(</span><span class="n">contour</span><span class="p">,</span> <span class="n">poly_tol</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">poly</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&#39;  warning: polygon was None for cell with id  </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">cell_id</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;polygon was None for cell with id  </span><span class="si">%d</span><span class="s">&#39;</span><span class="p">,</span> <span class="n">cell_id</span><span class="p">)</span>
             <span class="k">continue</span>
 
         <span class="c"># Add the offset of this subimage to all coordinates</span>

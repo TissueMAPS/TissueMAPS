@@ -26,6 +26,9 @@
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
     <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
+    <link rel="up" title="tmlib package" href="tmlib.html" />
+    <link rel="next" title="tmlib.jterator package" href="tmlib.jterator.html" />
+    <link rel="prev" title="tmlib.illuminati package" href="tmlib.illuminati.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -43,17 +46,118 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="tmlib-imextract-api-module">
-<h2>tmlib.imextract.api module<a class="headerlink" href="#tmlib-imextract-api-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-tmlib.imextract.api">
+<span id="tmlib-imextract-api-module"></span><h2>tmlib.imextract.api module<a class="headerlink" href="#module-tmlib.imextract.api" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="tmlib.imextract.api.ImageExtractor">
+<em class="property">class </em><code class="descclassname">tmlib.imextract.api.</code><code class="descname">ImageExtractor</code><span class="sig-paren">(</span><em>experiment</em>, <em>prog_name</em>, <em>verbosity</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/api.html#ImageExtractor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.api.ImageExtractor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="tmlib.html#tmlib.cluster.ClusterRoutines" title="tmlib.cluster.ClusterRoutines"><code class="xref py py-class docutils literal"><span class="pre">tmlib.cluster.ClusterRoutines</span></code></a></p>
+<p>Class for extraction of pixel arrays (planes) stored in image files using
+<a class="reference external" href="https://github.com/CellProfiler/python-bioformats">python-bioformats</a>.
+The extracted arrays are written to PNG files.</p>
+<dl class="method">
+<dt id="tmlib.imextract.api.ImageExtractor.apply_statistics">
+<code class="descname">apply_statistics</code><span class="sig-paren">(</span><em>output_dir</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/api.html#ImageExtractor.apply_statistics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.api.ImageExtractor.apply_statistics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="tmlib.imextract.api.ImageExtractor.collect_job_output">
+<code class="descname">collect_job_output</code><span class="sig-paren">(</span><em>batch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/api.html#ImageExtractor.collect_job_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.api.ImageExtractor.collect_job_output" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="tmlib.imextract.api.ImageExtractor.create_job_descriptions">
+<code class="descname">create_job_descriptions</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/api.html#ImageExtractor.create_job_descriptions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.api.ImageExtractor.create_job_descriptions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a list of information required for the creation and processing
+of individual jobs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>**kwargs</strong> &#8211; <p>additional input arguments as key-value pairs:
+* &#8220;batch_size&#8221;: number of images per job (<em>int</em>)</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">job descriptions</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Dict[str, List[dict] or dict]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tmlib.imextract.api.ImageExtractor.run_job">
+<code class="descname">run_job</code><span class="sig-paren">(</span><em>batch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/api.html#ImageExtractor.run_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.api.ImageExtractor.run_job" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract individual planes from an image file and write each of them
+to a separate PNG file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>batch</strong> (<a class="reference external" href="https://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; joblist element, i.e. description of a single job</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
 </div>
-<div class="section" id="tmlib-imextract-argparser-module">
-<h2>tmlib.imextract.argparser module<a class="headerlink" href="#tmlib-imextract-argparser-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-tmlib.imextract.argparser">
+<span id="tmlib-imextract-argparser-module"></span><h2>tmlib.imextract.argparser module<a class="headerlink" href="#module-tmlib.imextract.argparser" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="tmlib-imextract-cli-module">
-<h2>tmlib.imextract.cli module<a class="headerlink" href="#tmlib-imextract-cli-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-tmlib.imextract.cli">
+<span id="tmlib-imextract-cli-module"></span><h2>tmlib.imextract.cli module<a class="headerlink" href="#module-tmlib.imextract.cli" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="tmlib.imextract.cli.Imextract">
+<em class="property">class </em><code class="descclassname">tmlib.imextract.cli.</code><code class="descname">Imextract</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/cli.html#Imextract"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.cli.Imextract" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="tmlib.html#tmlib.cli.CommandLineInterface" title="tmlib.cli.CommandLineInterface"><code class="xref py py-class docutils literal"><span class="pre">tmlib.cli.CommandLineInterface</span></code></a></p>
+<p>Command line interface for extraction of images from image files.</p>
+<dl class="staticmethod">
+<dt id="tmlib.imextract.cli.Imextract.call">
+<em class="property">static </em><code class="descname">call</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/cli.html#Imextract.call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.cli.Imextract.call" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize an instance of the cli class with the parsed command
+line arguments and call the method matching the name of the subparser.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> (<em>arparse.Namespace</em>) &#8211; parsed command line arguments</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a href="#id5"><span class="problematic" id="id6">`tmlib.imextract.argparser`_</span></a></p>
 </div>
-<div class="section" id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="tmlib.imextract.cli.Imextract.name">
+<code class="descname">name</code><a class="headerlink" href="#tmlib.imextract.cli.Imextract.name" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the program</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="tmlib.imextract.cli.Imextract.print_logo">
+<em class="property">static </em><code class="descname">print_logo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/imextract/cli.html#Imextract.print_logo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.imextract.cli.Imextract.print_logo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-tmlib.imextract">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tmlib.imextract" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -70,10 +174,10 @@
   <ul>
 <li><a class="reference internal" href="#">tmlib.imextract package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#tmlib-imextract-api-module">tmlib.imextract.api module</a></li>
-<li><a class="reference internal" href="#tmlib-imextract-argparser-module">tmlib.imextract.argparser module</a></li>
-<li><a class="reference internal" href="#tmlib-imextract-cli-module">tmlib.imextract.cli module</a></li>
-<li><a class="reference internal" href="#module-contents">Module contents</a></li>
+<li><a class="reference internal" href="#module-tmlib.imextract.api">tmlib.imextract.api module</a></li>
+<li><a class="reference internal" href="#module-tmlib.imextract.argparser">tmlib.imextract.argparser module</a></li>
+<li><a class="reference internal" href="#module-tmlib.imextract.cli">tmlib.imextract.cli module</a></li>
+<li><a class="reference internal" href="#module-tmlib.imextract">Module contents</a></li>
 </ul>
 </li>
 </ul>
@@ -81,6 +185,12 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">tmlib</a><ul>
+  <li><a href="tmlib.html">tmlib package</a><ul>
+      <li>Previous: <a href="tmlib.illuminati.html" title="previous chapter">tmlib.illuminati package</a></li>
+      <li>Next: <a href="tmlib.jterator.html" title="next chapter">tmlib.jterator package</a></li>
+  </ul></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>

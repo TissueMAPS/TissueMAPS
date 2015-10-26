@@ -4,6 +4,11 @@
 Introduction
 ************
 
+.. _overview:
+
+Overview
+========
+
 `TissueMAPS` is a web-based, cluster-integrated tool for visualizing and analyzing large-scale microscopic image datasets.
 
 Microscopy image datasets can easily amount to several terabytes, which makes it impractical to store and process them on a local computer. Instead, images  are often stored on a remote data volume and processed by cluster computing.
@@ -49,7 +54,7 @@ The data unit for visualization of images and the corresponding features is a **
 **Object** layers represent geometrical structures, such as cell segmentations or wells in a multi-well plate. They are rendered on the client side as vector graphics. The data that specifies the location of objects in the map as well as the corresponding features that describe properties of the objects are stored in `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files. 
 
 
-The generation of these layers from the microscopic images generally involves the following sequence of steps, which can be combined into an automated *workflow*:
+The generation of these layers from the microscopic images generally involves different processing **stages**, each of which is composed of a sequence of individual **steps**:
 
 .. image:: ./_static/TissueMAPS_workflow.png
     :height: 400px
@@ -60,12 +65,12 @@ The generation of these layers from the microscopic images generally involves th
 Steps
 -----
 
-Each step of the workflow corresponds to a subpackage of the `tmlib` package:
+Each *step* of a workflow *stage* corresponds to a subpackage of the `tmlib` package:
 
-- `metaextract <../tmlib/metaextract>`_: **Extraction of metadata from microscope files**
+- `metaextract <tmlib.metaextract.html>`_: **Extraction of metadata from microscope files**
     Microscopes usually store images together with additional acquisition information in vendor-specific formats. These are often not understood by standard readers. The `Bio-Formats <https://www.openmicroscopy.org/site/products/bio-formats>`_ Java library is used to extract the metadata from heterogeneous image file formats. These are stored as `OMEXML <https://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html>`_ files according to the standardized `OME <https://www.openmicroscopy.org/site/support/ome-model/>`_ data model.
 
-- `metaconfig <../tmlib/metaconfig>`_: **Configuration and Complementation of metadata**
+- `metaconfig <tmlib.metaconfig.html>`_: **Configuration and Complementation of metadata**
     The information that can be retrieved from individual image files is often not sufficient for automated processing in subsequent steps. In particular, information about the position of images within the scanned grid, which is required to stitch individual images together for the creation of an overview of the entire acquisition area, may not be available from image files, but rather needs to be provided by additional microscope-specific metadata files or user input. Metadata from these various resources is combined into a single *OMEXML* per image acquisition.
 
 - `imextract <../tmlib/imextract>`_: **Extraction of images from files**

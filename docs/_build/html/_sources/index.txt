@@ -13,9 +13,8 @@ Contents:
 
    introduction
    installation
-   api_reference
-   user_documentation
-   developer_documentation
+   .. user_guide
+   .. developer_guide
 
 
 

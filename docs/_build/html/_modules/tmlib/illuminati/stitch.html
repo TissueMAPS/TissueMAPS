@@ -76,7 +76,7 @@
     <span class="k">return</span> <span class="n">n_sites</span>
 
 </div>
-<div class="viewcode-block" id="guess_stitch_dimensions"><a class="viewcode-back" href="../../../tmlib.illuminati.html#tmlib.illuminati.stitch.guess_stitch_dimensions">[docs]</a><span class="k">def</span> <span class="nf">guess_stitch_dimensions</span><span class="p">(</span><span class="n">n_sites</span><span class="p">,</span> <span class="n">more_rows_than_columns</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+<div class="viewcode-block" id="guess_stitch_dimensions"><a class="viewcode-back" href="../../../tmlib.illuminati.html#tmlib.illuminati.stitch.guess_stitch_dimensions">[docs]</a><span class="k">def</span> <span class="nf">guess_stitch_dimensions</span><span class="p">(</span><span class="n">n_sites</span><span class="p">,</span> <span class="n">stitch_major_axis</span><span class="o">=</span><span class="s">&#39;vertical&#39;</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Simple algorithm to guess correct dimensions of a stitched mosaic image.</span>
 
@@ -84,15 +84,16 @@
 <span class="sd">    ----------</span>
 <span class="sd">    n_sites: int</span>
 <span class="sd">        total number of sites (individual images) in the stitched mosaic image</span>
-<span class="sd">    more_rows_than_columns: bool, optional</span>
-<span class="sd">        whether there are more rows than columns (default)</span>
+<span class="sd">    stitch_major_axis: str, optional</span>
+<span class="sd">        ``&quot;horizontal&quot;`` if there are more columns than rows and</span>
+<span class="sd">        ``&quot;vertical&quot;`` otherwise (default: ``&quot;vertical&quot;``)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    Tuple[int]</span>
 <span class="sd">        number of rows and columns of the stitched mosaic image</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">if</span> <span class="n">more_rows_than_columns</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">stitch_major_axis</span> <span class="o">==</span> <span class="s">&#39;vertical&#39;</span><span class="p">:</span>
         <span class="n">decent</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">decent</span> <span class="o">=</span> <span class="bp">False</span>
@@ -101,7 +102,7 @@
                      <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n_sites</span><span class="p">))</span> <span class="o">+</span> <span class="mi">5</span><span class="p">))</span>
     <span class="n">tmpII</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">tmpI</span><span class="p">)</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">tmpI</span><span class="p">)</span>
     <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">triu</span><span class="p">(</span><span class="n">tmpII</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_sites</span><span class="p">)</span>
-    <span class="n">stitch_dims</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">tmpI</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">tmpI</span><span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]]],</span> <span class="n">reverse</span><span class="o">=</span><span class="n">decent</span><span class="p">)</span>
+    <span class="n">stitch_dims</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="nb">abs</span><span class="p">(</span><span class="n">tmpI</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]]),</span> <span class="nb">abs</span><span class="p">(</span><span class="n">tmpI</span><span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]])],</span> <span class="n">reverse</span><span class="o">=</span><span class="n">decent</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
 </div>
@@ -188,7 +189,7 @@
     <span class="k">return</span> <span class="n">layout</span>
 
 </div>
-<div class="viewcode-block" id="calc_image_position"><a class="viewcode-back" href="../../../tmlib.illuminati.html#tmlib.illuminati.stitch.calc_image_position">[docs]</a><span class="k">def</span> <span class="nf">calc_image_position</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">,</span> <span class="n">stitch_layout</span><span class="p">):</span>
+<div class="viewcode-block" id="calc_grid_coordinates_from_layout"><a class="viewcode-back" href="../../../tmlib.illuminati.html#tmlib.illuminati.stitch.calc_grid_coordinates_from_layout">[docs]</a><span class="k">def</span> <span class="nf">calc_grid_coordinates_from_layout</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">,</span> <span class="n">stitch_layout</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Determine the position of each image in the stitched mosaic image.</span>
 
@@ -203,7 +204,7 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    List[Tuple[int]]</span>
-<span class="sd">        pair of one-based &quot;row&quot; (y) and &quot;column&quot; (x) position indices for each</span>
+<span class="sd">        pair of zero-based &quot;row&quot; (y) and &quot;column&quot; (x) position indices for each</span>
 <span class="sd">        individual image in the stitched mosaic image in the order of</span>
 <span class="sd">        acquisition, i.e. sorted according to image *site*</span>
 
@@ -232,25 +233,26 @@
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>  <span class="c"># loop over rows</span>
             <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="ow">and</span> <span class="s">&#39;zigzag&#39;</span> <span class="ow">in</span> <span class="n">stitch_layout</span><span class="p">:</span>
                 <span class="c"># Reverse order of sites in columns every other iteration</span>
-                <span class="n">cols</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">cols</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c"># Preserve order of sites in columns</span>
-                <span class="n">cols</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">rows</span> <span class="o">+=</span> <span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+                <span class="n">cols</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">rows</span> <span class="o">+=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
     <span class="k">elif</span> <span class="s">&#39;vertical&#39;</span> <span class="ow">in</span> <span class="n">stitch_layout</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>  <span class="c"># loop over columns</span>
             <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="ow">and</span> <span class="s">&#39;zigzag&#39;</span> <span class="ow">in</span> <span class="n">stitch_layout</span><span class="p">:</span>
                 <span class="c"># Reverse order of sites in rows every other iteration</span>
-                <span class="n">rows</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">rows</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c"># Preserve order of sites in rows</span>
-                <span class="n">rows</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+                <span class="n">rows</span> <span class="o">+=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">stitch_dims</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
     <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">)</span>
 
 </div>
-<div class="viewcode-block" id="calc_image_coordinates"><a class="viewcode-back" href="../../../tmlib.illuminati.html#tmlib.illuminati.stitch.calc_image_coordinates">[docs]</a><span class="k">def</span> <span class="nf">calc_image_coordinates</span><span class="p">(</span><span class="n">stage_positions</span><span class="p">,</span>
-                           <span class="n">reverse_rows</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">reverse_columns</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="calc_grid_coordinates_from_positions"><a class="viewcode-back" href="../../../tmlib.illuminati.html#tmlib.illuminati.stitch.calc_grid_coordinates_from_positions">[docs]</a><span class="k">def</span> <span class="nf">calc_grid_coordinates_from_positions</span><span class="p">(</span><span class="n">stage_positions</span><span class="p">,</span>
+                                         <span class="n">reverse_rows</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                         <span class="n">reverse_columns</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Calculate the relative position of each image within the acquisition grid.</span>
 <span class="sd">    The coordinates are one-based to be consistent with the OME data model.</span>
@@ -273,7 +275,7 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    List[Tuple[int]]</span>
-<span class="sd">        relative positions (one-based coordinates) within the grid</span>
+<span class="sd">        relative positions (zero-based coordinates) within the grid</span>
 
 <span class="sd">    TODO</span>
 <span class="sd">    ----</span>
@@ -305,7 +307,7 @@
             <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="n">pos_index</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ix</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">continue</span>
-                <span class="n">unique_coordinates</span><span class="p">[</span><span class="n">ix</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>  <span class="c"># one-based!</span>
+                <span class="n">unique_coordinates</span><span class="p">[</span><span class="n">ix</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
 
     <span class="c"># Map the unique coordinates back.</span>
     <span class="n">coordinates</span> <span class="o">=</span> <span class="p">[</span><span class="n">unique_coordinates</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">unique_indices</span><span class="p">]</span>

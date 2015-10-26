@@ -46,9 +46,10 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">cached_property</span> <span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span> <span class="nn">natsort</span> <span class="kn">import</span> <span class="n">natsorted</span>
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">text_readers</span>
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">text_writers</span>
+<span class="kn">from</span> <span class="nn">..readers</span> <span class="kn">import</span> <span class="n">YamlReader</span>
+<span class="kn">from</span> <span class="nn">..writers</span> <span class="kn">import</span> <span class="n">YamlWriter</span>
 <span class="kn">from</span> <span class="nn">..errors</span> <span class="kn">import</span> <span class="n">PipelineOSError</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
@@ -87,7 +88,7 @@
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">,</span> <span class="n">pipe_name</span><span class="p">,</span> <span class="n">pipe</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">handles</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Instantiate an instance of class Jtproject.</span>
+<span class="sd">        Initialize an instance of class Jtproject.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -113,7 +114,8 @@
 <span class="sd">        str</span>
 <span class="sd">            name of the corresponding experiment</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_experiment</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_experiment</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span>
+                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">)))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_experiment</span>
 
     <span class="nd">@property</span>
@@ -219,10 +221,11 @@
 
     <span class="k">def</span> <span class="nf">_create_pipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">pipe_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pipe_file</span><span class="p">()</span>
-        <span class="n">pipe</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_descriptor_name</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">),</span>
-            <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">)</span>
-        <span class="p">}</span>
+        <span class="k">with</span> <span class="n">YamlReader</span><span class="p">()</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="n">pipe</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_descriptor_name</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">),</span>
+                <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">)</span>
+            <span class="p">}</span>
         <span class="k">if</span> <span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">][</span><span class="s">&#39;pipeline&#39;</span><span class="p">]:</span>
             <span class="c"># Add module &#39;name&#39; to pipeline for display in the interface</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">][</span><span class="s">&#39;pipeline&#39;</span><span class="p">]):</span>
@@ -241,17 +244,18 @@
     <span class="k">def</span> <span class="nf">_create_handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">handles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="n">handles_files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_handles_files</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">handles_files</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">handles_files</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-                    <span class="n">f</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="n">PipelineOSError</span><span class="p">(</span>
-                            <span class="s">&#39;Handles file does not exist: &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">f</span><span class="p">)</span>
-                <span class="n">handles</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-                    <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_descriptor_name</span><span class="p">(</span><span class="n">f</span><span class="p">),</span>
-                    <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-                <span class="p">})</span>
+        <span class="k">with</span> <span class="n">YamlReader</span><span class="p">()</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">handles_files</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">handles_files</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+                        <span class="n">f</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="n">PipelineOSError</span><span class="p">(</span>
+                                <span class="s">&#39;Handles file does not exist: &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">f</span><span class="p">)</span>
+                    <span class="n">handles</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                        <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_descriptor_name</span><span class="p">(</span><span class="n">f</span><span class="p">),</span>
+                        <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                    <span class="p">})</span>
         <span class="c"># Sort handles information according to order of modules in the pipeline</span>
         <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">]</span>
         <span class="n">sorted_handles</span> <span class="o">=</span> <span class="p">[</span>
@@ -268,12 +272,14 @@
                 <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">()</span>
             <span class="p">},</span>
             <span class="s">&#39;images&#39;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s">&#39;layers&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">()</span>
+                <span class="s">&#39;layers&#39;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(),</span> <span class="s">&#39;correct&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">}</span>
+                <span class="p">]</span>
             <span class="p">},</span>
             <span class="s">&#39;pipeline&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">()</span>
         <span class="p">}</span>
-
-        <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">pipe_skeleton</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">YamlWriter</span><span class="p">()</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">pipe_skeleton</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_create_handles_folder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">handles_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">)</span>
@@ -285,11 +291,13 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">repo_dir</span><span class="p">:</span>
             <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">pipe_content</span> <span class="o">=</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">YamlReader</span><span class="p">()</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+                <span class="n">pipe_content</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
             <span class="n">pipe_content</span><span class="p">[</span><span class="s">&#39;project&#39;</span><span class="p">][</span><span class="s">&#39;lib&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">repo_dir</span>
             <span class="n">new_pipe_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span>
                                          <span class="s">&#39;</span><span class="si">%s</span><span class="s">.pipe&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_name</span><span class="p">)</span>
-            <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">new_pipe_file</span><span class="p">,</span> <span class="n">pipe_content</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">YamlWriter</span><span class="p">()</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">new_pipe_file</span><span class="p">,</span> <span class="n">pipe_content</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
         <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">skel_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">),</span>
                         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">))</span>
 
@@ -303,15 +311,17 @@
 
     <span class="k">def</span> <span class="nf">_modify_pipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">pipe_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pipe_file</span><span class="p">()</span>
-        <span class="c"># Use ruamel.yaml to preserve comments in the pipe file</span>
-        <span class="n">old_pipe_content</span> <span class="o">=</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">YamlReader</span><span class="p">()</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="c"># Use ruamel.yaml to preserve comments in the pipe file</span>
+            <span class="n">old_pipe_content</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
         <span class="n">new_pipe_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span><span class="p">[</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
         <span class="c"># Remove module &#39;name&#39; from pipeline (only used internally)</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">new_pipe_content</span><span class="p">[</span><span class="s">&#39;pipeline&#39;</span><span class="p">]):</span>
             <span class="n">new_pipe_content</span><span class="p">[</span><span class="s">&#39;pipeline&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
         <span class="n">mod_pipe_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_values</span><span class="p">(</span><span class="n">old_pipe_content</span><span class="p">,</span>
                                                 <span class="n">new_pipe_content</span><span class="p">)</span>
-        <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">mod_pipe_content</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">YamlWriter</span><span class="p">()</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">pipe_file</span><span class="p">,</span> <span class="n">mod_pipe_content</span><span class="p">,</span> <span class="n">use_ruamel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_modify_handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">handles_files</span> <span class="o">=</span> <span class="p">[]</span>
@@ -320,18 +330,20 @@
             <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">,</span>
                                     <span class="s">&#39;</span><span class="si">%s</span><span class="s">.handles&#39;</span> <span class="o">%</span> <span class="n">h</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
             <span class="n">handles_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">handles_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">handles_files</span><span class="p">):</span>
-            <span class="c"># If file already exists, modify its content</span>
-            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">handles_file</span><span class="p">):</span>
-                <span class="n">old_handles_content</span> <span class="o">=</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">handles_file</span><span class="p">)</span>
-                <span class="n">new_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
-                <span class="n">mod_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_values</span><span class="p">(</span>
-                                            <span class="n">old_handles_content</span><span class="p">,</span>
-                                            <span class="n">new_handles_content</span><span class="p">)</span>
-            <span class="c"># If file doesn&#39;t yet exist, create it and add content</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">mod_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
-            <span class="n">text_writers</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="n">handles_file</span><span class="p">,</span> <span class="n">mod_handles_content</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">YamlReader</span><span class="p">()</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">handles_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">handles_files</span><span class="p">):</span>
+                <span class="c"># If file already exists, modify its content</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">handles_file</span><span class="p">):</span>
+                    <span class="n">old_handles_content</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">handles_file</span><span class="p">)</span>
+                    <span class="n">new_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
+                    <span class="n">mod_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_values</span><span class="p">(</span>
+                                                <span class="n">old_handles_content</span><span class="p">,</span>
+                                                <span class="n">new_handles_content</span><span class="p">)</span>
+                <span class="c"># If file doesn&#39;t yet exist, create it and add content</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">mod_handles_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;description&#39;</span><span class="p">]</span>
+                <span class="k">with</span> <span class="n">YamlWriter</span><span class="p">()</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">handles_file</span><span class="p">,</span> <span class="n">mod_handles_content</span><span class="p">)</span>
         <span class="c"># Remove .handles file that are no longer in the pipeline</span>
         <span class="n">existing_handles_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">,</span>
                                            <span class="s">&#39;handles&#39;</span><span class="p">,</span> <span class="s">&#39;*.handles&#39;</span><span class="p">))</span>
@@ -433,7 +445,7 @@
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repo_dir</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Instantiate an instance of class JtAvailableModules.</span>
+<span class="sd">        Initialize an instance of class JtAvailableModules.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -456,12 +468,11 @@
         <span class="n">modules_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_dir</span><span class="p">,</span> <span class="s">&#39;modules&#39;</span><span class="p">)</span>
         <span class="n">search_string</span> <span class="o">=</span> <span class="s">&#39;\.(</span><span class="si">%s</span><span class="s">)$&#39;</span> <span class="o">%</span> <span class="s">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MODULE_FILE_EXT</span><span class="p">)</span>
         <span class="n">regexp_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">search_string</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_module_files</span> <span class="o">=</span> <span class="n">natsorted</span><span class="p">([</span>
+        <span class="k">return</span> <span class="n">natsorted</span><span class="p">([</span>
             <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">modules_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">modules_dir</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">regexp_pattern</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
         <span class="p">])</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_module_files</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">module_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -474,11 +485,10 @@
 <span class="sd">        List[str]</span>
 <span class="sd">            names of the modules</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_module_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="k">return</span> <span class="p">[</span>
             <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">module_files</span>
         <span class="p">]</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_module_names</span>
 
     <span class="k">def</span> <span class="nf">_get_corresponding_handles_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module_name</span><span class="p">):</span>
         <span class="n">handles_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_dir</span><span class="p">,</span> <span class="s">&#39;handles&#39;</span><span class="p">)</span>
@@ -493,8 +503,9 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;No handles file found for module &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span>
                              <span class="o">%</span> <span class="n">module_name</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">handles_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">handles_file</span> <span class="o">=</span> <span class="n">handles_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">handles_file</span>
+            <span class="c"># NOTE: we assume that handles are stored within a subfolder of the</span>
+            <span class="c"># project folder, which is called &quot;handles&quot;</span>
+            <span class="k">return</span> <span class="n">handles_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -511,14 +522,15 @@
 <span class="sd">        --------</span>
 <span class="sd">        `create_handles`</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">{</span>
-                <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
-                <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">_get_corresponding_handles_file</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
-            <span class="p">}</span>
-            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">module_names</span>
-        <span class="p">]</span>
+        <span class="k">with</span> <span class="n">YamlReader</span><span class="p">()</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                    <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_get_corresponding_handles_file</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">module_names</span>
+            <span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handles</span>
 
     <span class="nd">@property</span>
@@ -539,10 +551,15 @@
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">module_files</span><span class="p">):</span>
             <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">available_modules</span><span class="p">:</span>
+                <span class="n">repo_handles_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_corresponding_handles_file</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                <span class="c"># We have to provide the path to handles files for the</span>
+                <span class="c"># currently processed project</span>
+                <span class="n">new_handles_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="s">&#39;handles&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">repo_handles_path</span><span class="p">))</span>
                 <span class="n">element</span> <span class="o">=</span> <span class="p">{</span>
                     <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
                     <span class="s">&#39;description&#39;</span><span class="p">:</span> <span class="p">{</span>
-                        <span class="s">&#39;handles&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_corresponding_handles_file</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                        <span class="s">&#39;handles&#39;</span><span class="p">:</span> <span class="n">new_handles_path</span><span class="p">,</span>
                         <span class="s">&#39;module&#39;</span><span class="p">:</span> <span class="n">f</span><span class="p">,</span>
                         <span class="s">&#39;active&#39;</span><span class="p">:</span> <span class="bp">True</span>
                     <span class="p">}</span>

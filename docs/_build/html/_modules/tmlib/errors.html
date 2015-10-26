@@ -65,7 +65,7 @@
 <span class="sd">    &#39;&#39;&#39;</span>
 
 </div>
-<div class="viewcode-block" id="RegexpError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.RegexpError">[docs]</a><span class="k">class</span> <span class="nc">RegexpError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<div class="viewcode-block" id="RegexError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.RegexError">[docs]</a><span class="k">class</span> <span class="nc">RegexError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Error class that is raised when a regular expression pattern didn&#39;t match.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -78,24 +78,50 @@
 <span class="sd">    &#39;&#39;&#39;</span>
 
 </div>
-<div class="viewcode-block" id="PipelineRunError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.PipelineRunError">[docs]</a><span class="k">class</span> <span class="nc">PipelineRunError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<div class="viewcode-block" id="PipelineError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.PipelineError">[docs]</a><span class="k">class</span> <span class="nc">PipelineError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Base class for jterator pipeline errors.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+</div>
+<div class="viewcode-block" id="PipelineRunError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.PipelineRunError">[docs]</a><span class="k">class</span> <span class="nc">PipelineRunError</span><span class="p">(</span><span class="n">PipelineError</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Error class that is raised when an error occurs upon running a jterator</span>
 <span class="sd">    pipeline.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
 </div>
-<div class="viewcode-block" id="PipelineDescriptionError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.PipelineDescriptionError">[docs]</a><span class="k">class</span> <span class="nc">PipelineDescriptionError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<div class="viewcode-block" id="PipelineDescriptionError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.PipelineDescriptionError">[docs]</a><span class="k">class</span> <span class="nc">PipelineDescriptionError</span><span class="p">(</span><span class="n">PipelineError</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Error class that is raised when information in pipeline description is</span>
 <span class="sd">    missing or incorrect.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
 </div>
-<div class="viewcode-block" id="PipelineOSError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.PipelineOSError">[docs]</a><span class="k">class</span> <span class="nc">PipelineOSError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<div class="viewcode-block" id="PipelineOSError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.PipelineOSError">[docs]</a><span class="k">class</span> <span class="nc">PipelineOSError</span><span class="p">(</span><span class="n">PipelineError</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Error class that is raised when pipeline related files do not exist</span>
 <span class="sd">    on disk.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+</div>
+<div class="viewcode-block" id="WorkflowError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.WorkflowError">[docs]</a><span class="k">class</span> <span class="nc">WorkflowError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Base class for workflow errors.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+</div>
+<div class="viewcode-block" id="WorkflowArgsError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.WorkflowArgsError">[docs]</a><span class="k">class</span> <span class="nc">WorkflowArgsError</span><span class="p">(</span><span class="n">WorkflowError</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Error class that is raised when arguments of a workflow step are</span>
+<span class="sd">    not correctly specified.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+</div>
+<div class="viewcode-block" id="WorkflowNextStepError"><a class="viewcode-back" href="../../tmlib.html#tmlib.errors.WorkflowNextStepError">[docs]</a><span class="k">class</span> <span class="nc">WorkflowNextStepError</span><span class="p">(</span><span class="n">WorkflowError</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Error class that is raised when requirements for progressing to the next</span>
+<span class="sd">    step are not fulfilled.</span>
 <span class="sd">    &#39;&#39;&#39;</span></div>
 </pre></div>
 

@@ -41,6 +41,7 @@
             
   <h1>Source code for tmlib.utils</h1><div class="highlight"><pre>
 <span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">os</span>
 
 <span class="sd">&#39;&#39;&#39;Utility functions for standard routines.&#39;&#39;&#39;</span>
 
@@ -78,26 +79,26 @@
     <span class="k">return</span> <span class="n">regex</span>
 
 </div>
-<div class="viewcode-block" id="indices"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.indices">[docs]</a><span class="k">def</span> <span class="nf">indices</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+<div class="viewcode-block" id="indices"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.indices">[docs]</a><span class="k">def</span> <span class="nf">indices</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Determine all indices of an item in a list.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    seq: list</span>
+<span class="sd">    data: list</span>
 <span class="sd">    item:</span>
 <span class="sd">        the element whose index position should be determined</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    list</span>
-<span class="sd">        all indices of `item` in `seq`</span>
+<span class="sd">        all indices of `item` in `data`</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">start_at</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
     <span class="n">locs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">loc</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">start_at</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">start_at</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
             <span class="k">break</span>
         <span class="k">else</span><span class="p">:</span>
@@ -106,19 +107,173 @@
     <span class="k">return</span> <span class="n">locs</span>
 
 </div>
-<div class="viewcode-block" id="flatten"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.flatten">[docs]</a><span class="k">def</span> <span class="nf">flatten</span><span class="p">(</span><span class="n">seq</span><span class="p">):</span>
+<div class="viewcode-block" id="flatten"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.flatten">[docs]</a><span class="k">def</span> <span class="nf">flatten</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Flatten a list of lists into a list.</span>
+<span class="sd">    Transform a list of lists into a flat list.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    seq: List[list]</span>
+<span class="sd">    data: dataist[list]</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    list</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">seq</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="common_substring"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.common_substring">[docs]</a><span class="k">def</span> <span class="nf">common_substring</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Find longest common substring across a collection of strings.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data: dataist[str]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># NOTE: code taken from stackoverflow.com (question 2892931)</span>
+    <span class="n">substr</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">-</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">substr</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">j</span><span class="p">]</span> <span class="ow">in</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="p">):</span>
+                    <span class="n">substr</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">j</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">substr</span>
+
+</div>
+<div class="viewcode-block" id="list_directory_tree"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.list_directory_tree">[docs]</a><span class="k">def</span> <span class="nf">list_directory_tree</span><span class="p">(</span><span class="n">start_dir</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Capture the whole directory tree downstream of `start_dir`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_dir: str</span>
+<span class="sd">        absolute path to the directory whose content should be listed</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">start_dir</span><span class="p">):</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">start_dir</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
+        <span class="n">indent</span> <span class="o">=</span> <span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="n">level</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&#39;{}{}/&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">root</span><span class="p">)))</span>
+
+</div>
+<div class="viewcode-block" id="is_number"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.is_number">[docs]</a><span class="k">def</span> <span class="nf">is_number</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Check whether a string can be represented by a number.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    s: str</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt;is_number(&#39;blabla&#39;)</span>
+<span class="sd">    False</span>
+<span class="sd">    &gt;&gt;&gt;is_number(&#39;007&#39;)</span>
+<span class="sd">    True</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># NOTE: code taken from stackoverflow.com (question 354038)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+</div>
+<div class="viewcode-block" id="map_letter_to_number"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.map_letter_to_number">[docs]</a><span class="k">def</span> <span class="nf">map_letter_to_number</span><span class="p">(</span><span class="n">letter</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Map capital letter to number.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    letter: str</span>
+<span class="sd">        capital letter</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    int</span>
+<span class="sd">        one-based index number</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt;map_letter_to_number(&quot;A&quot;)</span>
+<span class="sd">    1</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="nb">ord</span><span class="p">(</span><span class="n">letter</span><span class="p">)</span> <span class="o">-</span> <span class="mi">64</span>
+
+</div>
+<div class="viewcode-block" id="map_number_to_letter"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.map_number_to_letter">[docs]</a><span class="k">def</span> <span class="nf">map_number_to_letter</span><span class="p">(</span><span class="n">number</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Map number to capital letter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    number: int</span>
+<span class="sd">        one-based index number</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        capital letter</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt;map_number_to_letter(1)</span>
+<span class="sd">    &quot;A&quot;</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="nb">chr</span><span class="p">(</span><span class="n">number</span><span class="o">+</span><span class="mi">64</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="missing_elements"><a class="viewcode-back" href="../../tmlib.html#tmlib.utils.missing_elements">[docs]</a><span class="k">def</span> <span class="nf">missing_elements</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Determine missing elements in a sequence of integers.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data: List[int]</span>
+<span class="sd">        sequence with potentially missing elements</span>
+<span class="sd">    start: int, optional</span>
+<span class="sd">        lower limit of the range (defaults to ``0``)</span>
+<span class="sd">    end: int, optional</span>
+<span class="sd">        upper limit of the range (defaults to ``len(data)-1``)</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt;data = [10, 12, 13, 15, 16, 19, 20]</span>
+<span class="sd">    &gt;&gt;&gt;list(missing_elements(data))</span>
+<span class="sd">    [11, 14, 17, 18]</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># NOTE: code adapted from stackoverflow.com (question 16974047)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">start</span><span class="p">:</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">end</span><span class="p">:</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+
+    <span class="k">if</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span> 
+        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="n">start</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">start</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="n">end</span><span class="p">]):</span>
+                <span class="k">yield</span> <span class="n">d</span>
+        <span class="k">return</span>
+
+    <span class="n">index</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+
+    <span class="c"># is the lower half consecutive?</span>
+    <span class="n">consecutive_low</span> <span class="o">=</span>  <span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="n">start</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">index</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">consecutive_low</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">missing_elements</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">s</span>
+
+    <span class="c"># is the upper part consecutive?</span>
+    <span class="n">consecutive_high</span> <span class="o">=</span>  <span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">index</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">consecutive_high</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">missing_elements</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">e</span></div>
 </pre></div>
 
           </div>

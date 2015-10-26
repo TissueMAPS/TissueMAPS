@@ -26,6 +26,9 @@
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
     <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
+    <link rel="up" title="tmlib package" href="tmlib.html" />
+    <link rel="next" title="tmlib.tmaps package" href="tmlib.tmaps.html" />
+    <link rel="prev" title="tmlib.metaconvert package" href="tmlib.metaconvert.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -43,17 +46,132 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="tmlib-metaextract-api-module">
-<h2>tmlib.metaextract.api module<a class="headerlink" href="#tmlib-metaextract-api-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-tmlib.metaextract.api">
+<span id="tmlib-metaextract-api-module"></span><h2>tmlib.metaextract.api module<a class="headerlink" href="#module-tmlib.metaextract.api" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="tmlib.metaextract.api.MetadataExtractor">
+<em class="property">class </em><code class="descclassname">tmlib.metaextract.api.</code><code class="descname">MetadataExtractor</code><span class="sig-paren">(</span><em>experiment</em>, <em>prog_name</em>, <em>verbosity</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/api.html#MetadataExtractor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.api.MetadataExtractor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="tmlib.html#tmlib.cluster.ClusterRoutines" title="tmlib.cluster.ClusterRoutines"><code class="xref py py-class docutils literal"><span class="pre">tmlib.cluster.ClusterRoutines</span></code></a></p>
+<p>Class for extraction of metadata from microscopic image files using the
+Bio-Formats command line tool
+<a class="reference external" href="http://www.openmicroscopy.org/site/support/bio-formats5.1/users/comlinetools/display.html">showinf</a>.</p>
+<p>Upon extraction, the metadata is formatted according to the
+<a class="reference external" href="http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html">Open Microscopy Environment (OME) schema</a>
+and written to XML files.</p>
+<dl class="method">
+<dt id="tmlib.metaextract.api.MetadataExtractor.apply_statistics">
+<code class="descname">apply_statistics</code><span class="sig-paren">(</span><em>output_dir</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/api.html#MetadataExtractor.apply_statistics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.api.MetadataExtractor.apply_statistics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="tmlib.metaextract.api.MetadataExtractor.collect_job_output">
+<code class="descname">collect_job_output</code><span class="sig-paren">(</span><em>batch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/api.html#MetadataExtractor.collect_job_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.api.MetadataExtractor.collect_job_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <em>showinf</em> command prints the OMEXML string to standard output.
+GC3Pie redirects the standard output to a log file. Here we copy the
+content of the log file to the files specified by the <cite>omexml_files</cite>
+attribute.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>batch</strong> (<a class="reference external" href="https://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; description of the <em>collect</em> job</li>
+<li><strong>**kwargs</strong> &#8211; <p>additional variable input arguments as key-value pairs</p>
+</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tmlib.metaextract.api.MetadataExtractor.create_job_descriptions">
+<code class="descname">create_job_descriptions</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/api.html#MetadataExtractor.create_job_descriptions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.api.MetadataExtractor.create_job_descriptions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create job descriptions for parallel computing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cfg_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; absolute path to custom configuration file</li>
+<li><strong>**kwargs</strong> &#8211; <p>empty - no additional arguments</p>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">job descriptions</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Dict[str, List[dict] or dict]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tmlib.metaextract.api.MetadataExtractor.run_job">
+<code class="descname">run_job</code><span class="sig-paren">(</span><em>batch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/api.html#MetadataExtractor.run_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.api.MetadataExtractor.run_job" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
-<div class="section" id="tmlib-metaextract-argparser-module">
-<h2>tmlib.metaextract.argparser module<a class="headerlink" href="#tmlib-metaextract-argparser-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-tmlib.metaextract.argparser">
+<span id="tmlib-metaextract-argparser-module"></span><h2>tmlib.metaextract.argparser module<a class="headerlink" href="#module-tmlib.metaextract.argparser" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="tmlib-metaextract-cli-module">
-<h2>tmlib.metaextract.cli module<a class="headerlink" href="#tmlib-metaextract-cli-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-tmlib.metaextract.cli">
+<span id="tmlib-metaextract-cli-module"></span><h2>tmlib.metaextract.cli module<a class="headerlink" href="#module-tmlib.metaextract.cli" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="tmlib.metaextract.cli.Metaextract">
+<em class="property">class </em><code class="descclassname">tmlib.metaextract.cli.</code><code class="descname">Metaextract</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/cli.html#Metaextract"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.cli.Metaextract" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="tmlib.html#tmlib.cli.CommandLineInterface" title="tmlib.cli.CommandLineInterface"><code class="xref py py-class docutils literal"><span class="pre">tmlib.cli.CommandLineInterface</span></code></a></p>
+<p>Command line interface for extraction of metadata from image files.</p>
+<dl class="staticmethod">
+<dt id="tmlib.metaextract.cli.Metaextract.call">
+<em class="property">static </em><code class="descname">call</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/cli.html#Metaextract.call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.cli.Metaextract.call" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize an instance of the cli class with the parsed command
+line arguments and call the method matching the name of the subparser.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> (<em>arparse.Namespace</em>) &#8211; parsed command line arguments</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a href="#id9"><span class="problematic" id="id10">`tmlib.metaextract.argparser`_</span></a></p>
 </div>
-<div class="section" id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="tmlib.metaextract.cli.Metaextract.name">
+<code class="descname">name</code><a class="headerlink" href="#tmlib.metaextract.cli.Metaextract.name" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the program</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="tmlib.metaextract.cli.Metaextract.print_logo">
+<em class="property">static </em><code class="descname">print_logo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tmlib/metaextract/cli.html#Metaextract.print_logo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tmlib.metaextract.cli.Metaextract.print_logo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-tmlib.metaextract">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tmlib.metaextract" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -70,10 +188,10 @@
   <ul>
 <li><a class="reference internal" href="#">tmlib.metaextract package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#tmlib-metaextract-api-module">tmlib.metaextract.api module</a></li>
-<li><a class="reference internal" href="#tmlib-metaextract-argparser-module">tmlib.metaextract.argparser module</a></li>
-<li><a class="reference internal" href="#tmlib-metaextract-cli-module">tmlib.metaextract.cli module</a></li>
-<li><a class="reference internal" href="#module-contents">Module contents</a></li>
+<li><a class="reference internal" href="#module-tmlib.metaextract.api">tmlib.metaextract.api module</a></li>
+<li><a class="reference internal" href="#module-tmlib.metaextract.argparser">tmlib.metaextract.argparser module</a></li>
+<li><a class="reference internal" href="#module-tmlib.metaextract.cli">tmlib.metaextract.cli module</a></li>
+<li><a class="reference internal" href="#module-tmlib.metaextract">Module contents</a></li>
 </ul>
 </li>
 </ul>
@@ -81,6 +199,12 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">tmlib</a><ul>
+  <li><a href="tmlib.html">tmlib package</a><ul>
+      <li>Previous: <a href="tmlib.metaconvert.html" title="previous chapter">tmlib.metaconvert package</a></li>
+      <li>Next: <a href="tmlib.tmaps.html" title="next chapter">tmlib.tmaps package</a></li>
+  </ul></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>

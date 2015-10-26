@@ -26,7 +26,6 @@
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="shortcut icon" href="_static/tmaps_favicon.ico"/>
     <link rel="top" title="TissueMAPS Library 0.1.0 documentation" href="index.html" />
-    <link rel="prev" title="Installation" href="installation.html" />
    
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -146,6 +145,30 @@ The name of this file is defined in the configuration settings in <cite>tmlib.cf
 </div>
 <div class="section" id="jterator">
 <span id="id12"></span><h2>jterator<a class="headerlink" href="#jterator" title="Permalink to this headline">¶</a></h2>
+<p>The <em>collect</em> step collects segmentations and measurements data created by individual jobs and fuses them into a single HDF5 file.</p>
+<p>The final <code class="docutils literal"><span class="pre">data.h5</span></code> file is structured as follows:</p>
+<div class="code highlight-python"><div class="highlight"><pre>/
+
+/objects                                    Group
+/objects/cells                              Group
+
+/objects/cells                              Group
+/objects/cells/ids                          Dataset {n}      :: INTEGER 32
+/objects/cells/parent_ids                   Dataset {n}      :: INTEGER 32
+/objects/cells/is_border                    Dataset {n}      :: BOOL
+/objects/cells/is_discarded                 Dataset {n}      :: BOOL
+/objects/cells/features                     Dataset {n, p}   :: FLOAT
+
+/objects/cells/segmentations                Group
+/objects/cells/segmentations/outlines       Group
+/objects/cells/segmentations/outlines/y     Dataset {n}      :: VARIABLE-LENGTH INTEGER 64
+/objects/cells/segmentations/outlines/x     Dataset {n}      :: VARIABLE-LENGTH INTEGER 64
+/objects/cells/segmentations/centroids      Group
+/objects/cells/segmentations/centroids/y    Dataset {n}
+/objects/cells/segmentations/centroids/x    Dataset {n}
+</pre></div>
+</div>
+<p>where <em>n</em> is the number of objects, <em>m</em> is the maximal number of pixels along the perimeter of objects, and <em>p</em> is the number of features measured per object. The object names &#8220;cells&#8221; and &#8220;nuclei&#8221; only serve as an example here.</p>
 </div>
 <div class="section" id="illuminati">
 <span id="id13"></span><h2>illuminati<a class="headerlink" href="#illuminati" title="Permalink to this headline">¶</a></h2>
@@ -264,7 +287,6 @@ The name of this file is defined in the configuration settings in <cite>tmlib.cf
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
   </ul></li>
 </ul>
 </div>

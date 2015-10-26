@@ -20,6 +20,7 @@ import shlex
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('.'))
+sys.path.append(os.path.join(os.path.dirname(__name__), '..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -213,7 +214,7 @@ html_last_updated_fmt = '%b %d, %Y'
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'TissueMAPSToolboxdoc'
+htmlhelp_basename = 'TissueMAPSLibrarydoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -235,8 +236,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'TissueMAPSToolbox.tex', u'TissueMAPS Toolbox Documentation',
-   u'Markus D. Herrmann, Robin Hafen, Lucas Pelkmans', 'manual'),
+  (master_doc, 'TissueMAPSLibrary.tex', u'TissueMAPS Library Documentation',
+   u'Markus D. Herrmann, Robin Hafen', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -265,7 +266,7 @@ latex_logo = '_static/logo.png'
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'tissuemapstoolbox', u'TissueMAPS Toolbox Documentation',
+    (master_doc, 'tissuemapslibrary', u'TissueMAPS Library Documentation',
      [author], 1)
 ]
 
@@ -279,8 +280,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'TissueMAPSToolbox', u'TissueMAPS Toolbox Documentation',
-   author, 'TissueMAPSToolbox', 'One line description of project.',
+  (master_doc, 'TissueMAPSLibrary', u'TissueMAPS Library Documentation',
+   author, 'TissueMAPSLibrary', 'One line description of project.',
    'Miscellaneous'),
 ]
 

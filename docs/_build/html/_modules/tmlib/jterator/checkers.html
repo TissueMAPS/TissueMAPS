@@ -46,7 +46,7 @@
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">splitext</span><span class="p">,</span> <span class="n">basename</span><span class="p">,</span> <span class="n">exists</span><span class="p">,</span> <span class="n">dirname</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">path_utils</span>
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">text_readers</span>
+<span class="kn">from</span> <span class="nn">..readers</span> <span class="kn">import</span> <span class="n">YamlReader</span>
 <span class="kn">from</span> <span class="nn">..errors</span> <span class="kn">import</span> <span class="n">PipelineDescriptionError</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
@@ -60,7 +60,7 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">,</span> <span class="n">pipe_description</span><span class="p">,</span>
                  <span class="n">handles_descriptions</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Instantiate an instance of class JtChecker.</span>
+<span class="sd">        Initialize an instance of class JtChecker.</span>
 
 <span class="sd">        project_dir: str</span>
 <span class="sd">            path to Jterator project folder</span>
@@ -203,9 +203,7 @@
 
 <span class="sd">                    ...</span>
 
-<span class="sd">                ],</span>
-
-<span class="sd">                &#39;plot&#39;: bool</span>
+<span class="sd">                ]</span>
 <span class="sd">            }</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">libpath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_description</span><span class="p">[</span><span class="s">&#39;project&#39;</span><span class="p">][</span><span class="s">&#39;lib&#39;</span><span class="p">]</span>
@@ -257,17 +255,11 @@
                 <span class="n">handles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles_descriptions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
             <span class="c"># Check &quot;input&quot; section</span>
-            <span class="n">required_keys</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="s">&#39;output&#39;</span><span class="p">,</span> <span class="s">&#39;plot&#39;</span><span class="p">]</span>
+            <span class="n">required_keys</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="s">&#39;output&#39;</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">required_keys</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
                             <span class="s">&#39;Handles file must contain the key &quot;</span><span class="si">%s</span><span class="s">&quot;.&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;plot&#39;</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handles</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">bool</span><span class="p">):</span>
-                        <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
-                                <span class="s">&#39;The value of &quot;</span><span class="si">%s</span><span class="s">&quot; in the &#39;</span>
-                                <span class="s">&#39;&quot;input&quot; section of the handles &#39;</span>
-                                <span class="s">&#39;file must be boolean.&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;input&#39;</span><span class="p">:</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handles</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
                         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
@@ -326,11 +318,6 @@
                 <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
                         <span class="s">&#39;Output names need to be unique.&#39;</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handles</span><span class="p">[</span><span class="s">&#39;plot&#39;</span><span class="p">],</span> <span class="nb">bool</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
-                        <span class="s">&#39;Plot argument in handles file &#39;</span>
-                        <span class="s">&#39;&quot;</span><span class="si">%s</span><span class="s">&quot; needs to be boolean.&#39;</span> <span class="o">%</span> <span class="n">handles_path</span><span class="p">)</span>
-
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Handles descriptions check successful!&#39;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="PipelineChecker.check_pipeline_io"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.checkers.PipelineChecker.check_pipeline_io">[docs]</a>    <span class="k">def</span> <span class="nf">check_pipeline_io</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -338,60 +325,62 @@
 <span class="sd">        Ensure that module inputs have been produced upstream in the pipeline.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">outputs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipe_description</span><span class="p">[</span><span class="s">&#39;pipeline&#39;</span><span class="p">]):</span>
-            <span class="n">handles_path</span> <span class="o">=</span> <span class="n">path_utils</span><span class="o">.</span><span class="n">complete_module_path</span><span class="p">(</span>
-                            <span class="n">module</span><span class="p">[</span><span class="s">&#39;handles&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">libpath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles_descriptions</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-                <span class="n">handles</span> <span class="o">=</span> <span class="n">text_readers</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">handles_path</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">handles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles_descriptions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">with</span> <span class="n">YamlReader</span><span class="p">()</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipe_description</span><span class="p">[</span><span class="s">&#39;pipeline&#39;</span><span class="p">]):</span>
+                <span class="n">handles_path</span> <span class="o">=</span> <span class="n">path_utils</span><span class="o">.</span><span class="n">complete_module_path</span><span class="p">(</span>
+                                <span class="n">module</span><span class="p">[</span><span class="s">&#39;handles&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">libpath</span><span class="p">,</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">project_dir</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles_descriptions</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">handles</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">handles_path</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">handles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handles_descriptions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
-            <span class="c"># Ensure that argument names are unique</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">([</span><span class="n">arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">]])</span>
-            <span class="n">repeated</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">repeated</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
-                        <span class="s">&#39;Input arguments names in &quot;</span><span class="si">%s</span><span class="s">&quot; &#39;</span>
-                        <span class="s">&#39;have to be unique.&#39;</span> <span class="o">%</span> <span class="n">handles_path</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;output&#39;</span><span class="p">]:</span>
-                <span class="k">continue</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">([</span><span class="n">arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;output&#39;</span><span class="p">]])</span>
-            <span class="n">repeated</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">repeated</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
-                        <span class="s">&#39;Output arguments names in &quot;</span><span class="si">%s</span><span class="s">&quot; &#39;</span>
-                        <span class="s">&#39;have to be unique.&#39;</span> <span class="o">%</span> <span class="n">handles_path</span><span class="p">)</span>
-
-            <span class="c"># Check pipeline logic:</span>
-            <span class="c"># Check whether input arguments for current module were produced</span>
-            <span class="c"># upstream in the pipeline</span>
-            <span class="k">for</span> <span class="n">input_arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">]:</span>
-                <span class="k">if</span> <span class="p">(</span><span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;class&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;pipeline&#39;</span>
-                        <span class="ow">or</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
-                    <span class="c"># We only check for non-empty data passed via the HDF5 file</span>
-                    <span class="k">continue</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
-                <span class="n">layer_names</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="n">layer</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
-                    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_description</span><span class="p">[</span><span class="s">&#39;images&#39;</span><span class="p">][</span><span class="s">&#39;layers&#39;</span><span class="p">]</span>
-                <span class="p">]</span>
-                <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">layer_names</span><span class="p">:</span>
-                    <span class="c"># These names are written into the HDF5 file by Jterator</span>
-                    <span class="c"># and are therefore not created in the pipeline.</span>
-                    <span class="c"># So there is no need to check them here.</span>
-                    <span class="k">continue</span>
-                <span class="k">if</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
-                    <span class="k">print</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
-                    <span class="k">print</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+                <span class="c"># Ensure that argument names are unique</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">([</span><span class="n">arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">]])</span>
+                <span class="n">repeated</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">repeated</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
-                            <span class="s">&#39;Input &quot;</span><span class="si">%s</span><span class="s">&quot; of module &quot;</span><span class="si">%s</span><span class="s">&quot; is not &#39;</span>
-                            <span class="s">&#39;created upstream in the pipeline.&#39;</span>
-                            <span class="o">%</span> <span class="p">(</span><span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">],</span> <span class="n">module</span><span class="p">[</span><span class="s">&#39;handles&#39;</span><span class="p">]))</span>
+                            <span class="s">&#39;Input arguments names in &quot;</span><span class="si">%s</span><span class="s">&quot; &#39;</span>
+                            <span class="s">&#39;have to be unique.&#39;</span> <span class="o">%</span> <span class="n">handles_path</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;output&#39;</span><span class="p">]:</span>
+                    <span class="k">continue</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">([</span><span class="n">arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;output&#39;</span><span class="p">]])</span>
+                <span class="n">repeated</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">repeated</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
+                            <span class="s">&#39;Output arguments names in &quot;</span><span class="si">%s</span><span class="s">&quot; &#39;</span>
+                            <span class="s">&#39;have to be unique.&#39;</span> <span class="o">%</span> <span class="n">handles_path</span><span class="p">)</span>
 
-            <span class="c"># Store all upstream output arguments</span>
-            <span class="k">for</span> <span class="n">output_arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;output&#39;</span><span class="p">]:</span>
-                <span class="n">output</span> <span class="o">=</span> <span class="n">output_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
-                <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+                <span class="c"># Check pipeline logic:</span>
+                <span class="c"># Check whether input arguments for current module were produced</span>
+                <span class="c"># upstream in the pipeline</span>
+                <span class="k">for</span> <span class="n">input_arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;class&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;pipeline&#39;</span>
+                            <span class="ow">or</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+                        <span class="c"># We only check for non-empty data passed via the HDF5 file</span>
+                        <span class="k">continue</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+                    <span class="n">layer_names</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">layer</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+                        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe_description</span><span class="p">[</span><span class="s">&#39;images&#39;</span><span class="p">][</span><span class="s">&#39;layers&#39;</span><span class="p">]</span>
+                    <span class="p">]</span>
+                    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">layer_names</span><span class="p">:</span>
+                        <span class="c"># These names are written into the HDF5 file by Jterator</span>
+                        <span class="c"># and are therefore not created in the pipeline.</span>
+                        <span class="c"># So there is no need to check them here.</span>
+                        <span class="k">continue</span>
+                    <span class="k">if</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
+                        <span class="k">print</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+                        <span class="k">print</span> <span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+                        <span class="k">raise</span> <span class="n">PipelineDescriptionError</span><span class="p">(</span>
+                                <span class="s">&#39;Input &quot;</span><span class="si">%s</span><span class="s">&quot; of module &quot;</span><span class="si">%s</span><span class="s">&quot; is not &#39;</span>
+                                <span class="s">&#39;created upstream in the pipeline.&#39;</span>
+                                <span class="o">%</span> <span class="p">(</span><span class="n">input_arg</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">],</span> <span class="n">module</span><span class="p">[</span><span class="s">&#39;handles&#39;</span><span class="p">]))</span>
+
+                <span class="c"># Store all upstream output arguments</span>
+                <span class="k">for</span> <span class="n">output_arg</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">[</span><span class="s">&#39;output&#39;</span><span class="p">]:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">output_arg</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+                    <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Module input/output check successful!&#39;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="PipelineChecker.check_all"><a class="viewcode-back" href="../../../tmlib.jterator.html#tmlib.jterator.checkers.PipelineChecker.check_all">[docs]</a>    <span class="k">def</span> <span class="nf">check_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

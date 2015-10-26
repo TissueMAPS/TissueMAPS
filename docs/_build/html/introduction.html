@@ -42,154 +42,107 @@
             
   <div class="section" id="introduction">
 <span id="id1"></span><h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
-<p><cite>TissueMAPS</cite> is a web-based, cluster-integrated tool for the visualization and analysis of large-scale 2D image datasets.</p>
-<p>Microscopy datasets can easily amount to several terabytes of size, which makes it infeasible to store and process them on a local computer. Instead, we store image files on a remote data volume and process them using cluster computing.</p>
-<p><cite>TissueMAPS</cite> runs on a virtual machine (<em>VM</em>) within a cloud, where it has access to a files system and a cluster computing infrastructure. Users interact with the program via the Internet.</p>
-<a class="reference internal image-reference" href="_images/TissueMAPS_overview.png"><img alt="_images/TissueMAPS_overview.png" src="_images/TissueMAPS_overview.png" style="height: 500px;" /></a>
-<p>The web-based approach has the advantage that no specialized software has to be installed locally and that large datasets can be handled efficiently and conveniently from a laptop computer via a standard web browser.</p>
-<p>Automated configuration and installation procedures make it easy to deploy the <em>VM</em> image in different virtual environments. This can be useful for development, debugging and testing purposes.</p>
-<p>The <cite>tmlib</cite> Python package serves as a library for image storage and processing routines. The library has an object-orientated design and provides classes for file system operations and interaction with the computer cluster.</p>
-<p>The organizational unit of <cite>TissueMAPS</cite> is an <strong>Experiment</strong>, which is represented by a directory on disk that holds the microscopic image files and related files for metadata, calculated statistics or extracted features, for example.</p>
-<div class="section" id="file-system-configuration">
-<span id="id2"></span><h2>File system configuration<a class="headerlink" href="#file-system-configuration" title="Permalink to this headline">¶</a></h2>
-<p>Images as well as metadata are stored in files on the file system.</p>
-<div class="section" id="config-file">
-<span id="id3"></span><h3>Config file<a class="headerlink" href="#config-file" title="Permalink to this headline">¶</a></h3>
-<p>The layout of the directory tree on disk is configured via the <cite>cfg.py</cite> file where Python <a class="reference external" href="https://docs.python.org/2/library/string.html#formatstrings">format strings</a> are used to set paths and filenames:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">TISSUEMAPS LIBRARY CONFIGURATION SETTINGS</span>
-
-<span class="sd">Describe the experimental layout (directory structure and filename nomenclature)</span>
-<span class="sd">by Python format strings. To this end, the following keywords are available::</span>
-
-<span class="sd">* *experiment_dir*: Absolute path to the experiment folder (string).</span>
-
-<span class="sd">* *experiment*: Name of the experiment folder, i.e. the basename of &quot;experiment_dir&quot; (string).</span>
-<span class="sd">                 </span>
-<span class="sd">* *cycle_dir*: Absolute path to the cycle directory (string).</span>
-
-<span class="sd">* *cycle*: Name of the cycle folder, i.e. the basename of &quot;cycle_dir&quot; (string).</span>
-
-<span class="sd">* *channel*: Name of the corresponding channel or wavelength (string).</span>
-
-<span class="sd">* *site*: One-based position index in the acquisition sequence in x, y dimensions (integer).</span>
-
-<span class="sd">* *time*: One-based time point index in the acquisition sequence in t dimension (integer).</span>
-
-<span class="sd">* *zstack*: One-based z-stack index in the acquisition sequence in z dimension (integer).</span>
-
-<span class="sd">* *row*: Y index position of the image in the acquisition grid (integer).</span>
-
-<span class="sd">* *column*: X index position of the image in the acquisition grid (integer).</span>
-
-<span class="sd">* *well*: Well identifier Id encoding the position in the well plate (string).</span>
-
-<span class="sd">* *sep*: Platform-specific path separator (&quot;/&quot; Unix or &quot;\&quot; Windows)</span>
-<span class="sd">&#39;&#39;&#39;</span>
-
-<span class="n">LAYERS_DIR</span> <span class="o">=</span> <span class="s">&#39;{experiment_dir}{sep}layers&#39;</span>
-<span class="n">DATA_FILE</span> <span class="o">=</span> <span class="s">&#39;{experiment_dir}{sep}data.h5&#39;</span>
-
-<span class="n">USER_CFG_FILE</span> <span class="o">=</span> <span class="s">&#39;{experiment_dir}{sep}user.cfg&#39;</span>
-
-<span class="n">CYCLE_DIR</span> <span class="o">=</span> <span class="s">&#39;{experiment}-{cycle_id}&#39;</span>
-<span class="n">LAYER_NAME</span> <span class="o">=</span> <span class="s">&#39;{cycle}-{channel}&#39;</span>
-
-<span class="n">IMAGE_UPLOAD_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}image_uploads&#39;</span>
-<span class="n">ADDITIONAL_UPLOAD_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}additional_uploads&#39;</span>
-<span class="n">OME_XML_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}ome_xml&#39;</span>
-
-<span class="n">IMAGE_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}images&#39;</span>
-<span class="n">IMAGE_FILE</span> <span class="o">=</span> <span class="s">&#39;{cycle}_{well}_s{site:0&gt;3}_r{row:0&gt;2}_c{column:0&gt;2}_{channel}.png&#39;</span>
-
-<span class="n">METADATA_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}metadata&#39;</span>
-<span class="n">IMAGE_METADATA_FILE</span> <span class="o">=</span> <span class="s">&#39;images.metadata&#39;</span>
-
-<span class="n">STATS_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}stats&#39;</span>
-<span class="n">STATS_FILE</span> <span class="o">=</span> <span class="s">&#39;{cycle}_{channel}.stat&#39;</span>
-
-<span class="n">SHIFT_DIR</span> <span class="o">=</span> <span class="s">&#39;{cycle_dir}{sep}shifts&#39;</span>
-<span class="n">SHIFT_FILE</span> <span class="o">=</span> <span class="s">&#39;{cycle}.shift&#39;</span>
-</pre></div>
+<div class="section" id="overview">
+<span id="id2"></span><h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p><cite>TissueMAPS</cite> is a web-based, cluster-integrated tool for visualizing and analyzing large-scale microscopic image datasets.</p>
+<p>Microscopy image datasets can easily amount to several terabytes, which makes it impractical to store and process them on a local computer. Instead, images  are often stored on a remote data volume and processed by cluster computing.</p>
+<p><cite>TissueMAPS</cite> runs on a virtual machine (<em>VM</em>) within a cloud, where it has access to a shared files system and a cluster computing infrastructure. Users interact with the program via the Internet.</p>
+<a class="reference internal image-reference" href="_images/TissueMAPS_overview.png"><img alt="_images/TissueMAPS_overview.png" src="_images/TissueMAPS_overview.png" style="height: 400px;" /></a>
+<p>The web-based approach has the advantage that large datasets can be handled efficiently and conveniently from a remote computer via a standard web browser.</p>
+<p>On the server side, <cite>TissueMAPS</cite> uses Python as a glue language and the <cite>tmlib</cite> Python package serves as a library for tasks related to image storage and processing. The library has an object-orientated design and provides classes for file system operations and interaction with the computer cluster.</p>
 </div>
-<p>Configuration classes then replace the <em>replacement fields</em> in curly braches <code class="docutils literal"><span class="pre">{}</span></code> are replaced with experiment-specific attribute values.</p>
+<div class="section" id="file-system-configuration">
+<span id="id3"></span><h2>File system configuration<a class="headerlink" href="#file-system-configuration" title="Permalink to this headline">¶</a></h2>
+<p>The organizational unit of <cite>TissueMAPS</cite> is an <strong>Experiment</strong>, which is represented by a directory on disk that holds the microscopic image files and related files for metadata, calculated statistics or extracted features.</p>
+<div class="section" id="user-configuration-settings">
+<span id="id4"></span><h3>User configuration settings<a class="headerlink" href="#user-configuration-settings" title="Permalink to this headline">¶</a></h3>
+<p>The location of files on disk can be configure via an experiment-specific user configuration file in <a class="reference external" href="http://yaml.org/">YAML</a> format.</p>
+<p>By default, all files belonging to an experiment are stored within the root experiment folder. However, a user can overwrite these default locations.</p>
 </div>
 </div>
 <div class="section" id="workflow">
-<span id="id4"></span><h2>Workflow<a class="headerlink" href="#workflow" title="Permalink to this headline">¶</a></h2>
-<p>The data unit for visualization in <cite>TissueMAPS</cite> is a <strong>Layer</strong>.</p>
-<p>The program supports different types of layers and their generation requires multiple steps that are combined into larger workflows.</p>
-<p><strong>Channel</strong> layers are comprised of the microscopic raster images. For interactive visualization via the web, images are converted into <a class="reference external" href="http://www.zoomify.com/">zoomify</a> format. These so called <a class="reference external" href="https://en.wikipedia.org/wiki/Pyramid_(image_processing)">pyramids</a> represent a large image by several smaller image tiles (stored in <a class="reference external" href="http://www.jpeg.org">JPEG</a> files) at different resolution levels. Only the tiles that are requested for the current view are loaded and streamed to the client. Channels can be dynamically colorized on the client side and combined by additive color blending for RGB display.</p>
-<p><strong>Object</strong> layers represent geometrical structures, such as cell segmentations or wells in a multi-well plate, that are rendered on the client side as vector graphics. The data that specifies the location of objects in the map as well as the corresponding features that describe properties of the objects are stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files. Objects can be overlaid on channels and colorized according to pre-calculated feature values or results of the program&#8217;s data analysis tools, e.g. class labels generated by a classifier. This allows the user to browse the entire image dataset and perform statistical hypothesis testing in a visually assisted way.</p>
-<p>The generation of layers from the microscopic images may involve the following sequence of steps:</p>
-<a class="reference internal image-reference" href="_images/TissueMAPS_workflow.png"><img alt="_images/TissueMAPS_workflow.png" src="_images/TissueMAPS_workflow.png" style="height: 500px;" /></a>
+<span id="id5"></span><h2>Workflow<a class="headerlink" href="#workflow" title="Permalink to this headline">¶</a></h2>
+<p>The data unit for visualization of images and the corresponding features is a <strong>Layer</strong>. <cite>TissueMAPS</cite> supports two types of layers and their generation requires different image processing steps:</p>
+<p><strong>Channel</strong> layers are comprised of the actual microscopic raster images. For interactive visualization via the web, images are converted into <a class="reference external" href="http://www.zoomify.com/">zoomify</a> format. These so called <a class="reference external" href="https://en.wikipedia.org/wiki/Pyramid_(image_processing)">pyramids</a> represent a large image by several smaller image tiles (stored in <a class="reference external" href="http://www.jpeg.org">JPEG</a> files) at different resolution levels. Only the tiles that are required for the current view are loaded and streamed to the client.</p>
+<p><strong>Object</strong> layers represent geometrical structures, such as cell segmentations or wells in a multi-well plate. They are rendered on the client side as vector graphics. The data that specifies the location of objects in the map as well as the corresponding features that describe properties of the objects are stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files.</p>
+<p>The generation of these layers from the microscopic images generally involves different processing <strong>stages</strong>, each of which is composed of a sequence of individual <strong>steps</strong>:</p>
+<a class="reference internal image-reference" href="_images/TissueMAPS_workflow.png"><img alt="_images/TissueMAPS_workflow.png" src="_images/TissueMAPS_workflow.png" style="height: 400px;" /></a>
 <div class="section" id="steps">
-<span id="id5"></span><h3>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h3>
-<p>Each step of the workflow corresponds to a subpackage of the <cite>tmlib</cite> package:</p>
+<span id="id6"></span><h3>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h3>
+<p>Each <em>step</em> of a workflow <em>stage</em> corresponds to a subpackage of the <cite>tmlib</cite> package:</p>
 <ul>
 <li><dl class="first docutils">
-<dt><a class="reference external" href="../tmlib/metaextract">metaextract</a>: <strong>Extraction of metadata from files</strong></dt>
-<dd><p class="first last">Microscopes usually store images together with the acquisition information in vendor-specific formats, which are often not understood by standard readers. The program uses the <a class="reference external" href="https://www.openmicroscopy.org/site/products/bio-formats">Bio-Formats</a> Java library to extract the metadata from heterogeneous image file formats and stores as <a class="reference external" href="https://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html">XML</a> files according to the standardized <a class="reference external" href="https://www.openmicroscopy.org/site/support/ome-model/">OME</a> data model.</p>
+<dt><a class="reference external" href="tmlib.metaextract.html">metaextract</a>: <strong>Extraction of metadata from microscope files</strong></dt>
+<dd><p class="first last">Microscopes usually store images together with additional acquisition information in vendor-specific formats. These are often not understood by standard readers. The <a class="reference external" href="https://www.openmicroscopy.org/site/products/bio-formats">Bio-Formats</a> Java library is used to extract the metadata from heterogeneous image file formats. These are stored as <a class="reference external" href="https://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html">OMEXML</a> files according to the standardized <a class="reference external" href="https://www.openmicroscopy.org/site/support/ome-model/">OME</a> data model.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="first docutils">
-<dt><a class="reference external" href="../tmlib/metaconvert">metaconvert</a>: <strong>Conversion of extracted metadata to custom format</strong></dt>
-<dd><p class="first last">For the subsequent steps, the relevant metadata is converted to a custom format and serialized to <a class="reference external" href="http://www.json.org/">JSON</a> files. In particular, the microscope stage positions are used to calculate the relative positions of the images within the scanned acquisition grid, which are ultimately required to stitch individual images together to create an overview of the entire imaged area.</p>
+<dt><a class="reference external" href="tmlib.metaconfig.html">metaconfig</a>: <strong>Configuration and Complementation of metadata</strong></dt>
+<dd><p class="first last">The information that can be retrieved from individual image files is often not sufficient for automated processing in subsequent steps. In particular, information about the position of images within the scanned grid, which is required to stitch individual images together for the creation of an overview of the entire acquisition area, may not be available from image files, but rather needs to be provided by additional microscope-specific metadata files or user input. Metadata from these various resources is combined into a single <em>OMEXML</em> per image acquisition.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="first docutils">
 <dt><a class="reference external" href="../tmlib/imextract">imextract</a>: <strong>Extraction of images from files</strong></dt>
-<dd><p class="first last">Image files may contain more than one image. Often images acquired at different <em>z</em>-resolutions are stored in the same file. Some microscopes even store all images in a single file. To facilitate easier handling of images, they are extracted from the original files and stored separately as <a class="reference external" href="http://www.libpng.org/pub/png/">PNG</a> files. If images have more than one <em>z</em>-dimensions, they are automatically projected to 2D.</p>
+<dd><p class="first last">Image files may contain more than one image. For example, images acquired at different <em>z</em>-resolutions are often stored in the same file. Some microscopes even store all images in a single file.
+These formats are not practical, because they require specialized readers. In addition, it is desirable to apply image compression to save storage space. To these ends, each 2D plate is extracted from the original file and stored in a separate <a class="reference external" href="http://www.libpng.org/pub/png/">PNG</a> file. Optionally, images acquired at different <em>z</em>-resolutions (<em>z</em>-stacks) are projected to 2D. Note that mapping from source to target files is already created in the <cite>metaconfig</cite> step.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="first docutils">
 <dt><a class="reference external" href="../tmlib/corilla">corilla</a>: <strong>Calculation of illumination statistics</strong></dt>
-<dd><p class="first last">Microscopic images display illumination artifacts. Correction of these artifacts is important for visualization and even more so for quantitative analysis of pixel intensity values. Illumination statistics are pre-calculated across all acquisition sites and stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files. They can later be applied to individual images in order to correct them for illumination artifacts.</p>
+<dd><p class="first last">Microscopic images generally display illumination artifacts. Correction of these artifacts is important for visualization and even more so for quantitative analysis of pixel intensity values. Illumination statistics are pre-calculated across all acquisition sites and stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files. They can later be applied to individual images for correction.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="first docutils">
-<dt><a class="reference external" href="../tmlib/align">align</a>: <strong>Calculation of shift statistics</strong></dt>
+<dt><a class="reference external" href="../tmlib/align">align</a>: <strong>Image registration and alignment</strong></dt>
 <dd><p class="first last">Images may be acquired at different time points with a potential shift in x-y directions between acquisitions. In order to be able to overlay images from different <em>cycles</em>, images have to be registered and aligned. Shift statistics are pre-calculated for each acquisition site and stored as <a class="reference external" href="http://www.json.org/">JSON</a> files.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="first docutils">
-<dt><a class="reference external" href="../tmlib/jterator">jterator</a>: <strong>Building and running image analysis pipelines</strong></dt>
-<dd><p class="first last">Images are segmented and features are extracted for the detected objects, such as &#8220;nuclei&#8221; or &#8220;cells&#8221;.
-Users can build custom image analysis <em>pipelines</em> by combining available modules. The extracted features are stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files.</p>
+<dt><a class="reference external" href="../tmlib/jterator">jterator</a>: <strong>Image segmentation and feature extraction</strong></dt>
+<dd><p class="first last">Biologically meaningful objects (e.g. &#8220;cells&#8221;) are detected in the images by segmentation and features can be extracted for the detected objects.
+To this end, users can build custom image analysis <em>pipelines</em> by combining available modules in a <a class="reference external" href="http://cellprofiler.org/">CellProfiler</a> like web interface. The outlines of segmented objects and the extracted features are stored in <a class="reference external" href="https://www.hdfgroup.org/HDF5/">HDF5</a> files.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="first docutils">
-<dt><a class="reference external" href="../tmlib/illuminati">illuminati</a>: <strong>Creation of map layers for web visualization</strong></dt>
-<dd><p class="first last">Individual images are stitched together to one big overview image according the positional information provided by the obtained metadata. Images are also corrected for illumination artifacts and aligned if necessary based on the calculated illumination and shift statistics, respectively. Segmented objects are given global Ids and their locations within images are translated into global map coordinates. Images are stored as <a class="reference external" href="http://www.jpeg.org">JPEG</a> files and features in <a class="reference external" href="http://www.json.org/">HDF5</a> files.</p>
+<dt><a class="reference external" href="../tmlib/illuminati">illuminati</a>: <strong>Creation of image pyramids</strong></dt>
+<dd><p class="first last">Individual images are stitched together to one big overview image according the positional information provided by the obtained metadata. Images are also corrected for illumination artifacts and aligned if necessary based on the calculated illumination and shift statistics, respectively. Segmented objects get global IDs assigned and their locations within images are translated into global map coordinates. Channel images are stored in <a class="reference external" href="http://www.jpeg.org">JPEG</a>.</p>
 </dd>
 </dl>
 </li>
 </ul>
-<p>The order of steps is not arbitrary, since some steps are dependent on others, i.e. the <em>outputs</em> of one step may be the <em>inputs</em> for another.</p>
+<p>Programmatically, each step is represented by <a class="reference external" href="http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/workflow.html#gc3libs.workflow.SequentialTaskCollection">GC3Pie tasks</a>, which can combined into larger automated workflows. Individual steps are added to the workflow dynamically at runtime, but the steps can be configured in advance via the configuration settings file. To this end, the user needs to provide the required arguments for each step and can overwrite default settings for optional arguments.</p>
 </div>
 <div class="section" id="command-line-interface">
-<span id="id11"></span><h3>Command-line interface<a class="headerlink" href="#command-line-interface" title="Permalink to this headline">¶</a></h3>
-<p>Each of the above listed packages provides an application programming interface (<strong>API</strong>) and command-line interface (<strong>CLI</strong>).</p>
-<p>The corresponding classes inherit from the <cite>CommandLineInterface</cite> and <cite>ClusterRoutines</cite> base classes. This makes it easy to further extend the workflow by additional steps and allows packages to share a common interface.</p>
-<p>Command line calls are handled by <a class="reference external" href="https://docs.python.org/3/library/argparse.html">argparse</a> and follow a general syntax:</p>
+<span id="id10"></span><h3>Command-line interface<a class="headerlink" href="#command-line-interface" title="Permalink to this headline">¶</a></h3>
+<p>Each of the above listed packages contains the following modules, which provide an application programming interface (<strong>API</strong>) and a command-line interface (<strong>CLI</strong>):</p>
+<ul class="simple">
+<li><strong>argparser</strong>: Serves an instance of class <a class="reference external" href="https://docs.python.org/3/library/argparse.html#argumentparser-objects">argparse.ArgumentParser</a> that processes command line arguments and parses them to the <em>cli</em> class. The parser has the same name as the package and each subparser has a corresponding method in the <em>cli</em> class.</li>
+<li><strong>cli</strong>: The <em>cli</em> class gets initialized with the parsed arguments and the method with the name of the specified subparser gets called. The method in turn initializes an instance of the <em>api</em> class and delegates the actual processing to lower level methods of this class. Of particular importance for the workflow is the <em>init</em> method, which handles arguments for fine-tuning of the step and creates persistent job descriptions on disk.</li>
+<li><strong>api</strong>: The <em>api</em> class provides methods for all <em>GC3Pie</em> related magic, such as creation and submission of jobs.</li>
+</ul>
+<p>The <em>api</em> and <em>cli</em> classes inherit from the <cite>CommandLineInterface</cite> and <cite>ClusterRoutines</cite> base classes, respectively. This approach makes it easy to further extend the workflow by additional steps and allows a common syntax for command line calls:</p>
 <div class="highlight-bash"><div class="highlight"><pre>&lt;class_name&gt; &lt;class_args&gt; &lt;method_name&gt; &lt;method_args&gt;
 </pre></div>
 </div>
 <p>where</p>
 <ul class="simple">
-<li><em>class_name</em> is the name of the main parser corresponding to the <em>cli</em> class of an individual step</li>
-<li><em>class_args</em> are arguments that are handled by the main parser, such as the logging verbosity level or the path to the directory of the experiment that should be processed, which are used to instantiate the corresponding <em>api</em> class</li>
-<li><em>method_name</em> is the name of a subparser corresponding to a method of the <em>cli</em> class</li>
-<li><em>method_args</em> are arguments that are handled by the subparser and are forwarded to the methods of the <em>api</em> class</li>
+<li><strong>class_name</strong> is the name of the main parser corresponding to the <em>cli</em> class of an individual step</li>
+<li><strong>class_args</strong> are arguments that are handled by the main parser, such as the logging verbosity level or the path to the directory of the experiment that should be processed, which are used to instantiate the corresponding <em>api</em> class</li>
+<li><strong>method_name</strong> is the name of a subparser corresponding to a method of the <em>cli</em> class</li>
+<li><strong>method_args</strong> are arguments that are handled by the subparser and are forwarded to the methods of the <em>api</em> class</li>
 </ul>
-<p>You can use the <code class="docutils literal"><span class="pre">-h</span></code> or <code class="docutils literal"><span class="pre">--help</span></code> argument to get help for a particular step:</p>
+<p>The <code class="docutils literal"><span class="pre">-h</span></code> or <code class="docutils literal"><span class="pre">--help</span></code> argument can be used to get help for a particular step:</p>
 <div class="highlight-bash"><div class="highlight"><pre>&lt;class_name&gt; --help
+</pre></div>
+</div>
+<p>It can also be used to get help for individual methods available for a particular step:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&lt;class_name&gt; &lt;class_args&gt; &lt;method_name&gt; --help
 </pre></div>
 </div>
 <p>By default, each step is equipped with the following methods:</p>
@@ -200,34 +153,15 @@ Users can build custom image analysis <em>pipelines</em> by combining available 
 </ul>
 <p>Optionally, steps may provide additional methods, such as:</p>
 <ul class="simple">
-<li><strong>collect</strong>: collect the job output after submission and fuse the data spread across individual files into a single dataset if necessary</li>
-<li><strong>apply</strong>: apply the results of the step (calculated statistics) to individual images</li>
+<li><strong>collect</strong>: collect the job output of parallel runs and fuse the data spread across individual files into a single dataset if necessary</li>
+<li><strong>apply</strong>: apply statistics calculated by the step to individual images</li>
 </ul>
-<p>You can also use the <code class="docutils literal"><span class="pre">-h</span></code> or <code class="docutils literal"><span class="pre">--help</span></code> argument to get help for the individual methods available for a particular step:</p>
-<div class="highlight-bash"><div class="highlight"><pre>&lt;class_name&gt; &lt;class_args&gt; &lt;method_name&gt; --help
+<p>Here is an example call for the <cite>metaconvert</cite> step:</p>
+<div class="highlight-bash"><div class="highlight"><pre>metaconfig -v ./ init --format cellvoyager
 </pre></div>
 </div>
-<p>An example for the <cite>metaconvert</cite> step:</p>
-<p>The call</p>
-<div class="highlight-bash"><div class="highlight"><pre>metaconvert --format cellvoyager ./ init --backup
-</pre></div>
+<p>would initialize the <cite>metaconfig</cite> step and create persistent job descriptions on disk, which could subsequently be used to <em>run</em> or <em>submit</em> jobs. It further specifies a custom file format and thereby adapts the behavior of the program.</p>
 </div>
-<p>would initialize the <cite>metaconvert</cite> step and create persistent job descriptions on disk, which could subsequently be used to <em>run</em> or <em>submit</em> jobs. It further specifies that the format of files as &#8220;cellvoyager&#8221; and backs up job descriptions and log outputs of the previous submission.</p>
-</div>
-</div>
-<div class="section" id="documentation">
-<h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h2>
-<p>We use <a class="reference external" href="http://sphinx-doc.org/index.html">Sphinx</a> in combination with the <a class="reference external" href="https://pypi.python.org/pypi/sphinxcontrib-napoleon">Napoleon extension</a> for support of the <a class="reference external" href="https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard">reStructuredText NumPy style</a>.</p>
-<p>To update the documentation upon changes in the source code, do</p>
-<div class="code bash highlight-python"><div class="highlight"><pre>$ sphinx-apidoc -o ./docs ./tmlib
-</pre></div>
-</div>
-<p>To build the documentation website, do</p>
-<div class="code bash highlight-python"><div class="highlight"><pre>$ cd docs
-$ make html
-</pre></div>
-</div>
-<p>The generated HTML files are located at <cite>docs/_build/html</cite>.</p>
 </div>
 </div>
 
@@ -243,8 +177,9 @@ $ make html
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Introduction</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
 <li><a class="reference internal" href="#file-system-configuration">File system configuration</a><ul>
-<li><a class="reference internal" href="#config-file">Config file</a></li>
+<li><a class="reference internal" href="#user-configuration-settings">User configuration settings</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#workflow">Workflow</a><ul>
@@ -252,7 +187,6 @@ $ make html
 <li><a class="reference internal" href="#command-line-interface">Command-line interface</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#documentation">Documentation</a></li>
 </ul>
 </li>
 </ul>

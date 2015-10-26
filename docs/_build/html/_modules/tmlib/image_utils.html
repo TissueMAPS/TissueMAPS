@@ -44,8 +44,9 @@
 <span class="kn">from</span> <span class="nn">gi.repository</span> <span class="kn">import</span> <span class="n">Vips</span>
 <span class="kn">from</span> <span class="nn">scipy.misc</span> <span class="kn">import</span> <span class="n">imread</span><span class="p">,</span> <span class="n">bytescale</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">png</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">skimage.exposure</span> <span class="kn">import</span> <span class="n">rescale_intensity</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
 
@@ -85,7 +86,7 @@
     <span class="n">im</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="s">&#39;ushort&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write_to_file</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
 </div>
-<div class="viewcode-block" id="save_image_png_numpy"><a class="viewcode-back" href="../../tmlib.html#tmlib.image_utils.save_image_png_numpy">[docs]</a><span class="k">def</span> <span class="nf">save_image_png_numpy</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">bitdepth</span><span class="o">=</span><span class="mi">16</span><span class="p">):</span>
+<div class="viewcode-block" id="save_image_png_numpy"><a class="viewcode-back" href="../../tmlib.html#tmlib.image_utils.save_image_png_numpy">[docs]</a><span class="k">def</span> <span class="nf">save_image_png_numpy</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Save the `numpy` array to file as PNG image.</span>
 
@@ -95,15 +96,8 @@
 <span class="sd">        image</span>
 <span class="sd">    filename: str</span>
 <span class="sd">        name of the output file</span>
-<span class="sd">    bitdepth: int, optional</span>
-<span class="sd">        bit depth of the PNG image (defaults to 16)</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="c"># img = Image.fromarray(image)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-        <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">im</span><span class="o">.</span><span class="n">shape</span>
-        <span class="n">w</span> <span class="o">=</span> <span class="n">png</span><span class="o">.</span><span class="n">Writer</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
-                       <span class="n">bitdepth</span><span class="o">=</span><span class="n">bitdepth</span><span class="p">,</span> <span class="n">greyscale</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-        <span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">im</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">))</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">im</span><span class="p">)</span>
 
 </div>
 <div class="viewcode-block" id="save_image_png"><a class="viewcode-back" href="../../tmlib.html#tmlib.image_utils.save_image_png">[docs]</a><span class="k">def</span> <span class="nf">save_image_png</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
@@ -215,16 +209,20 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    Vips.image</span>
+<span class="sd">    numpy.ndarray</span>
+
+<span class="sd">    Warning</span>
+<span class="sd">    -------</span>
+<span class="sd">    This seems to be buggy!!!</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">nptype</span> <span class="o">=</span> <span class="n">vips_format_to_np_dtype</span><span class="p">(</span><span class="n">vips_image</span><span class="o">.</span><span class="n">get_format</span><span class="p">())</span>
     <span class="n">mem_string</span> <span class="o">=</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">write_to_memory</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">bands</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">mem_string</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">nptype</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
-                    <span class="n">vips_image</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">bands</span><span class="p">)</span>
+                    <span class="n">vips_image</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">bands</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">mem_string</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">nptype</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
-                    <span class="n">vips_image</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
+                    <span class="n">vips_image</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="n">vips_image</span><span class="o">.</span><span class="n">width</span><span class="p">)</span>
     <span class="c"># TODO: 3D RGB images</span>
     <span class="k">return</span> <span class="n">array</span>
 
@@ -381,7 +379,31 @@
     <span class="n">condition_image</span> <span class="o">=</span> <span class="p">(</span><span class="n">identity_image</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">)</span>
     <span class="n">lut</span> <span class="o">=</span> <span class="n">condition_image</span><span class="o">.</span><span class="n">ifthenelse</span><span class="p">(</span><span class="n">threshold</span><span class="p">,</span> <span class="n">identity_image</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">lut</span></div>
+    <span class="k">return</span> <span class="n">lut</span>
+
+</div>
+<div class="viewcode-block" id="convert_to_uint8"><a class="viewcode-back" href="../../tmlib.html#tmlib.image_utils.convert_to_uint8">[docs]</a><span class="k">def</span> <span class="nf">convert_to_uint8</span><span class="p">(</span><span class="n">img</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convert a 16-bit image to 8-bit by linearly scaling from 0-``max(img)``</span>
+<span class="sd">    to 0-255.</span>
+<span class="sd">    </span>
+<span class="sd">    This can be useful for the display of an image in a figure.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    image: numpy.ndarray[uint16]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray[uint8]</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    This is equivalent to Image &gt; Type &gt; 8-bit in ImageJ.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">in_range</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">img</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">img</span><span class="p">))</span>
+    <span class="n">img_rescaled</span> <span class="o">=</span> <span class="n">rescale_intensity</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">out_range</span><span class="o">=</span><span class="s">&#39;uint8&#39;</span><span class="p">,</span> <span class="n">in_range</span><span class="o">=</span><span class="n">in_range</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">img_rescaled</span></div>
 </pre></div>
 
           </div>

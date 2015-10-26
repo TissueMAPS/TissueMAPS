@@ -62,7 +62,7 @@
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Instantiate an instance of class Mosaic.</span>
+<span class="sd">        Initialize an instance of class Mosaic.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -160,7 +160,7 @@
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Instantiate an instance of class Mosaic.</span>
+<span class="sd">        Initialize an instance of class Mosaic.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -172,7 +172,10 @@
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_build_image_grid</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
-        <span class="n">coordinates</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">grid_coordinates</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">well_pos_y</span><span class="p">,</span> <span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">well_pos_x</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span>
+        <span class="p">]</span>
         <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">coordinates</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c"># zero-based</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">height</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">width</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">coordinates</span><span class="p">):</span>
@@ -180,7 +183,7 @@
         <span class="k">return</span> <span class="n">grid</span>
 
     <span class="nd">@staticmethod</span>
-<div class="viewcode-block" id="Mosaic.create_from_images"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.Mosaic.create_from_images">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_images</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Mosaic.create_from_images"><a class="viewcode-back" href="../../tmlib.html#tmlib.mosaic.Mosaic.create_from_images">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_images</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">stats</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Create a Mosaic object from image objects.</span>
 
@@ -197,9 +200,8 @@
 <span class="sd">        stats: IllumstatsImages, optional</span>
 <span class="sd">            illumination statistics to correct images for</span>
 <span class="sd">            illumination artifacts</span>
-<span class="sd">        shift: List[ShiftDescription], optional</span>
-<span class="sd">            shift descriptions, when provided images are aligned between</span>
-<span class="sd">            cycles</span>
+<span class="sd">        shift: bool, optional</span>
+<span class="sd">            whether images should be aligned between cycles</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -209,20 +211,11 @@
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            when `dx` or `dy` are positive</span>
-<span class="sd">        MetadataError</span>
-<span class="sd">            when `images` are not of same *cycle* or *channel*</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dx</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&quot;dx&quot; has to be a negative integer value&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dy</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&quot;dy&quot; has to be a negative integer value&#39;</span><span class="p">)</span>
-
-        <span class="n">cycles</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cycle</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cycles</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same cycle&#39;</span><span class="p">)</span>
-        <span class="n">channels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">channel</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same channel&#39;</span><span class="p">)</span>
 
         <span class="n">grid</span> <span class="o">=</span> <span class="n">Mosaic</span><span class="o">.</span><span class="n">_build_image_grid</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
@@ -233,10 +226,7 @@
                 <span class="k">if</span> <span class="n">stats</span><span class="p">:</span>
                     <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">correct</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">shift</span><span class="p">:</span>
-                    <span class="n">shift_description</span> <span class="o">=</span> <span class="p">[</span>
-                        <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">shift</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="n">img</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">site</span>
-                    <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">shift_description</span><span class="p">,</span> <span class="n">crop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">crop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
                 <span class="n">current_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
             <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span>
                         <span class="n">x</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="s">&#39;horizontal&#39;</span><span class="p">,</span> <span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">width</span><span class="o">-</span><span class="n">dx</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">current_row</span><span class="p">))</span>
@@ -250,7 +240,7 @@
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Instantiate an instance of class Mosaic.</span>
+<span class="sd">        Initialize an instance of class Mosaic.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -316,10 +306,10 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">dy</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&quot;dy&quot; has to be a positive integer value&#39;</span><span class="p">)</span>
 
-        <span class="n">cycles</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cycle</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+        <span class="n">cycles</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">cycle_name</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cycles</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same cycle&#39;</span><span class="p">)</span>
-        <span class="n">channels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">channel</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
+        <span class="n">channels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">channel_name</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">MetadataError</span><span class="p">(</span><span class="s">&#39;All images must be of the same channel&#39;</span><span class="p">)</span>
         <span class="n">dtypes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="n">im</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">im</span> <span class="ow">in</span> <span class="n">images</span><span class="p">])</span>
@@ -349,10 +339,7 @@
                 <span class="k">if</span> <span class="n">stats</span><span class="p">:</span>
                     <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">correct</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">shift</span><span class="p">:</span>
-                    <span class="n">shift_description</span> <span class="o">=</span> <span class="p">[</span>
-                        <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">shift</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="n">img</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">site</span>
-                    <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">shift_description</span><span class="p">,</span> <span class="n">crop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">crop</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
                 <span class="c"># pad image with zeros if necessary</span>
                 <span class="n">height_diff</span> <span class="o">=</span> <span class="n">im_height</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">pixels</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">height_diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
