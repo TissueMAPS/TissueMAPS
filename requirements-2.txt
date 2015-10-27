@@ -6,7 +6,6 @@ FITS-tools
 gc3pie==2.4.2
 h5py==2.5.0
 image-registration==0.2.1
-ipdb==0.8.1
 ipython==3.2.0
 julia==0.1.1
 matlab-wrapper==0.9.6
@@ -26,7 +25,6 @@ python-dateutil==2.4.2
 pytest==2.7.2
 pytz==2015.4
 PyYAML==3.11
-Shapely==1.5.9
 sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12
 tifffile==0.6.2
