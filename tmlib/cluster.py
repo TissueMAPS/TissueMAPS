@@ -658,9 +658,9 @@ class ClusterRoutines(BasicClusterRoutines):
                     jobname=jobname,
                     stdout=log_out_file,
                     stderr=log_err_file,
-                    # activate the virtual environment
-                    application_name=virtualenv
             )
+            if virtualenv:
+                job.application_name = virtualenv
             run_jobs.add(job)
 
         if 'collect' in job_descriptions.keys():
@@ -680,10 +680,10 @@ class ClusterRoutines(BasicClusterRoutines):
                     output_dir=self.log_dir,
                     jobname=jobname,
                     stdout=log_out_file,
-                    stderr=log_err_file,
-                    # activate the virtual environment
-                    application_name=virtualenv
+                    stderr=log_err_file
             )
+            if virtualenv:
+                collect_job.application_name = virtualenv
 
             logging.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(

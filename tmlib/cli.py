@@ -424,9 +424,8 @@ class CommandLineInterface(object):
                 help='job monitoring interval in seconds'
             )
             submit_parser.add_argument(
-                '--virtualenv', type=str, default='tmaps',
-                help='name of a virtual environment that should be activated '
-                     '(default: tmaps')
+                '--virtualenv', type=str, default=None,
+                help='name of a virtual environment that should be activated')
 
         if 'collect' in required_subparsers:
             collect_parser = subparsers.add_parser(
