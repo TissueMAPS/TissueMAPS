@@ -323,14 +323,20 @@ class ClusterRoutines(BasicClusterRoutines):
                 j['outputs'].values() for j in job_descriptions['run']
             ])
             if all([isinstance(f, list) for f in run_files]):
-                files.extend(utils.flatten(run_files))
+                run_files = utils.flatten(run_files)
+                if all([isinstance(f, list) for f in run_files]):
+                    run_files = utils.flatten(run_files)
+                files.extend(run_files)
             else:
                 files.extend(run_files)
         if 'collect' in job_descriptions.keys():
             collect_files =  \
                 utils.flatten(job_descriptions['collect']['outputs'].values())
             if all([isinstance(f, list) for f in collect_files]):
-                files.extend(utils.flatten(collect_files))
+                collect_files = utils.flatten(collect_files)
+                if all([isinstance(f, list) for f in collect_files]):
+                    collect_files = utils.flatten(collect_files)
+                files.extend(collect_files)
             else:
                 files.extend(collect_files)
         return files
@@ -350,7 +356,10 @@ class ClusterRoutines(BasicClusterRoutines):
                 j['inputs'].values() for j in job_descriptions['run']
             ])
             if all([isinstance(f, list) for f in run_files]):
-                files.extend(utils.flatten(run_files))
+                run_files = utils.flatten(run_files)
+                if all([isinstance(f, list) for f in run_files]):
+                    run_files = utils.flatten(run_files)
+                files.extend(run_files)
             elif any([isinstance(f, dict) for f in run_files]):
                 files.extend(utils.flatten([
                     utils.flatten(f.values())
