@@ -25,6 +25,7 @@ python-dateutil==2.4.2
 pytest==2.7.2
 pytz==2015.4
 PyYAML==3.11
+sphinxcontrib-autoprogram==0.1.2
 sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12
 tifffile==0.6.2
