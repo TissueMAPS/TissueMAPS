@@ -20,6 +20,9 @@ tmlib.metaconfig.argparser module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.metaconfig.argparser:parser
+    :prog: metaconfig
+
 tmlib.metaconfig.cellvoyager module
 -----------------------------------
 

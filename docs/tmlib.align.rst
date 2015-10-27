@@ -20,6 +20,9 @@ tmlib.align.argparser module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.align.argparser:parser
+    :prog: align
+
 tmlib.align.cli module
 ----------------------
 

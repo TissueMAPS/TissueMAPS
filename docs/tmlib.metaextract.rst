@@ -20,6 +20,9 @@ tmlib.metaextract.argparser module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.metaextract.argparser:parser
+    :prog: metaextract
+
 tmlib.metaextract.cli module
 ----------------------------
 

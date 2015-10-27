@@ -73,21 +73,21 @@ Each *step* of a workflow *stage* corresponds to a subpackage of the `tmlib` pac
 - `metaconfig <tmlib.metaconfig.html>`_: **Configuration and Complementation of metadata**
     The information that can be retrieved from individual image files is often not sufficient for automated processing in subsequent steps. In particular, information about the position of images within the scanned grid, which is required to stitch individual images together for the creation of an overview of the entire acquisition area, may not be available from image files, but rather needs to be provided by additional microscope-specific metadata files or user input. Metadata from these various resources is combined into a single *OMEXML* per image acquisition.
 
-- `imextract <../tmlib/imextract>`_: **Extraction of images from files**
+- `imextract <tmlib.imextract.html>`_: **Extraction of images from files**
     Image files may contain more than one image. For example, images acquired at different *z*-resolutions are often stored in the same file. Some microscopes even store all images in a single file. 
     These formats are not practical, because they require specialized readers. In addition, it is desirable to apply image compression to save storage space. To these ends, each 2D plate is extracted from the original file and stored in a separate `PNG <http://www.libpng.org/pub/png/>`_ file. Optionally, images acquired at different *z*-resolutions (*z*-stacks) are projected to 2D. Note that mapping from source to target files is already created in the `metaconfig` step.
 
-- `corilla <../tmlib/corilla>`_: **Calculation of illumination statistics**
+- `corilla <tmlib.corilla.html>`_: **Calculation of illumination statistics**
     Microscopic images generally display illumination artifacts. Correction of these artifacts is important for visualization and even more so for quantitative analysis of pixel intensity values. Illumination statistics are pre-calculated across all acquisition sites and stored in `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files. They can later be applied to individual images for correction.
 
-- `align <../tmlib/align>`_: **Image registration and alignment**
+- `align <tmlib.align.html>`_: **Image registration and alignment**
     Images may be acquired at different time points with a potential shift in x-y directions between acquisitions. In order to be able to overlay images from different *cycles*, images have to be registered and aligned. Shift statistics are pre-calculated for each acquisition site and stored as `JSON <http://www.json.org/>`_ files.
 
-- `jterator <../tmlib/jterator>`_: **Image segmentation and feature extraction**
+- `jterator <tmlib.jterator.html>`_: **Image segmentation and feature extraction**
     Biologically meaningful objects (e.g. "cells") are detected in the images by segmentation and features can be extracted for the detected objects.
     To this end, users can build custom image analysis *pipelines* by combining available modules in a `CellProfiler <http://cellprofiler.org/>`_ like web interface. The outlines of segmented objects and the extracted features are stored in `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files.
 
-- `illuminati <../tmlib/illuminati>`_: **Creation of image pyramids**
+- `illuminati <tmlib.illuminati.html>`_: **Creation of image pyramids**
     Individual images are stitched together to one big overview image according the positional information provided by the obtained metadata. Images are also corrected for illumination artifacts and aligned if necessary based on the calculated illumination and shift statistics, respectively. Segmented objects get global IDs assigned and their locations within images are translated into global map coordinates. Channel images are stored in `JPEG <http://www.jpeg.org>`_.
 
 

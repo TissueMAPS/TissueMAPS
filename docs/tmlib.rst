@@ -8,7 +8,6 @@ Subpackages
 
     tmlib.align
     tmlib.corilla
-    tmlib.dafu
     tmlib.illuminati
     tmlib.imextract
     tmlib.jterator
@@ -23,14 +22,6 @@ tmlib.cfg module
 ----------------
 
 .. automodule:: tmlib.cfg
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.cfg_setters module
-------------------------
-
-.. automodule:: tmlib.cfg_setters
     :members:
     :undoc-members:
     :show-inheritance:
@@ -55,22 +46,6 @@ tmlib.cycle module
 ------------------
 
 .. automodule:: tmlib.cycle
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.data_readers module
--------------------------
-
-.. automodule:: tmlib.data_readers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.data_writers module
--------------------------
-
-.. automodule:: tmlib.data_writers
     :members:
     :undoc-members:
     :show-inheritance:
@@ -103,14 +78,6 @@ tmlib.image module
 ------------------
 
 .. automodule:: tmlib.image
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.image_readers module
---------------------------
-
-.. automodule:: tmlib.image_readers
     :members:
     :undoc-members:
     :show-inheritance:
@@ -155,10 +122,10 @@ tmlib.pixels module
     :undoc-members:
     :show-inheritance:
 
-tmlib.plates module
+tmlib.plate module
 -------------------
 
-.. automodule:: tmlib.plates
+.. automodule:: tmlib.plate
     :members:
     :undoc-members:
     :show-inheritance:
@@ -183,22 +150,6 @@ tmlib.shift module
 ------------------
 
 .. automodule:: tmlib.shift
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.text_readers module
--------------------------
-
-.. automodule:: tmlib.text_readers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.text_writers module
--------------------------
-
-.. automodule:: tmlib.text_writers
     :members:
     :undoc-members:
     :show-inheritance:

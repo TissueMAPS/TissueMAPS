@@ -37,10 +37,11 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.autoprogram',
     'matplotlib.sphinxext.mathmpl',
     'matplotlib.sphinxext.only_directives',
     'matplotlib.sphinxext.plot_directive',
-    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.inheritance_diagram'
     # 'sphinx_pyreverse'
     # 'matplotlib.sphinxext.ipython_directive'
 ]
@@ -122,7 +123,7 @@ todo_include_todos = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme =  'alabaster'  # 'sphinx_rtd_theme' 
+html_theme = 'alabaster'  # 'sphinx_rtd_theme' 
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -300,3 +301,14 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+
+# Include documentation for __init__ special member
+def skip(app, what, name, obj, skip, options):
+    if name == "__init__":
+        return False
+    return skip
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)

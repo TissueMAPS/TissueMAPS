@@ -20,6 +20,9 @@ tmlib.illuminati.argparser module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.illuminati.argparser:parser
+    :prog: illuminati
+
 tmlib.illuminati.cli module
 ---------------------------
 
