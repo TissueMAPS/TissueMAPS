@@ -125,43 +125,51 @@ class IllumstatsGenerator(ClusterRoutines):
             writer.write('/metadata/tpoint_ix', data=batch['cycle'])
             writer.write('/metadata/channel_ix', data=batch['channel'])
 
-    def apply_statistics(self, output_dir, **kwargs):
+    def apply_statistics(self, output_dir, plates, wells, sites, channels,
+                         tpoints, zplanes, **kwargs):
         '''
         Apply the calculated statistics to images in order to correct them for
-        illumination artifacts. A subset of images that should be corrected can
-        be selected based on following criteria:
-            * **plates**: plate names (*List[str]*)
-            * **wells**: cycle names (*List[str]*)
-            * **channels**: channel indices (*List[int]*)
-            * **zplanes**: z-plane indices (*List[int]*)
+        illumination artifacts.
 
         Parameters
         ----------
         output_dir: str
-            absolute path to directory where the corrected images should be
-            written to
+            absolute path to directory where the processed images should be
+            stored
+        plates: List[str]
+            plate names
+        wells: List[str]
+            well identifiers
+        sites: List[int]
+            site indices
+        channels: List[str]
+            channel indices
+        tpoints: List[int]
+            time point (cycle) indices
+        zplanes: List[int]
+            z-plane indices
         **kwargs: dict
-            additional arguments as key-value pairs: selection criteria
+            no additional arguments used
         '''
         logger.info('correct images for illumination artifacts')
         for plate in self.experiment.plates:
-            if kwargs['plates']:
-                if plate.name not in kwargs['plates']:
+            if plates:
+                if plate.name not in plates:
                     continue
             for cycle in plate.cycles:
                 if kwargs['tpoints']:
-                    if cycle.index not in kwargs['tpoints']:
+                    if cycle.index not in tpoints:
                         continue
                 md = cycle.image_metadata_table
                 sld = md.copy()
-                if kwargs['sites']:
-                    sld = sld[sld['site_ix'].isin(kwargs['sites'])]
-                if kwargs['wells']:
-                    sld = sld[sld['well_name'].isin(kwargs['wells'])]
-                if kwargs['channels']:
-                    sld = sld[sld['channel_ix'].isin(kwargs['channels'])]
-                if kwargs['zplanes']:
-                    sld = sld[sld['zplane_ix'].isin(kwargs['zplanes'])]
+                if sites:
+                    sld = sld[sld['site_ix'].isin(sites)]
+                if wells:
+                    sld = sld[sld['well_name'].isin(wells)]
+                if channels:
+                    sld = sld[sld['channel_ix'].isin(channels)]
+                if zplanes:
+                    sld = sld[sld['zplane_ix'].isin(zplanes)]
                 selected_channels = list(set(sld['channel_ix'].tolist()))
                 for c in selected_channels:
                     stats = cycle.illumstats_images[c]

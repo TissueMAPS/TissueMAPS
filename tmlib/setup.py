@@ -16,22 +16,25 @@ def get_version():
 setup(
     name='tmlib',
     version=get_version(),
-    description='TissueMAPS toolbox. Image processing and data analysis '
-                'routines for TissueMAPS.',
+    description='TissueMAPS library',
+    long_description='Python package for image processing tasks required by TissueMAPS',
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann at gmail dot com',
-    url='https://github.com/hackermd/tissuemapstoolbox',
+    url='https://github.com/TissueMAPS/tissuemapslibrary',
+    license='GPL',
     platforms=['Linux', 'OS-X'],
     classifiers=[
         'Topic :: Scientific/Engineering :: Image Recognition',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: System :: Emulators',
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
         'Intended Audience :: System Administrators',
         'Programming Language :: Python',
         'Development Status :: 4 - Beta',
         'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS'
+        'Operating System :: MacOS',
+        'Natural Language :: English'
     ],
     scripts=['tmlib'],
     packages=find_packages(),
@@ -54,6 +57,5 @@ setup(
         'pygobject>=3.14.0',
         'argparse',
         'Shapely>=1.5.7',
-        'subprocess32>=3.2.6'
     ]
 )

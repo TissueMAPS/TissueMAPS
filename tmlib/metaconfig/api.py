@@ -458,6 +458,10 @@ class MetadataConfigurator(ClusterRoutines):
                     data = plate_file_mapper
                     writer.write(filename, data)
 
-    def apply_statistics(self, output_dir, **kwargs):
+    def apply_statistics(self, output_dir, plates, wells, sites, channels,
+                         tpoints, zplanes, **kwargs):
+        '''
+        Not implemented.
+        '''
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)

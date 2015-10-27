@@ -55,7 +55,7 @@ class MetadataExtractor(ClusterRoutines):
         cfg_file: str
             absolute path to custom configuration file
         **kwargs: dict
-            empty - no additional arguments
+            no additional arguments used
 
         Returns
         -------
@@ -105,7 +105,9 @@ class MetadataExtractor(ClusterRoutines):
         return command
 
     def run_job(self, batch):
-        # Java job
+        '''
+        Not implemented.
+        '''
         raise AttributeError('"%s" step has no "run" routine'
                              % self.prog_name)
 
@@ -120,8 +122,6 @@ class MetadataExtractor(ClusterRoutines):
         ----------
         batch: dict
             description of the *collect* job
-        **kwargs: dict
-            additional variable input arguments as key-value pairs
         '''
         for i, f in enumerate(batch['outputs']['omexml_files']):
             output_files = glob(os.path.join(
@@ -131,6 +131,10 @@ class MetadataExtractor(ClusterRoutines):
             output_files = natsorted(output_files)
             shutil.copyfile(output_files[0], f)
 
-    def apply_statistics(self, output_dir, **kwargs):
+    def apply_statistics(self, output_dir, plates, wells, sites, channels,
+                         tpoints, zplanes, **kwargs):
+        '''
+        Not implemented.
+        '''
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)

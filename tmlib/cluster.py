@@ -450,10 +450,6 @@ class ClusterRoutines(BasicClusterRoutines):
         ----
         Creates log directory if it does not exist and adds the job filename
         to "inputs" (required in case no shared network is available).
-
-        See also
-        --------
-        `get_job_descriptions_from_files`_
         '''
         if not os.path.exists(self.job_descriptions_dir):
             logger.debug('create directories for job descriptor files')
@@ -519,40 +515,40 @@ class ClusterRoutines(BasicClusterRoutines):
         processing of individual jobs.
 
         There are two kinds of jobs:
-        * *run* jobs: tasks that are processed in parallel
-        * *collect* job: a single task that is processed after *run* jobs
-          are terminated, i.e. successfully completed
+            * *run* jobs: collection of tasks that are processed in parallel
+            * *collect* job: a single task that is processed once all
+              *run* jobs are terminated successfully
 
         Each batch (element of the *run* job_descriptions) must provide the following
         key-value pairs:
-        * "id": one-based job indentifier number (*int*)
-        * "inputs": absolute paths to input files required to run the job
-          (Dict[*str*, List[*str*]])
-        * "outputs": absolute paths to output files produced the job
-          (Dict[*str*, List[*str*]])
+            * "id": one-based job indentifier number (*int*)
+            * "inputs": absolute paths to input files required to run the job
+              (Dict[*str*, List[*str*]])
+            * "outputs": absolute paths to output files produced the job
+              (Dict[*str*, List[*str*]])
 
         In case a *collect* job is required, the corresponding batch must
         provide the following key-value pairs:
-        * "inputs": absolute paths to input files required to collect job
-          output of the *run* step (Dict[*str*, List[*str*]])
-        * "outputs": absolute paths to output files produced by the job
-          (Dict[*str*, List[*str*]])
+            * "inputs": absolute paths to input files required to collect job
+              output of the *run* step (Dict[*str*, List[*str*]])
+            * "outputs": absolute paths to output files produced by the job
+              (Dict[*str*, List[*str*]])
 
         A complete job_descriptions has the following structure::
 
             {
                 'run': [
                     {
-                        'id': int,
-                        'inputs': list or dict,
-                        'outputs': list or dict,
+                        'id': ,            # int
+                        'inputs': ,        # list or dict,
+                        'outputs': ,       # list or dict,
                     },
                     ...
                     ]
                 'collect':
                     {
-                        'inputs': list or dict,
-                        'outputs': list or dict
+                        'inputs': ,        # list or dict,
+                        'outputs': ,       # list or dict
                     }
             }
 
@@ -565,33 +561,38 @@ class ClusterRoutines(BasicClusterRoutines):
         -------
         Dict[str, List[dict] or dict]
             job descriptions
+
+        See also
+        --------
+        :mod:`tmlib.cli.CommandLineInterface.get_parser_and_subparsers`
         '''
         pass
 
     @abstractmethod
-    def apply_statistics(self, job_descriptions, wells, sites, channels,
-                         output_dir, **kwargs):
+    def apply_statistics(self, output_dir, plates, wells, sites, channels,
+                         tpoints, zplanes, **kwargs):
         '''
         Apply the calculated statistics to images.
 
         Parameters
         ----------
-        wells: List[str]
-            well identifiers of images that should be processed
-        sites: List[int]
-            one-based site indices of images that should be processed
-        channels: List[str]
-            channel names of images that should be processed
         output_dir: str
             absolute path to directory where the processed images should be
             stored
+        plates: List[str]
+            plate names
+        wells: List[str]
+            well identifiers
+        sites: List[int]
+            site indices
+        channels: List[str]
+            channel indices
+        tpoints: List[int]
+            time point (cycle) indices
+        zplanes: List[int]
+            z-plane indices
         **kwargs: dict
-            additional variable input arguments as key-value pairs:
-            * "illumcorr": correct for illumination artifacts (*bool*)
-
-        See also
-        --------
-        `get_job_descriptions_from_files`_
+            additional variable input arguments as key-value pairs
         '''
         pass
 
@@ -603,10 +604,6 @@ class ClusterRoutines(BasicClusterRoutines):
         ----------
         job_descriptions: Dict[List[dict]]
             description of inputs and outputs or individual jobs
-
-        See also
-        --------
-        `get_job_descriptions_from_files`_
         '''
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
@@ -633,10 +630,6 @@ class ClusterRoutines(BasicClusterRoutines):
         parallel task (a collection of jobs that are processed in parallel).
         This is done for consistency so that jobs from different steps can
         be handled the same way and easily be combined into a larger workflow.
-
-        See also
-        --------
-        `get_job_descriptions_from_files`_
         '''
         run_jobs = ParallelTaskCollection(
                         jobname='tmaps_%s_run' % self.prog_name)

@@ -1,16 +1,28 @@
+'''
+Calculation of illumination statistics, which can subsequently be applied
+to individual images in order to correct them for illumination artifacts [1]_.
+
+References
+----------
+
+.. _[1]: Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L. 2015. "Computer vision for image-based transcriptomics". Methods.
+'''
+
+
 import numpy as np
 
 
 class OnlineStatistics(object):
 
     '''
-    Class for calculating online statistics based on Welford's method:
+    Class for calculating online statistics based on Welford's method [1]_.
+    Code adapted from Wikipedia article "Algorithms for calculating variance"
+    [2]_.
 
-    B. P. Welford (1962). "Note on a method for calculating corrected sums of
-    squares and products". Technometrics 4(3):419-420.
-
-    Code adapted from Wikipedia article "Algorithms for calculating variance".
-    https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+    References
+    ----------
+    .. [1]: B. P. Welford (1962). "Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419-420.
+    .. [2]: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
     '''
 
     def __init__(self, image_dimensions):

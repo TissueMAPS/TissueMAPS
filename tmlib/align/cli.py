@@ -27,7 +27,7 @@ class Align(CommandLineInterface):
         self.args = args
 
     @staticmethod
-    def print_logo():
+    def _print_logo():
         print logo % {'version': __version__}
 
     @property
@@ -49,7 +49,17 @@ class Align(CommandLineInterface):
                 verbosity=self.args.verbosity)
 
     @property
-    def _init_args(self):
+    def init_args(self):
+        '''
+        Returns
+        -------
+        dict
+            arguments that are parsed to the "init" method.
+
+        See also
+        --------
+        :py:mod:`tmlib.align.argparser`
+        '''
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         kwargs['ref_cycle'] = self.args.ref_cycle
@@ -60,12 +70,6 @@ class Align(CommandLineInterface):
     @property
     def _variable_apply_args(self):
         kwargs = dict()
-        kwargs['plates'] = self.args.plates
-        kwargs['wells'] = self.args.wells
-        kwargs['channels'] = self.args.channels
-        kwargs['zplanes'] = self.args.zplanes
-        kwargs['tpoints'] = self.args.tpoints
-        kwargs['sites'] = self.args.sites
         kwargs['illumcorr'] = self.args.illumcorr
         return kwargs
 
@@ -82,7 +86,7 @@ class Align(CommandLineInterface):
 
         See also
         --------
-        `tmlib.align.argparser`_
+        :py:mod:`tmlib.align.argparser`
         '''
         cli = Align(args)
         logger.debug('call "%s" method of class "%s"'

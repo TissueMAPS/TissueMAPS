@@ -31,7 +31,7 @@ class Metaconfig(CommandLineInterface):
         self.args = args
 
     @staticmethod
-    def print_logo():
+    def _print_logo():
         print logo % {'version': __version__}
 
     @property
@@ -45,7 +45,7 @@ class Metaconfig(CommandLineInterface):
         return self.__class__.__name__.lower()
 
     @property
-    def _init_args(self):
+    def init_args(self):
         kwargs = dict()
         kwargs['format'] = self.args.format
         kwargs['z_stacks'] = self.args.format

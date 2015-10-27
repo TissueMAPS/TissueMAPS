@@ -19,7 +19,7 @@ class Metaextract(CommandLineInterface):
         self.args = args
 
     @staticmethod
-    def print_logo():
+    def _print_logo():
         print logo % {'version': __version__}
 
     @property

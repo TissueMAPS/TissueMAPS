@@ -27,7 +27,7 @@ class Illuminati(CommandLineInterface):
         self.args = args
 
     @staticmethod
-    def print_logo():
+    def _print_logo():
         print logo % {'version': __version__}
 
     @property
@@ -49,7 +49,14 @@ class Illuminati(CommandLineInterface):
         return self.__api_instance
 
     @property
-    def _init_args(self):
+    def init_args(self):
+        '''
+        Arguments that are parsed to the "init" method.
+
+        See also
+        --------
+        `tmlib.align.argparser`_
+        '''
         kwargs = dict()
         kwargs['shift'] = self.args.shift
         kwargs['illumcorr'] = self.args.illumcorr

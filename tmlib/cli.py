@@ -128,11 +128,11 @@ class CommandLineInterface(object):
         pass
 
     @abstractmethod
-    def print_logo():
+    def _print_logo():
         pass
 
     @property
-    def _init_args(self):
+    def init_args(self):
         # Since "init" requires more flexibility with respect to the number
         # of parsed arguments, we use a separate property, which can be
         # overwritten by subclasses to handle custom use cases
@@ -165,7 +165,7 @@ class CommandLineInterface(object):
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "cleanup" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         self._cleanup()
 
     def init(self):
@@ -178,7 +178,7 @@ class CommandLineInterface(object):
         dict
             job descriptions
         '''
-        self.print_logo()
+        self._print_logo()
         self._cleanup()
         api = self._api_instance
         if self.args.backup:
@@ -205,7 +205,7 @@ class CommandLineInterface(object):
             shutil.rmtree(api.status_dir)
 
         logger.info('create job descriptions')
-        kwargs = self._init_args
+        kwargs = self.init_args
         job_descriptions = api.create_job_descriptions(**kwargs)
         if self.args.print_job_descriptions:
             api.print_job_descriptions(job_descriptions)
@@ -219,7 +219,7 @@ class CommandLineInterface(object):
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "run" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         logger.info('read job description from file')
         job_file = api.build_run_job_filename(self.args.job)
@@ -286,7 +286,7 @@ class CommandLineInterface(object):
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "submit" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         jobs = self.jobs
         # TODO: check whether jobs were actually created
@@ -298,7 +298,7 @@ class CommandLineInterface(object):
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "kill" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         jobs = self.get_jobs()
         logger.info('kill jobs')
@@ -307,12 +307,6 @@ class CommandLineInterface(object):
     @property
     def _variable_apply_args(self):
         kwargs = dict()
-        kwargs['plates'] = self.args.plates
-        kwargs['wells'] = self.args.wells
-        kwargs['channels'] = self.args.channels
-        kwargs['zplanes'] = self.args.zplanes
-        kwargs['tpoints'] = self.args.tpoints
-        kwargs['sites'] = self.args.sites
         return kwargs
 
     def apply(self):
@@ -320,18 +314,26 @@ class CommandLineInterface(object):
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "apply" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         logger.info('apply statistics')
         kwargs = self._variable_apply_args
-        api.apply_statistics(output_dir=self.args.output_dir, **kwargs)
+        api.apply_statistics(
+                output_dir=self.args.output_dir,
+                plates=self.args.plates,
+                wells=self.args.wells,
+                sites=self.args.sites,
+                channels=self.args.channels,
+                tpoints=self.args.tpoints,
+                zplanes=self.args.zplanes,
+                **kwargs)
 
     def collect(self):
         '''
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "collect" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         logger.info('read job description from file')
         job_file = api.build_collect_job_filename()
@@ -352,12 +354,7 @@ class CommandLineInterface(object):
         ----------
         required_subparsers: List[str]
             subparsers that should be returned (defaults to
-            ``["init", "run", "submit"]``)
-        level: str
-            level of the directory tree at which the command line interface
-            operates; "cycle" when processing data at the level of an individual
-            *cycle* folder or "experiment" when processing data at the level of
-            the *experiment* folder, i.e. across multiple *cycle* folders
+            ``["init", "run", "submit", "cleanup"]``)
 
         Returns
         -------
@@ -366,7 +363,7 @@ class CommandLineInterface(object):
         '''
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            'experiment_dir', help='path to experiment directory')
+            'experiment_dir', type=str, help='path to experiment directory')
         parser.add_argument(
             '-v', '--verbosity', dest='verbosity', action='count', default=0,
             help='increase logging verbosity to DEBUG (default: WARN)')
@@ -374,10 +371,10 @@ class CommandLineInterface(object):
             '--version', action='version')
 
         if not required_subparsers:
-            raise ValueError('At least one subparser has to specified')
+            raise ValueError('At least one subparser has to be specified')
 
-        subparsers = parser.add_subparsers(dest='method_name',
-                                           help='sub-commands')
+        subparsers = parser.add_subparsers(
+            dest='method_name', help='sub-commands')
 
         if 'init' in required_subparsers:
             init_parser = subparsers.add_parser(
@@ -398,7 +395,7 @@ class CommandLineInterface(object):
                 '--backup', action='store_true',
                 help='create a backup of the output of a previous submission')
             # NOTE: when additional arguments are provided, the property
-            # `_init_args` has to be overwritten
+            # `init_args` has to be overwritten
 
         if 'run' in required_subparsers:
             run_parser = subparsers.add_parser(

@@ -27,7 +27,7 @@ class Jterator(CommandLineInterface):
         self.args = args
 
     @staticmethod
-    def print_logo():
+    def _print_logo():
         print logo % {'version': __version__}
 
     @property
@@ -54,7 +54,7 @@ class Jterator(CommandLineInterface):
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "create" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         logger.info('create project: %s' % api.project_dir)
         api.project.create(self.args.repo_dir, self.args.skel_dir)
@@ -64,7 +64,7 @@ class Jterator(CommandLineInterface):
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "remove" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         logger.info('remove project: %s' % api.project_dir)
         api.project.remove()
@@ -74,7 +74,7 @@ class Jterator(CommandLineInterface):
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "check" subparser.
         '''
-        self.print_logo()
+        self._print_logo()
         api = self._api_instance
         logger.info('check pipe and handles descriptor files')
         api.check_pipeline()

@@ -208,7 +208,7 @@ class ImageRegistration(ClusterRoutines):
         
         See also
         --------
-        `tmlib.align.registration.fuse_registration`_
+        :mod:`tmlib.align.registration.fuse_registration`
         '''
         for i, plate_name in enumerate(batch['plates']):
             plate = [
@@ -260,44 +260,52 @@ class ImageRegistration(ClusterRoutines):
             logger.debug('remove directory: %s', reg_dir)
             shutil.rmtree(reg_dir)
 
-    def apply_statistics(self, output_dir, **kwargs):
+    def apply_statistics(self, output_dir, plates, wells, sites, channels,
+                         tpoints, zplanes, **kwargs):
         '''
         Apply calculated statistics (shift and overhang values) to images
-        in order to align them between cycles. A subset of images that should
-        be aligned can be selected based on following criteria:
-            * **plates**: plate names (*List[str]*)
-            * **wells**: cycle names (*List[str]*)
-            * **channels**: channel indices (*List[int]*)
-            * **zplanes**: z-plane indices (*List[int]*)
+        in order to align them between cycles.
 
         Parameters
         ----------
         output_dir: str
-            absolute path to directory where the aligned images should be
+            absolute path to directory where the processed images should be
             stored
+        plates: List[str]
+            plate names
+        wells: List[str]
+            well identifiers
+        sites: List[int]
+            site indices
+        channels: List[str]
+            channel indices
+        tpoints: List[int]
+            time point (cycle) indices
+        zplanes: List[int]
+            z-plane indices
         **kwargs: dict
-            additional variable input arguments as key-value pairs:
-            * "illumcorr": also correct illumination artifacts (*bool*)
+            additional arguments as key-value pairs:
+                * "illumcorr": to correct for illumination artifacts (*bool*)
         '''
         logger.info('align images between cycles')
         for plate in self.experiment.plates:
-            if kwargs['plates']:
-                if plate.name not in kwargs['plates']:
+            if plates:
+                if plate.name not in plates:
                     continue
             for cycle in plate.cycles:
-                if kwargs['tpoints']:
-                    if cycle.index not in kwargs['tpoints']:
+                if tpoints:
+                    if cycle.index not in tpoints:
                         continue
                 md = cycle.image_metadata_table
                 sld = md.copy()
-                if kwargs['sites']:
-                    sld = sld[sld['site_ix'].isin(kwargs['sites'])]
-                if kwargs['wells']:
-                    sld = sld[sld['well_name'].isin(kwargs['wells'])]
-                if kwargs['channels']:
-                    sld = sld[sld['channel_ix'].isin(kwargs['channels'])]
-                if kwargs['zplanes']:
-                    sld = sld[sld['zplane_ix'].isin(kwargs['zplanes'])]
+                if sites:
+                    sld = sld[sld['site_ix'].isin(sites)]
+                if wells:
+                    sld = sld[sld['well_name'].isin(wells)]
+                if channels:
+                    sld = sld[sld['channel_ix'].isin(channels)]
+                if zplanes:
+                    sld = sld[sld['zplane_ix'].isin(zplanes)]
                 selected_channels = list(set(sld['channel_ix'].tolist()))
                 for c in selected_channels:
                     if kwargs['illumcorr']:

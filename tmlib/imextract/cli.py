@@ -31,7 +31,7 @@ class Imextract(CommandLineInterface):
         self.args = args
 
     @staticmethod
-    def print_logo():
+    def _print_logo():
         print logo % {'version': __version__}
 
     @property
@@ -53,7 +53,7 @@ class Imextract(CommandLineInterface):
                 verbosity=self.args.verbosity)
 
     @property
-    def _init_args(self):
+    def init_args(self):
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         return kwargs

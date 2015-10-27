@@ -1,4 +1,3 @@
-import os
 import re
 import operator as op
 from gi.repository import Vips
@@ -8,7 +7,6 @@ import scipy
 import logging
 from skimage.measure import find_contours, approximate_polygon
 from .. import image_utils
-from ..dafu.utils import extract_ids
 
 logger = logging.getLogger(__name__)
 
@@ -70,60 +68,6 @@ def create_id_lookup_matrices(sitemat, offset):
     mat = sitemat.astype('uint32')
     mat[nonzero] = mat[nonzero] + offset
     return mat, np.max(mat)
-
-
-def create_and_save_lookup_tables(image_grid, data_file, output_dir):
-    '''
-    Create lookup tables (lut) for global object ids
-    and save them as .npy files.
-    They are required by TissueMAPS to map pixel positions in a pyramid image
-    to the corresponding object.
-
-    Parameters
-    ----------
-    image_grid: List[List[tmlib.image.SegmentationImage]]
-        image files
-    data_file: str
-        path to the `data.h5` file containing the object id datasets
-    output_dir: str
-        location were lut files should be saved
-    '''
-    current_obj = image_grid[0][0].objects.lower()
-
-    current, parent = extract_ids(data_file, current_obj)
-
-    max_id = 0
-    for i in range(len(image_grid)):
-        for j in range(len(image_grid[0])):
-
-            im = image_grid[i][j].image
-
-            # Which of the current objects are not in the dataset?
-            # (Tracked via their parent object ids)
-            site_ix = image_grid[i][j].site
-            ids_image = image_grid[i][j].ids
-            ids_data = np.unique(current['ID_parent'][current.ID_site == site_ix])
-            ids_nodata = [o for o in ids_data if o not in ids_image]
-
-            # Which parent objects lie at the border of the image?
-            ids_border = parent['ID_object'][(parent.IX_border > 0) &
-                                             (parent.ID_site == site_ix)]
-            ids_border = ids_border.tolist()
-
-            # Combine all object ids that should not be displayed and thus
-            # removed from the images for the creation of masks
-            ids_nodisplay = ids_border + ids_nodata
-
-            im = remove_objects_numpy(im, ids_nodisplay)
-
-            im, max_id = create_id_lookup_matrices(im, max_id)
-            fname = 'ROW{rownr:0>5}_COL{colnr:0>5}.npy'.format(
-                        rownr=(i+1), colnr=(j+1))
-            fname_abs = os.path.join(output_dir, fname)
-            print '    Saving file: ' + fname_abs
-            with open(fname_abs, 'w') as f:
-                np.save(f, im)
-
 
 def remove_border_objects_numpy(im):
     '''

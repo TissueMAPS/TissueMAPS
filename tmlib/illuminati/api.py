@@ -135,9 +135,16 @@ class PyramidBuilder(ClusterRoutines):
         layer.create_pyramid(output_dir)
 
     def collect_job_output(self, batch):
+        '''
+        Not implemented.
+        '''
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
                              ' method' % self.__class__.__name__)
 
-    def apply_statistics(self, output_dir, **kwargs):
+    def apply_statistics(self, output_dir, plates, wells, sites, channels,
+                         tpoints, zplanes, **kwargs):
+        '''
+        Not implemented.
+        '''
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)

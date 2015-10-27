@@ -480,6 +480,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         # TODO: create the JSON file required by the client
 
-    def apply_statistics(self, output_dir, **kwargs):
+    def apply_statistics(self, output_dir, plates, wells, sites, channels,
+                         tpoints, zplanes, **kwargs):
+        '''
+        Not implemented.
+        '''
         raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
                              ' method' % self.__class__.__name__)
