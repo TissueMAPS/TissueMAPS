@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import unittest
 import numpy as np
 from gi.repository import Vips
@@ -21,7 +20,3 @@ class TestImageUtils(unittest.TestCase):
         vips_image = Vips.Image.new_from_array(numpy_array.tolist())
         conv_vips_image = image_utils.np_array_to_vips_image(numpy_array)
         self.assertEqual(vips_image, conv_vips_image)
-
-if __name__ == '__main__':
-
-    unittest.main()
