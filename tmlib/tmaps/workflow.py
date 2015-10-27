@@ -23,10 +23,11 @@ class Workflow(SequentialTaskCollection, StopOnError):
         experiment: str
             configured experiment object
         stage: str or int,
-            name or index of the workflow stage that should be run
+            name or index of the stage from where the workflow should be
+            started
         step: str or int
-            name or index of the step within `stage` from which the workflow
-            should be run
+            name or index of the step within `stage` from where the workflow
+            should be started
         virtualenv: str
             name of a virtual environment that needs to be activated
         verbosity: int
@@ -67,37 +68,43 @@ class Workflow(SequentialTaskCollection, StopOnError):
         commands = list()
         logger.info('build workflow based on user configuration')
         if isinstance(self.stage, basestring):
-            ix = [s.name for s in workflow.stages].index(self.stage)
+            stage_ix = [s.name for s in workflow.stages].index(self.stage)
         else:
-            ix = self.stage
-        stage = workflow.stages[ix]
+            stage_ix = self.stage
+        stage = workflow.stages[stage_ix]
+        logger.info('start workflow at stage "%s"', stage.name)
         if isinstance(self.step, basestring):
-            start_ix = [s.name for s in stage.steps].index(self.step)
+            step_ix = [s.name for s in stage.steps].index(self.step)
         else:
-            start_ix = self.step
-        for i, step in enumerate(stage.steps):
-            if i < start_ix:
+            step_ix = self.step
+        logger.info('start stage "%s" at step "%s"',
+                    stage.name, stage.steps[step_ix].name)
+        for i, stage in enumerate(workflow.stages):
+            if i < stage_ix:
                 continue
-            logger.debug('add step "%s" to workflow', step.name)
-            cmd = [step.name]
-            cmd.extend(['-v' for x in xrange(self.verbosity)])
-            cmd.append(self.experiment.dir)
-            cmd.append('init')
-            if step.args:
-                for k, v in step.args.iteritems():
-                    if v or v == 0:  # zero would be considered ``False``
-                        cmd.append('--%s' % k)
-                    if not isinstance(v, bool) and v is not None:
-                        cmd.append(str(v))
-            # Test whether arguments are specified correctly.
-            parser = self._get_argparser(cmd[0])
-            try:
-                parser.parse_args(cmd[1:])
-            except SystemExit:
-                raise WorkflowArgsError(
-                        'Arguments for step "%s" are specified incorrectly'
-                        % step.name)
-            commands.append(cmd)
+            for j, step in enumerate(stage.steps):
+                if j < step_ix:
+                    continue
+                logger.debug('add step "%s" to workflow', step.name)
+                cmd = [step.name]
+                cmd.extend(['-v' for x in xrange(self.verbosity)])
+                cmd.append(self.experiment.dir)
+                cmd.append('init')
+                if step.args:
+                    for k, v in step.args.iteritems():
+                        if v or v == 0:  # zero would be considered ``False``
+                            cmd.append('--%s' % k)
+                        if not isinstance(v, bool) and v is not None:
+                            cmd.append(str(v))
+                # Test whether arguments are specified correctly.
+                parser = self._get_argparser(cmd[0])
+                try:
+                    parser.parse_args(cmd[1:])
+                except SystemExit:
+                    raise WorkflowArgsError(
+                            'Arguments for step "%s" are specified incorrectly'
+                            % step.name)
+                commands.append(cmd)
         return commands
 
     @property
