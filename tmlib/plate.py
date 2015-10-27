@@ -104,7 +104,7 @@ class Plate(object):
         if not match:
             raise RegexError(
                     'Plate name could not be determined from folder name')
-        return match.group('plate_name')
+        return match.group('name')
 
     def _is_cycle_dir(self, folder):
         format_string = Cycle.CYCLE_DIR_FORMAT

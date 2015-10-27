@@ -89,7 +89,7 @@ class PlateSource(object):
                 'Can\'t determine acquisition name from folder "%s" '
                 'using format "%s".'
                 % (folder_name, self.PLATE_SOURCE_DIR_FORMAT))
-        return match.group('plate_name')
+        return match.group('name')
 
     def _is_acquistion_dir(self, folder):
         format_string = PlateAcquisition.ACQUISITION_DIR_FORMAT
