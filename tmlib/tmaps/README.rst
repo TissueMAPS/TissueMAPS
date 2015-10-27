@@ -3,7 +3,7 @@ A `tmaps` workflow represents a `GC3Pie workflow <http://gc3pie.readthedocs.org/
 Define a workflow
 =================
 
-A workflow is defined within an experiment-specific user configuration file. The user needs to create this file in the experiment root directory. For details see *UserConfiguration* class in the `tmlib.cfg <../cfg.py>`_ module and *WorkflowStepArgs* class in the `tmlib.tmaps.workflow <./workflow.py>`_ module.
+A workflow is defined within an experiment-specific user configuration file. The user needs to create this file in the experiment root directory. For details see *UserConfiguration* class in the `tmlib.cfg <../cfg.py>`_ module and *WorkflowStepDescription* class in the `tmlib.tmaps.workflow <./workflow.py>`_ module.
 
 The file must specify a mapping in `YAML <http://yaml.org/>`_ format and provide the *name* and the arguments (*args*) for each step of the *workflow*. `Here <./../user.cfg.template>`_ is an example template file for processing image files created by *cellvoyager* microscopes and multiple acquisition cycles, where images with channel ID ``0`` and cycle ID ``1`` are used as reference for image registration.
 

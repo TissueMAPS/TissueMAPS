@@ -67,6 +67,8 @@ class Tmaps(object):
         api = self._api_instance
         jobs = Workflow(
                     experiment=api.experiment,
+                    stage=self.args.stage,
+                    step=self.args.step,
                     virtualenv=self.args.virtualenv,
                     verbosity=self.args.verbosity)
         api.submit_jobs(jobs, 5)
@@ -80,9 +82,6 @@ class Tmaps(object):
         parser.add_argument(
             '-v', '--verbosity', action='count', default=0,
             help='increase logging verbosity to DEBUG (default: INFO)')
-        parser.add_argument(
-            '-s', '--silent', action='store_true',
-            help='set logging verbosity to WARNING')
         parser.add_argument(
             '--version', action='version')
 

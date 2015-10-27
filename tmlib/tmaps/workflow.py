@@ -12,77 +12,9 @@ from ..errors import WorkflowArgsError
 logger = logging.getLogger(__name__)
 
 
-class WorkflowStepArgs(object):
-
-    def __init__(self, name=None, args=None):
-        '''
-        Initialize an instance of class WorkflowStep.
-
-        Parameters
-        ----------
-        name: str, optional
-            the name of the step
-        args: dict, optional
-            the arguments required for the step
-        '''
-        self._name = name
-        self._args = args
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the step
-
-        Note
-        ----
-        Must correspond to a name of a `tmlib` command line program
-        (subpackage).
-        '''
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "value" must have type basestring')
-        self._name = str(value)
-
-    @property
-    def args(self):
-        '''
-        Returns
-        -------
-        dict
-            arguments required by the step (arguments that can be parsed
-            to the "init" method of the corresponding *cli* class)
-
-        Note
-        ----
-        Default values defined by the corresponding *init* subparser will
-        be used in case an optional argument is not provided.
-
-        See also
-        --------
-        `tmlib.cli`_
-        '''
-        return self._args
-
-    @args.setter
-    def args(self, value):
-        if not isinstance(value, dict) or value is not None:
-            raise TypeError('Attribute "args" must have type dict')
-        self._args = value
-
-    def __iter__(self):
-        yield ('name', getattr(self, 'name'))
-        yield ('args', getattr(self, 'args'))
-
-
 class Workflow(SequentialTaskCollection, StopOnError):
 
-    def __init__(self, experiment, virtualenv, verbosity):
+    def __init__(self, experiment, stage, step, virtualenv, verbosity):
         '''
         Initialize an instance of class Workflow.
 
@@ -90,6 +22,11 @@ class Workflow(SequentialTaskCollection, StopOnError):
         ----------
         experiment: str
             configured experiment object
+        stage: str or int,
+            name or index of the workflow stage that should be run
+        step: str or int
+            name or index of the step within `stage` from which the workflow
+            should be run
         virtualenv: str
             name of a virtual environment that needs to be activated
         verbosity: int
@@ -97,11 +34,12 @@ class Workflow(SequentialTaskCollection, StopOnError):
 
         Returns
         -------
-        Workflow
+        tmlib.tmaps.Workflow
         '''
-        super(Workflow, self).__init__(
-            tasks=None, jobname='tmaps')
+        super(Workflow, self).__init__(tasks=None, jobname='tmaps')
         self.experiment = experiment
+        self.stage = stage
+        self.step = step
         self.virtualenv = virtualenv
         self.verbosity = verbosity
         self.tasks = list()
@@ -119,7 +57,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
         Returns
         -------
         List[List[str]]
-            command for each step of the workflow
+            command for each step of the specified workflow stage
 
         Note
         ----
@@ -128,7 +66,18 @@ class Workflow(SequentialTaskCollection, StopOnError):
         workflow = self.experiment.user_cfg.workflow
         commands = list()
         logger.info('build workflow based on user configuration')
-        for step in workflow:
+        if isinstance(self.stage, basestring):
+            ix = [s.name for s in workflow.stages].index(self.stage)
+        else:
+            ix = self.stage
+        stage = workflow.stages[ix]
+        if isinstance(self.step, basestring):
+            start_ix = [s.name for s in stage.steps].index(self.step)
+        else:
+            start_ix = self.step
+        for i, step in enumerate(stage.steps):
+            if i < start_ix:
+                continue
             logger.debug('add step "%s" to workflow', step.name)
             cmd = [step.name]
             cmd.extend(['-v' for x in xrange(self.verbosity)])
