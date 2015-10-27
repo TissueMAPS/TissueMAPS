@@ -39,18 +39,10 @@ tmlib.jterator.cli module
     :undoc-members:
     :show-inheritance:
 
-tmlib.jterator.fusion module
-----------------------------
+tmlib.jterator.data_fusion module
+---------------------------------
 
-.. automodule:: tmlib.jterator.fusion
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.jterator.jtapi module
----------------------------
-
-.. automodule:: tmlib.jterator.jtapi
+.. automodule:: tmlib.jterator.data_fusion
     :members:
     :undoc-members:
     :show-inheritance:
