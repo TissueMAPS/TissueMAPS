@@ -25,7 +25,7 @@ class Metaconfig(CommandLineInterface):
 
         Returns
         -------
-        tmlib.metaconfig.cli.Metaconfig
+        :mod:`tmlib.metaconfig.cli.Metaconfig`
         '''
         super(Metaconfig, self).__init__(args)
         self.args = args
@@ -46,6 +46,16 @@ class Metaconfig(CommandLineInterface):
 
     @property
     def init_args(self):
+        '''
+        Returns
+        -------
+        dict
+            additional variable arguments for the `init` method
+
+        See also
+        --------
+        :mod:`tmlib.metaconfig.argparser`
+        '''
         kwargs = dict()
         kwargs['format'] = self.args.format
         kwargs['z_stacks'] = self.args.format
@@ -76,7 +86,7 @@ class Metaconfig(CommandLineInterface):
 
         See also
         --------
-        `tmlib.metaconfig.argparser`_
+        :mod:`tmlib.metaconfig.argparser`
         '''
         cli = Metaconfig(args)
         logger.debug('call "%s" method of class "%s"'

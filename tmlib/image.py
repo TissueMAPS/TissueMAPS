@@ -53,7 +53,7 @@ class Image(object):
 
         See also
         --------
-        `tmlib.metadata.ImageMetadata`_
+        :mod:`tmlib.metadata.ImageMetadata`
         '''
         return self._metadata
 
@@ -135,7 +135,7 @@ class ChannelImage(Image):
 
         Returns
         -------
-        ChannelImage
+        tmlib.image.ChannelImage
             image object
 
         Raises
@@ -165,10 +165,6 @@ class ChannelImage(Image):
             when `pixels` has more than one band
         TypeError
             when `pixels` doesn't have unsigned integer type
-
-        See also
-        --------
-        `tmlib.pixels.Pixels`_
         '''
         if hasattr(self, '_factory') and hasattr(self, 'filename'):
             self._pixels = self._factory(self.filename)
@@ -188,13 +184,13 @@ class ChannelImage(Image):
 
         Parameters
         ----------
-        stats: IllumstatsImages
+        stats: tmlib.image.IllumstatsImages
             mean and standard deviation statistics for at each pixel
             calculated over all images of the same channel
 
         Returns
         -------
-        ChannelImage
+        tmlib.image.ChannelImage
             a new image object
 
         Raises
@@ -231,7 +227,7 @@ class ChannelImage(Image):
 
         Returns
         -------
-        ChannelImage
+        tmlib.image.ChannelImage
             aligned image
 
         Warning
@@ -262,7 +258,7 @@ class BrightfieldImage(Image):
         ----------
         filename: str
             absolute path to the image file
-        metadata: BrightfieldImageMetadata
+        metadata: tmlib.metadata.BrightfieldImageMetadata
             image metadata object
         library: str, optional
             image library that should be used, "vips" or "numpy"
@@ -270,7 +266,7 @@ class BrightfieldImage(Image):
 
         Returns
         -------
-        BrightfieldImage
+        tmlib.image.BrightfieldImage
             image object
 
         Raises
@@ -291,7 +287,7 @@ class BrightfieldImage(Image):
         '''
         Returns
         -------
-        Pixels
+        tmlib.pixels.Pixels
             pixels object
 
         Raises
@@ -300,10 +296,6 @@ class BrightfieldImage(Image):
             when `pixels` doesn't have three bands
         TypeError
             when `pixels` doesn't have unsigned integer type
-
-        See also
-        --------
-        `tmlib.pixels.Pixels`_
         '''
         if hasattr(self, '_factory') and hasattr(self, 'filename'):
             self._pixels = self._factory(self.filename)
@@ -317,266 +309,6 @@ class BrightfieldImage(Image):
     @pixels.setter
     def pixels(self, value):
         self._pixels = value
-
-
-# TODO
-
-class MaskImage(Image):
-
-    '''
-    Class for a mask image: a 2D binary segmentation image with a single band.
-    '''
-
-    @staticmethod
-    def create_from_file(filename, metadata, library='vips'):
-        '''
-        Create a MaskImage object from a file on disk.
-
-        Parameters
-        ----------
-        filename: str
-            absolute path to the image file
-        metadata: SegmentationImageMetadata
-            image metadata object
-        library: str, optional
-            image library that should be used, "vips" or "numpy"
-            (defaults to "vips")
-
-        Returns
-        -------
-        MaskImage
-            image object
-
-        Raises
-        ------
-        ValueError
-            when `library` is not specified correctly
-        '''
-        if library not in {'vips', 'numpy'}:
-            raise ValueError('Library must be either "vips" or "numpy".')
-        image = MaskImage()
-        image._factory = image._get_factory(library)
-        image.filename = filename
-        image.metadata = metadata
-        return image
-
-    @property
-    def pixels(self):
-        '''
-        Returns
-        -------
-        Pixels
-            pixels object
-
-        Raises
-        ------
-        ValueError
-            when `pixels` has more than one band
-        TypeError
-            when `pixels` doesn't have binary type
-
-        See also
-        --------
-        `tmlib.pixels.Pixels`_
-        '''
-        if hasattr(self, '_factory') and hasattr(self, 'filename'):
-            self._pixels = self._factory(self.filename)
-        if self._pixels.bands > 1:
-            raise ValueError('A channel image can only have a single band.')
-        if not self._pixels.is_binary:
-            raise TypeError('A mask image must have binary type.')
-        return self._pixels
-
-    @pixels.setter
-    def pixels(self, value):
-        self._pixels = value
-
-    @property
-    def outlines(self):
-        '''
-        Returns
-        -------
-        MaskImage
-            non-outline pixels values of connected regions are set to background
-        '''
-        self._outlines = SegmentationImage(
-                            self.pixels.get_outlines(keep_ids=False),
-                            self.metadata)
-        return self._outlines
-
-    def align(self, crop=True):
-        '''
-        Align, i.e. shift and crop, an image based on calculated shift
-        and overhang values.
-
-        Parameters
-        ----------
-        crop: bool, optional
-            whether images should cropped or rather padded
-            with zero valued pixels (default: ``True``)
-
-        Returns
-        -------
-        MaskImage
-            aligned image
-
-        Warning
-        -------
-        Alignment may change the dimensions of the image when `crop` is
-        ``True``.
-        '''
-        new_object = MaskImage()
-        new_object.metadata = self.metadata
-        new_object.filename = self.filename
-        new_object.pixels = self.pixels.align(self.metadata, crop=crop)
-        new_object.metadata.is_aligned = True
-        return new_object
-
-
-class SegmentationImage(Image):
-
-    '''
-    Class for a labeled image: a 2D segmentation image,
-    where each object (connected component) is labeled with a unique identifier.
-    The labeling can be encoded in a single band or in multiple bands
-    (which may become necessary when the number of objects exceeds the depth
-     of the image, e.g. a greyscale 16-bit image one only encode 2^16 objects).
-    '''
-
-    @staticmethod
-    def create_from_file(filename, metadata, library='vips'):
-        '''
-        Create a SegmentationImage object from a file on disk.
-
-        Parameters
-        ----------
-        filename: str
-            absolute path to the image file
-        metadata: SegmentationImageMetadata
-            image metadata object
-        library: str, optional
-            image library that should be used, "vips" or "numpy"
-            (defaults to "vips")
-
-        Returns
-        -------
-        SegmentationImage
-            image object
-
-        Raises
-        ------
-        ValueError
-            when `library` is not specified correctly
-        '''
-        if library not in {'vips', 'numpy'}:
-            raise ValueError('Library must be either "vips" or "numpy".')
-        image = SegmentationImage()
-        image._factory = image._get_factory(library)
-        image.filename = filename
-        image.metadata = metadata
-        return image
-
-    @property
-    def pixels(self):
-        '''
-        Returns
-        -------
-        Pixels
-            pixels object
-
-        Raises
-        ------
-        ValueError
-            when `pixels` has not one or three bands
-        TypeError
-            when `pixels` doesn't have unsigned integer type
-        '''
-        self._pixels = self._factory(self.filename)
-        if self._pixels.bands != 1 or self.pixels.bands != 3:
-            raise ValueError('A label image can either have a single band '
-                             'or three bands.')
-        if not self._pixels.is_uint:
-            raise TypeError('A label image must have unsigned integer type.')
-        return self._pixels
-
-    @pixels.setter
-    def pixels(self, value):
-        self._pixels = value
-
-    @property
-    def outlines(self):
-        '''
-        Returns
-        -------
-        SegmentationImage
-            non-outline pixels values of connected regions are set to background
-        '''
-        self._outlines = SegmentationImage(
-                            self.pixels.get_outlines(keep_ids=True),
-                            self.metadata)
-        return self._outlines
-
-    @property
-    def n_objects(self):
-        '''
-        Returns
-        -------
-        int
-            number of objects in the image
-        '''
-        self.n_objects = self.pixels.n_objects
-        return self._n_objects
-
-    def remove_objects(self, ids):
-        '''
-        Remove individual objects by their Id.
-
-        Parameters
-        ----------
-        ids: List[int]
-            identifier numbers of objects that should be removed
-
-        Returns
-        -------
-        SegmentationImage
-            image without the specified objects
-        '''
-        return SegmentationImage(
-                    self.pixels.remove_objects(ids), self.metadata)
-
-    def align(self, crop=True):
-        '''
-        Align, i.e. shift and crop, an image based on calculated shift
-        and overhang values.
-
-        Parameters
-        ----------
-        crop: bool, optional
-            whether images should cropped or rather padded
-            with zero valued pixels (default: ``True``)
-
-        Returns
-        -------
-        SegmentationImage
-            aligned image
-
-        Warning
-        -------
-        Alignment may change the dimensions of the image when `crop` is
-        ``True``.
-        '''
-        new_object = SegmentationImage()
-        new_object.metadata = self.metadata
-        new_object.filename = self.filename
-        new_object.pixels = self.pixels.align(self.metadata, crop=crop)
-        new_object.metadata.is_aligned = True
-        return new_object
-
-    def local_to_global_ids(self, max_id):
-        '''
-        '''
-        img, new_max_id = self.pixels.local_to_global_ids(max_id)
-        return (SegmentationImage(img, self.metadata), new_max_id)
 
 
 class IllumstatsImage(object):
@@ -594,7 +326,7 @@ class IllumstatsImage(object):
         ----------
         pixels: Pixel
             pixel object
-        metadata: IllumstatsMetadata
+        metadata: tmlib.metadata.IllumstatsMetadata
             image metadata object
 
         Returns
@@ -668,12 +400,8 @@ class IllumstatsImages(object):
         '''
         Returns
         -------
-        IllumstatsImage
+        tmlib.image.IllumstatsImage
             image object for calculated standard deviation values
-
-        See also
-        --------
-        `tmlib.image.IllumstatsImage`_ 
         '''
         self._std = self._stats['std']
         return self._std
@@ -683,12 +411,8 @@ class IllumstatsImages(object):
         '''
         Returns
         -------
-        IllumstatsImage
+        tmlib.image.IllumstatsImage
             image object for calculated mean values
-
-        See also
-        --------
-        `tmlib.image.IllumstatsImage`_
         '''
         self._mean = self._stats['mean']
         return self._mean
@@ -698,12 +422,8 @@ class IllumstatsImages(object):
         '''
         Returns
         -------
-        IllumstatsMetadata
+        tmlib.metadata.IllumstatsMetadata
             metadata object
-
-        See also
-        --------
-        `tmlib.metadata.IllumstatsMetadata`_
         '''
         return self._metadata
 
@@ -736,7 +456,7 @@ class IllumstatsImages(object):
         ----------
         filename: str
             absolute path to the HDF5 file
-        metadata: IllumstatsMetadata
+        metadata: tmlib.metadata.IllumstatsMetadata
             metadata object
         library: str, optional
             image library that should be used, "vips" or "numpy"
@@ -744,7 +464,7 @@ class IllumstatsImages(object):
 
         Returns
         -------
-        IllumstatsImages
+        tmlib.image.IllumstatsImages
             container for `IllumstatsImage` objects
 
         Raises

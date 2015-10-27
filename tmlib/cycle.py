@@ -31,7 +31,7 @@ class Cycle(object):
 
     See also
     --------
-    `experiment.Experiment`_
+    :mod:`tmlib.experiment.Experiment`
     '''
 
     CYCLE_DIR_FORMAT = 'cycle_{cycle_ix:0>2}'
@@ -60,6 +60,10 @@ class Cycle(object):
         ------
         OSError
             when `cycle_dir` does not exist
+
+        See also
+        --------
+        :mod:`tmlib.cfg.UserConfiguration`
         '''
         self.cycle_dir = os.path.abspath(cycle_dir)
         if not os.path.exists(self.cycle_dir):
@@ -177,7 +181,7 @@ class Cycle(object):
 
         See also
         --------
-        `image.is_image_file`_
+        :mod:`tmlib.image.is_image_file`
         '''
         files = [
             f for f in os.listdir(self.image_dir) if is_image_file(f)
@@ -269,7 +273,7 @@ class Cycle(object):
         if os.path.exists(alignment_file):
             with JsonReader() as reader:
                 description = reader.read(alignment_file)
-            align_description = AlignmentDescription.set(description)
+            align_description = AlignmentDescription(description)
             # Match shift descriptions via "site_ix"
             fmd_sites = [fmd['site_ix'] for fmd in formatted_metadata]
             align_sites = [shift.site_ix for shift in align_description.shifts]
@@ -294,7 +298,7 @@ class Cycle(object):
         '''
         Returns
         -------
-        List[ChannelImage]
+        List[tmlib.image.ChannelImage]
             image object for each image file in `image_dir`
 
         Note
@@ -336,7 +340,7 @@ class Cycle(object):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         stats_dir = os.path.join(self.dir, 'stats')
         if not os.path.exists(stats_dir):
@@ -381,7 +385,7 @@ class Cycle(object):
         '''
         Returns
         -------
-        List[IllumstatsImageMetadata]
+        List[tmlib.image.IllumstatsImageMetadata]
             metadata for each illumination statistic file in `stats_dir`
 
         Note
@@ -391,7 +395,7 @@ class Cycle(object):
 
         Raises
         ------
-        RegexError
+        tmlib.errors.RegexError
             when required information could not be retrieved from filename
         '''
         illumstats_metadata = list()
@@ -417,7 +421,7 @@ class Cycle(object):
         '''
         Returns
         -------
-        Dict[int, IllumstatsImages]
+        Dict[int, tmlib.image.IllumstatsImages]
             illumination statistics images for each channel
 
         Note

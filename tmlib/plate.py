@@ -75,7 +75,7 @@ class Plate(object):
 
         See also
         --------
-        `tmlib.cfg.UserConfiguration`_
+        :mod:`tmlib.cfg.UserConfiguration`
         '''
         self.plate_dir = plate_dir
         self.user_cfg = user_cfg
@@ -118,10 +118,6 @@ class Plate(object):
         -------
         List[tmlib.cycle.Cycle]
             configured cycle objects
-
-        See also
-        --------
-        `tmlib.cycle.Cycle`_
         '''
         cycle_dirs = [
             os.path.join(self.dir, d)
@@ -140,7 +136,7 @@ class Plate(object):
 
         Returns
         -------
-        WellPlate or Slide
+        tmlib.cycle.Cycle
             configured cycle object
         '''
         cycle_index = len(self.cycles)

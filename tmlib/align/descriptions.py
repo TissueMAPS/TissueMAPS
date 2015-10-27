@@ -10,7 +10,51 @@ class AlignmentDescription(object):
     PERSISTENT_ATTRS = {'cycle_ix', 'ref_cycle_ix', 'overhang', 'shift'}
 
     def __init__(self, description=None):
-        self.description = description
+        '''
+        Initialize an instance of class AlignmentDescription.
+
+        Parameters
+        ----------
+        description: dict, optional
+            alignment description as key-value pairs
+
+        Returns
+        -------
+        tmlib.metadata.AlignmentDescription
+        '''
+        if description is not None:
+            if not isinstance(description, dict):
+                raise TypeError('Argument "description" must have type dict.')
+            if 'shifts' not in description.keys():
+                raise KeyError('Aligment description requires key "shifts"')
+            if not isinstance(description['shifts'], list):
+                raise TypeError('The value of "shifts" must have type list')
+            if 'overhang' not in description.keys():
+                raise KeyError('Aligment description requires key "overhang"')
+            if not isinstance(description['overhang'], dict):
+                raise TypeError('The value of "overhang" must have type dict')
+
+            for key, value in description.iteritems():
+                if key == 'overhang':
+                    overhang = OverhangDescription()
+                    for k, v in value.iteritems():
+                        if k in overhang.PERSISTENT_ATTRS:
+                            setattr(overhang, k, v)
+                    setattr(self, 'overhang', overhang)
+
+                elif key == 'shifts':
+                    shifts = list()
+                    for element in value:
+                        shift = ShiftDescription()
+                        for k, v in element.iteritems():
+                            if k in shift.PERSISTENT_ATTRS:
+                                setattr(shift, k, v)
+                        shifts.append(shift)
+                    setattr(self, 'shifts', shifts)
+
+                else:
+                    if value in self.PERSISTENT_ATTRS:
+                        setattr(self, key, value)
 
     @property
     def cycle_ix(self):
@@ -51,7 +95,7 @@ class AlignmentDescription(object):
         '''
         Returns
         -------
-        OverhangDescription
+        tmlib.align.description.OverhangDescription
             overhang at each site of the image in pixels relative to the
             reference images 
         '''
@@ -69,7 +113,7 @@ class AlignmentDescription(object):
         '''
         Returns
         -------
-        List[ShiftDescription]
+        List[tmlib.align.description.ShiftDescription]
         '''
         return self._shifts
 
@@ -123,55 +167,6 @@ class AlignmentDescription(object):
             else:
                 if attr in self.PERSISTENT_ATTRS:
                     yield (attr, getattr(self, attr))
-
-    @staticmethod
-    def set(description):
-        '''
-        Set attribute values based on a description provided as key-value pair
-        mappings.
-
-        Parameters
-        ----------
-        description: dict
-            alignment descriptions
-
-        Returns
-        -------
-        AlignmentDescription
-        '''
-        if 'shifts' not in description.keys():
-            raise KeyError('Aligment description requires key "shifts"')
-        if not isinstance(description['shifts'], list):
-            raise TypeError('The value of "shifts" must have type list')
-        if 'overhang' not in description.keys():
-            raise KeyError('Aligment description requires key "overhang"')
-        if not isinstance(description['overhang'], dict):
-            raise TypeError('The value of "overhang" must have type dict')
-
-        alignment = AlignmentDescription()
-        for key, value in description.iteritems():
-            if key == 'overhang':
-                overhang = OverhangDescription()
-                for k, v in value.iteritems():
-                    if k in overhang.PERSISTENT_ATTRS:
-                        setattr(overhang, k, v)
-                setattr(alignment, 'overhang', overhang)
-
-            elif key == 'shifts':
-                shifts = list()
-                for element in value:
-                    shift = ShiftDescription()
-                    for k, v in element.iteritems():
-                        if k in shift.PERSISTENT_ATTRS:
-                            setattr(shift, k, v)
-                    shifts.append(shift)
-                setattr(alignment, 'shifts', shifts)
-
-            else:
-                if value in alignment.PERSISTENT_ATTRS:
-                    setattr(alignment, key, value)
-
-        return alignment
 
 
 class OverhangDescription(object):

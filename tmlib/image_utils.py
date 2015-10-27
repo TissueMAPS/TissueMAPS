@@ -251,7 +251,6 @@ def find_border_objects(im):
     -------
     List[int]
         1 if object represent a border object and 0 otherwise
-
     '''
     edges = [np.unique(im[0, :]),   # first row
              np.unique(im[-1, :]),  # last row

@@ -21,7 +21,7 @@ class Jterator(CommandLineInterface):
 
         Returns
         -------
-        tmlib.jterator.cli.Jterator
+        :mod:`tmlib.jterator.cli.Jterator`
         '''
         super(Jterator, self).__init__(args)
         self.args = args
@@ -92,7 +92,7 @@ class Jterator(CommandLineInterface):
 
         See also
         --------
-        `tmlib.jterator.argparser`_
+        :mod:`tmlib.jterator.argparser`
         '''
         cli = Jterator(args)
         logger.debug('call "%s" method of class "%s"'

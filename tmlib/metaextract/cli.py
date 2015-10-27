@@ -15,6 +15,18 @@ class Metaextract(CommandLineInterface):
     '''
 
     def __init__(self, args):
+        '''
+        Initialize an instance of class Metaextract.
+
+        Parameters
+        ----------
+        args: arparse.Namespace
+            parsed command line arguments
+
+        Returns
+        -------
+        tmlib.metaconfig.cli.Metaextract
+        '''
         super(Metaextract, self).__init__(args)
         self.args = args
 
@@ -28,7 +40,7 @@ class Metaextract(CommandLineInterface):
         Returns
         -------
         str
-            name of the program
+            name of the command line program
         '''
         return self.__class__.__name__.lower()
 
@@ -57,7 +69,7 @@ class Metaextract(CommandLineInterface):
 
         See also
         --------
-        `tmlib.metaextract.argparser`_
+        :mod:`tmlib.metaextract.argparser`
         '''
         cli = Metaextract(args)
         getattr(cli, args.method_name)()

@@ -39,10 +39,18 @@ class PlateSource(object):
         user_cfg: Dict[str, str]
             additional user configuration settings
 
+        Returns
+        -------
+        tmlib.source.PlateSource
+
         Raises
         ------
         OSError
             when `plate_source_dir` does not exist
+
+        See also
+        --------
+        :mod:`tmlib.cfg.UserConfiguration`
         '''
         self.plate_source_dir = plate_source_dir
         if not os.path.exists(self.plate_source_dir):
@@ -72,10 +80,6 @@ class PlateSource(object):
         ----
         The name is encoded in the folder name and retrieved via regular
         expressions.
-
-        See also
-        --------
-        `tmlib.cfg`_
         '''
         folder_name = os.path.basename(self.dir)
         regexp = utils.regex_from_format_string(self.PLATE_SOURCE_DIR_FORMAT)
@@ -100,12 +104,8 @@ class PlateSource(object):
 
         Returns
         -------
-        List[PlateAcquisition]
+        List[tmlib.acquisition.PlateAcquisition]
             files belonging to different image acquisitions
-
-        See also
-        --------
-        `tmlib.acquisition.PlateAcquisition`_
         '''
         acquisition_dirs = [
             os.path.join(self.dir, d)
@@ -133,7 +133,7 @@ class PlateSource(object):
         '''
         Returns
         -------
-        List[ImageFileMapper]
+        List[tmlib.metadata.ImageFileMapper]
             key-value pairs that map the location of individual planes within
             the original files to *Image* elements in the OMEXML
         '''
@@ -141,7 +141,7 @@ class PlateSource(object):
         with JsonReader(self.dir) as reader:
             hashmap = reader.read(self.image_mapper_file)
         for element in hashmap:
-            image_mapper.append(ImageFileMapper.set(element))
+            image_mapper.append(ImageFileMapper(element))
         return image_mapper
 
 
@@ -167,6 +167,16 @@ class PlateAcquisition(object):
         ----------
         acquisition_dir: str
             absolute path to the acquisition folder
+        user_cfg: Dict[str, str]
+            additional user configuration settings
+
+        Returns
+        -------
+        tmlib.source.PlateAcquisition
+
+        See also
+        --------
+        :mod:`tmlib.cfg.UserConfiguration`
         '''
         self.acquisition_dir = acquisition_dir
         self.user_cfg = user_cfg
@@ -191,7 +201,7 @@ class PlateAcquisition(object):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         image_dir = os.path.join(self.dir, self.IMAGE_DIR_NAME)
         if not os.path.exists(image_dir):
@@ -210,7 +220,7 @@ class PlateAcquisition(object):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         metadata_dir = os.path.join(self.dir, self.METADATA_DIR_NAME)
         if not os.path.exists(metadata_dir):
@@ -230,7 +240,7 @@ class PlateAcquisition(object):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         omexml_dir = os.path.join(self.dir, self.OMEXML_DIR_NAME)
         if not os.path.exists(omexml_dir):
@@ -280,7 +290,7 @@ class PlateAcquisition(object):
 
         See also
         --------
-        `tmlib.formats.Formats`_
+        :mod:`tmlib.formats.Formats`
         '''
         files = [
             f for f in os.listdir(self.image_dir)
@@ -344,7 +354,7 @@ class PlateAcquisition(object):
         '''
         Returns
         -------
-        List[ImageFileMapper]
+        List[tmlib.metadata.ImageFileMapper]
             key-value pairs to map the location of individual planes within the
             original files to the *Image* elements in the OMEXML
         '''
@@ -352,5 +362,5 @@ class PlateAcquisition(object):
         with JsonReader(self.dir) as reader:
             hashmap = reader.read(self.image_mapper_file)
         for element in hashmap:
-            image_mapper.append(ImageFileMapper.set(element))
+            image_mapper.append(ImageFileMapper(element))
         return image_mapper

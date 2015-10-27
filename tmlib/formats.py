@@ -11,7 +11,7 @@ from .writers import JsonWriter
 class Formats(object):
 
     '''
-    Class for providing information on file formats supported by Bio-Formats.
+    Class for providing information on files supported by Bio-Formats.
     '''
 
     SUPPORT_FOR_ADDITIONAL_FILES = {'metamorph', 'cellvoyager', 'visiview'}

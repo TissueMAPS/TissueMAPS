@@ -133,9 +133,16 @@ class CommandLineInterface(object):
 
     @property
     def init_args(self):
-        # Since "init" requires more flexibility with respect to the number
-        # of parsed arguments, we use a separate property, which can be
-        # overwritten by subclasses to handle custom use cases
+        '''
+        Returns
+        -------
+        dict
+            additional variable arguments for the `init` method
+
+        See also
+        --------
+        :mod:`tmlib.illuminati.argparser`
+        '''
         return dict()
 
     def _cleanup(self):
@@ -205,8 +212,7 @@ class CommandLineInterface(object):
             shutil.rmtree(api.status_dir)
 
         logger.info('create job descriptions')
-        kwargs = self.init_args
-        job_descriptions = api.create_job_descriptions(**kwargs)
+        job_descriptions = api.create_job_descriptions(**self.init_args)
         if self.args.print_job_descriptions:
             api.print_job_descriptions(job_descriptions)
         else:
@@ -395,7 +401,7 @@ class CommandLineInterface(object):
                 '--backup', action='store_true',
                 help='create a backup of the output of a previous submission')
             # NOTE: when additional arguments are provided, the property
-            # `init_args` has to be overwritten
+            # `arguments` has to be overwritten
 
         if 'run' in required_subparsers:
             run_parser = subparsers.add_parser(

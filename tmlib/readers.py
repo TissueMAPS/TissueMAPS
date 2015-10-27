@@ -35,7 +35,7 @@ and follow a similar syntax::
 class Reader(object):
 
     '''
-    Abstract reader base class.
+    Abstract base class for readers.
     '''
 
     __metaclass__ = ABCMeta
@@ -93,6 +93,8 @@ class XmlReader(TextReader):
 
         Returns
         -------
+        basestring
+            xml string
 
         Note
         ----

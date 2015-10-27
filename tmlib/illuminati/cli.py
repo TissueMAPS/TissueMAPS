@@ -51,11 +51,14 @@ class Illuminati(CommandLineInterface):
     @property
     def init_args(self):
         '''
-        Arguments that are parsed to the "init" method.
+        Returns
+        -------
+        dict
+            additional variable arguments for the `init` method
 
         See also
         --------
-        `tmlib.align.argparser`_
+        :mod:`tmlib.illuminati.argparser`
         '''
         kwargs = dict()
         kwargs['shift'] = self.args.shift
@@ -78,7 +81,7 @@ class Illuminati(CommandLineInterface):
 
         See also
         --------
-        `tmlib.illuminati.argparser`_
+        :mod:`tmlib.illuminati.argparser`
         '''
         cli = Illuminati(args)
         logger.debug('call "%s" method of class "%s"'

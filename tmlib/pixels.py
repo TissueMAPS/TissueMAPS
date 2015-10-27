@@ -14,12 +14,12 @@ from .readers import NumpyImageReader
 class Pixels(object):
 
     '''
-    Abstract base class for a pixel array.
+    Abstract base class for a 2D pixel array.
 
     See also
     --------
-    `tmlib.pixels.VipsPixels`_
-    `tmlib.pixels.NumpyPixels`_
+    :mod:`tmlib.pixels.VipsPixels`
+    :mod:`tmlib.pixels.NumpyPixels`
     '''
 
     __metaclass__ = ABCMeta
@@ -95,6 +95,10 @@ class VipsPixels(Pixels):
         ----------
         array: Vips.Image
             image pixel array
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixels
         '''
         super(VipsPixels, self).__init__(array)
         self.array = array
@@ -183,7 +187,7 @@ class VipsPixels(Pixels):
 
         Returns
         -------
-        VipsPixels
+        tmlib.pixels.VipsPixels
             new pixel object
         '''
         outlines = segment.compute_outlines_vips(self.array)
@@ -215,7 +219,7 @@ class VipsPixels(Pixels):
 
         Returns
         -------
-        VipsPixels
+        tmlib.pixels.VipsPixels
             new pixel object without the specified objects
         '''
         return VipsPixels(segment.remove_objects_vips(self.array, ids))
@@ -227,19 +231,23 @@ class VipsPixels(Pixels):
         Parameters
         ----------
         shift_description: dict
-            shift and overlap values
+            shift and overhang values
         crop: bool, optional
             whether images should cropped or rather padded
             with zero valued pixels (default: ``True``)
 
         Returns
         -------
-        VipsPixels
+        tmlib.pixels.VipsPixels
             aligned pixel object
 
         Warning
         -------
         The aligned image may have different dimensions.
+
+        See also
+        --------
+        :mod:`tmlib.align.description.AligmentDescription`
         '''
         sd = shift_description
         # TODO
@@ -263,7 +271,7 @@ class VipsPixels(Pixels):
 
         Returns
         -------
-        VipsPixels
+        tmlib.pixels.VipsPixels
             corrected pixel object
         '''
         return VipsPixels(illumcorr.illum_correct_vips(
@@ -281,12 +289,12 @@ class VipsPixels(Pixels):
 
         Returns
         -------
-        VipsPixel
+        tmlib.pixels.VipsPixel
             pixel object
 
         See also
         --------
-        `tmlib.readers.VipsImageReader`_
+        :mod:`tmlib.readers.VipsImageReader`
         '''
         with VipsImageReader() as reader:
             return VipsPixels(reader.read(filename))
@@ -302,7 +310,7 @@ class VipsPixels(Pixels):
 
         Returns
         -------
-        VipsPixel
+        tmlib.pixels.VipsPixel
             pixel object
         '''
         return VipsPixels(Vips.Image.new_from_array(array.tolist()))
@@ -333,6 +341,10 @@ class NumpyPixels(Pixels):
         ----------
         array: numpy.ndarray
             image pixel array
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
         '''
         super(NumpyPixels, self).__init__(array)
         self.array = array
@@ -422,7 +434,7 @@ class NumpyPixels(Pixels):
 
         Returns
         -------
-        NumpyPixels
+        tmlib.pixels.NumpyPixels
             new pixel object
         '''
         return NumpyPixels(segment.compute_outlines_numpy(self.array,
@@ -450,7 +462,7 @@ class NumpyPixels(Pixels):
 
         Returns
         -------
-        NumpyPixels
+        tmlib.pixels.NumpyPixels
             new pixel object without the specified objects
         '''
         return NumpyPixels(segment.remove_objects_numpy(self.array, ids))
@@ -469,7 +481,7 @@ class NumpyPixels(Pixels):
 
         Returns
         -------
-        NumpyPixels
+        tmlib.pixels.NumpyPixels
             aligned pixel object
 
         Warning
@@ -497,7 +509,7 @@ class NumpyPixels(Pixels):
 
         Returns
         -------
-        NumpyPixels
+        tmlib.pixels.NumpyPixels
             corrected pixel object
         '''
         return NumpyPixels(illumcorr.illum_correct_numpy(
@@ -515,12 +527,12 @@ class NumpyPixels(Pixels):
 
         Returns
         -------
-        NumpyPixels
+        tmlib.pixels.NumpyPixels
             pixel object
 
         See also
         --------
-        `tmlib.readers.NumpyImageReader`_
+        :mod:`tmlib.readers.NumpyImageReader`
         '''
         with NumpyImageReader() as reader:
             return NumpyPixels(reader.read(filename))

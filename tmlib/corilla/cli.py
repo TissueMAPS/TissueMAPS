@@ -61,7 +61,7 @@ class Corilla(CommandLineInterface):
 
         See also
         --------
-        `tmlib.corilla.argparser`_
+        :mod:`tmlib.corilla.argparser`
         '''
         cli = Corilla(args)
         logger.debug('call "%s" method of class "%s"'

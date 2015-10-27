@@ -40,7 +40,7 @@ class Imextract(CommandLineInterface):
         Returns
         -------
         str
-            name of the program
+            name of the command line program
         '''
         return self.__class__.__name__.lower()
 
@@ -54,6 +54,16 @@ class Imextract(CommandLineInterface):
 
     @property
     def init_args(self):
+        '''
+        Returns
+        -------
+        dict
+            additional variable arguments for the `init` method
+
+        See also
+        --------
+        :mod:`tmlib.imextract.argparser`
+        '''
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         return kwargs
@@ -71,7 +81,7 @@ class Imextract(CommandLineInterface):
 
         See also
         --------
-        `tmlib.imextract.argparser`_
+        :mod:`tmlib.imextract.argparser`
         '''
         cli = Imextract(args)
         logger.debug('call "%s" method of class "%s"'

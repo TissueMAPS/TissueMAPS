@@ -12,6 +12,18 @@ class ImageMetadata(object):
     def __init__(self):
         '''
         Initialize an instance of class ImageMetadata.
+
+        Returns
+        -------
+        tmlib.metadata.ImageMetadata
+
+        Note
+        ----
+        Values of shift and overhang attributes are set to zero.
+
+        See also
+        --------
+        :mod:`tmlib.align.descriptions.AlignmentDescription`
         '''
         self.is_aligned = False
         self.is_corrected = False
@@ -315,25 +327,34 @@ class ImageMetadata(object):
 class ChannelImageMetadata(ImageMetadata):
 
     '''
-    Class for metadata specific to channel images.
+    Class for metadata specific to channel images, e.g. images acquired with
+    a fluorescence microscope.
     '''
 
     PERSISTENT_ATTRS = ImageMetadata.PERSISTENT_ATTRS.union({
         'channel_name', 'is_corrected', 'channel_ix'
     })
 
-    def __init__(self):
+    def __init__(self, metadata=None):
         '''
         Initialize an instance of class ChannelImageMetadata.
 
         Parameters
         ----------
-        metadata: Dict[str, int or str]
-            image metadata read from the *.metadata* JSON file
+        metadata: dict, optional
+            metadata attributes as key-value pairs (default: ``None``)
+
+        Returns
+        -------
+        tmlib.metadata.ChannelImageMetadata
         '''
         super(ChannelImageMetadata, self).__init__()
         self.is_corrected = False
         self.is_projected = False
+        if metadata is not None:
+            for key, value in metadata.iteritems():
+                if key in self.PERSISTENT_ATTRS:
+                    setattr(self, key, value)
 
     @property
     def channel_name(self):
@@ -406,28 +427,6 @@ class ChannelImageMetadata(ImageMetadata):
         # TODO: pretty print
         pass
 
-    @staticmethod
-    def set(metadata):
-        '''
-        Set attributes based on key-value pairs in dictionary.
-
-        Parameters
-        ----------
-        metadata: dict
-            metadata as key-value pairs
-
-        Returns
-        -------
-        ChannelImageMetadata
-            metadata object with `PERSISTENT_ATTRS` attributes set
-        '''
-        # TODO: site
-        obj = ChannelImageMetadata()
-        for key, value in metadata.iteritems():
-            if key in ChannelImageMetadata.PERSISTENT_ATTRS:
-                setattr(obj, key, value)
-        return obj
-
 
 class ImageFileMapper(object):
 
@@ -441,6 +440,23 @@ class ImageFileMapper(object):
         'files', 'series', 'planes',
         'ref_index', 'ref_file', 'ref_id'
     }
+
+    def __init__(self, mapping=None):
+        '''
+        Parameters
+        ----------
+        description: dict, optional
+            key-value representation of the object (default: ``None``)
+
+        Returns
+        -------
+        tmlib.metadata.ImageFileMapper
+            object where `PERSISTENT_ATTRS` attributes where set with provided values
+        '''
+        if mapping is not None:
+            for key, value in mapping.iteritems():
+                if key in self.PERSISTENT_ATTRS:
+                    setattr(self, key, value)
 
     @property
     def files(self):
@@ -571,25 +587,6 @@ class ImageFileMapper(object):
             if attr not in self.PERSISTENT_ATTRS:
                 continue
             yield (attr, getattr(self, attr))
-
-    @staticmethod
-    def set(description):
-        '''
-        Parameters
-        ----------
-        description: dict
-            key-value representation of the object
-
-        Returns
-        -------
-        ImageFileMapper
-            object where `PERSISTENT_ATTRS` attributes where set with provided values
-        '''
-        obj = ImageFileMapper()
-        for key, value in description.iteritems():
-            if key in obj.PERSISTENT_ATTRS:
-                setattr(obj, key, value)
-        return obj
 
 
 class IllumstatsImageMetadata(object):

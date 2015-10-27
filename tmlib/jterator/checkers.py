@@ -20,12 +20,18 @@ class PipelineChecker(object):
         '''
         Initialize an instance of class JtChecker.
 
+        Parameters
+        ----------
         project_dir: str
             path to Jterator project folder
         pipe_description: dict
             pipeline description (module order)
         handles_descriptions: dict, optional
             list of module descriptions (module input/output)
+
+        Returns
+        -------
+        tmlib.jterator.checker.PipelineChecker
         '''
         self.pipe_description = pipe_description
         self.handles_descriptions = handles_descriptions
@@ -34,35 +40,6 @@ class PipelineChecker(object):
     def check_pipeline(self):
         '''
         Check pipeline structure.
-
-            {
-                'project': {
-                    'name': str,
-                    'libpath': str
-                },
-
-                'jobs': {
-                    'folder': str,
-                    'pattern': [
-                            {
-                                'name': str,
-                                'expression': str
-                            },               
-                            ...
-                    ]
-                    }
-                },
-
-                'pipeline': [
-                        {
-                            'active': bool,
-                            'handles': str,
-                            'module': str
-                        },
-                        ...
-                ]
-
-            }
         '''
         # Check "project" section
         if 'project' not in self.pipe_description.keys():
@@ -137,32 +114,6 @@ class PipelineChecker(object):
     def check_handles(self):
         '''
         Check handles structure.
-
-            {
-                'input': [
-                    {
-                        'name': str,
-                        'value': int or str or float or
-                                 List[int] or List[str] or List[float],
-                        'class': str 
-                    },
-
-                    ...
-
-                ],
-
-                'output': [
-                    {
-                        'name': str,
-                        'value': int or str or float or
-                                 List[int] or List[str] or List[float],
-                        'class': str
-                    },
-
-                    ...
-
-                ]
-            }
         '''
         self.libpath = self.pipe_description['project']['lib']
         self.libpath = path_utils.complete_path(self.libpath, self.project_dir)
@@ -342,6 +293,9 @@ class PipelineChecker(object):
         logger.info('Module input/output check successful!')
 
     def check_all(self):
+        '''
+        Perform pipeline, handles and io checks.
+        '''
         self.check_pipeline()
         self.check_handles()
         self.check_pipeline_io()

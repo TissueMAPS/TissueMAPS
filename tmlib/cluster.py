@@ -238,6 +238,10 @@ class ClusterRoutines(BasicClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+
+        Returns
+        -------
+        tmlib.cluster.ClusterRoutines
         '''
         super(ClusterRoutines, self).__init__(experiment)
         self.experiment = experiment
@@ -403,7 +407,7 @@ class ClusterRoutines(BasicClusterRoutines):
         Raises
         ------
         OSError
-            when file does not exist
+            when `filename` does not exist
         '''
         with JsonReader() as reader:
             return reader.read(filename)
@@ -448,8 +452,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Note
         ----
-        Creates log directory if it does not exist and adds the job filename
-        to "inputs" (required in case no shared network is available).
+        Log directory is created if it does not exist.
         '''
         if not os.path.exists(self.job_descriptions_dir):
             logger.debug('create directories for job descriptor files')
@@ -490,7 +493,7 @@ class ClusterRoutines(BasicClusterRoutines):
         Parameters
         ----------
         batch: dict
-            job_descriptions element, i.e. description of a single job
+            description of the job
         '''
         pass
 
@@ -607,7 +610,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
-    def create_jobs(self, job_descriptions, virtualenv='tmaps'):
+    def create_jobs(self, job_descriptions, virtualenv=None):
         '''
         Create a GC3Pie task collection of "jobs".
 
@@ -617,7 +620,7 @@ class ClusterRoutines(BasicClusterRoutines):
             description of inputs and outputs or individual jobs
         virtualenv: str, optional
             name of a virtual environment that should be activated
-            (defaults to ``"tmaps"``)
+            (default: ``None``)
 
         Returns
         -------

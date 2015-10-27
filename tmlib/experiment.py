@@ -33,8 +33,8 @@ class Experiment(object):
 
     See also
     --------
-    `tmlib.plate.Plate`_
-    `tmlib.cycle.Cycle`_
+    :mod:`tmlib.plate.Plate`
+    :mod:`tmlib.cycle.Cycle`
     '''
 
     def __init__(self, experiment_dir, user_cfg=None, library='vips'):
@@ -57,7 +57,7 @@ class Experiment(object):
 
         See also
         --------
-        `tmlib.cfg`_
+        :mod:`tmlib.cfg`
 
         Note
         ----
@@ -154,7 +154,7 @@ class Experiment(object):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         self._plates_dir = self.user_cfg.plates_dir
         if not os.path.exists(self._plates_dir):
@@ -259,7 +259,7 @@ class Experiment(object):
 
         See also
         --------
-        `tmlib.source.PlateSource`_
+        :mod:`tmlib.source.PlateSource`
 
         Note
         ----
@@ -287,7 +287,7 @@ class Experiment(object):
 
         See also
         --------
-        `tmlib.illuminati`_
+        :mod:`tmlib.illuminati`
         '''
         layers_dir = self.user_cfg.layers_dir
         if not os.path.exists(layers_dir):
@@ -339,6 +339,10 @@ class Experiment(object):
             absolute path to the HDF5 file holding the measurement datasets,
             i.e. the results of an image analysis pipeline such as
             segmentations and features for the segmented objects
+
+        See also
+        --------
+        :mod:`tmlib.jterator`
         '''
         return os.path.join(self.layers_dir, 'data.h5')
 
@@ -353,7 +357,7 @@ class Experiment(object):
 
         Returns
         -------
-        ChannelImage
+        tmlib.image.ChannelImage
             corresponding image object
         '''
         regex = utils.regex_from_format_string(cfg.IMAGE_NAME_FORMAT)

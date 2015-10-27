@@ -31,7 +31,7 @@ class ImageRegistration(ClusterRoutines):
 
         Returns
         -------
-        tmlib.align.api.ImageRegistration
+        :mod:`tmlib.align.api.ImageRegistration`
         '''
         super(ImageRegistration, self).__init__(
                 experiment, prog_name, verbosity)
@@ -73,11 +73,12 @@ class ImageRegistration(ClusterRoutines):
         ----------
         **kwargs: dict
             additional input arguments as key-value pairs:
-            * "batch_size": number of image acquisition sites per job (*int*)
-            * "ref_channel": number of the image channel that should be used as
-              a reference for image registration (*int*)
-            * "ref_cycle": number of the image channel that should be used as a
-              reference for image registration (*int*)
+                * "batch_size": number of image acquisition sites that should
+                   be processed per job (*int*)
+                * "ref_channel": number of the image channel that should be
+                  used as a reference for image registration (*int*)
+                * "ref_cycle": number of the image channel that should be used
+                  as a reference for image registration (*int*)
 
         Returns
         -------
@@ -185,7 +186,7 @@ class ImageRegistration(ClusterRoutines):
 
         See also
         --------
-        `tmlib.align.registration.register_images`_
+        :mod:`tmlib.align.registration.register_images`
         '''
         reg.register_images(batch['sites'],
                             batch['inputs']['target_files'],

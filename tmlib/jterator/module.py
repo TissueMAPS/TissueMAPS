@@ -18,14 +18,13 @@ logger = logging.getLogger(__name__)
 
 class CaptureOutput(dict):
     '''
-    Class for capturing standard output and error of function calls.
+    Class for capturing standard output and error of function calls
+    and redirecting the STDOUT and STDERR strings to a dictionary.
 
-    Usage::
-
-        with CaptureOutput() as output:
-            my_function(arg)
-
-    This redirects the STDOUT and STDERR string and stores it in a dictionary. 
+    Examples
+    --------
+    with CaptureOutput() as output:
+        my_function(arg)
     '''
     def __enter__(self):
         self._stdout = sys.stdout
@@ -59,6 +58,10 @@ class ImageProcessingModule(object):
             path to program file that should be executed
         handles_description: dict
             description of module input/output
+
+        Returns
+        -------
+        tmlib.jterator.module.ImageProcessingModule
         '''
         self.name = name
         self.module_file = module_file
@@ -162,7 +165,7 @@ class ImageProcessingModule(object):
         Returns
         -------
         str
-            language of the module
+            language of the module (e.g. "python")
         '''
         self._language = path_utils.determine_language(self.module_file)
         return self._language
@@ -170,8 +173,8 @@ class ImageProcessingModule(object):
     def _exec_m_module(self, inputs, output_names, engine):
         logger.debug('adding module to Matlab path: "%s"' % self.module_file)
         engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.module_file)))
-        logger.debug('evaluating Matlab function with INPUTS: "%s"'
-              % '", "'.join(inputs.keys()))
+        logger.debug('evaluating Matlab function with INPUTS: "%s"',
+                     '", "'.join(inputs.keys()))
         for name, value in inputs.iteritems():
             engine.put('%s' % name, value)
         func_call = '[{output_args}] = {function_name}({inputs_args});'.format(
@@ -332,17 +335,24 @@ class ImageProcessingModule(object):
     def run(self, inputs, engine=None):
         '''
         Execute a module, i.e. evaluate the corresponding function with
-        the parsed input arguments as described by the *handles*.
+        the parsed input arguments as described by `handles`.
 
-        Output has the format::
+        Output has the following format::
 
             {
-                'data': dict,
-                'stdout': str,
-                'stderr': str,
-                'success': bool,
-                'error_message': str
+                'data': ,               # dict
+                'stdout': ,             # str
+                'stderr': ,             # str
+                'success': ,            # bool
+                'error_message': ,      # str
             }
+
+        Parameters
+        ----------
+        inputs: dict
+            input arguments of the module
+        engine: matlab_wrapper.matlab_session.MatlabSession, optional
+            engine for non-Python languages (default: ``None``)
 
         Returns
         -------

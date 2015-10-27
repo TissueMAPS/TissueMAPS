@@ -63,14 +63,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         Raises
         ------
-        PipelineDescriptionError
+        tmlib.errors.PipelineDescriptionError
             when `pipe` or `handles` are incorrect
-        PipelineOSError
+        tmlib.errors.PipelineOSError
             when the *.pipe* or *.handles* files do not exist
-
-        See also
-        --------
-        `tmlib.cfg`_
         '''
         super(ImageAnalysisPipeline, self).__init__(
                 experiment, prog_name, verbosity)
@@ -102,7 +98,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         Returns
         -------
-        JtProject
+        tmlib.jterator.project.JtProject
             jterator project object
         '''
         return self._project
@@ -134,7 +130,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         self._figures_dir = os.path.join(self.project_dir, 'figures')
         if not os.path.exists(self._figures_dir):
@@ -152,7 +148,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         self._data_dir = os.path.join(self.project_dir, 'data')
         if not os.path.exists(self._data_dir):
@@ -170,7 +166,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         Note
         ----
-        Creates the directory if it doesn't exist.
+        Directory is created if it doesn't exist.
         '''
         self._module_log_dir = os.path.join(self.project_dir, 'log_modules')
         if not os.path.exists(self._module_log_dir):
@@ -216,13 +212,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         Returns
         -------
-        List[JtModule]
+        List[tmlib.jterator.module.JtModule]
             pipeline built in modular form based on *pipe* and *handles*
             descriptions
 
         Raises
         ------
-        PipelineDescriptionError
+        tmlib.errors.PipelineDescriptionError
             when information in *pipe* description is missing or incorrect
         '''
         libpath = self.project.pipe['description']['project']['lib']
@@ -288,6 +284,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def build_data_filename(self, job_id):
         '''
         Build name of the HDF5 file where pipeline data will be stored.
+
+        Parameters
+        ----------
+        job_id: int
+            one-based job identifier number
         '''
         data_file = os.path.join(self.data_dir,
                                  '%s_%.5d.data.h5' % (self.pipe_name, job_id))
@@ -304,7 +305,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Parameters
         ----------
         **kwargs: dict
-            no additional input arguments required
+            no additional arguments used
 
         Returns
         -------

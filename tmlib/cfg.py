@@ -38,12 +38,12 @@ class UserConfiguration(object):
         ----------
         experiment_dir: str
             absolute path to experiment directory
-        cfg_settings: dict, optional
+        cfg_settings: dict
             user configuration settings as key-value pairs
 
         Returns
         -------
-        UserConfiguration
+        tmlib.cfg.UserConfiguration
             experiment-specific user configuration object
         '''
         self.experiment_dir = experiment_dir
@@ -71,8 +71,8 @@ class UserConfiguration(object):
 
         See also
         --------
-        `tmlib.source.PlateSource`_
-        `tmlib.source.PlateAcquisition`_
+        :mod:`tmlib.source.PlateSource`
+        :mod:`tmlib.source.PlateAcquisition`
         '''
         if self._sources_dir is None:
             self._sources_dir = os.path.join(self.experiment_dir, 'sources')
@@ -139,8 +139,8 @@ class UserConfiguration(object):
 
         See also
         --------
-        `tmlib.illuminati.layers`_
-        `tmlib.jterator.data_fusion`_
+        :mod:`tmlib.illuminati.layers`
+        :mod:`tmlib.jterator.data_fusion`
         '''
         if self._layers_dir is None:
             self._layers_dir = os.path.join(self.experiment_dir, 'layers')
@@ -182,12 +182,8 @@ class UserConfiguration(object):
         '''
         Returns
         -------
-        List[WorkflowStepArgs]
+        List[tmlib.tmaps.workflow.WorkflowStepArgs]
             name and required arguments of each step in the workflow
-
-        See also
-        --------
-        `tmaps.workflow.WorkflowStepArgs`_
         '''
         return self._workflow
 

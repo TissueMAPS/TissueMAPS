@@ -49,7 +49,7 @@ class Align(CommandLineInterface):
                 verbosity=self.args.verbosity)
 
     @property
-    def init_args(self):
+    def arguments(self):
         '''
         Returns
         -------

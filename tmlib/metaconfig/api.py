@@ -61,10 +61,6 @@ class MetadataConfigurator(ClusterRoutines):
         ------
         NotSupportedError
             when `file_format` is not supported
-
-        See also
-        --------
-        `tmlib.cfg`_
         '''
         super(MetadataConfigurator, self).__init__(
                 experiment, prog_name, verbosity)
@@ -90,7 +86,7 @@ class MetadataConfigurator(ClusterRoutines):
         Parameters
         ----------
         **kwargs: dict
-            empty - no additional arguments
+            no additional arguments used
 
         Returns
         -------
@@ -200,9 +196,9 @@ class MetadataConfigurator(ClusterRoutines):
 
         See also
         --------
-        `tmlib.metaconfig.default`_
-        `tmlib.metaconfig.cellvoyager`_
-        `tmlib.metaconfig.visiview`_
+        :mod:`tmlib.metaconfig.default`
+        :mod:`tmlib.metaconfig.cellvoyager`
+        :mod:`tmlib.metaconfig.visiview`
         '''
         handler_class = self._handler_factory(batch['format'])
         handler = handler_class(

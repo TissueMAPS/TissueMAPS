@@ -31,9 +31,9 @@ class MetadataExtractor(ClusterRoutines):
         verbosity: int
             logging level
 
-        See also
-        --------
-        `tmlib.cfg`_
+        Returns
+        -------
+        tmlib.metaextract.api.MetadataExtractor
         '''
         super(MetadataExtractor, self).__init__(
                 experiment, prog_name, verbosity)

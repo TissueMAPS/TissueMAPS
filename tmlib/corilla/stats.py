@@ -15,14 +15,15 @@ import numpy as np
 class OnlineStatistics(object):
 
     '''
-    Class for calculating online statistics based on Welford's method [1]_.
+    Class for calculating online statistics based on Welford's method [1]_ .
     Code adapted from Wikipedia article "Algorithms for calculating variance"
-    [2]_.
+    [2]_ .
 
     References
     ----------
-    .. [1]: B. P. Welford (1962). "Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419-420.
-    .. [2]: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+    .. [1] B. P. Welford (1962). "Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419-420
+
+    .. [2] https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
     '''
 
     def __init__(self, image_dimensions):
