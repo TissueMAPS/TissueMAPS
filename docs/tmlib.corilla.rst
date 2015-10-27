@@ -20,6 +20,9 @@ tmlib.corilla.argparser module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.corilla.argparser:parser
+    :prog: corilla
+
 tmlib.corilla.cli module
 ------------------------
 

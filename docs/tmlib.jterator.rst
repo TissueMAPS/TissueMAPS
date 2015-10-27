@@ -20,6 +20,9 @@ tmlib.jterator.argparser module
     :undoc-members:
     :show-inheritance:
 
+.. .. autoprogram:: tmlib.jterator.argparser:parser
+..     :prog: jterator
+
 tmlib.jterator.checkers module
 ------------------------------
 

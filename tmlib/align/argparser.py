@@ -1,6 +1,9 @@
+'''
+Arguments of the command line program.
+'''
+
 from . import __version__
 from .cli import Align
-
 
 parser, subparsers = Align.get_parser_and_subparsers(
     required_subparsers=[
@@ -8,8 +11,7 @@ parser, subparsers = Align.get_parser_and_subparsers(
 
 parser.description = '''
     Calculate shift in y, x direction for images, which were
-    acquired in different "cycles", i.e. at the same sites but at
-    different time points.
+    acquired in different "cycles", i.e. at different time points.
 '''
 parser.version = __version__
 
