@@ -234,7 +234,6 @@ class Experiment(object):
         ----
         The user has to create the directory and provide its location.
         '''
-        print self.user_cfg.sources_dir
         self._sources_dir = self.user_cfg.sources_dir
         if not os.path.exists(self._sources_dir):
             raise OSError('PlateSources directory does not exist')
