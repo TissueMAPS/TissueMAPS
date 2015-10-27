@@ -1,3 +1,7 @@
+'''
+Arguments of the command line program.
+'''
+
 from . import __version__
 from .cli import Jterator
 
@@ -13,7 +17,7 @@ parser.description = '''
 '''
 parser.version = __version__
 parser.add_argument(
-    '-p', '--pipeline', dest='pipeline', type=str, required=True,
+    '-p', '--pipeline', type=str, required=True,
     help='name of a pipeline that should be processed')
 
 create_parser = subparsers.add_parser(

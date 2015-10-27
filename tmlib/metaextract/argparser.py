@@ -1,3 +1,7 @@
+'''
+Arguments of the command line program.
+'''
+
 from . import __version__
 from .cli import Metaextract
 
