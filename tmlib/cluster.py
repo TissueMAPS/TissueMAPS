@@ -339,6 +339,10 @@ class ClusterRoutines(BasicClusterRoutines):
                 files.extend(collect_files)
             else:
                 files.extend(collect_files)
+            if 'removals' in job_descriptions['collect']:
+                for k in job_descriptions['collect']['removals']:
+                    for f in job_descriptions['collect']['inputs'][k]:
+                        files.remove(f)
         return files
 
     def list_input_files(self, job_descriptions):
@@ -531,8 +535,8 @@ class ClusterRoutines(BasicClusterRoutines):
             * *collect* job: a single task that is processed once all
               *run* jobs are terminated successfully
 
-        Each batch (element of the *run* job_descriptions) must provide the following
-        key-value pairs:
+        Each batch (element of the *run* job_descriptions) must provide the
+        following key-value pairs:
             * "id": one-based job indentifier number (*int*)
             * "inputs": absolute paths to input files required to run the job
               (Dict[*str*, List[*str*]])
@@ -546,21 +550,26 @@ class ClusterRoutines(BasicClusterRoutines):
             * "outputs": absolute paths to output files produced by the job
               (Dict[*str*, List[*str*]])
 
+        A *collect* job description can have the optional key "removals", which
+        provides a list of strings indicating which of the inputs are removed
+        during the *collect* step.
+
         A complete job_descriptions has the following structure::
 
             {
-                'run': [
+                "run": [
                     {
-                        'id': ,            # int
-                        'inputs': ,        # list or dict,
-                        'outputs': ,       # list or dict,
+                        "id": ,            # int
+                        "inputs": ,        # list or dict,
+                        "outputs": ,       # list or dict,
                     },
                     ...
                     ]
-                'collect':
+                "collect":
                     {
-                        'inputs': ,        # list or dict,
-                        'outputs': ,       # list or dict
+                        "inputs": ,        # list or dict,
+                        "outputs": ,       # list or dict
+                        "removals":        # set
                     }
             }
 

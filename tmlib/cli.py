@@ -146,26 +146,23 @@ class CommandLineInterface(object):
         return dict()
 
     def _cleanup(self):
-        api = self._api_instance
-        job_descriptions = api.get_job_descriptions_from_files()
-        if job_descriptions['run']:
+        outputs = self.expected_outputs
+        if outputs:
             logger.info('clean up output of previous submission')
-            outputs = api.list_output_files(job_descriptions)
-            if outputs:
-                dont_exist_ix = [not os.path.exists(f) for f in outputs]
-                if all(dont_exist_ix):
-                    logger.warning('outputs don\'t exist')
-                elif any(dont_exist_ix):
-                    logger.warning('some outputs don\'t exist')
-                for out in outputs:
-                    if not os.path.exists(out):
-                        continue
-                    if os.path.isdir(out):
-                        logger.debug('remove output directory: %s' % out)
-                        shutil.rmtree(out)
-                    else:
-                        logger.debug('remove output file: %s' % out)
-                        os.remove(out)
+            dont_exist_ix = [not os.path.exists(f) for f in outputs]
+            if all(dont_exist_ix):
+                logger.info('outputs don\'t exist')
+            elif any(dont_exist_ix):
+                logger.warning('some outputs don\'t exist')
+            for out in outputs:
+                if not os.path.exists(out):
+                    continue
+                if os.path.isdir(out):
+                    logger.debug('remove output directory: %s' % out)
+                    shutil.rmtree(out)
+                else:
+                    logger.debug('remove output file: %s' % out)
+                    os.remove(out)
 
     def cleanup(self):
         '''
