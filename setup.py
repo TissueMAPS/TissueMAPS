@@ -138,9 +138,15 @@ def get_version():
 
 
 def get_requirements():
+    import platform
+    system_name = platform.system()
     requirements_path = os.path.abspath(os.path.dirname(__file__))
     files = glob.glob(os.path.join(requirements_path,
                       'requirements-[0-9].txt'))
+    # Include all files of form requirements-<platform>-[0-9].txt,
+    # where platform is {Windows, Linux, Darwin}
+    files += glob.glob(os.path.join(requirements_path,
+                       'requirements-%s-[0-9].txt' % system_name))
     if len(files) == 0:
         raise Exception('Failed to find any requirements-[0-9].txt files')
     files = sorted(files)
