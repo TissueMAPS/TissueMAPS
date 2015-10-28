@@ -1,7 +1,10 @@
+'''Utility functions for standard routines.'''
+
 import re
 import os
+import logging
 
-'''Utility functions for standard routines.'''
+logger = logging.getLogger(__name__)
 
 
 def regex_from_format_string(format_string):
@@ -228,7 +231,7 @@ def missing_elements(data, start=None, end=None):
             yield s
 
     # is the upper part consecutive?
-    consecutive_high =  data[index] == data[end] - (end - index)
+    consecutive_high = data[index] == data[end] - (end - index)
     if not consecutive_high:
         for e in missing_elements(data, index, end):
             yield e

@@ -1,7 +1,7 @@
 import os
 import logging
 from .plate import Plate
-from .tmaps.workflow import WorkflowStepArgs
+from .tmaps.descriptions import WorkflowDescription
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class UserConfiguration(object):
         for k, v in cfg_settings.iteritems():
             if k in self.PERSISTENT_ATTRS:
                 if k == 'workflow':
-                    v = [WorkflowStepArgs(**step) for step in v]
+                    v = WorkflowDescription(v)
                 setattr(self, k, v)
 
     @property
@@ -96,7 +96,7 @@ class UserConfiguration(object):
         -------
         str
             absolute path to the directory where extracted files are located
-            (grouped per *plate* and *cycle*)
+            (grouped per *plate*)
 
         Note
         ----
@@ -105,8 +105,8 @@ class UserConfiguration(object):
 
         See also
         --------
-        `tmlib.plate.Plate`_
-        `tmlib.cycle.Cycle`_
+        :mod:`tmlib.plate.Plate`
+        :mod:`tmlib.cycle.Cycle`
         '''
         if self._plates_dir is None:
             self._plates_dir = os.path.join(self.experiment_dir, 'plates')
@@ -140,7 +140,6 @@ class UserConfiguration(object):
         See also
         --------
         :mod:`tmlib.illuminati.layers`
-        :mod:`tmlib.jterator.data_fusion`
         '''
         if self._layers_dir is None:
             self._layers_dir = os.path.join(self.experiment_dir, 'layers')
@@ -182,18 +181,16 @@ class UserConfiguration(object):
         '''
         Returns
         -------
-        List[tmlib.tmaps.workflow.WorkflowStepArgs]
-            name and required arguments of each step in the workflow
+        tmlib.tmaps.workflow.WorkflowDescription
+            description of the workflow that should be processed on the cluster
         '''
         return self._workflow
 
     @workflow.setter
     def workflow(self, value):
-        if not isinstance(value, list):
-            raise TypeError('Attribute "workflow" must have type list')
-        if not all([isinstance(v, WorkflowStepArgs) for v in value]):
+        if not isinstance(value, WorkflowDescription):
             raise TypeError(
-                    'Elements of "workflow" must have type WorkflowStepArgs')
+                'Attribute "workflow" must have type WorkflowDescription')
         self._workflow = value
 
     def __iter__(self):
