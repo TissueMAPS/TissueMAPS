@@ -1,7 +1,7 @@
 import os
 import logging
 import numpy as np
-from .layers import ChannelLayer
+from ..layers import ChannelLayer
 from ..cluster import ClusterRoutines
 
 logger = logging.getLogger(__name__)

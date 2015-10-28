@@ -1,11 +1,11 @@
 import os
 import numpy as np
-from ..mosaic import Mosaic
-from ..metadata import MosaicMetadata
-from .. import utils
-from .. import image_utils
-from ..readers import OpenslideImageReader
-from ..errors import NotSupportedError
+from . import utils
+from . import image_utils
+from .mosaic import Mosaic
+from .metadata import MosaicMetadata
+from .readers import OpenslideImageReader
+from .errors import NotSupportedError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,14 +21,18 @@ class ChannelLayer(object):
 
     def __init__(self, mosaic, metadata):
         '''
-        Initialize an instance of class Layer.
+        Initialize an instance of class ChannelLayer.
 
         Parameters
         ----------
-        mosaic: Mosaic
+        mosaic: tmlib.mosaic.Mosaic
             stitched mosaic image
-        metadata: MosaicMetadata
+        metadata: tmlib.metadata.MosaicMetadata
             metadata corresponding to the mosaic image
+
+        Returns
+        -------
+        tmlib.layer.ChannelLayer
         '''
         self.mosaic = mosaic
         self.metadata = metadata
