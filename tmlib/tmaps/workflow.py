@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 import importlib
 from cached_property import cached_property
@@ -10,6 +9,107 @@ from ..errors import WorkflowNextStepError
 from ..errors import WorkflowArgsError
 
 logger = logging.getLogger(__name__)
+
+
+def dict_to_command(d):
+    '''
+    Convert arguments provided as a dictionary into a list of command strings,
+    which can be used as input argument for the
+    `parse_args() <https://argparse.googlecode.com/svn/trunk/doc/parse_args.html>`_
+    method of the argparser package.
+
+    Parameters
+    ----------
+    d: dict
+        arguments as key-value pairs
+
+    Returns
+    -------
+    List[str]
+        arguments as sub-commands
+
+    Note
+    ----
+    For boolean arguments only the key will be appended to the command and only
+    in case the value is ``True``.
+
+    Examples
+    --------
+    >>>dict_to_command({"a": "bla", "b": True, "c": False})
+    ["--a", "bla", "--b"]
+    '''
+    command = list()
+    for k, v in d.iteritems():
+        if isinstance(v, bool):
+            if v:
+                command.append('--%s' % str(k))
+        command.extend(['--%s' % str(k), str(v)])
+    return command
+
+
+def load_parser(prog_name):
+    '''
+    Load a
+    `parser <https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser>`_
+    object of a TissueMAPS command line program.
+
+    Parameters
+    ----------
+    prog_name: str
+        name of the program, i.e. the name of corresponding subpackage in the
+        "tmlib" package
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        the loaded parser object
+
+    Raises
+    ------
+    ImportError
+        when subpackage with name `prog_name` doesn't have a module named
+        "argparser"
+    AttributeError
+        when the "argparser" module doesn't contain an attribute named "parser"
+
+    Examples
+    --------
+    >>>load_parser('align')
+    '''
+    module_name = 'tmlib.%s.argparser' % prog_name
+    logger.debug('load argparser module "%s"' % module_name)
+    module = importlib.import_module(module_name)
+    return module.parser
+
+
+def load_program(prog_name):
+    '''
+    Load a TissueMAPS command line program.
+
+    Parameters
+    ----------
+    prog_name: str
+        name of the program, i.e. the name of corresponding subpackage in the
+        "tmlib" package
+
+    Raises
+    ------
+    ImportError
+        when subpackage with name `prog_name` doesn't have a module named "cli"
+    AttributeError
+        when the "cli" module doesn't contain a class with name `prog_name`
+
+    Returns
+    -------
+    tmlib.cli.CommandLineInterface
+        command line program, i.e. an instance of a subclass of the abstract
+        base class :mod:`tmlib.cli.CommandLineInterface`
+    '''
+    module_name = 'tmlib.%s.cli' % prog_name
+    logger.debug('load cli module "%s"' % module_name)
+    module = importlib.import_module(module_name)
+    class_name = prog_name.capitalize()
+    return getattr(module, class_name)
 
 
 class Workflow(SequentialTaskCollection, StopOnError):
@@ -73,6 +173,8 @@ class Workflow(SequentialTaskCollection, StopOnError):
             stage_ix = self.stage
         stage = workflow.stages[stage_ix]
         logger.info('start workflow at stage "%s"', stage.name)
+        if self.step is None:
+            self.step = 0
         if isinstance(self.step, basestring):
             step_ix = [s.name for s in stage.steps].index(self.step)
         else:
@@ -91,61 +193,40 @@ class Workflow(SequentialTaskCollection, StopOnError):
                 cmd.append(self.experiment.dir)
                 cmd.append('init')
                 if step.args:
-                    for k, v in step.args.iteritems():
-                        if v or v == 0:  # zero would be considered ``False``
-                            cmd.append('--%s' % k)
-                        if not isinstance(v, bool) and v is not None:
-                            cmd.append(str(v))
+                    cmd.extend(dict_to_command(step.args))
                 # Test whether arguments are specified correctly.
-                parser = self._get_argparser(cmd[0])
+                parser = load_parser(cmd[0])
                 try:
                     parser.parse_args(cmd[1:])
-                except SystemExit:
+                except SystemExit as error:
                     raise WorkflowArgsError(
-                            'Arguments for step "%s" are specified incorrectly'
-                            % step.name)
+                        'Arguments for step "%s" are specified incorrectly:\n%s'
+                        % (step.name, str(error)))
                 commands.append(cmd)
         return commands
-
-    @property
-    def _package_name(self):
-        return re.search('^([^.]+)', self.__module__).group(1)
-
-    def _get_argparser(self, prog_name):
-        package_name = self._package_name
-        module_name = '%s.%s.argparser' % (package_name, prog_name)
-        logger.debug('load argparser module "%s"' % module_name)
-        module = importlib.import_module(module_name)
-        parser = module.parser
-        return parser
 
     def _create_jobs_for_step(self, init_command):
         prog_name = init_command[0]
         logger.debug('create jobs for step {0}'.format(prog_name))
-        package_name = self._package_name
-        module_name = '%s.%s.cli' % (package_name, prog_name)
-        logger.debug('load cli module "%s"' % module_name)
-        module = importlib.import_module(module_name)
-        class_name = prog_name.capitalize()
-
-        parser = self._get_argparser(prog_name)
+        prog = load_program(prog_name)
+        parser = load_parser(prog_name)
         init_args = parser.parse_args(init_command[1:])
-        init_cli_instance = getattr(module, class_name)(init_args)
+        init_prog = prog(init_args)
 
         # Check whether inputs of current step were generated by previous steps
         if not all([
                     os.path.exists(i)
-                    for i in init_cli_instance.required_inputs
+                    for i in init_prog.required_inputs
                 ]):
             logger.error('required inputs were not generated')
             raise WorkflowNextStepError('required inputs do not exist')
 
         # Create job_descriptions for new step
-        getattr(init_cli_instance, init_args.method_name)()
+        getattr(init_prog, init_args.method_name)()
 
         # Store the expected outputs to be later able to check whether they
         # were actually generated
-        self.expected_outputs.append(init_cli_instance.expected_outputs)
+        self.expected_outputs.append(init_prog.expected_outputs)
 
         # Build "submit" command
         submit_command = list()
@@ -154,11 +235,11 @@ class Workflow(SequentialTaskCollection, StopOnError):
         if self.virtualenv:
             submit_command.extend(['--virtualenv', self.virtualenv])
 
-        parser = self._get_argparser(prog_name)
+        # Create submission program
         submit_args = parser.parse_args(submit_command[1:])
-        submit_cli_instance = getattr(module, class_name)(submit_args)
-        # The "jobs" attribute returns a SequentialTaskCollection
-        return submit_cli_instance.jobs
+        submit_prog = prog(submit_args)
+        # Return "jobs" (gc3libs.workflow.SequentialTaskCollection)
+        return submit_prog.jobs
 
     def _add_step(self, index):
         if index > 0:
@@ -168,7 +249,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
                              'outputs of previous step do not exist')
         logger.debug('create job descriptions for next step')
         init_command = self.commands[index]
-        logger.debug('create jobs for next step and add them to the task list')
+        logger.debug('add jobs to the task list')
         task = self._create_jobs_for_step(init_command)
         self.tasks.append(task)
 
