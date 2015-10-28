@@ -211,7 +211,7 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
     def tearDown(self):
         self.tearDownPyfakefs()
 
-    def test_initialization_without_setting_directories(self):
+    def test_initialize_without_setting_directories(self):
         config_settings = {
             'sources_dir': None,
             'plates_dir': None,
@@ -230,7 +230,7 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
         expected_layers_dir = os.path.join(self.experiment_dir, 'layers')
         self.assertEqual(config.layers_dir, expected_layers_dir)
 
-    def test_initialization_with_setting_directories(self):
+    def test_initialize_with_setting_directories(self):
         expected_sources_dir = os.path.join(self.data_location, 'sources')
         expected_plates_dir = os.path.join(self.data_location, 'plates')
         expected_layers_dir = os.path.join(self.data_location, 'layers')
