@@ -140,12 +140,14 @@ class MetadataConfigurator(ClusterRoutines):
         job_descriptions['collect'] = {
             'inputs': {
                 'metadata_files': [
-                    os.path.join(acquisition.dir, acquisition.image_metadata_file)
+                    os.path.join(acquisition.dir,
+                                 acquisition.image_metadata_file)
                     for source in self.experiment.sources
                     for acquisition in source.acquisitions
                 ],
                 'mapper_files': [
-                    os.path.join(acquisition.dir, acquisition.image_mapper_file)
+                    os.path.join(acquisition.dir,
+                                 acquisition.image_mapper_file)
                     for source in self.experiment.sources
                     for acquisition in source.acquisitions
                 ]
@@ -153,8 +155,14 @@ class MetadataConfigurator(ClusterRoutines):
             'outputs': {
                 'plates_dir': [
                     self.experiment.plates_dir
+                ],
+                'mapper_files': [
+                    os.path.join(source.dir,
+                                 source.image_mapper_file)
+                    for source in self.experiment.sources
                 ]
-            }
+            },
+            'removals': ['mapper_files']
         }
 
         return job_descriptions
@@ -449,8 +457,7 @@ class MetadataConfigurator(ClusterRoutines):
                     cycle_count += 1
 
                 with JsonWriter() as writer:
-                    filename = os.path.join(source.dir,
-                                            source.image_mapper_file)
+                    filename = batch['outputs']['mapper_files'][i]
                     data = plate_file_mapper
                     writer.write(filename, data)
 

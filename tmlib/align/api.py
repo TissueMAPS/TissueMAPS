@@ -102,7 +102,8 @@ class ImageRegistration(ClusterRoutines):
             },
             'outputs': {
                 'align_descriptor_files': list()
-            }
+            },
+            'removals': ['registration_files']
         }
         for plate in self.experiment.plates:
             md = plate.cycles[0].image_metadata_table.sort('site_ix')
