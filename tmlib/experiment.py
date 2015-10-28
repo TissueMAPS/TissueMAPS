@@ -57,7 +57,14 @@ class Experiment(object):
 
         See also
         --------
-        :mod:`tmlib.cfg`
+        :mod:`tmlib.cfg.UserConfiguration`
+
+        Raises
+        ------
+        OSError
+            when `experiment_dir` does not exist
+        ValueError
+            when `library` is not specified correctly
 
         Note
         ----
@@ -67,6 +74,8 @@ class Experiment(object):
         self.experiment_dir = os.path.expandvars(experiment_dir)
         self.experiment_dir = os.path.expanduser(self.experiment_dir)
         self.experiment_dir = os.path.abspath(self.experiment_dir)
+        if not os.path.exists(self.experiment_dir):
+            raise OSError('Experiment directory does not exist')
         self.library = library
         if self.library not in {'vips', 'numpy'}:
             raise ValueError(

@@ -463,6 +463,10 @@ class UserConfiguration(object):
     def __iter__(self):
         for attr in dir(self):
             if attr in self.PERSISTENT_ATTRS:
+                if not hasattr(self, attr):
+                    raise AttributeError(
+                            '"%s" object has no attribute "%s"'
+                            % (self.__class__.__name__, attr))
                 value = getattr(self, attr)
                 if attr == 'workflow':
                     value = dict(value)

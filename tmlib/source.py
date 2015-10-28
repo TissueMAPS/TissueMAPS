@@ -191,6 +191,43 @@ class PlateAcquisition(object):
         '''
         return self.acquisition_dir
 
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the acquisition folder
+        '''
+        return os.path.basename(self.dir)
+
+    @property
+    def index(self):
+        '''
+        An *acquisition* has a zero-based `index` based on the order in which
+        acquisitions were added.
+        It is encoded in the name of the *acquisition* folder and is retrieved
+        from it using a regular expression.
+
+        Returns
+        -------
+        int
+            zero-based acquisition index
+
+        Raises
+        ------
+        RegexError
+            when `index` cannot not be determined from folder name
+        '''
+        regexp = utils.regex_from_format_string(self.ACQUISITION_DIR_FORMAT)
+        match = re.search(regexp, self.name)
+        if not match:
+            raise RegexError(
+                    'Can\'t determine cycle id number from folder "%s" '
+                    'using format "%s" provided by the configuration settings.'
+                    % (self.name, self.CYCLE_DIR_FORMAT))
+        return int(match.group('index'))
+
     @cached_property
     def image_dir(self):
         '''

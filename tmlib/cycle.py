@@ -34,7 +34,7 @@ class Cycle(object):
     :mod:`tmlib.experiment.Experiment`
     '''
 
-    CYCLE_DIR_FORMAT = 'cycle_{cycle_ix:0>2}'
+    CYCLE_DIR_FORMAT = 'cycle_{index:0>2}'
 
     STATS_FILE_FORMAT = 'channel_{channel_ix}.stat.h5'
 
@@ -126,7 +126,7 @@ class Cycle(object):
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
                     % (self.name, self.CYCLE_DIR_FORMAT))
-        return int(match.group('cycle_ix'))
+        return int(match.group('index'))
 
     @property
     def experiment_dir(self):
