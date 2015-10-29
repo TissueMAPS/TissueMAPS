@@ -11,17 +11,17 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         self.setUpPyfakefs()
         self.data_location = '/testdir'
         os.mkdir(self.data_location)
-        self.experiment_name = '150820-Testset-CV'
+        # Create an experiment on the fake file system
+        self.experiment_name = 'testExperiment'
         self.experiment_dir = os.path.join(
                                 self.data_location,
                                 self.experiment_name)
         os.mkdir(self.experiment_dir)  # on the fake filesystem
-        # Create an experiment on the fake file system
         # Create directory for uploaded files
         self.sources_dir = os.path.join(self.experiment_dir, 'sources')
         os.mkdir(self.sources_dir)
         # Add one uploaded plate with one acquisition
-        self.plate_source_name = 'defaultPlate'
+        self.plate_source_name = 'testPlate'
         self.plate_source_dir = os.path.join(
                                 self.sources_dir,
                                 'plate_%s' % self.plate_source_name)
@@ -48,6 +48,9 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         # Create directory for created pyramids
         self.layers_dir = os.path.join(self.experiment_dir, 'layers')
         os.mkdir(self.layers_dir)
+        # Create a data file
+        self.data_file = 'data.h5'
+        # Create a user configuration settings file
         self.user_cfg_settings = {
             'sources_dir': self.sources_dir,
             'plates_dir': self.plates_dir,
@@ -86,14 +89,15 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         self.assertEqual(exp.sources_dir, self.sources_dir)
         self.assertEqual(exp.plates_dir, self.plates_dir)
         self.assertEqual(exp.layers_dir, self.layers_dir)
+        self.assertEqual(exp.data_file, self.data_file)
         self.assertEqual(dict(exp.user_cfg), self.user_cfg_settings)
 
-    def test_initialize_without_providing_user_cfg(self):
+    def test_initialize_experiment_without_user_cfg(self):
         exp = Experiment(self.experiment_dir)
         self._test_basic_attributes(exp)
         self.assertEqual(exp.library, 'vips')
 
-    def test_initialize_with_providing_user_cfg(self):
+    def test_initialize_experiment_with_user_cfg(self):
         user_cfg = cfg.UserConfiguration(
                         experiment_dir=self.experiment_dir,
                         cfg_settings=self.user_cfg_settings)
@@ -101,7 +105,7 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         self._test_basic_attributes(exp)
         self.assertEqual(exp.library, 'vips')
 
-    def test_initialize_with_specifying_library(self):
+    def test_initialize_experiment_with_library(self):
         exp = Experiment(self.experiment_dir, library='vips')
         self._test_basic_attributes(exp)
         self.assertEqual(exp.library, 'vips')
@@ -111,7 +115,7 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         with self.assertRaises(ValueError):
             Experiment(self.experiment_dir, library='bla')
 
-    def test_sources_attribute(self):
+    def test_experiment_sources_attribute(self):
         exp = Experiment(self.experiment_dir)
         self.assertEqual(len(exp.sources), 1)
         self.assertEqual(exp.sources[0].dir, self.plate_source_dir)
@@ -122,7 +126,7 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         self.assertEqual(exp.sources[0].acquisitions[0].index,
                          self.acquisition_index)
 
-    def test_plates_attribute(self):
+    def test_experiment_plates_attribute(self):
         exp = Experiment(self.experiment_dir)
         self.assertEqual(len(exp.plates), 1)
         self.assertEqual(exp.plates[0].dir, self.plate_dir)
@@ -131,11 +135,13 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         self.assertEqual(exp.plates[0].cycles[0].dir, self.cycle_dir)
         self.assertEqual(exp.plates[0].cycles[0].index, self.cycle_index)
 
-    def test_adding_plate(self):
+    def test_experiment_adding_plate(self):
         exp = Experiment(self.experiment_dir)
         new_plate_name = 'newPlate'
         exp.add_plate(new_plate_name)
         self.assertEqual(len(exp.plates), 2)
-        self.assertEqual(exp.plates[1].name, new_plate_name)
-        self.assertEqual(len(exp.plates[1].cycles), 0)
+        ix = [p.name for p in exp.plates].index(new_plate_name)
+        self.assertEqual(exp.plates[ix].name, new_plate_name)
+        self.assertEqual(len(exp.plates[ix].cycles), 0)
+
 

@@ -24,13 +24,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         self.assertEqual(step.name, description['name'])
         self.assertEqual(step.args, description['args'])
 
-        wrong_description = {
-            'name': 'bla',
-            'args': list()
-        }
-        with self.assertRaises(TypeError):
-            WorkflowStepDescription(description=wrong_description)
-
+    def test_wrong_name_type(self):
         wrong_description = {
             'name': 1,
             'args': list()
@@ -38,6 +32,15 @@ class TestWorkflowStepDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowStepDescription(description=wrong_description)
 
+    def test_wrong_arg_type_1(self):
+        wrong_description = {
+            'name': 'bla',
+            'args': list()
+        }
+        with self.assertRaises(TypeError):
+            WorkflowStepDescription(description=wrong_description)
+
+    def test_wrong_arg_type_2(self):
         wrong_description = {
             'name': 'bla',
             'args': {1: 'blabla'}
@@ -45,6 +48,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowStepDescription(description=wrong_description)
 
+    def test_wrong_arg_type_3(self):
         wrong_description = {
             'name': 'bla',
             'args': {'blabla': None}
@@ -87,6 +91,7 @@ class TestWorkflowStageDescription(unittest.TestCase):
             [isinstance(s, WorkflowStepDescription) for s in stage.steps]
         ))
 
+    def test_wrong_steps_type_1(self):
         wrong_description = {
             'name': 'bla',
             'steps': list()
@@ -94,11 +99,12 @@ class TestWorkflowStageDescription(unittest.TestCase):
         with self.assertRaises(ValueError):
             WorkflowStageDescription(description=wrong_description)
 
+    def test_wrong_steps_type_2(self):
         wrong_description = {
             'name': 'bla',
             'steps': ['blabla']
         }
-        with self.assertRaises(TypeError):
+        with self.assertRaises(KeyError):
             WorkflowStageDescription(description=wrong_description)
 
     def test_return_description(self):
