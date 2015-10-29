@@ -131,8 +131,8 @@ def readme():
 
 
 def get_version():
-    src_path = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'src')
-    sys.path.append(src_path)
+    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'src')
+    sys.path = [src_path] + sys.path
     import tmlib.version
     return tmlib.version.__version__
 
