@@ -159,6 +159,7 @@ class MetadataConfigurator(ClusterRoutines):
                                          acquisition.image_mapper_file)
                         ]
                     },
+                    'file_format': file_format,
                     'z_stacks': z_stacks,
                     'plate': source.name,
                     'regex': regex,
@@ -240,7 +241,7 @@ class MetadataConfigurator(ClusterRoutines):
         :mod:`tmlib.metaconfig.cellvoyager`
         :mod:`tmlib.metaconfig.visiview`
         '''
-        handler_class = self._handler_factory(batch['format'])
+        handler_class = self._handler_factory(batch['file_format'])
         handler = handler_class(
                             batch['inputs']['uploaded_image_files'],
                             batch['inputs']['uploaded_additional_files'],
@@ -390,7 +391,9 @@ class MetadataConfigurator(ClusterRoutines):
                     # that belong to the currently processed cycle (time point)
                     cpla = cycle_metadata.PlatesDucktype(
                                     cycle_metadata.root_node).newPlate(
-                                        name=cycle.name)
+                                        name='{plate}_{cycle}'.format(
+                                                plate=cycle.plate_name,
+                                                cycle=cycle.index))
                     upla = metadata.plates[0]
                     cpla.RowNamingConvention = upla.RowNamingConvention
                     cpla.ColumnNamingConvention = upla.ColumnNamingConvention
