@@ -3,7 +3,7 @@ import numpy as np
 import logging
 from collections import defaultdict
 from ..readers import BioformatsImageReader
-from ..cluster import ClusterRoutines
+from ..api import ClusterRoutines
 from ..writers import ImageWriter
 
 logger = logging.getLogger(__name__)

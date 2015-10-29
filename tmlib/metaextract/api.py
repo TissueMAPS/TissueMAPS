@@ -3,7 +3,7 @@ import re
 import shutil
 from glob import glob
 from natsort import natsorted
-from ..cluster import ClusterRoutines
+from ..api import ClusterRoutines
 
 
 class MetadataExtractor(ClusterRoutines):

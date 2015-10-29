@@ -8,7 +8,7 @@ from .descriptions import AlignmentDescription
 from .descriptions import OverhangDescription
 from .descriptions import ShiftDescription
 from ..writers import JsonWriter
-from ..cluster import ClusterRoutines
+from ..api import ClusterRoutines
 from ..errors import NotSupportedError
 
 logger = logging.getLogger(__name__)

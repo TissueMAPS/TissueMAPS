@@ -4,7 +4,7 @@ import logging
 from .stats import OnlineStatistics
 from ..writers import DatasetWriter
 from ..readers import NumpyImageReader
-from ..cluster import ClusterRoutines
+from ..api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
 

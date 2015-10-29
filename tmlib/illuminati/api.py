@@ -2,7 +2,7 @@ import os
 import logging
 import numpy as np
 from ..layers import ChannelLayer
-from ..cluster import ClusterRoutines
+from ..api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
 

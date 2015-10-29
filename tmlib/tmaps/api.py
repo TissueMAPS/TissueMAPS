@@ -1,6 +1,6 @@
 import os
 import logging
-from ..cluster import BasicClusterRoutines
+from ..api import BasicClusterRoutines
 
 logger = logging.getLogger(__name__)
 

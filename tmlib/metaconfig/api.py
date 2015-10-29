@@ -10,7 +10,7 @@ from .. import utils
 from .. import cfg
 from ..plate import determine_plate_dimensions
 from ..metadata import ImageFileMapper
-from ..cluster import ClusterRoutines
+from ..api import ClusterRoutines
 from ..writers import JsonWriter
 from ..writers import XmlWriter
 from ..errors import NotSupportedError

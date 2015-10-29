@@ -15,7 +15,7 @@ from .checkers import PipelineChecker
 from .. import utils
 from .. import image_utils
 from ..readers import YamlReader
-from ..cluster import ClusterRoutines
+from ..api import ClusterRoutines
 from ..errors import PipelineDescriptionError
 from ..writers import DatasetWriter
 
