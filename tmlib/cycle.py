@@ -389,11 +389,12 @@ class Cycle(object):
                 md.tpoint_ix = self.index
                 md.filename = f
             else:
-                raise RegexError('Can\'t determine channel and cycle number '
-                                  'from illumination statistic file "%s" '
-                                  'using provided format "%s".\n'
-                                  'Check your configuration settings!'
-                                  % (f, self.STATS_FILE_FORMAT))
+                raise RegexError(
+                        'Can\'t determine channel and cycle number '
+                        'from illumination statistic file "%s" '
+                        'using provided format "%s".\n'
+                        'Check your configuration settings!'
+                        % (f, self.STATS_FILE_FORMAT))
             illumstats_metadata.append(md)
         return illumstats_metadata
 

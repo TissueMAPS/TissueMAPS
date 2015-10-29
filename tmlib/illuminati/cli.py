@@ -49,23 +49,13 @@ class Illuminati(CommandLineInterface):
         return self.__api_instance
 
     @property
-    def init_args(self):
-        '''
-        Returns
-        -------
-        dict
-            additional variable arguments for the `init` method
-
-        See also
-        --------
-        :mod:`tmlib.illuminati.argparser`
-        '''
+    def _init_args(self):
         kwargs = dict()
-        kwargs['shift'] = self.args.shift
+        kwargs['align'] = self.args.align
         kwargs['illumcorr'] = self.args.illumcorr
-        kwargs['thresh'] = self.args.thresh
-        kwargs['thresh_value'] = self.args.thresh_value
-        kwargs['thresh_percent'] = self.args.thresh_percent
+        kwargs['clip'] = self.args.clip
+        kwargs['clip_value'] = self.args.clip_value
+        kwargs['clip_percent'] = self.args.clip_percent
         return kwargs
 
     @staticmethod

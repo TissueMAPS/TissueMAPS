@@ -7,7 +7,7 @@ class ImageMetadata(object):
     the relative position of the image within the acquisition grid.
     '''
 
-    PERSISTENT_ATTRS = {'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'}
+    _PERSISTENT_ATTRS = {'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'}
 
     def __init__(self):
         '''
@@ -331,7 +331,7 @@ class ChannelImageMetadata(ImageMetadata):
     a fluorescence microscope.
     '''
 
-    PERSISTENT_ATTRS = ImageMetadata.PERSISTENT_ATTRS.union({
+    _PERSISTENT_ATTRS = ImageMetadata._PERSISTENT_ATTRS.union({
         'channel_name', 'is_corrected', 'channel_ix'
     })
 
@@ -353,7 +353,7 @@ class ChannelImageMetadata(ImageMetadata):
         self.is_projected = False
         if metadata is not None:
             for key, value in metadata.iteritems():
-                if key in self.PERSISTENT_ATTRS:
+                if key in self._PERSISTENT_ATTRS:
                     setattr(self, key, value)
 
     @property
@@ -420,7 +420,7 @@ class ChannelImageMetadata(ImageMetadata):
         '''
         # TODO: site
         for attr in dir(self):
-            if attr in self.PERSISTENT_ATTRS:
+            if attr in self._PERSISTENT_ATTRS:
                 yield (attr, getattr(self, attr))
 
     def __str__(self):
@@ -436,7 +436,7 @@ class ImageFileMapper(object):
     will be stored upon extraction.
     '''
 
-    PERSISTENT_ATTRS = {
+    _PERSISTENT_ATTRS = {
         'files', 'series', 'planes',
         'ref_index', 'ref_file', 'ref_id'
     }
@@ -451,11 +451,11 @@ class ImageFileMapper(object):
         Returns
         -------
         tmlib.metadata.ImageFileMapper
-            object where `PERSISTENT_ATTRS` attributes where set with provided values
+            object where `_PERSISTENT_ATTRS` attributes where set with provided values
         '''
         if mapping is not None:
             for key, value in mapping.iteritems():
-                if key in self.PERSISTENT_ATTRS:
+                if key in self._PERSISTENT_ATTRS:
                     setattr(self, key, value)
 
     @property
@@ -569,7 +569,7 @@ class ImageFileMapper(object):
         -------
         dict
             key-value representation of the object
-            (only `PERSISTENT_ATTRS` attributes)
+            (only `_PERSISTENT_ATTRS` attributes)
 
         Examples
         --------
@@ -584,7 +584,7 @@ class ImageFileMapper(object):
         {'series': [0, 0], 'planes': [0, 1], 'ref_id': 'Image:0', 'ref_index': 0, 'filenames': ['a', 'b'], 'ref_name': 'c'}
         '''
         for attr in dir(self):
-            if attr not in self.PERSISTENT_ATTRS:
+            if attr not in self._PERSISTENT_ATTRS:
                 continue
             yield (attr, getattr(self, attr))
 

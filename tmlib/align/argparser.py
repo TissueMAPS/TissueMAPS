@@ -25,10 +25,10 @@ init_registration_group = init_parser.add_argument_group(
     'additional arguments for image registration')
 init_registration_group.add_argument(
     '--ref_cycle', type=int, required=True,
-    help='id of the reference cycle')
+    help='zero-based index of the reference cycle')
 init_registration_group.add_argument(
     '--ref_channel', type=int, required=True,
-    help='id of the reference channel')
+    help='zero-based index of the reference channel')
 init_registration_group.add_argument(
     '-l', '--limit', type=int, default=300,
     help='shift limit, i.e. maximally allowed shift in pixels (default: 300)')

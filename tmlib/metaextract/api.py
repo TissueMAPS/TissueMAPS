@@ -46,16 +46,9 @@ class MetadataExtractor(ClusterRoutines):
         return re.sub(r'(%s)$' % os.path.splitext(image_filename)[1],
                       '.ome.xml', image_filename)
 
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self):
         '''
         Create job descriptions for parallel computing.
-
-        Parameters
-        ----------
-        cfg_file: str
-            absolute path to custom configuration file
-        **kwargs: dict
-            no additional arguments used
 
         Returns
         -------

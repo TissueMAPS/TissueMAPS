@@ -1,7 +1,7 @@
 import os
 import logging
 import numpy as np
-from ..layers import ChannelLayer
+from ..layer import ChannelLayer
 from ..api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
@@ -31,24 +31,25 @@ class PyramidBuilder(ClusterRoutines):
         self.prog_name = prog_name
         self.verbosity = verbosity
 
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self, align, illumcorr, clip,
+                                clip_value=None, clip_percent=99.9):
         '''
         Create job descriptions for parallel computing.
 
         Parameters
         ----------
-        **kwargs: dict
-            additional arguments as key-value pairs:
-            * "shift": whether images should be shifted (*bool*)
-            * "illumcorr": whether images should be corrected for illumination
-              artifacts (*bool*)
-            * "thresh": whether images should be thresholded and rescaled
-              (*bool*)
-            * "thresh_value": fixed pixel value for threshold (*int*)
-            * "thresh_percent": percentage of pixel values below threshold
-              (*float*)
-            * "stitch_only": whether the stitched image should be saved and
-              no pyramid should be created (*bool*)
+        shift: bool
+            align images between cycles
+        illumcorr: bool
+            correct images for illumination artifacts
+        clip: bool
+            clip pixel values above a certain level to level value,
+            i.e. rescale images between minimum value and a defined clip level
+        clip_value: int, optional
+            define a fixed pixel value for clip level (default: ``None``)
+        clip_percent: int, optional
+            define percentage of pixel values below clip level
+            (default: ``99.9``)
 
         Returns
         -------
@@ -98,11 +99,11 @@ class PyramidBuilder(ClusterRoutines):
                         'cycle': cycle.index,
                         'channel': channel,
                         'zplane': zplane,
-                        'shift': kwargs['shift'],
-                        'illumcorr': kwargs['illumcorr'],
-                        'thresh': kwargs['thresh'],
-                        'thresh_value': kwargs['thresh_value'],
-                        'thresh_percent': kwargs['thresh_percent']
+                        'align': align,
+                        'illumcorr': illumcorr,
+                        'clip': clip,
+                        'clip_value': clip_value,
+                        'clip_percent': clip_percent
                     })
         return job_descriptions
 
@@ -118,12 +119,12 @@ class PyramidBuilder(ClusterRoutines):
         layer = ChannelLayer.create_from_files(
                     experiment=self.experiment, tpoint_ix=batch['cycle'],
                     channel_ix=batch['channel'], zplane_ix=batch['zplane'],
-                    illumcorr=batch['illumcorr'], shift=batch['shift'])
+                    illumcorr=batch['illumcorr'], align=batch['align'])
 
         if batch['thresh']:
             logger.info('threshold intensities')
-            layer = layer.clip(thresh_value=batch['thresh_value'],
-                               thresh_percent=batch['thresh_percent'])
+            layer = layer.clip(value=batch['clip_value'],
+                               percent=batch['clip_percent'])
 
         layer = layer.scale()
 

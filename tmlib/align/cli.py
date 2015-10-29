@@ -49,17 +49,7 @@ class Align(CommandLineInterface):
                 verbosity=self.args.verbosity)
 
     @property
-    def init_args(self):
-        '''
-        Returns
-        -------
-        dict
-            arguments that are parsed to the "init" method.
-
-        See also
-        --------
-        :py:mod:`tmlib.align.argparser`
-        '''
+    def _init_args(self):
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         kwargs['ref_cycle'] = self.args.ref_cycle
@@ -68,7 +58,7 @@ class Align(CommandLineInterface):
         return kwargs
 
     @property
-    def _variable_apply_args(self):
+    def _apply_args(self):
         kwargs = dict()
         kwargs['illumcorr'] = self.args.illumcorr
         return kwargs

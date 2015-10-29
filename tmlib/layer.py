@@ -40,7 +40,7 @@ class ChannelLayer(object):
 
     @staticmethod
     def create_from_files(experiment, tpoint_ix, channel_ix, zplane_ix,
-                          dx=0, dy=0, illumcorr=False, shift=False):
+                          dx=0, dy=0, illumcorr=False, align=False):
         '''
         Load individual images and stitch them together.
 
@@ -63,7 +63,7 @@ class ChannelLayer(object):
         illumcorr: bool, optional
             whether images should be corrected for illumination artifacts
             (default: ``False``)
-        shift: bool, optional
+        align: bool, optional
             whether images should be aligned between cycles
             (default: ``False``)
 
@@ -116,7 +116,7 @@ class ChannelLayer(object):
             )[0]
             images = [cycle.images[ix] for ix in index]
 
-            mosaic = Mosaic.create_from_images(images, dx, dy, None, shift)
+            mosaic = Mosaic.create_from_images(images, dx, dy, None, align)
             gap_size = 500
             # Column spacer: insert between two wells in each row
             # (and instead of a well in case the whole column is empty
@@ -188,7 +188,7 @@ class ChannelLayer(object):
                         )[0]
                         images = [cycle.images[ix] for ix in index]
                         mosaic = Mosaic.create_from_images(
-                                        images, dx, dy, stats, shift)
+                                        images, dx, dy, stats, align)
                         row_img = row_img.join(mosaic.array, 'horizontal')
 
                     # Add small vertical gab between wells
@@ -246,20 +246,17 @@ class ChannelLayer(object):
         scaled_image = self.mosaic.array.scale()
         return ChannelLayer(Mosaic(scaled_image), self.metadata)
 
-    def clip(self, thresh_value=None, thresh_percent=None):
+    def clip(self, value=None, percent=None):
         '''
         Clip (limit) the pixel values in the mosaic image.
 
-        Given a threshold level, values above threshold are set
-        to the threshold level.
-
         Parameters
         ----------
-        thresh_value: int
-            value for the threshold level
-        thresh_percent: int
-            percentile to calculate the threshold level,
-            e.g. if `thresh_percent` is 99.9% then 0.1% of pixels will lie
+        value: int
+            value for the clip level
+        percent: int
+            percentile to calculate the clip level,
+            e.g. if `percent` is 99.9% then 0.1% of pixels will lie
             above threshold
 
         Returns
@@ -267,10 +264,10 @@ class ChannelLayer(object):
         ChannelLayer
             clipped mosaic image
         '''
-        if not thresh_value:
+        if not value:
             # TODO: only consider non-empty wells
-            thresh_value = self.mosaic.array.percent(thresh_percent)
-        lut = image_utils.create_thresholding_LUT(thresh_value)
+            value = self.mosaic.array.percent(percent)
+        lut = image_utils.create_thresholding_LUT(value)
         clipped_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(Mosaic(clipped_image), self.metadata)
 

@@ -132,17 +132,8 @@ class CommandLineInterface(object):
         pass
 
     @property
-    def init_args(self):
-        '''
-        Returns
-        -------
-        dict
-            additional variable arguments for the `init` method
-
-        See also
-        --------
-        :mod:`tmlib.illuminati.argparser`
-        '''
+    def _init_args(self):
+        # Explicit is better than implicit :)
         return dict()
 
     def _cleanup(self):
@@ -167,7 +158,7 @@ class CommandLineInterface(object):
     def cleanup(self):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments of the "cleanup" subparser.
+        and process arguments provided by the "cleanup" subparser.
         '''
         self._print_logo()
         self._cleanup()
@@ -175,7 +166,7 @@ class CommandLineInterface(object):
     def init(self):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments of the "init" subparser.
+        and process arguments provided by the "init" subparser.
 
         Returns
         -------
@@ -209,7 +200,7 @@ class CommandLineInterface(object):
             shutil.rmtree(api.status_dir)
 
         logger.info('create job descriptions')
-        job_descriptions = api.create_job_descriptions(**self.init_args)
+        job_descriptions = api.create_job_descriptions(**self._init_args)
         if self.args.print_job_descriptions:
             api.print_job_descriptions(job_descriptions)
         else:
@@ -220,7 +211,7 @@ class CommandLineInterface(object):
     def run(self):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments of the "run" subparser.
+        and process arguments provided by the "run" subparser.
         '''
         self._print_logo()
         api = self._api_instance
@@ -287,7 +278,7 @@ class CommandLineInterface(object):
     def submit(self):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments of the "submit" subparser.
+        and process arguments provided by the "submit" subparser.
         '''
         self._print_logo()
         api = self._api_instance
@@ -296,19 +287,8 @@ class CommandLineInterface(object):
         logger.info('submit and monitor jobs')
         api.submit_jobs(jobs, self.args.interval)
 
-    def kill(self):
-        '''
-        Initialize an instance of the API class corresponding to the program
-        and process arguments of the "kill" subparser.
-        '''
-        self._print_logo()
-        api = self._api_instance
-        jobs = self.get_jobs()
-        logger.info('kill jobs')
-        api.kill_jobs(jobs)
-
     @property
-    def _variable_apply_args(self):
+    def _apply_args(self):
         kwargs = dict()
         return kwargs
 
@@ -320,7 +300,7 @@ class CommandLineInterface(object):
         self._print_logo()
         api = self._api_instance
         logger.info('apply statistics')
-        kwargs = self._variable_apply_args
+        kwargs = self._apply_args
         api.apply_statistics(
                 output_dir=self.args.output_dir,
                 plates=self.args.plates,
@@ -383,22 +363,23 @@ class CommandLineInterface(object):
             init_parser = subparsers.add_parser(
                 'init', help='instantiate the program with required arguments')
             init_parser.description = '''
-                Initialize a step: Create a list of persistent job
-                descriptions (batches) for parallel processing, which are
-                stored as ".job" JSON files. Note that in
-                case of the existence of a previous submission, the job
-                description and log outputs files will be overwritten unless
-                the "--backup" or "--show" argument is specified.
+                Create a list of persistent job descriptions for parallel
+                processing, which are used to dynamically build GC3Pie jobs.
+                The descriptions are stored on disk in form of JSON files.
+                Note that in case of the existence of a previous submission,
+                job descriptions and log outputs will be overwritten
+                unless the "--backup" or "--show" argument is specified.
+                All outputs created by a previous submission will also be
+                removed!
             '''
             init_parser.add_argument(
                 '--show', action='store_true', dest='print_job_descriptions',
-                help='print job descriptions to standard output '
-                     'without writing them to file')
+                help='pretty print job descriptions to standard output '
+                     'without writing them to files')
             init_parser.add_argument(
                 '--backup', action='store_true',
-                help='create a backup of the output of a previous submission')
-            # NOTE: when additional arguments are provided, the property
-            # `arguments` has to be overwritten
+                help='create a backup of the job descriptions and log output '
+                     'of a previous submission')
 
         if 'run' in required_subparsers:
             run_parser = subparsers.add_parser(

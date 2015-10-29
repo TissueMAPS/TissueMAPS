@@ -53,6 +53,10 @@ class MetadataHandler(object):
             full paths to the XML files that contain the extracted OMEXML data
         plate_name: str
             name of the corresponding plate
+
+        Returns
+        -------
+        tmlib.metaconfig.default.MetadataHandler
         '''
         self.image_files = image_files
         self.additional_files = additional_files
@@ -79,7 +83,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        `tmlib.metareaders.DefaultMetadataReader`_
+        :mod:`tmlib.metareaders.DefaultMetadataReader`
         '''
         self._ome_image_metadata = dict()
         logger.info('read OMEXML metadata extracted from image files')
@@ -345,9 +349,9 @@ class MetadataHandler(object):
 
         See also
         --------
-        `tmlib.metaconfig.default.MetaDataHandler`_
-        `tmlib.metaconfig.visiview.VisiviewMetaDataHandler`_
-        `tmlib.metaconfig.cellvoyager.CellvoyagerMetaDataHandler`_
+        :mod:`tmlib.metaconfig.default.MetaDataHandler`
+        :mod:`tmlib.metaconfig.visiview.VisiviewMetaDataHandler`
+        :mod:`tmlib.metaconfig.cellvoyager.CellvoyagerMetaDataHandler`
         '''
         if self.ome_additional_metadata.image_count == 0:
             # One image is always added by default.
@@ -497,7 +501,7 @@ class MetadataHandler(object):
 
         Raises
         ------
-        MetadataError
+        tmlib.errors.MetadataError
             when image files contain more than more plane, since this case
             wouldn't allow a 1-to-1 mapping of information from filename to
             image plane
@@ -610,7 +614,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        `illuminati.stitch.calc_grid_coordinates_from_positions`_
+        :mod:`illuminati.stitch.calc_grid_coordinates_from_positions`
         '''
         # Retrieve the stage positions for each pixel array.
         positions = list()
@@ -676,8 +680,8 @@ class MetadataHandler(object):
 
         See also
         --------
-        `illuminati.stitch.guess_stitch_dimensions`_
-        `illuminati.stitch.calc_grid_coordinates_from_layout`_
+        :mod:`illuminati.stitch.guess_stitch_dimensions`
+        :mod:`illuminati.stitch.calc_grid_coordinates_from_layout`
         '''
         plate = self.metadata.plates[0]
 
@@ -913,10 +917,6 @@ class MetadataHandler(object):
         -------
         bioformats.OMEXML
             metadata with an image element for each ultimately extracted image
-
-        See also
-        --------
-        `tmlib.cfg`_
         '''
         logger.info('build names for final image files')
         for i in xrange(self.metadata.image_count):
@@ -1006,6 +1006,10 @@ class DefaultMetadataHandler(MetadataHandler):
             full paths to the XML files that contain the extracted OMEXML data
         plate_name: str
             name of the corresponding plate
+
+        Returns
+        -------
+        tmlib.metaconfig.default.DefaultMetadataHandler
         '''
         super(DefaultMetadataHandler, self).__init__(
                 image_files, additional_files, omexml_files, plate_name)
@@ -1061,7 +1065,7 @@ class DefaultMetadataReader(MetadataReader):
 
         Raises
         ------
-        NotSupportedError
+        tmlib.errors.NotSupportedError
             when the file format is not supported
         '''
         # ome_xml_data = bf.get_omexml_metadata(filename)

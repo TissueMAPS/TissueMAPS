@@ -49,14 +49,9 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         return self.experiment.plates[0].cycles[0].STATS_FILE_FORMAT
 
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self):
         '''
         Create job descriptions for parallel computing.
-
-        Parameters
-        ----------
-        **kwargs: dict
-            empty - no additional arguments
 
         Returns
         -------

@@ -59,7 +59,7 @@ class MetadataConfigurator(ClusterRoutines):
 
         Raises
         ------
-        NotSupportedError
+        tmlib.errors.NotSupportedError
             when `file_format` is not supported
         '''
         super(MetadataConfigurator, self).__init__(
@@ -79,22 +79,50 @@ class MetadataConfigurator(ClusterRoutines):
         '''
         return cfg.IMAGE_NAME_FORMAT
 
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self, file_format, z_stacks,
+                                regex=None,
+                                stitch_vertical=None,
+                                stitch_horizontal=None,
+                                stitch_major_axis='vertical',
+                                stitch_layout='zigzag_horizontal'):
         '''
         Create job descriptions for parallel computing.
 
         Parameters
         ----------
-        **kwargs: dict
-            no additional arguments used
+        file_format: str
+            microscope-specific file format for which custom
+            readers are available (default: "default")
+        z_stacks: bool
+            if individual focal planes should be kept,
+            i.e. no intensity projection performed
+        regex: str
+            named regular expression that defines group names "(?P<name>...)"
+            for retrieval of metadata from image filenames
+        stitch_vertical: int, optional
+            number of images along the vertical axis of each stitched mosaic
+        stitch_horizontal: int, optional
+            number of images along the horizontal axis of each stitched mosaic
+        stitch_major_axis: str, optional
+            specify which axis of the stitched mosaic image is longer
+            (default: "vertical")
+        stitch_layout: str, optional
+            layout of the stitched mosaic image, i.e. the order in
+            which images are arrayed on the grid
+            (choices: "horizontal", "zigzag_horizontal", "vertical",
+             "zigzag_vertical"; default: "zigzag_horizontal")
 
         Returns
         -------
         Dict[str, List[dict] or dict]
             job descriptions
+
+        See also
+        --------
+        :mod:`tmlib.metaconfig.argparser`
         '''
-        if kwargs['format'] != 'default':
-            if kwargs['format'] not in Formats.SUPPORT_FOR_ADDITIONAL_FILES:
+        if file_format != 'default':
+            if file_format not in Formats.SUPPORT_FOR_ADDITIONAL_FILES:
                 raise NotSupportedError(
                         'The specified format is not supported.\n'
                         'Possible options are: "%s"'.format(
@@ -131,10 +159,14 @@ class MetadataConfigurator(ClusterRoutines):
                                          acquisition.image_mapper_file)
                         ]
                     },
-                    'z_stacks': kwargs['z_stacks'],
-                    'plate': source.name
+                    'z_stacks': z_stacks,
+                    'plate': source.name,
+                    'regex': regex,
+                    'stitch_major_axis': stitch_major_axis,
+                    'stitch_vertical': stitch_vertical,
+                    'stitch_horizontal': stitch_horizontal,
+                    'stitch_layout': stitch_layout
                 }
-                description.update(kwargs)
                 job_descriptions['run'].append(description)
 
         job_descriptions['collect'] = {

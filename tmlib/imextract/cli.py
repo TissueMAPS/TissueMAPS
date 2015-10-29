@@ -53,17 +53,7 @@ class Imextract(CommandLineInterface):
                 verbosity=self.args.verbosity)
 
     @property
-    def init_args(self):
-        '''
-        Returns
-        -------
-        dict
-            additional variable arguments for the `init` method
-
-        See also
-        --------
-        :mod:`tmlib.imextract.argparser`
-        '''
+    def _init_args(self):
         kwargs = dict()
         kwargs['batch_size'] = self.args.batch_size
         return kwargs

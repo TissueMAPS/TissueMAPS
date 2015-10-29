@@ -19,20 +19,21 @@ init_parser = subparsers.choices['init']
 init_stitch_group = init_parser.add_argument_group(
     'additional arguments for processing of the stitched mosaic image')
 init_stitch_group.add_argument(
-    '-s', '--shift', action='store_true',
-    help='shift stitched image')
+    '-a', '--align', action='store_true',
+    help='align images between cycles')
 init_stitch_group.add_argument(
     '-i', '--illumcorr', action='store_true',
-    help='correct images for illumination artifacts before stitching')
+    help='correct images for illumination artifacts')
 init_stitch_group.add_argument(
-    '-t', '--thresh', action='store_true',
-    help='rescale pixel values between min value and a threshold level')
+    '-c', '--clip', action='store_true',
+    help='clip pixel values above a certain level to level value, '
+         'i.e. rescale images between min value and a clip level')
 init_stitch_group.add_argument(
-    '--thresh_value', type=int, default=None,
-    help='fixed pixel value for threshold')
+    '--clip_value', type=int, default=None,
+    help='define a fixed pixel value for clip level')
 init_stitch_group.add_argument(
-    '--thresh_percent', type=float, default=99.9,
-    help='percentage of pixel values below threshold (default: 99.9)')
+    '--clip_percent', type=float, default=99.9,
+    help='define percentage of pixel values below clip level (default: 99.9)')
 
 for name in subparsers.choices:
     subparsers.choices[name].set_defaults(handler=Illuminati.call)

@@ -18,17 +18,18 @@ parser.description = '''
 parser.version = __version__
 
 init_parser = subparsers.choices['init']
+
 init_auto_group = init_parser.add_argument_group(
     'arguments for automatic configuration')
 init_auto_group.add_argument(
-    '-f', '--format', type=str, default='default',
+    '-f', '--file_format', type=str, default='default',
     choices=Formats.SUPPORT_FOR_ADDITIONAL_FILES,
     help='microscope-specific file format for which custom '
          'readers are available (default: "default")')
 init_auto_group.add_argument(
     '-z', '--z_stacks', action='store_true',
     help='if individual focal planes should be kept, '
-         'i.e. no intensity project performed')
+         'i.e. no intensity projection performed')
 
 init_manual_group = init_parser.add_argument_group(
     'arguments for manual configuration')

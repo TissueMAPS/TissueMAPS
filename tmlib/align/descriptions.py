@@ -7,7 +7,7 @@ class AlignmentDescription(object):
     align images between cycles.
     '''
 
-    PERSISTENT_ATTRS = {'cycle_ix', 'ref_cycle_ix', 'overhang', 'shift'}
+    _PERSISTENT_ATTRS = {'cycle_ix', 'ref_cycle_ix', 'overhang', 'shift'}
 
     def __init__(self, description=None):
         '''
@@ -38,7 +38,7 @@ class AlignmentDescription(object):
                 if key == 'overhang':
                     overhang = OverhangDescription()
                     for k, v in value.iteritems():
-                        if k in overhang.PERSISTENT_ATTRS:
+                        if k in overhang._PERSISTENT_ATTRS:
                             setattr(overhang, k, v)
                     setattr(self, 'overhang', overhang)
 
@@ -47,13 +47,13 @@ class AlignmentDescription(object):
                     for element in value:
                         shift = ShiftDescription()
                         for k, v in element.iteritems():
-                            if k in shift.PERSISTENT_ATTRS:
+                            if k in shift._PERSISTENT_ATTRS:
                                 setattr(shift, k, v)
                         shifts.append(shift)
                     setattr(self, 'shifts', shifts)
 
                 else:
-                    if value in self.PERSISTENT_ATTRS:
+                    if value in self._PERSISTENT_ATTRS:
                         setattr(self, key, value)
 
     @property
@@ -150,7 +150,7 @@ class AlignmentDescription(object):
                 for i, sh in enumerate(shifts):
                     shift_description.append(dict())
                     for a in dir(sh):
-                        if a in ShiftDescription.PERSISTENT_ATTRS:
+                        if a in ShiftDescription._PERSISTENT_ATTRS:
                             shift_description[i][a] = getattr(sh, a)
                 yield (attr, shift_description)
 
@@ -160,12 +160,12 @@ class AlignmentDescription(object):
                 for a in dir(oh):
                     if a.startswith('_') or a.isupper():
                             continue
-                    if a in oh.PERSISTENT_ATTRS:
+                    if a in oh._PERSISTENT_ATTRS:
                         overhang_description[a] = getattr(oh, a)
                 yield (attr, overhang_description)
 
             else:
-                if attr in self.PERSISTENT_ATTRS:
+                if attr in self._PERSISTENT_ATTRS:
                     yield (attr, getattr(self, attr))
 
 
@@ -177,7 +177,7 @@ class OverhangDescription(object):
     between all images of an experiment. 
     '''
 
-    PERSISTENT_ATTRS = {'lower', 'upper', 'right', 'left'}
+    _PERSISTENT_ATTRS = {'lower', 'upper', 'right', 'left'}
 
     @property
     def lower(self):
@@ -266,7 +266,7 @@ class ShiftDescription(object):
     for images of the reference cycle.
     '''
 
-    PERSISTENT_ATTRS = {'site_ix', 'x', 'y', 'is_above_limit'}
+    _PERSISTENT_ATTRS = {'site_ix', 'x', 'y', 'is_above_limit'}
 
     @property
     def site_ix(self):

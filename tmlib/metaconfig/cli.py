@@ -45,20 +45,10 @@ class Metaconfig(CommandLineInterface):
         return self.__class__.__name__.lower()
 
     @property
-    def init_args(self):
-        '''
-        Returns
-        -------
-        dict
-            additional variable arguments for the `init` method
-
-        See also
-        --------
-        :mod:`tmlib.metaconfig.argparser`
-        '''
+    def _init_args(self):
         kwargs = dict()
-        kwargs['format'] = self.args.format
-        kwargs['z_stacks'] = self.args.format
+        kwargs['file_format'] = self.args.file_format
+        kwargs['z_stacks'] = self.args.z_stacks
         kwargs['regex'] = self.args.regex
         kwargs['stitch_layout'] = self.args.stitch_layout
         kwargs['stitch_major_axis'] = self.args.stitch_major_axis

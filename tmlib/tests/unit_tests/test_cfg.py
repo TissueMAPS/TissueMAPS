@@ -15,7 +15,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_initialize_with_description(self):
+    def test_initialize_with_correct_description_1(self):
         description = {
             'name': 'bla',
             'args': dict()
@@ -24,7 +24,16 @@ class TestWorkflowStepDescription(unittest.TestCase):
         self.assertEqual(step.name, description['name'])
         self.assertEqual(step.args, description['args'])
 
-    def test_wrong_name_type(self):
+    def test_initialize_with_correct_description_2(self):
+        description = {
+            'name': 'bla',
+            'args': None
+        }
+        step = WorkflowStepDescription(description=description)
+        self.assertEqual(step.name, description['name'])
+        self.assertEqual(step.args, description['args'])
+
+    def test_initialize_with_incorrect_description_1(self):
         wrong_description = {
             'name': 1,
             'args': list()
@@ -32,7 +41,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowStepDescription(description=wrong_description)
 
-    def test_wrong_arg_type_1(self):
+    def test_initialize_with_incorrect_description_2(self):
         wrong_description = {
             'name': 'bla',
             'args': list()
@@ -40,7 +49,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowStepDescription(description=wrong_description)
 
-    def test_wrong_arg_type_2(self):
+    def test_initialize_with_incorrect_description_3(self):
         wrong_description = {
             'name': 'bla',
             'args': {1: 'blabla'}
@@ -48,7 +57,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowStepDescription(description=wrong_description)
 
-    def test_wrong_arg_type_3(self):
+    def test_initialize_with_incorrect_description_4(self):
         wrong_description = {
             'name': 'bla',
             'args': {'blabla': None}

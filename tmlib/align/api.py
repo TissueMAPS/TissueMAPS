@@ -65,29 +65,34 @@ class ImageRegistration(ClusterRoutines):
         self._reg_file_format_string = '{experiment}_{job}.reg.h5'
         return self._reg_file_format_string
 
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self, batch_size, ref_cycle, ref_channel,
+                                limit):
         '''
         Create job descriptions for parallel computing.
 
         Parameters
         ----------
-        **kwargs: dict
-            additional input arguments as key-value pairs:
-                * "batch_size": number of image acquisition sites that should
-                   be processed per job (*int*)
-                * "ref_channel": number of the image channel that should be
-                  used as a reference for image registration (*int*)
-                * "ref_cycle": number of the image channel that should be used
-                  as a reference for image registration (*int*)
+        batch_size: int
+            number of image files that should be registered per job
+        ref_cycle: int
+            zero-based index of the reference cycle
+        ref_channel: int
+            zero-based index of the reference channel
+        limit: int
+            shift limit, i.e. maximally allowed shift in pixels unit
 
         Returns
         -------
         Dict[str, List[dict] or dict]
             job descriptions
+
+        See also
+        --------
+        :mod:`tmlib.align.argparser`
         '''
         def get_targets(cycle):
             md = cycle.image_metadata_table.sort('site_ix')
-            ix = md['channel_ix'] == kwargs['ref_channel']
+            ix = md['channel_ix'] == ref_channel
             return md[ix]['name'].tolist()
 
         job_count = 0
@@ -95,8 +100,8 @@ class ImageRegistration(ClusterRoutines):
         job_descriptions['run'] = list()
         job_descriptions['collect'] = {
             'plates': list(),
-            'limit': kwargs['limit'],
-            'ref_cycle': kwargs['ref_cycle'],
+            'limit': limit,
+            'ref_cycle': ref_cycle,
             'inputs': {
                 'registration_files': list()
             },
@@ -113,14 +118,14 @@ class ImageRegistration(ClusterRoutines):
             # TODO: group images per site
             # (such that all z-planes end up in the same batch)
             im_batches = [
-                self._create_batches(get_targets(c), kwargs['batch_size'])
+                self._create_batches(get_targets(c), batch_size)
                 for c in plate.cycles
             ]
-            
-            ix = md['channel_ix'] == kwargs['ref_channel']
+
+            ix = md['channel_ix'] == ref_channel
             sites = md[ix]['site_ix'].tolist()
-            site_batches = self._create_batches(sites, kwargs['batch_size'])
-            
+            site_batches = self._create_batches(sites, batch_size)
+
             registration_batches = list()
             for i in xrange(len(im_batches[0])):
                 if any([i >= len(b) for b in im_batches]):
@@ -135,7 +140,7 @@ class ImageRegistration(ClusterRoutines):
                     'references': [
                         os.path.join(c.image_dir, b)
                         for j, c in enumerate(plate.cycles)
-                        if c.index == kwargs['ref_cycle']
+                        if c.index == ref_cycle
                         for b in im_batches[j][i]
                     ]
                 })

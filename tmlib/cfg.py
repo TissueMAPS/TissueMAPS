@@ -272,10 +272,11 @@ class WorkflowStepDescription(object):
     def args(self, value):
         if not(isinstance(value, dict) or value is None):
             raise TypeError('Attribute "args" must have type dict')
-        if not all([isinstance(k, basestring) for k, v in value.iteritems()]):
-            raise TypeError('Keys of "args" must have type basestring.')
-        if any([v is None for k, v in value.iteritems()]):
-            raise ValueError('Values of "args" must be specified.')
+        if value is not None:
+            if not all([isinstance(k, basestring) for k, v in value.iteritems()]):
+                raise TypeError('Keys of "args" must have type basestring.')
+            if any([v is None for k, v in value.iteritems()]):
+                raise ValueError('Values of "args" must be specified.')
         self._args = value
 
     def __iter__(self):
@@ -289,7 +290,7 @@ class UserConfiguration(object):
     Class for experiment-specific configuration settings provided by the user.
     '''
 
-    PERSISTENT_ATTRS = {
+    _PERSISTENT_ATTRS = {
         'sources_dir', 'plates_dir', 'layers_dir', 'plate_format', 'workflow'
     }
 
@@ -321,7 +322,7 @@ class UserConfiguration(object):
         self._plates_dir = None
         self._layers_dir = None
         for k, v in cfg_settings.iteritems():
-            if k in self.PERSISTENT_ATTRS:
+            if k in self._PERSISTENT_ATTRS:
                 if k == 'workflow':
                     v = WorkflowDescription(v)
                 setattr(self, k, v)
@@ -465,7 +466,7 @@ class UserConfiguration(object):
 
     def __iter__(self):
         for attr in dir(self):
-            if attr in self.PERSISTENT_ATTRS:
+            if attr in self._PERSISTENT_ATTRS:
                 if not hasattr(self, attr):
                     raise AttributeError(
                             '"%s" object has no attribute "%s"'

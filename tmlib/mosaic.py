@@ -106,7 +106,7 @@ class StichedImage(object):
         pass
 
     @abstractmethod
-    def create_from_images(images, dx=0, dy=0, stats=None, shift=None):
+    def create_from_images(images, dx=0, dy=0, stats=None, align=None):
         pass
 
 
@@ -141,7 +141,7 @@ class Mosaic(StichedImage):
         return grid
 
     @staticmethod
-    def create_from_images(images, dx=0, dy=0, stats=None, shift=False):
+    def create_from_images(images, dx=0, dy=0, stats=None, align=False):
         '''
         Create a Mosaic object from image objects.
 
@@ -158,7 +158,7 @@ class Mosaic(StichedImage):
         stats: IllumstatsImages, optional
             illumination statistics to correct images for
             illumination artifacts
-        shift: bool, optional
+        align: bool, optional
             whether images should be aligned between cycles
 
         Returns
@@ -183,7 +183,7 @@ class Mosaic(StichedImage):
                 img = grid[i, j]
                 if stats:
                     img = img.correct(stats)
-                if shift:
+                if align:
                     img = img.align(crop=False)
                 current_row.append(img.pixels.array)
             rows.append(reduce(lambda x, y:
@@ -223,7 +223,7 @@ class Collage(StichedImage):
         return grid
 
     @staticmethod
-    def create_from_images(images, dx=100, dy=100, stats=None, shift=None):
+    def create_from_images(images, dx=100, dy=100, stats=None, align=None):
         '''
         Create a Collage object from image objects.
 
@@ -242,8 +242,8 @@ class Collage(StichedImage):
         stats: IllumstatsImages, optional
             illumination statistics to correct images for
             illumination artifacts
-        shift: List[ShiftDescription], optional
-            shift descriptions, when provided images are aligned between
+        align: List[ShiftDescription], optional
+            align descriptions, when provided images are aligned between
             cycles
 
         Returns
@@ -296,7 +296,7 @@ class Collage(StichedImage):
                 img = grid[i, j]
                 if stats:
                     img = img.correct(stats)
-                if shift:
+                if align:
                     img = img.align(crop=False)
                 # pad image with zeros if necessary
                 height_diff = im_height - img.pixels.dimensions[0]

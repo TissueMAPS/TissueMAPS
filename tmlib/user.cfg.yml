@@ -27,9 +27,9 @@ workflow:
       steps:
         - name: illuminati
           args:
-            shift: Yes
+            align: Yes
             illumcorr: Yes
-            thresh: Yes
+            clip: Yes
     - name: image_analysis
       steps:
         - name: jterator_segment

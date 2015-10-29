@@ -2,6 +2,18 @@ import os
 import sys
 import h5py
 import logging
+'''
+All readers make use of the 
+`with statement context manager <https://docs.python.org/2/reference/datamodel.html#context-managers>`_.
+and follow a similar syntax::
+
+    with Reader('/path/to/folder') as reader:
+        data = reader.read('name_of_file')
+
+    with Reader() as reader:
+        data = reader.read('/path/to/file')
+'''
+
 import json
 import yaml
 import ruamel.yaml
@@ -15,21 +27,6 @@ from abc import abstractmethod
 from .errors import NotSupportedError
 
 logger = logging.getLogger(__name__)
-
-
-'''
-Reader classes.
-
-All readers make use of the 
-`with statement context manager <https://docs.python.org/2/reference/datamodel.html#context-managers>`_.
-and follow a similar syntax::
-
-    with Reader('/path/to/folder') as reader:
-        data = reader.read('name_of_file')
-
-    with Reader() as reader:
-        data = reader.read('/path/to/file')
-'''
 
 
 class Reader(object):

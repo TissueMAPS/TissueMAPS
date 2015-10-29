@@ -219,9 +219,10 @@ class BasicClusterRoutines(object):
 class ClusterRoutines(BasicClusterRoutines):
 
     '''
-    Abstract base class for cluster routines.
-    It provides a common framework for creation, submission and monitoring
-    of jobs via `GC3Pie <https://code.google.com/p/gc3pie/>`_.
+    Abstract base class for API classes.
+
+    It provides methods for standard cluster routines,
+    such as creation and submission of jobs.
     '''
 
     __metaclass__ = ABCMeta
@@ -241,7 +242,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Returns
         -------
-        tmlib.cluster.ClusterRoutines
+        tmlib.api.ClusterRoutines
         '''
         super(ClusterRoutines, self).__init__(experiment)
         self.experiment = experiment
@@ -525,7 +526,7 @@ class ClusterRoutines(BasicClusterRoutines):
         pass
 
     @abstractmethod
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self):
         '''
         Create job descriptions with information required for the creation and
         processing of individual jobs.
@@ -572,11 +573,6 @@ class ClusterRoutines(BasicClusterRoutines):
                         "removals":        # set
                     }
             }
-
-        Parameters
-        ----------
-        **kwargs: dict
-            additional variable input arguments as key-value pairs
 
         Returns
         -------
