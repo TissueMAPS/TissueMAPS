@@ -31,14 +31,6 @@ tmlib.illuminati.cli module
     :undoc-members:
     :show-inheritance:
 
-tmlib.illuminati.layers module
-------------------------------
-
-.. automodule:: tmlib.illuminati.layers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.illuminati.segment module
 -------------------------------
 

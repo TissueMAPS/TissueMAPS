@@ -138,22 +138,6 @@ tmlib.readers module
     :undoc-members:
     :show-inheritance:
 
-tmlib.setup module
-------------------
-
-.. automodule:: tmlib.setup
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.shift module
-------------------
-
-.. automodule:: tmlib.shift
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.utils module
 ------------------
 
