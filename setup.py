@@ -131,8 +131,8 @@ def readme():
 
 
 def get_version():
-    src_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-    sys.path.append(src_path)
+    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'src')
+    sys.path = [src_path] + sys.path
     import tmlib.version
     return tmlib.version.__version__
 
@@ -160,7 +160,17 @@ def get_requirements():
 
 scripts = []
 
-# packages = []
+packages = [
+    'tmlib',
+    'tmlib.imextract', 
+    'tmlib.jterator', 
+    'tmlib.metaextract', 
+    'tmlib.illuminati', 
+    'tmlib.corilla', 
+    'tmlib.metaconfig', 
+    'tmlib.tmaps', 
+    'tmlib.align',
+]
 
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
@@ -175,7 +185,6 @@ if package_data is None: package_data = find_package_data(packages)
 if scripts is None: scripts = find_scripts()
 
 
-print(get_requirements())
 
 setuptools.setup(
     name='tmlib',
@@ -197,9 +206,9 @@ setuptools.setup(
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS'
     ],
-    scripts=['tmlib'],
+    scripts=[],
     packages=packages,
-    package_dir={'': 'tmlib'},
+    package_dir={'': 'src'},
     package_data={'': ['*.rst']},
     # package_data=package_data,
     include_package_data=True,
