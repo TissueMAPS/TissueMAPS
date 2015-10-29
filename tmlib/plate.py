@@ -127,7 +127,14 @@ class Plate(object):
             and not d.startswith('.')
         ]
         cycle_dirs = natsorted(cycle_dirs)
-        return [Cycle(d, self.user_cfg, self.library) for d in cycle_dirs]
+        return [
+            Cycle(
+                cycle_dir=d,
+                plate_name=self.name,
+                user_cfg=self.user_cfg,
+                library=self.library)
+            for d in cycle_dirs
+        ]
 
     def add_cycle(self):
         '''
@@ -140,14 +147,18 @@ class Plate(object):
             configured cycle object
         '''
         cycle_index = len(self.cycles)
-        new_cycle_name = Cycle.CYCLE_DIR_FORMAT.format(cycle_ix=cycle_index)
+        new_cycle_name = Cycle.CYCLE_DIR_FORMAT.format(index=cycle_index)
         new_cycle_dir = os.path.join(self.dir, new_cycle_name)
         if os.path.exists(new_cycle_dir):
             raise OSError('Cycle "%s" already exists.')
         logger.debug('add cycle: %s', cycle_index)
         logger.debug('create directory for new cycle: %s', new_cycle_dir)
         os.mkdir(new_cycle_dir)
-        new_cycle = Cycle(new_cycle_dir, self.user_cfg, self.library)
+        new_cycle = Cycle(
+                      cycle_dir=new_cycle_dir,
+                      plate_name=self.name,
+                      user_cfg=self.user_cfg,
+                      library=self.library)
         self.cycles.append(new_cycle)
         return new_cycle
 
@@ -168,7 +179,7 @@ class Plate(object):
         ValueError
             when provided plate format is not supported
         '''
-        self._n_wells = self.user_cfg.number_of_wells
+        self._n_wells = self.user_cfg.plate_format
         if self._n_wells not in self.SUPPORTED_PLATE_FORMATS:
             raise ValueError(
                     'Well plate format must be either "%s"' % '" or "'.join(
@@ -211,7 +222,6 @@ class Plate(object):
             one-based index number for column position) for each imaged
             well of the plate
         '''
-        # TODO
         md = self.cycles[0].image_metadata_table
         self._wells = np.unique(md['well_name']).tolist()
         return self._wells

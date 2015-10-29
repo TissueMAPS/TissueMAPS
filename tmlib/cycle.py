@@ -38,7 +38,7 @@ class Cycle(object):
 
     STATS_FILE_FORMAT = 'channel_{channel_ix}.stat.h5'
 
-    def __init__(self, cycle_dir, user_cfg, library):
+    def __init__(self, cycle_dir, plate_name, user_cfg, library):
         '''
         Initialize an instance of class Cycle.
 
@@ -46,6 +46,8 @@ class Cycle(object):
         ----------
         cycle_dir: str
             absolute path to the cycle directory
+        plate_name: str
+            name of the corresponding plate
         user_cfg: Dict[str, str]
             additional user configuration settings
         library: str
@@ -66,6 +68,7 @@ class Cycle(object):
         :mod:`tmlib.cfg.UserConfiguration`
         '''
         self.cycle_dir = os.path.abspath(cycle_dir)
+        self.plate_name = plate_name
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
         self.user_cfg = user_cfg
@@ -80,26 +83,6 @@ class Cycle(object):
             absolute path to the cycle folder
         '''
         return self.cycle_dir
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the cycle folder
-        '''
-        return os.path.basename(self.dir)
-
-    @property
-    def plate_name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the plate to which images of this cycle belong
-        '''
-        return os.path.basename(os.path.dirname(self.dir))
 
     @property
     def index(self):
@@ -119,13 +102,14 @@ class Cycle(object):
         RegexError
             when `index` cannot not be determined from folder name
         '''
+        folder_name = os.path.basename(self.dir)
         regexp = utils.regex_from_format_string(self.CYCLE_DIR_FORMAT)
-        match = re.search(regexp, self.name)
+        match = re.search(regexp, folder_name)
         if not match:
             raise RegexError(
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
-                    % (self.name, self.CYCLE_DIR_FORMAT))
+                    % (folder_name, self.CYCLE_DIR_FORMAT))
         return int(match.group('index'))
 
     @property
@@ -237,7 +221,8 @@ class Cycle(object):
         '''
         metadata_file = os.path.join(self.dir, self.image_metadata_file)
         with XmlReader() as reader:
-            metadata = bioformats.OMEXML(reader.read(metadata_file))
+            omexml = reader.read(metadata_file)
+            metadata = bioformats.OMEXML(omexml)
         # Bring metadata into the following format: List[dict], which makes
         # it easy to convert it into a pandas.DataFrame
         formatted_metadata = list()
@@ -263,7 +248,7 @@ class Cycle(object):
                 # Collect list indices per unique acquisition site
                 site_mapper[(w, s.PositionY, s.PositionX)].append(count)
                 count += 1
-        # Add the acquisition site index "site_ix" to each image element 
+        # Add the acquisition site index "site_ix" to each image element
         sites = range(len(site_mapper))
         for i, indices in enumerate(site_mapper.values()):
             for ix in indices:
@@ -361,14 +346,10 @@ class Cycle(object):
         Raises
         ------
         OSError
-            when `stats_dir` does not exist or when no illumination statistic
-            files are found in `stats_dir`
+            when no illumination statistic files are found in `stats_dir`
         '''
         stats_pattern = self.STATS_FILE_FORMAT.format(channel_ix='\w+')
         stats_pattern = re.compile(stats_pattern)
-        if not os.path.exists(self.stats_dir):
-            raise OSError('Stats directory does not exist: %s'
-                          % self.stats_dir)
         files = [
             f for f in os.listdir(self.stats_dir)
             if re.search(stats_pattern, f)

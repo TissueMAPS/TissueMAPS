@@ -192,16 +192,6 @@ class PlateAcquisition(object):
         return self.acquisition_dir
 
     @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the acquisition folder
-        '''
-        return os.path.basename(self.dir)
-
-    @property
     def index(self):
         '''
         An *acquisition* has a zero-based `index` based on the order in which
@@ -219,13 +209,14 @@ class PlateAcquisition(object):
         RegexError
             when `index` cannot not be determined from folder name
         '''
+        folder_name = os.path.basename(self.dir)
         regexp = utils.regex_from_format_string(self.ACQUISITION_DIR_FORMAT)
-        match = re.search(regexp, self.name)
+        match = re.search(regexp, folder_name)
         if not match:
             raise RegexError(
                     'Can\'t determine cycle id number from folder "%s" '
                     'using format "%s" provided by the configuration settings.'
-                    % (self.name, self.CYCLE_DIR_FORMAT))
+                    % (folder_name, self.CYCLE_DIR_FORMAT))
         return int(match.group('index'))
 
     @cached_property

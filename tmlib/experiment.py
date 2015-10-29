@@ -350,9 +350,9 @@ class Experiment(object):
 
         See also
         --------
-        :mod:`tmlib.jterator`
+        :mod:`tmlib.jterator.data_fusion`
         '''
-        return os.path.join(self.layers_dir, 'data.h5')
+        return 'data.h5'
 
     def get_image_by_name(self, name):
         '''

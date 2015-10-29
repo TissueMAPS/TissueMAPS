@@ -221,6 +221,9 @@ class WorkflowStepDescription(object):
         KeyError
             when `description` doesn't have the keys "name" and "args"
         '''
+        if not('name' in description and 'args' in description):
+            raise KeyError(
+                    'Argument "description" requires keys "name" and "args"')
         self.name = description['name']
         self.args = description['args']
 
