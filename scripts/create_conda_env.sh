@@ -15,15 +15,15 @@ if [[ ! -d src ]] || [[ ! -d docs ]] || [[ ! -d scripts ]]; then
 fi
 
 # Makes sure requirements.txt is present
-if [[ ! -f ../requirements-1.txt ]]; then
+if [[ ! -f requirements-1.txt ]]; then
     echo "requirements-1.txt is missing from the root directory of tmlibrary"
     exit 101
 fi
-if [[ ! -f ../requirements-2.txt ]]; then
+if [[ ! -f requirements-2.txt ]]; then
     echo "requirements-2.txt is missing from the root directory of tmlibrary"
     exit 101
 fi
-if [[ ! -f ../requirements-Darwin-3.txt ]]; then
+if [[ ! -f requirements-Darwin-3.txt ]]; then
     echo "requirements-Darwin-3.txt is missing from the root directory of tmlibrary"
     exit 101
 fi
