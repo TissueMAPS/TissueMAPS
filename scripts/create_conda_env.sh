@@ -41,6 +41,7 @@ source activate tmlibrary
 export PATH="$HOME/.local/bin:$PATH"
 
 GC3PIE_DIR="$PWD/.gc3"
+mkdir ${GC3PIE_DIR}
 # create config file here in the Jenkins workspace (as opposed to the
 # user's home directory)
 export GC3PIE_CONF="${GC3PIE_DIR:-$PWD}/gc3pie.conf"
@@ -61,10 +62,9 @@ override = no
 __EOF__
 
 
-# Install brainy and its dependencies with `pip` as not all of them
+# Install tmlib and its dependencies with `pip` as not all of them
 # are available as Conda packages, and furthermore `conda develop`
 # does not install/create the executables
-# XXX: an alternative way to run `brainy` tests is `python setup.py test`
 pip install -r requirements-1.txt
 pip install -r requirements-2.txt
 
