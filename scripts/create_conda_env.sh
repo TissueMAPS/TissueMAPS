@@ -73,6 +73,7 @@ pip install -r requirements-2.txt
 
 # Install tmlib
 pip install -e .
+pip install -e ./lib/pyfakefs
 # It's a part of installation procedure that tmlib is installed
 # into the homefolder.
 export PYTHONPATH="$PWD/src:$PYTHONPATH"
