@@ -41,7 +41,7 @@ source activate tmlibrary
 export PATH="$HOME/.local/bin:$PATH"
 
 GC3PIE_DIR="$PWD/.gc3"
-mkdir ${GC3PIE_DIR}
+mkdir -p ${GC3PIE_DIR}
 # create config file here in the Jenkins workspace (as opposed to the
 # user's home directory)
 export GC3PIE_CONF="${GC3PIE_DIR:-$PWD}/gc3pie.conf"
