@@ -37,6 +37,9 @@ conda install conda-env --yes -q
 # conda create -n tmlibrary python --yes -q
 source activate tmlibrary
 
+conda install -y opencv
+conda install -y --file requirements-Darwin-3.txt
+
 # Use `pip install` from activated conda PATH
 export PATH="$HOME/.local/bin:$PATH"
 
