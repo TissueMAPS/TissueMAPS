@@ -1,0 +1,3 @@
+[submodule "lib/pyfakefs"]
+	path = lib/pyfakefs
+	url = git@github.com:jmcgeheeiv/pyfakefs.git
