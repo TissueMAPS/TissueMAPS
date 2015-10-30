@@ -31,44 +31,19 @@ fi
 conda install conda-env --yes -q
 
 # Removes previous environment
-conda-env remove -n tmlibrary --yes -q
+# conda-env remove -n tmlibrary --yes -q
 
 # Creates and activates environment
-conda create -n tmlibrary python --yes -q
+# conda create -n tmlibrary python --yes -q
 source activate tmlibrary
 
 # Use `pip install` from activated conda PATH
 export PATH="$HOME/.local/bin:$PATH"
 
-# Install GC3Pie and configure it to run tasks on local host only
-#
-# Note: we cannot use GC3Pie's `install.sh` script as that only
-# works with Python "virtualenv"s, whereas we are using Anaconda's
-# environment feature, which is a different beast.
-#
-: ${required_gc3pie_version:='2.4.0'}
-case "$required_gc3pie_version" in
-    *dev*)
-        # install development version from SVN
-        gc3pie_dir="$PWD/gc3pie"
-        if [ -d "$gc3pie_dir" ]; then
-            # assume source is already checked out here, update
-            (cd "$gc3pie_dir" && svn update)
-        else
-            # perform SVN checkout
-            svn checkout --quiet http://gc3pie.googlecode.com/svn/trunk/gc3pie "$gc3pie_dir"
-        fi
-        # install GC3Pie package
-        (cd "$gc3pie_dir" && pip install -e .)
-        ;;
-    *)
-        # install released version from PyPI
-        pip install "gc3pie==${required_gc3pie_version}"
-        ;;
-esac
+GC3PIE_DIR="$PWD/.gc3"
 # create config file here in the Jenkins workspace (as opposed to the
 # user's home directory)
-export GC3PIE_CONF="${gc3pie_dir:-$PWD}/config.ini"
+export GC3PIE_CONF="${GC3PIE_DIR:-$PWD}/gc3pie.conf"
 cat > "$GC3PIE_CONF" <<__EOF__
 [resource/localhost]
 enabled = yes
