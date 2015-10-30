@@ -29,4 +29,4 @@ sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12
 tifffile==0.6.2
 ruamel.yaml==0.10.11
-gc3pie>=2.5.dev
+gc3pie>=2.4.2
