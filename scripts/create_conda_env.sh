@@ -76,6 +76,7 @@ pip install -e .
 # It's a part of installation procedure that tmlib is installed
 # into the homefolder.
 export PYTHONPATH="$PWD/src:$PYTHONPATH"
+export PYTHONPATH="$PWD/lib:$PYTHONPATH"
 
 # Deactivates Anaconda
 source deactivate
