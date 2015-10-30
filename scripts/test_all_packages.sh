@@ -20,7 +20,7 @@ source activate tmlibrary
 #
 # Actually run tests
 #
-nosetests -v /src --all-modules --with-doctest \
+nosetests -v ./src --all-modules --with-doctest \
     --with-xunit --xunit-file=global_nosetests.xml
 
 # Deactivates Anaconda
