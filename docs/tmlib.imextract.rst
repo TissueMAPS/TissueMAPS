@@ -23,6 +23,14 @@ tmlib.imextract.argparser module
 .. autoprogram:: tmlib.imextract.argparser:parser
     :prog: imextract
 
+tmlib.imextract.args module
+---------------------------
+
+.. automodule:: tmlib.imextract.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.imextract.cli module
 --------------------------
 

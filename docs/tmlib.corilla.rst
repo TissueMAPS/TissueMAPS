@@ -23,6 +23,14 @@ tmlib.corilla.argparser module
 .. autoprogram:: tmlib.corilla.argparser:parser
     :prog: corilla
 
+tmlib.corilla.args module
+-------------------------
+
+.. automodule:: tmlib.corilla.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.corilla.cli module
 ------------------------
 

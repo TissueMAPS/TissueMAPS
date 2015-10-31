@@ -20,7 +20,7 @@ import shlex
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('.'))
-sys.path.append(os.path.join(os.path.dirname(__name__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__name__), '..', '..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -123,7 +123,7 @@ todo_include_todos = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'  # 'sphinxdoc'
+html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -305,12 +305,14 @@ texinfo_documents = [
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 
-# Include documentation for __init__ special member
-def skip(app, what, name, obj, skip, options):
-    if name == "__init__":
-        return False
-    return skip
+# # Include documentation for __init__ special member
+# def skip(app, what, name, obj, skip, options):
+#     if name == "__init__":
+#         return False
+#     return skip
 
 
-def setup(app):
-    app.connect("autodoc-skip-member", skip)
+# def setup(app):
+#     app.connect("autodoc-skip-member", skip)
+
+autoclass_content = 'both'

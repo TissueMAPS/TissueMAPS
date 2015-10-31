@@ -23,6 +23,14 @@ tmlib.jterator.argparser module
 .. .. autoprogram:: tmlib.jterator.argparser:parser
 ..     :prog: jterator
 
+tmlib.jterator.args module
+--------------------------
+
+.. automodule:: tmlib.jterator.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.jterator.checkers module
 ------------------------------
 

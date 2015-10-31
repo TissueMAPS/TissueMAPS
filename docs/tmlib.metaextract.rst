@@ -23,6 +23,14 @@ tmlib.metaextract.argparser module
 .. autoprogram:: tmlib.metaextract.argparser:parser
     :prog: metaextract
 
+tmlib.metaextract.args module
+-----------------------------
+
+.. automodule:: tmlib.metaextract.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.metaextract.cli module
 ----------------------------
 

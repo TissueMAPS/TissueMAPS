@@ -23,6 +23,14 @@ tmlib.illuminati.argparser module
 .. autoprogram:: tmlib.illuminati.argparser:parser
     :prog: illuminati
 
+tmlib.illuminati.args module
+----------------------------
+
+.. automodule:: tmlib.illuminati.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.illuminati.cli module
 ---------------------------
 

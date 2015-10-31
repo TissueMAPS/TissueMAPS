@@ -18,6 +18,14 @@ Subpackages
 Submodules
 ----------
 
+tmlib.args module
+----------------
+
+.. automodule:: tmlib.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.cfg module
 ----------------
 

@@ -23,6 +23,14 @@ tmlib.align.argparser module
 .. autoprogram:: tmlib.align.argparser:parser
     :prog: align
 
+tmlib.align.args module
+-----------------------
+
+.. automodule:: tmlib.align.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.align.cli module
 ----------------------
 
