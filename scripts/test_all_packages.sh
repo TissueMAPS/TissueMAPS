@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Runs iBRAIN test scripts in a controlled environment
+# Runs tmlibrary test scripts in a controlled environment
 #
-# The script expects to be run from the TOP-LEVEL folder of iBRAIN_UZH
+# The script expects to be run from the TOP-LEVEL folder of tmlibrary
 #
 
 # exit at the first error
@@ -14,8 +14,8 @@ if [[ ! -d src ]] || [[ ! -d docs ]] || [[ ! -d scripts ]]; then
     exit 100
 fi
 
-# Activates Anaconda
-source activate tmlibrary
+# Activate virtualenv
+workon tmlibrary
 
 #
 # Actually run tests
@@ -23,5 +23,5 @@ source activate tmlibrary
 nosetests -v ./src --all-modules --with-doctest \
     --with-xunit --xunit-file=global_nosetests.xml
 
-# Deactivates Anaconda
-source deactivate
+# Deactivate virtualenv
+deactivate

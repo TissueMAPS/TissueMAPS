@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Create iBRAIN conda env used to run tests and generate API docs.
+# Create tmlibrary virtualenv used to run tests and generate API docs.
 #
-# The script expects to be run from the TOP-LEVEL folder of iBRAIN_UZH
+# The script expects to be run from the TOP-LEVEL folder of tmlibrary
 #
 
 # exit at the first error
@@ -28,17 +28,14 @@ if [[ ! -f requirements-Darwin-3.txt ]]; then
     exit 101
 fi
 
-conda install conda-env --yes -q
-
 # Removes previous environment
-# conda-env remove -n tmlibrary --yes -q
+rmvirtualenv tmlibrary
 
 # Creates and activates environment
-# conda create -n tmlibrary python --yes -q
-source activate tmlibrary
+mkvirtualenv tmlibrary
+workon tmlibrary
 
 conda install -y opencv
-conda install -y --file requirements-Darwin-3.txt
 
 # Use `pip install` from activated conda PATH
 export PATH="$HOME/.local/bin:$PATH"
@@ -70,6 +67,7 @@ __EOF__
 # does not install/create the executables
 pip install -r requirements-1.txt
 pip install -r requirements-2.txt
+pip install -r requirements-Darwin-3.txt
 
 # Install tmlib
 pip install -e .
@@ -79,5 +77,5 @@ pip install -e ./lib/pyfakefs
 export PYTHONPATH="$PWD/src:$PYTHONPATH"
 export PYTHONPATH="$PWD/lib:$PYTHONPATH"
 
-# Deactivates Anaconda
-source deactivate
+# Deactivate virtual environment
+deactivate
