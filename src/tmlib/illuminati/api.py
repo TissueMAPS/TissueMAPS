@@ -21,35 +21,20 @@ class PyramidBuilder(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-
-        Returns
-        -------
-        tmlib.illuminati.api.PyramidBuilder
         '''
         super(PyramidBuilder, self).__init__(experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
         self.verbosity = verbosity
 
-    def create_job_descriptions(self, align, illumcorr, clip,
-                                clip_value=None, clip_percent=99.9):
+    def create_job_descriptions(self, args):
         '''
         Create job descriptions for parallel computing.
 
         Parameters
         ----------
-        shift: bool
-            align images between cycles
-        illumcorr: bool
-            correct images for illumination artifacts
-        clip: bool
-            clip pixel values above a certain level to level value,
-            i.e. rescale images between minimum value and a defined clip level
-        clip_value: int, optional
-            define a fixed pixel value for clip level (default: ``None``)
-        clip_percent: int, optional
-            define percentage of pixel values below clip level
-            (default: ``99.9``)
+        args: tmlib.illuminati.args.IlluminatiInitArgs
+            program-specific arguments
 
         Returns
         -------
@@ -80,6 +65,16 @@ class PyramidBuilder(ClusterRoutines):
                     image_files = md.loc[indices]['name']
                     channel = np.unique(md.loc[indices]['channel_ix'])[0]
                     zplane = np.unique(md.loc[indices]['zplane_ix'])[0]
+                    layer_names = [
+                        lmd.name
+                        for lmd in self.experiment.layer_metadata.values()
+                        if lmd.channel_ix == channel
+                        and lmd.tpoint_ix == cycle.index
+                        and lmd.zplane_ix == zplane
+                    ]
+                    if len(layer_names) != 1:
+                        raise ValueError('Wrong number of layer names.')
+                    name = layer_names[0]
                     job_count += 1
                     job_descriptions['run'].append({
                         'id': job_count,
@@ -92,18 +87,16 @@ class PyramidBuilder(ClusterRoutines):
                         'outputs': {
                             'pyramid_dir':
                                 os.path.join(
-                                    self.experiment.layers_dir,
-                                    self.experiment.layer_names[(
-                                        cycle.index, channel, zplane)])
+                                    self.experiment.layers_dir, name)
                         },
                         'cycle': cycle.index,
                         'channel': channel,
                         'zplane': zplane,
-                        'align': align,
-                        'illumcorr': illumcorr,
-                        'clip': clip,
-                        'clip_value': clip_value,
-                        'clip_percent': clip_percent
+                        'align': args.align,
+                        'illumcorr': args.illumcorr,
+                        'clip': args.clip,
+                        'clip_value': args.clip_value,
+                        'clip_percentile': args.clip_percentile
                     })
         return job_descriptions
 
@@ -121,10 +114,10 @@ class PyramidBuilder(ClusterRoutines):
                     channel_ix=batch['channel'], zplane_ix=batch['zplane'],
                     illumcorr=batch['illumcorr'], align=batch['align'])
 
-        if batch['thresh']:
+        if batch['clip']:
             logger.info('threshold intensities')
             layer = layer.clip(value=batch['clip_value'],
-                               percent=batch['clip_percent'])
+                               percentile=batch['clip_percentile'])
 
         layer = layer.scale()
 

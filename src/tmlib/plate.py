@@ -75,7 +75,7 @@ class Plate(object):
 
         See also
         --------
-        :mod:`tmlib.cfg.UserConfiguration`
+        :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.plate_dir = plate_dir
         self.user_cfg = user_cfg

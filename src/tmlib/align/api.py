@@ -28,10 +28,6 @@ class ImageRegistration(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-
-        Returns
-        -------
-        :mod:`tmlib.align.api.ImageRegistration`
         '''
         super(ImageRegistration, self).__init__(
                 experiment, prog_name, verbosity)
@@ -65,34 +61,23 @@ class ImageRegistration(ClusterRoutines):
         self._reg_file_format_string = '{experiment}_{job}.reg.h5'
         return self._reg_file_format_string
 
-    def create_job_descriptions(self, batch_size, ref_cycle, ref_channel,
-                                limit):
+    def create_job_descriptions(self, args):
         '''
         Create job descriptions for parallel computing.
 
         Parameters
         ----------
-        batch_size: int
-            number of image files that should be registered per job
-        ref_cycle: int
-            zero-based index of the reference cycle
-        ref_channel: int
-            zero-based index of the reference channel
-        limit: int
-            shift limit, i.e. maximally allowed shift in pixels unit
+        args: tmlib.align.args.AlignInitArgs
+            program-specific arguments
 
         Returns
         -------
         Dict[str, List[dict] or dict]
             job descriptions
-
-        See also
-        --------
-        :mod:`tmlib.align.argparser`
         '''
         def get_targets(cycle):
             md = cycle.image_metadata_table.sort('site_ix')
-            ix = md['channel_ix'] == ref_channel
+            ix = md['channel_ix'] == args.ref_channel
             return md[ix]['name'].tolist()
 
         job_count = 0
@@ -100,8 +85,8 @@ class ImageRegistration(ClusterRoutines):
         job_descriptions['run'] = list()
         job_descriptions['collect'] = {
             'plates': list(),
-            'limit': limit,
-            'ref_cycle': ref_cycle,
+            'limit': args.limit,
+            'ref_cycle': args.ref_cycle,
             'inputs': {
                 'registration_files': list()
             },
@@ -118,20 +103,20 @@ class ImageRegistration(ClusterRoutines):
             # TODO: group images per site
             # (such that all z-planes end up in the same batch)
             im_batches = [
-                self._create_batches(get_targets(c), batch_size)
+                self._create_batches(get_targets(c), args.batch_size)
                 for c in plate.cycles
             ]
 
-            ix = md['channel_ix'] == ref_channel
+            ix = md['channel_ix'] == args.ref_channel
             sites = md[ix]['site_ix'].tolist()
-            site_batches = self._create_batches(sites, batch_size)
+            site_batches = self._create_batches(sites, args.batch_size)
 
             registration_batches = list()
             for i in xrange(len(im_batches[0])):
                 if any([i >= len(b) for b in im_batches]):
                     continue
                 registration_batches.append({
-                    'targets': {c.name: [
+                    'targets': {os.path.basename(c.dir): [
                             os.path.join(c.image_dir, b)
                             for b in im_batches[j][i]
                         ]
@@ -140,7 +125,7 @@ class ImageRegistration(ClusterRoutines):
                     'references': [
                         os.path.join(c.image_dir, b)
                         for j, c in enumerate(plate.cycles)
-                        if c.index == ref_cycle
+                        if c.index == args.ref_cycle
                         for b in im_batches[j][i]
                     ]
                 })
@@ -192,7 +177,7 @@ class ImageRegistration(ClusterRoutines):
 
         See also
         --------
-        :mod:`tmlib.align.registration.register_images`
+        :py:func:`tmlib.align.registration.register_images`
         '''
         reg.register_images(batch['sites'],
                             batch['inputs']['target_files'],
@@ -215,7 +200,7 @@ class ImageRegistration(ClusterRoutines):
         
         See also
         --------
-        :mod:`tmlib.align.registration.fuse_registration`
+        :py:func:`tmlib.align.registration.fuse_registration`
         '''
         for i, plate_name in enumerate(batch['plates']):
             plate = [
@@ -223,9 +208,9 @@ class ImageRegistration(ClusterRoutines):
             ][0]
 
             reg_files = batch['inputs']['registration_files'][i]
-            cycle_names = [c.name for c in plate.cycles]
+            cycle_folders = [os.path.basename(c.dir) for c in plate.cycles]
 
-            descriptions = reg.fuse_registration(reg_files, cycle_names)
+            descriptions = reg.fuse_registration(reg_files, cycle_folders)
 
             # Calculate overhang between cycles
             upper_oh, lower_oh, right_oh, left_oh, dont_shift = \
@@ -234,7 +219,7 @@ class ImageRegistration(ClusterRoutines):
             with JsonWriter() as writer:
                 for j, cycle in enumerate(plate.cycles):
                     logger.info('collect registration statistics for cycle %s'
-                                % cycle.name)
+                                % cycle.index)
 
                     a = AlignmentDescription()
                     a.cycle_ix = cycle.index

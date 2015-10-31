@@ -256,10 +256,6 @@ class VisiviewMetadataHandler(MetadataHandler):
             full paths to the XML files that contain the extracted OMEXML data
         experiment_name: str
             name of the corresponding plate
-
-        Returns
-        -------
-        tmlib.metaconfig.visiview.VisiviewMetadataHandler
         '''
         super(VisiviewMetadataHandler, self).__init__(
                 image_files, additional_files, omexml_files, plate_name)
@@ -278,7 +274,7 @@ class VisiviewMetadataHandler(MetadataHandler):
 
         See also
         --------
-        :mod:`tmlib.metaconfig.visiview.VisiviewMetadataHandler`
+        :py:class:`tmlib.metaconfig.visiview.VisiviewMetadataHandler`
         '''
         files = [
             f for f in self.additional_files

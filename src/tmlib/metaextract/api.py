@@ -30,10 +30,6 @@ class MetadataExtractor(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-
-        Returns
-        -------
-        tmlib.metaextract.api.MetadataExtractor
         '''
         super(MetadataExtractor, self).__init__(
                 experiment, prog_name, verbosity)
@@ -46,9 +42,14 @@ class MetadataExtractor(ClusterRoutines):
         return re.sub(r'(%s)$' % os.path.splitext(image_filename)[1],
                       '.ome.xml', image_filename)
 
-    def create_job_descriptions(self):
+    def create_job_descriptions(self, args):
         '''
         Create job descriptions for parallel computing.
+
+        Parameters
+        ----------
+        args: tmlib.metaextract.args.MetaextractArgs
+            program-specific arguments
 
         Returns
         -------

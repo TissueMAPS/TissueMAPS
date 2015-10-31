@@ -17,10 +17,6 @@ class AlignmentDescription(object):
         ----------
         description: dict, optional
             alignment description as key-value pairs
-
-        Returns
-        -------
-        tmlib.metadata.AlignmentDescription
         '''
         if description is not None:
             if not isinstance(description, dict):

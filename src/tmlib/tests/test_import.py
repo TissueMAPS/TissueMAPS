@@ -9,7 +9,13 @@ class TestPackageImports(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_vips_import(self):
+    def test_import_tmlib(self):
+        try:
+            import tmlib
+        except ImportError:
+            raise AssertionError('tmlib cannot be imported')
+
+    def test_import_vips(self):
         try:
             from gi.repository import Vips
         except ImportError:

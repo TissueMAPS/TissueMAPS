@@ -3,7 +3,6 @@ from . import logo
 from . import __version__
 from .api import ImageExtractor
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -14,21 +13,20 @@ class Imextract(CommandLineInterface):
     Command line interface for extraction of images from image files.
     '''
 
-    def __init__(self, args):
+    def __init__(self, experiment_dir, verbosity):
         '''
         Initialize an instance of class Imextract.
 
         Parameters
         ----------
-        args: argparse.Namespace
-            parsed command line arguments
-
-        Returns
-        -------
-        tmlib.imextract.cli.Imextract
+        experiment_dir: str
+            path to the experiment directory
+        verbosity: int
+            logging level
         '''
-        super(Imextract, self).__init__(args)
-        self.args = args
+        super(Imextract, self).__init__(experiment_dir, verbosity)
+        self.experiment_dir = experiment_dir
+        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -46,17 +44,10 @@ class Imextract(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir)
         return ImageExtractor(
-                experiment=experiment,
+                experiment=self.experiment,
                 prog_name=self.name,
-                verbosity=self.args.verbosity)
-
-    @property
-    def _init_args(self):
-        kwargs = dict()
-        kwargs['batch_size'] = self.args.batch_size
-        return kwargs
+                verbosity=self.verbosity)
 
     @staticmethod
     def call(args):
@@ -71,9 +62,7 @@ class Imextract(CommandLineInterface):
 
         See also
         --------
-        :mod:`tmlib.imextract.argparser`
+        :py:mod:`tmlib.imextract.argparser`
         '''
-        cli = Imextract(args)
-        logger.debug('call "%s" method of class "%s"'
-                     % (args.method_name, cli.__class__.__name__))
-        getattr(cli, args.method_name)()
+        cli = Imextract(args.experiment_dir, args.verbosity)
+        cli._call(args)

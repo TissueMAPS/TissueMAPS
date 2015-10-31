@@ -28,10 +28,6 @@ class PipelineChecker(object):
             pipeline description (module order)
         handles_descriptions: dict, optional
             list of module descriptions (module input/output)
-
-        Returns
-        -------
-        tmlib.jterator.checker.PipelineChecker
         '''
         self.pipe_description = pipe_description
         self.handles_descriptions = handles_descriptions

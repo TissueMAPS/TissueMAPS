@@ -31,7 +31,7 @@ class Cycle(object):
 
     See also
     --------
-    :mod:`tmlib.experiment.Experiment`
+    :py:class:`tmlib.experiment.Experiment`
     '''
 
     CYCLE_DIR_FORMAT = 'cycle_{index:0>2}'
@@ -65,7 +65,7 @@ class Cycle(object):
 
         See also
         --------
-        :mod:`tmlib.cfg.UserConfiguration`
+        :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.plate_name = plate_name
@@ -165,7 +165,7 @@ class Cycle(object):
 
         See also
         --------
-        :mod:`tmlib.image.is_image_file`
+        :py:func:`tmlib.image.is_image_file`
         '''
         files = [
             f for f in os.listdir(self.image_dir) if is_image_file(f)

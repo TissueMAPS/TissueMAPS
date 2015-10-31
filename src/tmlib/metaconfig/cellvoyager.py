@@ -153,10 +153,6 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             full paths to the XML files that contain the extracted OMEXML data
         plate_name: str
             name of the corresponding plate
-
-        Returns
-        -------
-        tmlib.metaconfig.cellvoyager.CellvoyagerMetadataHandler
         '''
         super(CellvoyagerMetadataHandler, self).__init__(
                 image_files, additional_files, omexml_files, plate_name)
@@ -175,7 +171,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
 
         See also
         --------
-        :mod:`tmlib.metaconfig.cellvoyager.CellvoyagerMetadataReader`
+        :py:class:`tmlib.metaconfig.cellvoyager.CellvoyagerMetadataReader`
         '''
         files = [
             f for f in self.additional_files

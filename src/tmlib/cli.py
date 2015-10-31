@@ -9,7 +9,14 @@ from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
-from . import cfg
+from .args import InitArgs
+from .args import SubmitArgs
+from .args import RunArgs
+from .args import CollectArgs
+from .args import ApplyArgs
+from .args import CleanupArgs
+from .tmaps import workflow
+from .experiment import Experiment
 from .logging_utils import configure_logging
 from .logging_utils import map_logging_verbosity
 
@@ -32,18 +39,21 @@ def command_line_call(parser):
     -------
     Don't do any other logging configuration anywhere else!
     '''
-    args = parser.parse_args()
+    arguments = parser.parse_args()
 
-    level = map_logging_verbosity(args.verbosity)
+    level = map_logging_verbosity(arguments.verbosity)
     configure_logging(level)
     logger.debug('running program: %s' % parser.prog)
-
+    
     gc3libs.log = logging.getLogger('gc3lib')
     gc3libs.log.level = logging.CRITICAL
 
+    # vips_logger = logging.getLogger('vips')
+    # vips_logger.level = logging.CRITICAL
+
     try:
-        if args.handler:
-            args.handler(args)
+        if arguments.handler:
+            arguments.handler(arguments)
         else:
             parser.print_help()
     except Exception as error:
@@ -66,32 +76,47 @@ class CommandLineInterface(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, args):
+    def __init__(self, experiment_dir, verbosity):
         '''
         Initialize an instance of class CommandLineInterface.
 
         Parameters
         ----------
-        args: argparse.Namespace
-            parsed command line arguments
+        experiment_dir: str
+            path to the experiment directory
+        verbosity: int
+            logging level
 
-        Note
-        ----
-        Default configuration settings are overwritten in case a custom
-        configuration file is provided via the command line.
+        Raises
+        ------
+        TypeError
+            when `verbosity` doesn't have type int
+        ValueError
+            when `verbosity` is negative
+
+        See also
+        --------
+        :py:func:`tmlib.logging_utils.map_logging_verbosity`
         '''
-        self.args = args
+        self.experiment_dir = experiment_dir
+        if not isinstance(verbosity, int):
+            raise TypeError('Argument "verbosity" must have type int.')
+
+        if not verbosity >= 0:
+            raise ValueError('Argument "verbosity" must be a positive number.')
+        if verbosity > 3:
+            logging.warning('verbosity exceeds maximum logging level')
+        self.verbosity = verbosity
 
     @property
-    def cfg(self):
+    def experiment(self):
         '''
         Returns
         -------
-        Dict[str, str]
-            configuration settings
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
         '''
-        self._cfg = cfg
-        return self._cfg
+        return Experiment(self.experiment_dir)
 
     @abstractproperty
     def name(self):
@@ -131,11 +156,6 @@ class CommandLineInterface(object):
     def _print_logo():
         pass
 
-    @property
-    def _init_args(self):
-        # Explicit is better than implicit :)
-        return dict()
-
     def _cleanup(self):
         outputs = self.expected_outputs
         if outputs:
@@ -155,18 +175,28 @@ class CommandLineInterface(object):
                     logger.debug('remove output file: %s' % out)
                     os.remove(out)
 
-    def cleanup(self):
+    def cleanup(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
         and process arguments provided by the "cleanup" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.CleanupArgs
+            method-specific arguments
         '''
         self._print_logo()
         self._cleanup()
 
-    def init(self):
+    def init(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
         and process arguments provided by the "init" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.InitArgs
+            method-specific arguments
 
         Returns
         -------
@@ -176,7 +206,7 @@ class CommandLineInterface(object):
         self._print_logo()
         self._cleanup()
         api = self._api_instance
-        if self.args.backup:
+        if args.backup:
             logger.info('backup log reports and job descriptions '
                         'of previous submission')
             timestamp = api.create_datetimestamp()
@@ -200,23 +230,28 @@ class CommandLineInterface(object):
             shutil.rmtree(api.status_dir)
 
         logger.info('create job descriptions')
-        job_descriptions = api.create_job_descriptions(**self._init_args)
-        if self.args.print_job_descriptions:
+        job_descriptions = api.create_job_descriptions(args.variable_args)
+        if args.display:
             api.print_job_descriptions(job_descriptions)
         else:
             logger.info('write job descriptions to files')
             api.write_job_files(job_descriptions)
         return job_descriptions
 
-    def run(self):
+    def run(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
         and process arguments provided by the "run" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.RunArgs
+            method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
         logger.info('read job description from file')
-        job_file = api.build_run_job_filename(self.args.job)
+        job_file = api.build_run_job_filename(args.job)
         batch = api.read_job_file(job_file)
         logger.info('run job #%d' % batch['id'])
         api.run_job(batch)
@@ -258,10 +293,9 @@ class CommandLineInterface(object):
         self._required_inputs = api.list_input_files(self._job_descriptions)
         return self._required_inputs
 
-    @property
-    def jobs(self):
+    def build_jobs(self, virtualenv):
         '''
-        Read the job descriptions and build GCPie "jobs".
+        Build *jobs* based on prior created job descriptions.
 
         Returns
         -------
@@ -272,49 +306,58 @@ class CommandLineInterface(object):
         logger.info('create jobs')
         jobs = api.create_jobs(
                 job_descriptions=self._job_descriptions,
-                virtualenv=self.args.virtualenv)
+                virtualenv=virtualenv)
         return jobs
 
-    def submit(self):
+    def submit(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
         and process arguments provided by the "submit" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.SubmitArgs
+            method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
-        jobs = self.jobs
+        jobs = self.build_jobs(virtualenv=args.virtualenv)
         # TODO: check whether jobs were actually created
         logger.info('submit and monitor jobs')
-        api.submit_jobs(jobs, self.args.interval)
+        api.submit_jobs(jobs, monitoring_interval=args.interval)
 
-    @property
-    def _apply_args(self):
-        kwargs = dict()
-        return kwargs
-
-    def apply(self):
+    def apply(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "apply" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.ApplyArgs
+            method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
         logger.info('apply statistics')
-        kwargs = self._apply_args
         api.apply_statistics(
-                output_dir=self.args.output_dir,
-                plates=self.args.plates,
-                wells=self.args.wells,
-                sites=self.args.sites,
-                channels=self.args.channels,
-                tpoints=self.args.tpoints,
-                zplanes=self.args.zplanes,
-                **kwargs)
+                output_dir=args.output_dir,
+                plates=args.plates,
+                wells=args.wells,
+                sites=args.sites,
+                channels=args.channels,
+                tpoints=args.tpoints,
+                zplanes=args.zplanes,
+                **args.variable_args)
 
-    def collect(self):
+    def collect(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
         and process arguments of the "collect" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.CollectArgs
+            method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
@@ -323,6 +366,17 @@ class CommandLineInterface(object):
         batch = api.read_job_file(job_file)
         logger.info('collect job output')
         api.collect_job_output(batch)
+
+    def _call(self, args):
+        logger.debug('call "%s" method of class "%s"'
+                     % (args.method_name, self.__class__.__name__))
+        general_args_handler = workflow.load_method_args(args.method_name)
+        method_args = general_args_handler(**vars(args))
+        var_args_handler = workflow.load_var_method_args(
+                                self.name, args.method_name)
+        if var_args_handler is not None:
+            method_args.variable_args = var_args_handler(**vars(args))
+        getattr(self, args.method_name)(method_args)
 
     @staticmethod
     def get_parser_and_subparsers(
@@ -336,7 +390,7 @@ class CommandLineInterface(object):
         Parameters
         ----------
         required_subparsers: List[str]
-            subparsers that should be returned (defaults to
+            subparsers that should be returned (default: 
             ``["init", "run", "submit", "cleanup"]``)
 
         Returns
@@ -361,7 +415,7 @@ class CommandLineInterface(object):
 
         if 'init' in required_subparsers:
             init_parser = subparsers.add_parser(
-                'init', help='instantiate the program with required arguments')
+                'init', help='initialize the program with required arguments')
             init_parser.description = '''
                 Create a list of persistent job descriptions for parallel
                 processing, which are used to dynamically build GC3Pie jobs.
@@ -372,95 +426,48 @@ class CommandLineInterface(object):
                 All outputs created by a previous submission will also be
                 removed!
             '''
-            init_parser.add_argument(
-                '--show', action='store_true', dest='print_job_descriptions',
-                help='pretty print job descriptions to standard output '
-                     'without writing them to files')
-            init_parser.add_argument(
-                '--backup', action='store_true',
-                help='create a backup of the job descriptions and log output '
-                     'of a previous submission')
+            InitArgs().add_to_argparser(init_parser)
 
         if 'run' in required_subparsers:
             run_parser = subparsers.add_parser(
-                'run',
-                help='run an individual job')
+                'run', help='run an individual job')
             run_parser.description = '''
                 Run an individual job.
             '''
-            run_parser.add_argument(
-                '-j', '--job', type=int, required=True,
-                help='id of the job that should be processed')
+            RunArgs().add_to_argparser(run_parser)
 
         if 'submit' in required_subparsers:
             submit_parser = subparsers.add_parser(
-                'submit',
-                help='submit and monitor jobs')
+                'submit', help='submit and monitor jobs')
             submit_parser.description = '''
                 Create jobs, submit them to the cluster, monitor their
                 processing and collect their outputs.
             '''
-            submit_parser.add_argument(
-                '--interval', type=int, default=5,
-                help='job monitoring interval in seconds'
-            )
-            submit_parser.add_argument(
-                '--virtualenv', type=str, default=None,
-                help='name of a virtual environment that should be activated')
+            SubmitArgs().add_to_argparser(submit_parser)
 
         if 'collect' in required_subparsers:
             collect_parser = subparsers.add_parser(
-                'collect',
-                help='collect job output after submission')
+                'collect', help='collect job output after submission')
             collect_parser.description = '''
                 Collect outputs of processed jobs and fuse them.
             '''
-            collect_parser.add_argument(
-                '-o', '--output_dir', type=str,
-                help='path to output directory')
+            CollectArgs().add_to_argparser(collect_parser)
 
         if 'apply' in required_subparsers:
             apply_parser = subparsers.add_parser(
-                'apply',
-                help='apply the calculated statistics')
+                'apply', help='apply job output')
             apply_parser.description = '''
-                Apply the calculated statistics to images in order to correct
-                them for illumination artifacts. A subset of images can be
-                selected using additional arguments.
+                Apply statistics calculated by the program to (a subset of)
+                images.
             '''
-            apply_required_group = apply_parser.add_argument_group(
-                'required arguments')
-            apply_required_group.add_argument(
-                '-o', '--output_dir', type=str, required=True,
-                help='directory where corrected images should be saved')
-
-            apply_selection_group = apply_parser.add_argument_group(
-                'additional arguments for selection of images')
-            apply_selection_group.add_argument(
-                '-p', '--plates', nargs='+', type=str, metavar='P',
-                help='plate names')
-            apply_selection_group.add_argument(
-                '-w', '--wells', nargs='+', type=str, metavar='W',
-                help='well names, e.g. "A01"')
-            apply_selection_group.add_argument(
-                '-c', '--channels', nargs='+', type=int, metavar='C',
-                help='channel indices')
-            apply_selection_group.add_argument(
-                '-z', '--zplanes',  nargs='+', type=int, metavar='Z',
-                help='z-plane indices')
-            apply_selection_group.add_argument(
-                '-t', '--tpoints',  nargs='+', type=int, metavar='T',
-                help='time point (cycle) indices')
-            apply_selection_group.add_argument(
-                '-s', '--sites',  nargs='+', type=int, metavar='S',
-                help='acquisition site indices')
+            ApplyArgs().add_to_argparser(apply_parser)
 
         if 'cleanup' in required_subparsers:
-            apply_parser = subparsers.add_parser(
-                'cleanup',
-                help='clean-up output of previous runs')
-            apply_parser.description = '''
+            cleanup_parser = subparsers.add_parser(
+                'cleanup', help='clean-up output of previous runs')
+            cleanup_parser.description = '''
                 Remove files and folders generated upon previous submissions.
             '''
+            CleanupArgs().add_to_argparser(cleanup_parser)
 
         return (parser, subparsers)

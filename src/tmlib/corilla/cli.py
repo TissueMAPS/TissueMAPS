@@ -3,28 +3,26 @@ from . import logo
 from . import __version__
 from .api import IllumstatsGenerator
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
 class Corilla(CommandLineInterface):
 
-    def __init__(self, args):
+    def __init__(self, experiment_dir, verbosity):
         '''
         Initialize an instance of class Corilla.
 
         Parameters
         ----------
-        args: argparse.Namespace
-            parsed command line arguments
-
-        Returns
-        -------
-        tmlib.corilla.cli.Corilla
+        experiment_dir: str
+            path to the experiment directory
+        verbosity: int
+            logging level
         '''
-        super(Corilla, self).__init__(args)
-        self.args = args
+        super(Corilla, self).__init__(experiment_dir, verbosity)
+        self.experiment_dir = experiment_dir
+        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -42,11 +40,10 @@ class Corilla(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir)
         return IllumstatsGenerator(
-                    experiment=experiment,
+                    experiment=self.experiment,
                     prog_name=self.name,
-                    verbosity=self.args.verbosity)
+                    verbosity=self.verbosity)
 
     @staticmethod
     def call(args):
@@ -61,9 +58,7 @@ class Corilla(CommandLineInterface):
 
         See also
         --------
-        :mod:`tmlib.corilla.argparser`
+        :py:mod:`tmlib.corilla.argparser`
         '''
-        cli = Corilla(args)
-        logger.debug('call "%s" method of class "%s"'
-                     % (args.method_name, cli.__class__.__name__))
-        getattr(cli, args.method_name)()
+        cli = Corilla(args.experiment_dir, args.verbosity)
+        cli._call(args)

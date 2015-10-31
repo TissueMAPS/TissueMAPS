@@ -33,8 +33,8 @@ class Experiment(object):
 
     See also
     --------
-    :mod:`tmlib.plate.Plate`
-    :mod:`tmlib.cycle.Cycle`
+    :py:class:`tmlib.plate.Plate`
+    :py:class:`tmlib.cycle.Cycle`
     '''
 
     def __init__(self, experiment_dir, user_cfg=None, library='vips'):
@@ -51,14 +51,6 @@ class Experiment(object):
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
 
-        Returns
-        -------
-        tmlib.experiment.Experiment
-
-        See also
-        --------
-        :mod:`tmlib.cfg.UserConfiguration`
-
         Raises
         ------
         OSError
@@ -70,6 +62,10 @@ class Experiment(object):
         ----
         When no user configuration settings are provided, the program tries
         to read them from a file.
+
+        See also
+        --------
+        :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.experiment_dir = os.path.expandvars(experiment_dir)
         self.experiment_dir = os.path.expanduser(self.experiment_dir)
@@ -267,7 +263,7 @@ class Experiment(object):
 
         See also
         --------
-        :mod:`tmlib.source.PlateSource`
+        :py:class:`tmlib.source.PlateSource`
 
         Note
         ----
@@ -295,7 +291,7 @@ class Experiment(object):
 
         See also
         --------
-        :mod:`tmlib.illuminati`
+        :py:mod:`tmlib.illuminati`
         '''
         layers_dir = self.user_cfg.layers_dir
         if not os.path.exists(layers_dir):
@@ -350,7 +346,7 @@ class Experiment(object):
 
         See also
         --------
-        :mod:`tmlib.jterator.data_fusion`
+        :py:func:`tmlib.jterator.data_fusion`
         '''
         return 'data.h5'
 

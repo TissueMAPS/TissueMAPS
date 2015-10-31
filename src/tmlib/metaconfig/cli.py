@@ -3,7 +3,6 @@ from . import logo
 from . import __version__
 from .api import MetadataConfigurator
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -14,21 +13,20 @@ class Metaconfig(CommandLineInterface):
     Command line interface for metadata conversion.
     '''
 
-    def __init__(self, args):
+    def __init__(self, experiment_dir, verbosity):
         '''
         Initialize an instance of class Metaconfig.
 
         Parameters
         ----------
-        args: arparse.Namespace
-            parsed command line arguments
-
-        Returns
-        -------
-        :mod:`tmlib.metaconfig.cli.Metaconfig`
+        experiment_dir: str
+            path to the experiment directory
+        verbosity: int
+            logging level
         '''
-        super(Metaconfig, self).__init__(args)
-        self.args = args
+        super(Metaconfig, self).__init__(experiment_dir, verbosity)
+        self.experiment_dir = experiment_dir
+        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -39,29 +37,17 @@ class Metaconfig(CommandLineInterface):
         '''
         Returns
         -------
-        st
+        str
             name of the command line program
         '''
         return self.__class__.__name__.lower()
 
     @property
-    def _init_args(self):
-        kwargs = dict()
-        kwargs['file_format'] = self.args.file_format
-        kwargs['z_stacks'] = self.args.z_stacks
-        kwargs['regex'] = self.args.regex
-        kwargs['stitch_layout'] = self.args.stitch_layout
-        kwargs['stitch_major_axis'] = self.args.stitch_major_axis
-        kwargs['stitch_vertical'] = self.args.stitch_vertical
-        kwargs['stitch_horizontal'] = self.args.stitch_horizontal
-        return kwargs
-
-    @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir)
         return MetadataConfigurator(
-                            experiment=experiment, prog_name=self.name,
-                            verbosity=self.args.verbosity)
+                    experiment=self.experiment,
+                    prog_name=self.name,
+                    verbosity=self.verbosity)
 
     @staticmethod
     def call(args):
@@ -76,9 +62,7 @@ class Metaconfig(CommandLineInterface):
 
         See also
         --------
-        :mod:`tmlib.metaconfig.argparser`
+        :py:mod:`tmlib.metaconfig.argparser`
         '''
-        cli = Metaconfig(args)
-        logger.debug('call "%s" method of class "%s"'
-                     % (args.method_name, cli.__class__.__name__))
-        getattr(cli, args.method_name)()
+        cli = Metaconfig(args.experiment_dir, args.verbosity)
+        cli._call(args)

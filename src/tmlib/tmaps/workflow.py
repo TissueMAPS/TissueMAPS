@@ -47,11 +47,11 @@ def dict_to_command(d):
     return command
 
 
-def load_parser(prog_name):
+def load_argparser(prog_name):
     '''
     Load a
     `parser <https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser>`_
-    object of a TissueMAPS command line program.
+    object of a `TissueMAPS` command line program.
 
     Parameters
     ----------
@@ -71,10 +71,6 @@ def load_parser(prog_name):
         "argparser"
     AttributeError
         when the "argparser" module doesn't contain an attribute named "parser"
-
-    Examples
-    --------
-    >>>load_parser('align')
     '''
     module_name = 'tmlib.%s.argparser' % prog_name
     logger.debug('load argparser module "%s"' % module_name)
@@ -84,7 +80,7 @@ def load_parser(prog_name):
 
 def load_program(prog_name):
     '''
-    Load a TissueMAPS command line program.
+    Load a `TissueMAPS` command line program.
 
     Parameters
     ----------
@@ -92,24 +88,91 @@ def load_program(prog_name):
         name of the program, i.e. the name of corresponding subpackage in the
         "tmlib" package
 
+    Returns
+    -------
+    tmlib.cli.CommandLineInterface
+        command line program
+
     Raises
     ------
     ImportError
         when subpackage with name `prog_name` doesn't have a module named "cli"
     AttributeError
-        when the "cli" module doesn't contain a class with name `prog_name`
-
-    Returns
-    -------
-    tmlib.cli.CommandLineInterface
-        command line program, i.e. an instance of a subclass of the abstract
-        base class :mod:`tmlib.cli.CommandLineInterface`
+        when the "cli" module doesn't contain a program-specific
+        implementation of the `CommandLineInterface` base class
     '''
     module_name = 'tmlib.%s.cli' % prog_name
     logger.debug('load cli module "%s"' % module_name)
     module = importlib.import_module(module_name)
     class_name = prog_name.capitalize()
     return getattr(module, class_name)
+
+
+def load_method_args(method_name):
+    '''
+    Load general arguments that can be parsed to a method of
+    an implemented subclass of a :py:class:`tmlib.cli.CommandLineInterface`
+    base class
+
+    Parameters
+    ----------
+    method_name: str
+        name of the method
+
+    Returns
+    -------
+    tmlib.args.Args
+        argument container
+
+    Raises
+    ------
+    AttrbuteError
+        when the "args" module doesn't contain a method-specific
+        implementation of the `Args` base class
+    '''
+    module_name = 'tmlib.args'
+    module = importlib.import_module(module_name)
+    class_name = '%sArgs' % method_name.capitalize()
+    return getattr(module, class_name)
+
+
+def load_var_method_args(prog_name, method_name):
+    '''
+    Load additional, variable program-specific arguments that can be parsed to
+    a method of an implemented subclass of a
+    :py:class:`tmlib.cli.CommandLineInterface` base class.
+
+    Parameters
+    ----------
+    prog_name: str
+        name of the program
+    method_name: str
+        name of the method
+
+    Returns
+    -------
+    tmlib.args.Args
+        argument container
+
+    Note
+    ----
+    Returns ``None`` when the "args" module in the subpackage with name
+    `prog_name` doesn't contain a program- and method-specific implementation
+    of the `Args` base class.
+
+    Raises
+    ------
+    ImportError
+        when subpackage with name `prog_name` doesn't have a module named "args"
+    '''
+    module_name = 'tmlib.%s.args' % prog_name
+    module = importlib.import_module(module_name)
+    class_name = '%s%sArgs' % (prog_name.capitalize(),
+                               method_name.capitalize())
+    try:
+        return getattr(module, class_name)
+    except AttributeError:
+        return None
 
 
 class Workflow(SequentialTaskCollection, StopOnError):
@@ -132,10 +195,6 @@ class Workflow(SequentialTaskCollection, StopOnError):
             name of a virtual environment that needs to be activated
         verbosity: int
             logging level verbosity
-
-        Returns
-        -------
-        tmlib.tmaps.Workflow
         '''
         super(Workflow, self).__init__(tasks=None, jobname='tmaps')
         self.experiment = experiment
@@ -195,7 +254,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
                 if step.args:
                     cmd.extend(dict_to_command(step.args))
                 # Test whether arguments are specified correctly.
-                parser = load_parser(cmd[0])
+                parser = load_argparser(cmd[0])
                 try:
                     parser.parse_args(cmd[1:])
                 except SystemExit as error:
@@ -209,7 +268,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
         prog_name = init_command[0]
         logger.debug('create jobs for step {0}'.format(prog_name))
         prog = load_program(prog_name)
-        parser = load_parser(prog_name)
+        parser = load_argparser(prog_name)
         init_args = parser.parse_args(init_command[1:])
         init_prog = prog(init_args)
 

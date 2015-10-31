@@ -11,10 +11,16 @@ from .writers import JsonWriter
 class Formats(object):
 
     '''
-    Class for providing information on files supported by Bio-Formats.
+    Class for providing information on supported file formats.
+
+    `TissueMAPS` supports most file formats supported by Bio-Formats.
     '''
 
-    SUPPORT_FOR_ADDITIONAL_FILES = {'metamorph', 'cellvoyager', 'visiview'}
+    #: Some file formats require additional metadata files, which are not
+    #: directly supported by Bio-Formats.
+    #: For more information, please refer to
+    #: :py:meth:`tmlib.metaconfig.default.configure_ome_metadata_from_additional_files`
+    SUPPORT_FOR_ADDITIONAL_FILES = {'cellvoyager', 'visiview'}
 
     @property
     def _filename(self):

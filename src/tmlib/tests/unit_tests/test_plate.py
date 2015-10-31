@@ -45,7 +45,7 @@ class TestPlate(fake_filesystem_unittest.TestCase):
                         'name': 'bla',
                         'steps': [
                             {
-                                'name': 'blabla',
+                                'name': 'metaconfig',
                                 'args': dict()
                             }
                         ]

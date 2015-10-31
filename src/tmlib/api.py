@@ -1,4 +1,5 @@
 import os
+import re
 import yaml
 import glob
 import time
@@ -111,7 +112,7 @@ class BasicClusterRoutines(object):
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
 
-    def submit_jobs(self, jobs, monitoring_interval):
+    def submit_jobs(self, jobs, monitoring_interval=5):
         '''
         Create a GC3Pie engine that submits jobs to a cluster
         for parallel and/or sequential processing and monitors their progress.
@@ -120,8 +121,8 @@ class BasicClusterRoutines(object):
         ----------
         jobs: gc3libs.workflow.SequentialTaskCollection
             GC3Pie task collection of "jobs" that should be submitted
-        monitoring_interval: int
-            monitoring interval in seconds
+        monitoring_interval: int, optional
+            monitoring interval in seconds (default: ``5``)
 
         Returns
         -------
@@ -167,7 +168,7 @@ class BasicClusterRoutines(object):
                 # `progess` will do the GC3Pie magic:
                 # submit new jobs, update status of submitted jobs, get
                 # results of terminating jobs etc...
-                logger.info('workflow "%s": %s '
+                logger.info('step "%s": %s '
                             % (jobs.jobname, jobs.execution.state))
                 status.update({
                     'state': jobs.execution.state
@@ -176,7 +177,7 @@ class BasicClusterRoutines(object):
                 for task in jobs_level_1:
                     if task.jobname == jobs.jobname:
                         continue
-                    logger.info('step "%s": %s '
+                    logger.info('task "%s": %s '
                                 % (task.jobname, task.execution.state))
 
                 for j, task in enumerate(jobs_level_2):
@@ -189,15 +190,38 @@ class BasicClusterRoutines(object):
 
                 terminated_count = 0
                 total_count = 0
-                for j in status['jobs']:
-                    if j['state'] == gc3libs.Run.State.TERMINATED:
-                        terminated_count += 1
-                    total_count += 1
-                terminated_percent = int(float(terminated_count) /
-                                         float(total_count) * 100)
-                logger.info('status of current step: '
-                            '{0} of {1} jobs terminated ({2}%)'.format(
-                            terminated_count, total_count, terminated_percent))
+                # NOTE: status of jobs could be "SUBMITTED" instead of "RUNNING"
+                # in case jobs terminated very quickly 
+                currently_processed_job = list(set([
+                    j['name'] for j in status['jobs']
+                    if j['state'] in {
+                        gc3libs.Run.State.RUNNING,
+                        gc3libs.Run.State.SUBMITTED,
+                        gc3libs.Run.State.TERMINATING,
+                        gc3libs.Run.State.TERMINATED
+                    }
+                    and not re.search(r'_\d+$', j['name'])
+                ]))
+                if len(currently_processed_job) > 0:
+                    for j in status['jobs']:
+                        if j['name'].startswith(currently_processed_job[-1]):
+                            if j['state'] == gc3libs.Run.State.TERMINATED:
+                                terminated_count += 1
+                            total_count += 1
+                    if total_count > 0:
+                        terminated_percent = int(
+                            float(terminated_count) / float(total_count) * 100
+                        )
+                    else:
+                        terminated_percent = 0
+                else:
+                    terminated_count = 0
+                    total_count = 0
+                    terminated_percent = 0
+                logger.info(
+                    'status of current task: '
+                    '{0} of {1} jobs terminated ({2}%)'.format(
+                        terminated_count, total_count, terminated_percent))
                 status.update({'terminated': terminated_percent})
                 writer.write(self.status_file, status)
 
@@ -343,7 +367,10 @@ class ClusterRoutines(BasicClusterRoutines):
             if 'removals' in job_descriptions['collect']:
                 for k in job_descriptions['collect']['removals']:
                     for f in job_descriptions['collect']['inputs'][k]:
-                        files.remove(f)
+                        if isinstance(f, list):
+                            [files.remove(x) for x in f]
+                        else:
+                            files.remove(f)
         return files
 
     def list_input_files(self, job_descriptions):
@@ -526,10 +553,15 @@ class ClusterRoutines(BasicClusterRoutines):
         pass
 
     @abstractmethod
-    def create_job_descriptions(self):
+    def create_job_descriptions(self, args):
         '''
         Create job descriptions with information required for the creation and
         processing of individual jobs.
+
+        Parameters
+        ----------
+        args: tmlib.args.Args
+            an instance of an implemented subclass of the `Args` base class
 
         There are two kinds of jobs:
             * *run* jobs: collection of tasks that are processed in parallel
@@ -578,10 +610,6 @@ class ClusterRoutines(BasicClusterRoutines):
         -------
         Dict[str, List[dict] or dict]
             job descriptions
-
-        See also
-        --------
-        :mod:`tmlib.cli.CommandLineInterface.get_parser_and_subparsers`
         '''
         pass
 
@@ -649,12 +677,12 @@ class ClusterRoutines(BasicClusterRoutines):
         be handled the same way and easily be combined into a larger workflow.
         '''
         run_jobs = ParallelTaskCollection(
-                        jobname='tmaps_%s_run' % self.prog_name)
+                        jobname='%s_run' % self.prog_name)
 
         logging.debug('create run jobs: ParallelTaskCollection')
         for i, batch in enumerate(job_descriptions['run']):
 
-            jobname = 'tmaps_%s_run_%.5d' % (self.prog_name, batch['id'])
+            jobname = '%s_run_%.5d' % (self.prog_name, batch['id'])
             timestamp = self.create_datetimestamp()
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)
@@ -678,7 +706,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
             batch = job_descriptions['collect']
 
-            jobname = 'tmaps_%s_collect' % self.prog_name
+            jobname = '%s_collect' % self.prog_name
             timestamp = self.create_datetimestamp()
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)
@@ -698,13 +726,13 @@ class ClusterRoutines(BasicClusterRoutines):
             logging.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs, collect_job],
-                        jobname='tmaps_%s' % self.prog_name)
+                        jobname='%s' % self.prog_name)
 
         else:
 
             logging.debug('add run jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs],
-                        jobname='tmaps_%s' % self.prog_name)
+                        jobname='%s' % self.prog_name)
 
         return jobs

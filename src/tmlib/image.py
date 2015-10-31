@@ -53,7 +53,7 @@ class Image(object):
 
         See also
         --------
-        :mod:`tmlib.metadata.ImageMetadata`
+        :py:class:`tmlib.metadata.ImageMetadata`
         '''
         return self._metadata
 

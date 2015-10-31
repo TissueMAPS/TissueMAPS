@@ -18,8 +18,8 @@ class Pixels(object):
 
     See also
     --------
-    :mod:`tmlib.pixels.VipsPixels`
-    :mod:`tmlib.pixels.NumpyPixels`
+    :py:class:`tmlib.pixels.VipsPixels`
+    :py:class:`tmlib.pixels.NumpyPixels`
     '''
 
     __metaclass__ = ABCMeta
@@ -247,7 +247,7 @@ class VipsPixels(Pixels):
 
         See also
         --------
-        :mod:`tmlib.align.description.AligmentDescription`
+        :py:class:`tmlib.align.description.AligmentDescription`
         '''
         sd = shift_description
         # TODO
@@ -294,7 +294,7 @@ class VipsPixels(Pixels):
 
         See also
         --------
-        :mod:`tmlib.readers.VipsImageReader`
+        :py:class:`tmlib.readers.VipsImageReader`
         '''
         with VipsImageReader() as reader:
             return VipsPixels(reader.read(filename))
@@ -532,7 +532,7 @@ class NumpyPixels(Pixels):
 
         See also
         --------
-        :mod:`tmlib.readers.NumpyImageReader`
+        :py:class:`tmlib.readers.NumpyImageReader`
         '''
         with NumpyImageReader() as reader:
             return NumpyPixels(reader.read(filename))

@@ -1,6 +1,8 @@
 import os
 import logging
+from .tmaps import workflow
 from .plate import Plate
+from .args import Args
 
 logger = logging.getLogger(__name__)
 
@@ -56,17 +58,17 @@ class WorkflowDescription(object):
 
     See also
     --------
-    :mod:`tmlib.tmaps.descriptions.WorkflowStageDescription`
-    :mod:`tmlib.tmaps.descriptions.WorkflowStepDescription`
+    :py:class:`tmlib.tmaps.descriptions.WorkflowStageDescription`
+    :py:class:`tmlib.tmaps.descriptions.WorkflowStepDescription`
     '''
 
-    def __init__(self, description):
+    def __init__(self, **kwargs):
         '''
         Initialize an instance of class WorkflowDescription.
 
         Parameters
         ----------
-        description: dict, optional
+        **kwargs: dict, optional
             description of a workflow
 
         Returns
@@ -75,17 +77,13 @@ class WorkflowDescription(object):
 
         Raises
         ------
-        TypeError
-            when `description` doesn't have type dict
         KeyError
-            when `description` doesn't have key "stages"
+            when `kwargs` doesn't have key "stages"
         '''
-        if not isinstance(description, dict):
-            raise TypeError('Argument "description" must have type dict.')
-        if 'stages' not in description:
-            raise KeyError('Argument "description" must have key "stages".')
+        if 'stages' not in kwargs:
+            raise KeyError('Argument "kwargs" must have key "stages".')
         self.stages = [
-            WorkflowStageDescription(s) for s in description['stages']
+            WorkflowStageDescription(**s) for s in kwargs['stages']
         ]
 
     @property
@@ -117,13 +115,13 @@ class WorkflowStageDescription(object):
     Description of a TissueMAPS workflow stage.
     '''
 
-    def __init__(self, description=None):
+    def __init__(self, **kwargs):
         '''
         Initialize an instance of class WorkflowStageDescription.
 
         Parameters
         ----------
-        description: dict, optional
+        **kwargs: dict, optional
             description of a workflow stage
 
         Returns
@@ -132,22 +130,18 @@ class WorkflowStageDescription(object):
 
         Raises
         ------
-        TypeError
-            when `description` doesn't have type dict
         KeyError
-            when `description` doesn't have the keys "name" and "steps"
+            when `kwargs` doesn't have the keys "name" and "steps"
         '''
-        if not isinstance(description, dict):
-            raise TypeError('Argument "description" must have type dict.')
-        if not('name' in description and 'steps' in description):
+        if not('name' in kwargs and 'steps' in kwargs):
             raise KeyError(
-                'Argument "description" must have keys "name" and "steps".')
-        self.name = description['name']
-        if not description['steps']:
+                'Argument "kwargs" must have keys "name" and "steps".')
+        self.name = kwargs['name']
+        if not kwargs['steps']:
             raise ValueError(
-                'Value of "steps" of argument "description" cannot be empty.')
+                'Value of "steps" of argument "kwargs" cannot be empty.')
         self.steps = [
-            WorkflowStepDescription(s) for s in description['steps']
+            WorkflowStepDescription(**s) for s in kwargs['steps']
         ]
 
     @property
@@ -201,13 +195,13 @@ class WorkflowStepDescription(object):
     Description of a step as part of a TissueMAPS workflow stage.
     '''
 
-    def __init__(self, description=None):
+    def __init__(self, **kwargs):
         '''
         Initialize an instance of class WorkflowStep.
 
         Parameters
         ----------
-        description: dict, optional
+        **kwargs: dict, optional
             description of a step of a workflow stage
 
         Returns
@@ -219,13 +213,17 @@ class WorkflowStepDescription(object):
         TypeError
             when `description` doesn't have type dict
         KeyError
-            when `description` doesn't have the keys "name" and "args"
+            when `description` doesn't have keys "name" and "args"
         '''
-        if not('name' in description and 'args' in description):
+        if not('name' in kwargs and 'args' in kwargs):
             raise KeyError(
                     'Argument "description" requires keys "name" and "args"')
-        self.name = description['name']
-        self.args = description['args']
+        self.name = kwargs['name']
+        args_handler = workflow.load_var_method_args(self.name, 'init')
+        if kwargs['args'] is not None:
+            self.args = args_handler(**kwargs['args'])
+        else:
+            self.args = None
 
     @property
     def name(self):
@@ -237,8 +235,8 @@ class WorkflowStepDescription(object):
 
         Note
         ----
-        Must correspond to a name of a `tmlib` command line program
-        (subpackage).
+        Must correspond to a name of a `tmaps` command line program
+        (a `tmlib` subpackage).
         '''
         return self._name
 
@@ -253,35 +251,28 @@ class WorkflowStepDescription(object):
         '''
         Returns
         -------
-        dict
-            arguments required by the step (arguments that can be parsed
-            to the "init" method of the corresponding *cli* class)
+        tmlib.args.InitArgs
+            arguments required by the step (i.e. arguments that can be parsed
+            to the `init` method of the program-specific implementation of
+            the :py:class:`tmlib.cli.CommandLineInterface` base class)
 
         Note
         ----
-        Default values defined by the corresponding *init* subparser will
-        be used in case an optional argument is not provided.
-
-        See also
-        --------
-        `tmlib.cli`_
+        Default values defined by the program-specific implementation of the
+        `Args` class will be used in case an optional argument is not
+        provided.
         '''
         return self._args
 
     @args.setter
     def args(self, value):
-        if not(isinstance(value, dict) or value is None):
-            raise TypeError('Attribute "args" must have type dict')
-        if value is not None:
-            if not all([isinstance(k, basestring) for k, v in value.iteritems()]):
-                raise TypeError('Keys of "args" must have type basestring.')
-            if any([v is None for k, v in value.iteritems()]):
-                raise ValueError('Values of "args" must be specified.')
+        if not(isinstance(value, Args) or value is None):
+            raise TypeError('Attribute "args" must have type tmlib.args.Args')
         self._args = value
 
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
-        yield ('args', getattr(self, 'args'))
+        yield ('args', dict(getattr(self, 'args')))
 
 
 class UserConfiguration(object):
@@ -324,7 +315,7 @@ class UserConfiguration(object):
         for k, v in cfg_settings.iteritems():
             if k in self._PERSISTENT_ATTRS:
                 if k == 'workflow':
-                    v = WorkflowDescription(v)
+                    v = WorkflowDescription(**v)
                 setattr(self, k, v)
 
     @property
@@ -342,8 +333,8 @@ class UserConfiguration(object):
 
         See also
         --------
-        :mod:`tmlib.source.PlateSource`
-        :mod:`tmlib.source.PlateAcquisition`
+        :py:class:`tmlib.source.PlateSource`
+        :py:class:`tmlib.source.PlateAcquisition`
         '''
         if self._sources_dir is None:
             self._sources_dir = os.path.join(self.experiment_dir, 'sources')
@@ -376,8 +367,8 @@ class UserConfiguration(object):
 
         See also
         --------
-        :mod:`tmlib.plate.Plate`
-        :mod:`tmlib.cycle.Cycle`
+        :py:class:`tmlib.plate.Plate`
+        :py:class:`tmlib.cycle.Cycle`
         '''
         if self._plates_dir is None:
             self._plates_dir = os.path.join(self.experiment_dir, 'plates')
@@ -410,7 +401,7 @@ class UserConfiguration(object):
 
         See also
         --------
-        :mod:`tmlib.illuminati.layers`
+        :py:mod:`tmlib.illuminati.layers`
         '''
         if self._layers_dir is None:
             self._layers_dir = os.path.join(self.experiment_dir, 'layers')

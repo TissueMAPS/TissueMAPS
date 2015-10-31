@@ -51,10 +51,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         headless: bool, optional
             whether plotting should be disabled (default: ``True``)
 
-        Returns
-        -------
-        tmlib.jterator.api.ImageAnalysisPipeline
-
         Note
         ----
         If `pipe` or `handles` are not provided

@@ -1,7 +1,7 @@
 import sys
 import logging
 
-
+#: Mapping for logging level verbosity
 VERBOSITY_LEVELS = {
     0: logging.WARN,  # For simplicity. Includes ERROR, CRITICAL
     1: logging.INFO,

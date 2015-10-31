@@ -27,10 +27,6 @@ class IllumstatsGenerator(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-
-        Returns
-        -------
-        tmlib.corilla.api.IllumstatsGenerator
         '''
         super(IllumstatsGenerator, self).__init__(
                 experiment, prog_name, verbosity)
@@ -49,9 +45,14 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         return self.experiment.plates[0].cycles[0].STATS_FILE_FORMAT
 
-    def create_job_descriptions(self):
+    def create_job_descriptions(self, args):
         '''
         Create job descriptions for parallel computing.
+
+        Parameters
+        ----------
+        args: tmlib.corilla.args.CorillaInitArgs
+            program-specific arguments
 
         Returns
         -------

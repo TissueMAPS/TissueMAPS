@@ -3,28 +3,26 @@ from . import logo
 from . import __version__
 from .api import ImageRegistration
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
 class Align(CommandLineInterface):
 
-    def __init__(self, args):
+    def __init__(self, experiment_dir, verbosity):
         '''
         Initialize an instance of class Align.
 
         Parameters
         ----------
-        args: argparse.Namespace
-            parsed command line arguments
-
-        Returns
-        -------
-        tmlib.align.cli.Align
+        experiment_dir: str
+            path to the experiment directory
+        verbosity: int
+            logging level
         '''
-        super(Align, self).__init__(args)
-        self.args = args
+        super(Align, self).__init__(experiment_dir, verbosity)
+        self.experiment_dir = experiment_dir
+        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -42,26 +40,10 @@ class Align(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir)
         return ImageRegistration(
-                experiment=experiment,
+                experiment=self.experiment,
                 prog_name=self.name,
-                verbosity=self.args.verbosity)
-
-    @property
-    def _init_args(self):
-        kwargs = dict()
-        kwargs['batch_size'] = self.args.batch_size
-        kwargs['ref_cycle'] = self.args.ref_cycle
-        kwargs['ref_channel'] = self.args.ref_channel
-        kwargs['limit'] = self.args.limit
-        return kwargs
-
-    @property
-    def _apply_args(self):
-        kwargs = dict()
-        kwargs['illumcorr'] = self.args.illumcorr
-        return kwargs
+                verbosity=self.verbosity)
 
     @staticmethod
     def call(args):
@@ -78,7 +60,5 @@ class Align(CommandLineInterface):
         --------
         :py:mod:`tmlib.align.argparser`
         '''
-        cli = Align(args)
-        logger.debug('call "%s" method of class "%s"'
-                     % (args.method_name, cli.__class__.__name__))
-        getattr(cli, args.method_name)()
+        cli = Align(args.experiment_dir, args.verbosity)
+        cli._call(args)

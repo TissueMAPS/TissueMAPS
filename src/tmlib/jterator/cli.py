@@ -3,28 +3,43 @@ from . import logo
 from . import __version__
 from .api import ImageAnalysisPipeline
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
 class Jterator(CommandLineInterface):
 
-    def __init__(self, args):
+    def __init__(self, experiment_dir, verbosity, pipeline_name, headless):
         '''
         Initialize an instance of class Jterator.
 
         Parameters
         ----------
-        args: argparse.Namespace
-            parsed command line arguments
+        experiment_dir: str
+            path to the experiment directory
+        verbosity: int
+            logging level
+        pipeline_name: str
+            name of the processed pipeline
+        headless: bool
+            indicator that program should run in headless mode,
+            i.e. that modules should not generate any plots
 
-        Returns
-        -------
-        :mod:`tmlib.jterator.cli.Jterator`
+        Raises
+        ------
+        TypeError
+            when `pipeline_name` doesn't have type str and/or when
+            `headless` doesn't have type bool
         '''
-        super(Jterator, self).__init__(args)
-        self.args = args
+        super(Jterator, self).__init__(experiment_dir, verbosity)
+        self.experiment_dir = experiment_dir
+        self.verbosity = verbosity
+        if not isinstance(pipeline_name, basestring):
+            raise TypeError('Argument "pipeline_name" must have type str.')
+        self.pipeline_name = str(pipeline_name)
+        if not isinstance(headless, bool):
+            raise TypeError('Argument "headless" must have type bool.')
+        self.headless = headless
 
     @staticmethod
     def _print_logo():
@@ -42,37 +57,52 @@ class Jterator(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir)
         return ImageAnalysisPipeline(
-                                experiment=experiment, prog_name=self.name,
-                                verbosity=self.args.verbosity,
-                                pipe_name=self.args.pipeline,
-                                headless=self.args.headless)
+                    experiment=self.experiment,
+                    prog_name=self.name,
+                    verbosity=self.verbosity,
+                    pipe_name=self.pipeline,
+                    headless=self.headless)
 
-    def create(self):
+    def create(self, create_args):
         '''
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "create" subparser.
+
+        Parameters
+        ----------
+        create_args: tmlib.args.CreateArgs
+            method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
         logger.info('create project: %s' % api.project_dir)
-        api.project.create(self.args.repo_dir, self.args.skel_dir)
+        api.project.create(create_args.repo_dir, create_args.skel_dir)
 
-    def remove(self):
+    def remove(self, args):
         '''
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "remove" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.RemoveArgs
+            method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
         logger.info('remove project: %s' % api.project_dir)
         api.project.remove()
 
-    def check(self):
+    def check(self, args):
         '''
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "check" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.CheckArgs
+            method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
@@ -92,9 +122,8 @@ class Jterator(CommandLineInterface):
 
         See also
         --------
-        :mod:`tmlib.jterator.argparser`
+        :py:mod:`tmlib.jterator.argparser`
         '''
-        cli = Jterator(args)
-        logger.debug('call "%s" method of class "%s"'
-                     % (args.method_name, cli.__class__.__name__))
-        getattr(cli, args.method_name)()
+        cli = Jterator(args.experiment_dir, args.verbosity,
+                       args.pipeline, not args.plot)
+        cli._call(args)

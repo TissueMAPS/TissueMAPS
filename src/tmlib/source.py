@@ -50,7 +50,7 @@ class PlateSource(object):
 
         See also
         --------
-        :mod:`tmlib.cfg.UserConfiguration`
+        :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.plate_source_dir = plate_source_dir
         if not os.path.exists(self.plate_source_dir):
@@ -176,7 +176,7 @@ class PlateAcquisition(object):
 
         See also
         --------
-        :mod:`tmlib.cfg.UserConfiguration`
+        :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.acquisition_dir = acquisition_dir
         self.user_cfg = user_cfg
@@ -318,7 +318,7 @@ class PlateAcquisition(object):
 
         See also
         --------
-        :mod:`tmlib.formats.Formats`
+        :py:class:`tmlib.formats.Formats`
         '''
         files = [
             f for f in os.listdir(self.image_dir)

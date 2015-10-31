@@ -33,8 +33,6 @@ class MetadataHandler(object):
     The metadata that can be automatically retrieved form image files may not
     be sufficient, but may require additional microscope-specific metadata
     and/or user input.
-
-
     '''
 
     __metaclass__ = ABCMeta
@@ -53,10 +51,6 @@ class MetadataHandler(object):
             full paths to the XML files that contain the extracted OMEXML data
         plate_name: str
             name of the corresponding plate
-
-        Returns
-        -------
-        tmlib.metaconfig.default.MetadataHandler
         '''
         self.image_files = image_files
         self.additional_files = additional_files
@@ -83,7 +77,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        :mod:`tmlib.metareaders.DefaultMetadataReader`
+        :py:class:`tmlib.metareaders.DefaultMetadataReader`
         '''
         self._ome_image_metadata = dict()
         logger.info('read OMEXML metadata extracted from image files')
@@ -344,14 +338,14 @@ class MetadataHandler(object):
             when metadata specifies more than one *Plate* element
             or when *Plane* elements have different x, y positions
         MetadataError
-            when *Plate* element provide no or incorrect references to
-            image files or when no additional metadata is available
+            when no additional metadata is available or when *Plate* element
+            provides no or incorrect references to image files
 
         See also
         --------
-        :mod:`tmlib.metaconfig.default.MetaDataHandler`
-        :mod:`tmlib.metaconfig.visiview.VisiviewMetaDataHandler`
-        :mod:`tmlib.metaconfig.cellvoyager.CellvoyagerMetaDataHandler`
+        :py:class:`tmlib.metaconfig.default.MetaDataHandler`
+        :py:class:`tmlib.metaconfig.visiview.VisiviewMetaDataHandler`
+        :py:class:`tmlib.metaconfig.cellvoyager.CellvoyagerMetaDataHandler`
         '''
         if self.ome_additional_metadata.image_count == 0:
             # One image is always added by default.
@@ -475,7 +469,7 @@ class MetadataHandler(object):
     def configure_metadata_from_filenames(self, plate_dimensions, regex=None):
         '''
         Configure metadata based on information encoded in image filenames
-        using a regular expression with named groups::
+        using a regular expression with named groups:
             - *w*: well
             - *t*: time point
             - *s*: acquisition site
@@ -614,7 +608,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        :mod:`illuminati.stitch.calc_grid_coordinates_from_positions`
+        :py:func:`illuminati.stitch.calc_grid_coordinates_from_positions`
         '''
         # Retrieve the stage positions for each pixel array.
         positions = list()
@@ -680,8 +674,8 @@ class MetadataHandler(object):
 
         See also
         --------
-        :mod:`illuminati.stitch.guess_stitch_dimensions`
-        :mod:`illuminati.stitch.calc_grid_coordinates_from_layout`
+        :py:func:`illuminati.stitch.guess_stitch_dimensions`
+        :py:func:`illuminati.stitch.calc_grid_coordinates_from_layout`
         '''
         plate = self.metadata.plates[0]
 
@@ -1038,15 +1032,16 @@ class DefaultMetadataReader(MetadataReader):
 
     '''
     `Python-bioformats <https://github.com/CellProfiler/python-bioformats>`_
-    provides an interface for reading metadata form files
+    provides an interface for reading metadata form image files
     using `python-javabridge <https://github.com/CellProfiler/python-javabridge>`_.
 
-    However, this approach often leads to incorrect parsing of metadata.
-    Therefore, we decided to extract metadata from the image files directly via
+    However, this approach often leads to incorrect parsing of metadata due
+    to problems related to the use of specific reader classes.
+    Therefore, metadata is extracted from the image files directly via
     Bio-Formats using the
     `showinf <http://www.openmicroscopy.org/site/support/bio-formats5.1/users/comlinetools/display.html>`_
     command line tool. This tool prints the OME-XML to standard output, which
-    we direct to a file.
+    is captured and redirected to a file.
     '''
 
     def read(self, filename):

@@ -69,6 +69,7 @@ def create_id_lookup_matrices(sitemat, offset):
     mat[nonzero] = mat[nonzero] + offset
     return mat, np.max(mat)
 
+
 def remove_border_objects_numpy(im):
     '''
     Given a matrix of a site image, set all pixels with

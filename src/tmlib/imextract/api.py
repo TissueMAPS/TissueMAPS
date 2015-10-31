@@ -29,10 +29,6 @@ class ImageExtractor(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-
-        Returns
-        -------
-        tmlib.imextract.api.ImageExtractor
         '''
         super(ImageExtractor, self).__init__(experiment, prog_name, verbosity)
         self.experiment = experiment
@@ -44,16 +40,15 @@ class ImageExtractor(ClusterRoutines):
             if not os.path.exists(cycle.image_dir):
                 os.mkdir(cycle.image_dir)
 
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self, args):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.
 
         Parameters
         ----------
-        **kwargs: dict
-            additional input arguments as key-value pairs:
-            * "batch_size": number of images per job (*int*)
+        args: tmlib.imextract.args.ImextractInitArgs
+            program-specific arguments
 
         Returns
         -------
@@ -65,7 +60,7 @@ class ImageExtractor(ClusterRoutines):
         for source in self.experiment.sources:
             mapper = source.image_mapper
             ix_batches = self._create_batches(range(len(mapper)),
-                                              kwargs['batch_size'])
+                                              args.batch_size)
 
             for indices in ix_batches:
                 job_count += 1

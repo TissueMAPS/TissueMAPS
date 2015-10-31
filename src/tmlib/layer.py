@@ -87,7 +87,7 @@ class ChannelLayer(object):
 
         logger.info('stitch images to mosaic')
         layer_name = [
-            lmd.name for lmd in experiment.layer_metadata
+            lmd.name for lmd in experiment.layer_metadata.values()
             if lmd.tpoint_ix == tpoint_ix
             and lmd.channel_ix == channel_ix
             and lmd.zplane_ix == zplane_ix
@@ -246,7 +246,7 @@ class ChannelLayer(object):
         scaled_image = self.mosaic.array.scale()
         return ChannelLayer(Mosaic(scaled_image), self.metadata)
 
-    def clip(self, value=None, percent=None):
+    def clip(self, value=None, percentile=None):
         '''
         Clip (limit) the pixel values in the mosaic image.
 
@@ -254,10 +254,10 @@ class ChannelLayer(object):
         ----------
         value: int
             value for the clip level
-        percent: int
+        percentile: int
             percentile to calculate the clip level,
-            e.g. if `percent` is 99.9% then 0.1% of pixels will lie
-            above threshold
+            e.g. if `percentile` is 99.9% then 0.1% of pixels will lie
+            above the clip level
 
         Returns
         -------
@@ -266,7 +266,7 @@ class ChannelLayer(object):
         '''
         if not value:
             # TODO: only consider non-empty wells
-            value = self.mosaic.array.percent(percent)
+            value = self.mosaic.array.percent(percentile)
         lut = image_utils.create_thresholding_LUT(value)
         clipped_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(Mosaic(clipped_image), self.metadata)
