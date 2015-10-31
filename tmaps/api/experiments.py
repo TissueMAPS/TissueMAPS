@@ -11,7 +11,6 @@ import numpy as np
 from tmaps.models import Experiment
 from tmaps.extensions.encrypt import decode
 from tmaps.api import api
-import tmaps.posmapper
 
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
@@ -178,33 +177,6 @@ def get_experiment(experiment_id):
         return jsonify(ex[0].as_dict())
     else:
         return 'User does not have an experiment with id %d' % experiment_id, 404
-
-
-@api.route('/experiments/<experiment_id>/cells', methods=['GET'])
-# @jwt_required()
-def get_cell_at_pos(experiment_id):
-    experiment_id = decode(experiment_id)
-    ex = Experiment.query.get(experiment_id)
-    if not ex:
-        return 'No experiment found', 404
-
-    x = request.args.get('x')
-    y = request.args.get('y')
-    if x and y:
-        x = float(x)
-        y = float(y)
-        cell_id = posmapper.get_cell_at_pos(ex, x, y)
-        return jsonify(cell_id=cell_id)
-    else:
-        # arr = ex.dataset['/objects/cells/centroids'][()]
-        loc = os.path.join(ex.location, 'outlines.json')
-        return send_file(loc)
-        # ids = map(int, arr[:, 0])
-        # xy = arr[:, 1:3].tolist()
-        # centroids = dict(zip(ids, xy))
-
-        # return jsonify(centroids)
-
 
 
 def _get_feat_property_extractor(prop):
