@@ -129,6 +129,11 @@ class WorkflowDescription(object):
         >>>obj = WorkflowDescription(mapping)
         >>>dict(obj)
 
+    Note
+    ----
+    The input mapping will not be identical to the output mapping, because
+    default values will be added for optional arguments that are not provided.
+
     See also
     --------
     :py:class:`tmlib.tmaps.descriptions.WorkflowStageDescription`
