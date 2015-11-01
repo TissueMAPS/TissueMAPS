@@ -5,7 +5,7 @@ from . import logging_utils
 from .tmaps import workflow
 from .tmaps import canonical
 from .plate import Plate
-from .args import GeneralArgs
+from .args import VariableArgs
 from .writers import YamlWriter
 from .errors import WorkflowDescriptionError
 
@@ -292,26 +292,13 @@ class WorkflowStageDescription(object):
         for k in self._PERSISTENT_ATTRS:
             if k not in kwargs:
                 raise KeyError('Argument "kwargs" must have key "%s".' % k)
-        self.name = kwargs['name']
-        check_stage_name(self.name)
         if not kwargs['steps']:
             raise ValueError(
                 'Value of "steps" of argument "kwargs" cannot be empty.')
+        self.name = kwargs['name']
         self.steps = list()
-        step_names = list()
         for step in kwargs['steps']:
-            name = step['name']
-            check_step_name(name)
-            # Ensure that dependencies between steps within the stage
-            # are fulfilled
-            if name in canonical.INTRA_STAGE_DEPENDENCIES:
-                for dep in canonical.INTRA_STAGE_DEPENDENCIES[name]:
-                    if dep not in step_names:
-                        raise WorkflowDescriptionError(
-                                'Step "%s" requires upstream step "%s"'
-                                % (name, dep))
-            step_names.append(name)
-            self.steps.append(WorkflowStepDescription(**step))
+            self.add_step(WorkflowStepDescription(**step))
 
     @property
     def name(self):
@@ -332,6 +319,7 @@ class WorkflowStageDescription(object):
     def name(self, value):
         if not isinstance(value, basestring):
             raise TypeError('Attribute "name" must have type basestring')
+        check_stage_name(value)
         self._name = str(value)
 
     @property
@@ -352,6 +340,35 @@ class WorkflowStageDescription(object):
             raise TypeError(
                 'Elements of "steps" must have type WorkflowStepDescription')
         self._steps = value
+
+    def add_step(self, step_description):
+        '''
+        Add an additional step to the stage.
+
+        Parameters
+        ----------
+        step_description: tmlib.cfg.WorkflowStepDescription
+            description of the step that should be added
+
+        Raises
+        ------
+        TypeError
+            when `step_description` doesn't have type
+            :py:class:`tmlib.cfg.WorkflowStepDescription`
+        '''
+        if not isinstance(step_description, WorkflowStepDescription):
+            raise TypeError(
+                    'Argument "step_description" must have type '
+                    'tmlib.cfg.WorkflowStepDescription.')
+        name = step_description.name
+        step_names = [s.name for s in self.steps]
+        if name in canonical.INTRA_STAGE_DEPENDENCIES:
+            for dep in canonical.INTRA_STAGE_DEPENDENCIES[name]:
+                if dep not in step_names:
+                    raise WorkflowDescriptionError(
+                            'Step "%s" requires upstream step "%s"'
+                            % (name, dep))
+        self.steps.append(step_description)
 
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
@@ -381,32 +398,32 @@ class WorkflowStepDescription(object):
 
         Raises
         ------
-        TypeError
-            when `description` doesn't have type dict
         KeyError
             when `description` doesn't have keys "name" and "args"
+        WorkflowDescriptionError
+            when the step is not known
         '''
         for attr in self._PERSISTENT_ATTRS:
             if attr not in kwargs:
                 raise KeyError('Argument "kwargs" requires key "%s"')
         self.name = kwargs['name']
-        args_handler = workflow.load_method_args('init')
-        self.args = args_handler()
         try:
             variable_args_handler = workflow.load_var_method_args(
                                         self.name, 'init')
         except ImportError:
             raise WorkflowDescriptionError(
-                    'Step "%s" doesn\'t exist.' % self.name)
+                    '"%s" is not a valid step name.' % self.name)
+        args_handler = workflow.load_method_args('init')
+        self._args = args_handler()
         if kwargs['args']:
-            self.args.variable_args = variable_args_handler(**kwargs['args'])
+            self.args = variable_args_handler(**kwargs['args'])
             for arg in kwargs['args']:
                 if arg not in self.args.variable_args._persistent_attrs:
                     raise WorkflowDescriptionError(
                             'Unknown argument "%s" for step "%s".'
                             % (arg, self.name))
         else:
-            self.args.variable_args = variable_args_handler()
+            self.args = variable_args_handler()
 
     @property
     def name(self):
@@ -427,6 +444,7 @@ class WorkflowStepDescription(object):
     def name(self, value):
         if not isinstance(value, basestring):
             raise TypeError('Attribute "name" must have type basestring')
+        check_step_name(value)
         self._name = str(value)
 
     @property
@@ -435,9 +453,9 @@ class WorkflowStepDescription(object):
         Returns
         -------
         tmlib.args.GeneralArgs
-            arguments required by the step (i.e. arguments that can be parsed
-            to the `init` method of the program-specific implementation of
-            the :py:class:`tmlib.cli.CommandLineInterface` base class)
+            all arguments required by the step (i.e. the arguments that can be
+            parsed to the `init` method of the program-specific implementation
+            of the :py:class:`tmlib.cli.CommandLineInterface` base class)
 
         Note
         ----
@@ -449,9 +467,10 @@ class WorkflowStepDescription(object):
 
     @args.setter
     def args(self, value):
-        if not isinstance(value, GeneralArgs):
-            raise TypeError('Attribute "args" must have type tmlib.args.GeneralArgs')
-        self._args = value
+        if not isinstance(value, VariableArgs):
+            raise TypeError(
+                    'Attribute "args" must have type tmlib.args.VariableArgs')
+        self._args.variable_args = value
 
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
