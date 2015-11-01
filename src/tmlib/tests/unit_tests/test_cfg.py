@@ -397,3 +397,34 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
             cfg_settings=config_settings
         )
         self.assertIsInstance(dict(config), dict)
+
+    def test_dump_to_file(self):
+        expected_sources_dir = os.path.join(self.data_location, 'sources')
+        expected_plates_dir = os.path.join(self.data_location, 'plates')
+        expected_layers_dir = os.path.join(self.data_location, 'layers')
+        config_settings = {
+            'sources_dir': expected_sources_dir,
+            'plates_dir': expected_plates_dir,
+            'layers_dir': expected_layers_dir,
+            'plate_format': self.plate_format,
+            'workflow': {
+                'stages': [
+                    {
+                        'name': 'image_conversion',
+                        'steps': [
+                            {
+                                'name': 'metaextract',
+                                'args': dict()
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+        config = UserConfiguration(
+            experiment_dir=self.experiment_dir,
+            cfg_settings=config_settings
+        )
+        self.assertFalse(os.path.exists(config.cfg_file))
+        config.dump_to_file()
+        self.assertTrue(os.path.exists(config.cfg_file))

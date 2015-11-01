@@ -142,5 +142,3 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         ix = [p.name for p in exp.plates].index(new_plate_name)
         self.assertEqual(exp.plates[ix].name, new_plate_name)
         self.assertEqual(len(exp.plates[ix].cycles), 0)
-
-
