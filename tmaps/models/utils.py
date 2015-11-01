@@ -2,7 +2,9 @@ import shutil
 import os.path as p
 import os
 from sqlalchemy import event
+
 from tmaps.extensions.encrypt import encode
+from tmaps.extensions.database import db
 
 
 def auto_generate_hash(cls):
@@ -61,6 +63,21 @@ def auto_create_directory(get_location_func):
                 os.mkdir(loc)
             else:
                 print 'WARNING: Tried to create location %s but it exists already!' % loc
+        event.listen(cls, 'after_insert', after_insert_callback)
+        return cls
+    return class_decorator
+
+
+def exec_func_after_insert(func):
+    """
+    @exec_func_after_insert(lambda target: do_something())
+    SomeClass(db.Model):
+    ...
+
+    """
+    def class_decorator(cls):
+        def after_insert_callback(mapper, connection, target):
+            func(mapper, connection, target)
         event.listen(cls, 'after_insert', after_insert_callback)
         return cls
     return class_decorator
