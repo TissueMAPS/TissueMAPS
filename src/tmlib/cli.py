@@ -13,10 +13,8 @@ from .args import InitArgs
 from .args import SubmitArgs
 from .args import RunArgs
 from .args import CollectArgs
-from .args import ApplyArgs
 from .args import CleanupArgs
 from .tmaps import workflow
-from .experiment import Experiment
 from .logging_utils import configure_logging
 from .logging_utils import map_logging_verbosity
 
@@ -44,7 +42,7 @@ def command_line_call(parser):
     level = map_logging_verbosity(arguments.verbosity)
     configure_logging(level)
     logger.debug('running program: %s' % parser.prog)
-    
+
     gc3libs.log = logging.getLogger('gc3lib')
     gc3libs.log.level = logging.CRITICAL
 
@@ -63,6 +61,28 @@ def command_line_call(parser):
         sys.exit(1)
 
 
+def call_cli_method(cli_instance, args):
+    '''
+    Call a method of a *cli* class with the parsed command line arguments.
+
+    Parameters
+    ----------
+    cli_instance: tmlib.cli.CommandLineInterface
+        an instance of an implementation of the
+        :py:class:`tmlib.cli.CommandLineInterface` base class
+    args: argparse.Namespace
+        parsed command line arguments
+    '''
+    args_handler = workflow.load_method_args(args.method_name)
+    method_args = args_handler(**vars(args))
+    # Add variable, program-specific arguments (if there are any)
+    variable_args_handler = workflow.load_var_method_args(
+                                cli_instance.name, args.method_name)
+    if variable_args_handler is not None:
+        method_args.variable_args = variable_args_handler(**vars(args))
+    getattr(cli_instance, args.method_name)(method_args)
+
+
 class CommandLineInterface(object):
 
     '''
@@ -76,47 +96,23 @@ class CommandLineInterface(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment_dir, verbosity):
+    def __init__(self, experiment, verbosity):
         '''
         Initialize an instance of class CommandLineInterface.
 
         Parameters
         ----------
-        experiment_dir: str
-            path to the experiment directory
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
         verbosity: int
             logging level
-
-        Raises
-        ------
-        TypeError
-            when `verbosity` doesn't have type int
-        ValueError
-            when `verbosity` is negative
 
         See also
         --------
         :py:func:`tmlib.logging_utils.map_logging_verbosity`
         '''
-        self.experiment_dir = experiment_dir
-        if not isinstance(verbosity, int):
-            raise TypeError('Argument "verbosity" must have type int.')
-
-        if not verbosity >= 0:
-            raise ValueError('Argument "verbosity" must be a positive number.')
-        if verbosity > 3:
-            logging.warning('verbosity exceeds maximum logging level')
+        self.experiment = experiment
         self.verbosity = verbosity
-
-    @property
-    def experiment(self):
-        '''
-        Returns
-        -------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
-        '''
-        return Experiment(self.experiment_dir)
 
     @abstractproperty
     def name(self):
@@ -217,10 +213,6 @@ class CommandLineInterface(object):
             shutil.move(api.job_descriptions_dir,
                         '{name}_backup_{time}'.format(
                             name=api.job_descriptions_dir,
-                            time=timestamp))
-            shutil.move(api.status_dir,
-                        '{name}_backup_{time}'.format(
-                            name=api.status_file,
                             time=timestamp))
         else:
             logger.debug('remove log reports and job descriptions '
@@ -326,29 +318,6 @@ class CommandLineInterface(object):
         logger.info('submit and monitor jobs')
         api.submit_jobs(jobs, monitoring_interval=args.interval)
 
-    def apply(self, args):
-        '''
-        Initialize an instance of the API class corresponding to the program
-        and process arguments of the "apply" subparser.
-
-        Parameters
-        ----------
-        args: tmlib.args.ApplyArgs
-            method-specific arguments
-        '''
-        self._print_logo()
-        api = self._api_instance
-        logger.info('apply statistics')
-        api.apply_statistics(
-                output_dir=args.output_dir,
-                plates=args.plates,
-                wells=args.wells,
-                sites=args.sites,
-                channels=args.channels,
-                tpoints=args.tpoints,
-                zplanes=args.zplanes,
-                **args.variable_args)
-
     def collect(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
@@ -368,19 +337,14 @@ class CommandLineInterface(object):
         api.collect_job_output(batch)
 
     def _call(self, args):
-        logger.debug('call "%s" method of class "%s"'
-                     % (args.method_name, self.__class__.__name__))
-        general_args_handler = workflow.load_method_args(args.method_name)
-        method_args = general_args_handler(**vars(args))
-        var_args_handler = workflow.load_var_method_args(
-                                self.name, args.method_name)
-        if var_args_handler is not None:
-            method_args.variable_args = var_args_handler(**vars(args))
-        getattr(self, args.method_name)(method_args)
+        logger.debug('call "%s" method of class "%s"',
+                     args.method_name, self.__class__.__name__)
+        call_cli_method(self, args)
 
     @staticmethod
     def get_parser_and_subparsers(
-            required_subparsers=['init', 'run', 'submit', 'cleanup']):
+            required_subparsers=[
+                'init', 'run', 'submit', 'collect', 'cleanup']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -391,12 +355,18 @@ class CommandLineInterface(object):
         ----------
         required_subparsers: List[str]
             subparsers that should be returned (default: 
-            ``["init", "run", "submit", "cleanup"]``)
+            ``["init", "run", "submit", "collect", cleanup"]``)
 
         Returns
         -------
         Tuple[argparse.Argumentparser and argparse._SubParsersAction]
             parser and subparsers objects
+
+        Note
+        ----
+        In case an implementation of the base class doesn't use a particular
+        subparser, the corresponding method must be overwritten such that it
+        raises an AttributeError.
         '''
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -452,15 +422,6 @@ class CommandLineInterface(object):
                 Collect outputs of processed jobs and fuse them.
             '''
             CollectArgs().add_to_argparser(collect_parser)
-
-        if 'apply' in required_subparsers:
-            apply_parser = subparsers.add_parser(
-                'apply', help='apply job output')
-            apply_parser.description = '''
-                Apply statistics calculated by the program to (a subset of)
-                images.
-            '''
-            ApplyArgs().add_to_argparser(apply_parser)
 
         if 'cleanup' in required_subparsers:
             cleanup_parser = subparsers.add_parser(

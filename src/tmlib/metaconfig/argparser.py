@@ -7,9 +7,7 @@ from .cli import Metaconfig
 from .args import MetaconfigInitArgs
 
 
-parser, subparsers = Metaconfig.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'cleanup', 'collect']
-)
+parser, subparsers = Metaconfig.get_parser_and_subparsers()
 
 parser.description = '''
         Configure metadata based on OMEXML extracted from image files

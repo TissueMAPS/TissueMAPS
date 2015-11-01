@@ -1,24 +1,32 @@
 import logging
-import argparse
 from . import logo
 from . import __version__
-from .workflow import Workflow
 from .api import WorkflowClusterRoutines
 from ..experiment import Experiment
+from .. import cli
 
 logger = logging.getLogger(__name__)
 
 
 class Tmaps(object):
 
-    def __init__(self, args):
+    '''
+    Command line interface for submission of workflows.
+    '''
+
+    def __init__(self, experiment, verbosity):
         '''
         Initialize an instance of class Tmaps.
 
-        
+        Parameters
+        ----------
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
+        verbosity: int
+            logging level
         '''
-        self.args = args
-        self.logger = logger
+        self.experiment = experiment
+        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -36,8 +44,28 @@ class Tmaps(object):
 
     @property
     def _api_instance(self):
-        experiment = Experiment(self.args.experiment_dir)
-        return WorkflowClusterRoutines(experiment, self.name)
+        return WorkflowClusterRoutines(
+                    experiment=self.experiment,
+                    prog_name=self.name,
+                    verbosity=self.verbosity)
+
+    def submit(self, args):
+        '''
+        Initialize an instance of the API class corresponding to the program
+        and process arguments provided by the "submit" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.SubmitArgs
+            method-specific arguments
+        '''
+        api = self._api_instance
+        jobs = api.create_jobs(args.variable_args.stage,
+                               args.variable_args.step)
+        api.submit_jobs(jobs, args.interval)
+
+    def _call(self, args):
+        cli.call_cli_method(self, args)
 
     @staticmethod
     def call(args):
@@ -52,60 +80,29 @@ class Tmaps(object):
 
         See also
         --------
-        `tmlib.tmaps.argparser`_
+        :py:mod:`tmlib.metaextract.argparser`
         '''
-        cli = Tmaps(args)
-        logger.debug('call "%s" method of class "%s"'
-                     % (args.method_name, cli.__class__.__name__))
-        getattr(cli, args.method_name)()
-
-    def submit(self):
-        '''
-        Initialize an instance of the API class corresponding to the program
-        and process arguments of the "submit" subparser.
-        '''
-        api = self._api_instance
-        jobs = Workflow(
-                    experiment=api.experiment,
-                    stage=self.args.stage,
-                    step=self.args.step,
-                    virtualenv=self.args.virtualenv,
-                    verbosity=self.args.verbosity)
-        api.submit_jobs(jobs, 5)
+        experiment = Experiment(args.experiment_dir)
+        cli = Tmaps(experiment, args.verbosity)
+        cli._call(args)
 
     @staticmethod
-    def get_parser_and_subparsers(
-            required_subparsers=['submit']):
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            'experiment_dir', help='path to experiment directory')
-        parser.add_argument(
-            '-v', '--verbosity', action='count', default=0,
-            help='increase logging verbosity to DEBUG (default: INFO)')
-        parser.add_argument(
-            '--version', action='version')
+    def get_parser_and_subparsers(required_subparsers=['submit']):
+        '''
+        Get an argument parser object and subparser objects with default
+        arguments for use in command line interfaces.
+        The subparsers objects can be extended with additional subparsers and
+        additional arguments can be added to each individual subparser.
 
-        if not required_subparsers:
-            raise ValueError('At least one subparser has to specified')
+        Parameters
+        ----------
+        required_subparsers: List[str]
+            subparsers that should be returned (default: ``["submit"]``)
 
-        subparsers = parser.add_subparsers(dest='method_name',
-                                           help='sub-commands')
-
-        if 'submit' in required_subparsers:
-            submit_parser = subparsers.add_parser(
-                'submit',
-                help='submit and monitor jobs')
-            submit_parser.description = '''
-                Create jobs, submit them to the cluster, monitor their
-                processing and collect their outputs.
-            '''
-            submit_parser.add_argument(
-                '--interval', type=int, default=5,
-                help='monitoring interval in seconds'
-            )
-            submit_parser.add_argument(
-                '--virtualenv', type=str, default='tmaps',
-                help='name of a virtual environment that should be activated '
-                     '(default: tmaps')
-
-        return (parser, subparsers)
+        Returns
+        -------
+        Tuple[argparse.Argumentparser and argparse._SubParsersAction]
+            parser and subparsers objects
+        '''
+        return cli.CommandLineInterface.get_parser_and_subparsers(
+                        required_subparsers=required_subparsers)

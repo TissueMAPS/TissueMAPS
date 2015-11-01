@@ -79,6 +79,33 @@ class Args(object):
                 kwargs = getattr(self, params)
                 parser.add_argument(*[flag], **kwargs)
 
+
+class GeneralArgs(Args):
+
+    '''
+    Class for arguments that are shared between different programs.
+    '''
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class GeneralArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict, optional
+            arguments as key-value pairs
+        '''
+        self.variable_args = None
+        super(GeneralArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return set()
+
+    @property
+    def _persistent_attrs(self):
+        return set()
+
     @property
     def variable_args(self):
         '''
@@ -100,13 +127,39 @@ class Args(object):
 
     @variable_args.setter
     def variable_args(self, value):
-        if not isinstance(value, Args):
+        if not(isinstance(value, Args) or value is None):
             raise TypeError(
                     'Attribute "variable_args" must have type tmlib.args.Args')
         self._variable_args = value
 
 
-class InitArgs(Args):
+class VariableArgs(Args):
+
+    '''
+    Class for variable, program-specific arguments.
+    '''
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class VariableArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict, optional
+            arguments as key-value pairs
+        '''
+        super(VariableArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return set()
+
+    @property
+    def _persistent_attrs(self):
+        return set()
+
+
+class InitArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -118,6 +171,7 @@ class InitArgs(Args):
             arguments as key-value pairs
         '''
         self.backup = False
+        self.display = False
         super(InitArgs, self).__init__(**kwargs)
 
     @property
@@ -189,7 +243,7 @@ class InitArgs(Args):
         }
 
 
-class SubmitArgs(Args):
+class SubmitArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -265,12 +319,12 @@ class SubmitArgs(Args):
             'type': int,
             'default': 5,
             'help': '''
-                monitoring interval in seconds
+                monitoring interval in seconds (default: 5)
             '''
         }
 
 
-class CollectArgs(Args):
+class CollectArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -292,7 +346,7 @@ class CollectArgs(Args):
         return set()
 
 
-class CleanupArgs(Args):
+class CleanupArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -314,7 +368,7 @@ class CleanupArgs(Args):
         return set()
 
 
-class RunArgs(Args):
+class RunArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -363,7 +417,7 @@ class RunArgs(Args):
         }
 
 
-class ApplyArgs(Args):
+class ApplyArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -613,7 +667,7 @@ class ApplyArgs(Args):
 # However, they have to be defined here, since they get dynamically loaded
 # from this module.
 
-class CreateArgs(Args):
+class CreateArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -635,7 +689,7 @@ class CreateArgs(Args):
         return set()
 
 
-class RemoveArgs(Args):
+class RemoveArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -657,7 +711,7 @@ class RemoveArgs(Args):
         return set()
 
 
-class CheckArgs(Args):
+class CheckArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
         '''

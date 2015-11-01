@@ -1,7 +1,7 @@
-from ..args import Args
+from ..args import VariableArgs
 
 
-class AlignInitArgs(Args):
+class AlignInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -105,7 +105,7 @@ class AlignInitArgs(Args):
                 zero-based ID of the reference channel
             '''
         }
-    
+
     @property
     def limit(self):
         '''
@@ -141,7 +141,7 @@ class AlignInitArgs(Args):
         }
 
 
-class AlignApplyArgs(Args):
+class AlignApplyArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''

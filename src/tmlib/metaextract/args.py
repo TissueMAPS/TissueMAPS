@@ -1,7 +1,7 @@
-from ..args import Args
+from ..args import VariableArgs
 
 
-class MetaextractInitArgs(Args):
+class MetaextractInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''

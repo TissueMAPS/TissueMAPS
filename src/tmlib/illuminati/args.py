@@ -1,7 +1,7 @@
-from ..args import Args
+from ..args import VariableArgs
 
 
-class IlluminatiInitArgs(Args):
+class IlluminatiInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''

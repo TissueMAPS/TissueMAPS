@@ -3,6 +3,7 @@ from . import logo
 from . import __version__
 from .api import MetadataConfigurator
 from ..cli import CommandLineInterface
+from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -13,19 +14,19 @@ class Metaconfig(CommandLineInterface):
     Command line interface for metadata conversion.
     '''
 
-    def __init__(self, experiment_dir, verbosity):
+    def __init__(self, experiment, verbosity):
         '''
         Initialize an instance of class Metaconfig.
 
         Parameters
         ----------
-        experiment_dir: str
-            path to the experiment directory
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
         verbosity: int
             logging level
         '''
-        super(Metaconfig, self).__init__(experiment_dir, verbosity)
-        self.experiment_dir = experiment_dir
+        super(Metaconfig, self).__init__(experiment, verbosity)
+        self.experiment = experiment
         self.verbosity = verbosity
 
     @staticmethod
@@ -64,5 +65,6 @@ class Metaconfig(CommandLineInterface):
         --------
         :py:mod:`tmlib.metaconfig.argparser`
         '''
-        cli = Metaconfig(args.experiment_dir, args.verbosity)
+        experiment = Experiment(args.experiment_dir)
+        cli = Metaconfig(experiment, args.verbosity)
         cli._call(args)

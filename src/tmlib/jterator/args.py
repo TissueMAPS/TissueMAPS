@@ -1,7 +1,7 @@
-from ..args import Args
+from ..args import VariableArgs
 
 
-class JteratorInitArgs(Args):
+class JteratorInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -23,7 +23,7 @@ class JteratorInitArgs(Args):
         return set()
 
 
-class JteratorRunArgs(Args):
+class JteratorRunArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
@@ -72,7 +72,7 @@ class JteratorRunArgs(Args):
         }
 
 
-class JteratorCreateArgs(Args):
+class JteratorCreateArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''

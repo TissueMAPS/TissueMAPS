@@ -7,7 +7,8 @@ from .cli import Imextract
 from .args import ImextractInitArgs
 
 
-parser, subparsers = Imextract.get_parser_and_subparsers()
+parser, subparsers = Imextract.get_parser_and_subparsers(
+    required_subparsers=['init', 'run', 'submit', 'cleanup'])
 
 parser.description = '''
     Extract images from heterogeneous microscopic image file formats

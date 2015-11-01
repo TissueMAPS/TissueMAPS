@@ -13,6 +13,7 @@ from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
 import logging
 from . import utils
+from . import logging_utils
 from .readers import JsonReader
 from .writers import JsonWriter
 
@@ -60,12 +61,11 @@ class BasicClusterRoutines(object):
         str
             absolute path to the directory where status files are stored
         '''
-        self._status_dir = os.path.join(self.project_dir, 'status')
-        if not os.path.exists(self._status_dir):
-            logging.debug('create directory for status files: %s'
-                          % self._status_dir)
-            os.mkdir(self._status_dir)
-        return self._status_dir
+        status_dir = os.path.join(self.project_dir, 'status')
+        if not os.path.exists(status_dir):
+            logging.debug('create directory for status files: %s', status_dir)
+            os.mkdir(status_dir)
+        return status_dir
 
     @property
     def status_file(self):
@@ -76,10 +76,10 @@ class BasicClusterRoutines(object):
             absolute path to the file where the job status is written to
         '''
         # TODO: XML
-        self._status_file = os.path.join(
+        status_file = os.path.join(
             self.status_dir, '{project}.status'.format(
                                 project=os.path.basename(self.project_dir)))
-        return self._status_file
+        return status_file
 
     @staticmethod
     def create_datetimestamp():
@@ -271,6 +271,7 @@ class ClusterRoutines(BasicClusterRoutines):
         super(ClusterRoutines, self).__init__(experiment)
         self.experiment = experiment
         self.prog_name = prog_name
+        self.verbosity = verbosity
 
     @cached_property
     def project_dir(self):
@@ -306,7 +307,7 @@ class ClusterRoutines(BasicClusterRoutines):
     def get_job_descriptions_from_files(self):
         '''
         Get job descriptions from files and combine them into
-        the format required by the `build_jobs()` method.
+        the format required by the `create_jobs()` method.
 
         Returns
         -------

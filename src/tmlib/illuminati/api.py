@@ -22,7 +22,8 @@ class PyramidBuilder(ClusterRoutines):
         verbosity: int
             logging level
         '''
-        super(PyramidBuilder, self).__init__(experiment, prog_name, verbosity)
+        super(PyramidBuilder, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
         self.verbosity = verbosity

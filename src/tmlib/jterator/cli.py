@@ -3,20 +3,21 @@ from . import logo
 from . import __version__
 from .api import ImageAnalysisPipeline
 from ..cli import CommandLineInterface
+from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
 class Jterator(CommandLineInterface):
 
-    def __init__(self, experiment_dir, verbosity, pipeline_name, headless):
+    def __init__(self, experiment, verbosity, pipeline_name, headless):
         '''
         Initialize an instance of class Jterator.
 
         Parameters
         ----------
-        experiment_dir: str
-            path to the experiment directory
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
         verbosity: int
             logging level
         pipeline_name: str
@@ -31,8 +32,8 @@ class Jterator(CommandLineInterface):
             when `pipeline_name` doesn't have type str and/or when
             `headless` doesn't have type bool
         '''
-        super(Jterator, self).__init__(experiment_dir, verbosity)
-        self.experiment_dir = experiment_dir
+        super(Jterator, self).__init__(experiment, verbosity)
+        self.experiment = experiment
         self.verbosity = verbosity
         if not isinstance(pipeline_name, basestring):
             raise TypeError('Argument "pipeline_name" must have type str.')
@@ -124,6 +125,7 @@ class Jterator(CommandLineInterface):
         --------
         :py:mod:`tmlib.jterator.argparser`
         '''
-        cli = Jterator(args.experiment_dir, args.verbosity,
+        experiment = Experiment(args.experiment_dir)
+        cli = Jterator(experiment, args.verbosity,
                        args.pipeline, not args.plot)
         cli._call(args)

@@ -30,7 +30,8 @@ class ImageExtractor(ClusterRoutines):
         verbosity: int
             logging level
         '''
-        super(ImageExtractor, self).__init__(experiment, prog_name, verbosity)
+        super(ImageExtractor, self).__init__(
+                experiment, prog_name, verbosity)
         self.experiment = experiment
         self.prog_name = prog_name
         self.verbosity = verbosity

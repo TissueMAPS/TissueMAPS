@@ -1,8 +1,8 @@
-from ..args import Args
+from ..args import VariableArgs
 from ..formats import Formats
 
 
-class MetaconfigInitArgs(Args):
+class MetaconfigInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''

@@ -1,7 +1,7 @@
-from ..args import Args
+from ..args import VariableArgs
 
 
-class CorillaInitArgs(Args):
+class CorillaInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''

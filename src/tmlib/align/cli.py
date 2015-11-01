@@ -3,25 +3,26 @@ from . import logo
 from . import __version__
 from .api import ImageRegistration
 from ..cli import CommandLineInterface
+from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
 class Align(CommandLineInterface):
 
-    def __init__(self, experiment_dir, verbosity):
+    def __init__(self, experiment, verbosity):
         '''
         Initialize an instance of class Align.
 
         Parameters
         ----------
-        experiment_dir: str
-            path to the experiment directory
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
         verbosity: int
             logging level
         '''
-        super(Align, self).__init__(experiment_dir, verbosity)
-        self.experiment_dir = experiment_dir
+        super(Align, self).__init__(experiment, verbosity)
+        self.experiment = experiment
         self.verbosity = verbosity
 
     @staticmethod
@@ -45,6 +46,29 @@ class Align(CommandLineInterface):
                 prog_name=self.name,
                 verbosity=self.verbosity)
 
+    def apply(self, args):
+        '''
+        Initialize an instance of the API class corresponding to the program
+        and process arguments of the "apply" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.ApplyArgs
+            method-specific arguments
+        '''
+        self._print_logo()
+        api = self._api_instance
+        logger.info('apply statistics')
+        api.apply_statistics(
+                output_dir=args.output_dir,
+                plates=args.plates,
+                wells=args.wells,
+                sites=args.sites,
+                channels=args.channels,
+                tpoints=args.tpoints,
+                zplanes=args.zplanes,
+                **args.variable_args)
+
     @staticmethod
     def call(args):
         '''
@@ -60,5 +84,6 @@ class Align(CommandLineInterface):
         --------
         :py:mod:`tmlib.align.argparser`
         '''
-        cli = Align(args.experiment_dir, args.verbosity)
+        experiment = Experiment(args.experiment_dir)
+        cli = Align(experiment, args.verbosity)
         cli._call(args)

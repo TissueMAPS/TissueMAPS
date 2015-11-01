@@ -5,6 +5,7 @@ from tmlib.cfg import WorkflowStepDescription
 from tmlib.cfg import WorkflowStageDescription
 from tmlib.cfg import WorkflowDescription
 from tmlib.cfg import UserConfiguration
+from tmlib.args import GeneralArgs
 
 
 class TestWorkflowStepDescription(unittest.TestCase):
@@ -23,6 +24,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         step = WorkflowStepDescription(**description)
         self.assertEqual(step.name, description['name'])
         self.assertEqual(dict(step.args), description['args'])
+        self.assertIsInstance(step.args, GeneralArgs)
 
     def test_initialize_with_correct_description_2(self):
         description = {
@@ -31,7 +33,8 @@ class TestWorkflowStepDescription(unittest.TestCase):
         }
         step = WorkflowStepDescription(**description)
         self.assertEqual(step.name, description['name'])
-        self.assertEqual(step.args, description['args'])
+        self.assertNotEqual(dict(step.args), description['args'])
+        self.assertIsInstance(step.args, GeneralArgs)
 
     def test_initialize_with_incorrect_description_1(self):
         wrong_description = {
@@ -44,7 +47,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
     def test_initialize_with_incorrect_description_2(self):
         wrong_description = {
             'name': 'metaconfig',
-            'args': list()
+            'args': [1, 2]
         }
         with self.assertRaises(TypeError):
             WorkflowStepDescription(**wrong_description)

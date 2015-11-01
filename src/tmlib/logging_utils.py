@@ -2,27 +2,18 @@ import sys
 import logging
 
 #: Mapping for logging level verbosity
-VERBOSITY_LEVELS = {
+VERBOSITY_TO_LEVELS = {
     0: logging.WARN,  # For simplicity. Includes ERROR, CRITICAL
     1: logging.INFO,
     2: logging.DEBUG,
     3: logging.NOTSET,  # Equivalent to no filtering. Everything is logged.
 }
-LOGGING_LEVELS = {
-    'NONE': None,
-    'CRITICAL': logging.CRITICAL,
-    'ERROR': logging.ERROR,
-    'WARN': logging.WARN,
-    'INFO': logging.INFO,
-    'DEBUG': logging.DEBUG,
-    'NOTSET': logging.NOTSET,
-}
-VERBOSITY_TO_LEVELS = {
-    0: 'NONE',
-    1: 'WARN',
-    2: 'INFO',
-    3: 'DEBUG',
-    4: 'NOTSET',
+
+LEVELS_TO_VERBOSITY = {
+    logging.WARN: 0,
+    logging.INFO: 1,
+    logging.DEBUG: 2,
+    logging.NOTSET: 3
 }
 
 
@@ -35,12 +26,24 @@ def map_logging_verbosity(verbosity):
 
     Returns
     -------
-    Returns a logging level as exported by `logging` module.
+    A logging level as exported by `logging` module.
     By default returns logging.NOTSET
+
+    Raises
+    ------
+    TypeError
+        when `verbosity` doesn't have type int
+    ValueError
+        when `verbosity` is negative
     '''
-    if verbosity > len(VERBOSITY_LEVELS):
-        verbosity = len(VERBOSITY_LEVELS) - 1
-    return VERBOSITY_LEVELS.get(verbosity, logging.NOTSET)
+    if not isinstance(verbosity, int):
+        raise TypeError('Argument "verbosity" must have type int.')
+
+    if not verbosity >= 0:
+        raise ValueError('Argument "verbosity" must be a positive number.')
+    if verbosity > len(VERBOSITY_TO_LEVELS):
+        verbosity = len(VERBOSITY_TO_LEVELS) - 1
+    return VERBOSITY_TO_LEVELS.get(verbosity, logging.NOTSET)
 
 
 def configure_logging(level):

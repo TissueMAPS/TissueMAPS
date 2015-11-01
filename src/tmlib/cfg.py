@@ -1,8 +1,9 @@
 import os
 import logging
+from . import logging_utils
 from .tmaps import workflow
 from .plate import Plate
-from .args import Args
+from .args import GeneralArgs
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,8 @@ class WorkflowDescription(object):
         self.stages = [
             WorkflowStageDescription(**s) for s in kwargs['stages']
         ]
+        self.virtualenv = None
+        self.verbosity = 1
 
     @property
     def stages(self):
@@ -104,6 +107,62 @@ class WorkflowDescription(object):
             raise TypeError(
                 'Elements of "steps" must have type WorkflowStageDescription')
         self._stages = value
+
+    @property
+    def virtualenv(self):
+        '''
+        Returns
+        -------
+        str
+            name of a Python virtual environment that needs to be activated
+            (default: ``None``)
+
+        Note
+        ----
+        Requires the environment variable "$WORKON_HOME" to point to the
+        virtual environment home directory, i.e. the directory where
+        `virtualenv` is located.
+
+        See also
+        --------
+        `virtualenvwrapper <http://virtualenvwrapper.readthedocs.org/en/latest/>`_
+        '''
+        return self._virtualenv
+
+    @virtualenv.setter
+    def virtualenv(self, value):
+        if value is not None:
+            if 'WORKON_HOME' not in os.environ:
+                raise KeyError('No environment variable "WORKON_HOME".')
+            virtualenv_dir = os.path.join(os.environ['WORKON_HOME'], value)
+            if not os.path.exists(virtualenv_dir):
+                raise OSError('Virtual environment does not exist: %s'
+                              % virtualenv_dir)
+        self._virtualenv = value
+
+    @property
+    def verbosity(self):
+        '''
+        Returns
+        -------
+        int
+            logging verbosity level (default: ``1``)
+
+        See also
+        --------
+        :py:const:`tmlib.logging_utils.VERBOSITY_TO_LEVELS`
+        '''
+        return self._verbosity
+
+    @verbosity.setter
+    def verbosity(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "verbosity" must have type int.')
+        if value < 0:
+            raise ValueError('Attribute "verbosity" must be positive.')
+        if value > len(logging_utils.VERBOSITY_TO_LEVELS):
+            logging.warning('verbosity exceeds maximally possible level')
+        self._verbosity = value
 
     def __iter__(self):
         yield ('stages', [dict(s) for s in getattr(self, 'stages')])
@@ -219,11 +278,13 @@ class WorkflowStepDescription(object):
             raise KeyError(
                     'Argument "description" requires keys "name" and "args"')
         self.name = kwargs['name']
-        args_handler = workflow.load_var_method_args(self.name, 'init')
-        if kwargs['args'] is not None:
-            self.args = args_handler(**kwargs['args'])
+        args_handler = workflow.load_method_args('init')
+        self.args = args_handler()
+        variable_args_handler = workflow.load_var_method_args(self.name, 'init')
+        if kwargs['args']:
+            self.args.variable_args = variable_args_handler(**kwargs['args'])
         else:
-            self.args = None
+            self.args.variable_args = variable_args_handler()
 
     @property
     def name(self):
@@ -251,7 +312,7 @@ class WorkflowStepDescription(object):
         '''
         Returns
         -------
-        tmlib.args.InitArgs
+        tmlib.args.GeneralArgs
             arguments required by the step (i.e. arguments that can be parsed
             to the `init` method of the program-specific implementation of
             the :py:class:`tmlib.cli.CommandLineInterface` base class)
@@ -266,8 +327,8 @@ class WorkflowStepDescription(object):
 
     @args.setter
     def args(self, value):
-        if not(isinstance(value, Args) or value is None):
-            raise TypeError('Attribute "args" must have type tmlib.args.Args')
+        if not isinstance(value, GeneralArgs):
+            raise TypeError('Attribute "args" must have type tmlib.args.GeneralArgs')
         self._args = value
 
     def __iter__(self):

@@ -1,7 +1,7 @@
-from ..args import Args
+from ..args import VariableArgs
 
 
-class ImextractInitArgs(Args):
+class ImextractInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''

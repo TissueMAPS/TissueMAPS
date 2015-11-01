@@ -12,10 +12,7 @@ from ..args import CreateArgs
 from ..args import RemoveArgs
 
 
-parser, subparsers = Jterator.get_parser_and_subparsers(
-    required_subparsers=[
-        'init', 'run', 'submit', 'collect', 'cleanup'
-    ])
+parser, subparsers = Jterator.get_parser_and_subparsers()
 
 parser.description = '''
     Image analysis pipeline engine for applying a sequence of algorithms
