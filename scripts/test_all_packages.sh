@@ -15,7 +15,7 @@ export PATH="/usr/bin:$PATH"
 export PATH="/usr/local/lib:$PATH"
 
 # Set path for virtual environment
-export WORKON_HOME="$PWD/.virtualenvs"
+export WORKON_HOME="$HOME/.virtualenvs"
 export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
 export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
 source /usr/local/bin/virtualenvwrapper.sh
