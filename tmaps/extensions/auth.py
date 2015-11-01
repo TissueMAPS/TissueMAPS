@@ -1,6 +1,6 @@
 import datetime
 
-from flask import current_app
+from flask import current_app, request
 from passlib.hash import sha256_crypt
 from flask_jwt import JWT
 
@@ -44,8 +44,7 @@ def make_payload(user):
         'exp': exp
     }
 
-
-@jwt.jwt_error_handler
-def error_handler(e):
-    """This function is called whenever flask-jwt encounters an error."""
-    return 'No valid access token in header', 401
+# @jwt.jwt_error_handler
+# def error_handler(e):
+#     """This function is called whenever flask-jwt encounters an error."""
+#     return 'No valid access token in header', 401
