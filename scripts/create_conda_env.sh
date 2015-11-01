@@ -28,17 +28,17 @@ if [[ ! -f requirements-Darwin-3.txt ]]; then
     exit 101
 fi
 
-# Removes previous environment
+# Set path for virtual environment
+export WORKON_HOME=$HOME/.virtualenvs
+export PROJECT_HOME=$HOME/Devel
+source /usr/local/bin/virtualenvwrapper.sh
+
+# Remove previous environment
 rmvirtualenv tmlibrary
 
-# Creates and activates environment
+# Create and activates environment
 mkvirtualenv tmlibrary
 workon tmlibrary
-
-conda install -y opencv
-
-# Use `pip install` from activated conda PATH
-export PATH="$HOME/.local/bin:$PATH"
 
 GC3PIE_DIR="$PWD/.gc3"
 mkdir -p ${GC3PIE_DIR}
@@ -62,9 +62,7 @@ override = no
 __EOF__
 
 
-# Install tmlib and its dependencies with `pip` as not all of them
-# are available as Conda packages, and furthermore `conda develop`
-# does not install/create the executables
+# Install tmlib dependencies with `pip`
 pip install -r requirements-1.txt
 pip install -r requirements-2.txt
 pip install -r requirements-Darwin-3.txt
