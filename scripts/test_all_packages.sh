@@ -21,7 +21,7 @@ export PATH="/usr/local/lib:$PATH"
 export WORKON_HOME="$PWD/.virtualenvs"
 export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
 export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
-
+source /usr/local/bin/virtualenvwrapper.sh
 
 # Create a link for vips
 cd $VIRTUALENVWRAPPER_HOOK_DIR/tmlibrary/lib/python2.7/site-packages/gi

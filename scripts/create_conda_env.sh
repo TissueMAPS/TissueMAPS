@@ -35,6 +35,7 @@ export PATH="/usr/local/lib:$PATH"
 export WORKON_HOME="$PWD/.virtualenvs"
 export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
 export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
+source /usr/local/bin/virtualenvwrapper.sh
 
 # Remove previous environment
 if [ -d "$WORKON_HOME/tmlibrary" ]; then
