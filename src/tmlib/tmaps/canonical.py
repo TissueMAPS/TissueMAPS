@@ -15,7 +15,7 @@ described workflow in the first place.
 #: For more information please refer to the corresponding section in
 #: :ref:`introduction <workflow>`
 STAGES = {
-    'image_conversion', 'image_conversion',
+    'image_conversion', 'image_preprocessing',
     'pyramid_creation', 'image_analysis'
 }
 
