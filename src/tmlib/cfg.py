@@ -12,17 +12,20 @@ from .errors import WorkflowDescriptionError
 logger = logging.getLogger(__name__)
 
 '''
-Configuration settings constants:
+User configuration settings
 
 Describe the experimental layout (directory structure and filename nomenclature)
 by Python format strings. The fieldnames are replaced by the program with the
 values of configuration class attributes.
 '''
-
+#: Format string for the generation of a full path to the user configuration settings file.
 USER_CFG_FILE_FORMAT = '{experiment_dir}{sep}user.cfg.yml'
 
+#: Format string for building default layer names based on time point, channel, and z-plane index.
 LAYER_NAME_FORMAT = 't{t:0>3}_c{c:0>3}_z{z:0>3}'
 
+#: Format string for building image filenames based on plate name, time point index, well name,
+#: y and x coordinates of the image within the well, channel index and z-plane index.
 IMAGE_NAME_FORMAT = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.png'
 
 
