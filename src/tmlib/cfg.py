@@ -1,9 +1,13 @@
 import os
 import logging
+from . import utils
 from . import logging_utils
 from .tmaps import workflow
+from .tmaps import canonical
 from .plate import Plate
 from .args import GeneralArgs
+from .writers import YamlWriter
+from .errors import WorkflowDescriptionError
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,71 @@ USER_CFG_FILE_FORMAT = '{experiment_dir}{sep}user.cfg.yml'
 LAYER_NAME_FORMAT = 't{t:0>3}_c{c:0>3}_z{z:0>3}'
 
 IMAGE_NAME_FORMAT = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.png'
+
+
+def check_stage_name(stage_name):
+    '''
+    Check whether a described stage is known.
+
+    Parameters
+    ----------
+    stage_name: str
+        name of the stage
+
+    Raises
+    ------
+    tmlib.errors.WorkflowDescriptionError
+        when `stage_name` is unknown
+
+    See also
+    --------
+    :py:const:`tmlib.tmaps.canonical.STAGES`
+    '''
+    known_names = canonical.STAGES
+    if stage_name not in known_names:
+        raise WorkflowDescriptionError(
+                'Unknown stage "%s". Known stages are: "%s"'
+                % (stage_name, '", "'.join(known_names)))
+
+
+def check_step_name(step_name, stage_name=None):
+    '''
+    Check whether a described step is known.
+
+    Parameters
+    ----------
+    step_name: str
+        name of the step
+    stage_name: str, optional
+        name of the corresponding stage
+
+    Raises
+    ------
+    tmlib.errors.WorkflowDescriptionError
+        when `step_name` is unknown or when step with name `step_name` is not
+        part of stage with name `stage_name`
+
+    Note
+    ----
+    When `stage_name` is provided, it is also checked whether `step_name` is a
+    valid step within stage named `stage_name`.
+
+    See also
+    --------
+    :py:const:`tmlib.tmaps.canonical.STEPS_PER_STAGE`
+    '''
+    if stage_name:
+        known_names = canonical.STEPS_PER_STAGE[stage_name]
+        if step_name not in known_names:
+            raise WorkflowDescriptionError(
+                    'Unknown step "%s" for stage "%s". Known steps are: "%s"'
+                    % (step_name, stage_name, '", "'.join(known_names)))
+    else:
+        known_names = utils.flatten(canonical.STEPS_PER_STAGE.values())
+        if step_name not in known_names:
+            raise WorkflowDescriptionError(
+                    'Unknown step "%s". Known steps are: "%s"'
+                    % (step_name, '", "'.join(known_names)))
 
 
 class WorkflowDescription(object):
@@ -63,6 +132,10 @@ class WorkflowDescription(object):
     :py:class:`tmlib.tmaps.descriptions.WorkflowStepDescription`
     '''
 
+    _PERSISTENT_ATTRS = {
+        'stages', 'verbosity', 'virtualenv'
+    }
+
     def __init__(self, **kwargs):
         '''
         Initialize an instance of class WorkflowDescription.
@@ -81,13 +154,30 @@ class WorkflowDescription(object):
         KeyError
             when `kwargs` doesn't have key "stages"
         '''
-        if 'stages' not in kwargs:
-            raise KeyError('Argument "kwargs" must have key "stages".')
-        self.stages = [
-            WorkflowStageDescription(**s) for s in kwargs['stages']
-        ]
+        # Set defaults
         self.virtualenv = None
         self.verbosity = 1
+        # Check stage description
+        if 'stages' not in kwargs:
+            raise KeyError('Argument "kwargs" must have key "stages".')
+        for k in kwargs.keys():
+            if k not in self._PERSISTENT_ATTRS:
+                raise ValueError('Unknown workflow descriptor: "%s"' % k)
+        self.stages = list()
+        stage_names = list()
+        for stage in kwargs['stages']:
+            name = stage['name']
+            check_stage_name(name)
+            stage_dependencies = canonical.INTER_STAGE_DEPENDENCIES[name]
+            for dep in stage_dependencies:
+                if dep not in stage_names:
+                    raise WorkflowDescriptionError(
+                            'Stage "%s" requires upstream stage "%s"'
+                            % (name, dep))
+            for step in stage['steps']:
+                check_step_name(step['name'], name)
+            stage_names.append(name)
+            self.stages.append(WorkflowStageDescription(**stage))
 
     @property
     def stages(self):
@@ -165,7 +255,12 @@ class WorkflowDescription(object):
         self._verbosity = value
 
     def __iter__(self):
-        yield ('stages', [dict(s) for s in getattr(self, 'stages')])
+        for attr in vars(self):
+            if attr in self._PERSISTENT_ATTRS:
+                if attr == 'stages':
+                    yield (attr, [dict(s) for s in getattr(self, attr)])
+                else:
+                    yield (attr, getattr(self, attr))
 
 
 class WorkflowStageDescription(object):
@@ -173,6 +268,8 @@ class WorkflowStageDescription(object):
     '''
     Description of a TissueMAPS workflow stage.
     '''
+
+    _PERSISTENT_ATTRS = {'name', 'steps'}
 
     def __init__(self, **kwargs):
         '''
@@ -192,16 +289,26 @@ class WorkflowStageDescription(object):
         KeyError
             when `kwargs` doesn't have the keys "name" and "steps"
         '''
-        if not('name' in kwargs and 'steps' in kwargs):
-            raise KeyError(
-                'Argument "kwargs" must have keys "name" and "steps".')
+        for k in self._PERSISTENT_ATTRS:
+            if k not in kwargs:
+                raise KeyError('Argument "kwargs" must have key "%s".' % k)
         self.name = kwargs['name']
+        check_stage_name(self.name)
         if not kwargs['steps']:
             raise ValueError(
                 'Value of "steps" of argument "kwargs" cannot be empty.')
-        self.steps = [
-            WorkflowStepDescription(**s) for s in kwargs['steps']
-        ]
+        self.steps = list()
+        step_names = list()
+        for step in kwargs['steps']:
+            name = step['name']
+            check_step_name(name)
+            for dep in canonical.INTRA_STAGE_DEPENDENCIES[name]:
+                if dep not in step_names:
+                    raise WorkflowDescriptionError(
+                            'Step "%s" requires upstream step "%s"'
+                            % (name, dep))
+            step_names.append(name)
+            self.steps.append(WorkflowStepDescription(**step))
 
     @property
     def name(self):
@@ -254,6 +361,8 @@ class WorkflowStepDescription(object):
     Description of a step as part of a TissueMAPS workflow stage.
     '''
 
+    _PERSISTENT_ATTRS = {'name', 'args'}
+
     def __init__(self, **kwargs):
         '''
         Initialize an instance of class WorkflowStep.
@@ -274,15 +383,25 @@ class WorkflowStepDescription(object):
         KeyError
             when `description` doesn't have keys "name" and "args"
         '''
-        if not('name' in kwargs and 'args' in kwargs):
-            raise KeyError(
-                    'Argument "description" requires keys "name" and "args"')
+        for attr in self._PERSISTENT_ATTRS:
+            if attr not in kwargs:
+                raise KeyError('Argument "kwargs" requires key "%s"')
         self.name = kwargs['name']
         args_handler = workflow.load_method_args('init')
         self.args = args_handler()
-        variable_args_handler = workflow.load_var_method_args(self.name, 'init')
+        try:
+            variable_args_handler = workflow.load_var_method_args(
+                                        self.name, 'init')
+        except ImportError:
+            raise WorkflowDescriptionError(
+                    'Step "%s" doesn\'t exist.' % self.name)
         if kwargs['args']:
             self.args.variable_args = variable_args_handler(**kwargs['args'])
+            for arg in kwargs['args']:
+                if arg not in self.args.variable_args._persistent_attrs:
+                    raise WorkflowDescriptionError(
+                            'Unknown argument "%s" for step "%s".'
+                            % (arg, self.name))
         else:
             self.args.variable_args = variable_args_handler()
 
@@ -527,3 +646,25 @@ class UserConfiguration(object):
                 if attr == 'workflow':
                     value = dict(value)
                 yield (attr, value)
+
+    @property
+    def cfg_file(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the configuration file
+        '''
+        return USER_CFG_FILE_FORMAT.format(
+                    experiment_dir=self.experiment_dir, sep=os.path.sep)
+
+    def dump_to_file(self):
+        '''
+        Convert the object to a mapping and write to a YAML file.
+
+        See also
+        --------
+        :py:const:`tmlib.cfg.USER_CFG_FILE_FORMAT`
+        '''
+        with YamlWriter() as writer:
+            writer.write(self.cfg_file, dict(self))
