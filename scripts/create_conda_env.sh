@@ -35,10 +35,14 @@ export PATH="/usr/local/lib:$PATH"
 # Set path for virtual environment
 export WORKON_HOME="$PWD/.virtualenvs"
 export PROJECT_HOME="$PWD/Devel"
+# export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python
+# export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
 source /usr/local/bin/virtualenvwrapper.sh
 
 # Remove previous environment
-rmvirtualenv tmlibrary
+if [ -d "$WORKON_HOME/tmlibrary" ]; then
+  rmvirtualenv tmlibrary
+fi
 
 # Create and activates environment
 mkvirtualenv tmlibrary
@@ -79,4 +83,4 @@ export PYTHONPATH="$PWD/src:$PYTHONPATH"
 export PYTHONPATH="$PWD/lib:$PYTHONPATH"
 
 # Deactivate virtual environment
-# deactivate
+deactivate
