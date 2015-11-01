@@ -56,9 +56,11 @@ def populate_db():
         # Add admin user
         u1 = User(name='testuser',
                  email='testuser@something.com',
+                 location='/Users/robin/Dev/TissueMAPS/expdata',
                  password='123')
         u2 = User(name='testuser2',
                   email='testuser2@something.com',
+                 location='/Users/robin/Dev/TissueMAPS/expdata/somethingelse',
                   password='123')
         db.session.add(u1)
         db.session.add(u2)
@@ -86,7 +88,7 @@ def populate_db():
 
         e1 = Experiment(name='150316-30min-PBS',
                         description='Very nice exp',
-                        owner_id=u1.id,
+                        owner=u1,
                         location='/Users/robin/Dev/TissueMAPS/expdata/150316-30min-PBS')
         db.session.add(e1)
         db.session.commit()

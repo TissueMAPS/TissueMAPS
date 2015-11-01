@@ -1,11 +1,22 @@
+import os
+import os.path as p
+
 from ..extensions.database import db
 from passlib.hash import sha256_crypt
 
+from werkzeug import secure_filename
 from _appstate import AppStateShare
 from _experiment import ExperimentShare
-from .utils import auto_generate_hash
+from .utils import auto_generate_hash, auto_create_directory
 
 
+def _experiments_dir(user_location):
+    expdir_loc = p.join(user_location, 'experiments')
+    return expdir_loc
+
+
+@auto_create_directory(lambda t: t.location)
+@auto_create_directory(lambda t: _experiments_dir(t.location))
 @auto_generate_hash
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -16,24 +27,31 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
 
-    active = db.Column(db.Boolean(), default=True)
+    location = db.Column(db.String(300))
 
-    # both 'one to many'
-    # owned_experiments = db.relationship("Experiment")
+    active = db.Column(db.Boolean(), default=True)
 
     created_on = db.Column(db.DateTime, default=db.func.now())
     updated_on = db.Column(db.DateTime, default=db.func.now(),
                            onupdate=db.func.now())
 
-    def __init__(self, name, email, password, experiments=[]):
+    def __init__(self, name, email, password, location, experiments=[]):
 
         self.name = name
         self.email = email
+        self.location = location
+        if not p.exists(location):
+            os.mkdir(location)
         self.password = sha256_crypt.encrypt(password)
         self.experiments = experiments
 
     def __repr__(self):
         return '<User %r>' % self.name
+
+    @property
+    def experiments_location(self):
+        return _experiments_dir(self.location)
+
 
     @property
     def received_appstates(self):
