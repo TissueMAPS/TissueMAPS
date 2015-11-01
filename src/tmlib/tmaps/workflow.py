@@ -97,7 +97,9 @@ def load_var_method_args(prog_name, method_name):
     ImportError
         when subpackage with name `prog_name` doesn't have a module named "args"
     '''
+    package_name = 'tmlib.%s' % prog_name
     module_name = 'tmlib.%s.args' % prog_name
+    importlib.import_module(package_name)
     module = importlib.import_module(module_name)
     class_name = '%s%sArgs' % (prog_name.capitalize(),
                                method_name.capitalize())
