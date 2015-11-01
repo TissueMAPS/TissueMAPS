@@ -14,6 +14,14 @@ if [[ ! -d src ]] || [[ ! -d docs ]] || [[ ! -d scripts ]]; then
     exit 100
 fi
 
+export PATH="/usr/bin:$PATH"
+export PATH="/usr/local/lib:$PATH"
+
+# Set path for virtual environment
+export WORKON_HOME="$PWD/.virtualenvs"
+export PROJECT_HOME="$PWD/Devel"
+source /usr/local/bin/virtualenvwrapper.sh
+
 # Activate virtualenv
 workon tmlibrary
 
