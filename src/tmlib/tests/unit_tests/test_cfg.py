@@ -6,6 +6,7 @@ from tmlib.cfg import WorkflowStageDescription
 from tmlib.cfg import WorkflowDescription
 from tmlib.cfg import UserConfiguration
 from tmlib.args import GeneralArgs
+from tmlib.errors import WorkflowDescriptionError
 
 
 class TestWorkflowStepDescription(unittest.TestCase):
@@ -36,7 +37,27 @@ class TestWorkflowStepDescription(unittest.TestCase):
         self.assertNotEqual(dict(step.args), description['args'])
         self.assertIsInstance(step.args, GeneralArgs)
 
-    def test_initialize_with_incorrect_description_1(self):
+    def test_initialize_with_correct_description_3(self):
+        description = {
+            'name': 'metaconfig',
+            'args': {
+                'file_format': 'cellvoyager'
+            }
+        }
+        step = WorkflowStepDescription(**description)
+        self.assertEqual(step.name, description['name'])
+        self.assertNotEqual(dict(step.args), description['args'])
+        self.assertIsInstance(step.args, GeneralArgs)
+
+    def test_initialize_with_incorrect_name(self):
+        wrong_description = {
+            'name': 'bla',
+            'args': None
+        }
+        with self.assertRaises(WorkflowDescriptionError):
+            WorkflowStepDescription(**wrong_description)
+
+    def test_initialize_with_incorrect_args_type_1(self):
         wrong_description = {
             'name': 1,
             'args': dict()
@@ -44,7 +65,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowStepDescription(**wrong_description)
 
-    def test_initialize_with_incorrect_description_2(self):
+    def test_initialize_with_incorrect_args_type_2(self):
         wrong_description = {
             'name': 'metaconfig',
             'args': [1, 2]
@@ -52,12 +73,20 @@ class TestWorkflowStepDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowStepDescription(**wrong_description)
 
-    def test_initialize_with_incorrect_description_3(self):
+    def test_initialize_with_incorrect_args_type_3(self):
         wrong_description = {
             'name': 'metaconfig',
             'args': {1: 'blabla'}
         }
         with self.assertRaises(TypeError):
+            WorkflowStepDescription(**wrong_description)
+
+    def test_initialize_with_incorrect_args_name(self):
+        wrong_description = {
+            'name': 'metaconfig',
+            'args': {'bla': None}
+        }
+        with self.assertRaises(WorkflowDescriptionError):
             WorkflowStepDescription(**wrong_description)
 
     def test_return_description(self):
@@ -79,12 +108,16 @@ class TestWorkflowStageDescription(unittest.TestCase):
 
     def test_initialize_with_correct_description(self):
         description = {
-            'name': 'bla',
+            'name': 'image_conversion',
             'steps': [
+                {
+                    'name': 'metaextract',
+                    'args': dict()
+                },
                 {
                     'name': 'metaconfig',
                     'args': dict()
-                }
+                },
             ]
         }
         stage = WorkflowStageDescription(**description)
@@ -96,28 +129,58 @@ class TestWorkflowStageDescription(unittest.TestCase):
             [isinstance(s, WorkflowStepDescription) for s in stage.steps]
         ))
 
-    def test_initialize_with_incorrect_description_1(self):
+    def test_initialize_with_incorrect_steps_value(self):
         wrong_description = {
-            'name': 'bla',
+            'name': 'image_conversion',
             'steps': list()
         }
         with self.assertRaises(ValueError):
             WorkflowStageDescription(**wrong_description)
 
-    def test_initialize_with_incorrect_description_2(self):
+    def test_initialize_with_incorrect_steps_type(self):
         wrong_description = {
-            'name': 'bla',
+            'name': 'image_conversion',
             'steps': [list()]
         }
         with self.assertRaises(TypeError):
             WorkflowStageDescription(**wrong_description)
 
-    def test_return_description(self):
-        description = {
+    def test_initialize_with_incorrect_name(self):
+        wrong_description = {
             'name': 'bla',
             'steps': [
                 {
+                    'name': 'metaextract',
+                    'args': dict()
+                }
+            ]
+        }
+        with self.assertRaises(WorkflowDescriptionError):
+            WorkflowStageDescription(**wrong_description)
+
+    def test_initialize_with_incorrect_order(self):
+        wrong_description = {
+            'name': 'image_conversion',
+            'steps': [
+                {
                     'name': 'metaconfig',
+                    'args': dict()
+                },
+                {
+                    'name': 'metaextract',
+                    'args': dict()
+                }
+            ]
+        }
+        with self.assertRaises(WorkflowDescriptionError):
+            WorkflowStageDescription(**wrong_description)
+
+    def test_return_description(self):
+        description = {
+            'name': 'image_conversion',
+            'steps': [
+                {
+                    'name': 'metaextract',
                     'args': dict()
                 }
             ]
@@ -134,14 +197,14 @@ class TestWorkflowDescription(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_initialize_with_description(self):
+    def test_initialize_with_correct_description(self):
         description = {
             'stages': [
                 {
-                    'name': 'bla',
+                    'name': 'image_conversion',
                     'steps': [
                         {
-                            'name': 'metaconfig',
+                            'name': 'metaextract',
                             'args': dict()
                         }
                     ]
@@ -159,13 +222,14 @@ class TestWorkflowDescription(unittest.TestCase):
             [isinstance(s, WorkflowStageDescription) for s in workflow.stages]
         ))
 
+    def test_initialization_with_incorrect_name(self):
         wrong_description = {
             'bla': [
                 {
-                    'name': 'bla',
+                    'name': 'image_conversion',
                     'steps': [
                         {
-                            'name': 'metaconfig',
+                            'name': 'metaextract',
                             'args': dict()
                         }
                     ]
@@ -175,13 +239,14 @@ class TestWorkflowDescription(unittest.TestCase):
         with self.assertRaises(KeyError):
             WorkflowDescription(**wrong_description)
 
+    def test_initialization_with_incorrect_type_1(self):
         wrong_description = {
             'stages':
                 {
-                    'name': 'bla',
+                    'name': 'image_conversion',
                     'steps': [
                         {
-                            'name': 'metaconfig',
+                            'name': 'metaextract',
                             'args': dict()
                         }
                     ]
@@ -190,14 +255,58 @@ class TestWorkflowDescription(unittest.TestCase):
         with self.assertRaises(TypeError):
             WorkflowDescription(**wrong_description)
 
+    def test_initialization_with_incorrect_type_2(self):
+        wrong_description = {
+            'stages': [
+                {
+                    'name': 'image_conversion',
+                    'steps': [
+                        {
+                            'name': 'metaextract',
+                            'args': dict()
+                        }
+                    ]
+                }
+            ],
+            'bla': None
+        }
+        with self.assertRaises(ValueError):
+            WorkflowDescription(**wrong_description)
+
+    def test_initialization_with_incorrect_order(self):
+        wrong_description = {
+            'stages': [
+                {
+                    'name': 'image_preprocessing',
+                    'steps': [
+                        {
+                            'name': 'corilla',
+                            'args': dict()
+                        }
+                    ]
+                },
+                {
+                    'name': 'image_conversion',
+                    'steps': [
+                        {
+                            'name': 'metaextract',
+                            'args': dict()
+                        }
+                    ]
+                }
+            ]
+        }
+        with self.assertRaises(WorkflowDescriptionError):
+            WorkflowDescription(**wrong_description)
+
     def test_return_description(self):
         description = {
             'stages': [
                 {
-                    'name': 'bla',
+                    'name': 'image_conversion',
                     'steps': [
                         {
-                            'name': 'metaconfig',
+                            'name': 'metaextract',
                             'args': dict()
                         }
                     ]
@@ -205,7 +314,7 @@ class TestWorkflowDescription(unittest.TestCase):
             ]
         }
         workflow = WorkflowDescription(**description)
-        self.assertEqual(dict(workflow), description)
+        self.assertIsInstance(dict(workflow), dict)
 
 
 class TestUserConfiguration(fake_filesystem_unittest.TestCase):
@@ -272,10 +381,10 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
             'workflow': {
                 'stages': [
                     {
-                        'name': 'bla',
+                        'name': 'image_conversion',
                         'steps': [
                             {
-                                'name': 'metaconfig',
+                                'name': 'metaextract',
                                 'args': dict()
                             }
                         ]
@@ -287,4 +396,4 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
             experiment_dir=self.experiment_dir,
             cfg_settings=config_settings
         )
-        self.assertEqual(dict(config), config_settings)
+        self.assertIsInstance(dict(config), dict)

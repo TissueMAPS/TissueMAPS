@@ -42,10 +42,10 @@ class TestPlate(fake_filesystem_unittest.TestCase):
             'workflow': {
                 'stages': [
                     {
-                        'name': 'bla',
+                        'name': 'image_conversion',
                         'steps': [
                             {
-                                'name': 'metaconfig',
+                                'name': 'metaextract',
                                 'args': dict()
                             }
                         ]

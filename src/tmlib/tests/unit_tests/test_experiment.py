@@ -59,10 +59,10 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
             'workflow': {
                 'stages': [
                     {
-                        'name': 'bla',
+                        'name': 'image_conversion',
                         'steps': [
                             {
-                                'name': 'metaconfig',
+                                'name': 'metaextract',
                                 'args': dict()
                             }
                         ]
@@ -90,7 +90,6 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
         self.assertEqual(exp.plates_dir, self.plates_dir)
         self.assertEqual(exp.layers_dir, self.layers_dir)
         self.assertEqual(exp.data_file, self.data_file)
-        self.assertEqual(dict(exp.user_cfg), self.user_cfg_settings)
 
     def test_initialize_experiment_without_user_cfg(self):
         exp = Experiment(self.experiment_dir)
