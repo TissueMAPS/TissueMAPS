@@ -61,7 +61,46 @@ def command_line_call(parser):
         sys.exit(1)
 
 
-def call_cli_method(cli_instance, args):
+def build_cli_method_args_from_mapping(prog_name, method_name, **kwargs):
+    '''
+    Build the argument object required for a method of the
+    :py:class:`tmlib.cli.CommandLineInterface` class.
+
+    Parameters
+    ----------
+    prog_name: str
+        name of the program
+    method_name: str
+        name of the method for which arguments should be build
+    **kwargs: dict, optional
+        mapping of key-value pairs with names and values of
+        potential arguments
+
+    Returns
+    -------
+    tmlib.args.GeneralArgs
+        arguments object that can be parsed to the specified method
+
+    Note
+    ----
+    The function knows which arguments to strip from `kwargs`.
+
+    See also
+    --------
+    :py:func:`tmlib.tmaps.workflow.load_method_args`
+    :py:func:`tmlib.tmaps.workflow.load_var_method_args`
+    :py:class:`tmlib.args.Args`
+    '''
+    args_handler = workflow.load_method_args(method_name)
+    method_args = args_handler(**kwargs)
+    variable_args_handler = workflow.load_var_method_args(
+                                    prog_name, method_name)
+    if variable_args_handler is not None:
+        method_args.variable_args = variable_args_handler(**kwargs)
+    return method_args
+
+
+def call_cli_method(cli_instance, method_name, method_args):
     '''
     Call a method of a *cli* class with the parsed command line arguments.
 
@@ -70,17 +109,16 @@ def call_cli_method(cli_instance, args):
     cli_instance: tmlib.cli.CommandLineInterface
         an instance of an implementation of the
         :py:class:`tmlib.cli.CommandLineInterface` base class
-    args: argparse.Namespace
-        parsed command line arguments
+    method_name: str
+        name of the method that should be called
+    method_args: tmlib.args.GeneralArgs
+        arguments required for the method
+
+    See also
+    --------
+    :py:func:`tmlib.cli.build_cli_method_args`
     '''
-    args_handler = workflow.load_method_args(args.method_name)
-    method_args = args_handler(**vars(args))
-    # Add variable, program-specific arguments (if there are any)
-    variable_args_handler = workflow.load_var_method_args(
-                                cli_instance.name, args.method_name)
-    if variable_args_handler is not None:
-        method_args.variable_args = variable_args_handler(**vars(args))
-    getattr(cli_instance, args.method_name)(method_args)
+    getattr(cli_instance, method_name)(method_args)
 
 
 class CommandLineInterface(object):
@@ -339,7 +377,9 @@ class CommandLineInterface(object):
     def _call(self, args):
         logger.debug('call "%s" method of class "%s"',
                      args.method_name, self.__class__.__name__)
-        call_cli_method(self, args)
+        method_args = build_cli_method_args_from_mapping(
+                            prog_name=self.name, **vars(args))
+        call_cli_method(self, args.method_name, method_args)
 
     @staticmethod
     def get_parser_and_subparsers(

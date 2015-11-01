@@ -40,14 +40,19 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
             os.mkdir(self._project_dir)
         return self._project_dir
 
-    def create_jobs(self, start_stage, start_step):
+    def create_jobs(self, start_stage, start_step, job_descriptions=None):
         '''
         Create a `TissueMAPS` workflow.
 
         Parameters
         ----------
         start_stage: str
+            name of the stage from which the workflow should be started
         start_step: str
+            name of the step in `start_stage` from which the workflow should be
+            started
+        job_descriptions: tmlib.cfg.WorkflowDescription, optional
+            description of a `TissueMAPS` workflow
 
         Returns
         -------
@@ -56,6 +61,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         '''
         jobs = Workflow(
                     experiment=self.experiment,
+                    description=job_descriptions,
                     start_stage=start_stage,
                     start_step=start_step)
         # overwrite logging verbosity level

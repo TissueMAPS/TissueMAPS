@@ -65,7 +65,9 @@ class Tmaps(object):
         api.submit_jobs(jobs, args.interval)
 
     def _call(self, args):
-        cli.call_cli_method(self, args)
+        method_args = cli.build_cli_method_args_from_mapping(
+                            prog_name=self.name, **vars(args))
+        cli.call_cli_method(self, args.method_name, method_args)
 
     @staticmethod
     def call(args):
