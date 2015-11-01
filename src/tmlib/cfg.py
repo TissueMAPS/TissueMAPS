@@ -302,11 +302,14 @@ class WorkflowStageDescription(object):
         for step in kwargs['steps']:
             name = step['name']
             check_step_name(name)
-            for dep in canonical.INTRA_STAGE_DEPENDENCIES[name]:
-                if dep not in step_names:
-                    raise WorkflowDescriptionError(
-                            'Step "%s" requires upstream step "%s"'
-                            % (name, dep))
+            # Ensure that dependencies between steps within the stage
+            # are fulfilled
+            if name in canonical.INTRA_STAGE_DEPENDENCIES:
+                for dep in canonical.INTRA_STAGE_DEPENDENCIES[name]:
+                    if dep not in step_names:
+                        raise WorkflowDescriptionError(
+                                'Step "%s" requires upstream step "%s"'
+                                % (name, dep))
             step_names.append(name)
             self.steps.append(WorkflowStepDescription(**step))
 
