@@ -29,6 +29,7 @@ if [[ ! -f requirements-Darwin-3.txt ]]; then
 fi
 
 # Use non-conda python
+export PATH="/usr/bin:$PATH"
 export PATH="/usr/local/lib:$PATH"
 
 # Set path for virtual environment
