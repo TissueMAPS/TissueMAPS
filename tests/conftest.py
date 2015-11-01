@@ -1,125 +1,85 @@
 import json
 import py.test as pytest
-from models import *
-from app import create_app
-from app import db as _db
 
-# TESTDB = 'test.db'
-# TESTDB_PATH = "tests/{}".format(TESTDB)
-# TEST_DATABASE_URI = 'sqlite:///' + TESTDB_PATH
+from tmaps.models import *
+from tmaps.appfactory import create_app
+from tmaps.config import test
+from tmaps.extensions.database import db as _db
+
 
 @pytest.fixture(scope='session')
 def app(request):
     """Session-wide test `Flask` application."""
-    app = create_app(mode='test')
+    app = create_app(test)
 
     # Establish an application context before running the tests.
     ctx = app.app_context()
     ctx.push()
 
+    # Called when last test in scope has finished
     def teardown():
         ctx.pop()
-
     request.addfinalizer(teardown)
+
     return app
 
-# @pytest.fixture(scope='module')
-# def client_auth(app):
-#     client = app.test_client()
-#     rv = client.post(
-#         '/auth',
-#         headers={'content-type': 'application/json'},
-#         data=json.dumps({
-#             'username': 'testuser',
-#             'password': '123'
-#         })
-#     )
-#     data = json.loads(rv.data)
-#     app.wsgi_app = LoginMiddleware(app, data['token'])
-#     return client
+
+@pytest.fixture(scope='session', autouse=True)
+def db(app, tmpdir_factory, request):
+    # Initialize testing database
+    _db.app = app
+    # Commit before dropping, otherwise pytest might hang!
+    _db.session.commit()
+    _db.drop_all()
+    _db.create_all()
+
+    with app.app_context():
+        # Add some testing data
+        userdir = str(tmpdir_factory.mktemp('testuser'))
+        u = User(name='testuser',
+                 email='testuser@something.com',
+                 location=userdir,
+                 password='123')
+        _db.session.add(u)
+        _db.session.commit()
+
+    def teardown():
+        # Commit before dropping, otherwise pytest will hang!
+        # _db.session.commit()
+        # _db.drop_all()
+        pass
+    request.addfinalizer(teardown)
+
+    return _db
+
+
+@pytest.fixture(scope='session')
+def testuser(db):
+    testuser = User.query.get(1)
+    return testuser
+
+
+@pytest.fixture(scope='module')
+def authclient(app):
+    client = app.test_client()
+    # Token signature expiration date:
+    # 31 Oct. 15 + 99999 days
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYmYiOjE0NDYzMzA2NjAsInVuYW1lIjoidGVzdHVzZXIiLCJ1aWQiOjEsImV4cCI6MTAwODYyNDQyNjAsImlhdCI6MTQ0NjMzMDY2MH0.JPtwz_s5B4EWeoqczh6p6HoX4FAzThhE85U6TA5jRw0"
+    for method in ['get', 'post', 'put', 'delete']:
+        def gen_authed_meth():
+            old_method = getattr(client, method)
+            def authed_meth(*args, **kwargs):
+                headers = kwargs.get('headers', [])
+                headers.append(('Authorization', 'JWT %s' % token))
+                kwargs['headers'] = headers
+                return old_method(*args, **kwargs)
+            return authed_meth
+        setattr(client, method, gen_authed_meth())
+
+    return client
 
 
 @pytest.fixture(scope='module')
 def client(app):
     # m = LoginMiddleware(app)
     return app.test_client()
-
-
-@pytest.fixture(scope='session')
-def db(app, request):
-    """Session-wide test database."""
-
-    _db.app = app
-    _db.drop_all()
-    _db.create_all()
-
-    # Add some testing data
-    u = User(name='testuser',
-             email='testuser@something.com',
-             password='123')
-
-    _db.session.add(u)
-    _db.session.commit()
-
-    return _db
-
-
-@pytest.fixture(scope='function')
-def dbsession(db, request):
-    """Creates a new database session for a test."""
-    connection = db.engine.connect()
-    transaction = connection.begin()
-
-    options = dict(bind=connection)
-    session = db.create_scoped_session(options=options)
-
-    db.session = session
-
-    def teardown():
-        transaction.rollback()
-        connection.close()
-        session.remove()
-
-    request.addfinalizer(teardown)
-    return session
-
-
-def login(client):
-    """Helper function to login"""
-    rv = client.post(
-        '/auth',
-        headers={'content-type': 'application/json'},
-        data=json.dumps({
-            'username': 'testuser',
-            'password': '123'
-        })
-    )
-    data = json.loads(rv.data)
-    token = data['token']
-    wsgi = client.application.wsgi_app
-    client.application.wsgi_app = LoginMiddleware(wsgi, token)
-    return client
-
-
-def register(client, username, password, email):
-    """Helper function to register a user"""
-    return client.post('/register', data={
-        'username':     username,
-        'password':     password,
-        'email':        email,
-    }, follow_redirects=True)
-
-
-class LoginMiddleware(object):
-    def __init__(self, app, token):
-        self.app = app
-        self.token = token
-
-    def __call__(self, environ, start_response):
-
-        def custom_start_response(status, headers, exc_info=None):
-            headers.append(('Authorization', 'Bearer ' + self.token))
-            print 'Send request with headers: ' + str(headers)
-            return start_response(status, headers, exc_info)
-
-        return self.app(environ, custom_start_response)
