@@ -7,6 +7,7 @@ from utils import auto_remove_directory, auto_create_directory
 from tmaps.models import Experiment
 import shutil
 from tmlib import source as tmlib_source
+from . import Model, CRUDMixin
 
 
 ACQUISITION_UPLOAD_STATUS = (
@@ -33,7 +34,7 @@ def _get_free_index(existing_acquisitions):
 
 @auto_create_directory(lambda t: _acquisition_loc(index, t.plate_id))
 @auto_remove_directory(lambda pl: pl.location)
-class PlateAcquisition(db.Model):
+class PlateAcquisition(Model, CRUDMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), index=True)
     index = db.Column(db.Integer)
@@ -114,7 +115,7 @@ def _plate_source_loc(id, name, experiment_id):
 
 @auto_create_directory(lambda t: _plate_source_loc(t.id, t.name, t.experiment_id))
 @auto_remove_directory(lambda pl: pl.location)
-class PlateSource(db.Model):
+class PlateSource(Model, CRUDMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), index=True)
     description = db.Column(db.Text)
@@ -123,7 +124,7 @@ class PlateSource(db.Model):
 
     experiment = db.relationship('Experiment', backref='plate_sources')
 
-    def __init__(self, name, description, experiment):
+    def __init__(self, name, experiment, description=''):
         self.name = name
         self.description = description
         self.experiment_id = experiment.id
