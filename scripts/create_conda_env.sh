@@ -42,7 +42,6 @@ rmvirtualenv tmlibrary
 
 # Create and activates environment
 mkvirtualenv tmlibrary
-workon tmlibrary
 
 GC3PIE_DIR="$PWD/.gc3"
 mkdir -p ${GC3PIE_DIR}
@@ -80,4 +79,4 @@ export PYTHONPATH="$PWD/src:$PYTHONPATH"
 export PYTHONPATH="$PWD/lib:$PYTHONPATH"
 
 # Deactivate virtual environment
-deactivate
+# deactivate
