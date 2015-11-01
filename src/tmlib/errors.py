@@ -68,11 +68,9 @@ class WorkflowError(Exception):
     Base class for workflow errors.
     '''
 
-
-class WorkflowArgsError(WorkflowError):
+class WorkflowDescriptionError(WorkflowError):
     '''
-    Error class that is raised when arguments of a workflow step are
-    not correctly specified.
+    Error class that is raised when the workflow is not correctly described.
     '''
 
 
