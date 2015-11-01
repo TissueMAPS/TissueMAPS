@@ -70,7 +70,7 @@ def load_method_args(method_name):
 
 def load_var_method_args(prog_name, method_name):
     '''
-    Load additional, variable program-specific arguments that can be parsed to
+    Load variable program-specific arguments that can be parsed to
     a method of an implemented subclass of a
     :py:class:`tmlib.cli.CommandLineInterface` base class.
 
