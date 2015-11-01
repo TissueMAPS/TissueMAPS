@@ -28,9 +28,12 @@ if [[ ! -f requirements-Darwin-3.txt ]]; then
     exit 101
 fi
 
+# Use non-conda python
+export PATH="/usr/local/lib:$PATH"
+
 # Set path for virtual environment
-export WORKON_HOME=$HOME/.virtualenvs
-export PROJECT_HOME=$HOME/Devel
+export WORKON_HOME="$PWD/.virtualenvs"
+export PROJECT_HOME="$PWD/Devel"
 source /usr/local/bin/virtualenvwrapper.sh
 
 # Remove previous environment
