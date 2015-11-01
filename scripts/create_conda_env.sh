@@ -28,16 +28,13 @@ if [[ ! -f requirements-Darwin-3.txt ]]; then
     exit 101
 fi
 
-# Use non-conda python
 export PATH="/usr/bin:$PATH"
 export PATH="/usr/local/lib:$PATH"
 
 # Set path for virtual environment
 export WORKON_HOME="$PWD/.virtualenvs"
-export PROJECT_HOME="$PWD/Devel"
-# export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python
-# export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
-source /usr/local/bin/virtualenvwrapper.sh
+export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
+export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
 
 # Remove previous environment
 if [ -d "$WORKON_HOME/tmlibrary" ]; then
@@ -46,6 +43,19 @@ fi
 
 # Create and activates environment
 mkvirtualenv tmlibrary
+
+# Install tmlib dependencies with `pip`
+pip install -r requirements-1.txt
+pip install -r requirements-2.txt
+pip install -r requirements-Darwin-3.txt
+
+# Install tmlib
+pip install -e .
+pip install -e ./lib/pyfakefs
+# It's a part of installation procedure that tmlib is installed
+# into the homefolder.
+export PYTHONPATH="$PWD/src:$PYTHONPATH"
+export PYTHONPATH="$PWD/lib:$PYTHONPATH"
 
 GC3PIE_DIR="$PWD/.gc3"
 mkdir -p ${GC3PIE_DIR}
@@ -67,20 +77,6 @@ architecture = x86_64
 auth = none
 override = no
 __EOF__
-
-
-# Install tmlib dependencies with `pip`
-pip install -r requirements-1.txt
-pip install -r requirements-2.txt
-pip install -r requirements-Darwin-3.txt
-
-# Install tmlib
-pip install -e .
-pip install -e ./lib/pyfakefs
-# It's a part of installation procedure that tmlib is installed
-# into the homefolder.
-export PYTHONPATH="$PWD/src:$PYTHONPATH"
-export PYTHONPATH="$PWD/lib:$PYTHONPATH"
 
 # Deactivate virtual environment
 deactivate

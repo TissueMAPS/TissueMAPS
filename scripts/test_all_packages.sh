@@ -19,8 +19,13 @@ export PATH="/usr/local/lib:$PATH"
 
 # Set path for virtual environment
 export WORKON_HOME="$PWD/.virtualenvs"
-export PROJECT_HOME="$PWD/Devel"
-source /usr/local/bin/virtualenvwrapper.sh
+export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
+export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
+
+
+# Create a link for vips
+cd $VIRTUALENVWRAPPER_HOOK_DIR/tmlibrary/lib/python2.7/site-packages/gi
+ln -s /usr/local/lib/python2.7/site-packages/gi gi
 
 # Activate virtualenv
 workon tmlibrary
