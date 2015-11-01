@@ -20,6 +20,22 @@ tmlib.tmaps.argparser module
     :undoc-members:
     :show-inheritance:
 
+tmlib.tmaps.args module
+---------------------------
+
+.. automodule:: tmlib.tmaps.args
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+tmlib.tmaps.canonical module
+---------------------------
+
+.. automodule:: tmlib.tmaps.canonical
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tmlib.tmaps.cli module
 ----------------------
 
