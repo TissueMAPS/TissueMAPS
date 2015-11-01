@@ -11,56 +11,51 @@ description is correct and thereby prevent submission of an incorrectly
 described workflow in the first place.
 '''
 
-#: Stages:
+#: Implemented workflow stages:
 #: For more information please refer to the corresponding section in
 #: :ref:`introduction <workflow>`
 STAGES = {
-    [
-        {
-            'name': 'image_conversion',
-            'steps': [
-                {'name': 'metaextract'},
-                {'name': 'metaconfig'},
-                {'name': 'imextract'}
-            ]
-        },
-        {
-            'name': 'image_preprocessing',
-            'steps': [
-                {'name': 'corilla'},
-                {'name': 'align'}
-            ]
-        },
-        {
-            'name': 'pyramid_creation',
-            'steps': [
-                {'name': 'illuminati'}
-            ]
-        },
-        {
-            'name': 'image_analysis',
-            'steps': [
-                {'name': 'jterator'}
-            ]
-        }
-    ]
+    'image_conversion', 'image_conversion',
+    'pyramid_creation', 'image_analysis'
 }
 
+STEPS_PER_STAGE = {
+    'image_conversion':
+        ['metaextract', 'metaconfig', 'imextract'],
+    'image_preprocessing':
+        ['corilla', 'align'],
+    'pyramid_creation':
+        ['illuminati'],
+    'image_analysis':
+        ['jterator']
+}
+# Note: there could be more than one pipeline!
 
-#: Interdependencies between individual workflow steps.
-DEPENDENCIES = {
-    'metaextract': set(),
-    'metaconfig': {'metaextract'},
-    'imextract': {'metaconfig'},
-    'align': {'imextract'},
-    'corilla': {'imextract'},
-    'illuminati': {'imextract'},
-    'jterator': {'imextract'}
+#: Dependencies between individual workflow stages.
+INTER_STAGE_DEPENDENCIES = {
+    'image_conversion': {
+
+    },
+    'image_preprocessing': {
+        'image_conversion'
+    },
+    'pyramid_creation': {
+        'image_conversion', 'image_preprocessing'
+    },
+    'image_analysis': {
+        'image_conversion', 'image_preprocessing'
+    }
 }
 
+#: Dependencies between individual workflow steps within one stage.
+INTRA_STAGE_DEPENDENCIES = {
+    'metaextract': {
 
-#: Optional dependencies of workflow steps.
-OPTIONAL_DEPENDENCIES = {
-   'illuminati': {'align', 'corilla'},
-   'jterator': {'align', 'corilla'}
+    },
+    'metaconfig': {
+        'metaextract'
+    },
+    'imextract': {
+        'metaconfig'
+    }
 }
