@@ -20,19 +20,19 @@ ACQUISITION_UPLOAD_STATUS = (
 
 def _acquisition_loc(index, plate_id):
     """Return the directory path for a acquisition"""
-    pl = PlateSource.query.get(plate_id)
+    pls = PlateSource.get(plate_id)
     dirname = tmlib_source.PlateAcquisition.ACQUISITION_DIR_FORMAT.\
                            format(index=index)
-    return p.join(pl.location, dirname)
+    return p.join(pls.location, dirname)
 
 
 def _get_free_index(existing_acquisitions):
     used_indices = set([aq.index for aq in existing_acquisitions])
-    free_indices = set(range(len(used_idxs) + 1)) - used_indices
+    free_indices = set(range(len(used_indices) + 1)) - used_indices
     return sorted(free_indices)[0]
 
 
-@auto_create_directory(lambda t: _acquisition_loc(index, t.plate_id))
+@auto_create_directory(lambda t: _acquisition_loc(t.index, t.plate_source_id))
 @auto_remove_directory(lambda pl: pl.location)
 class PlateAcquisition(Model, CRUDMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,31 +45,27 @@ class PlateAcquisition(Model, CRUDMixin):
 
     plate_source_id = db.Column(db.Integer, db.ForeignKey('plate_source.id'))
 
-    plate = db.relationship('PlateSource', backref='acquisitions')
+    plate_source = db.relationship('PlateSource', backref='acquisitions')
 
     created_on = db.Column(db.DateTime, default=db.func.now())
 
-    def __init__(self, name, index, description, plate):
-        pl = PlateSource.query.get(plate.id)
-        self.index = _get_free_index(plate.acquisitions)
+    def __init__(self, name, plate_source, description=''):
+        self.index = _get_free_index(plate_source.acquisitions)
         self.name = name
-        self.index = index
         self.description = description
-        self.plate_id = plate.id
+        self.plate_source_id = plate_source.id
         self.upload_status = 'WAITING'
 
     @property
     def tmlib_object(self):
-        # FIXME: Is the second argument necessary?
         return tmlib_source.PlateAcquisition(self.location)
 
     @property
     def location(self):
-        return _acquisition_loc(self.index, self.plate_id)
+        return _acquisition_loc(self.index, self.plate_source_id)
 
     @property
     def files(self):
-        # FIXME: Is the OSError necessary?
         try:
             files = self.tmlib_object.image_files
             return files
@@ -81,6 +77,12 @@ class PlateAcquisition(Model, CRUDMixin):
         # TODO: Files might be uploading, this is only checked client-side!
         return len(self.files) != 0 and self.upload_status == 'SUCCESSFUL'
 
+    def save_file(self, f):
+        fname = secure_filename(f.filename)
+        fpath = p.join(self.tmlib_object.image_dir, fname)
+        f.save(fpath)
+        return fname
+
     def remove_files(self):
         files = [p.join(self.tmlib_object.image_dir, f) for f in self.files]
         for f in files:
@@ -88,9 +90,9 @@ class PlateAcquisition(Model, CRUDMixin):
         self.upload_status = 'WAITING'
         db.session.commit()
 
-    def mark_upload_successful(self):
-        self.upload_status = 'SUCCESSFUL'
-        db.session.commit()
+    @property
+    def images_location(self):
+        return self.tmlib_object.image_dir
 
     def as_dict(self):
         return {
