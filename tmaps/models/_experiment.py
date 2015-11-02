@@ -4,9 +4,12 @@ from xml.dom import minidom
 from werkzeug import secure_filename
 from ..extensions.database import db
 from utils import (
-    auto_generate_hash, auto_create_directory, exec_func_after_insert
+    auto_generate_hash, auto_create_directory, exec_func_after_insert,
+    auto_remove_directory
 )
 from . import CRUDMixin, Model, HashIdModel
+from tmlib import plate as tmlib_plate
+
 
 # EXPERIMENT_ACCESS_LEVELS = (
 #     'read',
@@ -68,23 +71,34 @@ def _create_locations_if_necessary(mapper, connection, exp):
                  .values(location=exp_location))
 
 
+SUPPORTED_MICROSCOPE_TYPES = ('cellvoyager', 'visiview')
+
+
 @exec_func_after_insert(_create_locations_if_necessary)
+@auto_remove_directory(lambda e: e.location)
 @auto_generate_hash
 class Experiment(HashIdModel, CRUDMixin):
+
     id = db.Column(db.Integer, primary_key=True)
     hash = db.Column(db.String(20))
     name = db.Column(db.String(120), index=True)
     location = db.Column(db.String(600))
     description = db.Column(db.Text)
 
+    microscope_type = \
+        db.Column(db.Enum(*SUPPORTED_MICROSCOPE_TYPES, name='microscope_type'))
+    plate_format = db.Column(db.Integer)
+
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_on = db.Column(db.DateTime, default=db.func.now())
     owner = db.relationship('User', backref='experiments')
 
-    def __init__(self, name, description, owner, location=None):
+    def __init__(self, name, owner, microscope_type, plate_format,
+                 description='', location=None):
         self.name = name
         self.description = description
         self.owner_id = owner.id
+
         if location is not None:
             if not p.isabs(location):
                 raise ValueError(
@@ -95,6 +109,16 @@ class Experiment(HashIdModel, CRUDMixin):
                 self.location = location
         else:
             self.location = None
+
+        if not microscope_type in set(SUPPORTED_MICROSCOPE_TYPES):
+            raise ValueError('Unsupported microscope type')
+        else:
+            self.microscope_type = microscope_type
+
+        if not plate_format in tmlib_plate.Plate.SUPPORTED_PLATE_FORMATS:
+            raise ValueError('Unsupported plate format')
+        else:
+            self.plate_format = plate_format
 
     @property
     def dataset_path(self):
@@ -164,6 +188,8 @@ class Experiment(HashIdModel, CRUDMixin):
             'name': self.name,
             'description': self.description,
             'owner': self.owner.name,
+            'plate_format': self.plate_format,
+            'microscope_type': self.microscope_type,
             'layers': self.layers,
             'plate_sources': [pl.as_dict() for pl in self.plate_sources],
             'plates': [pl.as_dict() for pl in self.plates]

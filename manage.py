@@ -89,7 +89,9 @@ def populate_db():
         e1 = Experiment(name='150316-30min-PBS',
                         description='Very nice exp',
                         owner=u1,
-                        location='/Users/robin/Dev/TissueMAPS/expdata/150316-30min-PBS')
+                        location='/Users/robin/Dev/TissueMAPS/expdata/150316-30min-PBS',
+                        microscope_type='visiview',
+                        plate_format=96)
         db.session.add(e1)
         db.session.commit()
 
