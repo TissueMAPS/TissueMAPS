@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Create tmlibrary virtualenv used to run tests and generate API docs.
+# Create virtualenv for running tests and generating docs.
 #
 # The script expects to be run from the TOP-LEVEL folder of tmlibrary
 #
@@ -43,14 +43,14 @@ pip install -r requirements-1.txt
 pip install -r requirements-2.txt
 
 # NOTE: dependencies in requirements-Darwin-3.txt should be installed globally
+# via apt-get
 
 # Install tmlib
 pip install -e .
 pip install -e ./lib/pyfakefs
-# It's a part of installation procedure that tmlib is installed
-# into the homefolder.
-export PYTHONPATH="$PWD/src:$PYTHONPATH"
-export PYTHONPATH="$PWD/lib:$PYTHONPATH"
+
+# Put command line scripts on the PATH
+export PATH="./src/tmlib/bin:$PATH"
 
 GC3PIE_DIR="$PWD/.gc3"
 mkdir -p ${GC3PIE_DIR}
