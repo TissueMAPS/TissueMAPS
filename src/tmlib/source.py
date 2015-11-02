@@ -116,6 +116,24 @@ class PlateSource(object):
         acquisition_dirs = natsorted(acquisition_dirs)
         return [PlateAcquisition(d, self.user_cfg) for d in acquisition_dirs]
 
+    def add_acquisition(self):
+        '''
+        Add a new plate acquisition, i.e. create a new subdirectory in
+        `plate_source_dir`.
+
+        Returns
+        -------
+        tmlib.source.PlateAcquisition
+            configured plate acquisition object
+        '''
+        new_index = len(self.acquisitions)
+        name = PlateAcquisition.ACQUISITION_DIR_FORMAT.format(index=new_index)
+        acquisition_dir = os.path.join(self.dir, name)
+        logging.debug('create directory for new acquisition: %s',
+                      acquisition_dir)
+        os.mkdir(acquisition_dir)
+        return PlateAcquisition(acquisition_dir, self.user_cfg)
+
     @property
     def image_mapper_file(self):
         '''

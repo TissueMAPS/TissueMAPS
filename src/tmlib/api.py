@@ -13,7 +13,6 @@ from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
 import logging
 from . import utils
-from . import logging_utils
 from .readers import JsonReader
 from .writers import JsonWriter
 
@@ -112,7 +111,7 @@ class BasicClusterRoutines(object):
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
 
-    def submit_jobs(self, jobs, monitoring_interval=5):
+    def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=2):
         '''
         Create a GC3Pie engine that submits jobs to a cluster
         for parallel and/or sequential processing and monitors their progress.
@@ -313,6 +312,11 @@ class ClusterRoutines(BasicClusterRoutines):
         -------
         dict
             job descriptions
+
+        Raises
+        ------
+        OSError
+            when no descriptor files are found
         '''
         directory = self.job_descriptions_dir
         job_descriptions = dict()
@@ -320,11 +324,11 @@ class ClusterRoutines(BasicClusterRoutines):
         run_job_files = glob.glob(os.path.join(
                                   directory, '*_run_*.job.json'))
         if not run_job_files:
-            logger.debug('No run job descriptor files found')
+            raise OSError('No job descriptor files found.')
         collect_job_files = glob.glob(os.path.join(
                                       directory, '*_collect.job.json'))
         if not collect_job_files:
-            logger.debug('No collect job descriptor file found')
+            logger.debug('no "collect" job descriptor file found')
         with JsonReader() as reader:
             for f in run_job_files:
                 batch = reader.read(f)

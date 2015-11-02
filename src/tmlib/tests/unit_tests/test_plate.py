@@ -4,6 +4,7 @@ import bioformats
 import fake_filesystem_unittest
 from tmlib import cfg
 from tmlib.plate import Plate
+from tmlib.cycle import Cycle
 
 
 class TestPlate(fake_filesystem_unittest.TestCase):
@@ -20,9 +21,9 @@ class TestPlate(fake_filesystem_unittest.TestCase):
         os.mkdir(self.experiment_dir)
         self.sources_dir = os.path.join(self.experiment_dir, 'sources')
         self.plates_dir = os.path.join(self.experiment_dir, 'plates')
+        os.mkdir(self.plates_dir)
         self.layers_dir = os.path.join(self.experiment_dir, 'layers')
         # Add a plate with one cycle
-        os.mkdir(self.plates_dir)
         self.plate_name = 'testPlate'
         self.plate_dir = os.path.join(
                                 self.plates_dir,
@@ -120,7 +121,8 @@ class TestPlate(fake_filesystem_unittest.TestCase):
         self.assertEqual(plate.cycles[0].dir, self.cycle_dir)
         self.assertEqual(plate.cycles[0].index, self.cycle_index)
         self.assertEqual(plate.cycles[0].plate_name, self.plate_name)
-        plate.add_cycle()
+        cycle = plate.add_cycle()
+        self.assertIsInstance(cycle, Cycle)
         self.assertEqual(len(plate.cycles), 2)
         self.assertEqual(plate.cycles[1].index, 1)
 

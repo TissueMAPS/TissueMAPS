@@ -193,9 +193,10 @@ class InitArgs(GeneralArgs):
             indicator that job descriptions should only be displayed
             and not written to files
 
-        Note
-        ----
-        This argument is only relevant for command line use. 
+        Warning
+        -------
+        This argument must not be set within workflows, since it will cause
+        the program to exit without creating persistent job descriptions. 
         '''
         return self._display
 

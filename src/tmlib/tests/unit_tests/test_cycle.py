@@ -147,6 +147,7 @@ class TestCycle(fake_filesystem_unittest.TestCase):
     def test_initialize_cycle(self):
         self.assertEqual(self.cycle.dir, self.cycle_dir)
         self.assertEqual(self.cycle.index, self.cycle_index)
+        self.assertEqual(self.cycle.user_cfg.plates_dir, self.plates_dir)
 
     def test_image_files(self):
         self.assertEqual(self.cycle.image_files, natsorted(self.image_files))

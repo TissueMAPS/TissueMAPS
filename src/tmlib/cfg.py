@@ -482,7 +482,12 @@ class WorkflowStepDescription(object):
 
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
-        yield ('args', dict(getattr(self, 'args')))
+        # Only return the "variable_args" attribute, because these are the
+        # arguments that are relevant for the workflow description
+        if hasattr(self, 'args.variable_args'):
+            yield ('args', dict(getattr(self, 'args.variable_args')))
+        else:
+            yield ('args', dict())
 
 
 class UserConfiguration(object):
