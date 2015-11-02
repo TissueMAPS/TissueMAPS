@@ -12,12 +12,13 @@ if [[ ! -d src ]] || [[ ! -d docs ]] || [[ ! -d scripts ]]; then
     exit 100
 fi
 
-# Activate environment created by test_all_packages script.
-workon tmlibrary
+VENV="${PWD}/venv_tmlibrary"
 
-# Generates docs.
-sphinx-apidoc -o docs src/tmlib
+# Activate virtual environment
+source $VENV/bin/activate
+
+# Generates docs
 make -C docs html
 
 # Deactivate virtual environment
-deactivate tmlibrary
+deactivate
