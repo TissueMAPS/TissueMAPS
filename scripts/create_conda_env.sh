@@ -25,27 +25,24 @@ if [[ ! -f requirements-Darwin-3.txt ]]; then
     exit 101
 fi
 
-export PATH="/usr/bin:$PATH"
-export PATH="/usr/local/lib:$PATH"
-
-# Set path for virtual environment
-export WORKON_HOME="$HOME/.virtualenvs"
-export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
-export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
-source /usr/local/bin/virtualenvwrapper.sh
+VENV="${PWD}/venv_tmlibrary"
 
 # Remove previous environment
-if [ -d "$WORKON_HOME/tmlibrary" ]; then
-  rmvirtualenv tmlibrary
+if [ -d $VENV ]; then
+  rm -r VENV
 fi
 
-# Create and activates environment
-mkvirtualenv tmlibrary
+# Create a fresh virtual environment
+virtualenv -p /usr/bin/python2.7 $VENV
+
+# Activate the virtual environment
+source $VENV/bin/activate
 
 # Install tmlib dependencies with `pip`
 pip install -r requirements-1.txt
 pip install -r requirements-2.txt
-pip install -r requirements-Darwin-3.txt
+
+# NOTE: dependencies in requirements-Darwin-3.txt should be installed globally
 
 # Install tmlib
 pip install -e .
@@ -76,5 +73,5 @@ auth = none
 override = no
 __EOF__
 
-# Deactivate virtual environment
+# Deactivate the virtual environment
 deactivate

@@ -11,21 +11,17 @@ if [[ ! -d src ]] || [[ ! -d docs ]] || [[ ! -d scripts ]]; then
     exit 100
 fi
 
-export PATH="/usr/bin:$PATH"
-export PATH="/usr/local/lib:$PATH"
+VENV="${PWD}/venv_tmlibrary"
 
-# Set path for virtual environment
-export WORKON_HOME="$HOME/.virtualenvs"
-export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
-export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/bin/virtualenv
-source /usr/local/bin/virtualenvwrapper.sh
+export PYTHONPATH="/usr/lib/python2.7/dist-packages:/usr/local/bin/python2.7/site-packages:$PYTHONPATH"
 
-# Create a link for vips
-cd $VIRTUALENVWRAPPER_HOOK_DIR/tmlibrary/lib/python2.7/site-packages/gi
-ln -s /usr/local/lib/python2.7/site-packages/gi gi
+# Set paths for Vips
+export VIPSHOME=/usr/local
+export GI_TYPELIB_PATH=$VIPSHOME/lib/girepository-1.0
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VIPSHOME/lib
 
-# Activate virtualenv
-workon tmlibrary
+# Activate the virtual environment
+source $VENV/bin/activate
 
 #
 # Actually run tests
