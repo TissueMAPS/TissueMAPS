@@ -72,7 +72,15 @@ def _create_locations_if_necessary(mapper, connection, exp):
 
 
 SUPPORTED_MICROSCOPE_TYPES = ('cellvoyager', 'visiview')
-
+EXPERIMENT_CREATION_STAGES = (
+    'WAITING_FOR_UPLOAD',
+    'UPLOADING',
+    'WAITING_FOR_IMAGE_CONVERSION'
+    'CONVERTING_IMAGES',
+    'WAITING_FOR_PYRAMID_CREATION',
+    'CREATING_PYRAMIDS',
+    'DONE'
+)
 
 @exec_func_after_insert(_create_locations_if_necessary)
 @auto_remove_directory(lambda e: e.location)
@@ -87,6 +95,8 @@ class Experiment(HashIdModel, CRUDMixin):
 
     microscope_type = \
         db.Column(db.Enum(*SUPPORTED_MICROSCOPE_TYPES, name='microscope_type'))
+    creation_stage = \
+        db.Column(db.Enum(*EXPERIMENT_CREATION_STAGES, name='creation_stage'))
     plate_format = db.Column(db.Integer)
 
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -109,6 +119,8 @@ class Experiment(HashIdModel, CRUDMixin):
                 self.location = location
         else:
             self.location = None
+
+        self.creation_stage = 'WAITING_FOR_UPLOAD'
 
         if not microscope_type in set(SUPPORTED_MICROSCOPE_TYPES):
             raise ValueError('Unsupported microscope type')
@@ -190,6 +202,7 @@ class Experiment(HashIdModel, CRUDMixin):
             'owner': self.owner.name,
             'plate_format': self.plate_format,
             'microscope_type': self.microscope_type,
+            'creation_stage': self.creation_stage,
             'layers': self.layers,
             'plate_sources': [pl.as_dict() for pl in self.plate_sources],
             'plates': [pl.as_dict() for pl in self.plates]

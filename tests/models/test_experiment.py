@@ -37,6 +37,9 @@ def test_creation_of_experiment_object(testuser):
     )
     assert e.description == ''
 
+    # Initial stage should be 'waiting_for_upload'
+    assert e.creation_stage == 'WAITING_FOR_UPLOAD'
+
     # Only certain microscopes are supported
     for t in SUPPORTED_MICROSCOPE_TYPES:
         e = Experiment(
@@ -76,6 +79,7 @@ def test_as_dict_method(exp):
 
     assert ser['plate_format'] == exp.plate_format
     assert ser['microscope_type'] == exp.microscope_type
+    assert ser['creation_stage'] == exp.creation_stage
 
     assert 'layers' in ser and type(ser['layers']) == list
     assert 'plate_sources' in ser and type(ser['plate_sources']) == list
