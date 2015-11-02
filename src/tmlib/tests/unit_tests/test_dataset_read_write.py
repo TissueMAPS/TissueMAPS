@@ -1,21 +1,25 @@
+import os
 import logging
-import tempfile
 import random
+import tempfile
 import numpy as np
+import unittest
 from tmlib.readers import DatasetReader
 from tmlib.writers import DatasetWriter
 
 logger = logging.getLogger(__name__)
 
 
-class TestDatasetReaderWriter(object):
+class TestDatasetReaderWriter(unittest.TestCase):
+
+    def setUp(self):
+        tmp_dir = tempfile.gettempdir()
+        self.filename = os.path.join(tmp_dir, 'testfile.h5')
 
     def write_array_to_HDF5_file_and_read_it_back(self, arr_write):
-        filename = '{dir}_{name}'.format(dir=tempfile.gettempdir(),
-                                         name=self.__class__.__name__)
-        with DatasetWriter(filename, truncate=True) as writer:
+        with DatasetWriter(self.filename, truncate=True) as writer:
             writer.write('arr', arr_write)
-        with DatasetReader(filename) as reader:
+        with DatasetReader(self.filename) as reader:
             arr_read = reader.read('arr')
         return arr_read
 
