@@ -22,7 +22,6 @@ prettytable==0.7.2
 pyCLI==2.0.3
 pyparsing==2.0.3
 pypng==0.0.17
-python-bioformats==1.0.5
 python-dateutil==2.4.2
 pytest==2.8.2
 pytz==2015.4
