@@ -179,17 +179,8 @@ class MetadataHandler(object):
                 # correspond to an individual plane or a z-stack, i.e. a
                 # collection of several focal planes with the same channel
                 # and time point.
-                # for p, stack in enumerate(stacks):
                 for p in xrange(n_planes):
                     plane = pixels.Plane(p)
-                    # Create a separate *Image*/*Pixels* for each *Plane*
-                    # in the original image file
-                    # if count == 0:
-                    #     # There is already one image created by default
-                    #     new_img = self.metadata.image(count)
-                    # else:
-                    #     self.metadata.set_image_count(count+1)
-                    #     new_img = self.metadata.image(count)
                     self.metadata.set_image_count(count+1)
                     new_img = self.metadata.image(count)
                     new_img.Name = image.Name
@@ -228,6 +219,9 @@ class MetadataHandler(object):
                     fm.series = [s]
                     fm.planes = [p]
                     self.file_mapper.append(fm)
+
+                    if f != new_img.Name:
+                        raise ValueError('Filenames must match.')
                     count += 1
 
         return self.metadata
@@ -352,7 +346,7 @@ class MetadataHandler(object):
             logger.info('no additional metadata provided')
 
             self.metadata.PlatesDucktype(
-                        self.metadata.root_node).newPlate(name='default') 
+                        self.metadata.root_node).newPlate(name='default')
             return self.metadata
 
         if not self.REGEX:
@@ -960,7 +954,7 @@ class MetadataHandler(object):
                 element.planes = self.file_mapper[i].planes
                 hashmap.append(dict(element))
         else:
-            # In this case images files contain multiple planes
+            # In this case images files one or contain multiple planes
             filenames = [f for fm in self.file_mapper for f in fm.files]
             for f in filenames:
                 ix = utils.indices(filenames, f)
