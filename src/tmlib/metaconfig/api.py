@@ -425,10 +425,9 @@ class MetadataConfigurator(ClusterRoutines):
                         data = cycle_metadata.to_xml()
                         writer.write(filename, data)
 
-                    # Update "ref_index" and "name" in the filemapper with the
-                    # full path to the final image file (in the respective cycle
-                    # folder) and store it in the main upload directory
-                    # TODO
+                    # Update "ref_index" and "name" in the file mapper with the
+                    # absolute path to the final image file (in the respective
+                    # cycle folder) and store it in the main upload directory
                     file_mapper = acquisition.image_mapper
                     for element in file_mapper:
                         new_element = ImageFileMapper()
@@ -436,8 +435,7 @@ class MetadataConfigurator(ClusterRoutines):
                         new_element.series = element.series
                         new_element.planes = element.planes
                         new_element.files = [
-                            os.path.join(acquisition.dir,
-                                         acquisition.image_dir, f)
+                            os.path.join(acquisition.image_dir, f)
                             for f in element.files
                         ]
                         new_element.ref_index = ix

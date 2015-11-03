@@ -864,7 +864,7 @@ class MetadataHandler(object):
 
         Returns
         -------
-        List[ChannelImageMetadata]
+        List[tmlib.metadata.ChannelImageMetadata]
             metadata, where "tpoint_ix" attribute has been set
 
         Note
