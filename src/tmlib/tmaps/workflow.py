@@ -253,7 +253,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
         if done+1 < len(self.steps_to_process):
             try:
                 logger.info('progress to next step ({0} of {1}): "{2}"'.format(
-                                (done+1), len(self.steps_to_process),
+                                (done+1)+1, len(self.steps_to_process),
                                 self.steps_to_process[done+1].name))
                 self._add_step(done+1)
             except Exception as error:
