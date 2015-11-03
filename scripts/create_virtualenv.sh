@@ -57,7 +57,9 @@ ln -s /usr/lib/python2.7/dist-packages/rpy2 $VENV/lib/python2.7/site-packages/rp
 
 # Install tmlib
 pip install -e .
-pip install -e ./lib/pyfakefs
+# pip install -e ./lib/pyfakefs
+pip install git+https://github.com/jmcgeheeiv/pyfakefs
+pip install git+https://github.com/cellprofiler/python-bioformats
 
 # Put command line scripts on the PATH
 export PATH="./src/tmlib/bin:$PATH"
