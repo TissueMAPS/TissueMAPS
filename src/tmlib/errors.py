@@ -16,6 +16,12 @@ class SubmissionError(Exception):
     '''
 
 
+class JobDescriptionError(OSError):
+    '''
+    Error class that is raised when no job descriptor files are found.
+    '''
+
+
 class CliArgError(Exception):
     '''
     Error class that is raised when the value of an command line argument is
