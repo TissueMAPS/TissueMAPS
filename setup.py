@@ -216,9 +216,5 @@ setuptools.setup(
     package_data={'': ['*.rst']},
     # package_data=package_data,
     include_package_data=True,
-    install_requires=get_requirements(),
-    dependency_links=[
-        'https://github.com/cellprofiler/python-bioformats@master#egg=python-bioformats',
-        'https://github.com/jmcgeheeiv/pyfakefs'
-    ]
+    install_requires=get_requirements()
 )

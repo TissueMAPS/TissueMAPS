@@ -47,6 +47,8 @@ source $VENV/bin/activate
 # Install tmlib dependencies with `pip`
 pip install -r requirements-1.txt
 pip install -r requirements-2.txt
+pip install -r requirements-3.txt
+pip install -r requirements-4.txt
 
 # NOTE: dependencies in requirements-Darwin-3.txt should be installed globally
 # via apt-get
