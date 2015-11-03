@@ -347,6 +347,7 @@ class PlateAcquisition(object):
             if not os.path.isdir(os.path.join(self.image_dir, f))
             and os.path.splitext(f)[1] in self._supported_image_file_extensions
         ]
+        files = natsorted(files)
         if not files:
             raise OSError('No image files found in "%s"' % self.image_dir)
         return files
