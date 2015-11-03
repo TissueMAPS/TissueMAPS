@@ -1,11 +1,12 @@
 import os
 from os.path import join, dirname, abspath
+import logging
 
 from flask import Flask
 
 from extensions.database import db
 from extensions.auth import jwt
-from config import dev
+from config import default as default_config
 
 
 MAIN_DIR_LOCATION = abspath(join(dirname(__file__), os.pardir, os.pardir))
@@ -14,61 +15,55 @@ EXPDATA_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'expdata')
 
 
 
-def create_app(config_object=dev):
+def create_app(config):
     """Create a Flask application object that registers all the blueprints on
-    which the actual routes are defined. Creating the application in a function
-    that is then to be called by run.py allows for easier testing.
+    which the actual routes are defined.
 
     The default settings for this app are contained in 'config/default.py'.
-    For the execution modes 'test', 'dev', and 'production', the respective file
-    (e.g. 'config/dev.py') must exist in the config directory.
+    Additional can be supplied to this method as a dict-like config argument.
 
     """
 
-    # TODO: The static folder shouldn't for production and is for debug
+    # NOTE: The static folder shouldn't for production and is for debug
     # purposes only. The static files will be served by NGINX or similar.
     app = Flask('wsgi',
                 static_folder=join(_CLIENT_DIR_LOCATION, 'app'),
                 static_url_path='')
 
-    app.config.from_object(config_object)
+    # Load the default settings
+    app.config.from_object(default_config)
+    app.config.update(config)
 
-    db_access_keys = [
-        'POSTGRES_DB_USER',
-        'POSTGRES_DB_PASSWORD',
-        'POSTGRES_DB_HOST',
-        'POSTGRES_DB_PORT',
-        'POSTGRES_DB_NAME'
-    ]
+    # Add log handlers
+    # TODO: Consider adding mail and file handlers if being in a production
+    # environment (i.e. app.config.DEBUG == False).
+    stream_handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    stream_handler.setFormatter(formatter)
+    app.logger.addHandler(stream_handler)
 
-    db_access_vals = [app.config.get(k) for k in db_access_keys]
-    for k, v in zip(db_access_keys, db_access_keys):
-        if not v:
-            raise Exception('Key %s has to be specified in config!' % k)
-
-    dbuser, dbpassword, dbhost, dbport, dbname = db_access_vals
-
-    SQLALCHEMY_DATABASE_URI = 'postgresql://{user}:{password}@{host}:{port}/{dbname}'.format(
-        user=dbuser,
-        password=dbpassword,
-        host=dbhost,
-        port=str(dbport),
-        dbname=dbname
-    )
-    app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
+    if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+        raise ValueError('No database URI specified!')
 
     secret_key = app.config.get('SECRET_KEY')
-    if not secret_key or secret_key == 'secret_key':
-        print '[warning] specify a __secret__ key for this application!'
-    salt_string = app.config.get('HASHIDS_SALT')
-    if not salt_string or secret_key == 'salt_string':
-        print '[warning] specify a __secret__ salt string for this application!'
+    if not secret_key:
+        raise ValueError('Specify a secret key for this application!')
+    if secret_key == 'default_secret_key':
+        app.logger.warn('The application will run with the default secret key!')
 
-    # TODO: Include better logging support
+    salt_string = app.config.get('HASHIDS_SALT')
+    if not salt_string:
+        raise ValueError(
+            'Specify a secret salt string for this application!')
+    if salt_string == 'default_salt_string':
+        app.logger.warn('The application will run with the default salt string!')
+
     if app.config['DEBUG']:
-        print "[info] Starting in __DEBUG__ mode"
+        app.logger.info("Starting in __DEBUG__ mode")
+    elif app.config['TESTING']:
+        app.logger.info("Starting in __TESTING__ mode")
     else:
-        print "[info] Starting in __PRODUCTION__ mode"
+        app.logger.info("Starting in __PRODUCTION__ mode")
 
     # Initialize Plugins
     jwt.init_app(app)

@@ -14,43 +14,18 @@ development server.
 
 """
 
-import os
+import os.path as p
+import flask
 from tmaps.appfactory import create_app
+import logging
 
 
-try:
-    _execmode = os.environ['TMAPS_EXECMODE']
-except KeyError:
-    print (
-        'No execution mode in the system environment!\n'
-        'There has to be a environment variable '
-        'TMAPS_EXECMODE that is either '
-        ' "DEV", "PROD" or "TEST".'
-        ' Using "DEV" as the default.'
-    )
-    _execmode = 'DEV'
-else:
-    _execmode = _execmode.upper()  # be case insensitive
+cfg = flask.Config(p.realpath(p.dirname(__file__)))
 
-cfg = None
-if _execmode == 'DEV':
-    from tmaps.config import dev
-    cfg = dev
-elif _execmode == 'TEST':
-    from tmaps.config import test
-    cfg = test
-elif _execmode == 'PROD':
-    from tmaps.config import prod
-    cfg = prod
-else:
-    raise (
-        'Unknown execution mode %s. '
-        'It has to be either "DEV", "TEST" or "PROD". Aborting...' % _execmode
-    )
-
+# Will throw a RuntimeError if not provided
+cfg.from_envvar('TMAPS_SETTINGS')
 
 app = create_app(cfg)
-
 
 if __name__ == '__main__':
     import argparse

@@ -1,6 +1,10 @@
+import os.path as p
 import json
 import py.test as pytest
 
+import flask
+
+import tmaps
 from tmaps.models import *
 from tmaps.appfactory import create_app
 from tmaps.config import test
@@ -10,7 +14,10 @@ from tmaps.extensions.database import db as _db
 @pytest.fixture(scope='session')
 def app(request):
     """Session-wide test `Flask` application."""
-    app = create_app(test)
+
+    cfg = flask.Config(p.join(p.dirname(tmaps.__file__), p.pardir))
+    cfg.from_envvar('TMAPS_SETTINGS_TEST')
+    app = create_app(cfg)
 
     # Establish an application context before running the tests.
     ctx = app.app_context()

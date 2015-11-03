@@ -1,0 +1,5 @@
+TESTING = True
+DEBUG = True
+
+SQLALCHEMY_DATABASE_URI = \
+    'postgresql://SOME_USER_NAME:SOME_USER_PASSWORD@localhost:5432/tissuemaps_test'
