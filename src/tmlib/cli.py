@@ -198,9 +198,9 @@ class CommandLineInterface(object):
                 logger.info('clean up output of previous submission')
                 dont_exist_ix = [not os.path.exists(f) for f in outputs]
                 if all(dont_exist_ix):
-                    logger.info('outputs don\'t exist')
+                    logger.debug('outputs don\'t exist')
                 elif any(dont_exist_ix):
-                    logger.warning('some outputs don\'t exist')
+                    logger.debug('some outputs don\'t exist')
                 for out in outputs:
                     if not os.path.exists(out):
                         continue

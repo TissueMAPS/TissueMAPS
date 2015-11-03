@@ -91,7 +91,7 @@ class BasicClusterRoutines(object):
             datetimestamp
         '''
         t = time.time()
-        return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H:%M:%S')
+        return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H-%M-%S')
 
     @staticmethod
     def create_timestamp():
