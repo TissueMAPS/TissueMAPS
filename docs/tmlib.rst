@@ -18,8 +18,16 @@ Subpackages
 Submodules
 ----------
 
-tmlib.args module
+tmlib.api module
 ----------------
+
+.. automodule:: api.cluster
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+tmlib.args module
+-----------------
 
 .. automodule:: tmlib.args
     :members:
@@ -38,14 +46,6 @@ tmlib.cli module
 ----------------
 
 .. automodule:: tmlib.cli
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.cluster module
---------------------
-
-.. automodule:: tmlib.cluster
     :members:
     :undoc-members:
     :show-inheritance:

@@ -21,7 +21,7 @@ tmlib.tmaps.argparser module
     :show-inheritance:
 
 tmlib.tmaps.args module
----------------------------
+-----------------------
 
 .. automodule:: tmlib.tmaps.args
     :members:
@@ -29,7 +29,7 @@ tmlib.tmaps.args module
     :show-inheritance:
 
 tmlib.tmaps.canonical module
----------------------------
+----------------------------
 
 .. automodule:: tmlib.tmaps.canonical
     :members:
