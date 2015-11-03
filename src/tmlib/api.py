@@ -15,6 +15,7 @@ import logging
 from . import utils
 from .readers import JsonReader
 from .writers import JsonWriter
+from .errors import JobDescriptionError
 
 logger = logging.getLogger(__name__)
 
@@ -315,8 +316,8 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Raises
         ------
-        OSError
-            when no descriptor files are found
+        :py:exc:`tmlib.errors.JobDescriptionError`
+            when no job descriptor files are found
         '''
         directory = self.job_descriptions_dir
         job_descriptions = dict()
@@ -324,7 +325,7 @@ class ClusterRoutines(BasicClusterRoutines):
         run_job_files = glob.glob(os.path.join(
                                   directory, '*_run_*.job.json'))
         if not run_job_files:
-            raise OSError('No job descriptor files found.')
+            raise JobDescriptionError('No job descriptor files found.')
         collect_job_files = glob.glob(os.path.join(
                                       directory, '*_collect.job.json'))
         if not collect_job_files:

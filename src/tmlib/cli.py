@@ -17,6 +17,7 @@ from .args import CleanupArgs
 from .tmaps import workflow
 from .logging_utils import configure_logging
 from .logging_utils import map_logging_verbosity
+from .errors import JobDescriptionError
 
 logger = logging.getLogger(__name__)
 
@@ -191,23 +192,26 @@ class CommandLineInterface(object):
         pass
 
     def _cleanup(self):
-        outputs = self.expected_outputs
-        if outputs:
-            logger.info('clean up output of previous submission')
-            dont_exist_ix = [not os.path.exists(f) for f in outputs]
-            if all(dont_exist_ix):
-                logger.info('outputs don\'t exist')
-            elif any(dont_exist_ix):
-                logger.warning('some outputs don\'t exist')
-            for out in outputs:
-                if not os.path.exists(out):
-                    continue
-                if os.path.isdir(out):
-                    logger.debug('remove output directory: %s' % out)
-                    shutil.rmtree(out)
-                else:
-                    logger.debug('remove output file: %s' % out)
-                    os.remove(out)
+        try:
+            outputs = self.expected_outputs
+            if outputs:
+                logger.info('clean up output of previous submission')
+                dont_exist_ix = [not os.path.exists(f) for f in outputs]
+                if all(dont_exist_ix):
+                    logger.info('outputs don\'t exist')
+                elif any(dont_exist_ix):
+                    logger.warning('some outputs don\'t exist')
+                for out in outputs:
+                    if not os.path.exists(out):
+                        continue
+                    if os.path.isdir(out):
+                        logger.debug('remove output directory: %s' % out)
+                        shutil.rmtree(out)
+                    else:
+                        logger.debug('remove output file: %s' % out)
+                        os.remove(out)
+        except JobDescriptionError:
+            logger.debug('nothing to clean up')
 
     def cleanup(self, args):
         '''
@@ -290,8 +294,7 @@ class CommandLineInterface(object):
     def _job_descriptions(self):
         api = self._api_instance
         logger.debug('read job descriptions from files')
-        self.__job_descriptions = api.get_job_descriptions_from_files()
-        return self.__job_descriptions
+        return api.get_job_descriptions_from_files()
 
     @property
     def expected_outputs(self):
