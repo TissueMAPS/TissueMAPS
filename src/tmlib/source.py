@@ -159,7 +159,7 @@ class PlateSource(object):
         with JsonReader(self.dir) as reader:
             hashmap = reader.read(self.image_mapper_file)
         for element in hashmap:
-            image_mapper.append(ImageFileMapper(element))
+            image_mapper.append(ImageFileMapper(**element))
         return image_mapper
 
 
@@ -317,6 +317,10 @@ class PlateAcquisition(object):
             raise OSError('No XML files found in "%s"' % self.omexml_dir)
         return files
 
+    @property
+    def _supported_image_file_extensions(self):
+        return Formats().supported_extensions
+
     @cached_property
     def image_files(self):
         '''
@@ -341,7 +345,7 @@ class PlateAcquisition(object):
         files = [
             f for f in os.listdir(self.image_dir)
             if not os.path.isdir(os.path.join(self.image_dir, f))
-            and os.path.splitext(f)[1] in Formats().supported_extensions
+            and os.path.splitext(f)[1] in self._supported_image_file_extensions
         ]
         if not files:
             raise OSError('No image files found in "%s"' % self.image_dir)
@@ -408,5 +412,5 @@ class PlateAcquisition(object):
         with JsonReader(self.dir) as reader:
             hashmap = reader.read(self.image_mapper_file)
         for element in hashmap:
-            image_mapper.append(ImageFileMapper(element))
+            image_mapper.append(ImageFileMapper(**element))
         return image_mapper

@@ -441,20 +441,20 @@ class ImageFileMapper(object):
         'ref_index', 'ref_file', 'ref_id'
     }
 
-    def __init__(self, mapping=None):
+    def __init__(self, **kwargs):
         '''
         Parameters
         ----------
-        description: dict, optional
-            key-value representation of the object (default: ``None``)
+        kwargs: dict, optional
+            file mapping key-value pairs
 
         Returns
         -------
         tmlib.metadata.ImageFileMapper
             object where `_PERSISTENT_ATTRS` attributes where set with provided values
         '''
-        if mapping is not None:
-            for key, value in mapping.iteritems():
+        if kwargs:
+            for key, value in kwargs.iteritems():
                 if key in self._PERSISTENT_ATTRS:
                     setattr(self, key, value)
 

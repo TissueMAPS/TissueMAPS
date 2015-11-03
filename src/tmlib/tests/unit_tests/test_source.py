@@ -1,8 +1,14 @@
 import os
 import fake_filesystem_unittest
+from mock import PropertyMock
+from mock import patch
 from tmlib import cfg
+import json
+import bioformats
+from cached_property import cached_property
 from tmlib.source import PlateSource
 from tmlib.source import PlateAcquisition
+from tmlib.metadata import ImageFileMapper
 
 
 class TestSource(fake_filesystem_unittest.TestCase):
@@ -49,26 +55,40 @@ class TestSource(fake_filesystem_unittest.TestCase):
 
 class TestPlateSource(TestSource):
 
+    @property
+    def source(self):
+        return PlateSource(self.source_dir, user_cfg=self.user_cfg)
+
+    def _add_image_mapper_file(self):
+        filename = os.path.join(self.source.dir,
+                                self.source.image_mapper_file)
+        with open(filename, 'w') as f:
+            mapping = [{}]
+            f.write(json.dumps(mapping))
+
     def test_initialize_platesource(self):
-        source = PlateSource(self.source_dir, user_cfg=self.user_cfg)
-        self.assertEqual(source.dir, self.source_dir)
-        self.assertEqual(source.name, self.plate_name)
-        self.assertEqual(source.user_cfg.sources_dir, self.sources_dir)
+        self.assertEqual(self.source.dir, self.source_dir)
+        self.assertEqual(self.source.name, self.plate_name)
+        self.assertEqual(self.source.user_cfg.sources_dir, self.sources_dir)
 
     def test_list_acquisitions(self):
-        source = PlateSource(self.source_dir, user_cfg=self.user_cfg)
-        self.assertEqual(len(source.acquisitions), 1)
-        self.assertEqual(source.acquisitions[0].index, 0)
+        self.assertEqual(len(self.source.acquisitions), 1)
+        self.assertEqual(self.source.acquisitions[0].index, 0)
 
     def test_add_acquisition(self):
-        source = PlateSource(self.source_dir, user_cfg=self.user_cfg)
-        acquisition = source.add_acquisition()
+        acquisition = self.source.add_acquisition()
         self.assertIsInstance(acquisition, PlateAcquisition)
-        self.assertEqual(len(source.acquisitions), 2)
-        self.assertEqual(source.acquisitions[1].index, 1)
+        self.assertEqual(len(self.source.acquisitions), 2)
+        self.assertEqual(self.source.acquisitions[1].index, 1)
+
+    def test_image_mapper(self):
+        self._add_image_mapper_file()
+        self.assertIsInstance(self.source.image_mapper, list)
+        self.assertEqual(len(self.source.image_mapper), 1)
+        self.assertIsInstance(self.source.image_mapper[0], ImageFileMapper)
 
 
-class TestPlateAcquisition(TestSource):
+class TestPlateAcquisitionDirectories(TestSource):
 
     @property
     def acquisition(self):
@@ -81,20 +101,19 @@ class TestPlateAcquisition(TestSource):
                          self.sources_dir)
 
     def test_image_dir_attribute(self):
-        acquisition = PlateAcquisition(self.acquisition_dir,
-                                       user_cfg=self.user_cfg)
-        image_dir = os.path.join(acquisition.dir, acquisition.IMAGE_DIR_NAME)
+        image_dir = os.path.join(
+                        self.acquisition.dir,
+                        self.acquisition.IMAGE_DIR_NAME)
         self.assertFalse(os.path.exists(image_dir))
-        self.assertEqual(acquisition.image_dir, image_dir)
+        self.assertEqual(self.acquisition.image_dir, image_dir)
         self.assertTrue(os.path.exists(image_dir))
 
     def test_metadata_dir_attribute(self):
-        acquisition = PlateAcquisition(self.acquisition_dir,
-                                       user_cfg=self.user_cfg)
         metadata_dir = os.path.join(
-                        acquisition.dir, acquisition.METADATA_DIR_NAME)
+                        self.acquisition.dir,
+                        self.acquisition.METADATA_DIR_NAME)
         self.assertFalse(os.path.exists(metadata_dir))
-        self.assertEqual(acquisition.metadata_dir, metadata_dir)
+        self.assertEqual(self.acquisition.metadata_dir, metadata_dir)
         self.assertTrue(os.path.exists(metadata_dir))
 
     def test_omexml_dir_attribute(self):
@@ -105,3 +124,94 @@ class TestPlateAcquisition(TestSource):
         self.assertFalse(os.path.exists(omexml_dir))
         self.assertEqual(acquisition.omexml_dir, omexml_dir)
         self.assertTrue(os.path.exists(omexml_dir))
+
+
+class TestPlateAcquisitionFiles(TestSource):
+
+    def _add_image_files(self, extension):
+        # Add some image files to the acquisition
+        self.image_files = list()
+        for i in xrange(10):
+            name = 'image_%.2d%s' % (i, extension)
+            filename = os.path.join(self.acquisition.image_dir, name)
+            with open(filename, 'w') as f:
+                f.write('')
+            self.image_files.append(name)
+
+    def _add_additional_files(self):
+        # Add an additional metadata file to the acquisition
+        self.metadata_file = 'metadata.xml'
+        filename = os.path.join(self.acquisition.metadata_dir,
+                                self.metadata_file)
+        with open(filename, 'w') as f:
+            f.write('')
+
+    def _add_metadata_file(self):
+        filename = os.path.join(self.acquisition.dir,
+                                self.acquisition.image_metadata_file)
+        with open(filename, 'w') as f:
+            # example from
+            f.write(u'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+                <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2015-01" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2015-01 http://www.openmicroscopy.org/Schemas/OME/2015-01/ome.xsd">
+                   <Image ID="Image:0" Name="image_00.tif">
+                   </Image>
+                </OME>
+            ''')
+
+    def _add_image_mapper_file(self):
+        filename = os.path.join(self.acquisition.dir,
+                                self.acquisition.image_mapper_file)
+        image_file = os.path.join(self.acquisition.image_dir, 'image_00.tif')
+        with open(filename, 'w') as f:
+            mapping = [{}]
+            f.write(json.dumps(mapping))
+
+    @cached_property
+    def acquisition(self):
+        return PlateAcquisition(self.acquisition_dir, user_cfg=self.user_cfg)
+
+    def test_image_files_1(self):
+        self._add_image_files('.tif')
+        # We need to mock the supported file extensions, because they would
+        # be read from a file that doesn't exist
+        # (and that we don't want to test here)
+        with patch.object(
+                    PlateAcquisition, '_supported_image_file_extensions',
+                    new_callable=PropertyMock
+                ) as mock_property:
+            mocked_acquisition = PlateAcquisition(self.acquisition_dir,
+                                                  user_cfg=self.user_cfg)
+            mock_property.return_value = {'.tif'}
+            self.assertEqual(mocked_acquisition.image_files, self.image_files)
+
+    def test_image_files_2(self):
+        self._add_image_files('.png')
+        # We need to mock the supported file extensions, because they would
+        # be read from a file that doesn't exist
+        # (and that we don't want to test here)
+        with patch.object(
+                    PlateAcquisition, '_supported_image_file_extensions',
+                    new_callable=PropertyMock
+                ) as mock_property:
+            mocked_acquisition = PlateAcquisition(self.acquisition_dir,
+                                                  user_cfg=self.user_cfg)
+            mock_property.return_value = {'.tif'}
+            with self.assertRaises(OSError):
+                mocked_acquisition.image_files
+
+    def test_additional_files(self):
+        self._add_additional_files()
+        self.assertEqual(self.acquisition.additional_files,
+                         [self.metadata_file])
+
+    def test_image_metadata(self):
+        self._add_metadata_file()
+        self.assertIsInstance(self.acquisition.image_metadata,
+                              bioformats.OMEXML)
+
+    def test_image_mapper(self):
+        self._add_image_mapper_file()
+        self.assertIsInstance(self.acquisition.image_mapper, list)
+        self.assertEqual(len(self.acquisition.image_mapper), 1)
+        self.assertIsInstance(self.acquisition.image_mapper[0],
+                              ImageFileMapper)
