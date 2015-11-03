@@ -1,2 +1,2 @@
-git+https://github.com/cellprofiler/python-bioformats@master#egg=python-bioformats
-git+https://github.com/jmcgeheeiv/pyfakefs
+python-bioformats
+pyfakefs

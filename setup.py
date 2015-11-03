@@ -162,28 +162,32 @@ scripts = []
 
 packages = [
     'tmlib',
-    'tmlib.imextract', 
-    'tmlib.jterator', 
-    'tmlib.metaextract', 
-    'tmlib.illuminati', 
-    'tmlib.corilla', 
-    'tmlib.metaconfig', 
-    'tmlib.tmaps', 
+    'tmlib.imextract',
+    'tmlib.jterator',
+    'tmlib.metaextract',
+    'tmlib.illuminati',
+    'tmlib.corilla',
+    'tmlib.metaconfig',
+    'tmlib.tmaps',
     'tmlib.align',
 ]
 
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
-if packages is None: packages = setuptools.find_packages('tmlib')
+if packages is None:
+        packages = setuptools.find_packages('tmlib')
 
-if len(packages) == 0: raise Exception("No valid packages found")
+if len(packages) == 0:
+        raise Exception("No valid packages found")
 
-if package_name is None: package_name = packages[0]
+if package_name is None:
+        package_name = packages[0]
 
-if package_data is None: package_data = find_package_data(packages)
+if package_data is None:
+        package_data = find_package_data(packages)
 
-if scripts is None: scripts = find_scripts()
-
+if scripts is None:
+        scripts = find_scripts()
 
 
 setuptools.setup(
@@ -213,4 +217,8 @@ setuptools.setup(
     # package_data=package_data,
     include_package_data=True,
     install_requires=get_requirements(),
+    dependency_links=[
+        'https://github.com/cellprofiler/python-bioformats@master#egg=python-bioformats',
+        'https://github.com/jmcgeheeiv/pyfakefs'
+    ]
 )
