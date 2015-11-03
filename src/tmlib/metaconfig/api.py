@@ -252,7 +252,7 @@ class MetadataConfigurator(ClusterRoutines):
                     stitch_dimensions=(batch['stitch_vertical'],
                                        batch['stitch_horizontal']))
 
-        if batch['z_stacks']:
+        if not batch['z_stacks']:
             logger.info('project focal planes to 2D')
             handler.reconfigure_ome_metadata_for_projection()
         else:
@@ -306,7 +306,7 @@ class MetadataConfigurator(ClusterRoutines):
 
                 metadata = acquisition.image_metadata
 
-                # Create a lookup tables for well information
+                # Create a lookup table for well information
                 tpoint_samples = defaultdict(list)
                 plate = metadata.plates[0]
                 for w, well_id in enumerate(plate.Well):
