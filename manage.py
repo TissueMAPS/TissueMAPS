@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import flask
 from flask.ext.script import Manager
 from flask.ext.migrate import Migrate, MigrateCommand
 
@@ -10,7 +11,11 @@ from tmaps.extensions.database import db
 # Execute all model definitions
 from tmaps.models import *
 
-app = create_app()
+
+cfg = flask.Config(p.realpath(p.dirname(__file__)))
+cfg.from_envvar('TMAPS_SETTINGS')
+
+app = create_app(cfg)
 
 migrate = Migrate(app, db)
 manager = Manager(app)
@@ -21,15 +26,11 @@ manager.add_command('migrate', MigrateCommand)
 
 @manager.command
 def repl():
-    import sys
     from werkzeug import script
     def make_shell():
-        from tmaps.appfactory import create_app
-        app = create_app()
         ctx = app.test_request_context()
         ctx.push()
         from tmaps import models
-        from tmaps.extensions.database import db
         return dict(app=app, ctx=ctx, models=models, db=db)
     script.make_shell(make_shell, use_ipython=True)()
 
