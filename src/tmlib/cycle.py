@@ -38,7 +38,7 @@ class Cycle(object):
 
     STATS_FILE_FORMAT = 'channel_{channel_ix}.stat.h5'
 
-    def __init__(self, cycle_dir, plate_name, user_cfg, library):
+    def __init__(self, cycle_dir, plate_name, library):
         '''
         Initialize an instance of class Cycle.
 
@@ -48,8 +48,6 @@ class Cycle(object):
             absolute path to the cycle directory
         plate_name: str
             name of the corresponding plate
-        user_cfg: Dict[str, str]
-            additional user configuration settings
         library: str
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
@@ -62,16 +60,11 @@ class Cycle(object):
         ------
         OSError
             when `cycle_dir` does not exist
-
-        See also
-        --------
-        :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.cycle_dir = os.path.abspath(cycle_dir)
         self.plate_name = plate_name
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
-        self.user_cfg = user_cfg
         self.library = library
 
     @property

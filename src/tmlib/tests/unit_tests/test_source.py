@@ -11,7 +11,7 @@ from tmlib.source import PlateAcquisition
 from tmlib.metadata import ImageFileMapper
 
 
-class TestSource(fake_filesystem_unittest.TestCase):
+class TestSourceSetup(fake_filesystem_unittest.TestCase):
 
     def setUp(self):
         self.setUpPyfakefs()
@@ -38,26 +38,16 @@ class TestSource(fake_filesystem_unittest.TestCase):
                                 self.source_dir,
                                 'acquisition_%.2d' % self.acquisition_index)
         os.mkdir(self.acquisition_dir)
-        # Add user configuration settings file
-        self.user_cfg_settings = {
-            'sources_dir': self.sources_dir,
-            'plates_dir': self.plates_dir,
-            'layers_dir': self.layers_dir,
-            'plate_format': 384,
-        }
-        self.user_cfg = cfg.UserConfiguration(
-                        experiment_dir=self.experiment_dir,
-                        cfg_settings=self.user_cfg_settings)
 
     def tearDown(self):
         self.tearDownPyfakefs()
 
 
-class TestPlateSource(TestSource):
+class TestPlateSource(TestSourceSetup):
 
     @property
     def source(self):
-        return PlateSource(self.source_dir, user_cfg=self.user_cfg)
+        return PlateSource(self.source_dir)
 
     def _add_image_mapper_file(self):
         filename = os.path.join(self.source.dir,
@@ -69,7 +59,6 @@ class TestPlateSource(TestSource):
     def test_initialize_platesource(self):
         self.assertEqual(self.source.dir, self.source_dir)
         self.assertEqual(self.source.name, self.plate_name)
-        self.assertEqual(self.source.user_cfg.sources_dir, self.sources_dir)
 
     def test_list_acquisitions(self):
         self.assertEqual(len(self.source.acquisitions), 1)
@@ -88,17 +77,15 @@ class TestPlateSource(TestSource):
         self.assertIsInstance(self.source.image_mapper[0], ImageFileMapper)
 
 
-class TestPlateAcquisitionDirectories(TestSource):
+class TestPlateAcquisitionDirectories(TestSourceSetup):
 
     @property
     def acquisition(self):
-        return PlateAcquisition(self.acquisition_dir, user_cfg=self.user_cfg)
+        return PlateAcquisition(self.acquisition_dir)
 
     def test_initialize_plateacquisition(self):
         self.assertEqual(self.acquisition.dir, self.acquisition_dir)
         self.assertEqual(self.acquisition.index, self.acquisition_index)
-        self.assertEqual(self.acquisition.user_cfg.sources_dir,
-                         self.sources_dir)
 
     def test_image_dir_attribute(self):
         image_dir = os.path.join(
@@ -117,8 +104,7 @@ class TestPlateAcquisitionDirectories(TestSource):
         self.assertTrue(os.path.exists(metadata_dir))
 
     def test_omexml_dir_attribute(self):
-        acquisition = PlateAcquisition(self.acquisition_dir,
-                                       user_cfg=self.user_cfg)
+        acquisition = PlateAcquisition(self.acquisition_dir)
         omexml_dir = os.path.join(
                         acquisition.dir, acquisition.OMEXML_DIR_NAME)
         self.assertFalse(os.path.exists(omexml_dir))
@@ -126,7 +112,7 @@ class TestPlateAcquisitionDirectories(TestSource):
         self.assertTrue(os.path.exists(omexml_dir))
 
 
-class TestPlateAcquisitionFiles(TestSource):
+class TestPlateAcquisitionFiles(TestSourceSetup):
 
     def _add_image_files(self, extension):
         # Add some image files to the acquisition
@@ -168,7 +154,7 @@ class TestPlateAcquisitionFiles(TestSource):
 
     @cached_property
     def acquisition(self):
-        return PlateAcquisition(self.acquisition_dir, user_cfg=self.user_cfg)
+        return PlateAcquisition(self.acquisition_dir)
 
     def test_image_files_1(self):
         self._add_image_files('.tif')
@@ -179,8 +165,7 @@ class TestPlateAcquisitionFiles(TestSource):
                     PlateAcquisition, '_supported_image_file_extensions',
                     new_callable=PropertyMock
                 ) as mock_property:
-            mocked_acquisition = PlateAcquisition(self.acquisition_dir,
-                                                  user_cfg=self.user_cfg)
+            mocked_acquisition = PlateAcquisition(self.acquisition_dir)
             mock_property.return_value = {'.tif'}
             self.assertEqual(mocked_acquisition.image_files, self.image_files)
 
@@ -193,8 +178,7 @@ class TestPlateAcquisitionFiles(TestSource):
                     PlateAcquisition, '_supported_image_file_extensions',
                     new_callable=PropertyMock
                 ) as mock_property:
-            mocked_acquisition = PlateAcquisition(self.acquisition_dir,
-                                                  user_cfg=self.user_cfg)
+            mocked_acquisition = PlateAcquisition(self.acquisition_dir)
             mock_property.return_value = {'.tif'}
             with self.assertRaises(OSError):
                 mocked_acquisition.image_files

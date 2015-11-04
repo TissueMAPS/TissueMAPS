@@ -27,7 +27,7 @@ class PlateSource(object):
 
     PLATE_SOURCE_DIR_FORMAT = 'plate_{name}'
 
-    def __init__(self, plate_source_dir, user_cfg):
+    def __init__(self, plate_source_dir):
         '''
         Initialize an instance of class PlateSource.
 
@@ -36,8 +36,6 @@ class PlateSource(object):
         plate_source_dir: str
             absolute path to the directory that contains the source files
             for a particular plate
-        user_cfg: Dict[str, str]
-            additional user configuration settings
 
         Returns
         -------
@@ -47,16 +45,11 @@ class PlateSource(object):
         ------
         OSError
             when `plate_source_dir` does not exist
-
-        See also
-        --------
-        :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.plate_source_dir = plate_source_dir
         if not os.path.exists(self.plate_source_dir):
             raise OSError(
                     'Directory does not exist: %s' % self.plate_source_dir)
-        self.user_cfg = user_cfg
 
     @property
     def dir(self):
@@ -114,7 +107,7 @@ class PlateSource(object):
             and self._is_acquistion_dir(d)
         ]
         acquisition_dirs = natsorted(acquisition_dirs)
-        return [PlateAcquisition(d, self.user_cfg) for d in acquisition_dirs]
+        return [PlateAcquisition(d) for d in acquisition_dirs]
 
     def add_acquisition(self):
         '''
@@ -132,7 +125,7 @@ class PlateSource(object):
         logging.debug('create directory for new acquisition: %s',
                       acquisition_dir)
         os.mkdir(acquisition_dir)
-        return PlateAcquisition(acquisition_dir, self.user_cfg)
+        return PlateAcquisition(acquisition_dir)
 
     @property
     def image_mapper_file(self):
@@ -179,14 +172,12 @@ class PlateAcquisition(object):
     IMAGE_DIR_NAME = 'images'
     METADATA_DIR_NAME = 'metadata'
 
-    def __init__(self, acquisition_dir, user_cfg):
+    def __init__(self, acquisition_dir):
         '''
         Parameters
         ----------
         acquisition_dir: str
             absolute path to the acquisition folder
-        user_cfg: Dict[str, str]
-            additional user configuration settings
 
         Returns
         -------
@@ -197,7 +188,6 @@ class PlateAcquisition(object):
         :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.acquisition_dir = acquisition_dir
-        self.user_cfg = user_cfg
 
     @property
     def dir(self):

@@ -36,31 +36,6 @@ class TestCycle(fake_filesystem_unittest.TestCase):
                                 self.plate_dir,
                                 'cycle_%.2d' % self.cycle_index)
         os.mkdir(self.cycle_dir)
-
-        # Add user configuration settings file to experiment
-        self.user_cfg_settings = {
-            'sources_dir': self.sources_dir,
-            'plates_dir': self.plates_dir,
-            'layers_dir': self.layers_dir,
-            'plate_format': 384,
-            'workflow': {
-                'stages': [
-                    {
-                        'name': 'image_conversion',
-                        'steps': [
-                            {
-                                'name': 'metaextract',
-                                'args': dict()
-                            }
-                        ]
-                    }
-                ]
-            }
-        }
-        self.user_cfg = cfg.UserConfiguration(
-                        experiment_dir=self.experiment_dir,
-                        cfg_settings=self.user_cfg_settings)
-
         # Add image metadata file to cycle
         md = bioformats.OMEXML()
         # Add a plate element to metadata
@@ -131,7 +106,7 @@ class TestCycle(fake_filesystem_unittest.TestCase):
 
         self.cycle = Cycle(
                         cycle_dir=self.cycle_dir, plate_name=self.plate_name,
-                        user_cfg=self.user_cfg, library='vips')
+                        library='vips')
 
         # Add illumination correction statistics file
         stats_dir = os.path.join(self.cycle_dir, 'stats')
@@ -147,7 +122,6 @@ class TestCycle(fake_filesystem_unittest.TestCase):
     def test_initialize_cycle(self):
         self.assertEqual(self.cycle.dir, self.cycle_dir)
         self.assertEqual(self.cycle.index, self.cycle_index)
-        self.assertEqual(self.cycle.user_cfg.plates_dir, self.plates_dir)
 
     def test_image_files(self):
         self.assertEqual(self.cycle.image_files, natsorted(self.image_files))

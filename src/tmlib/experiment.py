@@ -161,11 +161,11 @@ class Experiment(object):
         ----
         Directory is created if it doesn't exist.
         '''
-        self._plates_dir = self.user_cfg.plates_dir
-        if not os.path.exists(self._plates_dir):
-            logger.debug('create directory for plates: %s', self._plates_dir)
-            os.mkdir(self._plates_dir)
-        return self._plates_dir
+        plates_dir = self.user_cfg.plates_dir
+        if not os.path.exists(plates_dir):
+            logger.debug('create directory for plates: %s', plates_dir)
+            os.mkdir(plates_dir)
+        return plates_dir
 
     def _is_plate_dir(self, folder):
         format_string = Plate.PLATE_DIR_FORMAT
@@ -187,7 +187,10 @@ class Experiment(object):
             and self._is_plate_dir(d)
         ]
         plate_dirs = natsorted(plate_dirs)
-        return [Plate(d, self.user_cfg, self.library) for d in plate_dirs]
+        return [
+            Plate(d, self.user_cfg.plate_format, self.library)
+            for d in plate_dirs
+        ]
 
     def add_plate(self, plate_name):
         '''
@@ -217,7 +220,8 @@ class Experiment(object):
         logger.debug('create directory for plate "%s": %s',
                      plate_name, new_plate_dir)
         os.mkdir(new_plate_dir)
-        new_plate = Plate(new_plate_dir, self.user_cfg, self.library)
+        new_plate = Plate(new_plate_dir,
+                          self.user_cfg.plate_format, self.library)
         self.plates.append(new_plate)
         return new_plate
 
@@ -239,10 +243,10 @@ class Experiment(object):
         ----
         The user has to create the directory and provide its location.
         '''
-        self._sources_dir = self.user_cfg.sources_dir
-        if not os.path.exists(self._sources_dir):
+        sources_dir = self.user_cfg.sources_dir
+        if not os.path.exists(sources_dir):
             raise OSError('PlateSources directory does not exist')
-        return self._sources_dir
+        return sources_dir
 
     def _is_plate_source_dir(self, folder):
         format_string = PlateSource.PLATE_SOURCE_DIR_FORMAT
@@ -278,7 +282,7 @@ class Experiment(object):
             if os.path.isdir(os.path.join(self.sources_dir, d))
             and self._is_plate_source_dir(d)
         ])
-        return [PlateSource(d, self.user_cfg) for d in plate_source_dirs]
+        return [PlateSource(d)for d in plate_source_dirs]
 
     @cached_property
     def layers_dir(self):
@@ -310,7 +314,7 @@ class Experiment(object):
         '''
         if hasattr(self.user_cfg, 'LAYER_NAMES'):
             raise NotSupportedError('TODO')
-        self._layer_metadata = dict()
+        layer_metadata = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
                 md = cycle.image_metadata_table
@@ -331,8 +335,8 @@ class Experiment(object):
                         ]
                         sites = md[ix]['site_ix'].tolist()
                         metadata.site_ixs = sites
-                        self._layer_metadata[metadata.name] = metadata
-        return self._layer_metadata
+                        layer_metadata[metadata.name] = metadata
+        return layer_metadata
 
     @property
     def data_file(self):

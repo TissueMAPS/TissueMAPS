@@ -55,7 +55,7 @@ class Plate(object):
 
     PLATE_DIR_FORMAT = 'plate_{name}'
 
-    def __init__(self, plate_dir, user_cfg, library):
+    def __init__(self, plate_dir, plate_format, library):
         '''
         Initialize an instance of class WellPlate.
 
@@ -63,8 +63,8 @@ class Plate(object):
         ----------
         plate_dir: str
             absolute path to plate folder
-        user_cfg: tmlib.cfg.UserConfigurations
-            user configuration settings
+        plate_format: int
+            number of wells in the plate
         library: str
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
@@ -78,7 +78,7 @@ class Plate(object):
         :py:class:`tmlib.cfg.UserConfiguration`
         '''
         self.plate_dir = plate_dir
-        self.user_cfg = user_cfg
+        self.plate_format = plate_format
         self.library = library
 
     @property
@@ -131,7 +131,6 @@ class Plate(object):
             Cycle(
                 cycle_dir=d,
                 plate_name=self.name,
-                user_cfg=self.user_cfg,
                 library=self.library)
             for d in cycle_dirs
         ]
@@ -157,7 +156,6 @@ class Plate(object):
         new_cycle = Cycle(
                       cycle_dir=new_cycle_dir,
                       plate_name=self.name,
-                      user_cfg=self.user_cfg,
                       library=self.library)
         self.cycles.append(new_cycle)
         return new_cycle
@@ -179,7 +177,7 @@ class Plate(object):
         ValueError
             when provided plate format is not supported
         '''
-        self._n_wells = self.user_cfg.plate_format
+        self._n_wells = self.plate_format
         if self._n_wells not in self.SUPPORTED_PLATE_FORMATS:
             raise ValueError(
                     'Well plate format must be either "%s"' % '" or "'.join(

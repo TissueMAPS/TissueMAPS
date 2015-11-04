@@ -2,7 +2,6 @@ import os
 import itertools
 import bioformats
 import fake_filesystem_unittest
-from tmlib import cfg
 from tmlib.plate import Plate
 from tmlib.cycle import Cycle
 
@@ -34,29 +33,7 @@ class TestPlate(fake_filesystem_unittest.TestCase):
                                 self.plate_dir,
                                 'cycle_%.2d' % self.cycle_index)
         os.mkdir(self.cycle_dir)
-        # Add user configuration settings file
-        self.user_cfg_settings = {
-            'sources_dir': self.sources_dir,
-            'plates_dir': self.plates_dir,
-            'layers_dir': self.layers_dir,
-            'plate_format': 384,
-            'workflow': {
-                'stages': [
-                    {
-                        'name': 'image_conversion',
-                        'steps': [
-                            {
-                                'name': 'metaextract',
-                                'args': dict()
-                            }
-                        ]
-                    }
-                ]
-            }
-        }
-        self.user_cfg = cfg.UserConfiguration(
-                        experiment_dir=self.experiment_dir,
-                        cfg_settings=self.user_cfg_settings)
+        self.plate_format = 384
         # Add image metadata
         md = bioformats.OMEXML()
         # Add a plate element to metadata
@@ -110,13 +87,15 @@ class TestPlate(fake_filesystem_unittest.TestCase):
         self.tearDownPyfakefs()
 
     def test_initialize_plate(self):
-        plate = Plate(self.plate_dir, user_cfg=self.user_cfg, library='vips')
+        plate = Plate(self.plate_dir,
+                      plate_format=self.plate_format, library='vips')
         self.assertEqual(plate.dir, self.plate_dir)
         self.assertEqual(plate.name, self.plate_name)
-        self.assertEqual(plate.n_wells, self.user_cfg_settings['plate_format'])
+        self.assertEqual(plate.n_wells, self.plate_format)
 
     def test_cycles_attribute(self):
-        plate = Plate(self.plate_dir, user_cfg=self.user_cfg, library='vips')
+        plate = Plate(self.plate_dir,
+                      plate_format=self.plate_format, library='vips')
         self.assertEqual(len(plate.cycles), 1)
         self.assertEqual(plate.cycles[0].dir, self.cycle_dir)
         self.assertEqual(plate.cycles[0].index, self.cycle_index)
@@ -127,7 +106,8 @@ class TestPlate(fake_filesystem_unittest.TestCase):
         self.assertEqual(plate.cycles[1].index, 1)
 
     def test_well_related_attributes(self):
-        plate = Plate(self.plate_dir, user_cfg=self.user_cfg, library='vips')
+        plate = Plate(self.plate_dir,
+                      plate_format=self.plate_format, library='vips')
         self.assertEqual(plate.n_acquired_wells, self.n_wells)
         self.assertEqual(plate.dimensions, (16, 24))
         self.assertEqual(plate.well_coordinates, self.well_coordinates)
