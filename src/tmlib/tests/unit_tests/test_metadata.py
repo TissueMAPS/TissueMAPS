@@ -2,6 +2,8 @@
 import bioformats
 import unittest
 from tmlib.metadata import ChannelImageMetadata
+from tmlib.metadata import IllumstatsImageMetadata
+from tmlib.metadata import MosaicMetadata
 
 
 class TestChannelImageMetadata(unittest.TestCase):
@@ -294,3 +296,148 @@ class TestChannelImageMetadata(unittest.TestCase):
         metadata_as_dict = dict(metadata)
         for k, v in args.iteritems():
             self.assertEqual(getattr(metadata, k), metadata_as_dict[k])
+
+
+class TestIllumstatsImageMetadata(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_filename_attribute_1(self):
+        metadata = IllumstatsImageMetadata()
+        self.assertFalse(hasattr(metadata, 'filename'))
+        metadata.filename = 'image_test'
+        self.assertEqual(metadata.filename, 'image_test')
+
+    def test_filename_attribute_2(self):
+        metadata = IllumstatsImageMetadata()
+        metadata.filename = u'image_test'
+        self.assertIsInstance(metadata.filename, str)
+        self.assertEqual(metadata.filename, 'image_test')
+
+    def test_tpoint_ix_attribute(self):
+        metadata = IllumstatsImageMetadata()
+        self.assertFalse(hasattr(metadata, 'tpoint_ix'))
+        metadata.tpoint_ix = 0
+        self.assertIsInstance(metadata.tpoint_ix, int)
+        self.assertEqual(metadata.tpoint_ix, 0)
+
+    def test_tpoint_ix_attribute_wrong_datatype(self):
+        metadata = IllumstatsImageMetadata()
+        with self.assertRaises(TypeError):
+            metadata.tpoint_ix = float(0)
+
+    def test_channel_ix_attribute(self):
+        metadata = IllumstatsImageMetadata()
+        self.assertFalse(hasattr(metadata, 'channel_ix'))
+        metadata.channel_ix = 0
+        self.assertIsInstance(metadata.channel_ix, int)
+        self.assertEqual(metadata.channel_ix, 0)
+
+    def test_channel_ix_attribute_wrong_datatype(self):
+        metadata = IllumstatsImageMetadata()
+        with self.assertRaises(TypeError):
+            metadata.channel_ix = float(0)
+
+
+class TestMosaicMetadata(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_name_attribute(self):
+        metadata = MosaicMetadata()
+        self.assertFalse(hasattr(metadata, 'name'))
+        metadata.name = 'mosaic_test'
+        self.assertIsInstance(metadata.name, str)
+        self.assertEqual(metadata.name, 'mosaic_test')
+
+    def test_name_attribute_unicode(self):
+        metadata = MosaicMetadata()
+        metadata.name = u'mosaic_test'
+        self.assertIsInstance(metadata.name, str)
+        self.assertEqual(metadata.name, 'mosaic_test')
+
+    def test_name_attribute_wrong_datatype(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.name = 10
+
+    def test_tpoint_ix_attribute(self):
+        metadata = MosaicMetadata()
+        self.assertFalse(hasattr(metadata, 'tpoint_ix'))
+        metadata.tpoint_ix = 0
+        self.assertIsInstance(metadata.tpoint_ix, int)
+        self.assertEqual(metadata.tpoint_ix, 0)
+
+    def test_tpoint_ix_attribute_wrong_datatype(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.tpoint_ix = float(0)
+
+    def test_channel_ix_attribute(self):
+        metadata = MosaicMetadata()
+        self.assertFalse(hasattr(metadata, 'channel_ix'))
+        metadata.channel_ix = 0
+        self.assertIsInstance(metadata.channel_ix, int)
+        self.assertEqual(metadata.channel_ix, 0)
+
+    def test_channel_ix_attribute_wrong_datatype(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.channel_ix = float(0)
+
+    def test_zplane_ix_attribute(self):
+        metadata = MosaicMetadata()
+        self.assertFalse(hasattr(metadata, 'zplane_ix'))
+        metadata.zplane_ix = 0
+        self.assertIsInstance(metadata.zplane_ix, int)
+        self.assertEqual(metadata.zplane_ix, 0)
+
+    def test_zplane_ix_attribute_wrong_datatype(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.zplane_ix = float(0)
+
+    def test_site_ixs_attribute(self):
+        metadata = MosaicMetadata()
+        self.assertFalse(hasattr(metadata, 'site_ixs'))
+        metadata.site_ixs = [0, 1, 2]
+        self.assertEqual(metadata.site_ixs, [0, 1, 2])
+
+    def test_site_ixs_attribute_wrong_datatype_1(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.site_ixs = 0
+
+    def test_site_ixs_attribute_wrong_datatype_2(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.site_ixs = ['0', '1', '2']
+
+    def test_filenames_attribute_1(self):
+        metadata = MosaicMetadata()
+        self.assertFalse(hasattr(metadata, 'filenames'))
+        metadata.filenames = ['a', 'b', 'c']
+        self.assertEqual(metadata.filenames, ['a', 'b', 'c'])
+
+    def test_filenames_attribute_2(self):
+        metadata = MosaicMetadata()
+        metadata.filenames = [u'a', u'b', u'c']
+        self.assertEqual(metadata.filenames, ['a', 'b', 'c'])
+
+    def test_filenames_attribute_wrong_datatype_1(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.filenames = 'a'
+
+    def test_filenames_attribute_wrong_datatype_2(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.filenames = [0, 1, 2]
