@@ -1,5 +1,5 @@
 
-[![Build Status](http://jenkins.pelkmanslab.org/job/tmlibrary_Master/badge/icon)](http://jenkins.pelkmanslab.org/job/tmlibrary_Master/)
+[![Build Status](http://jenkins.pelkmanslab.org/buildStatus/icon?job=tmlibrary_Master)](http://jenkins.pelkmanslab.org/job/tmlibrary_Master)
 
 
 **tmlib** is a Python package that serves as a library for image processing tasks within the [TissueMAPS](https://github.com/HackerMD/TissueMAPS) framework.
