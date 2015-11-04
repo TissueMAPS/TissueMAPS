@@ -1328,6 +1328,9 @@ ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
   for (i = 0, ii = vertices.length / 2; i < ii; ++i) {
     this.vertices_.push(vertices[2 * i]);
     this.vertices_.push(vertices[2 * i + 1]);
+
+    // FIXME: Find a way to provide different vertex color info for each feature, not a gillColor for the whole layer
+
     this.vertices_.push(this.fillColor_[0]);
     this.vertices_.push(this.fillColor_[1]);
     this.vertices_.push(this.fillColor_[2]);
@@ -1515,6 +1518,7 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
     var feature, dontSkipFeature, featureIntersectsHitExtent, featureUid, end, start;
     var featureIndex = this.startIndices_.length - 1;
     var elementSize = context.hasOESElementIndexUint ? 4 : 2;
+    var featureHasGeometry;
 
     while (featureIndex >= 0) {
 
