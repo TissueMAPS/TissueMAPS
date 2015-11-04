@@ -1,16 +1,25 @@
+import logging
 from abc import ABCMeta
+
+logger = logging.getLogger(__name__)
 
 
 class ImageMetadata(object):
 
     '''
     Base class for image metadata, such as the name of the channel or
-    the relative position of the image within the acquisition grid.
+    the relative position of the image within the well (acquisition grid).
     '''
 
     __metaclass__ = ABCMeta
 
-    _PERSISTENT_ATTRS = {'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'}
+    _PERSISTENT_ATTRS = {
+        'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix',
+        'plate_name', 'well_name', 'well_pos_x', 'well_pos_y',
+        'x_shift', 'y_shift',
+        'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
+        'is_aligned', 'is_omitted'
+    }
 
     def __init__(self):
         '''
@@ -29,7 +38,6 @@ class ImageMetadata(object):
         :mod:`tmlib.align.descriptions.AlignmentDescription`
         '''
         self.is_aligned = False
-        self.is_corrected = False
         self.is_omitted = False
         self.upper_overhang = 0
         self.lower_overhang = 0
@@ -353,10 +361,15 @@ class ChannelImageMetadata(ImageMetadata):
         '''
         super(ChannelImageMetadata, self).__init__()
         self.is_corrected = False
-        self.is_projected = False
-        for key, value in kwargs.iteritems():
-            if key in self._PERSISTENT_ATTRS:
-                setattr(self, key, value)
+        if kwargs:
+            for a in self._PERSISTENT_ATTRS:
+                if a not in kwargs and not hasattr(self, a):
+                    raise ValueError('Argument "kwargs" requires key "%s"' % a)
+            for key, value in kwargs.iteritems():
+                if key in self._PERSISTENT_ATTRS:
+                    setattr(self, key, value)
+                else:
+                    logger.warning('attribute "%s" is not set', key)
 
     @property
     def channel_name(self):
@@ -407,23 +420,14 @@ class ChannelImageMetadata(ImageMetadata):
         self._is_corrected = value
 
     def __iter__(self):
-        '''
-        Convert the object to a dictionary.
-
-        Returns
-        -------
-        dict
-            image metadata as key-value pairs
-
-        Raises
-        ------
-        AttributeError
-            when instance doesn't have a required attribute
-        '''
-        # TODO: site
         for attr in dir(self):
             if attr in self._PERSISTENT_ATTRS:
-                yield (attr, getattr(self, attr))
+                if hasattr(self, attr):
+                    yield (attr, getattr(self, attr))
+                else:
+                    raise AttributeError(
+                            '"%s" object doesn\'t have attribute "%s"'
+                            % (self.__class__.__name__, attr))
 
     def __str__(self):
         # TODO: pretty print

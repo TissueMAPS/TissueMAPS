@@ -36,6 +36,31 @@ class TestChannelImageMetadata(unittest.TestCase):
         self.assertEqual(metadata.is_corrected, False)
         self.assertEqual(metadata.is_omitted, False)
 
+    def test_initialize_with_arguments(self):
+        args = {
+            'id': 0,
+            'name': 'image_test',
+            'plate_name': 'plate_test',
+            'well_name': 'A01',
+            'channel_ix': 0,
+            'zplane_ix': 0,
+            'tpoint_ix': 0,
+            'channel_name': 'channel_test',
+            'well_pos_x': 0,
+            'well_pos_y': 0,
+            'site_ix': 0
+        }
+        metadata = ChannelImageMetadata(**args)
+        self.assertEqual(metadata.id, 0)
+
+    def test_initialize_with_insufficient_arguments(self):
+        args = {
+            'id': 0,
+            'name': 'image_test'
+        }
+        with self.assertRaises(ValueError):
+            ChannelImageMetadata(**args)
+
     def test_id_attribute(self):
         metadata = ChannelImageMetadata()
         metadata.id = 0
@@ -243,3 +268,29 @@ class TestChannelImageMetadata(unittest.TestCase):
         self.assertTrue(metadata.is_aligned)
         metadata.is_aligned = False
         self.assertFalse(metadata.is_aligned)
+
+    def test_to_dict_1(self):
+        metadata = ChannelImageMetadata()
+        metadata.id = 0
+        metadata.name = 'test'
+        with self.assertRaises(AttributeError):
+            dict(metadata)
+
+    def test_to_dict_2(self):
+        args = {
+            'id': 0,
+            'name': 'image_test',
+            'plate_name': 'plate_test',
+            'well_name': 'A01',
+            'channel_ix': 0,
+            'zplane_ix': 0,
+            'tpoint_ix': 0,
+            'channel_name': 'channel_test',
+            'well_pos_x': 0,
+            'well_pos_y': 0,
+            'site_ix': 0
+        }
+        metadata = ChannelImageMetadata(**args)
+        metadata_as_dict = dict(metadata)
+        for k, v in args.iteritems():
+            self.assertEqual(getattr(metadata, k), metadata_as_dict[k])
