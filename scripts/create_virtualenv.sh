@@ -20,7 +20,7 @@ if [[ ! -f requirements-2.txt ]]; then
     echo "requirements-2.txt is missing from the root directory of tmlibrary"
     exit 101
 fi
-if [[ ! -f requirements-Darwin-3.txt ]]; then
+if [[ ! -f requirements-Darwin-4.txt ]]; then
     echo "requirements-Darwin-3.txt is missing from the root directory of tmlibrary"
     exit 101
 fi
