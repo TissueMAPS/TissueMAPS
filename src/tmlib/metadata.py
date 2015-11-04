@@ -443,8 +443,7 @@ class ImageFileMapper(object):
     '''
 
     _PERSISTENT_ATTRS = {
-        'files', 'series', 'planes',
-        'ref_index', 'ref_file', 'ref_id'
+        'files', 'series', 'planes', 'ref_index', 'ref_file', 'ref_id'
     }
 
     def __init__(self, **kwargs):
@@ -453,11 +452,6 @@ class ImageFileMapper(object):
         ----------
         kwargs: dict, optional
             file mapping key-value pairs
-
-        Returns
-        -------
-        tmlib.metadata.ImageFileMapper
-            object where `_PERSISTENT_ATTRS` attributes where set with provided values
         '''
         if kwargs:
             for key, value in kwargs.iteritems():
@@ -613,7 +607,7 @@ class IllumstatsImageMetadata(object):
 
     @tpoint_ix.setter
     def tpoint_ix(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "tpoint_ix" must have type int')
         self._tpoint_ix = value
 
@@ -629,6 +623,8 @@ class IllumstatsImageMetadata(object):
 
     @channel_ix.setter
     def channel_ix(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "channel_ix" must have type int')
         self._channel_ix = value
 
     @property
@@ -643,7 +639,9 @@ class IllumstatsImageMetadata(object):
 
     @filename.setter
     def filename(self, value):
-        self._filename = value
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "filename" must have type basestring')
+        self._filename = str(value)
 
 
 class MosaicMetadata(object):
@@ -666,7 +664,7 @@ class MosaicMetadata(object):
     @name.setter
     def name(self, value):
         if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "name" must have type str')
+            raise TypeError('Attribute "name" must have type basestring')
         self._name = str(value)
 
     @property
