@@ -53,7 +53,6 @@ pip install -r requirements-git.txt
 # NOTE: dependencies in requirements-Darwin-3.txt should be installed globally
 # via apt-get
 ln -s /usr/lib/python2.7/dist-packages/gi $VENV/lib/python2.7/site-packages/gi
-ln -s /usr/local/lib/python2.7/site-packages/gi/overrides/Vips.py $VENV/lib/python2.7/site-packages/gi
 ln -s /usr/lib/python2.7/dist-packages/cv2.so $VENV/lib/python2.7/site-packages/cv2.so
 ln -s /usr/lib/python2.7/dist-packages/lxml $VENV/lib/python2.7/site-packages/lxml
 ln -s /usr/lib/python2.7/dist-packages/rpy2 $VENV/lib/python2.7/site-packages/rpy2
