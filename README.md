@@ -11,10 +11,6 @@
 Documentation will ultimately be available on [readthedocs.org](https://readthedocs.org/).
 For now, you'll have to build the documentation yourself:
 
-Update the documentation upon changes in the source code
-
-    $ sphinx-apidoc -o ./docs ./tmlib
-
 and build the documentation website
 
     $ cd docs
