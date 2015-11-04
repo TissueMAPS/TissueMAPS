@@ -131,6 +131,7 @@ class TestPlateAcquisitionFiles(TestSource):
     def _add_image_files(self, extension):
         # Add some image files to the acquisition
         self.image_files = list()
+
         for i in xrange(10):
             name = 'image_%.2d%s' % (i, extension)
             filename = os.path.join(self.acquisition.image_dir, name)
@@ -161,7 +162,6 @@ class TestPlateAcquisitionFiles(TestSource):
     def _add_image_mapper_file(self):
         filename = os.path.join(self.acquisition.dir,
                                 self.acquisition.image_mapper_file)
-        image_file = os.path.join(self.acquisition.image_dir, 'image_00.tif')
         with open(filename, 'w') as f:
             mapping = [{}]
             f.write(json.dumps(mapping))

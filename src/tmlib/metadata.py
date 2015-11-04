@@ -1,3 +1,4 @@
+from abc import ABCMeta
 
 
 class ImageMetadata(object):
@@ -6,6 +7,8 @@ class ImageMetadata(object):
     Base class for image metadata, such as the name of the channel or
     the relative position of the image within the acquisition grid.
     '''
+
+    __metaclass__ = ABCMeta
 
     _PERSISTENT_ATTRS = {'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix'}
 
@@ -118,8 +121,8 @@ class ImageMetadata(object):
 
     @well_pos_y.setter
     def well_pos_y(self, value):
-        if not(isinstance(value, (int, float))):
-            raise TypeError('Attribute "well_pos_y" must have type int or float')
+        if not isinstance(value, int):
+            raise TypeError('Attribute "well_pos_y" must have type int')
         self._well_pos_y = int(value)
 
     @property
@@ -134,8 +137,8 @@ class ImageMetadata(object):
 
     @well_pos_x.setter
     def well_pos_x(self, value):
-        if not(isinstance(value, (int, float))):
-            raise TypeError('Attribute "well_pos_x" must have type int or float')
+        if not isinstance(value, int):
+            raise TypeError('Attribute "well_pos_x" must have type int')
         self._well_pos_x = int(value)
 
     @property
@@ -152,7 +155,7 @@ class ImageMetadata(object):
     def well_name(self, value):
         if not(isinstance(value, basestring)):
             raise TypeError('Attribute "well_name" must have type str')
-        self._well_name = value
+        self._well_name = str(value)
 
     @property
     def zplane_ix(self):
@@ -167,7 +170,7 @@ class ImageMetadata(object):
 
     @zplane_ix.setter
     def zplane_ix(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "zplane_ix" must have type int')
         self._zplane_ix = value
 
@@ -183,7 +186,7 @@ class ImageMetadata(object):
 
     @tpoint_ix.setter
     def tpoint_ix(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "tpoint_ix" must have type int')
         self._tpoint_ix = value
 
@@ -200,7 +203,7 @@ class ImageMetadata(object):
 
     @upper_overhang.setter
     def upper_overhang(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "upper_overhang" must have type int')
         self._upper_overhang = value
 
@@ -217,7 +220,7 @@ class ImageMetadata(object):
 
     @lower_overhang.setter
     def lower_overhang(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "lower_overhang" must have type int')
         self._lower_overhang = value
 
@@ -234,7 +237,7 @@ class ImageMetadata(object):
 
     @left_overhang.setter
     def left_overhang(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "left_overhang" must have type int')
         self._left_overhang = value
 
@@ -251,7 +254,7 @@ class ImageMetadata(object):
 
     @right_overhang.setter
     def right_overhang(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "right_overhang" must have type int')
         self._right_overhang = value
 
@@ -268,7 +271,7 @@ class ImageMetadata(object):
 
     @x_shift.setter
     def x_shift(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "x_shift" must have type int')
         self._x_shift = value
 
@@ -285,7 +288,7 @@ class ImageMetadata(object):
 
     @y_shift.setter
     def y_shift(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "y_shift" must have type int')
         self._y_shift = value
 
@@ -335,26 +338,25 @@ class ChannelImageMetadata(ImageMetadata):
         'channel_name', 'is_corrected', 'channel_ix'
     })
 
-    def __init__(self, metadata=None):
+    def __init__(self, **kwargs):
         '''
         Initialize an instance of class ChannelImageMetadata.
 
         Parameters
         ----------
-        metadata: dict, optional
-            metadata attributes as key-value pairs (default: ``None``)
+        **kwargs: dict, optional
+            metadata attributes as key-value pairs
 
         Returns
         -------
-        tmlib.metadata.ChannelImageMetadata
+        :py:class:`tmlib.metadata.ChannelImageMetadata`
         '''
         super(ChannelImageMetadata, self).__init__()
         self.is_corrected = False
         self.is_projected = False
-        if metadata is not None:
-            for key, value in metadata.iteritems():
-                if key in self._PERSISTENT_ATTRS:
-                    setattr(self, key, value)
+        for key, value in kwargs.iteritems():
+            if key in self._PERSISTENT_ATTRS:
+                setattr(self, key, value)
 
     @property
     def channel_name(self):
@@ -368,9 +370,9 @@ class ChannelImageMetadata(ImageMetadata):
 
     @channel_name.setter
     def channel_name(self, value):
-        if not(isinstance(value, basestring)) and value is not None:
+        if not isinstance(value, basestring):
             raise TypeError('Attribute "channel_name" must have type str')
-        self._channel_name = value
+        self._channel_name = str(value)
 
     @property
     def channel_ix(self):
@@ -384,7 +386,7 @@ class ChannelImageMetadata(ImageMetadata):
 
     @channel_ix.setter
     def channel_ix(self, value):
-        if not(isinstance(value, int)) and value is not None:
+        if not isinstance(value, int):
             raise TypeError('Attribute "channel_ix" must have type int')
         self._channel_ix = value
 
