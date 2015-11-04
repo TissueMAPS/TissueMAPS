@@ -14,7 +14,7 @@
  *      This command will also start a development server.
  *      The browser is reloaded automatically as soon as any of the files change.
  *
- *      $ grunt prod
+ *      $ grunt dist
  *
  *      will create a release build in the directory specified by the productionDir variable.
  *
@@ -112,7 +112,7 @@ module.exports = function(grunt) {
          * Delete content of build directory
          */
         clean: {
-            prod: ['<%= productionDir %>'],
+            dist: ['<%= productionDir %>'],
             build: ['<%= buildDir %>'],
             tmp: ['<%= tmpDir %>']
         },
@@ -121,10 +121,11 @@ module.exports = function(grunt) {
          * Copy the html and image files into the build directory
          */
         copy: {
-            prod: {
+            dist: {
                 files: [
                     {cwd: 'app', expand: true, src: ['templates/**/*.html'], dest: '<%= productionDir %>/'},
-                    {cwd: 'app', '<%= productionDir %>/index.html': 'index.html'},
+                    {dest: '<%= productionDir %>/index.html', src: 'app/index.html'},
+                    {dest: '<%= productionDir %>/src/toolwindow/index.html', src: 'app/src/toolwindow/index.html'},
                     {cwd: 'app', expand: true, src: ['resources/**'], dest: '<%= productionDir %>/'}
                 ]
             }
@@ -322,8 +323,7 @@ module.exports = function(grunt) {
 
         /*
          * Execute the python build script for openlayers.
-         * This will create the file ol3/build/ol.js.
-         * (has to be copied to libs/unmanaged)
+         * This will create the file libs/ol.js.
          */
         exec: {
             buildOLDebug: '(node <%= olDir %>/tasks/build.js <%= olDir %>/config/ol-debug.json app/assets/libs/ol-debug.js)',
@@ -419,7 +419,7 @@ module.exports = function(grunt) {
                     'app/assets/libs/bower_components/underscore/underscore.js',
 
                     // 'app/assets/libs/ol3/build/ol.js',
-                    'app/assets/libs/unmanaged/ol.js',
+                    'app/assets/libs/ol.js',
 
                     'app/assets/libs/bower_components/angular/angular.js',
                     'app/assets/libs/bower_components/angular-mocks/angular-mocks.js',
@@ -539,10 +539,10 @@ module.exports = function(grunt) {
     grunt.registerTask('test:e2e', ['protractor:all']);
     grunt.registerTask('test:all', ['test:unit', 'test:midway', 'test:e2e']);
 
-    // Build for prod
-    grunt.registerTask('prod', [
+    // Build for production
+    grunt.registerTask('dist', [
         'clean',
-        'copy:prod',
+        'copy:dist',
         'less',
         'exec:buildTypeScript',
         'includeSource',  // call before useminPrepare
