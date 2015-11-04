@@ -48,16 +48,38 @@ def shift_and_crop_numpy(im, y, x, bottom, top, right, left,
     '''
     try:
         if shift:
+            row_start = top-y
+            row_end = bottom+y
+            if row_end == 0:
+                row_end = im.shape[0]
+            else:
+                row_end = -row_end
+            col_start = left-x
+            col_end = right+x
+            if col_end == 0:
+                col_end = im.shape[1]
+            else:
+                col_end = -col_end
             if crop:
-                aligned_im = im[(top-y):-(bottom+y+1), (left-x):-(right+x+1)]
+                aligned_im = im[row_start:row_end, col_start:col_end]
             else:
                 aligned_im = np.zeros(im.shape, dtype=im.dtype)
-                aligned_im[im[(top-y):-(bottom+y+1), (left-x):-(right+x+1)]] = \
-                    im[(top-y):-(bottom+y+1), (left-x):-(right+x+1)]
+                aligned_im[row_start:row_end, col_start:col_end] = \
+                    im[row_start:row_end, col_start:col_end]
         else:
+            row_start = top
+            if bottom == 0:
+                row_end = im.shape[0]
+            else:
+                row_end = -bottom
+            col_start = left
+            if right == 0:
+                col_end = im.shape[1]
+            else:
+                col_end = -right
             empty_im = np.zeros(im.shape, dtype=im.dtype)
             if crop:
-                aligned_im = empty_im[top:-(bottom+1), left:-(right+1)]
+                aligned_im = empty_im[row_start:row_end, col_start:col_end]
             else:
                 aligned_im = empty_im
         return aligned_im
