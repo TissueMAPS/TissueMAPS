@@ -124,7 +124,7 @@ module.exports = function(grunt) {
             prod: {
                 files: [
                     {cwd: 'app', expand: true, src: ['templates/**/*.html'], dest: '<%= productionDir %>/'},
-                    {'<%= productionDir %>/index.html': 'index.html'},
+                    {cwd: 'app', '<%= productionDir %>/index.html': 'index.html'},
                     {cwd: 'app', expand: true, src: ['resources/**'], dest: '<%= productionDir %>/'}
                 ]
             }
@@ -185,17 +185,17 @@ module.exports = function(grunt) {
         useminPrepare: {
             html: [
                 'app/index.html',
-                'app/templates/tools/index.html'
+                'app/src/toolwindow/index.html'
             ],
             options: {
                 dest: '<%= productionDir %>'
             }
         },
         usemin: {
-            // html: [
-            //     '<%= productionDir %>/index.html',
-            //     '<%= productionDir %>/templates/tools/index.html'
-            // ],
+            html: [
+                '<%= productionDir %>/index.html',
+                '<%= productionDir %>/src/toolwindow/index.html'
+            ],
             options: {
                 assetDirs: [
                     '<% productionDir %>',
@@ -326,11 +326,10 @@ module.exports = function(grunt) {
          * (has to be copied to libs/unmanaged)
          */
         exec: {
-            // temporarily change working directory and build openlayers
-            // via its makefile
-            buildOLDebug: '(cd <%= olDir %> && node tasks/build.js config/ol-debug.json build/ol-debug.js)',
-            buildOL: '(cd <%= olDir %> && node tasks/build.js config/ol.json build/ol.js)',
-            initOL: '(cd <%= olDir %> && make install)'
+            buildOLDebug: '(node <%= olDir %>/tasks/build.js <%= olDir %>/config/ol-debug.json app/assets/libs/ol-debug.js)',
+            buildOL: '(node <%= olDir %>/tasks/build.js <%= olDir %>/config/ol.json app/assets/libs/ol.js)',
+            initOL: '(cd <%= olDir %> && make install)',
+            buildTypeScript: 'tsc'
         },
 
         /*
@@ -419,7 +418,8 @@ module.exports = function(grunt) {
                     'app/assets/libs/unmanaged/jquery-ui.min.js',
                     'app/assets/libs/bower_components/underscore/underscore.js',
 
-                    'app/assets/libs/ol3/build/ol-debug.js',
+                    // 'app/assets/libs/ol3/build/ol.js',
+                    'app/assets/libs/unmanaged/ol.js',
 
                     'app/assets/libs/bower_components/angular/angular.js',
                     'app/assets/libs/bower_components/angular-mocks/angular-mocks.js',
@@ -544,6 +544,7 @@ module.exports = function(grunt) {
         'clean',
         'copy:prod',
         'less',
+        'exec:buildTypeScript',
         'includeSource',  // call before useminPrepare
         'useminPrepare',
         'concat:generated',
