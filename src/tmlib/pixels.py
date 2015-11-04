@@ -93,7 +93,7 @@ class VipsPixels(Pixels):
 
         Parameters
         ----------
-        array: Vips.Image
+        array: gi.overrides.Vips.Image
             image pixel array
 
         Returns
@@ -101,6 +101,8 @@ class VipsPixels(Pixels):
         tmlib.pixels.VipsPixels
         '''
         super(VipsPixels, self).__init__(array)
+        if not isinstance(array, Vips.Image):
+            raise TypeError('Argument array must have type Vips.Image')
         self.array = array
 
     @property
@@ -290,7 +292,7 @@ class VipsPixels(Pixels):
         Returns
         -------
         tmlib.pixels.VipsPixel
-            pixel object
+            pixels object
 
         See also
         --------
@@ -311,9 +313,13 @@ class VipsPixels(Pixels):
         Returns
         -------
         tmlib.pixels.VipsPixel
-            pixel object
+            pixels object
+
+        See also
+        --------
+        :py:func:`tmlib.image_utils.np_array_to_vips_image`
         '''
-        return VipsPixels(Vips.Image.new_from_array(array.tolist()))
+        return VipsPixels(image_utils.np_array_to_vips_image(array))
 
     def save_as_png(self, filename):
         '''
@@ -347,6 +353,8 @@ class NumpyPixels(Pixels):
         tmlib.pixels.NumpyPixels
         '''
         super(NumpyPixels, self).__init__(array)
+        if not isinstance(array, np.ndarray):
+            raise TypeError('Argument array must have type numpy.ndarray')
         self.array = array
 
     @property
@@ -528,7 +536,7 @@ class NumpyPixels(Pixels):
         Returns
         -------
         tmlib.pixels.NumpyPixels
-            pixel object
+            pixels object
 
         See also
         --------
@@ -536,6 +544,26 @@ class NumpyPixels(Pixels):
         '''
         with NumpyImageReader() as reader:
             return NumpyPixels(reader.read(filename))
+
+    @staticmethod
+    def create_from_vips_image(array):
+        '''
+        Create an instance of class NumpyPixel from a `Vips` image.
+
+        Parameters
+        ----------
+        array: gi.overrides.Vips.Image
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixel
+            pixels object
+
+        See also
+        --------
+        :py:func:`tmlib.image_utils.vips_image_to_np_array`
+        '''
+        return NumpyPixels(image_utils.vips_image_to_np_array(array))
 
     def save_as_png(self, filename):
         '''

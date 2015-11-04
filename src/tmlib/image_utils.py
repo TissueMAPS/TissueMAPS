@@ -168,10 +168,6 @@ def vips_image_to_np_array(vips_image):
     Returns
     -------
     numpy.ndarray
-
-    Warning
-    -------
-    This seems to be buggy!!!
     '''
     nptype = vips_format_to_np_dtype(vips_image.get_format())
     mem_string = vips_image.write_to_memory()
