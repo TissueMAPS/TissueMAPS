@@ -60,7 +60,7 @@ def test_experiment_creation_without_specifying_location(exp, testuser):
     assert exp.description == 'Some desc'
     assert exp.owner == testuser
 
-    assert type(exp.hash) == unicode and exp.hash != ''
+    assert type(exp.hash) == str and exp.hash != ''
 
     # Check if directories were created
     assert p.exists(exp.location)

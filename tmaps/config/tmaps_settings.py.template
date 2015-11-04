@@ -3,3 +3,5 @@ DEBUG = False
 
 SQLALCHEMY_DATABASE_URI = \
     'postgresql://SOME_USER_NAME:SOME_USER_PASSWORD@localhost:5432/tissuemaps'
+
+REDIS_URL = 'redis://localhost:6379'

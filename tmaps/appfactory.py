@@ -6,6 +6,7 @@ from flask import Flask
 
 from extensions.database import db
 from extensions.auth import jwt
+from extensions.redis import redis_store
 from config import default as default_config
 
 
@@ -68,10 +69,11 @@ def create_app(config):
     # Initialize Plugins
     jwt.init_app(app)
     db.init_app(app)
+    redis_store.init_app(app)
 
+    # Import and register blueprints
     from api import api
     from res import res
-
     app.register_blueprint(api, url_prefix='/api')
     app.register_blueprint(res)
 

@@ -1,4 +1,4 @@
-from tmaps.extensions.encrypt import decode
+from tmaps.extensions.encrypt import decode, encode
 from tmaps.extensions.database import db
 
 class CRUDMixin(object):
@@ -43,6 +43,10 @@ class Model(db.Model):
 class HashIdModel(Model):
 
     __abstract__ = True
+
+    @property
+    def hash(self):
+        return encode(self.id)
 
     @classmethod
     def get(cls, id):

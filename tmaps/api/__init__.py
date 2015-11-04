@@ -7,5 +7,7 @@ import appstates
 import experiments
 import users
 import tools
+import sources
+import upload
 
 import responses

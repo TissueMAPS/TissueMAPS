@@ -4,7 +4,7 @@ from xml.dom import minidom
 from werkzeug import secure_filename
 from ..extensions.database import db
 from utils import (
-    auto_generate_hash, auto_create_directory, exec_func_after_insert,
+    auto_create_directory, exec_func_after_insert,
     auto_remove_directory
 )
 from . import CRUDMixin, Model, HashIdModel
@@ -84,11 +84,9 @@ EXPERIMENT_CREATION_STAGES = (
 
 @exec_func_after_insert(_create_locations_if_necessary)
 @auto_remove_directory(lambda e: e.location)
-@auto_generate_hash
 class Experiment(HashIdModel, CRUDMixin):
 
     id = db.Column(db.Integer, primary_key=True)
-    hash = db.Column(db.String(20))
     name = db.Column(db.String(120), index=True)
     location = db.Column(db.String(600))
     description = db.Column(db.Text)

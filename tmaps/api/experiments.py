@@ -11,6 +11,11 @@ import numpy as np
 from tmaps.models import Experiment
 from tmaps.extensions.encrypt import decode
 from tmaps.api import api
+from tmaps.api.responses import (
+    MALFORMED_REQUEST_RESPONSE,
+    RESOURCE_NOT_FOUND_RESPONSE,
+    NOT_AUTHORIZED_RESPONSE
+)
 
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
@@ -168,15 +173,12 @@ def get_experiment(experiment_id):
 
     """
 
-    experiment_id = decode(experiment_id)
-
-    experiments = current_identity.experiments + current_identity.received_experiments
-    ex = filter(lambda e: e.id == experiment_id, experiments)
-
-    if ex:
-        return jsonify(ex[0].as_dict())
-    else:
-        return 'User does not have an experiment with id %d' % experiment_id, 404
+    e = Experiment.get(experiment_id)
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+    if not e:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    return jsonify(e.as_dict())
 
 
 def _get_feat_property_extractor(prop):
@@ -188,3 +190,54 @@ def _get_feat_property_extractor(prop):
         return lambda mat: np.percentile(mat, p, axis=0)
     else:
         raise Exception('No extractor for property: ' + prop)
+
+
+@api.route('/experiments', methods=['POST'])
+@jwt_required()
+def create_experiment():
+    data = json.loads(request.data)
+
+    name = data.get('name')
+    description = data.get('description', '')
+    microscope_type = data.get('microscope_type')
+    plate_format = data.get('plate_format')
+
+    if any([var is None for var in [name, microscope_type, plate_format]]):
+        return MALFORMED_REQUEST_RESPONSE
+
+    exp = Experiment.create(
+        name=name,
+        description=description,
+        owner=current_identity,
+        microscope_type=microscope_type,
+        plate_format=plate_format
+    )
+
+    return jsonify(exp.as_dict())
+
+
+@api.route('/experiments/<experiment_id>', methods=['DELETE'])
+@jwt_required()
+def delete_experiment(experiment_id):
+    e = Experiment.get(experiment_id)
+    if not e:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+
+    e.delete()
+    return 'Deletion ok', 200
+
+
+@api.route('/experiments/<exp_id>/create-layers', methods=['PUT'])
+@jwt_required()
+def create_layers(exp_id):
+    e = Experiment.query.get(exp_id)
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+    plates_ready = all([pl.is_ready_for_processing for pl in e.plates])
+    exp_ready = len(e.plates) != 0 and plates_ready
+
+    if not exp_ready:
+        return 'Experiment not ready', 500
+
