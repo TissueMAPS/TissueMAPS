@@ -18,7 +18,7 @@ def save_vips_image_jpg(im, filename, quality=75):
 
     Parameters
     ----------
-    im: Vips.Image
+    im: gi.overrides.Vips.Image
         image
     filename: str
         name of the output file
@@ -34,7 +34,7 @@ def save_image_png_vips(im, filename, bitdepth=16):
 
     Parameters
     ----------
-    im: Vips.Image
+    im: gi.overrides.Vips.Image
         image
     filename: str
         name of the output file
@@ -64,7 +64,7 @@ def save_image_png(im, filename):
 
     Parameters
     ----------
-    im: numpy.ndarray or Vips.Image
+    im: numpy.ndarray or gi.overrides.Vips.Image
         image that should be saved
     filename: str
         path to the image file
@@ -85,7 +85,7 @@ def np_dtype_to_vips_format(np_dtype):
 
     Returns
     -------
-    Vips.BandFormat
+    gi.overrides.Vips.BandFormat
     '''
     lookup = {
         np.dtype('int8'): Vips.BandFormat.CHAR,
@@ -105,7 +105,7 @@ def vips_format_to_np_dtype(vips_format):
 
     Parameters
     ----------
-    format: Vips.BandFormat
+    format: gi.overrides.Vips.BandFormat
 
     Returns
     -------
@@ -133,7 +133,7 @@ def np_array_to_vips_image(nparray):
 
     Returns
     -------
-    Vips.image
+    gi.overrides.Vips.image
     '''
     # Look up what VIPS format corresponds to the type of this np array
     vips_format = np_dtype_to_vips_format(nparray.dtype)
@@ -163,7 +163,7 @@ def vips_image_to_np_array(vips_image):
 
     Parameters
     ----------
-    vips_image: Vips.image
+    vips_image: gi.overrides.Vips.image
 
     Returns
     -------
@@ -192,14 +192,14 @@ def create_spacer_image(height, width, dtype, bands):
         dimension of the image in y dimension
     width: int
         dimension of the image in x dimension
-    dtype: Vips.BandFormat
+    dtype: gi.overrides.Vips.BandFormat
         data type (format) of the image
     bands: int
         number of color dimensions (``1`` for grayscale and ``3`` for RGB)
 
     Returns
     -------
-    Vips.Image
+    gi.overrides.Vips.Image
         black image of specified `dtype`
 
     '''
@@ -277,7 +277,7 @@ def calc_threshold_level(sample_images, percent=99.9):
 
     Parameters
     ----------
-    sample_images: List[Vips.Image[Vips.BandFormat.USHORT]]
+    sample_images: List[gi.overrides.Vips.Image[gi.overrides.Vips.BandFormat.USHORT]]
         images that are representative of the images that are to be thresholded
 
     top_percent: float, optional
@@ -310,7 +310,7 @@ def create_thresholding_LUT(threshold):
 
     Returns
     -------
-    Vips.Image
+    gi.overrides.Vips.Image
         LUT (= 1 x 2^16 pixel `Vips` image)
 
     Examples
