@@ -200,9 +200,10 @@ class VisiviewMetadataReader(MetadataReader):
             # NOTE: We assume that the "site" id is global per plate
             captures = matches.groupdict()
             ix = sites.index(int(captures['s']))
-            samples = [captures for z in xrange(nd['NZSteps'])]
+            # NOTE: dict() creates a copy for each sample
+            samples = [dict(captures) for z in xrange(nd['NZSteps'])]
             for z in xrange(nd['NZSteps']):
-                samples[z].update({'z': z})
+                samples[z]['z'] = z
             lut[wells[ix]].extend(samples)
 
         # TODO: Sort samples according to "site"
