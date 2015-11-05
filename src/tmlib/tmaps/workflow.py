@@ -245,9 +245,9 @@ class Workflow(SequentialTaskCollection, StopOnError):
         -------
         gc3libs.Run.State
         '''
-        logger.info('waiting to give NFS time to get up-to-date')
-        time.sleep(60)
         if done+1 < len(self.steps_to_process):
+            logger.info('waiting to give NFS time to get up-to-date')
+            time.sleep(60)
             try:
                 logger.info('progress to next step ({0} of {1}): "{2}"'.format(
                                 (done+1)+1, len(self.steps_to_process),
