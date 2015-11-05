@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import importlib
 from cached_property import cached_property
@@ -244,11 +245,8 @@ class Workflow(SequentialTaskCollection, StopOnError):
         -------
         gc3libs.Run.State
         '''
-        # TODO: resubmission
-        # RetriableTask: overwrite "retry" method and adapt resubmission
-        # criteria such as memory or time requirements
-        # Workflow description: YAML mapping for each step with "command",
-        # "time", "memory", "resubmit", "active" keys
+        logger.info('waiting to give NFS time to get up-to-date')
+        time.sleep(60)
         if done+1 < len(self.steps_to_process):
             try:
                 logger.info('progress to next step ({0} of {1}): "{2}"'.format(
