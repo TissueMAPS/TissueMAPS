@@ -220,8 +220,6 @@ class MetadataHandler(object):
                     fm.planes = [p]
                     self.file_mapper.append(fm)
 
-                    if f != new_img.Name:
-                        raise ValueError('Filenames must match.')
                     count += 1
 
         return self.metadata
@@ -389,6 +387,9 @@ class MetadataHandler(object):
             # NOTE: Only image elements are considered for which the value
             # of the *Name* attribute matches.
             if self.ome_additional_metadata.image(i).Name == 'default.png':
+                img = self.metadata.image(i)
+                self.time_points.add(img.Pixels.Plane(0).TheT)
+                self.planes.add(img.Pixels.Plane(0).TheZ)
                 continue
             image = self.ome_additional_metadata.image(i)
             matched_elements = {
@@ -954,7 +955,7 @@ class MetadataHandler(object):
                 element.planes = self.file_mapper[i].planes
                 hashmap.append(dict(element))
         else:
-            # In this case images files one or contain multiple planes
+            # In this case images files contain one or multiple planes
             filenames = [f for fm in self.file_mapper for f in fm.files]
             for f in filenames:
                 ix = utils.indices(filenames, f)
