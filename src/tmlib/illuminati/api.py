@@ -125,9 +125,11 @@ class PyramidBuilder(ClusterRoutines):
 
         output_dir = batch['outputs']['pyramid_dir']
         if os.path.exists(output_dir):
+            logger.info('remove existing image pyramid: %s', output_dir)
+            # NOTE: this may cause problems on NFS
             shutil.rmtree(output_dir)
 
-        logger.info('create image pyramid: %s' % output_dir)
+        logger.info('create image pyramid: %s', output_dir)
         layer.create_pyramid(output_dir)
 
     def collect_job_output(self, batch):
