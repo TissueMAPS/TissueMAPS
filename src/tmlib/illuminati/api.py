@@ -1,5 +1,6 @@
 import os
 import logging
+import shutil
 import numpy as np
 from ..layer import ChannelLayer
 from ..api import ClusterRoutines
@@ -123,8 +124,8 @@ class PyramidBuilder(ClusterRoutines):
         layer = layer.scale()
 
         output_dir = batch['outputs']['pyramid_dir']
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
 
         logger.info('create image pyramid: %s' % output_dir)
         layer.create_pyramid(output_dir)
