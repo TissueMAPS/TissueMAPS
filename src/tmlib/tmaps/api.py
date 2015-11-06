@@ -61,9 +61,8 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         '''
         jobs = Workflow(
                     experiment=self.experiment,
+                    verbosity=self.verbosity,
                     description=job_descriptions,
                     start_stage=start_stage,
                     start_step=start_step)
-        # overwrite logging verbosity level
-        jobs.workflow.verbosity = self.verbosity
         return jobs

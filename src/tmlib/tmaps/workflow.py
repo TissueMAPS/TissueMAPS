@@ -112,7 +112,7 @@ def load_var_method_args(prog_name, method_name):
 
 class Workflow(SequentialTaskCollection, StopOnError):
 
-    def __init__(self, experiment, description=None,
+    def __init__(self, experiment, verbosity, description=None,
                  start_stage=None, start_step=None):
         '''
         Initialize an instance of class Workflow.
@@ -121,6 +121,8 @@ class Workflow(SequentialTaskCollection, StopOnError):
         ----------
         experiment: str
             configured experiment object
+        verbosity: int
+            logging verbosity level
         description: tmlib.cfg.WorkflowDescription, optional
             description of the workflow that should be (default: ``None``)
         start_stage: str or int, optional
@@ -148,6 +150,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
         self.start_step = start_step
         self.tasks = list()
         self.expected_outputs = list()
+        self.verbosity = verbosity
         self._add_step(0)
 
     @cached_property
