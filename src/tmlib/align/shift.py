@@ -141,6 +141,12 @@ def shift_and_crop_vips(im, y, x, bottom, top, right, left,
             offset_top = top-y
             width = im.width-right-left
             height = im.height-bottom-top
+            if offset_left < 0:
+                width -= abs(offset_left)
+                offset_left = 0
+            if offset_top < 0:
+                height -= abs(offset_top)
+                offset_top = 0
             if crop:
                 aligned_im = im.crop(
                                 offset_left, offset_top, width, height)
