@@ -4,12 +4,9 @@ import unittest
 from cached_property import cached_property
 from gi.repository import Vips
 from scipy import misc
-from mock import PropertyMock
-from mock import patch
 from tmlib.pixels import NumpyPixels
 from tmlib.image import ChannelImage
 from tmlib.image import IllumstatsImages
-from tmlib.image import IllumstatsImage
 from tmlib.metadata import ChannelImageMetadata
 from tmlib.metadata import IllumstatsImageMetadata
 from tmlib.pixels import VipsPixels
