@@ -4,9 +4,12 @@ import unittest
 from cached_property import cached_property
 from gi.repository import Vips
 from scipy import misc
+from mock import PropertyMock
+from mock import patch
 from tmlib.pixels import NumpyPixels
 from tmlib.image import ChannelImage
 from tmlib.image import IllumstatsImages
+from tmlib.image import IllumstatsImage
 from tmlib.metadata import ChannelImageMetadata
 from tmlib.metadata import IllumstatsImageMetadata
 from tmlib.pixels import VipsPixels
@@ -15,6 +18,7 @@ from tmlib.pixels import VipsPixels
 class TestImageSetup(unittest.TestCase):
 
     def setUp(self):
+        # TODO: mock attributes instead of using large files
         self.metadata = ChannelImageMetadata()
         testdata_dir = os.path.join(
                                 os.path.dirname(__file__), '..', 'testdata')
@@ -50,12 +54,12 @@ class TestImage(TestImageSetup):
 
     def test_align_vips_crop_1(self):
         image = ChannelImage.create_from_file(self.img_filename, self.metadata)
-        image.metadata.x_shift = 10
-        image.metadata.y_shift = 5
-        image.metadata.upper_overhang = 50
-        image.metadata.lower_overhang = 60
-        image.metadata.right_overhang = 70
-        image.metadata.left_overhang = 80
+        image.metadata.x_shift = 1
+        image.metadata.y_shift = 2
+        image.metadata.upper_overhang = 5
+        image.metadata.lower_overhang = 6
+        image.metadata.right_overhang = 7
+        image.metadata.left_overhang = 8
         aligned_image = image.align(crop=True)
         self.assertIsInstance(aligned_image, ChannelImage)
         diff_0 = image.metadata.upper_overhang + image.metadata.lower_overhang
@@ -78,12 +82,12 @@ class TestImage(TestImageSetup):
 
     def test_align_vips_not_crop_1(self):
         image = ChannelImage.create_from_file(self.img_filename, self.metadata)
-        image.x_shift = 10
-        image.y_shift = 5
-        image.upper_overhang = 50
-        image.lower_overhang = 60
-        image.right_overhang = 70
-        image.left_overhang = 80
+        image.x_shift = 1
+        image.y_shift = 2
+        image.upper_overhang = 5
+        image.lower_overhang = 6
+        image.right_overhang = 7
+        image.left_overhang = 8
         aligned_image = image.align(crop=False)
         self.assertIsInstance(aligned_image, ChannelImage)
         self.assertEqual(aligned_image.pixels.dimensions,
@@ -110,12 +114,12 @@ class TestImage(TestImageSetup):
     def test_align_np_crop_1(self):
         image = ChannelImage.create_from_file(self.img_filename, self.metadata,
                                               library='numpy')
-        image.metadata.x_shift = 10
-        image.metadata.y_shift = 5
-        image.metadata.upper_overhang = 50
-        image.metadata.lower_overhang = 60
-        image.metadata.right_overhang = 70
-        image.metadata.left_overhang = 80
+        image.metadata.x_shift = 1
+        image.metadata.y_shift = 2
+        image.metadata.upper_overhang = 5
+        image.metadata.lower_overhang = 6
+        image.metadata.right_overhang = 7
+        image.metadata.left_overhang = 8
         aligned_image = image.align(crop=True)
         self.assertIsInstance(aligned_image, ChannelImage)
         diff_0 = image.metadata.upper_overhang + image.metadata.lower_overhang
@@ -140,12 +144,12 @@ class TestImage(TestImageSetup):
     def test_align_np_not_crop_1(self):
         image = ChannelImage.create_from_file(self.img_filename, self.metadata,
                                               library='numpy')
-        image.x_shift = 10
-        image.y_shift = 5
-        image.upper_overhang = 50
-        image.lower_overhang = 60
-        image.right_overhang = 70
-        image.left_overhang = 80
+        image.x_shift = 1
+        image.y_shift = 2
+        image.upper_overhang = 5
+        image.lower_overhang = 6
+        image.right_overhang = 7
+        image.left_overhang = 8
         aligned_image = image.align(crop=False)
         self.assertIsInstance(aligned_image, ChannelImage)
         self.assertEqual(aligned_image.pixels.dimensions,
