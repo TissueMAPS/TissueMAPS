@@ -42,6 +42,13 @@ class StitchError(Exception):
     '''
 
 
+class PyramidCreationError(Exception):
+    '''
+    Error class that is raised when an error occurs upon creation of a pyramid
+    image, i.e. stitching of images together to a large overview image.
+    '''
+
+
 class PipelineError(Exception):
     '''
     Base class for jterator pipeline errors.
