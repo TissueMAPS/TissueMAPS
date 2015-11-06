@@ -138,7 +138,9 @@ class Experiment(object):
                     % self.user_cfg_file)
             with YamlReader() as reader:
                 config_settings = reader.read(self.user_cfg_file)
-            self._user_cfg = cfg.UserConfiguration(self.dir, config_settings)
+                if not config_settings:
+                    raise ValueError('No user configuration provided.')
+            self._user_cfg = cfg.UserConfiguration(self.dir, **config_settings)
         return self._user_cfg
 
     @user_cfg.setter
