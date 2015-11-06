@@ -1,7 +1,6 @@
 import os
 import logging
 from . import utils
-from . import logging_utils
 from .tmaps import workflow
 from .tmaps import canonical
 from .plate import Plate
@@ -141,7 +140,7 @@ class WorkflowDescription(object):
     '''
 
     _PERSISTENT_ATTRS = {
-        'stages', 'verbosity', 'virtualenv'
+        'stages', 'virtualenv'
     }
 
     def __init__(self, **kwargs):
@@ -164,7 +163,6 @@ class WorkflowDescription(object):
         '''
         # Set defaults
         self.virtualenv = None
-        self.verbosity = 1
         # Check stage description
         if 'stages' not in kwargs:
             raise KeyError('Argument "kwargs" must have key "stages".')
@@ -238,30 +236,6 @@ class WorkflowDescription(object):
                               % virtualenv_dir)
         self._virtualenv = value
 
-    @property
-    def verbosity(self):
-        '''
-        Returns
-        -------
-        int
-            logging verbosity level (default: ``1``)
-
-        See also
-        --------
-        :py:const:`tmlib.logging_utils.VERBOSITY_TO_LEVELS`
-        '''
-        return self._verbosity
-
-    @verbosity.setter
-    def verbosity(self, value):
-        if not isinstance(value, int):
-            raise TypeError('Attribute "verbosity" must have type int.')
-        if value < 0:
-            raise ValueError('Attribute "verbosity" must be positive.')
-        if value > len(logging_utils.VERBOSITY_TO_LEVELS):
-            logging.warning('verbosity exceeds maximally possible level')
-        self._verbosity = value
-
     def __iter__(self):
         for attr in vars(self):
             if attr in self._PERSISTENT_ATTRS:
@@ -286,7 +260,7 @@ class WorkflowStageDescription(object):
         Parameters
         ----------
         **kwargs: dict, optional
-            description of a workflow stage
+            description of a workflow stage in form of key-value pairs
 
         Returns
         -------
@@ -398,7 +372,7 @@ class WorkflowStepDescription(object):
         Parameters
         ----------
         **kwargs: dict, optional
-            description of a step of a workflow stage
+            description of the step as key-value pairs
 
         Returns
         -------
@@ -500,7 +474,8 @@ class UserConfiguration(object):
         'sources_dir', 'plates_dir', 'layers_dir', 'plate_format', 'workflow'
     }
 
-    def __init__(self, experiment_dir, cfg_settings):
+    def __init__(self, experiment_dir, plate_format,
+                 sources_dir=None, plates_dir=None, layers_dir=None, **kwargs):
         '''
         Initialize an instance of class UserConfiguration.
 
@@ -508,26 +483,28 @@ class UserConfiguration(object):
         ----------
         experiment_dir: str
             absolute path to experiment directory
-        cfg_settings: dict
-            user configuration settings as key-value pairs
+        sources_dir: str, optional
+            absolute path to the directory, where source files are located
+        plates_dir: str, optional
+            absolute path to the directory, where image files are located
+        layers_dir: str, optional
+            absolute path to the directory, where layers are located
+        **kwargs: dict
+            additional user configuration settings as key-value pairs
 
         Raises
         ------
         OSError
             when `experiment_dir` does not exist
-
-        Returns
-        -------
-        tmlib.cfg.UserConfiguration
-            experiment-specific user configuration object
         '''
         self.experiment_dir = experiment_dir
         if not os.path.exists(self.experiment_dir):
             raise OSError('Experiment directory does not exist')
-        self._sources_dir = None
-        self._plates_dir = None
-        self._layers_dir = None
-        for k, v in cfg_settings.iteritems():
+        self.plate_format = plate_format
+        self._sources_dir = sources_dir
+        self._plates_dir = plates_dir
+        self._layers_dir = layers_dir
+        for k, v in kwargs.iteritems():
             if k in self._PERSISTENT_ATTRS:
                 if k == 'workflow':
                     v = WorkflowDescription(**v)
