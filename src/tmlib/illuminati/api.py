@@ -111,7 +111,7 @@ class PyramidBuilder(ClusterRoutines):
         `illuminati.layers.ChannelLayer`_
         '''
         logger.debug('create channel layer')
-        layer = ChannelLayer.create_from_files(
+        layer = ChannelLayer.create(
                     experiment=self.experiment, tpoint_ix=batch['cycle'],
                     channel_ix=batch['channel'], zplane_ix=batch['zplane'],
                     illumcorr=batch['illumcorr'], align=batch['align'])
