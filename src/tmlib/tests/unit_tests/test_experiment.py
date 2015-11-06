@@ -99,7 +99,7 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
     def test_initialize_experiment_with_user_cfg(self):
         user_cfg = cfg.UserConfiguration(
                         experiment_dir=self.experiment_dir,
-                        cfg_settings=self.user_cfg_settings)
+                        **self.user_cfg_settings)
         exp = Experiment(self.experiment_dir, user_cfg=user_cfg)
         self._test_basic_attributes(exp)
         self.assertEqual(exp.library, 'vips')

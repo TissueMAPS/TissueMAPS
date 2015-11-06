@@ -339,8 +339,7 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
             'plate_format': self.plate_format
         }
         config = UserConfiguration(
-            experiment_dir=self.experiment_dir,
-            cfg_settings=config_settings
+            experiment_dir=self.experiment_dir, **config_settings
         )
         self.assertEqual(config.plate_format, self.plate_format)
         expected_sources_dir = os.path.join(self.experiment_dir, 'sources')
@@ -361,8 +360,7 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
                 'plate_format': self.plate_format
             }
         config = UserConfiguration(
-            experiment_dir=self.experiment_dir,
-            cfg_settings=config_settings
+            experiment_dir=self.experiment_dir, **config_settings
         )
         self.assertEqual(config.plate_format, self.plate_format)
         self.assertEqual(config.sources_dir, expected_sources_dir)
@@ -393,8 +391,7 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
             }
         }
         config = UserConfiguration(
-            experiment_dir=self.experiment_dir,
-            cfg_settings=config_settings
+            experiment_dir=self.experiment_dir, **config_settings
         )
         self.assertIsInstance(dict(config), dict)
 
@@ -422,8 +419,7 @@ class TestUserConfiguration(fake_filesystem_unittest.TestCase):
             }
         }
         config = UserConfiguration(
-            experiment_dir=self.experiment_dir,
-            cfg_settings=config_settings
+            experiment_dir=self.experiment_dir, **config_settings
         )
         self.assertFalse(os.path.exists(config.cfg_file))
         config.dump_to_file()

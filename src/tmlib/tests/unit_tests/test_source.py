@@ -2,7 +2,6 @@ import os
 import fake_filesystem_unittest
 from mock import PropertyMock
 from mock import patch
-from tmlib import cfg
 import json
 import bioformats
 from cached_property import cached_property
