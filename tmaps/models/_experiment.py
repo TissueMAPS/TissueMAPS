@@ -88,13 +88,14 @@ class Experiment(HashIdModel, CRUDMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), index=True)
+
     location = db.Column(db.String(600))
     description = db.Column(db.Text)
 
     microscope_type = \
-        db.Column(db.Enum(*SUPPORTED_MICROSCOPE_TYPES, name='microscope_type'))
+        db.Column(db.String(50))
     creation_stage = \
-        db.Column(db.Enum(*EXPERIMENT_CREATION_STAGES, name='creation_stage'))
+        db.Column(db.String(50))
     plate_format = db.Column(db.Integer)
 
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))

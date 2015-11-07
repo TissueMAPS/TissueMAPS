@@ -40,8 +40,7 @@ class PlateAcquisition(Model, CRUDMixin):
     index = db.Column(db.Integer)
     description = db.Column(db.Text)
 
-    upload_status = db.Column(db.Enum(*ACQUISITION_UPLOAD_STATUS,
-                              name='upload_status'))
+    upload_status = db.Column(db.String(50))
 
     plate_source_id = db.Column(db.Integer, db.ForeignKey('plate_source.id'))
 
