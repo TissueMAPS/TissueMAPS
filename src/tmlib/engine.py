@@ -357,53 +357,49 @@ class BgEngine(object):
         return data
 
     @at_most_once_per_cycle
-    def task_data(self, task, monitoring_depth=2):
-        is_live = (
-            gc3libs.Run.State.SUBMITTED,
-            gc3libs.Run.State.RUNNING,
-            gc3libs.Run.State.STOPPED
-        )
-        is_done = gc3libs.Run.State.TERMINATED
-        failed = task.execution.exitcode != 0
-        data = {
-            'name':     task.jobname,
-            'state':    task.execution.state,
-            'is_live':  (task.execution.state in is_live),
-            'is_done':  (task.execution.state in is_done),
-            'failed':   (task.execution.state in is_done and failed),
-            'percent_done': None,  # fix later, if possible
-        }
-        if hasattr(task, 'persistent_id'):
-            data['id'] = str(task.persistent_id)
-        # try to give percent completed
-        # if (task.requested_walltime
-        #         and (gc3libs.Run.State.RUNNING in task.execution.timestamp)):
-        if gc3libs.Run.State.RUNNING in task.execution.timestamp:
-            if isinstance(task, gc3libs.workflow.TaskCollection):
-                # express completion as nr or finished jobs over total nr of jobs
-                done = 0
-                for child in task.tasks:
-                    if (child.execution.state is gc3libs.Run.State.TERMINATED):
-                        done += 1
-                data['percent_done'] = done / len(task.tasks)
-            elif isinstance(task, gc3libs.Task):
-                # express completion as fraction of running time over requested walltime
-                runtime = time.time() - task.execution.timestamp[gc3libs.Run.State.RUNNING]
-                data['percent_done'] = 100.0 * runtime / task.requested_walltime.amount()
-            else:
-                raise NotImplementedError(
-                    "Unhandled task class %r" % (task.__class__))
-        return data
+    def task_data(self, task_, monitoring_depth=2):
+        def get_info(task, i):
+            is_live_states = {
+                gc3libs.Run.State.SUBMITTED,
+                gc3libs.Run.State.RUNNING,
+                gc3libs.Run.State.STOPPED
+            }
+            is_done = task.execution.state == gc3libs.Run.State.TERMINATED,
+            failed = task.execution.exitcode != 0
+            data = {
+                'name':     task.jobname,
+                'state':    task.execution.state,
+                'is_live':  task.execution.state in is_live_states,
+                'is_done': is_done,
+                'failed': is_done and failed,
+                'percent_done': 0.0  # fix later, if possible
+            }
+            if hasattr(task, 'persistent_id'):
+                data['id'] = str(task.persistent_id)
+            # try to give percent completed
+            # if (task.requested_walltime
+            #         and (gc3libs.Run.State.RUNNING in task.execution.timestamp)):
 
-    @at_most_once_per_cycle
-    def task_and_children_data(self, task):
-        data = self.task_data(task)
-        try:
-            data['subtasks'] = list()
-            for child in task.tasks:
-                child_data = self.task_data(child)
-                data['subtasks'].append(child_data)
-            return data
-        except AttributeError:
-            # no `.tasks`
-            return data
+            is_task_collection = isinstance(task, gc3libs.workflow.TaskCollection)
+
+            if gc3libs.Run.State.RUNNING in task.execution.timestamp:
+                if is_task_collection:
+                    # express completion as nr or finished jobs over total nr of jobs
+                    done = 0.0
+                    for child in task.tasks:
+                        if (child.execution.state is gc3libs.Run.State.TERMINATED):
+                            done += 1
+                    data['percent_done'] = done / len(task.tasks)
+                elif isinstance(task, gc3libs.Task):
+                    # express completion as fraction of running time over requested walltime
+                    runtime = time.time() - task.execution.timestamp[gc3libs.Run.State.RUNNING]
+                    data['percent_done'] = 100.0 * runtime / task.requested_walltime.amount()
+                else:
+                    raise NotImplementedError(
+                        "Unhandled task class %r" % (task.__class__))
+
+            monitoring_depth_reached = i == monitoring_depth
+            if is_task_collection and not monitoring_depth_reached:
+                data['subtasks'] = [get_info(t, i + 1) for t in task.tasks]
+
+        return get_info(task_, 0)
