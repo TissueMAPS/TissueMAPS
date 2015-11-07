@@ -203,7 +203,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
         logger.debug('load program "%s"', prog_name)
         prog = load_program(prog_name)
         logger.debug('create a program instance')
-        prog_instance = prog(self.experiment, self.workflow.verbosity)
+        prog_instance = prog(self.experiment, self.verbosity)
 
         logger.debug('call "init" method with configured arguments')
         prog_instance.init(step.args)
