@@ -8,7 +8,7 @@
         <tm-selectable-tab-popup>
 
           <h4>Minimum</h4>
-          <span class="output" ng-bind="layer.min() * 255"></span>
+          <span class="output" ng-bind="layer.min * 255"></span>
           <div ui-slider
                min="0" max="255"
                ng-model="ctrl.minInput"
@@ -16,7 +16,7 @@
           </div>
 
           <h4>Maximum</h4>
-          <span class="output" ng-bind="layer.max() * 255"></span>
+          <span class="output" ng-bind="layer.max * 255"></span>
           <div ui-slider
                min="0" max="255"
                ng-model="ctrl.maxInput"
@@ -24,7 +24,7 @@
           </div>
 
           <h4>Brightness</h4>
-          <span class="output" ng-bind="layer.brightness() * 100"></span>
+          <span class="output" ng-bind="layer.brightness * 100"></span>
           <div ui-slider
                min="-50" max="50"
                ng-model="ctrl.brightnessInput"
@@ -32,7 +32,7 @@
           </div>
 
           <h4>Opacity</h4>
-          <span class="output" ng-bind="layer.opacity() * 100"></span>
+          <span class="output" ng-bind="layer.opacity * 100"></span>
           <div ui-slider
                min="0" max="100"
                ng-model="ctrl.opacityInput"
