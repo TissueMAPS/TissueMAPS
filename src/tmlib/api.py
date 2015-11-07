@@ -139,153 +139,42 @@ class BasicClusterRoutines(object):
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
 
-    # def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=2):
-    #     '''
-    #     Create a GC3Pie engine that submits jobs to a cluster
-    #     for parallel and/or sequential processing and monitors their progress.
-
-    #     Parameters
-    #     ----------
-    #     jobs: gc3libs.workflow.SequentialTaskCollection
-    #         GC3Pie task collection of "jobs" that should be submitted
-    #     monitoring_interval: int, optional
-    #         monitoring interval in seconds (default: ``5``)
-
-    #     Returns
-    #     -------
-    #     bool
-    #         indicating whether processing of jobs was successful
-    #     '''
-    #     logger.debug('monitoring interval: %ds' % monitoring_interval)
-    #     # Create an `Engine` instance for running jobs in parallel
-    #     e = gc3libs.create_engine()
-    #     # Put all output files in the same directory
-    #     e.retrieve_overwrites = True
-    #     # Add tasks to engine instance
-    #     e.add(jobs)
-
-    #     status = {
-    #         'name': jobs.jobname,
-    #         'time': self.create_datetimestamp(),
-    #     }
-
-    #     with JsonWriter() as writer:
-    #         while jobs.execution.state != gc3libs.Run.State.TERMINATED:
-    #             e.progress()
-
-    #             # Periodically check the status of submitted jobs
-    #             success = True
-    #             jobs_level_1 = [
-    #                 j for j in jobs.iter_tasks()
-    #                 if j.jobname != jobs.jobname
-    #             ]
-    #             jobs_level_2 = [
-    #                 j for j in jobs.iter_workflow()
-    #                 if j.jobname != jobs.jobname
-    #             ]
-    #             status.update({
-    #                 'jobs': [
-    #                     {
-    #                         'name': j2.jobname,
-    #                         'jobs': dict()
-    #                     }
-    #                     for j2 in jobs_level_2
-    #                 ],
-    #             })
-    #             # `progess` will do the GC3Pie magic:
-    #             # submit new jobs, update status of submitted jobs, get
-    #             # results of terminating jobs etc...
-    #             logger.info('step "%s": %s '
-    #                         % (jobs.jobname, jobs.execution.state))
-    #             status.update({
-    #                 'state': jobs.execution.state
-    #             })
-
-    #             for task in jobs_level_1:
-    #                 if task.jobname == jobs.jobname:
-    #                     continue
-    #                 logger.info('task "%s": %s '
-    #                             % (task.jobname, task.execution.state))
-
-    #             for j, task in enumerate(jobs_level_2):
-    #                 # logger.debug('job "%s": %s '
-    #                 #              % (task.jobname, task.execution.state))
-    #                 status['jobs'][j].update({
-    #                     'name': task.jobname,
-    #                     'state': task.execution.state
-    #                 })
-
-    #             terminated_count = 0
-    #             total_count = 0
-    #             # NOTE: status of jobs could be "SUBMITTED" instead of "RUNNING"
-    #             # in case jobs terminated very quickly 
-    #             currently_processed_job = list(set([
-    #                 j['name'] for j in status['jobs']
-    #                 if j['state'] in {
-    #                     gc3libs.Run.State.RUNNING,
-    #                     gc3libs.Run.State.SUBMITTED,
-    #                     gc3libs.Run.State.TERMINATING,
-    #                     gc3libs.Run.State.TERMINATED
-    #                 }
-    #                 and not re.search(r'_\d+$', j['name'])
-    #             ]))
-    #             if len(currently_processed_job) > 0:
-    #                 for j in status['jobs']:
-    #                     if j['name'].startswith(currently_processed_job[-1]):
-    #                         if j['state'] == gc3libs.Run.State.TERMINATED:
-    #                             terminated_count += 1
-    #                         total_count += 1
-    #                 if total_count > 0:
-    #                     terminated_percent = int(
-    #                         float(terminated_count) / float(total_count) * 100
-    #                     )
-    #                 else:
-    #                     terminated_percent = 0
-    #             else:
-    #                 terminated_count = 0
-    #                 total_count = 0
-    #                 terminated_percent = 0
-    #             logger.info(
-    #                 'status of current task: '
-    #                 '{0} of {1} jobs terminated ({2}%)'.format(
-    #                     terminated_count, total_count, terminated_percent))
-    #             status.update({'terminated': terminated_percent})
-    #             writer.write(self.status_file, status)
-
-    #             time.sleep(monitoring_interval)
-
-    #         success = True
-    #         for task in jobs_level_2:
-    #             if(task.execution.returncode != 0
-    #                     or task.execution.exitcode != 0):
-    #                 logger.error('job "%s" failed.' % task.jobname)
-    #                 success = False
-    #         status['success'] = success
-    #         writer.write(self.status_file, status)
-    #         time.sleep(monitoring_interval)
-
-    #     return success
-
-    def submit_jobs(self, session, monitoring_interval=5, monitoring_depth=2):
+    def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=1):
         '''
         Create a GC3Pie engine that submits jobs to a cluster
         for parallel and/or sequential processing and monitors their progress.
 
         Parameters
         ----------
-        session: gc3libs.session.Session
-            GC3Pie session object with one task in form of a
-            :py:class:`gc3libs.workflow.SequentialTaskCollection` with jobs
-            that should be submitted
+        jobs: gc3libs.workflow.SequentialTaskCollection
+            jobs that should be submitted
         monitoring_interval: int, optional
             monitoring interval in seconds (default: ``5``)
+        monitoring_depth: int, optional
+            recursion depth for job monitoring, i.e. in which detail subtasks
+            in the task tree should be monitored (default: ``1``)
 
         Returns
         -------
-        bool
-            indicating whether processing of jobs was successful
+        dict
+            detailed information about each job
+
+        See also
+        --------
+        :py:meth:`
         '''
         logger.debug('monitoring interval: %ds' % monitoring_interval)
+
+        def log_task_data(task_data):
+            def log_recursive(data, i):
+                logger.info('%s: %s (%.2f %% done)',
+                            data['name'],
+                            data['state'],
+                            data['percent_done'])
+                if i <= monitoring_depth:
+                    for st in data.get('subtasks', list()):
+                        log_recursive(st, i+1)
+            log_recursive(task_data, 0)
 
         # Create an `Engine` instance for running jobs in parallel
         e = gc3libs.create_engine()
@@ -295,8 +184,6 @@ class BasicClusterRoutines(object):
         bg = BgEngine('threading', e)
 
         # Add task to engine instance:
-        # Take the last session
-        jobs = [task for task in session][-1]
         bg.add(jobs)
 
         # start the background thread; instruct it to run `e.progress()`
@@ -304,77 +191,25 @@ class BasicClusterRoutines(object):
         bg.start(monitoring_interval)
 
         # periodically check the status of submitted jobs 
+        break_next = False
         while True:
-
-            status = {
-                'name': jobs.jobname,
-                'time': self.create_datetimestamp(),
-            }
-
-            # this creates a *dictionary* mapping task IDs to data;
-            # the old code from submit_job() uses an array instead
-            # so I'm going to convert
-            task_data = bg.task_and_children_data(jobs)
-            status['subtasks'] = [
-                td
-                for td in task_data['subtasks']
-                if td['name'] != jobs.jobname
-            ]
-            # Now, the following would get you some data about the
-            # number of currently SUBMITTED, RUNNING, TERMINATED,
-            # etc. jobs:
-            #
-            #     aggregate = bg.stats_data()
-            #
-            # However, the original code excludes some jobs from the
-            # count (those which end in `_<number>`) so I'm going to keep it
-
-            # NOTE: status of jobs could be "SUBMITTED" instead of "RUNNING"
-            # in case jobs terminated very quickly
-            currently_processed_job = list(set([
-                j['name'] for j in status['subtasks']
-                if j['state'] in {
-                   gc3libs.Run.State.RUNNING,
-                   gc3libs.Run.State.SUBMITTED,
-                   gc3libs.Run.State.TERMINATING,
-                   gc3libs.Run.State.TERMINATED
-                }
-                and not re.search(r'_\d+$', j['name'])
-            ]))
-            if len(currently_processed_job) > 0:
-                terminated_count = 0
-                total_count = 0
-                for j in status['subtasks']:
-                    if j['name'].startswith(currently_processed_job[-1]):
-                        total_count += 1
-                    if j['state'] == gc3libs.Run.State.TERMINATED:
-                        terminated_count += 1
-                if total_count > 0:
-                    terminated_percent = int(float(terminated_count) / float(total_count) * 100)
-                else:
-                    terminated_percent = 0
-            else:
-                terminated_count = 0
-                total_count = 0
-                terminated_percent = 0
-
-            status['terminated'] = terminated_percent
-
-            # break out of the loop when all jobs are done
-            aggregate = bg.stats_data()
-            if aggregate['count_total'] > 0:
-                if aggregate['count_terminated'] == aggregate['count_total']:
-                    break
 
             time.sleep(monitoring_interval)
 
-            # A SequentialTaskCollection has exit code == 0 iff the last
-            # task had exit code == 0
-            status['success'] = (jobs.execution.exitcode == 0)
+            if break_next:
+                break
 
-            logger.info('%s: %s', status['name'], task_data['percent_done'])
+            task_data = bg.get_task_data(jobs, monitoring_depth)
 
-        return status
+            log_task_data(task_data)
+
+            # break out of the loop when all jobs are done
+            aggregate = bg.get_stats_data()
+            if aggregate['count_total'] > 0:
+                if aggregate['count_terminated'] == aggregate['count_total']:
+                    break_next = True
+
+        return task_data
 
 
 class ClusterRoutines(BasicClusterRoutines):
@@ -795,7 +630,8 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
-    def create_jobs(self, job_descriptions, virtualenv=None, duration='01:00:00'):
+    def create_jobs(self, job_descriptions, virtualenv=None,
+                    duration='01:00:00'):
         '''
         Create a GC3Pie task collection of "jobs".
 
@@ -807,7 +643,7 @@ class ClusterRoutines(BasicClusterRoutines):
             name of a virtual environment that should be activated
             (default: ``None``)
         duration: str, optional
-            computational time for a single job in HH:MM:SS format
+            computational time for a single job to complete in HH:MM:SS format
             (default: ``"01:00:00"``)
 
 
@@ -885,22 +721,3 @@ class ClusterRoutines(BasicClusterRoutines):
                         jobname='%s' % self.prog_name)
 
         return jobs
-
-    def create_session(self, jobs):
-        '''
-        Create a GC3Pie :py:class:`Session` object and populate it with `jobs`.
-
-        Parameters
-        ----------
-        jobs: gc3libs.workflow.SequentialTaskCollection
-            collection of tasks that should be added to the session
-
-        Returns
-        -------
-        gc3libs.Session
-            populated session
-        '''
-        session = Session(self.session_dir)
-        session.destroy()  # always create new session
-        session.add(jobs)
-        return session

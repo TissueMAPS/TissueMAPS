@@ -51,6 +51,12 @@ def command_line_call(parser):
     vips_logger = logging.getLogger('gi.overrides.vips')
     vips_logger.level = logging.CRITICAL
 
+    apscheduler_logger_1 = logging.getLogger('apscheduler.executors.default')
+    apscheduler_logger_1.level = logging.CRITICAL
+
+    apscheduler_logger_2 = logging.getLogger('apscheduler.scheduler')
+    apscheduler_logger_2.level = logging.CRITICAL
+
     try:
         if arguments.handler:
             arguments.handler(arguments)
@@ -257,12 +263,18 @@ class CommandLineInterface(object):
                         '{name}_backup_{time}'.format(
                             name=api.job_descriptions_dir,
                             time=timestamp))
+            if os.path.exists(api.session_dir):
+                shutil.move(api.job_descriptions_dir,
+                        '{name}_backup_{time}'.format(
+                            name=api.session_dir,
+                            time=timestamp))
         else:
             logger.debug('remove log reports and job descriptions '
                          'of previous submission')
             shutil.rmtree(api.job_descriptions_dir)
             shutil.rmtree(api.log_dir)
-            shutil.rmtree(api.session_dir)
+            if os.path.exists(api.session_dir):
+                shutil.rmtree(api.session_dir)
 
         logger.info('create job descriptions')
         job_descriptions = api.create_job_descriptions(args.variable_args)
@@ -357,9 +369,9 @@ class CommandLineInterface(object):
         api = self._api_instance
         jobs = self.build_jobs(virtualenv=args.virtualenv)
         # TODO: check whether jobs were actually created
-        session = api.create_session(jobs)
+        # session = api.create_session(jobs)
         logger.info('submit and monitor jobs')
-        api.submit_jobs(session, monitoring_interval=args.interval)
+        api.submit_jobs(jobs, monitoring_interval=args.interval)
 
     def collect(self, args):
         '''
