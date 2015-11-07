@@ -44,11 +44,12 @@ def command_line_call(parser):
     configure_logging(level)
     logger.debug('running program: %s' % parser.prog)
 
+    # Silence some chatty loggers
     gc3libs.log = logging.getLogger('gc3lib')
     gc3libs.log.level = logging.CRITICAL
 
-    # vips_logger = logging.getLogger('vips')
-    # vips_logger.level = logging.CRITICAL
+    vips_logger = logging.getLogger('gi.overrides.vips')
+    vips_logger.level = logging.CRITICAL
 
     try:
         if arguments.handler:
@@ -198,9 +199,9 @@ class CommandLineInterface(object):
                 logger.info('clean up output of previous submission')
                 dont_exist_ix = [not os.path.exists(f) for f in outputs]
                 if all(dont_exist_ix):
-                    logger.debug('outputs don\'t exist')
+                    logger.warning('outputs don\'t exist')
                 elif any(dont_exist_ix):
-                    logger.debug('some outputs don\'t exist')
+                    logger.warning('some outputs don\'t exist')
                 for out in outputs:
                     if not os.path.exists(out):
                         continue
@@ -261,7 +262,7 @@ class CommandLineInterface(object):
                          'of previous submission')
             shutil.rmtree(api.job_descriptions_dir)
             shutil.rmtree(api.log_dir)
-            shutil.rmtree(api.status_dir)
+            shutil.rmtree(api.session_dir)
 
         logger.info('create job descriptions')
         job_descriptions = api.create_job_descriptions(args.variable_args)
@@ -356,8 +357,9 @@ class CommandLineInterface(object):
         api = self._api_instance
         jobs = self.build_jobs(virtualenv=args.virtualenv)
         # TODO: check whether jobs were actually created
+        session = api.create_session(jobs)
         logger.info('submit and monitor jobs')
-        api.submit_jobs(jobs, monitoring_interval=args.interval)
+        api.submit_jobs(session, monitoring_interval=args.interval)
 
     def collect(self, args):
         '''
