@@ -1,5 +1,9 @@
-from tmaps.extensions.encrypt import decode, encode
+from tmaps.extensions.encrypt import (
+        decode, encode, DecodeFailedException
+)
 from tmaps.extensions.database import db
+from flask import current_app
+
 
 class CRUDMixin(object):
     """Mixin that adds convenience methods for CRUD (create, read, update, delete)
@@ -51,7 +55,11 @@ class HashIdModel(Model):
     @classmethod
     def get(cls, id):
         if type(id) == unicode or type(id) == str:
-            decoded_id = decode(id)
+            try:
+                decoded_id = decode(id)
+            except DecodeFailedException as e:
+                current_app.logger.error(e.message)
+                return None
         elif type(id) == int:
             decoded_id = id
         else:

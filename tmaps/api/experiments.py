@@ -3,7 +3,7 @@ import os
 import os.path as p
 
 from flask import jsonify, request, send_from_directory, send_file
-from flask_jwt import jwt_required
+from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 import numpy as np
@@ -115,22 +115,8 @@ def get_experiments():
         "shared": list of experiment objects
     }
 
-    where an experiment object looks as follows:
-
-    {
-        "id": int,
-        "name": string,
-        "description": string,
-        "owner": string,
-        "layers": [
-            {
-                "name",
-                "imageSize": [int, int],
-                "pyramidPath": string
-            },
-            ...
-        ]
-    }
+    where an experiment object is a dict as returned by
+    Experiment.as_dict().
 
     """
 
@@ -154,30 +140,16 @@ def get_experiment(experiment_id):
         an experiment object serialized to json
     }
 
-    where an experiment object looks as follows:
-
-    {
-        "id": int,
-        "name": string,
-        "description": string,
-        "owner": string,
-        "layers": [
-            {
-                "name",
-                "imageSize": [int, int],
-                "pyramidPath": string
-            },
-            ...
-        ]
-    }
+    where an experiment object is a dict as returned by
+    Experiment.as_dict().
 
     """
 
     e = Experiment.get(experiment_id)
-    if not e.belongs_to(current_identity):
-        return NOT_AUTHORIZED_RESPONSE
     if not e:
         return RESOURCE_NOT_FOUND_RESPONSE
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
     return jsonify(e.as_dict())
 
 
@@ -229,15 +201,37 @@ def delete_experiment(experiment_id):
     return 'Deletion ok', 200
 
 
-@api.route('/experiments/<exp_id>/create-layers', methods=['PUT'])
+# @api.route('/experiments/<exp_id>/create-layers', methods=['PUT'])
+# @jwt_required()
+# def create_layers(exp_id):
+#     e = Experiment.query.get(exp_id)
+#     if not e.belongs_to(current_identity):
+#         return NOT_AUTHORIZED_RESPONSE
+#     plates_ready = all([pl.is_ready_for_processing for pl in e.plates])
+#     exp_ready = len(e.plates) != 0 and plates_ready
+
+#     if not exp_ready:
+#         return 'Experiment not ready', 500
+
+
+@api.route('/experiments/<exp_id>/convert-images', methods=['POST'])
 @jwt_required()
-def create_layers(exp_id):
-    e = Experiment.query.get(exp_id)
+def convert_images(exp_id):
+    e = Experiment.get(exp_id)
+    if not e:
+        return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
-    plates_ready = all([pl.is_ready_for_processing for pl in e.plates])
-    exp_ready = len(e.plates) != 0 and plates_ready
+    if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
+        return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
-    if not exp_ready:
-        return 'Experiment not ready', 500
+    # e.update(creation_stage='CONVERTING_IMAGES')
 
+    # do stuff
+    response = {
+        channels: []
+    }
+
+    # e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+
+    return jsonify(response)

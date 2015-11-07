@@ -8,6 +8,7 @@ from werkzeug import secure_filename
 from _appstate import AppStateShare
 from _experiment import ExperimentShare
 from .utils import auto_generate_hash, auto_create_directory
+from . import CRUDMixin, Model
 
 
 def _experiments_dir(user_location):
@@ -18,7 +19,7 @@ def _experiments_dir(user_location):
 @auto_create_directory(lambda t: t.location)
 @auto_create_directory(lambda t: _experiments_dir(t.location))
 @auto_generate_hash
-class User(db.Model):
+class User(Model, CRUDMixin):
     id = db.Column(db.Integer, primary_key=True)
     hash = db.Column(db.String(20))
 

@@ -11,11 +11,12 @@ from tmaps.extensions.database import db as _db
 
 
 @pytest.fixture(scope='session')
-def app(request):
+def app(request, tmpdir_factory):
     """Session-wide test `Flask` application."""
 
     cfg = flask.Config(p.join(p.dirname(tmaps.__file__), p.pardir))
     cfg.from_envvar('TMAPS_SETTINGS_TEST')
+    cfg['GC3PIE_SESSION_DIR'] = str(tmpdir_factory.mktemp('gc3pie'))
     app = create_app(cfg)
 
     # Establish an application context before running the tests.
@@ -39,16 +40,6 @@ def db(app, tmpdir_factory, request):
     _db.drop_all()
     _db.create_all()
 
-    with app.app_context():
-        # Add some testing data
-        userdir = str(tmpdir_factory.mktemp('testuser'))
-        u = User(name='testuser',
-                 email='testuser@something.com',
-                 location=userdir,
-                 password='123')
-        _db.session.add(u)
-        _db.session.commit()
-
     def teardown():
         # Commit before dropping, otherwise pytest will hang!
         # _db.session.commit()
@@ -59,18 +50,18 @@ def db(app, tmpdir_factory, request):
     return _db
 
 
-@pytest.fixture(scope='module')
-def authclient(app):
+def make_test_client(app, user, password):
     client = app.test_client()
 
     rv = client.post(
         '/auth',
         headers={'content-type': 'application/json'},
         data=json.dumps({
-            'username': 'testuser',
-            'password': '123'
+            'username': user.name,
+            'password': password
         })
     )
+    assert rv.status_code == 200
     data = json.loads(rv.data)
     token = data['access_token']
 
@@ -86,6 +77,18 @@ def authclient(app):
         setattr(client, method, gen_authed_meth())
 
     return client
+
+
+@pytest.fixture(scope='module')
+def authclient(app, testuser):
+    cl = make_test_client(app, testuser, '123')
+    return cl
+
+
+@pytest.fixture(scope='module')
+def authclient2(app, testuser2):
+    cl = make_test_client(app, testuser2, '123')
+    return cl
 
 
 @pytest.fixture(scope='module')

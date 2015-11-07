@@ -1,13 +1,12 @@
 import json
 
 from flask import jsonify, request
-from flask_jwt import jwt_required
+from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
-from tmaps.models import AppState, AppStateSnapshot, AppStateBase, AppStateShare, User
 
+from tmaps.models import AppState, AppStateSnapshot, AppStateShare, User
 from tmaps.extensions.database import db
 from tmaps.api import api
-
 from tmaps.extensions.encrypt import decode
 
 
