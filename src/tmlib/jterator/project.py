@@ -111,7 +111,7 @@ class JtProject(object):
     def _get_pipe_file(self, directory=None):
         if not directory:
             directory = self.project_dir
-        pipe_files = glob.glob(os.path.join(directory, '*.pipe'))
+        pipe_files = glob.glob(os.path.join(directory, '*.pipe.yml'))
         if len(pipe_files) == 1:
             return pipe_files[0]
         elif len(pipe_files) > 1:
@@ -126,7 +126,7 @@ class JtProject(object):
             directory = os.path.join(self.project_dir, 'handles')
         else:
             directory = os.path.join(directory, 'handles')
-        handles_files = glob.glob(os.path.join(directory, '*.handles'))
+        handles_files = glob.glob(os.path.join(directory, '*.handles.yml'))
         if not handles_files:
             # We don't raise an exception, because an empty handles folder
             # can occur, for example upon creation of a new project
@@ -135,7 +135,11 @@ class JtProject(object):
 
     @staticmethod
     def _get_descriptor_name(filename):
-        return os.path.splitext(os.path.basename(filename))[0]
+        return os.path.splitext(
+                    os.path.splitext(
+                            os.path.basename(filename)
+                    )[0]
+                )[0]
 
     @staticmethod
     def _replace_values(old, new):
@@ -223,7 +227,9 @@ class JtProject(object):
         return sorted_handles
 
     def _create_pipe_file(self, repo_dir):
-        pipe_file = os.path.join(self.project_dir, '%s.pipe' % self.pipe_name)
+        pipe_file = os.path.join(
+                        self.project_dir,
+                        '%s.pipe.yml' % self.pipe_name)
         pipe_skeleton = {
             'project': {
                 'lib': repo_dir,
@@ -252,15 +258,16 @@ class JtProject(object):
             with YamlReader() as reader:
                 pipe_content = reader.read(pipe_file, use_ruamel=True)
             pipe_content['project']['lib'] = repo_dir
-            new_pipe_file = os.path.join(self.project_dir,
-                                         '%s.pipe' % self.pipe_name)
+            new_pipe_file = os.path.join(
+                                self.project_dir,
+                                '%s.pipe.yml' % self.pipe_name)
             with YamlWriter() as writer:
                 writer.write(new_pipe_file, pipe_content, use_ruamel=True)
         shutil.copytree(os.path.join(skel_dir, 'handles'),
                         os.path.join(self.project_dir, 'handles'))
 
     def _remove_pipe_file(self, name):
-        pipe_file = os.path.join(self.project_dir, '%s.pipe' % name)
+        pipe_file = os.path.join(self.project_dir, '%s.pipe.yml' % name)
         os.remove(pipe_file)
 
     def _remove_handles_folder(self):
@@ -304,7 +311,7 @@ class JtProject(object):
                     writer.write(handles_file, mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(os.path.join(self.project_dir,
-                                           'handles', '*.handles'))
+                                           'handles', '*.handles.yml'))
         for f in existing_handles_files:
             if f not in handles_files:
                 os.remove(f)
@@ -346,6 +353,9 @@ class JtProject(object):
         Update the content of *.pipe* and *.handles* files on disk
         according to modifications to the pipeline and module descriptions.
         '''
+        if not os.path.exists(self.project_dir):
+            raise PipelineOSError(
+                    'Project does not exist: %s' % self.project_dir)
         self._modify_pipe()
         self._modify_handles()
 
@@ -375,8 +385,10 @@ class JtProject(object):
             skel_dir = os.path.expandvars(skel_dir)
             skel_dir = os.path.expanduser(skel_dir)
             skel_dir = os.path.abspath(skel_dir)
-        if not os.path.exists(self.project_dir):
-            os.mkdir(self.project_dir)
+        if os.path.exists(self.project_dir):
+            raise PipelineOSError(
+                    'Project already exists. Remove existing project first.')
+        os.mkdir(self.project_dir)
         if skel_dir:
             self._create_project_from_skeleton(skel_dir, repo_dir)
         else:
@@ -389,6 +401,9 @@ class JtProject(object):
         '''
         # remove_pipe_file(self.project_dir, self.pipe['name'])
         # remove_handles_folder(self.project_dir)
+        if not os.path.exists(self.project_dir):
+            raise PipelineOSError(
+                    'Project does not exist: %s' % self.project_dir)
         shutil.rmtree(self.project_dir)
 
 
@@ -450,7 +465,7 @@ class JtAvailableModules(object):
 
     def _get_corresponding_handles_file(self, module_name):
         handles_dir = os.path.join(self.repo_dir, 'handles')
-        search_string = '^%s\.handles$' % module_name
+        search_string = '^%s\.handles.yml$' % module_name
         regexp_pattern = re.compile(search_string)
         handles_files = natsorted([
             os.path.join(handles_dir, f)

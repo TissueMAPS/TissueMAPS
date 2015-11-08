@@ -56,19 +56,23 @@ class PipelineChecker(object):
             raise PipelineDescriptionError(
                     'Pipe file must contain the key "layers" '
                     'as a subkey of "images".')
-        if not isinstance(self.pipe_description['images']['layers'], list):
-            raise PipelineDescriptionError(
-                    'The value of "layers" in the "images" section '
-                    'of the pipe file must be a list.')
+        if self.pipe_description['images']['layers']:
+            if not isinstance(self.pipe_description['images']['layers'], list):
+                raise PipelineDescriptionError(
+                        'The value of "layers" in the "images" section '
+                        'of the pipe file must be a list.')
 
         # Check for presence of required keys
         required_subkeys = ['name']
-        for pattern_description in self.pipe_description['images']['layers']:
-            for key in required_subkeys:
-                if key not in pattern_description:
-                    raise PipelineDescriptionError(
-                            'Each element of "layers" in the "images" section '
-                            'in the pipe file requires a key "%s".' % key)
+        layers = self.pipe_description['images']['layers']
+        if layers:
+            for pattern_description in layers:
+                for key in required_subkeys:
+                    if key not in pattern_description:
+                        raise PipelineDescriptionError(
+                                'Each element of "layers" in the "images" '
+                                'section in the pipe file requires a key "%s".'
+                                % key)
 
         # Check "pipeline" section
         if 'pipeline' not in self.pipe_description.keys():
@@ -166,12 +170,14 @@ class PipelineChecker(object):
                     raise PipelineDescriptionError(
                             'Handles file must contain the key "%s".' % key)
                 elif key == 'input':
+                    if not handles[key]:
+                        raise ValueError(
+                                '"input" cannot be empty: %s' % handles_path)
                     if not isinstance(handles[key], list):
                         raise TypeError(
                                 'The value of "%s" in the '
                                 '"input" section of the handles '
                                 'file must be a list.' % key)
-
             required_subkeys = ['name', 'value', 'class']
             for input_arg in handles['input']:
                 for key in required_subkeys:
@@ -265,22 +271,21 @@ class PipelineChecker(object):
                         # We only check for non-empty data passed via the HDF5 file
                         continue
                     name = input_arg['value']
-                    layer_names = [
-                        layer['name']
-                        for layer in self.pipe_description['images']['layers']
-                    ]
-                    if name in layer_names:
-                        # These names are written into the HDF5 file by Jterator
-                        # and are therefore not created in the pipeline.
-                        # So there is no need to check them here.
-                        continue
-                    if input_arg['value'] not in outputs:
-                        print input_arg['name']
-                        print input_arg['value']
-                        raise PipelineDescriptionError(
-                                'Input "%s" of module "%s" is not '
-                                'created upstream in the pipeline.'
-                                % (input_arg['name'], module['handles']))
+                    layers = self.pipe_description['images']['layers']
+                    if layers:
+                        layer_names = [layer['name'] for layer in layers]
+                        if name in layer_names:
+                            # These names are written into the HDF5 file by
+                            # the program and are therefore not created
+                            # upstream in the pipeline.
+                            continue
+                        if input_arg['value'] not in outputs:
+                            print input_arg['name']
+                            print input_arg['value']
+                            raise PipelineDescriptionError(
+                                    'Input "%s" of module "%s" is not '
+                                    'created upstream in the pipeline.'
+                                    % (input_arg['name'], module['handles']))
 
                 # Store all upstream output arguments
                 for output_arg in handles['output']:

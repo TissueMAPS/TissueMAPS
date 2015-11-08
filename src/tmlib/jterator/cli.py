@@ -62,23 +62,24 @@ class Jterator(CommandLineInterface):
                     experiment=self.experiment,
                     prog_name=self.name,
                     verbosity=self.verbosity,
-                    pipe_name=self.pipeline,
+                    pipe_name=self.pipeline_name,
                     headless=self.headless)
 
-    def create(self, create_args):
+    def create(self, args):
         '''
         Initialize an instance of the API class corresponding to the specific
         command line interface and process arguments of the "create" subparser.
 
         Parameters
         ----------
-        create_args: tmlib.args.CreateArgs
+        args: tmlib.args.CreateArgs
             method-specific arguments
         '''
         self._print_logo()
         api = self._api_instance
         logger.info('create project: %s' % api.project_dir)
-        api.project.create(create_args.repo_dir, create_args.skel_dir)
+        api.project.create(args.variable_args.repo_dir,
+                           args.variable_args.skel_dir)
 
     def remove(self, args):
         '''
@@ -126,6 +127,10 @@ class Jterator(CommandLineInterface):
         :py:mod:`tmlib.jterator.argparser`
         '''
         experiment = Experiment(args.experiment_dir)
-        cli = Jterator(experiment, args.verbosity,
-                       args.pipeline, not args.plot)
+        if args.method_name == 'run':
+            cli = Jterator(experiment, args.verbosity, args.pipeline,
+                           not args.plot)
+        else:
+            cli = Jterator(experiment, args.verbosity, args.pipeline,
+                           True)
         cli._call(args)

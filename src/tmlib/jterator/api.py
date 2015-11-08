@@ -17,6 +17,7 @@ from .. import image_utils
 from ..readers import YamlReader
 from ..api import ClusterRoutines
 from ..errors import PipelineDescriptionError
+from ..errors import PipelineOSError
 from ..writers import DatasetWriter
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     project_dir=self.project_dir, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
 
-    @cached_property
+    @property
     def project_dir(self):
         '''
         Returns
@@ -84,10 +85,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             directory where joblist file, pipeline and module descriptor files,
             log output, figures and data will be stored
         '''
-        self._project_dir = os.path.join(self.experiment.dir, 'tmaps',
-                                         '%s_%s' % (self.prog_name,
-                                                    self.pipe_name))
-        return self._project_dir
+        project_dir = os.path.join(
+                            self.experiment.dir, 'tmaps',
+                            '%s_%s' % (self.prog_name, self.pipe_name))
+        return project_dir
 
     @property
     def project(self):
@@ -95,12 +96,15 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Returns
         -------
         tmlib.jterator.project.JtProject
-            jterator project object
+            object representation of a jterator project
         '''
         return self._project
 
     @project.setter
     def project(self, value):
+        if not isinstance(value, JtProject):
+            raise TypeError('Attribute "project" must have type '
+                            'tmlib.jterator.project.JtProject')
         self._project = value
 
     def check_pipeline(self):
@@ -294,14 +298,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # TODO: add some metadata, such as the name of the image file
         h5py.File(data_file, 'w').close()
 
-    def create_job_descriptions(self, **kwargs):
+    def create_job_descriptions(self, args):
         '''
         Create job descriptions for parallel computing.
 
         Parameters
         ----------
-        **kwargs: dict
-            no additional arguments used
+        args: tmlib.metaconfig.args.JteratorInitArgs
+            program-specific arguments
 
         Returns
         -------
@@ -312,20 +316,31 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
-        layer_names = [
-            layer['name']
-            for layer in self.project.pipe['description']['images']['layers']
-        ]
+        layers = self.project.pipe['description']['images']['layers']
 
-        if all([name is None for name in layer_names]):
-            raise PipelineDescriptionError(
-                    'At least one layer needs to be specified')
+        layer_names = [layer['name'] for layer in layers]
+
+        # if all([name is None for name in layer_names]):
+        #     raise PipelineDescriptionError(
+        #             'At least one layer needs to be specified')
 
         images = dict()
         for name in layer_names:
             if name is None:
                 continue
             images[name] = self.experiment.layer_metadata[name]
+
+        if not images:
+            # This is useful for testing purposes, where a pipeline should
+            # be run that doesn't require any input
+            logger.warning('no layers provided')
+            logger.info('create one empty job description')
+            job_descriptions['run'] = [{
+                'id': 1,
+                'inputs': dict(),
+                'outputs': dict()
+            }]
+            return job_descriptions
 
         batches = [
             {k: v.filenames[i] for k, v in images.iteritems()}
@@ -435,8 +450,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         job_id=job_id,
                         experiment_dir=self.experiment.dir,
                         headless=self.headless)
-            logger.info('run module "%s": %s'
-                        % (module.name, module.module_file))
+            logger.info('run module "%s"', module.name)
+            logger.debug('module file: %s', module.module_file)
             out = module.run(inputs, self.engines[module.language])
             if not self.headless:
                 # The output is also included in log report of the job.

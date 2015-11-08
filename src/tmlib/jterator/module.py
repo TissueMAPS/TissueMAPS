@@ -185,7 +185,8 @@ class ImageProcessingModule(object):
         engine.eval("out = evalc('{0}')".format(func_call))
         out = engine.get('out')
         out = re.sub(r'\n$', '', out)  # naicify string
-        print out  # print to standard output
+        if out:
+            print out  # print to standard output
         for i, name in enumerate(output_names):
             m_out = engine.get('%s' % name)
             logger.debug('value of OUTPUT "{name}":\n{value}'.format(
@@ -240,6 +241,15 @@ class ImageProcessingModule(object):
         func = robjects.globalenv['{0}'.format(self.name)]
         logger.debug('evaluating R function with INPUTS: "%s"'
                      % '", "'.join(inputs.keys()))
+        # R doesn't have unsigned integer types
+        for k, v in inputs.iteritems():
+            if isinstance(v, np.ndarray):
+                if v.dtype == np.uint16 or v.dtype == np.uint8:
+                    logging.debug(
+                        'module "%s" input argument "%s": '
+                        'convert unsigned integer data type to integer',
+                        self.name, k)
+                    inputs[k] = v.astype(int)
         args = robjects.ListVector({k: v for k, v in inputs.iteritems()})
         base = importr('base')
         r_var = base.do_call(func, args)
