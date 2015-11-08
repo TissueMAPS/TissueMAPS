@@ -2,7 +2,7 @@ import json
 import os
 import os.path as p
 
-from flask import jsonify, request, send_from_directory, send_file
+from flask import jsonify, request, send_from_directory, send_file, current_app
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
@@ -225,13 +225,48 @@ def convert_images(exp_id):
     if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
         return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
-    # e.update(creation_stage='CONVERTING_IMAGES')
+    e.update(creation_stage='CONVERTING_IMAGES')
 
-    # do stuff
-    response = {
-        channels: []
-    }
+    # TODO: Check that data has the correct structure
+    data = json.loads(request.data)
+    metaconfig_args = data['metaconfig']
+    imextract_args = data['imextract']
 
-    # e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+    engine = current_app.extensions['gc3pie'].engine
+    # TODO: Start conversion
 
-    return jsonify(response)
+    e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+
+    # TODO: Return thumbnails
+    return 'Creation ok', 200
+
+
+@api.route('/experiments/<experiment_id>/cells', methods=['GET'])
+@jwt_required()
+def get_cells(experiment_id):
+    ex = Experiment.get(experiment_id)
+    if not ex:
+        return RESOURCE_NOT_FOUND_RESPONSE
+
+    loc = os.path.join(ex.location, 'outlines.json')
+    return send_file(loc)
+
+
+
+@api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])
+@jwt_required()
+def change_creation_state(exp_id):
+    e = Experiment.get(exp_id)
+    if not e:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+
+    data = json.loads(request.data)
+    new_stage = data['stage']
+
+    if new_stage == 'WAITING_FOR_IMAGE_CONVERSION' and e.is_ready_for_image_conversion:
+        e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+        return 'Stage changed', 200
+    else:
+        return 'Stage change impossible', 400

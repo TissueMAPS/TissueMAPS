@@ -193,6 +193,14 @@ class Experiment(HashIdModel, CRUDMixin):
 
         return layers
 
+    @property
+    def is_ready_for_image_conversion(self):
+        all_plate_sources_ready = \
+            all([pls.is_ready_for_processing for pls in self.plate_sources])
+        is_ready = \
+            self.creation_stage != 'CONVERTING_IMAGES' and all_plate_sources_ready
+        return is_ready
+
     def as_dict(self):
         return {
             'id': self.hash,
