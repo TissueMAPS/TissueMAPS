@@ -1,19 +1,10 @@
 import numpy as np
 import collections
-import jtapi
+import jtlib
 
 
 def initial_py_module(**kwargs):
-    InputImage = np.random.random((100, 100, 10))
-
-    print('>>>>> Image has type "{0}" and dimensions "{1}".'.format(
-          str(InputImage.dtype), str(InputImage.shape)))
-
-    print('>>>>> Pixel value at position [1, 2] (0-based): {0}'.format(
-          InputImage[1, 2]))
-
-    data = dict()
-    jtapi.writedata(data, kwargs['data_file'])
+    InputImage = np.arange(300).reshape((3, 10, 10)).astype(np.uint16)
 
     output = collections.namedtuple('Output', ['OutputImage'])
     return output(InputImage)

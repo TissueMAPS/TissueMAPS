@@ -1,17 +1,20 @@
-library(jtapi)
+library(jtlib)
 
 r_module <- function(InputImage, ...){
 
     dots <- list(...)
 
-    cat(sprintf('>>>>> Image has type "%s" and dimensions "%s".\n',
-          		toString(typeof(InputImage)), toString(dim(InputImage))))
+    stopifnot(all(InputImage == floor(InputImage)))
 
-    cat(sprintf('>>>>> Pixel value at position [2, 3] (1-based): %s\n',
-                toString(InputImage[2, 3, ])))
+    stopifnot(dim(InputImage) == c(3, 10, 10))
 
-    data <- list()
-    jtapi::writedata(data, dots$data_file)
+    stopifnot(InputImage[2, 3, 1] == 120)
+
+    # cat(sprintf('>>>>> Image has type "%s" and dimensions "%s".\n',
+    #       		toString(typeof(InputImage)), toString(dim(InputImage))))
+
+    # cat(sprintf('>>>>> Pixel value at position [2, 3] (1-based): %s\n',
+    #             toString(InputImage[2, 3, ])))
 
     output <- list()
     output[['OutputImage']] <- InputImage

@@ -15,8 +15,6 @@ project:
 # Define how jobs are created and processed:
 images:
   layers:
-  - name: 
-    correct:
 
 
 # Define path to modules (executable files) and handles (YAML files)
@@ -33,10 +31,6 @@ pipeline:
 - module: '{lib}/r_module.r'
   handles: handles/r_module.handles
   active: true
-
-- module: '{lib}/jl_module.jl'
-  handles: handles/jl_module.handles
-  active: false
 
 - module: '{lib}/py_module.py'
   handles: handles/py_module.handles
