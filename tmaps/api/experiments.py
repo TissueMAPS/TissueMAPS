@@ -20,28 +20,20 @@ from tmaps.api.responses import (
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
 def expdata_file(experiment_id, layer_name, filename):
-    """
-    Send a tile image for a specific layer.
-    This route is accessed by openlayers.
-
-    """
-    print experiment_id
-    print layer_name
+    """Send a tile image for a specific layer.
+    This route is accessed by openlayers."""
     # TODO: This method should also be flagged with `@jwt_required()`.
     # openlayers needs to send the token along with its request for files s.t.
     # the server can check if the user is authorized to access the experiment
     # with id `experiment_id`.
-    is_authorized = True
     # import ipdb; ipdb.set_trace()
-    experiment_id = decode(experiment_id)
+    e = Experiment.get(experiment_id)
+    is_authorized = True
     if is_authorized:
-        filepath = p.join(Experiment.query.get(experiment_id).location,
-                          'layers',
-                          layer_name,
-                          filename)
+        filepath = p.join(e.location, 'layers', layer_name, filename)
         return send_file(filepath)
     else:
-        return 'You have no permission to access this ressource', 401
+        return NOT_AUTHORIZED_RESPONSE
 
 
 # TODO: Make auth required. tools subapp should receive token
@@ -201,19 +193,6 @@ def delete_experiment(experiment_id):
     return 'Deletion ok', 200
 
 
-# @api.route('/experiments/<exp_id>/create-layers', methods=['PUT'])
-# @jwt_required()
-# def create_layers(exp_id):
-#     e = Experiment.query.get(exp_id)
-#     if not e.belongs_to(current_identity):
-#         return NOT_AUTHORIZED_RESPONSE
-#     plates_ready = all([pl.is_ready_for_processing for pl in e.plates])
-#     exp_ready = len(e.plates) != 0 and plates_ready
-
-#     if not exp_ready:
-#         return 'Experiment not ready', 500
-
-
 @api.route('/experiments/<exp_id>/convert-images', methods=['POST'])
 @jwt_required()
 def convert_images(exp_id):
@@ -250,7 +229,6 @@ def get_cells(experiment_id):
 
     loc = os.path.join(ex.location, 'outlines.json')
     return send_file(loc)
-
 
 
 @api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])
