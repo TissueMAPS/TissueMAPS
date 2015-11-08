@@ -1,12 +1,11 @@
-"""
-A minimal web application for checking the status of a GC3Pie session.
-
-Provides a REST API to perform the basic GC3Pie operations on jobs,
-plus a status page reporting some basic metrics.
-
-It is implemented as a `Flask <http://flask.pocoo.org/>` "blueprint"
-for easier embedding into larger web applications.
-"""
+from __future__ import absolute_import
+from collections import defaultdict
+import functools
+import itertools
+import time
+import gc3libs
+import gc3libs.core
+import gc3libs.session
 # Copyright (C) 2015 S3IT, University of Zurich.
 #
 # Authors:
@@ -24,24 +23,9 @@ for easier embedding into larger web applications.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-from __future__ import absolute_import
 
 __docformat__ = 'reStructuredText'
 __version__ = '$Revision$'
-
-
-# stdlib imports
-from collections import defaultdict
-import functools
-import itertools
-import threading
-import time
-
-# local imports
-import gc3libs
-import gc3libs.core
-import gc3libs.session
 
 
 def _get_scheduler_and_lock_factory(lib):
@@ -51,24 +35,39 @@ def _get_scheduler_and_lock_factory(lib):
     The scheduler will be a scheduler class from the APScheduler_
     framework (which see for the API), and the lock factory is an
     appropriate locking object for synchronizing independently running
-    tasks. Example::
+    tasks.
 
-        sched_factory, lock_factory = _get_scheduler_and_lock_factory('threading')
-        sched = sched_factory()
-        sched.add_job(task1, 'interval', seconds=5)
-        sched.add_job(task2, 'interval', seconds=30)
+    Parameters
+    ----------
+    lib: str
+        ``"threading"`` or ``"gevent"``,
+        each of them selects a scheduler and lock objects compatible with
+        the named framework for concurrent processing
 
-        shared_data_lock = lock_factory()
+    Returns
+    -------
+    tuple
 
-        def task1():
-          # ...
-          with shared_data_lock:
-            # modify shared data
+    Examples
+    --------
+    sched_factory, lock_factory = _get_scheduler_and_lock_factory("threading")
+    sched = sched_factory()
+    sched.add_job(task1, "interval", seconds=5)
+    sched.add_job(task2, "interval", seconds=30)
 
-    Argument `lib` is one of: ``threading``, ``gevent``, ``tornado``,
-    ``asyncio`` (Python 3.5+ "async" system), ``twisted``, ``qt``;
-    each of them selects a scheduler and lock objects compatible with
-    the named framework for concurrent processing.
+    shared_data_lock = lock_factory()
+
+    def task1():
+      # ...
+      with shared_data_lock:
+        # modify shared data
+
+    Raises
+    ------
+    NotImplementedError
+        when `lib` is one of ``tornado``, ``asyncio``, ``twisted`` or ``qt``
+    ValueError
+        when `lib` is unknown
 
     .. _APScheduler: https://apscheduler.readthedocs.org/en/latest/userguide.html
     """
@@ -132,6 +131,18 @@ class BgEngine(object):
     """
     def __init__(self, lib, *args, **kwargs):
         """
+        Initialize an instance of class `BgEngine`:class:.
+
+        Parameters
+        ----------
+        lib: str
+            library for scheduler, either ``"threading"`` or ``"gevent"``
+        args: list, optional
+            additional arguments as array, the first and only element must be
+            an instance of :py:class:`gc3lib.core.Engine`
+        kwargs: dict, optional
+            additional arguments that can be parsed to the :py:class:`Engine`
+            instance as a mapping of key-value pairs
         """
         sched_factory, lock_factory = _get_scheduler_and_lock_factory(lib)
         self._scheduler = sched_factory()
@@ -158,7 +169,6 @@ class BgEngine(object):
         # no result caching until an update is really performed
         self._progress_last_run = 0
 
-
     #
     # control main loop scheduling
     #
@@ -166,6 +176,11 @@ class BgEngine(object):
     def start(self, interval):
         """
         Start triggering the main loop every `interval` seconds.
+
+        Parameters
+        ----------
+        interval: int
+            looping interval for the scheduler
         """
         self.running = True
         self._scheduler.add_job((lambda: self._perform()),
@@ -179,7 +194,14 @@ class BgEngine(object):
         """
         Stop background execution of the main loop.
 
-        Call `start`:meth: to resume running.
+        Parameters
+        ----------
+        wait: bool
+            to wait until all submitted jobs have been executed
+
+        Note
+        ----
+        Call :py:meth:`start` to resume running.
         """
         gc3libs.log.info(
             "Stopping background execution of Engine %s ...", self._engine)
@@ -323,15 +345,21 @@ class BgEngine(object):
     @at_most_once_per_cycle
     def get_stats_data(self):
         """
-        Return global statistics about the jobs in the Engine.
-
         For each task state (and pseudo-state like ``ok`` or
         ``failed``), two values are returned: the count of managed
         tasks that were in that state when `Engine.progress()` was
         last run, and what percentage of the total managed tasks this
         is.
 
-        This is basically an enriched version of `Engine.stats()`.
+        Returns
+        -------
+        dict
+            global statistics about the jobs in the :py:class:`Engine`
+
+        Note
+        ----
+        This is basically an enriched version of
+        :py:meth:`gc3libs.core.Engine.stats()`.
         """
         data = {}
         stats = self._engine.stats()
@@ -342,46 +370,78 @@ class BgEngine(object):
         return data
 
     @at_most_once_per_cycle
-    def get_task_data(self, task_, monitoring_depth=2):
-        def get_info(task, i):
+    def get_task_data(self, task, monitoring_depth=2):
+        """
+        Provide the following data for each task and recursively for each
+        subtask (until `monitoring_depth` is reached) in form of a mapping:
+
+            * "name" (*str*): name of task
+            * "state" (*g3clibs.Run.State*): state of the task
+            * "is_live" (*bool*): whether the task is currently processed
+            * "is_done" (*bool*): whether the task is done
+            * "failed" (*bool*): whether the task failed, i.e. terminated
+              unsuccessfully
+            * "percent_done" (*float*): percent of subtasks that are done
+
+
+        Parameters
+        ----------
+        task: gc3libs.workflow.TaskCollection or gc3libs.Task
+            a collection of GC3Pie jobs that was submitted to the
+            :py:class:`Engine` and whose status should be monitored
+        monitoring_depth: int, optional
+            recursion depth, i.e. how detailed subtasks of `task` should be
+            monitored (default: ``2``)
+
+        Returns
+        -------
+        dict
+            information for each task and its subtasks
+        """
+        def get_info(task_, i):
             is_live_states = {
                 gc3libs.Run.State.SUBMITTED,
                 gc3libs.Run.State.RUNNING,
                 gc3libs.Run.State.STOPPED
             }
-            is_done = task.execution.state == gc3libs.Run.State.TERMINATED,
-            failed = task.execution.exitcode != 0
+            is_done = task_.execution.state == gc3libs.Run.State.TERMINATED,
+            failed = task_.execution.exitcode != 0
             data = {
-                'name':     task.jobname,
-                'state':    task.execution.state,
-                'is_live':  task.execution.state in is_live_states,
+                'id': str(task_),
+                'name': task_.jobname,
+                'state': task_.execution.state,
+                'is_live': task_.execution.state in is_live_states,
                 'is_done': is_done,
                 'failed': is_done and failed,
                 'percent_done': 0.0  # fix later, if possible
             }
-            if hasattr(task, 'persistent_id'):
-                data['id'] = str(task.persistent_id)
+            if hasattr(task_, 'persistent_id'):
+                data['id'] = str(task_.persistent_id)
 
-            is_task_collection = isinstance(task, gc3libs.workflow.TaskCollection)
-            is_task = isinstance(task, gc3libs.Task)
+            is_task_collection = isinstance(task_, gc3libs.workflow.TaskCollection)
+            is_task = isinstance(task_, gc3libs.Task)
 
             done = 0.0
             if is_task_collection:
-                for child in task.tasks:
+                for child in task_.tasks:
                     if (child.execution.state == gc3libs.Run.State.TERMINATED):
                         done += 1
-                data['percent_done'] = done / len(task.tasks) * 100
+                data['percent_done'] = done / len(task_.tasks) * 100
             elif is_task:
-                if task.execution.state == gc3libs.Run.State.TERMINATED:
+                # For an individual task it is difficult to estimate to which
+                # extent the task has been completed. For simplicity and
+                # consistency, we just set "percent_done" to 100% once the job
+                # is TERMINATED and 0% otherwise
+                if task_.execution.state == gc3libs.Run.State.TERMINATED:
                     data['percent_done'] = 100
             else:
                 raise NotImplementedError(
-                    "Unhandled task class %r" % (task.__class__))
+                    "Unhandled task class %r" % (task_.__class__))
 
             monitoring_depth_reached = i == monitoring_depth
             if is_task_collection and not monitoring_depth_reached:
-                data['subtasks'] = [get_info(t, i + 1) for t in task.tasks]
+                data['subtasks'] = [get_info(t, i + 1) for t in task_.tasks]
 
             return data
 
-        return get_info(task_, 0)
+        return get_info(task, 0)
