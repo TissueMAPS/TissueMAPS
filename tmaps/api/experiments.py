@@ -268,5 +268,12 @@ def change_creation_state(exp_id):
     if new_stage == 'WAITING_FOR_IMAGE_CONVERSION' and e.is_ready_for_image_conversion:
         e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
         return 'Stage changed', 200
+    elif new_stage == 'WAITING_FOR_UPLOAD':
+        e.update(creation_stage='WAITING_FOR_UPLOAD')
+        return 'Stage changed', 200
+    # TODO: Check that all plates have been created, only then allow changing states
+    elif new_stage == 'WAITING_FOR_PYRAMID_CREATION':
+        e.update(creation_stage='WAITING_FOR_PYRAMID_CREATION')
+        return 'Stage changed', 200
     else:
         return 'Stage change impossible', 400
