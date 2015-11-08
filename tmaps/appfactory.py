@@ -75,21 +75,7 @@ def create_app(config):
     jwt.init_app(app)
     db.init_app(app)
     redis_store.init_app(app)
-
-    if not app.config.get('GC3PIE_SESSION_DIR'):
-        raise ValueError('No gc3pie session dir specified!')
-
-    # Gc3pie expects URIs pointing to postgres databases
-    # to start with postgres:// instead of postgresql://.
-    gc3pie_store_uri = \
-        app.config['SQLALCHEMY_DATABASE_URI'].\
-        replace('postgresql', 'postgres')
-    sql_backed_session = gc3libs.session.Session(
-        app.config.get('GC3PIE_SESSION_DIR'),
-        store_url=gc3pie_store_uri,
-        table_name='gc3pie_tasks'
-    )
-    gc3pie_engine.init_app(app, sql_backed_session, poll_interval=5)
+    gc3pie_engine.init_app(app)
 
     # Import and register blueprints
     from api import api
