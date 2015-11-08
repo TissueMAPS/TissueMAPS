@@ -456,7 +456,7 @@ class CommandLineInterface(object):
                 The descriptions are stored on disk in form of JSON files.
                 Note that in case of the existence of a previous submission,
                 job descriptions and log outputs will be overwritten
-                unless the "--backup" or "--show" argument is specified.
+                unless the "--backup" or "--display" argument is specified.
                 All outputs created by a previous submission will also be
                 removed!
             '''
