@@ -27,7 +27,7 @@ def list_jtprojects(directory):
         os.path.join(directory, name)
         for name in os.listdir(directory)
         if os.path.isdir(os.path.join(directory, name))
-        and glob.glob(os.path.join(directory, name, '*.pipe'))
+        and glob.glob(os.path.join(directory, name, '*.pipe.yml'))
     ]
     if not projects:
         logger.warning('No Jterator projects found in %s' % directory)
