@@ -33,6 +33,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--port', action='store', type=int, default=5002,
         help='the port on which the server should listen')
+    parser.add_argument(
+        '--threaded', action='store_true', default=False,
+        help='if the dev server should run in multi-threaded mode')
     args = parser.parse_args()
 
-    app.run(port=args.port, debug=True)
+    app.run(port=args.port, debug=True, threaded=args.threaded)

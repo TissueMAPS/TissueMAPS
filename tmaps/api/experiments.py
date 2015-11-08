@@ -8,7 +8,7 @@ from flask.ext.jwt import current_identity
 
 import numpy as np
 
-from tmaps.models import Experiment
+from tmaps.models import Experiment, TaskSubmission
 from tmaps.extensions.encrypt import decode
 from tmaps.api import api
 from tmaps.api.responses import (
@@ -16,6 +16,11 @@ from tmaps.api.responses import (
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE
 )
+
+
+import gc3libs
+import logging
+# gc3libs.log.addHandler(logging.StreamHandler())
 
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
@@ -201,8 +206,8 @@ def convert_images(exp_id):
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
-    if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
-        return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
+    # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
+    #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
     e.update(creation_stage='CONVERTING_IMAGES')
 
@@ -212,7 +217,25 @@ def convert_images(exp_id):
     imextract_args = data['imextract']
 
     engine = current_app.extensions['gc3pie'].engine
+    session = current_app.extensions['gc3pie'].session
+
     # TODO: Start conversion
+
+    task = gc3libs.Application(
+        ['/bin/hostname'],
+        inputs=[],
+        outputs=[],
+        output_dir=p.join(e.location, 'demo_output'),
+        stdout=("hostname.log"),
+        join=True,
+        jobname=("hostname_task"))
+
+    persistent_id = session.add(task)
+
+    TaskSubmission.create(
+        submitting_user_id=current_identity.id,
+        experiment_id=e.id,
+        task_id=persistent_id)
 
     e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
 

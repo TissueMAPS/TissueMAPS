@@ -25,6 +25,7 @@ class ExperimentShare(Model, CRUDMixin):
     experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'),
                               primary_key=True)
     experiment = db.relationship('Experiment', uselist=False)
+
     # access_level = db.Column(db.Enum(*EXPERIMENT_ACCESS_LEVELS,
     #                                  name='access_level'))
 

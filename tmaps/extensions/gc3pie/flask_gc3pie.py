@@ -39,7 +39,18 @@ from flask import current_app
 from flask import _app_ctx_stack as stack
 
 import gc3libs
+
 from tmlib import engine as tmlib_engine
+from tmaps.models import Model
+from tmaps.extensions.database import db
+
+
+class GC3PieTask(Model):
+    __tablename__ = 'gc3pie_tasks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.LargeBinary()
+    state = db.Column(db.String(128))
 
 
 class GC3Pie(object):
@@ -84,6 +95,9 @@ class GC3PieEngine(object):
         # Add existing tasks
         for task in session:
             engine.add(task)
+
+        # TODO: Add interval back to config
+        engine.start(interval=5)
 
     def _create_bg_engine(self):
         """Create and return a `tmlib.BgEngine`:class: instance."""
