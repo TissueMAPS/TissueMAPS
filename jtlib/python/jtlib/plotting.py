@@ -1,8 +1,9 @@
 import mpld3
 import numpy as np
 import mahotas as mh
+# from bokeh.plotting import save
 from bokeh.resources import CDN
-from bokeh.plotting import save
+from bokeh.embed import file_html
 from bokeh.palettes import Reds5, Greens5, Blues5, Oranges5, BuPu5
 import matplotlib as mpl
 from matplotlib import cm
@@ -51,8 +52,10 @@ def save_bk_figure(fig, figure_file):
     figure_file: str
         name of the figure file
     '''
-    save(obj=fig, resources=CDN, filename=figure_file)
-
+    # save(obj=fig, resources='inline', filename=figure_file)
+    html = file_html(plot_object=fig, resources=CDN, title='jterator figure')
+    with open(figure_file, 'w') as f:
+        f.write(html)
     # # One could modify the div element dynamically
     # script, div = components(fig)
     # html = etree.HTML(div)
