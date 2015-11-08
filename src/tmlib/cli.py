@@ -339,9 +339,18 @@ class CommandLineInterface(object):
         self._required_inputs = api.list_input_files(self._job_descriptions)
         return self._required_inputs
 
-    def build_jobs(self, virtualenv):
+    def build_jobs(self, virtualenv, monitoring_depth=1):
         '''
         Build *jobs* based on prior created job descriptions.
+
+        Parameters
+        ----------
+        virtualenv: str
+            name of a Python virtual environment that needs to be activated
+        monitoring_depth: int, optional
+            number of subjobs that should be monitored, i.e. for each detailed
+            information of the current status should be printed to the console
+            during the processing of the jobs (default: ``1``)
 
         Returns
         -------

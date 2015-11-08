@@ -1,5 +1,4 @@
 import os
-import re
 import yaml
 import glob
 import time
@@ -10,7 +9,7 @@ from abc import abstractproperty
 from cached_property import cached_property
 import gc3libs
 from gc3libs.quantity import Duration
-from gc3libs.session import Session
+from gc3libs.quantity import Memory
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
 import logging
@@ -167,10 +166,9 @@ class BasicClusterRoutines(object):
 
         def log_task_data(task_data):
             def log_recursive(data, i):
-                logger.info('%s: %s (%.2f %% done)',
-                            data['name'],
-                            data['state'],
-                            data['percent_done'])
+                logger.info('%s: %s (%d %%)',
+                            data['name'], data['state'],
+                            int(data['percent_done']))
                 if i <= monitoring_depth:
                     for st in data.get('subtasks', list()):
                         log_recursive(st, i+1)
@@ -202,6 +200,7 @@ class BasicClusterRoutines(object):
             task_data = bg.get_task_data(jobs, monitoring_depth)
 
             log_task_data(task_data)
+            logger.info('------------------------------------------')
 
             # break out of the loop when all jobs are done
             aggregate = bg.get_stats_data()
@@ -631,21 +630,23 @@ class ClusterRoutines(BasicClusterRoutines):
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
     def create_jobs(self, job_descriptions, virtualenv=None,
-                    duration='01:00:00'):
+                    duration=None, memory=None):
         '''
         Create a GC3Pie task collection of "jobs".
 
         Parameters
         ----------
         job_descriptions: Dict[List[dict]]
-            description of inputs and outputs or individual jobs
+            description of inputs and outputs of individual computational jobs
         virtualenv: str, optional
             name of a virtual environment that should be activated
             (default: ``None``)
         duration: str, optional
-            computational time for a single job to complete in HH:MM:SS format
-            (default: ``"01:00:00"``)
-
+            computational time that should be allocated for a single job;
+            in HH:MM:SS format (default: ``None``)
+        memory: int, optional
+            amount of memory in Megabyte that should be allocated for a single
+            job (default: ``None``)
 
         Returns
         -------
@@ -678,9 +679,12 @@ class ClusterRoutines(BasicClusterRoutines):
                     output_dir=self.log_dir,
                     jobname=jobname,
                     stdout=log_out_file,
-                    stderr=log_err_file,
-                    requested_walltime=Duration(duration)
+                    stderr=log_err_file
             )
+            if duration:
+                job.requested_walltime = Duration(duration)
+            if memory:
+                job.requested_memory = Memory(memory, Memory.MB)
             if virtualenv:
                 job.application_name = virtualenv
             run_jobs.add(job)
@@ -702,8 +706,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     output_dir=self.log_dir,
                     jobname=jobname,
                     stdout=log_out_file,
-                    stderr=log_err_file,
-                    requested_walltime=Duration(duration)
+                    stderr=log_err_file
             )
             if virtualenv:
                 collect_job.application_name = virtualenv
