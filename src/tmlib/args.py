@@ -257,6 +257,7 @@ class SubmitArgs(GeneralArgs):
         '''
         self.virtualenv = self._virtualenv_params['default']
         self.interval = self._interval_params['default']
+        self.depth = self._depth_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -265,7 +266,7 @@ class SubmitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'virtualenv', 'interval'}
+        return {'virtualenv', 'interval', 'depth'}
 
     @property
     def virtualenv(self):
@@ -321,6 +322,35 @@ class SubmitArgs(GeneralArgs):
             'default': 5,
             'help': '''
                 monitoring interval in seconds (default: 5)
+            '''
+        }
+
+    @property
+    def depth(self):
+        '''
+        Returns
+        -------
+        int
+            monitoring recursion depth, i.e. how detailed status information of
+            subtasks should be monitored during the processing of the jobs
+            (default: ``1``)
+        '''
+        return self._depth
+
+    @depth.setter
+    def depth(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "depth" must have type %s'
+                            % self._depth_params['type'])
+        self._depth = value
+
+    @property
+    def _depth_params(self):
+        return {
+            'type': int,
+            'default': 1,
+            'help': '''
+                recursion depth for subtask monitoring (default: 1)
             '''
         }
 

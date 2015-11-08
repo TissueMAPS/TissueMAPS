@@ -59,34 +59,6 @@ class BasicClusterRoutines(object):
             os.mkdir(self._log_dir)
         return self._log_dir
 
-    # @cached_property
-    # def status_dir(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     str
-    #         absolute path to the directory where status files are stored
-    #     '''
-    #     status_dir = os.path.join(self.project_dir, 'status')
-    #     if not os.path.exists(status_dir):
-    #         logging.debug('create directory for status files: %s', status_dir)
-    #         os.mkdir(status_dir)
-    #     return status_dir
-
-    # @property
-    # def status_file(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     str
-    #         absolute path to the file where the job status is written to
-    #     '''
-    #     # TODO: XML
-    #     status_file = os.path.join(
-    #         self.status_dir, '{project}.status'.format(
-    #                             project=os.path.basename(self.project_dir)))
-    #     return status_file
-
     @property
     def session_dir(self):
         '''
@@ -163,6 +135,7 @@ class BasicClusterRoutines(object):
         :py:meth:`
         '''
         logger.debug('monitoring interval: %ds' % monitoring_interval)
+        logger.debug('monitoring depth: %ds' % monitoring_depth)
 
         def log_task_data(task_data):
             def log_recursive(data, i):
@@ -175,20 +148,21 @@ class BasicClusterRoutines(object):
             log_recursive(task_data, 0)
 
         # Create an `Engine` instance for running jobs in parallel
+        logger.debug('start GC3Pie engine in the background')
         e = gc3libs.create_engine()
         # Put all output files in the same directory
         e.retrieve_overwrites = True
-
         bg = BgEngine('threading', e)
 
-        # Add task to engine instance:
+        # Add task to engine instance
+        logger.debug('add jobs to engine')
         bg.add(jobs)
 
         # start the background thread; instruct it to run `e.progress()`
         # every `monitoring_interval` seconds
         bg.start(monitoring_interval)
 
-        # periodically check the status of submitted jobs 
+        # periodically check the status of submitted jobs
         break_next = False
         while True:
 
