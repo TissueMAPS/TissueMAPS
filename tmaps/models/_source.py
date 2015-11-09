@@ -6,7 +6,7 @@ from ..extensions.database import db
 from utils import auto_remove_directory, auto_create_directory
 from tmaps.models import Experiment
 import shutil
-from tmlib import source as tmlib_source
+import tmlib.source
 from . import Model, CRUDMixin
 
 
@@ -21,7 +21,7 @@ ACQUISITION_UPLOAD_STATUS = (
 def _acquisition_loc(index, plate_id):
     """Return the directory path for a acquisition"""
     pls = PlateSource.get(plate_id)
-    dirname = tmlib_source.PlateAcquisition.ACQUISITION_DIR_FORMAT.\
+    dirname = tmlib.source.PlateAcquisition.ACQUISITION_DIR_FORMAT.\
                            format(index=index)
     return p.join(pls.location, dirname)
 
@@ -57,7 +57,7 @@ class PlateAcquisition(Model, CRUDMixin):
 
     @property
     def tmlib_object(self):
-        return tmlib_source.PlateAcquisition(self.location)
+        return tmlib.source.PlateAcquisition(self.location)
 
     @property
     def location(self):
@@ -105,13 +105,12 @@ class PlateAcquisition(Model, CRUDMixin):
 
 def _plate_source_loc(id, name, experiment_id):
     """Return the directory path for a plate"""
-    e = Experiment.query.get(experiment_id)
+    e = Experiment.get(experiment_id)
     sec_name = secure_filename(name)
-    dirname = tmlib_source.PlateSource.PLATE_SOURCE_DIR_FORMAT.\
+    dirname = tmlib.source.PlateSource.PLATE_SOURCE_DIR_FORMAT.\
                            format(name=sec_name)
     dirname = '%s__%d' % (dirname, id)
     return p.join(e.plate_sources_location, dirname)
-
 
 
 @auto_create_directory(lambda t: _plate_source_loc(t.id, t.name, t.experiment_id))
@@ -132,8 +131,7 @@ class PlateSource(Model, CRUDMixin):
 
     @property
     def tmlib_object(self):
-        # FIXME: Is the second argument necessary?
-        return tmlib_source.PlateSource(self.location)
+        return tmlib.source.PlateSource(self.location)
 
     @property
     def location(self):

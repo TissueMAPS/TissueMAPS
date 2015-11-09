@@ -3,6 +3,8 @@ import os.path as p
 import os
 from sqlalchemy import event
 
+from flask import current_app
+
 from tmaps.extensions.encrypt import encode
 from tmaps.extensions.database import db
 
@@ -43,7 +45,11 @@ def auto_remove_directory(get_location_func):
     def class_decorator(cls):
         def after_delete_callback(mapper, connection, target):
             loc = get_location_func(target)
-            shutil.rmtree(loc)
+            try:
+                shutil.rmtree(loc)
+            except OSError:
+                current_app.logger.warn('Can\'t remove dir, no such location: %s' % loc)
+
         event.listen(cls, 'after_delete', after_delete_callback)
         return cls
     return class_decorator
