@@ -209,8 +209,6 @@ def convert_images(exp_id):
     # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
     #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
-    e.update(creation_stage='CONVERTING_IMAGES')
-
     # TODO: Check that data has the correct structure
     data = json.loads(request.data)
     metaconfig_args = data['metaconfig']
@@ -219,8 +217,8 @@ def convert_images(exp_id):
     engine = current_app.extensions['gc3pie'].engine
     session = current_app.extensions['gc3pie'].session
 
-    # TODO: Start conversion
-
+    # TODO: Create the task objects
+    # Dummy
     task = gc3libs.Application(
         ['/bin/hostname'],
         inputs=[],
@@ -230,8 +228,12 @@ def convert_images(exp_id):
         join=True,
         jobname=("hostname_task"))
 
+    # Add the task to the persistent session
+    e.update(creation_stage='CONVERTING_IMAGES')
     persistent_id = session.add(task)
 
+    # Create a database entry that links the current user
+    # to the task and experiment for which this task is executed.
     TaskSubmission.create(
         submitting_user_id=current_identity.id,
         experiment_id=e.id,
