@@ -75,7 +75,7 @@ class BasicClusterRoutines(object):
         '''
         session_dir = os.path.join(self.project_dir, 'session')
         if not os.path.exists(session_dir):
-            logging.debug('create session directory: %s', session_dir)
+            logger.debug('create session directory: %s', session_dir)
             os.mkdir(session_dir)
         return session_dir
 
@@ -134,8 +134,11 @@ class BasicClusterRoutines(object):
         --------
         :py:meth:`
         '''
-        logger.debug('monitoring interval: %ds' % monitoring_interval)
-        logger.debug('monitoring depth: %ds' % monitoring_depth)
+        logger.debug('monitoring interval: %d seconds' % monitoring_interval)
+
+        if monitoring_depth < 0:
+            monitoring_depth = 0
+        logger.debug('monitoring depth: %d' % monitoring_depth)
 
         def log_task_data(task_data):
             def log_recursive(data, i):
@@ -226,12 +229,12 @@ class ClusterRoutines(BasicClusterRoutines):
         str
             directory where *.job* files and log output will be stored
         '''
-        self._project_dir = os.path.join(self.experiment.dir,
+        project_dir = os.path.join(self.experiment.dir,
                                          'tmaps', self.prog_name)
-        if not os.path.exists(self._project_dir):
-            logger.debug('create project directory: %s' % self._project_dir)
-            os.makedirs(self._project_dir)
-        return self._project_dir
+        if not os.path.exists(project_dir):
+            logger.debug('create project directory: %s' % project_dir)
+            os.makedirs(project_dir)
+        return project_dir
 
     @cached_property
     def job_descriptions_dir(self):
@@ -637,7 +640,7 @@ class ClusterRoutines(BasicClusterRoutines):
         run_jobs = ParallelTaskCollection(
                         jobname='%s_run' % self.prog_name)
 
-        logging.debug('create run jobs: ParallelTaskCollection')
+        logger.debug('create run jobs: ParallelTaskCollection')
         for i, batch in enumerate(job_descriptions['run']):
 
             jobname = '%s_run_%.5d' % (self.prog_name, batch['id'])
@@ -664,7 +667,7 @@ class ClusterRoutines(BasicClusterRoutines):
             run_jobs.add(job)
 
         if 'collect' in job_descriptions.keys():
-            logging.debug('create collect job: Application')
+            logger.debug('create collect job: Application')
 
             batch = job_descriptions['collect']
 
@@ -685,14 +688,14 @@ class ClusterRoutines(BasicClusterRoutines):
             if virtualenv:
                 collect_job.application_name = virtualenv
 
-            logging.debug('add run & collect jobs to SequentialTaskCollection')
+            logger.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs, collect_job],
                         jobname='%s' % self.prog_name)
 
         else:
 
-            logging.debug('add run jobs to SequentialTaskCollection')
+            logger.debug('add run jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs],
                         jobname='%s' % self.prog_name)
