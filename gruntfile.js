@@ -329,7 +329,7 @@ module.exports = function(grunt) {
             buildOLDebug: '(node <%= olDir %>/tasks/build.js <%= olDir %>/config/ol-debug.json app/assets/libs/ol-debug.js)',
             buildOL: '(node <%= olDir %>/tasks/build.js <%= olDir %>/config/ol.json app/assets/libs/ol.js)',
             initOL: '(cd <%= olDir %> && make install)',
-            buildTypeScript: '/node_modules/typescript/bin/tsc'
+            buildTypeScript: 'node_modules/typescript/bin/tsc'
         },
 
         /*
@@ -508,7 +508,6 @@ module.exports = function(grunt) {
 
     // Necessary when using custom options
     grunt.task.run('notify_hooks');
-
 
     /*
      * ALIAS TASKS
