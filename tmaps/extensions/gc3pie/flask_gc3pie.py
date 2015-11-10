@@ -39,6 +39,7 @@ from flask import current_app
 from flask import _app_ctx_stack as stack
 
 import gc3libs
+import logging
 
 from tmlib import engine as tmlib_engine
 from tmaps.models import Model
@@ -69,6 +70,10 @@ class GC3PieEngine(object):
     def __init__(self, *args, **kwargs):
         if len(args) > 0 or len(kwargs) > 0:
             self.init_app(*args, **kwargs)
+        gc3libs.log = logging.getLogger('gc3lib')
+        gc3libs.log.level = logging.CRITICAL
+        apscheduler_logger = logging.getLogger('apscheduler')
+        apscheduler_logger.level = logging.CRITICAL
 
     def init_app(self, app):
         """Construct an `GC3PieEngine` Flask extension object."""
@@ -85,6 +90,9 @@ class GC3PieEngine(object):
         gc3pie_store_uri = \
             app.config['SQLALCHEMY_DATABASE_URI'].\
             replace('postgresql', 'postgres')
+
+        # TODO: We should have a separate session for each experiment
+        # could simply be a folder called "session" in the experiment root dir
         gc3pie_session_dir = app.config.get('GC3PIE_SESSION_DIR')
 
         session = self._create_session(gc3pie_store_uri, gc3pie_session_dir)
@@ -93,16 +101,19 @@ class GC3PieEngine(object):
         app.extensions['gc3pie'] = GC3Pie(session, engine)
 
         # Add existing tasks
+        # NOTE: we should have a separate session for each worklow, i.e.
+        # a separate session for each experiment
         for task in session:
             engine.add(task)
 
         # TODO: Add interval back to config
-        engine.start(interval=5)
 
     def _create_bg_engine(self):
         """Create and return a `tmlib.BgEngine`:class: instance."""
         engine = gc3libs.create_engine()
+        engine.retrieve_overwrites = True
         bg_engine = tmlib_engine.BgEngine('threading', engine)
+        bg_engine.start(interval=5)
         return bg_engine
 
     def _create_session(self, gc3pie_store_uri, gc3pie_session_dir):

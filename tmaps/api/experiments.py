@@ -2,11 +2,18 @@ import json
 import os
 import os.path as p
 
-from flask import jsonify, request, send_from_directory, send_file, current_app
+from flask import jsonify, request, send_file, current_app
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 import numpy as np
+
+from tmlib.experiment import Experiment as Exp
+from tmlib.tmaps.workflow import Workflow
+from tmlib.logging_utils import configure_logging
+from tmlib.cfg import WorkflowDescription
+from tmlib.cfg import WorkflowStageDescription
+from tmlib.cfg import WorkflowStepDescription
 
 from tmaps.models import Experiment, TaskSubmission
 from tmaps.extensions.encrypt import decode
@@ -17,10 +24,10 @@ from tmaps.api.responses import (
     NOT_AUTHORIZED_RESPONSE
 )
 
-
-import gc3libs
 import logging
-# gc3libs.log.addHandler(logging.StreamHandler())
+
+# configure tmlib loggers
+tmlib_logger = configure_logging(logging.INFO)
 
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
@@ -209,28 +216,47 @@ def convert_images(exp_id):
     # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
     #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
-    # TODO: Check that data has the correct structure
-    data = json.loads(request.data)
-    metaconfig_args = data['metaconfig']
-    imextract_args = data['imextract']
-
     engine = current_app.extensions['gc3pie'].engine
     session = current_app.extensions['gc3pie'].session
 
-    # TODO: Create the task objects
-    # Dummy
-    task = gc3libs.Application(
-        ['/bin/hostname'],
-        inputs=[],
-        outputs=[],
-        output_dir=p.join(e.location, 'demo_output'),
-        stdout=("hostname.log"),
-        join=True,
-        jobname=("hostname_task"))
+    # The description of the workflow can either be written into the
+    # "user.cfg.yml" file in YAML format, which will be automatically be picked
+    # up and read, or passed to the constructor of the Workflow class as
+    # "description" argument in form of a tmlib.cfg.WorkflowDescription object
+    data = json.loads(request.data)
+    metaextract_args = dict()
+    metaconfig_args = data['metaconfig']
+    imextract_args = data['imextract']
+
+    # NOTE: at subsequent stages the arguments of steps of previous stages
+    # have to be provided as well, because the WorkflowDescription internally
+    # checks inter-stage dependencies
+    workflow = WorkflowDescription()
+    stage = WorkflowStageDescription(name='image_conversion')
+    step1 = WorkflowStepDescription(name='metaextract', args=metaextract_args)
+    step2 = WorkflowStepDescription(name='metaconfig', args=metaconfig_args)
+    step3 = WorkflowStepDescription(name='imextract', args=imextract_args)
+    stage.add_step(step1)
+    stage.add_step(step2)
+    stage.add_step(step3)
+    workflow.add_stage(stage)
+    # Create a tmlib.experiment.Experiment object
+    exp = Exp(e.location)
+    # Create tmlib.workflow.Workflow object that can be added to the session
+    jobs = Workflow(exp, verbosity=1, start_stage='image_conversion',
+                    description=workflow)
 
     # Add the task to the persistent session
     e.update(creation_stage='CONVERTING_IMAGES')
-    persistent_id = session.add(task)
+
+    # Add the new task to the session
+    persistent_id = session.add(jobs)
+
+    # Add only the new task in the session to the engine
+    # (all other tasks are already in the engine)
+    for task in session:
+        if task.persistent_id == persistent_id:
+            engine.add(task)
 
     # Create a database entry that links the current user
     # to the task and experiment for which this task is executed.
