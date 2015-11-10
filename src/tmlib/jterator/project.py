@@ -293,7 +293,7 @@ class JtProject(object):
         # Create new .handles files for added modules
         for h in self.handles:
             filename = os.path.join(self.project_dir, 'handles',
-                                    '%s.handles' % h['name'])
+                                    '%s.handles.yml' % h['name'])
             handles_files.append(filename)
         with YamlReader() as reader:
             for i, handles_file in enumerate(handles_files):

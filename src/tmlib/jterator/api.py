@@ -390,7 +390,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.extend(['-p', self.pipe_name])
         command.append(self.experiment.dir)
-        command.extend(['run', '-j', str(batch['id'])])
+        command.extend(['run', '--job', str(batch['id'])])
         if not self.headless:
             command.append('--plot')
         return command
