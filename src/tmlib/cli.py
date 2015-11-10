@@ -269,8 +269,6 @@ class CommandLineInterface(object):
                          'of previous submission')
             shutil.rmtree(api.job_descriptions_dir)
             shutil.rmtree(api.log_dir)
-            if os.path.exists(api.session_dir):
-                shutil.rmtree(api.session_dir)
 
         logger.info('create job descriptions')
         job_descriptions = api.create_job_descriptions(args.variable_args)
