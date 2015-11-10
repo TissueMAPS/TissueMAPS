@@ -76,7 +76,7 @@ def configure_logging(level):
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 
-    logger = logging.getLogger()
+    logger = logging.getLogger('tmlib')
     logger.setLevel(level)
 
     stderr_handler = logging.StreamHandler(stream=sys.stderr)
@@ -91,6 +91,7 @@ def configure_logging(level):
     stdout_handler.setLevel(0)
     stdout_handler.addFilter(InfoFilter())
     logger.addHandler(stdout_handler)
+
     return logger
 
 
