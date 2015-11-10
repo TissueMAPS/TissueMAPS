@@ -2,11 +2,18 @@ import json
 import os
 import os.path as p
 
-from flask import jsonify, request, send_from_directory, send_file, current_app
+from flask import jsonify, request, send_file, current_app
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 import numpy as np
+
+from tmlib.experiment import Experiment as Exp
+from tmlib.tmaps.workflow import Workflow
+from tmlib.logging_utils import configure_logging
+from tmlib.cfg import WorkflowDescription
+from tmlib.cfg import WorkflowStageDescription
+from tmlib.cfg import WorkflowStepDescription
 
 from tmaps.models import Experiment, TaskSubmission
 from tmaps.extensions.encrypt import decode
@@ -17,10 +24,13 @@ from tmaps.api.responses import (
     NOT_AUTHORIZED_RESPONSE
 )
 
-
-import gc3libs
 import logging
-# gc3libs.log.addHandler(logging.StreamHandler())
+
+# configure tmlib loggers
+tmlib_logger = configure_logging(logging.INFO)
+
+# initialize an empty workflow description
+workflow_description = WorkflowDescription()
 
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
@@ -201,6 +211,10 @@ def delete_experiment(experiment_id):
 @api.route('/experiments/<exp_id>/convert-images', methods=['POST'])
 @jwt_required()
 def convert_images(exp_id):
+    """
+    Performs stage "image_conversion" of the canonical TissueMAPS workflow,
+    consisting of the steps "metaextract", "metaconfig", and "imextract"
+    """
     e = Experiment.get(exp_id)
     if not e:
         return RESOURCE_NOT_FOUND_RESPONSE
@@ -209,28 +223,206 @@ def convert_images(exp_id):
     # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
     #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
-    # TODO: Check that data has the correct structure
+    engine = current_app.extensions['gc3pie'].engine
+    session = current_app.extensions['gc3pie'].session
+
+    # The description of the workflow can either be written into the
+    # "user.cfg.yml" file in YAML format, which will be automatically be picked
+    # up and read, or passed to the constructor of the Workflow class as
+    # "description" argument in form of a tmlib.cfg.WorkflowDescription object.
+    # Here we parse the description, but keep track of previous stages
+    # via the "workflow_description" variable
     data = json.loads(request.data)
+    metaextract_args = data['metaextract']
     metaconfig_args = data['metaconfig']
     imextract_args = data['imextract']
+
+    # NOTE: at subsequent stages the arguments of steps of previous stages
+    # have to be provided as well, because the WorkflowDescription internally
+    # checks inter-stage dependencies
+    conversion_stage = WorkflowStageDescription(name='image_conversion')
+    metaextract_step = WorkflowStepDescription(
+                            name='metaextract', args=metaextract_args)
+    metaconfig_step = WorkflowStepDescription(
+                            name='metaconfig', args=metaconfig_args)
+    imextract_step = WorkflowStepDescription(
+                            name='imextract', args=imextract_args)
+    conversion_stage.add_step(metaextract_step)
+    conversion_stage.add_step(metaconfig_step)
+    conversion_stage.add_step(imextract_step)
+    workflow_description.add_stage(conversion_stage)
+    # Create a tmlib.experiment.Experiment object
+    exp = Exp(e.location)
+    # Create tmlib.workflow.Workflow object that can be added to the session
+    jobs = Workflow(exp, verbosity=1, start_stage='image_conversion',
+                    description=workflow_description)
+
+    # Add the task to the persistent session
+    e.update(creation_stage='CONVERTING_IMAGES')
+
+    # Add the new task to the session
+    persistent_id = session.add(jobs)
+
+    # Add only the new task in the session to the engine
+    # (all other tasks are already in the engine)
+    for task in session:
+        if task.persistent_id == persistent_id:
+            engine.add(task)
+
+    # Create a database entry that links the current user
+    # to the task and experiment for which this task is executed.
+    TaskSubmission.create(
+        submitting_user_id=current_identity.id,
+        experiment_id=e.id,
+        task_id=persistent_id)
+
+    e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+
+    # TODO: Return thumbnails
+    return 'Creation ok', 200
+
+
+@api.route('/experiments/<exp_id>/rerun-metaconfig', methods=['POST'])
+@jwt_required()
+def rerun_metaconfig(exp_id):
+    """
+    Reruns the step "metaconfig" (and the subsequent step "imextract")
+    of stage "image_conversion" of the canonical TissueMAPS workflow.
+
+    Note
+    ----
+    This works only if the "metaextract" step was already performed previously
+    and terminated successfully.
+    """
+    e = Experiment.get(exp_id)
+    if not e:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+    # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
+    #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
     engine = current_app.extensions['gc3pie'].engine
     session = current_app.extensions['gc3pie'].session
 
-    # TODO: Create the task objects
-    # Dummy
-    task = gc3libs.Application(
-        ['/bin/hostname'],
-        inputs=[],
-        outputs=[],
-        output_dir=p.join(e.location, 'demo_output'),
-        stdout=("hostname.log"),
-        join=True,
-        jobname=("hostname_task"))
+    data = json.loads(request.data)
+    metaconfig_args = data['metaconfig']
+
+    stage_index = [
+        i for i, s in enumerate(workflow_description.stages)
+        if s.name == 'image_conversion'
+    ]
+    if not stage_index:
+        return ('Error: requires prior submission of "convert-images"', 400)
+    stage_index = stage_index[0]
+
+    step_index = [
+        i for i, s in enumerate(workflow_description.stages[stage_index].steps)
+        if s.name == 'metaconfig'
+    ]
+
+    if not step_index:
+        return ('Error: requires prior submission of "convert-images"', 400)
+    step_index = step_index[0]
+
+    workflow_description.stages[stage_index].steps[step_index] = \
+        WorkflowStepDescription(name='metaconfig', args=metaconfig_args)
+
+    exp = Exp(e.location)
+    jobs = Workflow(exp, verbosity=1, start_stage='image_conversion',
+                    start_step='metaconfig', description=workflow_description)
 
     # Add the task to the persistent session
     e.update(creation_stage='CONVERTING_IMAGES')
-    persistent_id = session.add(task)
+
+    # Add the new task to the session
+    persistent_id = session.add(jobs)
+
+    # Add only the new task in the session to the engine
+    # (all other tasks are already in the engine)
+    for task in session:
+        if task.persistent_id == persistent_id:
+            engine.add(task)
+
+    # Create a database entry that links the current user
+    # to the task and experiment for which this task is executed.
+    TaskSubmission.create(
+        submitting_user_id=current_identity.id,
+        experiment_id=e.id,
+        task_id=persistent_id)
+
+    e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+
+    return 'Creation ok', 200
+
+
+@api.route('/experiments/<exp_id>/create_pyramids', methods=['POST'])
+@jwt_required()
+def create_pyramids(exp_id):
+    """
+    Submits stage "pyramid_creation" of the canonical TissueMAPS workflow,
+    consisting of the "illuminati" step.
+    Optionally submits stage "image_preprocessing", consisting of steps
+    "corilla" and/or "align", prior to the submission of "pyramid_creation"
+    in case the arguments "illumcorr" and/or "align" of the "illuminati" step
+    were set to ``True``.
+    """
+    e = Experiment.get(exp_id)
+    if not e:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+    # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
+    #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
+
+    engine = current_app.extensions['gc3pie'].engine
+    session = current_app.extensions['gc3pie'].session
+
+    illuminati_args = data['illuminati']
+    # NOTE: If the user wants to correct images for illumination artifacts
+    # and/or align images between cycles, the arguments for the "corilla"
+    # and "align" steps have to be provided as well (otherwise empty
+    # objects should be provided)
+    corilla_args = data['corilla']
+    align_args = data['align']
+
+    if corilla_args or align_args:
+        preprocessing_stage = WorkflowStageDescription(
+                                name='image_preprocessing')
+        if corilla_args:
+            corilla_step = WorkflowStepDescription(
+                                name='corilla', args=corilla_args)
+            preprocessing_stage.add_step(corilla_step)
+        if align_args:
+            align_step = WorkflowStepDescription(
+                                name='align', args=align_args)
+            preprocessing_stage.add_step(align_step)
+        workflow_description.add_stage(preprocessing_stage)
+    pyramid_creation_stage = WorkflowStageDescription(
+                                name='pyramid_creation')
+    illuminati_step = WorkflowStepDescription(
+                                name='illuminati', args=illuminati_args)
+    workflow_description.add_stage(pyramid_creation_stage)
+
+    exp = Exp(e.location)
+    if corilla_args or align_args:
+        jobs = Workflow(exp, verbosity=1, start_stage='image_preprocessing',
+                        description=workflow)
+    else:
+        jobs = Workflow(exp, verbosity=1, start_stage='pyramid_creation',
+                        description=workflow)
+
+    # Add the task to the persistent session
+    e.update(creation_stage='CONVERTING_IMAGES')
+
+    # Add the new task to the session
+    persistent_id = session.add(jobs)
+
+    # Add only the new task in the session to the engine
+    # (all other tasks are already in the engine)
+    for task in session:
+        if task.persistent_id == persistent_id:
+            engine.add(task)
 
     # Create a database entry that links the current user
     # to the task and experiment for which this task is executed.
