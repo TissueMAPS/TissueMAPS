@@ -45,7 +45,7 @@ class TmapsSubmitArgs(Args):
     @property
     def _stage_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'default': None,
             'help': '''
                 name of the stage from where workflow should be started
@@ -73,7 +73,7 @@ class TmapsSubmitArgs(Args):
     @property
     def _step_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'default': None,
             'help': '''
                 name of the step from where workflow should be started

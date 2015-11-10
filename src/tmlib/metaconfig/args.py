@@ -59,7 +59,7 @@ class MetaconfigInitArgs(VariableArgs):
     @property
     def _file_format_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'choices': Formats.SUPPORT_FOR_ADDITIONAL_FILES,
             'default': 'default',
             'help': '''
@@ -118,7 +118,7 @@ class MetaconfigInitArgs(VariableArgs):
     @property
     def _regex_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'default': None,
             'metavar': 'expression',
             'help': '''
@@ -152,7 +152,7 @@ class MetaconfigInitArgs(VariableArgs):
     @property
     def _stitch_layout_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'default': 'zigzag_horizontal',
             'choices': {
                 'horizontal', 'zigzag_horizontal',
@@ -189,7 +189,7 @@ class MetaconfigInitArgs(VariableArgs):
     @property
     def _stitch_major_axis_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'default': 'vertical',
             'choices': {'vertical', 'horizontal'},
             'help': '''

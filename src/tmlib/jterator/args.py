@@ -116,7 +116,7 @@ class JteratorCreateArgs(VariableArgs):
     @property
     def _repo_dir_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'default': None,
             'help': '''
                 path to repository directory where module files are located
@@ -144,7 +144,7 @@ class JteratorCreateArgs(VariableArgs):
     @property
     def _skel_dir_params(self):
         return {
-            'type': str,
+            'type': basestring,
             'default': None,
             'help': '''
                 path to repository directory where module files are located
