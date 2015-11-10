@@ -51,11 +51,8 @@ def command_line_call(parser):
     vips_logger = logging.getLogger('gi.overrides.vips')
     vips_logger.level = logging.CRITICAL
 
-    apscheduler_logger_1 = logging.getLogger('apscheduler.executors.default')
-    apscheduler_logger_1.level = logging.CRITICAL
-
-    apscheduler_logger_2 = logging.getLogger('apscheduler.scheduler')
-    apscheduler_logger_2.level = logging.CRITICAL
+    apscheduler_logger = logging.getLogger('apscheduler')
+    apscheduler_logger.level = logging.CRITICAL
 
     try:
         if arguments.handler:
@@ -248,7 +245,6 @@ class CommandLineInterface(object):
         dict
             job descriptions
         '''
-        self._print_logo()
         self._cleanup()
         api = self._api_instance
         if args.backup:
