@@ -404,10 +404,9 @@ class BgEngine(object):
                 gc3libs.Run.State.RUNNING,
                 gc3libs.Run.State.STOPPED
             }
-            is_done = task_.execution.state == gc3libs.Run.State.TERMINATED,
+            is_done = task_.execution.state == gc3libs.Run.State.TERMINATED
             failed = task_.execution.exitcode != 0
             data = {
-                'id': str(task_),
                 'name': task_.jobname,
                 'state': task_.execution.state,
                 'is_live': task_.execution.state in is_live_states,
@@ -417,6 +416,8 @@ class BgEngine(object):
             }
             if hasattr(task_, 'persistent_id'):
                 data['id'] = str(task_.persistent_id)
+            else:
+                data['id'] = str(task_)
 
             is_task_collection = isinstance(task_, gc3libs.workflow.TaskCollection)
             is_task = isinstance(task_, gc3libs.Task)
