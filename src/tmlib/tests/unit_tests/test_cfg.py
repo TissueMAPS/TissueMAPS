@@ -24,7 +24,7 @@ class TestWorkflowStepDescription(unittest.TestCase):
         }
         step = WorkflowStepDescription(**description)
         self.assertEqual(step.name, description['name'])
-        self.assertEqual(dict(step.args), description['args'])
+        self.assertNotEqual(dict(step)['args'], description['args'])
         self.assertIsInstance(step.args, GeneralArgs)
 
     def test_initialize_with_correct_description_2(self):
@@ -92,10 +92,15 @@ class TestWorkflowStepDescription(unittest.TestCase):
     def test_return_description(self):
         description = {
             'name': 'metaconfig',
-            'args': dict()
+            'args': {
+                'file_format': 'cellvoyager'
+            }
         }
         step = WorkflowStepDescription(**description)
-        self.assertEqual(dict(step), description)
+        step_dict = dict(step)
+        self.assertIsInstance(step_dict, dict)
+        self.assertEqual(step_dict['args']['file_format'],
+                         description['args']['file_format'])
 
 
 class TestWorkflowStageDescription(unittest.TestCase):
@@ -123,7 +128,7 @@ class TestWorkflowStageDescription(unittest.TestCase):
         stage = WorkflowStageDescription(**description)
         self.assertEqual(stage.name, description['name'])
         self.assertEqual(stage.steps[0].name, description['steps'][0]['name'])
-        self.assertEqual(dict(stage.steps[0].args),
+        self.assertEqual(dict(stage.steps[0])['args'],
                          description['steps'][0]['args'])
         self.assertTrue(all(
             [isinstance(s, WorkflowStepDescription) for s in stage.steps]
@@ -216,7 +221,7 @@ class TestWorkflowDescription(unittest.TestCase):
                          description['stages'][0]['name'])
         self.assertEqual(workflow.stages[0].steps[0].name,
                          description['stages'][0]['steps'][0]['name'])
-        self.assertEqual(dict(workflow.stages[0].steps[0].args),
+        self.assertEqual(dict(workflow.stages[0].steps[0])['args'],
                          description['stages'][0]['steps'][0]['args'])
         self.assertTrue(all(
             [isinstance(s, WorkflowStageDescription) for s in workflow.stages]
@@ -236,7 +241,7 @@ class TestWorkflowDescription(unittest.TestCase):
                 }
             ]
         }
-        with self.assertRaises(KeyError):
+        with self.assertRaises(WorkflowDescriptionError):
             WorkflowDescription(**wrong_description)
 
     def test_initialization_with_incorrect_type_1(self):
@@ -270,7 +275,7 @@ class TestWorkflowDescription(unittest.TestCase):
             ],
             'bla': None
         }
-        with self.assertRaises(ValueError):
+        with self.assertRaises(WorkflowDescriptionError):
             WorkflowDescription(**wrong_description)
 
     def test_initialization_with_incorrect_order(self):
@@ -314,7 +319,10 @@ class TestWorkflowDescription(unittest.TestCase):
             ]
         }
         workflow = WorkflowDescription(**description)
-        self.assertIsInstance(dict(workflow), dict)
+        workflow_dict = dict(workflow)
+        self.assertIsInstance(workflow_dict, dict)
+        self.assertEqual(workflow_dict['stages'][0]['name'],
+                         description['stages'][0]['name'])
 
 
 class TestUserConfiguration(fake_filesystem_unittest.TestCase):

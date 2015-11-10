@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from . import utils
 from .tmaps import workflow
@@ -150,7 +151,7 @@ class WorkflowDescription(object):
         Parameters
         ----------
         **kwargs: dict, optional
-            description of a workflow
+            additional workflow descriptions
 
         Returns
         -------
@@ -164,26 +165,18 @@ class WorkflowDescription(object):
         # Set defaults
         self.virtualenv = None
         # Check stage description
-        if 'stages' not in kwargs:
-            raise KeyError('Argument "kwargs" must have key "stages".')
         for k in kwargs.keys():
             if k not in self._PERSISTENT_ATTRS:
-                raise ValueError('Unknown workflow descriptor: "%s"' % k)
+                raise WorkflowDescriptionError(
+                        'Unknown workflow descriptor: "%s"' % k)
         self.stages = list()
-        stage_names = list()
-        for stage in kwargs['stages']:
-            name = stage['name']
-            check_stage_name(name)
-            stage_dependencies = canonical.INTER_STAGE_DEPENDENCIES[name]
-            for dep in stage_dependencies:
-                if dep not in stage_names:
-                    raise WorkflowDescriptionError(
-                            'Stage "%s" requires upstream stage "%s"'
-                            % (name, dep))
-            for step in stage['steps']:
-                check_step_name(step['name'], name)
-            stage_names.append(name)
-            self.stages.append(WorkflowStageDescription(**stage))
+        if kwargs:
+            for stage in kwargs['stages']:
+                name = stage['name']
+                check_stage_name(name)
+                for step in stage['steps']:
+                    check_step_name(step['name'], name)
+                self.add_stage(WorkflowStageDescription(**stage))
 
     @property
     def stages(self):
@@ -203,6 +196,42 @@ class WorkflowDescription(object):
             raise TypeError(
                 'Elements of "steps" must have type WorkflowStageDescription')
         self._stages = value
+
+    def add_stage(self, stage_description):
+        '''
+        Add an additional stage to the workflow.
+
+        Parameters
+        ----------
+        stage_description: tmlib.cfg.WorkflowStageDescription
+            description of the stage that should be added
+
+        Raises
+        ------
+        TypeError
+            when `stage_description` doesn't have type
+            :py:class:`tmlib.cfg.WorkflowStageDescription`
+        '''
+        if not isinstance(stage_description, WorkflowStageDescription):
+            raise TypeError(
+                    'Argument "stage_description" must have type '
+                    'tmlib.cfg.WorkflowStageDescription.')
+        name = stage_description.name
+        stage_names = [s.name for s in self.stages]
+        if name in canonical.INTER_STAGE_DEPENDENCIES:
+            for dep in canonical.INTER_STAGE_DEPENDENCIES[name]:
+                if dep not in stage_names:
+                    raise WorkflowDescriptionError(
+                            'Stage "%s" requires upstream stage "%s"'
+                            % (name, dep))
+        step_names = [s.name for s in stage_description.steps]
+        required_steps = canonical.STEPS_PER_STAGE[stage_description.name]
+        for name in step_names:
+            if name not in required_steps:
+                raise WorkflowDescriptionError(
+                            'Stage "%s" requires the following steps: "%s" '
+                            % '", "'.join(required_steps))
+        self.stages.append(stage_description)
 
     @property
     def virtualenv(self):
@@ -238,6 +267,8 @@ class WorkflowDescription(object):
 
     def __iter__(self):
         for attr in vars(self):
+            if attr.startswith('_'):
+                attr = re.search(r'^_(.*)', attr).group(1)
             if attr in self._PERSISTENT_ATTRS:
                 if attr == 'stages':
                     yield (attr, [dict(s) for s in getattr(self, attr)])
@@ -251,14 +282,16 @@ class WorkflowStageDescription(object):
     Description of a TissueMAPS workflow stage.
     '''
 
-    _PERSISTENT_ATTRS = {'name', 'steps'}
-
-    def __init__(self, **kwargs):
+    def __init__(self, name, steps=None, **kwargs):
         '''
         Initialize an instance of class WorkflowStageDescription.
 
         Parameters
         ----------
+        name: str
+            name of the stage
+        steps: list, optional
+            description of individual steps as a mapping of key-value pairs
         **kwargs: dict, optional
             description of a workflow stage in form of key-value pairs
 
@@ -271,38 +304,18 @@ class WorkflowStageDescription(object):
         KeyError
             when `kwargs` doesn't have the keys "name" and "steps"
         '''
-        for k in self._PERSISTENT_ATTRS:
-            if k not in kwargs:
-                raise KeyError('Argument "kwargs" must have key "%s".' % k)
-        if not kwargs['steps']:
-            raise ValueError(
-                'Value of "steps" of argument "kwargs" cannot be empty.')
-        self.name = kwargs['name']
-        self.steps = list()
-        for step in kwargs['steps']:
-            self.add_step(WorkflowStepDescription(**step))
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the stage
-
-        Note
-        ----
-        Must correspond to a name of a `tmlib` command line program
-        (subpackage).
-        '''
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        if not isinstance(value, basestring):
+        if steps is not None:
+            if not steps:
+                raise ValueError(
+                    'Value of "steps" of argument "kwargs" cannot be empty.')
+        if not isinstance(name, basestring):
             raise TypeError('Attribute "name" must have type basestring')
-        check_stage_name(value)
-        self._name = str(value)
+        check_stage_name(name)
+        self.name = str(name)
+        self.steps = list()
+        if steps is not None:
+            for s in steps:
+                self.add_step(WorkflowStepDescription(**s))
 
     @property
     def steps(self):
@@ -363,14 +376,16 @@ class WorkflowStepDescription(object):
     Description of a step as part of a TissueMAPS workflow stage.
     '''
 
-    _PERSISTENT_ATTRS = {'name', 'args'}
-
-    def __init__(self, **kwargs):
+    def __init__(self, name, args=None, **kwargs):
         '''
         Initialize an instance of class WorkflowStep.
 
         Parameters
         ----------
+        name: str
+            name of the step
+        args: dict, optional
+            arguments of the step as key-value pairs
         **kwargs: dict, optional
             description of the step as key-value pairs
 
@@ -385,10 +400,10 @@ class WorkflowStepDescription(object):
         WorkflowDescriptionError
             when the step is not known
         '''
-        for attr in self._PERSISTENT_ATTRS:
-            if attr not in kwargs:
-                raise KeyError('Argument "kwargs" requires key "%s"')
-        self.name = kwargs['name']
+        if not isinstance(name, basestring):
+            raise TypeError('Attribute "name" must have type basestring')
+        check_step_name(name)
+        self.name = str(name)
         try:
             variable_args_handler = workflow.load_var_method_args(
                                         self.name, 'init')
@@ -397,37 +412,15 @@ class WorkflowStepDescription(object):
                     '"%s" is not a valid step name.' % self.name)
         args_handler = workflow.load_method_args('init')
         self._args = args_handler()
-        if kwargs['args']:
-            self.args = variable_args_handler(**kwargs['args'])
-            for arg in kwargs['args']:
-                if arg not in self.args.variable_args._persistent_attrs:
+        if args:
+            self.args = variable_args_handler(**args)
+            for a in args:
+                if a not in self.args.variable_args._persistent_attrs:
                     raise WorkflowDescriptionError(
                             'Unknown argument "%s" for step "%s".'
-                            % (arg, self.name))
+                            % (a, self.name))
         else:
             self.args = variable_args_handler()
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the step
-
-        Note
-        ----
-        Must correspond to a name of a `tmaps` command line program
-        (a `tmlib` subpackage).
-        '''
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "name" must have type basestring')
-        check_step_name(value)
-        self._name = str(value)
 
     @property
     def args(self):
@@ -458,8 +451,8 @@ class WorkflowStepDescription(object):
         yield ('name', getattr(self, 'name'))
         # Only return the "variable_args" attribute, because these are the
         # arguments that are relevant for the workflow description
-        if hasattr(self, 'args.variable_args'):
-            yield ('args', dict(getattr(self, 'args.variable_args')))
+        if hasattr(self.args, 'variable_args'):
+            yield ('args', dict(getattr(self.args, 'variable_args')))
         else:
             yield ('args', dict())
 
