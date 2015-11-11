@@ -14,7 +14,8 @@ from .args import SubmitArgs
 from .args import RunArgs
 from .args import CollectArgs
 from .args import CleanupArgs
-from .tmaps import workflow
+from .tmaps.description import load_method_args
+from .tmaps.description import load_var_method_args
 from .logging_utils import configure_logging
 from .logging_utils import map_logging_verbosity
 from .errors import JobDescriptionError
@@ -96,10 +97,9 @@ def build_cli_method_args_from_mapping(prog_name, method_name, **kwargs):
     :py:func:`tmlib.tmaps.workflow.load_var_method_args`
     :py:class:`tmlib.args.Args`
     '''
-    args_handler = workflow.load_method_args(method_name)
+    args_handler = load_method_args(method_name)
     method_args = args_handler(**kwargs)
-    variable_args_handler = workflow.load_var_method_args(
-                                    prog_name, method_name)
+    variable_args_handler = load_var_method_args(prog_name, method_name)
     if variable_args_handler is not None:
         method_args.variable_args = variable_args_handler(**kwargs)
     return method_args
