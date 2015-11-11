@@ -148,6 +148,10 @@ class Experiment(object):
         if not(isinstance(value, cfg.UserConfiguration) or value is None):
             raise TypeError(
                     'Attribute "user_cfg" must have type UserConfiguration')
+        # Update configuration on disk to make it persistent, otherwise
+        # this would create inconsistencies in workflows.
+        if value:
+            value.dump_to_file()
         self._user_cfg = value
 
     @cached_property
