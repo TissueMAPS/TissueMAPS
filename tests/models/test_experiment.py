@@ -62,11 +62,8 @@ def test_experiment_creation_without_specifying_location(exp, testuser):
 
     assert type(exp.hash) == str and exp.hash != ''
 
-    # Check if directories were created
+    # Check if dir was created
     assert p.exists(exp.location)
-    assert p.exists(p.join(exp.location, 'layers'))
-    assert p.exists(p.join(exp.location, 'plates'))
-    assert p.exists(p.join(exp.location, 'plate_sources'))
 
 
 def test_as_dict_method(exp):

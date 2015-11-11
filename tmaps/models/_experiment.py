@@ -12,7 +12,6 @@ import tmlib.plate
 import tmlib.experiment
 import tmlib.cfg
 
-
 # EXPERIMENT_ACCESS_LEVELS = (
 #     'read',
 #     'delete'
@@ -55,19 +54,13 @@ def _plate_sources_location(exp):
 def _create_locations_if_necessary(mapper, connection, exp):
     if exp.location is None:
         exp_location = _default_experiment_location(exp)
-
         # Temp. set the location so that all the other location functions
         # work correctly. This still has to be persisted using SQL (see below).
         exp.location = exp_location
-        locfuncs = [_default_experiment_location, _plate_sources_location,
-                    _plates_location, _layers_location]
-        for f in locfuncs:
-            loc = f(exp)
-            if not p.exists(loc):
-                os.mkdir(loc)
-            else:
-                print 'Warning: dir %s already exists.' % loc
-
+        if not p.exists(exp_location):
+            os.mkdir(exp_location)
+        else:
+            print 'Warning: dir %s already exists.' % exp_location
         # exp.location = loc line won't
         # persists the location on the object.
         # If done directly via SQL it works.
