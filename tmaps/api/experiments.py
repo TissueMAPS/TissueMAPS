@@ -11,9 +11,9 @@ import numpy as np
 from tmlib.experiment import Experiment as Exp
 from tmlib.tmaps.workflow import Workflow
 from tmlib.logging_utils import configure_logging
-from tmlib.cfg import WorkflowDescription
-from tmlib.cfg import WorkflowStageDescription
-from tmlib.cfg import WorkflowStepDescription
+from tmlib.tmaps.canonical import CanonicalWorkflowDescription
+from tmlib.tmaps.canonical import CanonicalWorkflowStageDescription
+from tmlib.tmaps.canonical import CanonicalWorkflowStepDescription
 
 from tmaps.models import Experiment, TaskSubmission
 from tmaps.extensions.encrypt import decode
@@ -28,9 +28,6 @@ import logging
 
 # configure tmlib loggers
 tmlib_logger = configure_logging(logging.INFO)
-
-# initialize an empty workflow description
-workflow_description = WorkflowDescription()
 
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
@@ -226,33 +223,25 @@ def convert_images(exp_id):
     engine = current_app.extensions['gc3pie'].engine
     session = current_app.extensions['gc3pie'].session
 
-    # The description of the workflow can either be written into the
-    # "user.cfg.yml" file in YAML format, which will be automatically be picked
-    # up and read, or passed to the constructor of the Workflow class as
-    # "description" argument in form of a tmlib.cfg.WorkflowDescription object.
-    # Here we parse the description, but keep track of previous stages
-    # via the "workflow_description" variable
     data = json.loads(request.data)
     metaextract_args = data['metaextract']
     metaconfig_args = data['metaconfig']
     imextract_args = data['imextract']
 
-    # NOTE: at subsequent stages the arguments of steps of previous stages
-    # have to be provided as well, because the WorkflowDescription internally
-    # checks inter-stage dependencies
-    conversion_stage = WorkflowStageDescription(name='image_conversion')
-    metaextract_step = WorkflowStepDescription(
+    exp = Exp(e.location)
+    workflow_description = CanonicalWorkflowDescription()
+    conversion_stage = CanonicalWorkflowStageDescription(
+                            name='image_conversion')
+    metaextract_step = CanonicalWorkflowStepDescription(
                             name='metaextract', args=metaextract_args)
-    metaconfig_step = WorkflowStepDescription(
+    metaconfig_step = CanonicalWorkflowStepDescription(
                             name='metaconfig', args=metaconfig_args)
-    imextract_step = WorkflowStepDescription(
+    imextract_step = CanonicalWorkflowStepDescription(
                             name='imextract', args=imextract_args)
     conversion_stage.add_step(metaextract_step)
     conversion_stage.add_step(metaconfig_step)
     conversion_stage.add_step(imextract_step)
     workflow_description.add_stage(conversion_stage)
-    # Create a tmlib.experiment.Experiment object
-    exp = Exp(e.location)
     # Create tmlib.workflow.Workflow object that can be added to the session
     jobs = Workflow(exp, verbosity=1, start_stage='image_conversion',
                     description=workflow_description)
@@ -306,29 +295,25 @@ def rerun_metaconfig(exp_id):
     session = current_app.extensions['gc3pie'].session
 
     data = json.loads(request.data)
+    metaextract_args = data['metaextract']
     metaconfig_args = data['metaconfig']
-
-    stage_index = [
-        i for i, s in enumerate(workflow_description.stages)
-        if s.name == 'image_conversion'
-    ]
-    if not stage_index:
-        return ('Error: requires prior submission of "convert-images"', 400)
-    stage_index = stage_index[0]
-
-    step_index = [
-        i for i, s in enumerate(workflow_description.stages[stage_index].steps)
-        if s.name == 'metaconfig'
-    ]
-
-    if not step_index:
-        return ('Error: requires prior submission of "convert-images"', 400)
-    step_index = step_index[0]
-
-    workflow_description.stages[stage_index].steps[step_index] = \
-        WorkflowStepDescription(name='metaconfig', args=metaconfig_args)
+    imextract_args = data['imextract']
 
     exp = Exp(e.location)
+    workflow_description = CanonicalWorkflowDescription()
+    conversion_stage = CanonicalWorkflowStageDescription(
+                            name='image_conversion')
+    metaextract_step = CanonicalWorkflowStepDescription(
+                            name='metaextract', args=metaextract_args)
+    metaconfig_step = CanonicalWorkflowStepDescription(
+                            name='metaconfig', args=metaconfig_args)
+    imextract_step = CanonicalWorkflowStepDescription(
+                            name='imextract', args=imextract_args)
+    conversion_stage.add_step(metaextract_step)
+    conversion_stage.add_step(metaconfig_step)
+    conversion_stage.add_step(imextract_step)
+    workflow_description.add_stage(conversion_stage)
+
     jobs = Workflow(exp, verbosity=1, start_stage='image_conversion',
                     start_step='metaconfig', description=workflow_description)
 
@@ -378,6 +363,7 @@ def create_pyramids(exp_id):
     engine = current_app.extensions['gc3pie'].engine
     session = current_app.extensions['gc3pie'].session
 
+    data = json.loads(request.data)
     illuminati_args = data['illuminati']
     # NOTE: If the user wants to correct images for illumination artifacts
     # and/or align images between cycles, the arguments for the "corilla"
@@ -386,31 +372,28 @@ def create_pyramids(exp_id):
     corilla_args = data['corilla']
     align_args = data['align']
 
+    workflow_description = CanonicalWorkflowDescription()
     if corilla_args or align_args:
-        preprocessing_stage = WorkflowStageDescription(
+        preprocessing_stage = CanonicalWorkflowStageDescription(
                                 name='image_preprocessing')
         if corilla_args:
-            corilla_step = WorkflowStepDescription(
+            corilla_step = CanonicalWorkflowStepDescription(
                                 name='corilla', args=corilla_args)
             preprocessing_stage.add_step(corilla_step)
         if align_args:
-            align_step = WorkflowStepDescription(
+            align_step = CanonicalWorkflowStepDescription(
                                 name='align', args=align_args)
             preprocessing_stage.add_step(align_step)
         workflow_description.add_stage(preprocessing_stage)
-    pyramid_creation_stage = WorkflowStageDescription(
+    pyramid_creation_stage = CanonicalWorkflowStageDescription(
                                 name='pyramid_creation')
-    illuminati_step = WorkflowStepDescription(
+    illuminati_step = CanonicalWorkflowStepDescription(
                                 name='illuminati', args=illuminati_args)
+    pyramid_creation_stage.add_step(illuminati_step)
     workflow_description.add_stage(pyramid_creation_stage)
 
     exp = Exp(e.location)
-    if corilla_args or align_args:
-        jobs = Workflow(exp, verbosity=1, start_stage='image_preprocessing',
-                        description=workflow)
-    else:
-        jobs = Workflow(exp, verbosity=1, start_stage='pyramid_creation',
-                        description=workflow)
+    jobs = Workflow(exp, verbosity=1, description=workflow_description)
 
     # Add the task to the persistent session
     e.update(creation_stage='CONVERTING_IMAGES')
