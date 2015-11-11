@@ -242,7 +242,8 @@ class UserConfiguration(object):
                             % (self.__class__.__name__, attr))
                 value = getattr(self, attr)
                 if attr == 'workflow':
-                    value = dict(value)
+                    if value is not None:
+                        value = dict(value)
                 yield (attr, value)
 
     @property
