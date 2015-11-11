@@ -8,7 +8,9 @@ from utils import (
     auto_remove_directory
 )
 from . import CRUDMixin, Model, HashIdModel
-from tmlib import plate as tmlib_plate
+import tmlib.plate
+import tmlib.experiment
+import tmlib.cfg
 
 
 # EXPERIMENT_ACCESS_LEVELS = (
@@ -37,14 +39,18 @@ def _default_experiment_location(exp):
     dirpath = p.join(user.experiments_location, dirname)
     return dirpath
 
+def _get_tmlib_object(location, plate_format):
+    cfg = tmlib.cfg.UserConfiguration(location, plate_format)
+    return tmlib.experiment.Experiment(location, cfg)
+
 def _layers_location(exp):
-    return p.join(exp.location, 'layers')
+    return _get_tmlib_object(exp.location, exp.plate_format).layers_dir
 
 def _plates_location(exp):
-    return p.join(exp.location, 'plates')
+    return _get_tmlib_object(exp.location, exp.plate_format).plates_dir
 
 def _plate_sources_location(exp):
-    return p.join(exp.location, 'plate_sources')
+    return _get_tmlib_object(exp.location, exp.plate_format).sources_dir
 
 def _create_locations_if_necessary(mapper, connection, exp):
     if exp.location is None:
@@ -127,10 +133,14 @@ class Experiment(HashIdModel, CRUDMixin):
         else:
             self.microscope_type = microscope_type
 
-        if not plate_format in tmlib_plate.Plate.SUPPORTED_PLATE_FORMATS:
+        if not plate_format in tmlib.plate.Plate.SUPPORTED_PLATE_FORMATS:
             raise ValueError('Unsupported plate format')
         else:
             self.plate_format = plate_format
+
+    @property
+    def tmlib_object(self):
+        return _get_tmlib_object(self.location)
 
     @property
     def dataset_path(self):
@@ -170,7 +180,6 @@ class Experiment(HashIdModel, CRUDMixin):
         layers_dir = self.layers_location
         layer_names = [name for name in os.listdir(layers_dir)
                        if p.isdir(p.join(layers_dir, name))]
-
         layers = []
 
         for layer_name in layer_names:
