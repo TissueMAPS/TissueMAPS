@@ -221,20 +221,19 @@ def convert_images(exp_id):
     session = current_app.extensions['gc3pie'].session
 
     data = json.loads(request.data)
-    metaextract_args = data['metaextract']
     metaconfig_args = data['metaconfig']
     imextract_args = data['imextract']
 
     exp = tmlib.experiment.Experiment(e.location)
     workflow_description = tmlib.tmaps.canonical.CanonicalWorkflowDescription()
     conversion_stage = tmlib.tmaps.canonical.CanonicalWorkflowStageDescription(
-                            name='image_conversion')
+        name='image_conversion')
     metaextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
-                            name='metaextract', args=metaextract_args)
+        name='metaextract', args={})
     metaconfig_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
-                            name='metaconfig', args=metaconfig_args)
+        name='metaconfig', args=metaconfig_args)
     imextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
-                            name='imextract', args=imextract_args)
+        name='imextract', args=imextract_args)
     conversion_stage.add_step(metaextract_step)
     conversion_stage.add_step(metaconfig_step)
     conversion_stage.add_step(imextract_step)
