@@ -68,9 +68,12 @@ class UserConfiguration(object):
         self._sources_dir = sources_dir
         self._plates_dir = plates_dir
         self._layers_dir = layers_dir
+        self._workflow = None
         for k, v in kwargs.iteritems():
             if k in self._PERSISTENT_ATTRS:
                 if k == 'workflow':
+                    if v is None:
+                        continue
                     workflow_type = v.get('type', None)
                     if workflow_type is None:
                         raise WorkflowDescriptionError(
