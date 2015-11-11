@@ -59,26 +59,6 @@ class BasicClusterRoutines(object):
             os.mkdir(self._log_dir)
         return self._log_dir
 
-    @property
-    def session_dir(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path the
-            `GC3Pie session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
-            direcotory
-
-        Note
-        ----
-        The directory is created if it doesn't exist.
-        '''
-        session_dir = os.path.join(self.project_dir, 'session')
-        if not os.path.exists(session_dir):
-            logger.debug('create session directory: %s', session_dir)
-            os.mkdir(session_dir)
-        return session_dir
-
     @staticmethod
     def create_datetimestamp():
         '''
