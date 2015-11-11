@@ -57,6 +57,7 @@ class TestExperiment(fake_filesystem_unittest.TestCase):
             'layers_dir': self.layers_dir,
             'plate_format': 384,
             'workflow': {
+                'type': 'canonical',
                 'stages': [
                     {
                         'name': 'image_conversion',

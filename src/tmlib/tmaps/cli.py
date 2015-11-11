@@ -63,7 +63,9 @@ class Tmaps(object):
         api = self._api_instance
         jobs = api.create_jobs(args.variable_args.stage,
                                args.variable_args.step)
-        api.submit_jobs(jobs, args.interval, args.depth)
+        session = api.create_session(jobs, args.variable_args.overwrite)
+        for jobs in session:
+            api.submit_jobs(jobs, args.interval, args.depth)
 
     def _call(self, args):
         method_args = cli.build_cli_method_args_from_mapping(

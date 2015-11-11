@@ -6,6 +6,8 @@ from cached_property import cached_property
 from gc3libs import Run
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import StopOnError
+from .description import WorkflowDescription
+from .description import WorkflowStageDescription
 from ..errors import WorkflowNextStepError
 
 logger = logging.getLogger(__name__)
@@ -41,75 +43,6 @@ def load_program(prog_name):
     return getattr(module, class_name)
 
 
-def load_method_args(method_name):
-    '''
-    Load general arguments that can be parsed to a method of
-    an implemented subclass of a :py:class:`tmlib.cli.CommandLineInterface`
-    base class
-
-    Parameters
-    ----------
-    method_name: str
-        name of the method
-
-    Returns
-    -------
-    tmlib.args.Args
-        argument container
-
-    Raises
-    ------
-    AttrbuteError
-        when the "args" module doesn't contain a method-specific
-        implementation of the `Args` base class
-    '''
-    module_name = 'tmlib.args'
-    module = importlib.import_module(module_name)
-    class_name = '%sArgs' % method_name.capitalize()
-    return getattr(module, class_name)
-
-
-def load_var_method_args(prog_name, method_name):
-    '''
-    Load variable program-specific arguments that can be parsed to
-    a method of an implemented subclass of a
-    :py:class:`tmlib.cli.CommandLineInterface` base class.
-
-    Parameters
-    ----------
-    prog_name: str
-        name of the program
-    method_name: str
-        name of the method
-
-    Returns
-    -------
-    tmlib.args.Args
-        argument container
-
-    Note
-    ----
-    Returns ``None`` when the "args" module in the subpackage with name
-    `prog_name` doesn't contain a program- and method-specific implementation
-    of the `Args` base class.
-
-    Raises
-    ------
-    ImportError
-        when subpackage with name `prog_name` doesn't have a module named "args"
-    '''
-    package_name = 'tmlib.%s' % prog_name
-    module_name = 'tmlib.%s.args' % prog_name
-    importlib.import_module(package_name)
-    module = importlib.import_module(module_name)
-    class_name = '%s%sArgs' % (prog_name.capitalize(),
-                               method_name.capitalize())
-    try:
-        return getattr(module, class_name)
-    except AttributeError:
-        return None
-
-
 class Workflow(SequentialTaskCollection, StopOnError):
 
     def __init__(self, experiment, verbosity, description=None,
@@ -123,8 +56,9 @@ class Workflow(SequentialTaskCollection, StopOnError):
             configured experiment object
         verbosity: int
             logging verbosity level
-        description: tmlib.cfg.WorkflowDescription, optional
-            description of the workflow that should be (default: ``None``)
+        description: tmlib.cfg.WorkflowDescription or tmlib.cfg.WorkflowStageDescription, optional
+            description of a workflow or an individual stage that should be
+            processed (default: ``None``)
         start_stage: str or int, optional
             name or index of a stage from where the workflow should be
             started (default: ``None``)
@@ -132,10 +66,16 @@ class Workflow(SequentialTaskCollection, StopOnError):
             name or index of a step within `stage` from where the workflow
             should be started (default: ``None``)
 
+        Raises
+        ------
+        ValueError
+            when `start_stage` is provided together with a `description`
+            of type :py:class:`tmlib.cfg.WorkflowStageDescription`
+
         Note
         ----
-        If no `description` is provided, the description is
-        obtained from the user configuration settings file.
+        If no `description` is provided, an attempt is made to obtain the
+        description from the user configuration settings file.
 
         See also
         --------
@@ -143,9 +83,22 @@ class Workflow(SequentialTaskCollection, StopOnError):
         '''
         super(Workflow, self).__init__(tasks=None, jobname='tmaps')
         self.experiment = experiment
-        self.workflow = description
-        if self.workflow is None:
+        if isinstance(description, WorkflowDescription):
+            self.workflow = description
+        elif isinstance(description, WorkflowStageDescription):
+            if start_stage is not None:
+                raise ValueError(
+                        'Argument "start_stage" can only be used when '
+                        'type of argument "description" is '
+                        'tmlib.tmaps.description.WorkflowDescription')
+            self.workflow.stages[0] = description
+        elif description is None:
             self.workflow = self.experiment.user_cfg.workflow
+        else:
+            raise TypeError(
+                        'Argument "description" must have type '
+                        'tmlib.tmaps.description.WorkflowDescription or '
+                        'tmlib.tmaps.description.WorkflowStageDescription')
         self.start_stage = start_stage
         self.start_step = start_step
         self.tasks = list()
@@ -154,7 +107,7 @@ class Workflow(SequentialTaskCollection, StopOnError):
         self._add_step(0)
 
     @cached_property
-    def steps_to_process(self):
+    def _steps_to_process(self):
         '''
         Returns
         -------
@@ -225,13 +178,16 @@ class Workflow(SequentialTaskCollection, StopOnError):
         return jobs
 
     def _add_step(self, index):
+        if index == 0:
+            logger.info('start first step: "%s"',
+                        self._steps_to_process[index].name)
         if index > 0:
             if not all([os.path.exists(f) for f in self.expected_outputs[-1]]):
                 logger.error('expected outputs were not generated')
                 raise WorkflowNextStepError(
                              'outputs of previous step do not exist')
         logger.debug('create job descriptions for next step')
-        task = self._create_jobs_for_next_step(self.steps_to_process[index])
+        task = self._create_jobs_for_next_step(self._steps_to_process[index])
         logger.debug('add jobs to the workflow task list')
         self.tasks.append(task)
 
@@ -248,13 +204,13 @@ class Workflow(SequentialTaskCollection, StopOnError):
         -------
         gc3libs.Run.State
         '''
-        if done+1 < len(self.steps_to_process):
+        if done+1 < len(self._steps_to_process):
             logger.info('waiting to give NFS time to get up-to-date')
             time.sleep(60)
             try:
                 logger.info('progress to next step ({0} of {1}): "{2}"'.format(
-                                (done+1)+1, len(self.steps_to_process),
-                                self.steps_to_process[done+1].name))
+                                (done+1)+1, len(self._steps_to_process),
+                                self._steps_to_process[done+1].name))
                 self._add_step(done+1)
             except Exception as error:
                 logger.error('adding next step failed: %s', error)
