@@ -16,6 +16,10 @@ from .description import WorkflowStepDescription
 from ..errors import WorkflowDescriptionError
 from .. import utils
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 #: Implemented workflow stages:
 #: For more information please refer to the corresponding section in
 #: :ref:`introduction <workflow>`
@@ -165,6 +169,8 @@ class CanonicalWorkflowDescription(WorkflowDescription):
         TypeError
             when `stage_description` doesn't have type
             :py:class:`tmlib.tmaps.canonical.CanonicalWorkflowStageDescription`
+        WorkflowDescriptionError
+            when stage already exists or when a required step is not described
         '''
         if not isinstance(stage_description, CanonicalWorkflowStageDescription):
             raise TypeError(
@@ -175,17 +181,21 @@ class CanonicalWorkflowDescription(WorkflowDescription):
                 raise WorkflowDescriptionError(
                             'Stage "%s" already exists.'
                             % stage_description.name)
-        name = stage_description.name
-        check_stage_name(name)
+        check_stage_name(stage_description.name)
         for step in stage_description.steps:
-            check_step_name(step.name, name)
+            check_step_name(step.name, stage_description.name)
         stage_names = [s.name for s in self.stages]
-        if name in INTER_STAGE_DEPENDENCIES:
-            for dep in INTER_STAGE_DEPENDENCIES[name]:
+        if stage_description.name in INTER_STAGE_DEPENDENCIES:
+            for dep in INTER_STAGE_DEPENDENCIES[stage_description.name]:
                 if dep not in stage_names:
-                    raise WorkflowDescriptionError(
-                            'Stage "%s" requires upstream stage "%s"'
-                            % (name, dep))
+                    logger.warning(
+                            'Stage "%s" requires upstream stage "%s"',
+                            stage_description.name, dep)
+        for name in stage_names:
+            if stage_description.name in INTER_STAGE_DEPENDENCIES[name]:
+                raise WorkflowDescriptionError(
+                            'Stage "%s" must be upstream of stage "%s"'
+                            % (stage_description.name, name))
         step_names = [s.name for s in stage_description.steps]
         required_steps = STEPS_PER_STAGE[stage_description.name]
         for name in step_names:
@@ -237,6 +247,8 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
         TypeError
             when `step_description` doesn't have type
             :py:class:`tmlib.tmaps.canonical.CanonicalWorkflowStepDescription`
+        workflowDescriptionError
+            when step already exists or a required upstream step is missing
         '''
         if not isinstance(step_description, CanonicalWorkflowStepDescription):
             raise TypeError(
@@ -279,8 +291,6 @@ class CanonicalWorkflowStepDescription(WorkflowStepDescription):
 
         Raises
         ------
-        KeyError
-            when `description` doesn't have keys "name" and "args"
         WorkflowDescriptionError
             when the step is not known
         '''
