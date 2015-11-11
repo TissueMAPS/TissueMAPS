@@ -54,7 +54,8 @@ class Experiment(object):
         Raises
         ------
         OSError
-            when `experiment_dir` does not exist
+            when `experiment_dir` does not exist or when `user_cfg` is ``None``
+            and user configuration file does not exist
         ValueError
             when `library` is not specified correctly
 
@@ -76,7 +77,11 @@ class Experiment(object):
         if self.library not in {'vips', 'numpy'}:
             raise ValueError(
                     'Argument "library" must be either "numpy" or "vips"')
-        self.user_cfg = user_cfg
+        if user_cfg is None:
+            if not os.path.exists(self.user_cfg_file):
+                raise OSError(
+                        'User configuration settings file does not exist: %s'
+                        % self.user_cfg_file)
 
     @property
     def dir(self):
