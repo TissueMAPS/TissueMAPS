@@ -8,12 +8,10 @@ from flask.ext.jwt import current_identity
 
 import numpy as np
 
-from tmlib.experiment import Experiment as Exp
-from tmlib.tmaps.workflow import Workflow
-from tmlib.logging_utils import configure_logging
-from tmlib.tmaps.canonical import CanonicalWorkflowDescription
-from tmlib.tmaps.canonical import CanonicalWorkflowStageDescription
-from tmlib.tmaps.canonical import CanonicalWorkflowStepDescription
+import tmlib.experiment
+import tmlib.tmaps.workflow
+import tmlib.logging_utils
+import tmlib.tmaps.canonical
 
 from tmaps.models import Experiment, TaskSubmission
 from tmaps.extensions.encrypt import decode
@@ -27,7 +25,7 @@ from tmaps.api.responses import (
 import logging
 
 # configure tmlib loggers
-tmlib_logger = configure_logging(logging.INFO)
+tmlib_logger = tmlib.logging_utils.configure_logging(logging.INFO)
 
 
 @api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
@@ -123,7 +121,6 @@ def get_experiments():
     Experiment.as_dict().
 
     """
-
     experiments_owned = [e.as_dict() for e in current_identity.experiments]
     experiments_shared = [e.as_dict()
                           for e in current_identity.received_experiments]
@@ -228,22 +225,23 @@ def convert_images(exp_id):
     metaconfig_args = data['metaconfig']
     imextract_args = data['imextract']
 
-    exp = Exp(e.location)
-    workflow_description = CanonicalWorkflowDescription()
-    conversion_stage = CanonicalWorkflowStageDescription(
+    exp = tmlib.experiment.Experiment(e.location)
+    workflow_description = tmlib.tmaps.canonical.CanonicalWorkflowDescription()
+    conversion_stage = tmlib.tmaps.canonical.CanonicalWorkflowStageDescription(
                             name='image_conversion')
-    metaextract_step = CanonicalWorkflowStepDescription(
+    metaextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
                             name='metaextract', args=metaextract_args)
-    metaconfig_step = CanonicalWorkflowStepDescription(
+    metaconfig_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
                             name='metaconfig', args=metaconfig_args)
-    imextract_step = CanonicalWorkflowStepDescription(
+    imextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
                             name='imextract', args=imextract_args)
     conversion_stage.add_step(metaextract_step)
     conversion_stage.add_step(metaconfig_step)
     conversion_stage.add_step(imextract_step)
     workflow_description.add_stage(conversion_stage)
+
     # Create tmlib.workflow.Workflow object that can be added to the session
-    jobs = Workflow(exp, verbosity=1, start_stage='image_conversion',
+    jobs = tmlib.tmaps.workflow.Workflow(exp, verbosity=1, start_stage='image_conversion',
                     description=workflow_description)
 
     # Add the task to the persistent session
@@ -252,11 +250,14 @@ def convert_images(exp_id):
     # Add the new task to the session
     persistent_id = session.add(jobs)
 
+    # TODO: Check if necessary
+    # TODO: Consider session.flush()
+    session.save_all()
+
     # Add only the new task in the session to the engine
     # (all other tasks are already in the engine)
-    for task in session:
-        if task.persistent_id == persistent_id:
-            engine.add(task)
+    task = session.load(persistent_id)
+    engine.add(task)
 
     # Create a database entry that links the current user
     # to the task and experiment for which this task is executed.
