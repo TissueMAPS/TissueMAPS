@@ -14,6 +14,7 @@ class TmapsSubmitArgs(Args):
         '''
         self.stage = self._stage_params['default']
         self.step = self._step_params['default']
+        self.overwrite = False
         super(TmapsSubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -22,7 +23,7 @@ class TmapsSubmitArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        return {'stage', 'step'}
+        return {'stage', 'step', 'overwrite'}
 
     @property
     def stage(self):
@@ -45,7 +46,7 @@ class TmapsSubmitArgs(Args):
     @property
     def _stage_params(self):
         return {
-            'type': basestring,
+            'type': str,
             'default': None,
             'help': '''
                 name of the stage from where workflow should be started
@@ -73,9 +74,35 @@ class TmapsSubmitArgs(Args):
     @property
     def _step_params(self):
         return {
-            'type': basestring,
+            'type': str,
             'default': None,
             'help': '''
                 name of the step from where workflow should be started
+            '''
+        }
+
+    @property
+    def overwrite(self):
+        '''
+        Returns
+        -------
+        bool
+            indicator that an existing session should be overwritten
+            (default: ``False``)
+        '''
+        return self._overwrite
+
+    @overwrite.setter
+    def overwrite(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "overwrite" must have type bool.')
+        self._overwrite = value
+
+    @property
+    def _overwrite_params(self):
+        return {
+            'action': 'store_true',
+            'help': '''
+                overwrite an existing session
             '''
         }

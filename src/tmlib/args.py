@@ -36,6 +36,8 @@ class Args(object):
             for key, value in kwargs.iteritems():
                 if not isinstance(key, basestring):
                     raise TypeError('"kwargs" keys must have type basestring')
+                if isinstance(value, basestring):
+                    value = str(value)
                 if key in self._persistent_attrs:
                     logger.debug('set argument "%s"', key)
                     setattr(self, key, value)
@@ -293,7 +295,7 @@ class SubmitArgs(GeneralArgs):
     @property
     def _virtualenv_params(self):
         return {
-            'type': basestring,
+            'type': str,
             'default': None,
             'help': '''
                 name of a virtual environment that needs to be activated
@@ -507,7 +509,7 @@ class ApplyArgs(GeneralArgs):
     @property
     def _plates_params(self):
         return {
-            'type': basestring,
+            'type': str,
             'default': None,
             'nargs': '+',
             'metavar': 'P',
@@ -543,7 +545,7 @@ class ApplyArgs(GeneralArgs):
     @property
     def _wells_params(self):
         return {
-            'type': basestring,
+            'type': str,
             'nargs': '+',
             'default': None,
             'metavar': 'W',
