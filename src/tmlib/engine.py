@@ -407,6 +407,7 @@ class BgEngine(object):
             is_done = task_.execution.state == gc3libs.Run.State.TERMINATED
             failed = task_.execution.exitcode != 0
             data = {
+                'id': str(task_),
                 'name': task_.jobname,
                 'state': task_.execution.state,
                 'is_live': task_.execution.state in is_live_states,
@@ -414,10 +415,6 @@ class BgEngine(object):
                 'failed': is_done and failed,
                 'percent_done': 0.0  # fix later, if possible
             }
-            if hasattr(task_, 'persistent_id'):
-                data['id'] = str(task_.persistent_id)
-            else:
-                data['id'] = str(task_)
 
             is_task_collection = isinstance(task_, gc3libs.workflow.TaskCollection)
             is_task = isinstance(task_, gc3libs.Task)
@@ -427,7 +424,10 @@ class BgEngine(object):
                 for child in task_.tasks:
                     if (child.execution.state == gc3libs.Run.State.TERMINATED):
                         done += 1
-                data['percent_done'] = done / len(task_.tasks) * 100
+                if len(task_.tasks) > 0:
+                    data['percent_done'] = done / len(task_.tasks) * 100
+                else:
+                    data['percent_done'] = 0
             elif is_task:
                 # For an individual task it is difficult to estimate to which
                 # extent the task has been completed. For simplicity and

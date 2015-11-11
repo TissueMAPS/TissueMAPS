@@ -52,8 +52,7 @@ class Formats(object):
             file extensions of supported formats
         '''
         all_extensions = flatten(self.supported_formats.values())
-        self._supported_extensions = set(all_extensions)
-        return self._supported_extensions
+        return set(all_extensions)
 
     def extract_supported_formats(self, input_filename, support_level=0):
         '''

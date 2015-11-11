@@ -4,9 +4,9 @@ import logging
 import shutil
 import numpy as np
 from . import registration as reg
-from .descriptions import AlignmentDescription
-from .descriptions import OverhangDescription
-from .descriptions import ShiftDescription
+from .description import AlignmentDescription
+from .description import OverhangDescription
+from .description import ShiftDescription
 from ..writers import JsonWriter
 from ..api import ClusterRoutines
 from ..errors import NotSupportedError

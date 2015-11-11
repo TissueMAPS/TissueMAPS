@@ -120,8 +120,8 @@ class WorkflowDescription(object):
 
     See also
     --------
-    :py:class:`tmlib.tmaps.descriptions.WorkflowStageDescription`
-    :py:class:`tmlib.tmaps.descriptions.WorkflowStepDescription`
+    :py:class:`tmlib.tmaps.description.WorkflowStageDescription`
+    :py:class:`tmlib.tmaps.description.WorkflowStepDescription`
     '''
 
     __metaclass__ = ABCMeta

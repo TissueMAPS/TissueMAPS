@@ -17,7 +17,6 @@ from .. import image_utils
 from ..readers import YamlReader
 from ..api import ClusterRoutines
 from ..errors import PipelineDescriptionError
-from ..errors import PipelineOSError
 from ..writers import DatasetWriter
 
 logger = logging.getLogger(__name__)

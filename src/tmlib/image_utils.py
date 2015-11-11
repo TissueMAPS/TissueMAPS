@@ -1,3 +1,5 @@
+'''Utility functions for common image processing routines.'''
+
 import random as rand
 from gi.repository import Vips
 from scipy.misc import imread, bytescale
@@ -7,9 +9,6 @@ import logging
 from skimage.exposure import rescale_intensity
 
 logger = logging.getLogger(__name__)
-
-
-'''Utility functions for common image processing routines.'''
 
 
 def save_vips_image_jpg(im, filename, quality=75):
@@ -330,9 +329,7 @@ def create_thresholding_LUT(threshold):
     # Transform the LUT in such a way that pixels with values above the
     # threshold get the same value (= threshold).
     condition_image = (identity_image >= threshold)
-    lut = condition_image.ifthenelse(threshold, identity_image)
-
-    return lut
+    return condition_image.ifthenelse(threshold, identity_image)
 
 
 def convert_to_uint8(img):
@@ -355,5 +352,6 @@ def convert_to_uint8(img):
     This is equivalent to Image > Type > 8-bit in ImageJ.
     '''
     in_range = (np.min(img), np.max(img))
-    img_rescaled = rescale_intensity(img, out_range='uint8', in_range=in_range).astype(np.uint8)
+    img_rescaled = rescale_intensity(
+                    img, out_range='uint8', in_range=in_range).astype(np.uint8)
     return img_rescaled

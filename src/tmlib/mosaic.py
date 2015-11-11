@@ -113,7 +113,7 @@ class StichedImage(object):
 class Mosaic(StichedImage):
 
     '''
-    Class for a mosaic image of type `Vips.Image`.
+    Class for a mosaic image.
     '''
 
     def __init__(self, array):
@@ -176,29 +176,47 @@ class Mosaic(StichedImage):
             raise ValueError('"dy" has to be a negative integer value')
 
         grid = Mosaic._build_image_grid(images)
-        rows = list()
+        # rows = list()
         for i in xrange(grid.shape[0]):
-            current_row = list()
+            # current_row = list()
             for j in xrange(grid.shape[1]):
+
                 img = grid[i, j]
                 if stats:
                     img = img.correct(stats)
                 if align:
                     img = img.align(crop=False)
-                current_row.append(img.pixels.array)
-            rows.append(reduce(lambda x, y:
-                        x.merge(y, 'horizontal', -x.width-dx, 0), current_row))
-        img = reduce(lambda x, y:
-                     x.merge(y, 'vertical', 0, -x.height-dy), rows)
 
-        return Mosaic(img)
+                if j == 0:
+                    row = img.pixels.array
+                else:
+                    row = row.merge(img.pixels.array, 'horizontal',
+                                    -row.width-dx, 0)
+
+                print row.height, row.width
+
+            if i == 0:
+                mosaic = row
+            else:
+                mosaic = mosaic.merge(row, 'vertical',
+                                      0, -mosaic.height-dy)
+
+            print mosaic.height, mosaic.width
+
+        #         current_row.append(img.pixels.array)
+        #     rows.append(reduce(lambda x, y:
+        #                 x.merge(y, 'horizontal', -x.width-dx, 0), current_row))
+        # img = reduce(lambda x, y:
+        #              x.merge(y, 'vertical', 0, -x.height-dy), rows)
+
+        return Mosaic(mosaic)
 
 
 class Collage(StichedImage):
 
     def __init__(self, array):
         '''
-        Initialize an instance of class Mosaic.
+        Initialize an instance of class Collage.
 
         Parameters
         ----------

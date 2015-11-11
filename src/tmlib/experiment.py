@@ -236,18 +236,14 @@ class Experiment(object):
             absolute path to the directory, where source files
             (original microscope files) are located
 
-        Raises
-        ------
-        OSError
-            when `source_dir` does not exist
-
         Note
         ----
-        The user has to create the directory and provide its location.
+        Directory is created if it doesn't exist.
         '''
         sources_dir = self.user_cfg.sources_dir
         if not os.path.exists(sources_dir):
-            raise OSError('PlateSources directory does not exist')
+            logger.debug('create directory for sources: %s', sources_dir)
+            os.mkdir(sources_dir)
         return sources_dir
 
     def _is_plate_source_dir(self, folder):
@@ -295,14 +291,17 @@ class Experiment(object):
             absolute path to the folder holding the layers
             (image pyramids and associated data)
 
+        Note
+        ----
+        Directory is created if it doesn't exist.
+
         See also
         --------
         :py:mod:`tmlib.illuminati`
         '''
         layers_dir = self.user_cfg.layers_dir
         if not os.path.exists(layers_dir):
-            logger.debug('create directory for layers pyramid directories: %s'
-                         % layers_dir)
+            logger.debug('create directory for layers: %s', layers_dir)
             os.mkdir(layers_dir)
         return layers_dir
 

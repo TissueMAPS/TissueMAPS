@@ -35,7 +35,7 @@ class ImageMetadata(object):
 
         See also
         --------
-        :mod:`tmlib.align.descriptions.AlignmentDescription`
+        :mod:`tmlib.align.description.AlignmentDescription`
         '''
         self.is_aligned = False
         self.is_omitted = False

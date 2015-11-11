@@ -202,7 +202,7 @@ class CommandLineInterface(object):
                 logger.info('clean up output of previous submission')
                 dont_exist_ix = [not os.path.exists(f) for f in outputs]
                 if all(dont_exist_ix):
-                    logger.warning('outputs don\'t exist')
+                    logger.debug('outputs don\'t exist')
                 elif any(dont_exist_ix):
                     logger.warning('some outputs don\'t exist')
                 for out in outputs:
@@ -315,8 +315,7 @@ class CommandLineInterface(object):
         '''
         api = self._api_instance
         logger.debug('get expected outputs from job descriptions')
-        outputs = api.list_output_files(self._job_descriptions)
-        return outputs
+        return api.list_output_files(self._job_descriptions)
 
     @property
     def required_inputs(self):
@@ -330,8 +329,7 @@ class CommandLineInterface(object):
         '''
         api = self._api_instance
         logger.debug('get required inputs from job descriptions')
-        self._required_inputs = api.list_input_files(self._job_descriptions)
-        return self._required_inputs
+        return api.list_input_files(self._job_descriptions)
 
     def build_jobs(self, virtualenv):
         '''

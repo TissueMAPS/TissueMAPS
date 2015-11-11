@@ -16,7 +16,7 @@ from .metadata import ChannelImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .errors import RegexError
 from metaconfig import ome_xml
-from align.descriptions import AlignmentDescription
+from align.description import AlignmentDescription
 
 logger = logging.getLogger(__name__)
 

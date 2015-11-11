@@ -59,6 +59,17 @@ class BasicClusterRoutines(object):
             os.mkdir(self._log_dir)
         return self._log_dir
 
+    @property
+    def session_dir(self):
+        '''
+        Returns
+        -------
+        str
+            directory for a
+            `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
+        '''
+        return os.path.join(self.project_dir, 'session')
+
     @staticmethod
     def create_datetimestamp():
         '''
