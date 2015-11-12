@@ -184,7 +184,7 @@ if scripts is None:
 
 
 setuptools.setup(
-    name='tmlib',
+    name='jtlib',
     version=get_version(),
     description='Jterator library.',
     author='Markus D. Herrmann and Robin Hafen',
