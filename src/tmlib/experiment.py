@@ -77,6 +77,7 @@ class Experiment(object):
         if self.library not in {'vips', 'numpy'}:
             raise ValueError(
                     'Argument "library" must be either "numpy" or "vips"')
+        self.user_cfg = user_cfg
         if user_cfg is None:
             if not os.path.exists(self.user_cfg_file):
                 raise OSError(
