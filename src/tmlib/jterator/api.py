@@ -461,7 +461,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             if not out['success']:
                 sys.exit(out['error_message'])
             for k, v in out.iteritems():
-                print out[k]
                 if k == 'data':
                     outputs['data'].update(out[k])
                 else:
