@@ -81667,15 +81667,17 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
  */
 ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
     function(polygonGeometry, feature) {
-  // if (goog.isNull(this.fillColor_)) {
-  //   return;
-  // }
-
   // Get fill color
   // TODO: Check if feature has a fill color, if not, get the
-  // fillColor of this layer (i.e. this.fillColor_)
-  var fillColor = feature.getStyle().getFill().getColor();
-  // console.log(fillColor);
+  // fillColor of this layer.
+  var fillColor;
+  if (!goog.isNull(feature.getStyle())) {
+      fillColor = feature.getStyle().getFill().getColor();
+  } else if (!goog.isNull(this.fillColor_)) {
+      fillColor = this.fillColor_;
+  } else {
+    return;
+  }
 
   var coordinates = polygonGeometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);
