@@ -85,7 +85,8 @@ class ObjectLayer extends BaseLayer<ol.layer.Vector> {
         if (obj !== undefined && obj !== null) {
             this._objects.push(obj);
             var src = this.olLayer.getSource();
-            src.addFeature(obj.getOLFeature());
+            var feat = obj.getOLFeature();
+            src.addFeature(feat);
         } else {
             console.log('Warning: trying to add undefined or null MapObject.');
         }
@@ -98,7 +99,10 @@ class ObjectLayer extends BaseLayer<ol.layer.Vector> {
         objects.forEach((o) => {
             this._objects.push(o);
         });
-        var features = _(objects).map((o) => { return o.getOLFeature(); });
+        var features = _(objects).map((o) => {
+            var feat = o.getOLFeature();
+            return feat;
+        });
         this.olLayer.getSource().addFeatures(features);
     }
 }

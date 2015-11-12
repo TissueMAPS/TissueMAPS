@@ -146,3 +146,8 @@ class Color implements Serializable<Color> {
     }
 }
 
+angular.module('tmaps.core')
+.factory('Color', () => {
+    return Color;
+});
+
