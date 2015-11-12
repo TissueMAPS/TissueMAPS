@@ -1307,10 +1307,11 @@ goog.inherits(ol.render.webgl.PolygonReplay, ol.render.VectorContext);
 /**
  * Draw one polygon.
  * @param {Array.<Array.<ol.Coordinate>>} coordinates
+ * @param {ol.Color} fillColor
  * @private
  */
 ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
-    function(coordinates) {
+    function(coordinates, fillColor) {
   // Triangulate the polgon
   var triangulation = ol.ext.earcut(coordinates, true);
   var i, ii;
@@ -1330,11 +1331,10 @@ ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
     this.vertices_.push(vertices[2 * i + 1]);
 
     // FIXME: Find a way to provide different vertex color info for each feature, not a gillColor for the whole layer
-
-    this.vertices_.push(this.fillColor_[0]);
-    this.vertices_.push(this.fillColor_[1]);
-    this.vertices_.push(this.fillColor_[2]);
-    this.vertices_.push(this.fillColor_[3]);
+    this.vertices_.push(fillColor[0]);
+    this.vertices_.push(fillColor[1]);
+    this.vertices_.push(fillColor[2]);
+    this.vertices_.push(fillColor[3]);
   }
 };
 
@@ -1347,6 +1347,7 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
   if (goog.isNull(this.fillColor_)) {
     return;
   }
+
   var coordinatess = geometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);
   this.startIndicesFeature_.push(feature);
@@ -1362,13 +1363,20 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
  */
 ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
     function(polygonGeometry, feature) {
-  if (goog.isNull(this.fillColor_)) {
-    return;
-  }
+  // if (goog.isNull(this.fillColor_)) {
+  //   return;
+  // }
+
+  // Get fill color
+  // TODO: Check if feature has a fill color, if not, get the
+  // fillColor of this layer (i.e. this.fillColor_)
+  var fillColor = feature.getStyle().getFill().getColor();
+  // console.log(fillColor);
+
   var coordinates = polygonGeometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);
   this.startIndicesFeature_.push(feature);
-  this.drawCoordinates_(coordinates);
+  this.drawCoordinates_(coordinates, fillColor);
   var endIndex = this.indices_.length;
   this.endIndices_.push(endIndex);
 
@@ -1514,7 +1522,6 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
     var elementType = context.hasOESElementIndexUint ?
         goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
 
-    console.log(center);
     var feature, dontSkipFeature, featureIntersectsHitExtent, featureUid, end, start;
     var featureIndex = this.startIndices_.length - 1;
     var elementSize = context.hasOESElementIndexUint ? 4 : 2;
