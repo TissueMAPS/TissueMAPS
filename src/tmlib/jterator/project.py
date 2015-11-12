@@ -4,7 +4,6 @@ import glob
 import logging
 from copy import copy
 import shutil
-from cached_property import cached_property
 from natsort import natsorted
 from ..readers import YamlReader
 from ..writers import YamlWriter

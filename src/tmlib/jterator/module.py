@@ -205,8 +205,11 @@ class ImageProcessingModule(object):
 
     def _exec_py_module(self, inputs, output_names):
         logger.debug('importing module: "%s"' % self.module_file)
-        imp.load_source(self.name, self.module_file)
-        func = getattr(__import__(self.name, fromlist=[self.name]), self.name)
+        # The name of the module can differ from the name of the module source
+        # code file!
+        module_name = os.path.splitext(os.path.basename(self.module_file))[0]
+        imp.load_source(module_name, self.module_file)
+        func = getattr(__import__(module_name, fromlist=[module_name]), module_name)
         logger.debug('evaluating Python function with INPUTS: "%s"'
               % '", "'.join(inputs.keys()))
         py_out = func(**inputs)

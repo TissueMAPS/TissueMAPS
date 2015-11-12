@@ -279,9 +279,13 @@ class PipelineChecker(object):
                             # the program and are therefore not created
                             # upstream in the pipeline.
                             continue
+                        if not module['active']:
+                            # Don't check inactive modules
+                            continue
                         if input_arg['value'] not in outputs:
                             print input_arg['name']
-                            print input_arg['value']
+                            print module['handles']
+                            print handles
                             raise PipelineDescriptionError(
                                     'Input "%s" of module "%s" is not '
                                     'created upstream in the pipeline.'
