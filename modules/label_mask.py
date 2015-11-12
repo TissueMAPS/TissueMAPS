@@ -20,7 +20,7 @@ def label_mask(mask, **kwargs):
 
     Returns
     -------
-    namedtuple[numpy.ndarray[int]]
+    collections.namedtuple[numpy.ndarray[int]]
         labeled image: "objects"
 
     Note
@@ -34,7 +34,7 @@ def label_mask(mask, **kwargs):
 
     if kwargs['plot']:
 
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
 
         img_obj = labeled_image.copy().astype(float)

@@ -44,7 +44,7 @@ def smooth_image(image, filter, filter_size, sigma=0, sigma_color=0,
 
     Returns
     -------
-    namedtuple[numpy.ndarray]
+    collections.collections.namedtuple[numpy.ndarray]
         smoothed image: "smoothed_image"
 
     Raises
@@ -75,7 +75,7 @@ def smooth_image(image, filter, filter_size, sigma=0, sigma_color=0,
 
     if kwargs['plot']:
 
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure()
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
 

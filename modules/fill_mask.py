@@ -20,14 +20,14 @@ def fill_mask(mask, **kwargs):
 
     Returns
     -------
-    namedtuple[numpy.ndarray[bool]]
+    collections.namedtuple[numpy.ndarray[bool]]
         filled binary image: "filled_mask"
     '''
     img = ndi.binary_fill_holes(mask)
 
     if kwargs['plot']:
 
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
 
         img_obj = np.zeros(img.shape)

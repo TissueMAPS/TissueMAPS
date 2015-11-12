@@ -28,7 +28,7 @@ def load_objects(objects_name, **kwargs):
 
     Returns
     -------
-    namedtuple[numpy.ndarray[uint]]
+    collections.namedtuple[numpy.ndarray[uint]]
         label image that encodes the objects: "loaded_objects"
     '''
     experiment = ExperimentFactory(kwargs['experiment_dir'], cfg).create()
@@ -52,7 +52,7 @@ def load_objects(objects_name, **kwargs):
 
     if kwargs['plot']:
 
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 
         im = ax.imshow(labeled_image)

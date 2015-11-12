@@ -2,66 +2,66 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
                                         max_solidity, min_formfactor, min_area, max_area, selection_test_mode, ...
                                         filter_size, sliding_window_size, min_angle, max_radius, perimeter_test_mode, ...,
                                         varargin)
-% Jterator module for separating clumped objects, i.e. continuous pixel regions
-% in a binary image that satisfy certain morphological criteria (size and shape).
-% 
-% Selected clumps are separated along watershed lines in a corresponding
-% grayscale image connecting two concave regions. Note that only one fragment
-% will be cut of a clump in one cutting pass. 
-% 
-% This module is based on the "IdentifyPrimaryIterative" CellProfiler module
-% as described in Stoeger et al. 2015 [1]_.
-% 
-% Parameters
-% ----------
-% input_mask: logical array
-%   binary image in which clumps should be separated
-% input_image: double array
-%   grayscale image that should be used find optimal cut lines
-% cutting_passes: double
-%   number of cutting rounds that should be applied
-% min_cut_area: double
-%   minimal area of a cut fragment that should be tolerated, cuts that would
-%   result in a smaller fragment will not be performed 
-% max_solidity: double
-%   maximal solidity value for a continuous pixel region to be considered a clump
-% min_formfactor: double
-%   minimal form factor value for a continuous pixel region to be considered a clump
-%   (it's actually the inverse of the form factor, determine empirically)
-% min_area: double
-%   minimal area value for a continuous pixel region to be considered a clump
-% max_area: double
-%   minimal area value for a continuous pixel region to be considered a clump
-% selection_test_mode: logical
-%   whether selected clumps should be plotted in order to empirically determine 
-%   optimal values for `max_solidity`, `min_formfactor`, `min_area` and
-%   and `max_area`; no cutting will be performed
-% filter_size: double
-%   size of the smoothing filter that is applied to the mask prior to
-%   perimeter analysis
-% sliding_window_size: double
-%   size of the sliding window used for perimeter analysis
-% min_angle: double
-%   minimal angle
-% max_radius: double
-%   maximal radius of the circle fitting into the concave region
-% perimeter_test_mode: logical
-%   whether result of the perimeter analysis should be plotted in order to
-%   empirically determine optimal values for `min_angle` and `max_radius`;
-%   no cutting will be performed
-% varargin: cell array
-%   additional arguments provided by Jterator:
-%   {1}: "data_file", {2}: "figure_file", {3}: "project_dir", {4}: "plot"
-% 
-% Returns
-% -------
-% logical array
-%   output_mask: binary image with clumps in `input_mask` separated
-% 
-% References
-% ----------
-% _[1] Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L.
-%      Computer vision for image-based transcriptomics. Methods. 2015
+    % Jterator module for separating clumped objects, i.e. continuous pixel regions
+    % in a binary image that satisfy certain morphological criteria (size and shape).
+    % 
+    % Selected clumps are separated along watershed lines in a corresponding
+    % grayscale image connecting two concave regions. Note that only one fragment
+    % will be cut of a clump in one cutting pass. 
+    % 
+    % This module is based on the "IdentifyPrimaryIterative" CellProfiler module
+    % as described in Stoeger et al. 2015 [1]_.
+    % 
+    % Parameters
+    % ----------
+    % input_mask: logical array
+    %   binary image in which clumps should be separated
+    % input_image: integer array
+    %   grayscale image that should be used find optimal cut lines
+    % cutting_passes: double
+    %   number of cutting rounds that should be applied
+    % min_cut_area: double
+    %   minimal area of a cut fragment that should be tolerated, cuts that would
+    %   result in a smaller fragment will not be performed 
+    % max_solidity: double
+    %   maximal solidity value for a continuous pixel region to be considered a clump
+    % min_formfactor: double
+    %   minimal form factor value for a continuous pixel region to be considered a clump
+    %   (it's actually the inverse of the form factor, determine empirically)
+    % min_area: double
+    %   minimal area value for a continuous pixel region to be considered a clump
+    % max_area: double
+    %   minimal area value for a continuous pixel region to be considered a clump
+    % selection_test_mode: logical
+    %   whether selected clumps should be plotted in order to empirically determine 
+    %   optimal values for `max_solidity`, `min_formfactor`, `min_area` and
+    %   and `max_area`; no cutting will be performed
+    % filter_size: double
+    %   size of the smoothing filter that is applied to the mask prior to
+    %   perimeter analysis
+    % sliding_window_size: double
+    %   size of the sliding window used for perimeter analysis
+    % min_angle: double
+    %   minimal angle
+    % max_radius: double
+    %   maximal radius of the circle fitting into the concave region
+    % perimeter_test_mode: logical
+    %   whether result of the perimeter analysis should be plotted in order to
+    %   empirically determine optimal values for `min_angle` and `max_radius`;
+    %   no cutting will be performed
+    % varargin: cell array
+    %   additional arguments provided by Jterator:
+    %   {1}: "data_file", {2}: "figure_file", {3}: "project_dir", {4}: "plot"
+    % 
+    % Returns
+    % -------
+    % logical array
+    %   output_mask: binary image with clumps in `input_mask` separated
+    % 
+    % References
+    % ----------
+    % _[1] Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L.
+    %      Computer vision for image-based transcriptomics. Methods. 2015
 
     import jtlib.analysePerimeter;
     import jtlib.separateClumps;
@@ -69,7 +69,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
     import jtlib.rplabel;
     import jtlib.removeSmallObjects;
     import jtlib.freezeColors;
-    import plotting.*;
+    import jtlib.plotting.save_figure;
 
     if perimeter_test_mode && selection_test_mode
         error('Only one test mode can be active at a time.');
@@ -79,6 +79,9 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
 
     % Fill holes
     input_mask = imfill(input_mask, 'holes');
+
+    % Convert to double precision
+    input_image = double(input_image);
 
     % Translate angle value
     min_angle = degtorad(min_angle);
@@ -181,7 +184,6 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
 
     output_mask = jtlib.removeSmallObjects(output_mask, min_cut_area);
 
-
     if varargin{4}  % plot
 
         if perimeter_test_mode
@@ -232,7 +234,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
             title('Labeled separated mask');
             freezeColors
 
-            plotting.save_mpl_figure(fig, varargin{2})
+            jtlib.plotting.save_figure(fig, varargin{2})
 
         end
 

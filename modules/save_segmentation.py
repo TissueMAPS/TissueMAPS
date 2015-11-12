@@ -73,7 +73,7 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
             outline_image[y_coordinates[i], x_coordinates[i]] = rand_num[i]
         outline_image[outline_image == 0] = np.nan
 
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
 
         ax1.imshow(outline_image)

@@ -30,7 +30,7 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
 
     Returns
     -------
-    namedtuple[numpy.ndarray[bool]]
+    collections.namedtuple[numpy.ndarray[bool]]
         filtered label image: "filtered_objects"
 
     Raises
@@ -58,7 +58,7 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
 
     if kwargs['plot']:
 
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure()
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
 
