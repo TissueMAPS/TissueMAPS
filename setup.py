@@ -134,8 +134,8 @@ def get_version():
     src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                             'jtlib/python')
     sys.path = [src_path] + sys.path
-    import tmlib.version
-    return tmlib.version.__version__
+    import jtlib.version
+    return jtlib.version.__version__
 
 
 def get_requirements():
@@ -168,7 +168,7 @@ packages = [
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
 if packages is None:
-        packages = setuptools.find_packages('tmlib')
+        packages = setuptools.find_packages('jtlib')
 
 if len(packages) == 0:
         raise Exception("No valid packages found")
