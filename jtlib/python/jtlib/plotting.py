@@ -1,3 +1,4 @@
+import os
 import mpld3
 import numpy as np
 import mahotas as mh
@@ -6,6 +7,7 @@ from bokeh.resources import CDN
 from bokeh.embed import file_html
 from bokeh.palettes import Reds5, Greens5, Blues5, Oranges5, BuPu5
 import matplotlib as mpl
+from copy import deepcopy
 from matplotlib import cm
 import logging
 from tmlib import image_utils
@@ -34,10 +36,14 @@ def save_mpl_figure(fig, figure_file):
     Display of the figure in the browser requires internet connection.
     See `troubleshooting <http://mpld3.github.io/faq.html#troubleshooting>`_.
     '''
+    fig.figsize = (100, 100)
     mousepos = mpld3.plugins.MousePosition(fontsize=20)
     mpld3.plugins.connect(fig, mousepos)
     logger.debug('write figure to HTML file: "%s"' % figure_file)
     mpld3.save_html(fig, figure_file)   # template_type='simple'
+    # Also save figure as image
+    img_file = '%s.png' % os.path.splitext(figure_file)[0]
+    fig.savefig(img_file)
 
 
 def save_bk_figure(fig, figure_file):
