@@ -1,6 +1,6 @@
 import json
 from . import api
-from flask_jwt import jwt_required
+from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 from flask import jsonify, request
 from werkzeug import secure_filename

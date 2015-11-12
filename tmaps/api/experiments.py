@@ -224,7 +224,8 @@ def convert_images(exp_id):
     metaconfig_args = data['metaconfig']
     imextract_args = data['imextract']
 
-    exp = tmlib.experiment.Experiment(e.location)
+    exp = e.tmlib_object
+
     workflow_description = tmlib.tmaps.canonical.CanonicalWorkflowDescription()
     conversion_stage = tmlib.tmaps.canonical.CanonicalWorkflowStageDescription(
         name='image_conversion')
@@ -372,7 +373,7 @@ def create_pyramids(exp_id):
     corilla_args = data['corilla']
     align_args = data['align']
 
-    workflow_description = CanonicalWorkflowDescription()
+    workflow_description = tmlib.tmaps.canonical.CanonicalWorkflowDescription()
     if corilla_args or align_args:
         preprocessing_stage = CanonicalWorkflowStageDescription(
                                 name='image_preprocessing')

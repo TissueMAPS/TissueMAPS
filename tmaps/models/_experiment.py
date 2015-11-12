@@ -133,7 +133,7 @@ class Experiment(HashIdModel, CRUDMixin):
 
     @property
     def tmlib_object(self):
-        return _get_tmlib_object(self.location)
+        return _get_tmlib_object(self.location, self.plate_format)
 
     @property
     def dataset_path(self):

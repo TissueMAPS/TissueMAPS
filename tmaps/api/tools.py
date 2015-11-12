@@ -11,7 +11,6 @@ from tmaps.api import api
 from tmaps.tools import get_tool
 
 
-
 @api.route('/tools/<tool_id>/request', methods=['POST'])
 @jwt_required()
 def process_tool_request(tool_id):
