@@ -58,7 +58,7 @@ angular.module('tmaps.toolwindow')
                             sel.getCells()
                         );
                         if (!classes[clsName].color) {
-                            classes[clsName].color = sel.getColor().toRGBArray();
+                            classes[clsName].color = sel.color.toOlColor();
                         }
                     }
                 });
@@ -84,8 +84,10 @@ angular.module('tmaps.toolwindow')
 
             // Update the classes whenever a selection changes.
             // This ensures that the onChange expression is up to date.
-            tmapsProxy.$rootScope.$on('cellSelectionChanged', function(sel) {
-                $scope.updateClasses();
+            tmapsProxy.viewportScope.then(function(scope) {
+                scope.$on('cellSelectionChanged', function(sel) {
+                    $scope.updateClasses();
+                });
             });
         }]
     };

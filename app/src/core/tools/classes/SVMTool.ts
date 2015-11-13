@@ -1,11 +1,7 @@
-interface ClassResult {
-    label: string;
-    color: {r: number; g: number; b: number};
-    cell_ids: string[];
-}
-
 interface ClassificationResult extends ToolResult {
-    classes: ClassResult[];
+    predicted_labels: string[];
+    colors: { [label:string]: {r: number, g: number, b: number}; };
+    cell_ids: number[];
 }
 
 class SVMTool extends Tool {
@@ -25,15 +21,17 @@ class SVMTool extends Tool {
     handleResult(res: ClassificationResult) {
         this.appInstance.experiment.cellMap.then((cellMap) => {
             var cells = [];
-            res.classes.forEach((cls) => {
-                var color = Color.fromObject(cls.color);
-                cls.cell_ids.forEach((id) => {
-                    var cell = cellMap[id];
-                    if (cell !== undefined) {
-                        cells.push(cell.withFillColor(color));
-                    }
-                });
-            });
+            var i;
+            var nCells = res.cell_ids.length;
+            for (i = 0; i < nCells; i++) {
+                var id = res.cell_ids[i]
+                var cell = cellMap[id];
+                if (cell !== undefined) {
+                    var label = res.predicted_labels[i];
+                    var color = res.colors[label];
+                    cells.push(cell.withFillColor(Color.fromObject(color)));
+                }
+            }
             var layer = new ObjectLayer('SVM', {
                 objects: cells
             });

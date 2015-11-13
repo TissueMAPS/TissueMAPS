@@ -24,7 +24,7 @@ interface ViewportElementScope extends ng.IScope {
 class Viewport implements Serializable<Viewport> {
 
     element: ng.IPromise<JQuery>;
-    elementScope: ng.IPromise<ng.IScope>;
+    elementScope: ng.IPromise<ViewportElementScope>;
     map: ng.IPromise<ol.Map>;
 
     channelLayers: ChannelLayer[] = [];

@@ -63,7 +63,7 @@ abstract class Tool {
 
         // Create a container object that includes ressources that the tool may
         // need.
-        var init = {
+        var init: ToolWindowInitObject = {
             appInstance: this.appInstance,
             viewportScope: this.appInstance.viewport.elementScope,
             applicationScope: $injector.get<ng.IRootScopeService>('$rootScope'),
@@ -86,6 +86,7 @@ abstract class Tool {
         });
 
         return $injector.get<ng.IHttpService>('$http').post(url, {
+            'experiment_id': this.appInstance.experiment.id,
             'payload': payload
         }).then(
         (resp) => {

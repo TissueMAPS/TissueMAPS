@@ -10,6 +10,7 @@ angular.module('tmaps.toolwindow')
             $http.get('/experiments/' + id + '/features?include=min,max')
             .success(function(data) {
                 features[id] = [];
+                console.log(data);
                 _(data.features).each(function(feat) {
                     features[id].push(feat);
                 });

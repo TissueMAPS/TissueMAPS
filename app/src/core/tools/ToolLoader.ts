@@ -9,10 +9,8 @@ class ToolLoader {
         this.$http.get('/src/core/tools/tools.json').then((resp) => {
             var toolsConfig = <any> resp.data;
             var classNames: string[] = toolsConfig.loadClasses;
-            console.log(classNames);
             var tools = _.map(classNames, (clsName: string) => {
                 var constr = window[clsName];
-                console.log(constr);
                 if (constr === undefined) {
                     throw Error('No such tool constructor: ' + clsName);
                 } else {

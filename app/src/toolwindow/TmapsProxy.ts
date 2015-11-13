@@ -1,6 +1,6 @@
 interface ToolWindowInitObject {
     appInstance: AppInstance;
-    viewportScope: ViewportElementScope;
+    viewportScope: ng.IPromise<ViewportElementScope>;
     applicationScope: ng.IScope;
     tool: Tool;
     toolWindow: ToolWindow;
@@ -14,7 +14,7 @@ class TmapsProxy {
     static $inject = ['$window'];
 
     appInstance: AppInstance;
-    viewportScope: ViewportElementScope;
+    viewportScope: ng.IPromise<ViewportElementScope>;
     applicationScope: ng.IScope;
     tool: Tool;
     toolWindow: ToolWindow;
