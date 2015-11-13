@@ -7,7 +7,12 @@ from flask.ext.jwt import current_identity
 from tmaps.extensions.database import db
 from tmaps.extensions.encrypt import decode
 from tmaps.api import api
-
+from tmaps.models import Experiment
+from tmaps.api.responses import (
+    MALFORMED_REQUEST_RESPONSE,
+    RESOURCE_NOT_FOUND_RESPONSE,
+    NOT_AUTHORIZED_RESPONSE
+)
 from tmaps.tools import get_tool
 
 
@@ -19,6 +24,7 @@ def process_tool_request(tool_id):
     POST payload should have the format:
 
     {
+        experiment_id: string,
         payload: dict
     }
 
@@ -37,9 +43,19 @@ def process_tool_request(tool_id):
     }
 
     """
-
     data = json.loads(request.data)
+
+    if not 'payload' in data or not 'experiment_id' in data:
+        return MALFORMED_REQUEST_RESPONSE
+
     payload = data.get('payload', {})
+
+    experiment_id = data.get('experiment_id', {})
+    e = Experiment.get(experiment_id)
+    if e is None:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    if not e.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
 
     # Create the tool object
     # TODO: Could theoretically initialize the new tool instance with data that
@@ -54,7 +70,7 @@ def process_tool_request(tool_id):
     tool_cls = get_tool(tool_id)
     tool = tool_cls()
 
-    tool_res = tool.process_request(payload)
+    tool_res = tool.process_request(payload, e)
 
     return jsonify(result=tool_res)
 

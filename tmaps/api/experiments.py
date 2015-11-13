@@ -77,8 +77,7 @@ def get_features(experiment_id):
     }
     """
 
-    experiment_id = decode(experiment_id)
-    exp = Experiment.query.get(experiment_id)
+    exp = Experiment.get(experiment_id)
     dataset = exp.dataset
     features = []
 
