@@ -331,7 +331,7 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from job descriptions')
         return api.list_input_files(self._job_descriptions)
 
-    def build_jobs(self, virtualenv):
+    def build_jobs(self, virtualenv, duration, memory):
         '''
         Build *jobs* based on prior created job descriptions.
 
@@ -339,6 +339,10 @@ class CommandLineInterface(object):
         ----------
         virtualenv: str
             name of a Python virtual environment that needs to be activated
+        duration: str
+            time allocated for a job in HH:MM:SS
+        memory: int
+            memory allocated for a job in GB
 
         Returns
         -------
@@ -347,9 +351,13 @@ class CommandLineInterface(object):
         '''
         api = self._api_instance
         logger.info('create jobs')
+        logger.info('allocated time: %s', duration)
+        logger.info('allocated memory: %s', memory)
         jobs = api.create_jobs(
                 job_descriptions=self._job_descriptions,
-                virtualenv=virtualenv)
+                virtualenv=virtualenv,
+                duration=duration,
+                memory=memory)
         return jobs
 
     def submit(self, args):
@@ -364,7 +372,10 @@ class CommandLineInterface(object):
         '''
         self._print_logo()
         api = self._api_instance
-        jobs = self.build_jobs(virtualenv=args.virtualenv)
+        jobs = self.build_jobs(
+                    virtualenv=args.virtualenv,
+                    duration=args.duration,
+                    memory=args.memory)
         # TODO: check whether jobs were actually created
         # session = api.create_session(jobs)
         logger.info('submit and monitor jobs')

@@ -271,7 +271,7 @@ class SubmitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'virtualenv', 'interval', 'depth'}
+        return {'virtualenv', 'interval', 'depth', 'memory', 'duration'}
 
     @property
     def virtualenv(self):
@@ -344,7 +344,7 @@ class SubmitArgs(GeneralArgs):
 
     @depth.setter
     def depth(self, value):
-        if not isinstance(value, int):
+        if not isinstance(value, self._depth_params['type']):
             raise TypeError('Attribute "depth" must have type %s'
                             % self._depth_params['type'])
         self._depth = value
@@ -356,6 +356,63 @@ class SubmitArgs(GeneralArgs):
             'default': 1,
             'help': '''
                 recursion depth for subtask monitoring (default: 1)
+            '''
+        }
+
+    @property
+    def duration(self):
+        '''
+        Returns
+        -------
+        str
+            time that should be allocated for each job in HH:MM:SS
+            (default: ``"02:00:00"``)
+        '''
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        if not(isinstance(value, self._duration_params['type']) or value is None):
+            raise TypeError('Attribute "duration" must have type %s'
+                            % self._duration_params['type'])
+        self._duration = value
+
+    @property
+    def _duration_params(self):
+        return {
+            'type': str,
+            'default': '02:00:00',
+            'help': '''
+                time that should be allocated for each job in HH:MM:SS
+                (default: 02:00:00)
+            '''
+        }
+
+    @property
+    def memory(self):
+        '''
+        Returns
+        -------
+        int
+            amount of memory that should be allocated for each job in GB
+            (default: ``2``)
+        '''
+        return self._memory
+
+    @memory.setter
+    def memory(self, value):
+        if not(isinstance(value, self._memory_params['type']) or value is None):
+            raise TypeError('Attribute "memory" must have type %s'
+                            % self._memory_params['type'])
+        self._memory = value
+
+    @property
+    def _memory_params(self):
+        return {
+            'type': int,
+            'default': 2,
+            'help': '''
+                amount of memory that should be allocated for each job in GB
             '''
         }
 
