@@ -81,29 +81,6 @@ class SVMTool(Tool):
             'colors': colors
         }
 
-        #     # Now we can create a layermod that colors cells according to the
-        #     # labels received by the classification step above.
-        #     layermod_name = 'SVM: ' + '/'.join(cell_ids_per_class.keys())
-        #     self.client_proxy.log('Done!')
-
-        #     self.client_proxy.log('Sending layermod...')
-
-        #     # The function `modify_layer` will modify the tiles of the
-        #     # pyramid that encodes cell ids as RGB-tuples.
-        #     # The predicted labels (which is actually a lookup table from cell
-        #     # id to RGB) are passed to the function so it knows what
-        #     # cell id should get what color.
-        #     self.client_proxy.add_layer_mod(
-        #         layermod_name,
-        #         source='area',
-        #         funcname='modify_layer',
-        #         modfunc_arg=predicted_labels
-        #     )
-        #     self.client_proxy.log('Done!')
-
-        # else:
-        #     raise Exception('Not a known request type: ' + request_type)
-
     def _classify(self, data, features, cell_ids_per_class):
         # Extract the class names that were sent from the client
         classname_to_color = {}
@@ -154,31 +131,7 @@ class SVMTool(Tool):
         # Perform the actual model fitting
         cls.fit(X_train, y_train)
 
-        # self.client_proxy.log('Trained: ' + str(cls))
-
         # Predict all cells using the new classifier
         y_pred = cls.predict(X_new)
 
         return y_pred
-
-        # We now create a color lookup table that maps global cell ids to
-        # RGB-tuples. For this we create a tall (n x 3) matrix  whose row index
-        # corresponds to the cell id and each column specifies whether the value
-        # in the matrix cell is R, G or B. Note that we have to add one more row
-        # since the index 0 corresponds to the background which should stay
-        # black when we pipe the cell ids through this LUT.
-        # highest_cell_id = np.max(cell_ids)
-        # color_lut = np.zeros((highest_cell_id + 1, 3))
-
-        # for cell_id, predicted_classname in zip(cell_ids, y_pred):
-        #     color_lut[cell_id, :] = classname_to_color[predicted_classname]
-
-        # Return a python-list version of the color lookup table to
-        # `process_request`, so that the LUT can be saved in a layermod.
-        # return color_lut.tolist()
-
-    # @staticmethod
-    # def modify_layer(idmat, colors_lut):
-        # # out[np.logical_and(idmat % 2 == 0, idmat != 0)] = (255, 0, 0)
-        # colors_lut = np.array(colors_lut)
-        # return colors_lut[idmat]
