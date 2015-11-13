@@ -59,7 +59,7 @@ class SVMTool(Tool):
         dataset = experiment.dataset
 
         # Classification routine is in a sub function, call it now.
-        predicted_labels = self._classify(
+        predicted_labels = self._classify_dtree(
             dataset, features, cell_ids_per_class)
 
         ids = dataset['/objects/cells/ids'][:]
@@ -133,5 +133,67 @@ class SVMTool(Tool):
 
         # Predict all cells using the new classifier
         y_pred = cls.predict(X_new)
+
+        return y_pred
+
+
+    def _classify_dtree(self, data, features, cell_ids_per_class):
+        from sklearn import tree
+        # Extract the class names that were sent from the client
+        classname_to_color = {}
+
+        # Simplify the received dictionary and extract requested label colors.
+        # cell_ids_per_class should have the structure: string => list[int]
+        class_idx = 0
+        for classname, classobj in cell_ids_per_class.items():
+            cell_ids = map(int, classobj['cells'])
+            cell_ids_per_class[class_idx] = cell_ids
+            del cell_ids_per_class[classname]
+            classname_to_color[class_idx] = classobj['color']
+            class_idx += 1
+
+        feature_names = [f['name'] for f in features]
+
+        # Create a map cell id to class name
+        class_per_cell_id = {}
+        for cls, ids in cell_ids_per_class.items():
+            for id in ids:
+                class_per_cell_id[id] = cls
+
+        ## Build training data set
+
+        # Construct design matrix from features that were selected on a
+        # per-channel basis and from the selected cells.
+
+        training_cell_ids = np.array(sum(cell_ids_per_class.values(), []))
+
+        # Go through all features that should be used in training
+        header = data['/objects/cells/features'].attrs['names']
+        is_col_included = reduce(np.logical_or, [header == f for f in feature_names])
+
+        cell_ids = data['/objects/cells/ids'][()]
+
+        # Create a matrix with the columns that correspond to the features
+        # in `feats`.
+        mat = data['/objects/cells/features'][()]  # as numpy array
+
+        ix = np.array(
+            [np.where(cell_id == cell_ids)[0] for cell_id in training_cell_ids]
+        )
+
+        X_train = mat[ix, is_col_included]
+        y_train = np.array(
+            [class_per_cell_id[cell_id] for cell_id in training_cell_ids]
+        )
+
+        X_new = mat[:, is_col_included]
+
+        clf = tree.DecisionTreeClassifier()
+
+        # Perform the actual model fitting
+        clf.fit(X_train, y_train)
+
+        # Predict all cells using the new classifier
+        y_pred = clf.predict(X_new)
 
         return y_pred
