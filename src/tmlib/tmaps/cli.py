@@ -5,6 +5,7 @@ from .api import WorkflowClusterRoutines
 from ..experiment import Experiment
 from .. import cli
 from ..args import SubmitArgs
+from ..args import ResumeArgs
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 class Tmaps(object):
 
     '''
-    Command line interface for submission of workflows.
+    Command line interface for handling of workflows.
     '''
 
     def __init__(self, experiment, verbosity):
@@ -60,13 +61,28 @@ class Tmaps(object):
         args: tmlib.args.SubmitArgs
             method-specific arguments
         '''
-        logger.info('submit and monitor jobs')
+        logger.info('submit workflow')
         api = self._api_instance
-        jobs = api.create_jobs(args.variable_args.stage,
-                               args.variable_args.step)
-        session = api.create_session(jobs, args.variable_args.overwrite)
-        for jobs in session:
-            api.submit_jobs(jobs, args.interval, args.depth)
+        jobs = api.create_jobs()
+        session = api.create_session(jobs, backup=args.variable_args.backup)
+        api.submit_jobs(session, args.interval, args.depth)
+
+    def resume(self, args):
+        '''
+        Initialize an instance of the API class corresponding to the program
+        and process arguments provided by the "resume" subparser.
+
+        Parameters
+        ----------
+        args: tmlib.args.ResumeArgs
+            method-specific arguments
+        '''
+        logger.info('resume workflow')
+        api = self._api_instance
+        jobs = api.create_jobs(start_stage=args.variable_args.stage,
+                               start_step=args.variable_args.step)
+        session = api.create_session(jobs, overwrite=False)
+        api.submit_jobs(session, args.interval, args.depth)
 
     def _call(self, args):
         method_args = cli.build_cli_method_args_from_mapping(
@@ -89,11 +105,11 @@ class Tmaps(object):
         :py:mod:`tmlib.metaextract.argparser`
         '''
         experiment = Experiment(args.experiment_dir)
-        cli = Tmaps(experiment, args.verbosity)
-        cli._call(args)
+        inst = Tmaps(experiment, args.verbosity)
+        inst._call(args)
 
     @staticmethod
-    def get_parser_and_subparsers(required_subparsers=['submit']):
+    def get_parser_and_subparsers(required_subparsers=['submit', 'resume']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -103,7 +119,8 @@ class Tmaps(object):
         Parameters
         ----------
         required_subparsers: List[str]
-            subparsers that should be returned (default: ``["submit"]``)
+            subparsers that should be returned
+            (default: ``["submit", "resume"]``)
 
         Returns
         -------
@@ -114,12 +131,19 @@ class Tmaps(object):
                                 required_subparsers=[])
 
         submit_parser = subparsers.add_parser(
-            'submit', help='submit and monitor jobs')
+            'submit', help='submit and monitor a TissueMAPS workflow')
         submit_parser.description = '''
-            Create jobs, submit them to the cluster, monitor their
-            processing and collect their outputs.
+            Create a workflow, submit it to the cluster, monitor its
+            processing and collect the outputs of individual steps.
         '''
         SubmitArgs._persistent_attrs = {'interval', 'depth'}
         SubmitArgs().add_to_argparser(submit_parser)
+
+        resume_parser = subparsers.add_parser(
+            'resume', help='resume a previously submitted workflow')
+        resume_parser.description = '''
+            Resume a workflow at a given stage/step.
+        '''
+        ResumeArgs().add_to_argparser(resume_parser)
 
         return (parser, subparsers)

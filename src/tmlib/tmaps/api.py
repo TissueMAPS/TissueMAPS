@@ -54,26 +54,28 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         '''
         return os.path.join(self.project_dir, 'cli_session')
 
-    def create_jobs(self, start_stage, start_step, job_descriptions=None):
+    def create_jobs(self, job_descriptions=None,
+                    start_stage=None, start_step=None):
         '''
         Create a `TissueMAPS` workflow.
 
         Parameters
         ----------
-        start_stage: str
-            name of the stage from which the workflow should be started
-        start_step: str
-            name of the step in `start_stage` from which the workflow should be
-            started
         job_descriptions: tmlib.cfg.WorkflowDescription, optional
-            description of a `TissueMAPS` workflow
+            description of a `TissueMAPS` workflow (default: ``None``)
+        start_stage: str, optional
+            name of the stage from which the workflow should be started
+            (default: ``None``)
+        start_step: str, optional
+            name of the step in `start_stage` from which the workflow should be
+            started (default: ``None``)
 
         Returns
         -------
         tmlib.tmaps.workflow.Workflow
             custom implementation of a GC3Pie sequential task collection
         '''
-        logger.warning('TODO: duration and memory allocation')
+        logger.info('create jobs')
         jobs = Workflow(
                     experiment=self.experiment,
                     verbosity=self.verbosity,
@@ -82,7 +84,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
                     start_step=start_step)
         return jobs
 
-    def create_session(self, jobs, overwrite=False, backup=False):
+    def create_session(self, jobs, overwrite=True, backup=False):
         '''
         Create a `GC3Pie session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_for job persistence.
 
@@ -90,7 +92,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         ----------
         jobs: tmlib.tmaps.workflow.Workflow
         overwrite: bool, optional
-            overwrite an existing session (default: ``False``)
+            overwrite an existing session (default: ``True``)
         backup: bool, optional
             backup an existing session (default: ``False``)
 
@@ -100,16 +102,18 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         created, otherwise a session existing from a previous submission
         will be re-used.
         '''
+        logger.info('create session')
         if overwrite:
             if os.path.exists(self.session_dir):
                 logger.debug('remove session directory: %s', self.session_dir)
                 shutil.rmtree(self.session_dir)
         elif backup:
-            current_time = self.create_datetimestamp() 
+            current_time = self.create_datetimestamp()
             backup_dir = '%s_%s' % (self.session_dir, current_time)
             logger.debug('create backup of session directory: %s', backup_dir)
             shutil.move(self.session_dir, backup_dir)
         session = Session(self.session_dir)
-        session.add(jobs)
-        session.save_all()
+        if overwrite:
+            session.add(jobs)
+            session.save_all()
         return session

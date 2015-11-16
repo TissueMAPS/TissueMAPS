@@ -17,7 +17,8 @@ from . import utils
 from .readers import JsonReader
 from .writers import JsonWriter
 from .errors import JobDescriptionError
-from .engine import BgEngine
+from .cluster_utils import format_stats_data
+from .cluster_utils import get_task_data
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class BasicClusterRoutines(object):
             timestamp
         '''
         t = time.time()
-        return datetime.datetime.fromtimestamp(t).strftime('%H:%M:%S')
+        return datetime.datetime.fromtimestamp(t).strftime('%H-%M-%S')
 
     @staticmethod
     def _create_batches(li, n):
@@ -108,7 +109,7 @@ class BasicClusterRoutines(object):
 
         Parameters
         ----------
-        jobs: gc3libs.workflow.SequentialTaskCollection
+        jobs: gc3libs.workflow.TaskCollection or gc3libs.session.Session
             jobs that should be submitted
         monitoring_interval: int, optional
             monitoring interval in seconds (default: ``5``)
@@ -133,28 +134,39 @@ class BasicClusterRoutines(object):
 
         def log_task_data(task_data):
             def log_recursive(data, i):
-                logger.info('%s: %s (%d %%)',
+                logger.info('%s: %s (%.2f %%)',
                             data['name'], data['state'],
-                            int(data['percent_done']))
+                            data['percent_done'])
                 if i <= monitoring_depth:
                     for st in data.get('subtasks', list()):
                         log_recursive(st, i+1)
             log_recursive(task_data, 0)
 
         # Create an `Engine` instance for running jobs in parallel
-        logger.debug('start GC3Pie engine in the background')
+        logger.debug('create engine')
         e = gc3libs.create_engine()
         # Put all output files in the same directory
         e.retrieve_overwrites = True
-        bg = BgEngine('threading', e)
+        # Limit the total number of jobs that can be submitted simultaneously
+        e.max_submitted = 50
+        e.max_in_flight = 100
 
-        # Add task to engine instance
+        # Add tasks to engine instance
         logger.debug('add jobs to engine')
-        bg.add(jobs)
-
-        # start the background thread; instruct it to run `e.progress()`
-        # every `monitoring_interval` seconds
-        bg.start(monitoring_interval)
+        if isinstance(jobs, gc3libs.session.Session):
+            e._store = jobs.store
+            task_ids = jobs.list_ids()
+            if len(task_ids) != 1:
+                raise ValueError('Session should only contain a single task.')
+            task = jobs.load(task_ids[-1])
+            e.add(task)
+        elif isinstance(jobs, gc3libs.workflow.TaskCollection):
+            e.add(jobs)
+            task = jobs
+        else:
+            raise TypeError(
+                    'Argument "jobs" must either be a GC3Pie task collection '
+                    'or a GC3Pie session.')
 
         # periodically check the status of submitted jobs
         break_next = False
@@ -162,16 +174,18 @@ class BasicClusterRoutines(object):
 
             time.sleep(monitoring_interval)
 
+            e.progress()
+
             if break_next:
                 break
 
-            task_data = bg.get_task_data(jobs, monitoring_depth)
+            task_data = get_task_data(task, monitoring_depth)
 
             log_task_data(task_data)
             logger.info('------------------------------------------')
 
             # break out of the loop when all jobs are done
-            aggregate = bg.get_stats_data()
+            aggregate = format_stats_data(e.stats())
             if aggregate['count_total'] > 0:
                 if aggregate['count_terminated'] == aggregate['count_total']:
                     break_next = True
@@ -358,10 +372,14 @@ class ClusterRoutines(BasicClusterRoutines):
         str
             absolute path to the file that holds the description of the
             job with the given `job_id`
+
+        Note
+        ----
+        The total number of jobs is limited to 10^6.
         '''
         return os.path.join(
                     self.job_descriptions_dir,
-                    '%s_run_%.5d.job.json' % (self.prog_name, job_id))
+                    '%s_run_%.6d.job.json' % (self.prog_name, job_id))
 
     def build_collect_job_filename(self):
         '''
@@ -630,7 +648,7 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('create run jobs: ParallelTaskCollection')
         for i, batch in enumerate(job_descriptions['run']):
 
-            jobname = '%s_run_%.5d' % (self.prog_name, batch['id'])
+            jobname = '%s_run_%.6d' % (self.prog_name, batch['id'])
             timestamp = self.create_datetimestamp()
             log_out_file = '%s_%s.out' % (jobname, timestamp)
             log_err_file = '%s_%s.err' % (jobname, timestamp)

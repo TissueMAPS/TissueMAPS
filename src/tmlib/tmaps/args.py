@@ -12,9 +12,7 @@ class TmapsSubmitArgs(Args):
         **kwargs: dict
             arguments as key-value pairs
         '''
-        self.stage = self._stage_params['default']
-        self.step = self._step_params['default']
-        self.overwrite = False
+        self.backup = False
         super(TmapsSubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -23,7 +21,55 @@ class TmapsSubmitArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        return {'stage', 'step', 'overwrite'}
+        return {'backup'}
+
+    @property
+    def backup(self):
+        '''
+        Returns
+        -------
+        bool
+            indicator that an existing session should be overwritten
+            (default: ``False``)
+        '''
+        return self._backup
+
+    @backup.setter
+    def backup(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "backup" must have type bool.')
+        self._backup = value
+
+    @property
+    def _backup_params(self):
+        return {
+            'action': 'store_true',
+            'help': '''
+                backup an existing session
+            '''
+        }
+
+
+class TmapsResumeArgs(Args):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class TmapsResumeArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict
+            arguments as key-value pairs
+        '''
+        super(TmapsResumeArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return set('stage', 'step')
+
+    @property
+    def _persistent_attrs(self):
+        return {'stage', 'step'}
 
     @property
     def stage(self):
@@ -47,7 +93,6 @@ class TmapsSubmitArgs(Args):
     def _stage_params(self):
         return {
             'type': str,
-            'default': None,
             'help': '''
                 name of the stage from where workflow should be started
             '''
@@ -75,34 +120,7 @@ class TmapsSubmitArgs(Args):
     def _step_params(self):
         return {
             'type': str,
-            'default': None,
             'help': '''
                 name of the step from where workflow should be started
-            '''
-        }
-
-    @property
-    def overwrite(self):
-        '''
-        Returns
-        -------
-        bool
-            indicator that an existing session should be overwritten
-            (default: ``False``)
-        '''
-        return self._overwrite
-
-    @overwrite.setter
-    def overwrite(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "overwrite" must have type bool.')
-        self._overwrite = value
-
-    @property
-    def _overwrite_params(self):
-        return {
-            'action': 'store_true',
-            'help': '''
-                overwrite an existing session
             '''
         }

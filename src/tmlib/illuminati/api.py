@@ -108,7 +108,7 @@ class PyramidBuilder(ClusterRoutines):
 
         See also
         --------
-        `illuminati.layers.ChannelLayer`_
+        :py:class:`tmlib.illuminati.layers.ChannelLayer`
         '''
         logger.debug('create channel layer')
         layer = ChannelLayer.create(

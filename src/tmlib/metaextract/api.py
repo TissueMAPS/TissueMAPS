@@ -119,11 +119,11 @@ class MetadataExtractor(ClusterRoutines):
         '''
         for i, f in enumerate(batch['outputs']['omexml_files']):
             output_files = glob(os.path.join(
-                                self.log_dir, '*_%.5d*.out' % (i+1)))
+                                self.log_dir, '*_%.6d*.out' % (i+1)))
             # Take the most recent one, in case there are outputs of previous
             # submissions
             output_files = natsorted(output_files)
-            shutil.copyfile(output_files[0], f)
+            shutil.copyfile(output_files[-1], f)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):

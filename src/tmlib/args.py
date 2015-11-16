@@ -817,3 +817,22 @@ class CheckArgs(GeneralArgs):
     def _persistent_attrs(self):
         self.__persistent_attrs = set()
         return self.__persistent_attrs
+
+
+class ResumeArgs(SubmitArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class ResumeArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict, optional
+            arguments as key-value pairs
+        '''
+        super(ResumeArgs, self).__init__(**kwargs)
+
+    @property
+    def _persistent_attrs(self):
+        self.__persistent_attrs = {'interval', 'depth'}
+        return self.__persistent_attrs
