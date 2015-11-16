@@ -380,8 +380,8 @@ class WorkflowStepDescription(object):
         except ImportError:
             raise WorkflowDescriptionError(
                     '"%s" is not a valid step name.' % self.name)
-        args_handler = load_method_args('init')
-        self._args = args_handler()
+        init_args_handler = load_method_args('init')
+        self._args = init_args_handler()
         if args:
             self.args = variable_args_handler(**args)
             for a in args:
@@ -391,6 +391,10 @@ class WorkflowStepDescription(object):
                             % (a, self.name))
         else:
             self.args = variable_args_handler()
+        submit_args_handler = load_method_args('submit')
+        submit_args = submit_args_handler()
+        self.duration = submit_args.duration
+        self.memory = submit_args.memory
 
     @property
     def args(self):

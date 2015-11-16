@@ -275,6 +275,8 @@ class SubmitArgs(GeneralArgs):
         '''
         self.interval = self._interval_params['default']
         self.depth = self._depth_params['default']
+        self.duration = self._duration_params['default']
+        self.memory = self._memory_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property

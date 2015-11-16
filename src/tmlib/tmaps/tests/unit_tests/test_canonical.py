@@ -180,7 +180,8 @@ class TestWorkflowStageDescription(unittest.TestCase):
             ]
         }
         stage = CanonicalWorkflowStageDescription(**description)
-        self.assertEqual(dict(stage), description)
+        self.assertEqual(dict(stage)['steps'][0]['name'],
+                         description['steps'][0]['name'])
 
 
 class TestWorkflowDescription(unittest.TestCase):

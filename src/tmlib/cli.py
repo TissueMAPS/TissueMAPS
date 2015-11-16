@@ -49,10 +49,8 @@ def command_line_call(parser):
     # Fine tune the output of some loggers
     gc3libs_logger = logging.getLogger('gc3.gc3libs')
     gc3libs_logger.setLevel(logging.CRITICAL)
-
     apscheduler_logger = logging.getLogger('apscheduler')
     apscheduler_logger.setLevel(logging.CRITICAL)
-    # configure_logger(apscheduler_logger, logging.CRITICAL)
 
     try:
         if arguments.handler:
