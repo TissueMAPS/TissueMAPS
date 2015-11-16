@@ -41,19 +41,19 @@ def command_line_call(parser):
     '''
     arguments = parser.parse_args()
 
+    configure_logging(logging.CRITICAL)
+    logger = logging.getLogger('tmlib')
     level = map_logging_verbosity(arguments.verbosity)
-    configure_logging(level)
+    logger.setLevel(level)
     logger.debug('running program: %s' % parser.prog)
 
-    # Silence some chatty loggers
-    gc3libs.log = logging.getLogger('gc3lib')
-    gc3libs.log.level = logging.CRITICAL
-
-    vips_logger = logging.getLogger('gi.overrides.vips')
-    vips_logger.level = logging.CRITICAL
+    # Fine tune the output of some loggers
+    gc3libs_logger = logging.getLogger('gc3.gc3libs')
+    gc3libs_logger.setLevel(logging.CRITICAL)
 
     apscheduler_logger = logging.getLogger('apscheduler')
-    apscheduler_logger.level = logging.CRITICAL
+    apscheduler_logger.setLevel(logging.CRITICAL)
+    # configure_logger(apscheduler_logger, logging.CRITICAL)
 
     try:
         if arguments.handler:

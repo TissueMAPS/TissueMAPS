@@ -48,7 +48,7 @@ def map_logging_verbosity(verbosity):
 
 def configure_logging(level):
     '''
-    Create a logger instance and configure it for the command line applications.
+    Configure the root logger for command line applications.
 
     Two stream handlers will be added to the logger:
         * "out" that will direct INFO & DEBUG messages to the standard output
@@ -61,23 +61,28 @@ def configure_logging(level):
     level: int
         logging level verbosity
 
-    Returns
-    -------
-    logging.Logger
-        configured logger object
+    Note
+    ----
+    The level for individual loggers can be fine-tuned as follows (exemplified
+    for the `tmlib` logger)::
+
+        import logging
+
+        logger = logging.getLogger('tmlib')
+        logger.setLevel(logging.INFO)
+
 
     Warning
     -------
-    Logging should only be configured at the main entry point of the
-    application, but not within the library!
+    Logging should only be configured only once at the main entry point of the
+    application!
     '''
 
     fmt = '%(asctime)s | %(name)-30s | %(levelname)-8s | %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 
-    logger = logging.getLogger('tmlib')
-    logger.setLevel(level)
+    logger = logging.getLogger()  # returns the root logger
 
     stderr_handler = logging.StreamHandler(stream=sys.stderr)
     stderr_handler.name = 'err'
@@ -91,8 +96,6 @@ def configure_logging(level):
     stdout_handler.setLevel(0)
     stdout_handler.addFilter(InfoFilter())
     logger.addHandler(stdout_handler)
-
-    return logger
 
 
 class InfoFilter(logging.Filter):
