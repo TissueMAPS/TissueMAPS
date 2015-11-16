@@ -597,8 +597,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
-    def create_jobs(self, job_descriptions, virtualenv=None,
-                    duration=None, memory=None):
+    def create_jobs(self, job_descriptions, duration=None, memory=None):
         '''
         Create a GC3Pie task collection of "jobs".
 
@@ -606,9 +605,6 @@ class ClusterRoutines(BasicClusterRoutines):
         ----------
         job_descriptions: Dict[List[dict]]
             description of inputs and outputs of individual computational jobs
-        virtualenv: str, optional
-            name of a virtual environment that should be activated
-            (default: ``None``)
         duration: str, optional
             computational time that should be allocated for a single job;
             in HH:MM:SS format (default: ``None``)
@@ -652,9 +648,7 @@ class ClusterRoutines(BasicClusterRoutines):
             if duration:
                 job.requested_walltime = Duration(duration)
             if memory:
-                job.requested_memory = Memory(memory, Memory.MB)
-            if virtualenv:
-                job.application_name = virtualenv
+                job.requested_memory = Memory(memory, Memory.GB)
             run_jobs.add(job)
 
         if 'collect' in job_descriptions.keys():
@@ -676,13 +670,13 @@ class ClusterRoutines(BasicClusterRoutines):
                     stdout=log_out_file,
                     stderr=log_err_file
             )
-            if virtualenv:
-                collect_job.application_name = virtualenv
 
             logger.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
                         tasks=[run_jobs, collect_job],
                         jobname='%s' % self.prog_name)
+
+            # TODO: time and duration for "collect" jobs
 
         else:
 

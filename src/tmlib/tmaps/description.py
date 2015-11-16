@@ -417,6 +417,45 @@ class WorkflowStepDescription(object):
                     'Attribute "args" must have type tmlib.args.VariableArgs')
         self._args.variable_args = value
 
+    @property
+    def duration(self):
+        '''
+        Returns
+        -------
+        str
+            time that should be allocated to individual jobs of the step
+            in the format "HH:MM:SS"
+        '''
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "duration" must have type basestring.')
+        match = re.search(r'(?P<h>\d{2}):(?P<m>\d{2}):(?P<s>\d{2})', value)
+        results = match.groupdict()
+        if any([r is None for r in results.values()]):
+            raise ValueError(
+                    'Attribute "duration" must have the format "HH:MM:SS"')
+        self._duration = str(value)
+
+    @property
+    def memory(self):
+        '''
+        Returns
+        -------
+        int
+            memory that should be allocated to individual jobs of the step
+            in gigabytes (GB)
+        '''
+        return self._memory
+
+    @memory.setter
+    def memory(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "memory" must have type int.')
+        self._memory = value
+
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
         # Only return the "variable_args" attribute, because these are the
@@ -425,3 +464,7 @@ class WorkflowStepDescription(object):
             yield ('args', dict(getattr(self.args, 'variable_args')))
         else:
             yield ('args', dict())
+        if hasattr(self, 'duration'):
+            yield ('duration', getattr(self, 'duration'))
+        if hasattr(self, 'memory'):
+            yield ('memory', getattr(self, 'memory'))

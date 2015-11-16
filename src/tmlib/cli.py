@@ -4,7 +4,6 @@ import traceback
 import logging
 import shutil
 import argparse
-import gc3libs
 from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
@@ -331,16 +330,14 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from job descriptions')
         return api.list_input_files(self._job_descriptions)
 
-    def build_jobs(self, virtualenv, duration, memory):
+    def build_jobs(self, duration, memory):
         '''
         Build *jobs* based on prior created job descriptions.
 
         Parameters
         ----------
-        virtualenv: str
-            name of a Python virtual environment that needs to be activated
         duration: str
-            time allocated for a job in HH:MM:SS
+            time allocated for a job in the format "HH:MM:SS"
         memory: int
             memory allocated for a job in GB
 
@@ -355,7 +352,6 @@ class CommandLineInterface(object):
         logger.info('allocated memory: %s', memory)
         jobs = api.create_jobs(
                 job_descriptions=self._job_descriptions,
-                virtualenv=virtualenv,
                 duration=duration,
                 memory=memory)
         return jobs
@@ -373,7 +369,6 @@ class CommandLineInterface(object):
         self._print_logo()
         api = self._api_instance
         jobs = self.build_jobs(
-                    virtualenv=args.virtualenv,
                     duration=args.duration,
                     memory=args.memory)
         # TODO: check whether jobs were actually created
@@ -443,9 +438,6 @@ class CommandLineInterface(object):
             help='increase logging verbosity to DEBUG (default: WARN)')
         parser.add_argument(
             '--version', action='version')
-
-        if not required_subparsers:
-            raise ValueError('At least one subparser has to be specified')
 
         subparsers = parser.add_subparsers(
             dest='method_name', help='sub-commands')

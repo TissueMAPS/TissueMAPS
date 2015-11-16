@@ -73,6 +73,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         tmlib.tmaps.workflow.Workflow
             custom implementation of a GC3Pie sequential task collection
         '''
+        logger.warning('TODO: duration and memory allocation')
         jobs = Workflow(
                     experiment=self.experiment,
                     verbosity=self.verbosity,

@@ -4,6 +4,7 @@ from . import __version__
 from .api import WorkflowClusterRoutines
 from ..experiment import Experiment
 from .. import cli
+from ..args import SubmitArgs
 
 logger = logging.getLogger(__name__)
 
@@ -109,5 +110,16 @@ class Tmaps(object):
         Tuple[argparse.Argumentparser and argparse._SubParsersAction]
             parser and subparsers objects
         '''
-        return cli.CommandLineInterface.get_parser_and_subparsers(
-                        required_subparsers=required_subparsers)
+        parser, subparsers = cli.CommandLineInterface.get_parser_and_subparsers(
+                                required_subparsers=[])
+
+        submit_parser = subparsers.add_parser(
+            'submit', help='submit and monitor jobs')
+        submit_parser.description = '''
+            Create jobs, submit them to the cluster, monitor their
+            processing and collect their outputs.
+        '''
+        SubmitArgs._persistent_attrs = {'interval', 'depth'}
+        SubmitArgs().add_to_argparser(submit_parser)
+
+        return (parser, subparsers)

@@ -173,7 +173,9 @@ class Workflow(SequentialTaskCollection, StopOnError):
         self.expected_outputs.append(prog_instance.expected_outputs)
 
         logger.debug('build GC3Pie jobs')
-        jobs = prog_instance.build_jobs(virtualenv=self.workflow.virtualenv)
+        jobs = prog_instance.build_jobs(
+                        duration=step.duration,
+                        memory=step.memory)
         # jobs: gc3libs.workflow.SequentialTaskCollection
         return jobs
 

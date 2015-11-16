@@ -54,8 +54,18 @@ class Args(object):
         # should return a set of strings
         pass
 
+    @_persistent_attrs.setter
+    def _persistent_attrs(self, value):
+        if not isinstance(value, set):
+            raise TypeError('Attribute must have type set.')
+        if not all([isinstance(v, str) for v in value]):
+            raise TypeError('Elements of attribute must have type string.')
+        self.__persistent_attrs = value
+
     def __iter__(self):
-        for attr in vars(self):
+        for attr in dir(self):
+            if attr.startswith('__') or attr.endswith('__'):
+                continue
             if attr.startswith('_'):
                 attr = re.search(r'_(.*)', attr).group(1)
             if attr in self._persistent_attrs:
@@ -109,7 +119,8 @@ class GeneralArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        return set()
+        self.__persistent_attrs = set()
+        return self.__persistent_attrs
 
     @property
     def variable_args(self):
@@ -161,7 +172,8 @@ class VariableArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        return set()
+        self.__persistent_attrs = set()
+        return self.__persistent_attrs
 
 
 class InitArgs(GeneralArgs):
@@ -185,9 +197,10 @@ class InitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {
+        self.__persistent_attrs = {
             'display', 'backup', 'variable_args'
         }
+        return self.__persistent_attrs
 
     @property
     def display(self):
@@ -260,7 +273,6 @@ class SubmitArgs(GeneralArgs):
         **kwargs: dict, optional
             arguments as key-value pairs
         '''
-        self.virtualenv = self._virtualenv_params['default']
         self.interval = self._interval_params['default']
         self.depth = self._depth_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
@@ -271,36 +283,8 @@ class SubmitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'virtualenv', 'interval', 'depth', 'memory', 'duration'}
-
-    @property
-    def virtualenv(self):
-        '''
-        Returns
-        -------
-        str
-            name of a virtual environment that needs to be activated
-            (default: ``None``)
-        '''
-        return self._virtualenv
-
-    @virtualenv.setter
-    def virtualenv(self, value):
-        if not(isinstance(value, self._virtualenv_params['type'])
-               or value is None):
-            raise TypeError('Attribute "virtualenv" must have type %s'
-                            % self._virtualenv_params['type'])
-        self._virtualenv = value
-
-    @property
-    def _virtualenv_params(self):
-        return {
-            'type': str,
-            'default': None,
-            'help': '''
-                name of a virtual environment that needs to be activated
-            '''
-        }
+        self.__persistent_attrs = {'interval', 'depth', 'memory', 'duration'}
+        return self.__persistent_attrs
 
     @property
     def interval(self):
@@ -372,7 +356,7 @@ class SubmitArgs(GeneralArgs):
 
     @duration.setter
     def duration(self, value):
-        if not(isinstance(value, self._duration_params['type']) or value is None):
+        if not isinstance(value, self._duration_params['type']):
             raise TypeError('Attribute "duration" must have type %s'
                             % self._duration_params['type'])
         self._duration = value
@@ -401,7 +385,7 @@ class SubmitArgs(GeneralArgs):
 
     @memory.setter
     def memory(self, value):
-        if not(isinstance(value, self._memory_params['type']) or value is None):
+        if not isinstance(value, self._memory_params['type']):
             raise TypeError('Attribute "memory" must have type %s'
                             % self._memory_params['type'])
         self._memory = value
@@ -436,7 +420,8 @@ class CollectArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return set()
+        self.__persistent_attrs = set()
+        return self.__persistent_attrs
 
 
 class CleanupArgs(GeneralArgs):
@@ -458,7 +443,8 @@ class CleanupArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return set()
+        self.__persistent_attrs = set()
+        return self.__persistent_attrs
 
 
 class RunArgs(GeneralArgs):
@@ -480,7 +466,7 @@ class RunArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'job'}
+        self.__persistent_attrs = {'job'}
 
     @property
     def job(self):
@@ -535,9 +521,10 @@ class ApplyArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {
+        self.__persistent_attrs = {
             'plates', 'wells', 'channels', 'tpoints', 'zplanes', 'sites'
         }
+        return self.__persistent_attrs
 
     @property
     def plates(self):
@@ -779,7 +766,8 @@ class CreateArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return set()
+        self.__persistent_attrs = set()
+        return self.__persistent_attrs
 
 
 class RemoveArgs(GeneralArgs):
@@ -801,7 +789,8 @@ class RemoveArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return set()
+        self.__persistent_attrs = set()
+        return self.__persistent_attrs
 
 
 class CheckArgs(GeneralArgs):
@@ -823,4 +812,5 @@ class CheckArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return set()
+        self.__persistent_attrs = set()
+        return self.__persistent_attrs
