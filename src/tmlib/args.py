@@ -469,6 +469,7 @@ class RunArgs(GeneralArgs):
     @property
     def _persistent_attrs(self):
         self.__persistent_attrs = {'job'}
+        return self.__persistent_attrs
 
     @property
     def job(self):
