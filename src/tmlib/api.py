@@ -10,6 +10,8 @@ from cached_property import cached_property
 import gc3libs
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
+from gc3libs.session import Session
+from gc3libs.workflow import TaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import SequentialTaskCollection
 import logging
@@ -56,7 +58,8 @@ class BasicClusterRoutines(object):
         '''
         self._log_dir = os.path.join(self.project_dir, 'log')
         if not os.path.exists(self._log_dir):
-            logger.debug('create directory for log files: %s' % self._log_dir)
+            logger.debug('create output directory for log files: %s',
+                         self._log_dir)
             os.mkdir(self._log_dir)
         return self._log_dir
 
@@ -146,23 +149,27 @@ class BasicClusterRoutines(object):
         logger.debug('create engine')
         e = gc3libs.create_engine()
         # Put all output files in the same directory
+        logger.debug('store stdout/stderr in common output directory')
         e.retrieve_overwrites = True
         # Limit the total number of jobs that can be submitted simultaneously
         e.max_submitted = 50
         e.max_in_flight = 100
+        logger.debug('set maximum number of submitted jobs to %d',
+                     e.max_submitted)
 
         # Add tasks to engine instance
         logger.debug('add jobs to engine')
-        if isinstance(jobs, gc3libs.session.Session):
+        if isinstance(jobs, Session):
             e._store = jobs.store
             task_ids = jobs.list_ids()
             if len(task_ids) != 1:
                 raise ValueError('Session should only contain a single task.')
+            logger.debug('add task "%s" to engine', task_ids[-1])
             task = jobs.load(task_ids[-1])
             e.add(task)
-        elif isinstance(jobs, gc3libs.workflow.TaskCollection):
-            e.add(jobs)
+        elif isinstance(jobs, TaskCollection):
             task = jobs
+            e.add(task)
         else:
             raise TypeError(
                     'Argument "jobs" must either be a GC3Pie task collection '
@@ -173,8 +180,11 @@ class BasicClusterRoutines(object):
         while True:
 
             time.sleep(monitoring_interval)
+            logger.debug('wait %d seconds', monitoring_interval)
 
+            logger.debug('progress')
             e.progress()
+            logger.debug('progressed successfully')
 
             if break_next:
                 break
