@@ -63,8 +63,12 @@ class Tmaps(object):
         '''
         logger.info('submit workflow')
         api = self._api_instance
-        jobs = api.create_jobs()
-        session = api.create_session(jobs, backup=args.variable_args.backup)
+        jobs = api.create_jobs(
+                            start_stage=args.variable_args.stage,
+                            start_step=args.variable_args.step)
+        session = api.create_session(
+                            jobs=jobs,
+                            backup=args.variable_args.backup)
         api.submit_jobs(session, args.interval, args.depth)
 
     def resume(self, args):
@@ -79,9 +83,7 @@ class Tmaps(object):
         '''
         logger.info('resume workflow')
         api = self._api_instance
-        jobs = api.create_jobs(start_stage=args.variable_args.stage,
-                               start_step=args.variable_args.step)
-        session = api.create_session(jobs, overwrite=False)
+        session = api.create_session(jobs=None, overwrite=False)
         api.submit_jobs(session, args.interval, args.depth)
 
     def _call(self, args):

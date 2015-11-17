@@ -91,6 +91,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         Parameters
         ----------
         jobs: tmlib.tmaps.workflow.Workflow
+            jobs that should be added to the session
         overwrite: bool, optional
             overwrite an existing session (default: ``True``)
         backup: bool, optional
@@ -114,6 +115,8 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
             shutil.move(self.session_dir, backup_dir)
         session = Session(self.session_dir)
         if overwrite:
+            logger.debug('add jobs to session')
             session.add(jobs)
+            logger.debug('save session to disk')
             session.save_all()
         return session
