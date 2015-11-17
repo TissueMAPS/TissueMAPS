@@ -141,8 +141,16 @@ class BasicClusterRoutines(object):
                             data['name'], data['state'],
                             data['percent_done'])
                 if i <= monitoring_depth:
-                    for st in data.get('subtasks', list()):
-                        log_recursive(st, i+1)
+                    for subtd in data.get('subtasks', list()):
+                        log_recursive(subtd, i+1)
+            log_recursive(task_data, 0)
+
+        def log_failure(task_data):
+            def log_recursive(data, i):
+                for subtd in data.get('subtasks', list()):
+                    if subtd['failed']:
+                        logger.error('job "%s" failed', subtd['name'])
+                    log_recursive(subtd, i+1)
             log_recursive(task_data, 0)
 
         # Create an `Engine` instance for running jobs in parallel
@@ -152,8 +160,8 @@ class BasicClusterRoutines(object):
         logger.debug('store stdout/stderr in common output directory')
         e.retrieve_overwrites = True
         # Limit the total number of jobs that can be submitted simultaneously
-        e.max_submitted = 50
-        e.max_in_flight = 100
+        e.max_submitted = 2000
+        e.max_in_flight = 2000
         logger.debug('set maximum number of submitted jobs to %d',
                      e.max_submitted)
 
@@ -182,9 +190,8 @@ class BasicClusterRoutines(object):
             time.sleep(monitoring_interval)
             logger.debug('wait %d seconds', monitoring_interval)
 
-            logger.debug('progress')
+            logger.debug('progress...')
             e.progress()
-            logger.debug('progressed successfully')
 
             if break_next:
                 break

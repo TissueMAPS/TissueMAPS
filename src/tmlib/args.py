@@ -92,6 +92,8 @@ class Args(object):
                             '"%s" object must have an "%s" attribute'
                             % (self.__class__.__name__, params))
                 kwargs = getattr(self, params)
+                if attr in self._required_args:
+                    kwargs['required'] = True
                 parser.add_argument(*[flag], **kwargs)
 
 
@@ -110,7 +112,7 @@ class GeneralArgs(Args):
         **kwargs: dict, optional
             arguments as key-value pairs
         '''
-        self.variable_args = None
+        self.variable_args = VariableArgs()
         super(GeneralArgs, self).__init__(**kwargs)
 
     @property
@@ -294,7 +296,7 @@ class SubmitArgs(GeneralArgs):
         Returns
         -------
         int
-            monitoring interval in seconds (default: ``5``)
+            monitoring interval in seconds (default: ``1``)
         '''
         return self._interval
 
@@ -310,9 +312,9 @@ class SubmitArgs(GeneralArgs):
     def _interval_params(self):
         return {
             'type': int,
-            'default': 5,
+            'default': 1,
             'help': '''
-                monitoring interval in seconds (default: 5)
+                monitoring interval in seconds (default: 1)
             '''
         }
 
@@ -381,7 +383,7 @@ class SubmitArgs(GeneralArgs):
         -------
         int
             amount of memory that should be allocated for each job in GB
-            (default: ``2``)
+            (default: ``4``)
         '''
         return self._memory
 
@@ -396,7 +398,7 @@ class SubmitArgs(GeneralArgs):
     def _memory_params(self):
         return {
             'type': int,
-            'default': 2,
+            'default': 4,
             'help': '''
                 amount of memory that should be allocated for each job in GB
             '''
@@ -525,9 +527,36 @@ class ApplyArgs(GeneralArgs):
     @property
     def _persistent_attrs(self):
         self.__persistent_attrs = {
-            'plates', 'wells', 'channels', 'tpoints', 'zplanes', 'sites'
+            'plates', 'wells', 'channels', 'tpoints', 'zplanes', 'sites',
+            'output_dir'
         }
         return self.__persistent_attrs
+
+    @property
+    def output_dir(self):
+        '''
+        Returns
+        -------
+        str
+            path to the output directory
+        '''
+        return self._output_dir
+
+    @output_dir.setter
+    def output_dir(self, value):
+        if not isinstance(value, self._output_dir_params['type']):
+            raise TypeError('Attribute "output_dir" must have type %s',
+                            self._output_dir_params['type'])
+        self._output_dir = str(value)
+
+    @property
+    def _output_dir_params(self):
+        return {
+            'type': str,
+            'help': '''
+                path to the output directory
+            '''
+        }
 
     @property
     def plates(self):
@@ -615,14 +644,14 @@ class ApplyArgs(GeneralArgs):
     def channels(self, value):
         if value is not None:
             if not isinstance(value, list):
-                raise TypeError('Attribute "plates" must have type list')
+                raise TypeError('Attribute "channels" must have type list')
             if not(all([
-                        isinstance(v, self._plates_params['type'])
+                        isinstance(v, self._channels_params['type'])
                         for v in value
                     ])):
                 raise TypeError(
-                        'Elements of attribute "plates" must have type %s'
-                        % self._plates_params['type'])
+                        'Elements of attribute "channels" must have type %s'
+                        % self._channels_params['type'])
         self._channels = value
 
     @property
