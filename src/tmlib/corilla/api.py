@@ -153,7 +153,7 @@ class IllumstatsGenerator(ClusterRoutines):
                 if plate.name not in plates:
                     continue
             for cycle in plate.cycles:
-                if kwargs['tpoints']:
+                if tpoints:
                     if cycle.index not in tpoints:
                         continue
                 md = cycle.image_metadata_table

@@ -71,7 +71,7 @@ class Corilla(CommandLineInterface):
                 channels=args.channels,
                 tpoints=args.tpoints,
                 zplanes=args.zplanes,
-                **args.variable_args)
+                **dict(args.variable_args))
 
     @staticmethod
     def call(args):
