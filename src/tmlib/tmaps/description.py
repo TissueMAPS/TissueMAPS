@@ -392,7 +392,7 @@ class WorkflowStepDescription(object):
         else:
             self.args = variable_args_handler()
         submit_args_handler = load_method_args('submit')
-        submit_args = submit_args_handler()
+        submit_args = submit_args_handler(**kwargs)
         self.duration = submit_args.duration
         self.memory = submit_args.memory
 
