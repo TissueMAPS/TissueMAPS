@@ -190,7 +190,7 @@ class BasicClusterRoutines(object):
             time.sleep(monitoring_interval)
             logger.debug('wait %d seconds', monitoring_interval)
 
-            logger.debug('progress...')
+            logger.info('progress ...')
             e.progress()
 
             if break_next:
@@ -206,6 +206,8 @@ class BasicClusterRoutines(object):
             if aggregate['count_total'] > 0:
                 if aggregate['count_terminated'] == aggregate['count_total']:
                     break_next = True
+
+        log_failure(task)
 
         return task_data
 
@@ -705,6 +707,8 @@ class ClusterRoutines(BasicClusterRoutines):
                     stdout=log_out_file,
                     stderr=log_err_file
             )
+            collect_job.requested_walltime = Duration('01:00:00')
+            collect_job.requested_memory = Memory(32, Memory.GB)
 
             logger.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
