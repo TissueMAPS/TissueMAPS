@@ -139,8 +139,8 @@ class Tmaps(object):
             Create a workflow, submit it to the cluster, monitor its
             processing and collect the outputs of individual steps.
         '''
-        SubmitArgs._persistent_attrs = {'interval', 'depth'}
-        SubmitArgs().add_to_argparser(submit_parser)
+        SubmitArgs().add_to_argparser(submit_parser,
+                                      ignore={'memory', 'duration'})
 
         resume_parser = subparsers.add_parser(
             'resume', help='resume a previously submitted workflow')

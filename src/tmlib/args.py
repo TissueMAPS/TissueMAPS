@@ -54,14 +54,6 @@ class Args(object):
         # should return a set of strings
         pass
 
-    @_persistent_attrs.setter
-    def _persistent_attrs(self, value):
-        if not isinstance(value, set):
-            raise TypeError('Attribute must have type set.')
-        if not all([isinstance(v, str) for v in value]):
-            raise TypeError('Elements of attribute must have type string.')
-        self.__persistent_attrs = value
-
     def __iter__(self):
         for attr in dir(self):
             if attr.startswith('__') or attr.endswith('__'):
@@ -71,7 +63,7 @@ class Args(object):
             if attr in self._persistent_attrs:
                 yield (attr, getattr(self, attr))
 
-    def add_to_argparser(self, parser):
+    def add_to_argparser(self, parser, ignore=set()):
         '''
         Add the attributes as arguments to `parser` using
         `add_argument() <https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument>`_.
@@ -80,9 +72,11 @@ class Args(object):
         ----------
         parser: argparse.ArgumentParser
             parser or subparser object
+        ignore: List[str]
+            names of arguments that should not be added to the parser
         '''
         for attr in dir(self):
-            if attr in self._persistent_attrs:
+            if attr in self._persistent_attrs and attr not in ignore:
                 if attr == 'variable_args':
                     continue
                 flag = '--%s' % attr
@@ -121,8 +115,7 @@ class GeneralArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = set()
-        return self.__persistent_attrs
+        return set()
 
     @property
     def variable_args(self):
@@ -174,8 +167,8 @@ class VariableArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = set()
-        return self.__persistent_attrs
+        return set()
+
 
 
 class InitArgs(GeneralArgs):
@@ -199,10 +192,9 @@ class InitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = {
+        return {
             'display', 'backup', 'variable_args'
         }
-        return self.__persistent_attrs
 
     @property
     def display(self):
@@ -287,8 +279,7 @@ class SubmitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = {'interval', 'depth', 'memory', 'duration'}
-        return self.__persistent_attrs
+        return {'interval', 'depth', 'memory', 'duration'}
 
     @property
     def interval(self):
@@ -424,8 +415,7 @@ class CollectArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = set()
-        return self.__persistent_attrs
+        return set()
 
 
 class CleanupArgs(GeneralArgs):
@@ -447,8 +437,7 @@ class CleanupArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = set()
-        return self.__persistent_attrs
+        return set()
 
 
 class RunArgs(GeneralArgs):
@@ -470,8 +459,7 @@ class RunArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = {'job'}
-        return self.__persistent_attrs
+        return {'job'}
 
     @property
     def job(self):
@@ -526,11 +514,10 @@ class ApplyArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = {
+        return {
             'plates', 'wells', 'channels', 'tpoints', 'zplanes', 'sites',
             'output_dir'
         }
-        return self.__persistent_attrs
 
     @property
     def output_dir(self):
@@ -774,7 +761,6 @@ class ApplyArgs(GeneralArgs):
             '''
         }
 
-
 # NOTE: The following argument classes are specific to the jterator program.
 # However, they have to be defined here, since they get dynamically loaded
 # from this module.
@@ -798,8 +784,7 @@ class CreateArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = set()
-        return self.__persistent_attrs
+        return set()
 
 
 class RemoveArgs(GeneralArgs):
@@ -821,8 +806,7 @@ class RemoveArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = set()
-        return self.__persistent_attrs
+        return set()
 
 
 class CheckArgs(GeneralArgs):
@@ -844,8 +828,7 @@ class CheckArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = set()
-        return self.__persistent_attrs
+        return set()
 
 
 class ResumeArgs(SubmitArgs):
@@ -863,5 +846,4 @@ class ResumeArgs(SubmitArgs):
 
     @property
     def _persistent_attrs(self):
-        self.__persistent_attrs = {'interval', 'depth'}
-        return self.__persistent_attrs
+        return {'interval', 'depth'}
