@@ -71,15 +71,22 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
     import jtlib.freezeColors;
     import jtlib.plotting.save_figure;
 
+    test_mode = selection_test_mode || perimeter_test_mode;
     if perimeter_test_mode && selection_test_mode
         error('Only one test mode can be active at a time.');
-    elseif (perimeter_test_mode || selection_test_mode) && ~varargin{4}
+    elseif (test_mode) && ~varargin{4}
         error('Plotting needs to be activated for test mode to work');
     end
 
+    if ~isa(input_mask, 'logical')
+        error('Argument "input_mask" must have type logical.')
+    end
     % Fill holes
     input_mask = imfill(input_mask, 'holes');
 
+    if ~isa(input_image, 'integer')
+        error('Argument "input_image" must have type integer.')
+    end
     % Convert to double precision
     input_image = double(input_image);
 
@@ -94,6 +101,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
         
         masks = zeros([size(input_mask), cutting_passes]);
         cut_mask = zeros([size(input_mask), cutting_passes]);
+        selected_clumps = zeros([size(input_mask), cutting_passes]);
         separated_clumps = zeros([size(input_mask), cutting_passes]);
         non_clumps = zeros([size(input_mask), cutting_passes]);
         perimeters = cell(cutting_passes, 1);
@@ -119,12 +127,11 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
                                                              max_solidity, min_formfactor, ...
                                                              max_area, min_area);
 
-            if i==1
-                % Store selected clumps for plotting
-                selected_clumps = zeros(size(input_mask));
-                selected_clumps(clumps) = 1;
-                selected_clumps(logical(non_clumps(:,:,i))) = 2;
-            end
+            % Store selected clumps for plotting
+            tmp = zeros(size(input_mask));
+            tmp(clumps) = 1;
+            tmp(logical(non_clumps(:,:,i))) = 2;
+            selected_clumps(:,:,i) = tmp;
 
             %----------------
             % Separate clumps
@@ -155,7 +162,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
             cut_mask(:,:,i) = jtlib.separateClumps(clumps, input_image, ...
                                                    perimeters{i}, max_radius, min_angle, ...
                                                    min_cut_area, max_num_regions, 'debugOFF');
-            
+        
             separated_clumps(:,:,i) = clumps .* ~cut_mask(:,:,i);
 
         end
@@ -176,7 +183,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
         perimeters = {};
         output_mask = zeros(size(input_mask));
         masks = zeros([size(input_mask), cutting_passes]);
-        SelectedObjects = zeros([size(input_mask), cutting_passes]);
+        selected_clumps = zeros([size(input_mask), cutting_passes]);
         cut_mask = zeros([size(input_mask), cutting_passes]);
         perimeters = cell(cutting_passes, 1);
         
@@ -188,11 +195,92 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
 
         if perimeter_test_mode
 
-            % TODO
+            fig = figure;
+
+            if ~isempty(perimeters)
+                h = cutting_passes;
+                curv_image = zeros(size(input_mask));
+                concave_image = zeros(size(input_mask));
+                angle_image = zeros(size(input_mask));
+                radius_image = zeros(size(input_mask));
+                for i = 1:length(perimeters{h})
+                    matCurrentObjectProps = perimeters{h}{i};%get current object
+                    imConcaveRegions = bwlabel(matCurrentObjectProps(:,11)==-1);
+                    imConvexRegions = bwlabel(matCurrentObjectProps(:,11)==1);
+                    AllRegions = imConcaveRegions+(max(imConcaveRegions)+imConvexRegions).*(imConvexRegions>0);%bwlabel only works binary, therefore label convex, concave seperately, then merger labels
+                    NumRegions = length(setdiff(unique(AllRegions),0));
+                    for j = 1:size(matCurrentObjectProps,1)%loop over all pixels of object to plot general properties
+                        curv_image(matCurrentObjectProps(j,1),matCurrentObjectProps(j,2)) = matCurrentObjectProps(j,9);
+                        concave_image(matCurrentObjectProps(j,1),matCurrentObjectProps(j,2)) = matCurrentObjectProps(j,11);
+                    end
+                    for k = 1:NumRegions%loop over all regions to plot region specific properties
+                        matCurrentRegionProps = matCurrentObjectProps(AllRegions==k,:);%get current region
+                        NormCurvature = matCurrentRegionProps(:,9);
+                        CurrentEqAngle = sum(NormCurvature);
+                        CurrentEqRadius = length(NormCurvature)/sum(NormCurvature);
+                        for L = 1:size(matCurrentRegionProps,1)%loop over all pixels in region
+                            radius_image(matCurrentRegionProps(L,1),matCurrentRegionProps(L,2)) = CurrentEqRadius;
+                            angle_image(matCurrentRegionProps(L,1),matCurrentRegionProps(L,2)) = radtodeg(CurrentEqAngle);
+                        end
+                    end
+                end
+                
+                subplot(2,2,1);
+                imagesc(curv_image);
+                title('Curvature');
+                caxis([min(curv_image(curv_image>0)), max(curv_image(:))]);
+                colorbar;
+                
+                subplot(2,2,2);
+                RGBConvexConcaveImage = cat(3,(concave_image==1),(concave_image==-1),zeros(size(concave_image)));
+                imagesc(RGBConvexConcaveImage);
+                title('Convex concave');
+                % caxis([min(RGBConvexConcaveImage(RGBConvexConcaveImage>0)), max(RGBConvexConcaveImage(:))]);
+                colorbar;
+                
+                subplot(2,2,3);
+                imagesc(angle_image);
+                title('Equivalent angle (degree)');
+                caxis([min(angle_image(angle_image>0)), max(angle_image(:))]);
+                colorbar;
+                
+                subplot(2,2,4);
+                imagesc(radius_image);
+                title('Equivalent radius');
+                caxis([min(radius_image(radius_image>0)), max(radius_image(:))]);
+                colorbar;
+            end
 
         elseif selection_test_mode
 
-            % TODO
+            import jtlib.calculateObjectSelectionFeatures;
+
+            h = cutting_passes;
+            mask = masks(:,:,h);
+            [area, solidity, form_factor] = calculateObjectSelectionFeatures(mask);
+            solidity_image = rplabel(logical(mask), [], solidity);
+            form_factor_image = rplabel(logical(mask), [], form_factor);
+            area_image = rplabel(logical(mask), [], area);
+
+            fig = figure;
+            
+            subplot(2,2,1), imagesc(solidity_image);
+            title('Solidity');
+            caxis([min(solidity_image(solidity_image>0)), max(solidity_image(:))]);
+            colorbar;
+
+            subplot(2,2,2), imagesc(form_factor_image);
+            title('Form factor');
+            caxis([min(form_factor_image(form_factor_image>0)), max(form_factor_image(:))]);
+            colorbar;
+
+            subplot(2,2,3), imagesc(area_image);
+            title('Area');
+            caxis([min(area_image(area_image>0)), max(area_image(:))]);
+            colorbar;
+
+            subplot(2,2,4), imagesc(selected_clumps(:,:,h)); colormap('jet');
+            title('Selected objects');
 
         else
             
@@ -201,19 +289,19 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
 
             fig = figure;
 
-            subplot(2,2,2), imagesc(logical(selected_clumps==1)),
+            subplot(2,2,2), imagesc(logical(selected_clumps(:,:,1)==1)),
             title('Cut lines on selected clumps in input mask');
             hold on
-            redOutline = cat(3, ones(size(selected_clumps)), ...
-                                zeros(size(selected_clumps)), ...
-                                zeros(size(selected_clumps)));
+            redOutline = cat(3, ones(size(selected_clumps(:,:,1))), ...
+                                zeros(size(selected_clumps(:,:,1))), ...
+                                zeros(size(selected_clumps(:,:,1))));
             h = imagesc(redOutline);
             set(h, 'AlphaData', imdilate(logical(sum(cut_mask, 3)), ...
                                          strel('disk', 12)))
             hold off
             freezeColors
 
-            subplot(2,2,1), imagesc(selected_clumps), colormap('jet'),
+            subplot(2,2,1), imagesc(selected_clumps(:,:,1)), colormap('jet'),
             title('Selected clumps in input mask');
             freezeColors
 
@@ -234,8 +322,18 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
             title('Labeled separated mask');
             freezeColors
 
-            jtlib.plotting.save_figure(fig, varargin{2})
-
         end
+
+    jtlib.plotting.save_figure(fig, varargin{2})
+
+    if test_mode
+        if selection_test_mode
+            msg = 'selection';
+        end
+        if perimeter_test_mode
+            msg = 'perimeter';
+        end
+        error('Pipeline stopped because module "%s" ran in %s test mode.', m.filename, msg)
+    end
 
 end

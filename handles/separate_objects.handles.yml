@@ -32,7 +32,7 @@ input:
 
   - name: min_formfactor
     class: parameter
-    value: 0.40
+    value: 0.30
     help: >
       Minimal (negative) form factor value for a continuous pixel region
       to be considered a clump.
@@ -60,7 +60,7 @@ input:
     help: >
       Whether selected clumps should be plotted in order to empirically determine 
       optimal values for `max_solidity`, `min_formfactor`, `min_area` and
-      and `max_area`; no cutting will be performed.
+      and `max_area` (results will be shown for the last cutting pass).
 
   - name: filter_size
     class: parameter
@@ -92,8 +92,8 @@ input:
       - true
     help: >
       Whether result of the perimeter analysis should be plotted in order to
-      empirically determine optimal values for `min_angle` and `max_radius`;
-      no cutting will be performed.
+      empirically determine optimal values for `min_angle` and `max_radius`
+      (results will be shown for the last cutting pass).
 
 output:
 

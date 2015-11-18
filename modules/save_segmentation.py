@@ -1,6 +1,6 @@
 import numpy as np
 import pylab as plt
-from skimage import measure, morphology
+from skimage import measure
 from tmlib.writers import DatasetWriter
 from tmlib.illuminati import segment
 from tmlib.image_utils import find_border_objects
@@ -77,7 +77,7 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
         ax1 = fig.add_subplot(1, 1, 1)
 
         ax1.imshow(outline_image)
-        ax1.set_title(objects_name, size=20)
+        ax1.set_title('Outlines of objects "%s"' % objects_name, size=20)
 
         fig.tight_layout()
 
