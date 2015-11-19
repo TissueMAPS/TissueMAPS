@@ -20,6 +20,7 @@ input:
     - name: keep
       class: parameter
       value:
+      options: [above, below]
       help: Whether values "above" or "below" threshold level should be kept.
 
     - name: relabel
