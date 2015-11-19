@@ -44,6 +44,9 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
     regions = measure.regionprops(labeled_image)
     centroids = np.array([r.centroid for r in regions])
 
+    if not centroids.size:
+        centroids = np.empty((1, 2)).astype(int)
+
     with DatasetWriter(kwargs['data_file']) as f:
         f.write('objects/%s/object_ids' % objects_name,
                 data=objects_ids)
@@ -68,7 +71,8 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
 
         n_objects = len(objects_ids)
         outline_image = np.zeros(labeled_image.shape)
-        rand_num = np.random.randint(1, n_objects, size=n_objects)
+        if n_objects > 0:
+            rand_num = np.random.randint(1, n_objects, size=n_objects)
         for i in xrange(n_objects):
             outline_image[y_coordinates[i], x_coordinates[i]] = rand_num[i]
         outline_image[outline_image == 0] = np.nan
