@@ -1,0 +1,90 @@
+---
+input:
+- class: pipeline
+  help: Binary image in which clumps should be separated.
+  name: input_mask
+  value: prenuclei.filled
+- class: pipeline
+  help: Grayscale image that should be used find optimal cut lines.
+  name: input_image
+  value: dapi.smoothed
+- class: parameter
+  help: Number of cutting rounds that should be applied.
+  name: cutting_passes
+  value: 2
+- class: parameter
+  help: "Minimal area of a cut fragment that should be tolerated, cuts that would\
+    \ result in a smaller fragment will not be performed. \n"
+  name: min_cut_area
+  value: 2000
+- class: parameter
+  help: 'Maximal solidity value for a continuous pixel region to be considered a clump.
+
+    '
+  name: max_solidity
+  value: 0.92
+- class: parameter
+  help: 'Minimal (negative) form factor value for a continuous pixel region to be
+    considered a clump.
+
+    '
+  name: min_formfactor
+  value: 0.3
+- class: parameter
+  help: 'Minimal area value for a continuous pixel region to be considered a clump.
+
+    '
+  name: min_area
+  value: 5000
+- class: parameter
+  help: 'Maximal area value for a continuous pixel region to be considered a clump.
+
+    '
+  name: max_area
+  value: 50000
+- class: parameter
+  help: 'Whether selected clumps should be plotted in order to empirically determine  optimal
+    values for `max_solidity`, `min_formfactor`, `min_area` and and `max_area` (results
+    will be shown for the last cutting pass).
+
+    '
+  name: selection_test_mode
+  options:
+  - false
+  - true
+  value: false
+- class: parameter
+  help: 'Size of the smoothing filter that is applied to the mask prior to perimeter
+    analysis.
+
+    '
+  name: filter_size
+  value: 2
+- class: parameter
+  help: Size of the sliding window used for perimeter analysis.
+  name: sliding_window_size
+  value: 9
+- class: parameter
+  help: Size of the sliding window used for perimeter analysis.
+  name: min_angle
+  value: 6
+- class: parameter
+  help: Maximal radius of the circle fitting into the concave region.
+  name: min_radius
+  value: 30
+- class: parameter
+  help: 'Whether result of the perimeter analysis should be plotted in order to empirically
+    determine optimal values for `min_angle` and `max_radius` (results will be shown
+    for the last cutting pass).
+
+    '
+  name: perimeter_test_mode
+  options:
+  - false
+  - true
+  value: false
+output:
+- class: pipeline
+  help: Binary output image.
+  name: output_mask
+  value: prenuclei.separated

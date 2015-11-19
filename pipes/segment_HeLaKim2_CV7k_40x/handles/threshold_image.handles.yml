@@ -1,0 +1,29 @@
+---
+input:
+- class: pipeline
+  help: Grayscale image that should be thresholded.
+  name: image
+  value: dapi.smoothed
+- class: parameter
+  help: 'Threshold correction factor that is multiplied with the calculated threshold
+    level for manual fine-tuning.
+
+    '
+  name: correction_factor
+  value: 1
+- class: parameter
+  help: Minimal threshold level.
+  name: min_threshold
+  value: null
+- class: parameter
+  help: Maximal threshold level.
+  name: max_threshold
+  value: null
+output:
+- class: pipeline
+  help: 'Binary image where pixels above threshold are assigned to foreground and
+    pixels below threshold to background.
+
+    '
+  name: thresholded_image
+  value: prenuclei

@@ -1,0 +1,34 @@
+---
+project:
+  description: ''
+  lib: ''
+images:
+  layers: []
+pipeline:
+- active: true
+  handles: handles/smooth_image_dapi.handles.yml
+  module: '{lib}/modules/smooth_image.py'
+- active: true
+  handles: handles/threshold_image.handles
+  module: '{lib}/modules/threshold_image.py'
+- active: true
+  handles: handles/fill_mask.handles
+  module: '{lib}/modules/fill_mask.py'
+- active: true
+  handles: handles/separate_objects.handles.yml
+  module: '{lib}/modules/separate_objects.m'
+- active: true
+  handles: handles/filter_objects.handles
+  module: '{lib}/modules/filter_objects.py'
+- active: true
+  handles: handles/save_nuclei.handles
+  module: '{lib}/modules/save_segmentation.py'
+- active: true
+  handles: handles/smooth_image_celltrace.handles.yml
+  module: '{lib}/modules/smooth_image.py'
+- active: true
+  handles: handles/identify_cells.handles.yml
+  module: '{lib}/modules/identify_secondary_objects_iw.m'
+- active: true
+  handles: handles/save_cells.handles.yml
+  module: '{lib}/modules/save_segmentation.py'
