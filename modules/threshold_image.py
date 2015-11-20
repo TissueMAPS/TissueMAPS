@@ -1,7 +1,7 @@
 import mahotas as mh
 # from bokeh.plotting import figure
 # from bokeh.palettes import Reds3
-import pylab as plt
+import matplotlib.pyplot as plt
 import collections
 import numpy as np
 from jtlib import plotting

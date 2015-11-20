@@ -1,4 +1,4 @@
-import pylab as plt
+import matplotlib.pyplot as plt
 import collections
 import numpy as np
 from jtlib import plotting

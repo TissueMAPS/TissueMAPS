@@ -1,9 +1,9 @@
 import numpy as np
-from jtlib import plotting
+from tmlib.writers import DatasetWriter
 
 
-def relate_objects(parent_objects_image, parent_objects_name,
-                   children_objects_image, children_objects_name, **kwargs):
+def relate_objects(parents_image, parents_name,
+                   children_image, children_name, **kwargs):
     '''
     Jterator module for relating objects.
 
@@ -12,32 +12,33 @@ def relate_objects(parent_objects_image, parent_objects_name,
     than that of the corresponding parent object. Consequently, a parent object
     can have multiple children, but a child can only have one parent.
 
-    The module saves the "ParentName" and "ParentId" for child objects.
-
     Parameters
     ----------
-    parent_objects_image: numpy.ndarray
+    parents_image: numpy.ndarray
         label image containing the parent objects
-    parent_objects_name: str
+    parents_name: str
         name of the parent objects
-    children_objects_image: numpy.ndarray
+    children_image: numpy.ndarray
         label image containing the children objects
-    children_objects_name: str
+    children_name: str
         name of the children objects
-    config: dict
-        configuration settings
     **kwargs: dict
         additional arguments provided by Jterator:
         "data_file", "figure_file", "experiment_dir", "plot", "job_id"
     '''
-    children_ids = np.unique(children_objects_image)
-    children_ids = children_ids[children_ids != 0]
+    children_ids = np.unique(children_image[children_image != 0])
 
-    data = dict()
     parent_ids = list()
     for i in children_ids:
-        p = np.unique(parent_objects_image[children_objects_image == i])[0]
+        p = np.unique(parents_image[children_image == i])[0]
         parent_ids.append(p)
-    data['%s_ParentName' % children_objects_name] = parent_objects_name
-    data['%s_ParentId' % children_objects_name] = parent_ids
-    plotting.writedata(data, kwargs['data_file'])
+
+    if len(children_ids) > 0:
+
+        group_name = '/objects/%s/segmentation' % children_name
+
+        with DatasetWriter(kwargs['data_file']) as f:
+            f.write('%s/parent_name' % group_name,
+                    data=parents_name)
+            f.write('%s/parent_objects_ids' % group_name,
+                    data=parent_ids)

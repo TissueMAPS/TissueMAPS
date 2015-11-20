@@ -3,22 +3,22 @@ input:
 
     - name: parents_image
       class: pipeline
-      value: 
+      value: cells
       help: Label image containing parent objects.
 
     - name: parents_name
       class: parameter
-      value:
+      value: cells
       help: Name of the objects in the parents image.
 
     - name: children_image
       class: pipeline
-      value: 
+      value: nuclei
       help: Label image containing children objects.
 
     - name: children_name
       class: parameter
-      value: 
+      value: nuclei
       help: Name of the objects in the children image.
 
 output:

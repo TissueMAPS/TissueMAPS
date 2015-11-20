@@ -2,7 +2,7 @@
 input:
 - class: pipeline
   help: Labeled image that contains the objects.
-  name: labeled_image
+  name: image
   value: nuclei
 - class: parameter
   help: Name of should be given to the objects.

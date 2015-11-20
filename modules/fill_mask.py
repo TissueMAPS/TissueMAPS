@@ -1,6 +1,6 @@
 from scipy import ndimage as ndi
 import collections
-import pylab as plt
+import matplotlib.pyplot as plt
 import numpy as np
 from jtlib import plotting
 

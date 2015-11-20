@@ -3,7 +3,7 @@ from skimage.morphology import disk
 from skimage.filters.rank import median
 import collections
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
 from jtlib import plotting
 
 

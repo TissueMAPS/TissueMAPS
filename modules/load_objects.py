@@ -1,7 +1,7 @@
 import numpy as np
 import mahotas as mh
 from scipy import ndimage as ndi
-import pylab as plt
+import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import mpld3
 import collections

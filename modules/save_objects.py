@@ -1,5 +1,5 @@
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
 from skimage import measure
 from tmlib.writers import DatasetWriter
 from tmlib.illuminati import segment
@@ -7,26 +7,26 @@ from tmlib.image_utils import find_border_objects
 from jtlib import plotting
 
 
-def save_segmentation(labeled_image, name, **kwargs):
+def save_objects(image, name, **kwargs):
     '''
     Jterator module for saving segmented objects. The outline coordinates get
     written to a HDF5 file as a *variable_length* dataset.
 
     Parameters
     ----------
-    labeled_image: numpy.ndarray
+    image: numpy.ndarray
         labeled image where pixel value encodes objects id
     name: str
-        name that should be given to the objects in `labeled_image`
+        name that should be given to the objects in `image`
     **kwargs: dict
         additional arguments provided by Jterator:
         "data_file", "figure_file", "experiment_dir", "plot", "job_id"
     '''
-    objects_ids = np.unique(labeled_image[labeled_image != 0])
+    objects_ids = np.unique(image[image != 0])
     y_coordinates = list()
     x_coordinates = list()
     outline_image = segment.compute_outlines_numpy(
-                        labeled_image, keep_ids=True)
+                        image, keep_ids=True)
 
     for obj_id in objects_ids:
         coordinates = np.where(outline_image == obj_id)
@@ -39,37 +39,39 @@ def save_segmentation(labeled_image, name, **kwargs):
     # Storing the actual image directly would be way faster in these cases,
     # but it would cost a lot more memory.
 
-    border_indices = find_border_objects(labeled_image)
+    border_indices = find_border_objects(image)
 
-    regions = measure.regionprops(labeled_image)
+    regions = measure.regionprops(image)
     centroids = np.array([r.centroid for r in regions])
 
     if len(objects_ids) > 0:
 
+        group_name = '/objects/%s/segmentation' % name
+
         with DatasetWriter(kwargs['data_file']) as f:
-            f.write('objects/%s/object_ids' % name,
+            f.write('%s/object_ids' % group_name,
                     data=objects_ids)
-            f.write('objects/%s/is_border' % name,
+            f.write('%s/is_border' % group_name,
                     data=border_indices)
-            f.write('objects/%s/site_ids' % name,
+            f.write('%s/site_ids' % group_name,
                     data=[kwargs['job_id'] for x in xrange(len(objects_ids))])
-            f.write('objects/%s/segmentation/image_dimensions/y' % name,
-                    data=labeled_image.shape[0])
-            f.write('objects/%s/segmentation/image_dimensions/x' % name,
-                    data=labeled_image.shape[1])
-            f.write('objects/%s/segmentation/outlines/y' % name,
+            f.write('%s/image_dimensions/y' % group_name,
+                    data=image.shape[0])
+            f.write('%s/image_dimensions/x' % group_name,
+                    data=image.shape[1])
+            f.write('%s/outlines/y' % group_name,
                     data=y_coordinates)
-            f.write('objects/%s/segmentation/outlines/x' % name,
+            f.write('%s/outlines/x' % group_name,
                     data=x_coordinates)
-            f.write('objects/%s/segmentation/centroids/y' % name,
+            f.write('%s/centroids/y' % group_name,
                     data=centroids[:, 0])
-            f.write('objects/%s/segmentation/centroids/x' % name,
+            f.write('%s/centroids/x' % group_name,
                     data=centroids[:, 1])
 
     if kwargs['plot']:
 
         n_objects = len(objects_ids)
-        outline_image = np.zeros(labeled_image.shape)
+        outline_image = np.zeros(image.shape)
         if n_objects > 0:
             rand_num = np.random.randint(1, n_objects, size=n_objects)
             for i in xrange(n_objects):
