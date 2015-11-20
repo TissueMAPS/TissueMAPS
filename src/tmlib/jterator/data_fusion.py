@@ -25,18 +25,17 @@ def fuse_datasets(data_files):
         object_names = f.list_group_names('/objects')
 
     for obj_name in object_names:
-        features_path = obj_name + '/' + 'features'
-        segmentation_path = obj_name + '/' + 'segmentation'
+        features_path = '%s/features' % obj_name
+        segmentation_path = '%s/segmentation' % obj_name
         metadata_path = '/images'
         data[features_path] = pd.DataFrame()
+        data[metadata_path] = pd.DataFrame()
 
         for i, filename in enumerate(data_files):
 
             with DatasetReader(filename) as f:
 
                 # TODO: deal with empty or missing datasets
-
-                # TODO: parent objects for removal of border objects
 
                 if f.exists(features_path):
                     dataset_names = f.list_dataset_names(features_path)
