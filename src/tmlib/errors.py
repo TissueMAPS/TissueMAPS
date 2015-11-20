@@ -81,6 +81,13 @@ class WorkflowError(Exception):
     Base class for workflow errors.
     '''
 
+
+class DataError(Exception):
+    '''
+    Error class that is raised when data is not available in the HDF5 file.
+    '''
+
+
 class WorkflowDescriptionError(WorkflowError):
     '''
     Error class that is raised when the workflow is not correctly described.
