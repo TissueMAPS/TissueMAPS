@@ -53,10 +53,10 @@ class JtProject(object):
             path to the project folder
         pipe_name: str
             name of the pipeline
-        pipe: dict
-            pipeline description
-        handles: List[dict]
-            module descriptions
+        pipe: dict, optional
+            pipeline description (default: ``None``)
+        handles: List[dict], optional
+            module descriptions (default: ``None``)
         '''
         self.project_dir = project_dir
         self.pipe_name = pipe_name
@@ -116,7 +116,7 @@ class JtProject(object):
         elif len(pipe_files) > 1:
             raise PipelineOSError(
                     'More than more .pipe file found: %s' % directory)
-        if not pipe_files:
+        else:
             raise PipelineOSError(
                     'No .pipe file found: %s' % directory)
 
@@ -158,7 +158,6 @@ class JtProject(object):
                             if isinstance(element, dict):
                                 for k3 in copy(element):
                                     # Remove 'hashKey' elements
-                                    # (included by Javascript)
                                     if re.search(r'\$\$hashKey', k3):
                                         new[k1][k2][i].pop(k3, None)
                                 old[k1][k2].append(new[k1][k2][i])
@@ -171,7 +170,6 @@ class JtProject(object):
                 for i, element in enumerate(new[k1]):
                     for k2 in copy(element):
                         # Remove 'hashKey' elements
-                        # (included by Javascript)
                         if re.search(r'\$\$hashKey', k2):
                             new[k1][i].pop(k2, None)
                     if isinstance(element, dict):
@@ -315,13 +313,13 @@ class JtProject(object):
             if f not in handles_files:
                 os.remove(f)
 
-    def serialize(self):
+    def __iter__(self):
         '''
-        Serialize the attributes of the class in the format::
+        Convert the attributes of the class into a mapping of key-value pairs::
 
             {
-                "experiment_name": str,
-                "project_name": str,
+                "experiment": str,
+                "name": str,
                 "pipe": {
                     "name": str,
                     "description": dict
@@ -339,12 +337,10 @@ class JtProject(object):
         -------
         dict
         '''
-        return {
-            'experiment': self.experiment,
-            'name': self.pipe_name,
-            'pipe': self.pipe,
-            'handles': self.handles
-        }
+        yield('experiment', self.experiment)
+        yield('name', self.pipe_name)
+        yield('pipe', self.pipe)
+        yield('handles', self.handles)
 
     def save(self):
         '''
@@ -388,6 +384,7 @@ class JtProject(object):
             raise PipelineOSError(
                     'Project already exists. Remove existing project first.')
         os.mkdir(self.project_dir)
+        # TODO: handle creation of project based on provided pipe
         if skel_dir:
             self._create_project_from_skeleton(skel_dir, repo_dir)
         else:
@@ -483,19 +480,15 @@ class JtAvailableModules(object):
     def handles(self):
         '''
         Handles files are assumed to reside in a subfolder called "handles"
-        and have the suffix ".handles".
+        and have the suffix ".handles.yml".
 
         Returns
         -------
-        dict
-            handles name and description
-
-        See also
-        --------
-        `create_handles`
+        List[dict]
+            name and description for each handles file
         '''
         with YamlReader() as reader:
-            self._handles = [
+            handles = [
                 {
                     'name': name,
                     'description': reader.read(
@@ -503,7 +496,7 @@ class JtAvailableModules(object):
                 }
                 for name in self.module_names
             ]
-        return self._handles
+        return handles
 
     @property
     def pipe_registration(self):
@@ -539,23 +532,9 @@ class JtAvailableModules(object):
                 self._pipe_registration.append(element)
         return self._pipe_registration
 
-    def serialize(self):
-        '''
-        Provide information in the format required by server::
-
-            {
-                "modules": list,
-                "registration": list,
-            }
-
-        Returns
-        -------
-        dict
-        '''
-        return {
-            'modules': self.handles,
-            'registration': self.pipe_registration
-        }
+    def __iter__(self):
+        yield('modules', self.handles)
+        yield('registration', self.pipe_registration)
 
     @staticmethod
     def get_modules(lib_dir):

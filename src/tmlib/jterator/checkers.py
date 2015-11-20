@@ -44,10 +44,11 @@ class PipelineChecker(object):
         if 'lib' in self.pipe_description['project'].keys():
             libpath = self.pipe_description['project']['lib']
             libpath = path_utils.complete_path(libpath, self.project_dir)
-            if not exists(libpath):
-                raise PipelineDescriptionError(
-                        'The path defined by "lib" in your '
-                        'pipeline description is not valid.')
+            if libpath:
+                if not exists(libpath):
+                    raise PipelineDescriptionError(
+                            'The path defined by "lib" in your '
+                            'pipeline description is not valid.')
         # Check "jobs" section
         if 'images' not in self.pipe_description.keys():
             raise PipelineDescriptionError(

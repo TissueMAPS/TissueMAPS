@@ -25,7 +25,7 @@ def fuse_datasets(data_files):
 
     for obj_name in object_names:
         features_path = obj_name + '/' + 'features'
-        segmentation_path = obj_name + '/' + 'segmentations'
+        segmentation_path = obj_name + '/' + 'segmentation'
         data[features_path] = pd.DataFrame()
 
         for i, filename in enumerate(data_files):
@@ -90,3 +90,8 @@ def fuse_datasets(data_files):
         data[features_path] = data[features_path].T.groupby(level=0).first().T
 
     return data
+
+
+def create_object_layers(data_file):
+    '''
+    '''

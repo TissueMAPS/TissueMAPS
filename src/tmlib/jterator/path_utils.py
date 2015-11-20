@@ -9,9 +9,14 @@ def complete_path(input_path, project_dir):
     Parameters
     ----------
     input_path: str
-        the path the should be completed
+        relative path the should be completed
     project_dir: str
         absolute path to project folder
+
+    Returns
+    -------
+    str
+        absolute path
     '''
     if not input_path:
         return input_path
@@ -31,23 +36,28 @@ def complete_module_path(input_path, repo_dir, project_dir):
     Parameters
     ----------
     input_path: str
-        the path the should be completed
+        relative path to module file the should be completed
     repo_dir: str
         value of the "lib" key in the pipeline descriptor file
     project_dir: str
         absolute path to project folder
+
+    Returns
+    -------
+    str
+        absolute path to module file
     '''
     # Replace the `variable` name with the actual value
     if repo_dir and re.search(r'^{lib}', input_path):
         re_path = input_path.format(lib=repo_dir)
-    elif not os.path.isabs(input_path):
-        re_path = os.path.join(project_dir, input_path)
     else:
         re_path = input_path
     # Expand path containing environment variables '$'
     complete_path = os.path.expandvars(re_path)
     # Expand path starting with `~`
-    complete_path = os.path.expanduser(re_path)
+    complete_path = os.path.expanduser(complete_path)
+    if not os.path.isabs(complete_path):
+        complete_path = os.path.join(project_dir, complete_path)
     return complete_path
 
 

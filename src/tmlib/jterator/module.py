@@ -177,9 +177,10 @@ class ImageProcessingModule(object):
                      '", "'.join(inputs.keys()))
         for name, value in inputs.iteritems():
             engine.put('%s' % name, value)
+        function_name = os.path.splitext(os.path.basename(self.module_file))[0]
         func_call = '[{output_args}] = {function_name}({inputs_args});'.format(
                                     output_args=', '.join(output_names),
-                                    function_name=self.name,
+                                    function_name=function_name,
                                     inputs_args=', '.join(inputs.keys()))
         # Capture standard output and error
         engine.eval("out = evalc('{0}')".format(func_call))
@@ -189,8 +190,6 @@ class ImageProcessingModule(object):
             print out  # print to standard output
         for i, name in enumerate(output_names):
             m_out = engine.get('%s' % name)
-            logger.debug('value of OUTPUT "{name}":\n{value}'.format(
-                                            name=name, value=m_out))
             logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
                                             name=name, value=m_out.shape))
             logger.debug('type of OUTPUT "{name}": {value}'.format(
@@ -209,9 +208,10 @@ class ImageProcessingModule(object):
         # code file!
         module_name = os.path.splitext(os.path.basename(self.module_file))[0]
         imp.load_source(module_name, self.module_file)
-        func = getattr(__import__(module_name, fromlist=[module_name]), module_name)
-        logger.debug('evaluating Python function with INPUTS: "%s"'
-              % '", "'.join(inputs.keys()))
+        module_instance = __import__(module_name, fromlist=[module_name])
+        func = getattr(module_instance, module_name)
+        logger.debug('evaluating Python function with INPUTS: "%s"',
+                     '", "'.join(inputs.keys()))
         py_out = func(**inputs)
         if not output_names:
             return
@@ -221,8 +221,6 @@ class ImageProcessingModule(object):
             # NOTE: The Python function is supposed to return a namedtuple!
             if py_out._fields[i] != name:
                 raise PipelineRunError('Incorrect output names.')
-            logger.debug('value of OUTPUT "{name}":\n{value}'.format(
-                                            name=name, value=py_out[i]))
             logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
                                             name=name, value=py_out[i].shape))
             logger.debug('type of OUTPUT "{name}": {value}'.format(
@@ -241,7 +239,8 @@ class ImageProcessingModule(object):
         logger.debug('sourcing module: "%s"' % self.module_file)
         robjects.r('source("{0}")'.format(self.module_file))
         robjects.numpy2ri.activate()  # enables use of numpy arrays
-        func = robjects.globalenv['{0}'.format(self.name)]
+        function_name = os.path.splitext(os.path.basename(self.module_file))[0]
+        func = robjects.globalenv['{0}'.format(function_name)]
         logger.debug('evaluating R function with INPUTS: "%s"'
                      % '", "'.join(inputs.keys()))
         # R doesn't have unsigned integer types
@@ -258,8 +257,6 @@ class ImageProcessingModule(object):
         r_var = base.do_call(func, args)
         for i, name in enumerate(output_names):
             r_var_np = np.array(r_var.rx2(name))
-            logger.debug('value of OUTPUT "{name}":\n{value}'.format(
-                                            name=name, value=r_var_np))
             logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
                                             name=name, value=r_var_np.shape))
             logger.debug('type of OUTPUT "{name}": {value}'.format(

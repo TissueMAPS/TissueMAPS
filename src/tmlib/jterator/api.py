@@ -45,9 +45,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             name of the pipeline that should be processed
         pipe: dict, optional
             name of the pipeline and the description of module order and
-            paths to module code and descriptor files
+            paths to module code and descriptor files (default: ``None``)
         handles: List[dict], optional
             name of each module and the description of its input/output
+            (default: ``None``)
         headless: bool, optional
             whether plotting should be disabled (default: ``True``)
 
@@ -186,26 +187,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         shutil.rmtree(self.module_log_dir)
         shutil.rmtree(self.figures_dir)
 
-    @property
-    def pipe_file(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path to the *.pipe* YAML pipeline descriptor file
-        '''
-        self._pipeline_file = os.path.join(self.project_dir,
-                                           '%s.pipe' % self.pipe_name)
-        return self._pipeline_file
-
-    def _read_pipe_file(self):
-        with YamlReader() as reader:
-            content = reader.read(self.pipe_file, use_ruamel=True)
-        # Make paths absolute
-        content['project']['lib'] = path_utils.complete_path(
-                    content['project']['lib'], self.project_dir)
-        return content
-
     @cached_property
     def pipeline(self):
         '''
@@ -240,8 +221,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         handles_description=handles_description)
             self._pipeline.append(module)
         if not self._pipeline:
-            raise PipelineDescriptionError(
-                        'No pipeline description: "%s"' % self.pipe_filename)
+            raise PipelineDescriptionError('No pipeline description available')
         return self._pipeline
 
     def start_engines(self):
