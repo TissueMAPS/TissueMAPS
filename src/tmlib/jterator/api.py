@@ -390,7 +390,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         # Load the image and correct/align it if required (requested)
         layer_images = dict()
-        for layer in self.project.pipe['description']['images']['layers']:
+        layers = self.project.pipe['description']['images']['layers']
+        for i, layer in enumerate(layers):
             filename = batch['inputs']['image_files'][layer['name']]
             image = self.experiment.get_image_by_name(filename)
             if layer['correct']:
@@ -408,15 +409,18 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 image_array = image.pixels.array
             layer_images[layer['name']] = image_array
             # Add some metadata to the HDF5 file, which may be required later
-            with DatasetWriter(data_file) as writer:
-                writer.write('/metadata/plate_name',
-                             data=image.metadata.plate_name)
-                writer.write('/metadata/well_name',
-                             data=image.metadata.well_name)
-                writer.write('/metadata/well_position/x',
-                             data=image.metadata.well_pos_x)
-                writer.write('/metadata/well_position/y',
-                             data=image.metadata.well_pos_y)
+            if i == 0:
+                # All images processed per job were acquired at the same site
+                # and thus share the positional metadata information
+                with DatasetWriter(data_file) as writer:
+                    writer.write('/metadata/plate_name',
+                                 data=image.metadata.plate_name)
+                    writer.write('/metadata/well_name',
+                                 data=image.metadata.well_name)
+                    writer.write('/metadata/well_position/x',
+                                 data=image.metadata.well_pos_x)
+                    writer.write('/metadata/well_position/y',
+                                 data=image.metadata.well_pos_y)
 
         outputs = collections.defaultdict(dict)
         outputs['data'] = dict()
