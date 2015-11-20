@@ -145,12 +145,13 @@ class BasicClusterRoutines(object):
                         log_recursive(subtd, i+1)
             log_recursive(task_data, 0)
 
-        def log_failure(task_data):
+        def log_task_failure(task_data):
             def log_recursive(data, i):
-                for subtd in data.get('subtasks', list()):
-                    if subtd['failed']:
-                        logger.error('job "%s" failed', subtd['name'])
-                    log_recursive(subtd, i+1)
+                if data['failed']:
+                    logger.error('%s: failed', data['name'])
+                if i <= monitoring_depth:
+                    for subtd in data.get('subtasks', list()):
+                        log_recursive(subtd, i+1)
             log_recursive(task_data, 0)
 
         # Create an `Engine` instance for running jobs in parallel
@@ -196,7 +197,7 @@ class BasicClusterRoutines(object):
             if break_next:
                 break
 
-            task_data = get_task_data(task, monitoring_depth)
+            task_data = get_task_data(task)
 
             log_task_data(task_data)
             logger.info('------------------------------------------')
@@ -207,7 +208,7 @@ class BasicClusterRoutines(object):
                 if aggregate['count_terminated'] == aggregate['count_total']:
                     break_next = True
 
-        log_failure(task)
+        log_task_failure(task_data)
 
         return task_data
 
@@ -708,7 +709,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     stderr=log_err_file
             )
             collect_job.requested_walltime = Duration('01:00:00')
-            collect_job.requested_memory = Memory(32, Memory.GB)
+            collect_job.requested_memory = Memory(16, Memory.GB)
 
             logger.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(

@@ -4,6 +4,7 @@ import traceback
 import logging
 import shutil
 import argparse
+import socket
 from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
@@ -34,6 +35,11 @@ def command_line_call(parser):
     parser: argparse.ArgumentParser
         argument parser object
 
+    Raises
+    ------
+    SystemExit
+        when the call raises an :py:class:`Exception`
+
     Warning
     -------
     Don't do any other logging configuration anywhere else!
@@ -44,6 +50,7 @@ def command_line_call(parser):
     logger = logging.getLogger('tmlib')
     level = map_logging_verbosity(arguments.verbosity)
     logger.setLevel(level)
+    logger.info('processing on node: %s', socket.gethostname())
     logger.debug('running program: %s' % parser.prog)
 
     # Fine tune the output of some loggers
