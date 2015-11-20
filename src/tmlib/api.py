@@ -140,7 +140,7 @@ class BasicClusterRoutines(object):
                 logger.info('%s: %s (%.2f %%)',
                             data['name'], data['state'],
                             data['percent_done'])
-                if i <= monitoring_depth:
+                if i < monitoring_depth:
                     for subtd in data.get('subtasks', list()):
                         log_recursive(subtd, i+1)
             log_recursive(task_data, 0)
