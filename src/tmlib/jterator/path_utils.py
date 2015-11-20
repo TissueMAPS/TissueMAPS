@@ -86,4 +86,3 @@ def determine_language(filename):
         return 'Julia'
     else:
         raise Exception('Language could not be determined from filename.')
-

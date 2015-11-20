@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from ..readers import DatasetReader
+from ..errors import DataError
 
 
 def fuse_datasets(data_files):
@@ -26,6 +27,7 @@ def fuse_datasets(data_files):
     for obj_name in object_names:
         features_path = obj_name + '/' + 'features'
         segmentation_path = obj_name + '/' + 'segmentation'
+        metadata_path = '/images'
         data[features_path] = pd.DataFrame()
 
         for i, filename in enumerate(data_files):
@@ -49,6 +51,23 @@ def fuse_datasets(data_files):
                         else:
                             data[features_path] = \
                                 pd.concat([data[features_path], feature])
+
+                if f.exists(metadata_path):
+                    dataset_names = f.list_dataset_names(metadata_path)
+                    for name in dataset_names:
+                        metadata = pd.DataFrame()
+                        dataset_path = '{group}/{dataset}'.format(
+                                            group=metadata_path, dataset=name)
+                        metadata[name] = f.read(dataset_path)
+                        if i == 0:
+                            data[metadata_path] = metadata
+                        else:
+                            data[metadata_path] = \
+                                pd.concat([data[metadata_path], metadata])
+                else:
+                    raise DataError(
+                            'Data file must contain group "%s"'
+                            % metadata_path)
 
                 if f.exists(segmentation_path):
                     dataset_names = f.list_dataset_names(segmentation_path)
@@ -77,11 +96,13 @@ def fuse_datasets(data_files):
                                 if i == 0:
                                     data[dataset_path] = f.read(dataset_path)
                                 else:
-                                    data[dataset_path] = np.array(np.append(
-                                        data[dataset_path], f.read(dataset_path)
-                                    ), dtype=data[dataset_path].dtype)
-
-
+                                    data[dataset_path] = \
+                                        np.array(
+                                            np.append(
+                                                data[dataset_path],
+                                                f.read(dataset_path)
+                                            ),
+                                        dtype=data[dataset_path].dtype)
 
             # Remove individual data files
             # os.remove(filename)
