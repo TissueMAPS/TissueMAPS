@@ -27,7 +27,7 @@ def format_stats_data(stats):
     return data
 
 
-def get_task_data(task, monitoring_depth=2):
+def get_task_data(task):
     '''
     Provide the following data for each task and recursively for each
     subtask (until `monitoring_depth` is reached) in form of a mapping:
@@ -44,9 +44,6 @@ def get_task_data(task, monitoring_depth=2):
     ----------
     task: gc3libs.workflow.TaskCollection or gc3libs.Task
         submitted GC3Pie task that should be monitored
-    monitoring_depth: int, optional
-        recursion depth, i.e. how detailed subtasks of `task` should be
-        monitored (default: ``2``)
 
     Returns
     -------
@@ -71,11 +68,8 @@ def get_task_data(task, monitoring_depth=2):
             'percent_done': 0.0  # fix later, if possible
         }
 
-        is_task_collection = isinstance(task_, gc3libs.workflow.TaskCollection)
-        is_task = isinstance(task_, gc3libs.Task)
-
         done = 0.0
-        if is_task_collection:
+        if isinstance(task_, gc3libs.workflow.TaskCollection):
             for child in task_.tasks:
                 if (child.execution.state == gc3libs.Run.State.TERMINATED):
                     done += 1
@@ -83,7 +77,7 @@ def get_task_data(task, monitoring_depth=2):
                 data['percent_done'] = done / len(task_.tasks) * 100
             else:
                 data['percent_done'] = 0
-        elif is_task:
+        elif isinstance(task_, gc3libs.Task):
             # For an individual task it is difficult to estimate to which
             # extent the task has been completed. For simplicity and
             # consistency, we just set "percent_done" to 100% once the job
@@ -94,9 +88,8 @@ def get_task_data(task, monitoring_depth=2):
             raise NotImplementedError(
                 "Unhandled task class %r" % (task_.__class__))
 
-        monitoring_depth_reached = i == monitoring_depth
-        if is_task_collection and not monitoring_depth_reached:
-            data['subtasks'] = [get_info(t, i + 1) for t in task_.tasks]
+        if isinstance(task_, gc3libs.workflow.TaskCollection):
+            data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
 
         return data
 

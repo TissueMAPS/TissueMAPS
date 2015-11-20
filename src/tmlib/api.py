@@ -135,7 +135,7 @@ class BasicClusterRoutines(object):
             monitoring_depth = 0
         logger.debug('monitoring depth: %d' % monitoring_depth)
 
-        def log_task_data(task_data):
+        def log_task_data(task_data, monitoring_depth):
             def log_recursive(data, i):
                 logger.info('%s: %s (%.2f %%)',
                             data['name'], data['state'],
@@ -149,9 +149,8 @@ class BasicClusterRoutines(object):
             def log_recursive(data, i):
                 if data['failed']:
                     logger.error('%s: failed', data['name'])
-                if i <= monitoring_depth:
-                    for subtd in data.get('subtasks', list()):
-                        log_recursive(subtd, i+1)
+                for subtd in data.get('subtasks', list()):
+                    log_recursive(subtd, i+1)
             log_recursive(task_data, 0)
 
         # Create an `Engine` instance for running jobs in parallel
@@ -199,7 +198,7 @@ class BasicClusterRoutines(object):
 
             task_data = get_task_data(task)
 
-            log_task_data(task_data)
+            log_task_data(task_data, monitoring_depth)
             logger.info('------------------------------------------')
 
             # break out of the loop when all jobs are done
