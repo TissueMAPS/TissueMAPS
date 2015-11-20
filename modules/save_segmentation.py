@@ -7,7 +7,7 @@ from tmlib.image_utils import find_border_objects
 from jtlib import plotting
 
 
-def save_segmentation(labeled_image, objects_name, **kwargs):
+def save_segmentation(labeled_image, name, **kwargs):
     '''
     Jterator module for saving segmented objects. The outline coordinates get
     written to a HDF5 file as a *variable_length* dataset.
@@ -16,7 +16,7 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
     ----------
     labeled_image: numpy.ndarray
         labeled image where pixel value encodes objects id
-    objects_name: str
+    name: str
         name that should be given to the objects in `labeled_image`
     **kwargs: dict
         additional arguments provided by Jterator:
@@ -44,28 +44,27 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
     regions = measure.regionprops(labeled_image)
     centroids = np.array([r.centroid for r in regions])
 
-    if not centroids.size:
-        centroids = np.empty((1, 2)).astype(int)
+    if len(objects_ids) > 0:
 
-    with DatasetWriter(kwargs['data_file']) as f:
-        f.write('objects/%s/object_ids' % objects_name,
-                data=objects_ids)
-        f.write('objects/%s/is_border' % objects_name,
-                data=border_indices)
-        f.write('objects/%s/site_ids' % objects_name,
-                data=[kwargs['job_id'] for x in xrange(len(objects_ids))])
-        f.write('objects/%s/segmentations/image_dimensions/y' % objects_name,
-                data=labeled_image.shape[0])
-        f.write('objects/%s/segmentations/image_dimensions/x' % objects_name,
-                data=labeled_image.shape[1])
-        f.write('objects/%s/segmentations/outlines/y' % objects_name,
-                data=y_coordinates)
-        f.write('objects/%s/segmentations/outlines/x' % objects_name,
-                data=x_coordinates)
-        f.write('objects/%s/segmentations/centroids/y' % objects_name,
-                data=centroids[:, 0])
-        f.write('objects/%s/segmentations/centroids/x' % objects_name,
-                data=centroids[:, 1])
+        with DatasetWriter(kwargs['data_file']) as f:
+            f.write('objects/%s/object_ids' % name,
+                    data=objects_ids)
+            f.write('objects/%s/is_border' % name,
+                    data=border_indices)
+            f.write('objects/%s/site_ids' % name,
+                    data=[kwargs['job_id'] for x in xrange(len(objects_ids))])
+            f.write('objects/%s/segmentation/image_dimensions/y' % name,
+                    data=labeled_image.shape[0])
+            f.write('objects/%s/segmentation/image_dimensions/x' % name,
+                    data=labeled_image.shape[1])
+            f.write('objects/%s/segmentation/outlines/y' % name,
+                    data=y_coordinates)
+            f.write('objects/%s/segmentation/outlines/x' % name,
+                    data=x_coordinates)
+            f.write('objects/%s/segmentation/centroids/y' % name,
+                    data=centroids[:, 0])
+            f.write('objects/%s/segmentation/centroids/x' % name,
+                    data=centroids[:, 1])
 
     if kwargs['plot']:
 
@@ -73,15 +72,15 @@ def save_segmentation(labeled_image, objects_name, **kwargs):
         outline_image = np.zeros(labeled_image.shape)
         if n_objects > 0:
             rand_num = np.random.randint(1, n_objects, size=n_objects)
-        for i in xrange(n_objects):
-            outline_image[y_coordinates[i], x_coordinates[i]] = rand_num[i]
+            for i in xrange(n_objects):
+                outline_image[y_coordinates[i], x_coordinates[i]] = rand_num[i]
         outline_image[outline_image == 0] = np.nan
 
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
 
         ax1.imshow(outline_image)
-        ax1.set_title('Outlines of objects "%s"' % objects_name, size=20)
+        ax1.set_title('Outlines of objects "%s"' % name, size=20)
 
         fig.tight_layout()
 

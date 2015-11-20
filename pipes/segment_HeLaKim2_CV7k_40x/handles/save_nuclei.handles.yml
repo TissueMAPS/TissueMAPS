@@ -6,6 +6,6 @@ input:
   value: nuclei
 - class: parameter
   help: Name of should be given to the objects.
-  name: objects_name
+  name: name
   value: nuclei
 output: null
