@@ -12,6 +12,7 @@ import tmlib.experiment
 import tmlib.tmaps.workflow
 import tmlib.logging_utils
 import tmlib.tmaps.canonical
+from tmlib.readers import DatasetReader
 
 from tmaps.models import Experiment, TaskSubmission
 from tmaps.extensions.encrypt import decode
@@ -78,7 +79,6 @@ def get_features(experiment_id):
     """
 
     exp = Experiment.get(experiment_id)
-    dataset = exp.dataset
     features = []
 
     props = []
@@ -88,18 +88,18 @@ def get_features(experiment_id):
 
     features = []
 
-    dset = dataset['/objects/cells/features']
-    feat_names = dset.attrs['names'].tolist()
-    feat_objs = [{'name': f} for f in feat_names]
+    # with DatasetReader(exp.dataset_path) as dataset:
+    #     dset = dataset.read('/objects/cells/features')
+    #     feat_names = dataset.get_attribute('/objects/cells/features', 'names')
+    # feat_objs = [{'name': f} for f in feat_names]
 
-    mat = dset[()]
-    for prop in props:
-        f = _get_feat_property_extractor(prop)
-        prop_values = f(mat)
-        for feat, val in zip(feat_objs, prop_values):
-            feat[prop] = val
+    # for prop in props:
+    #     f = _get_feat_property_extractor(prop)
+    #     prop_values = f(dset)
+    #     for feat, val in zip(feat_objs, prop_values):
+    #         feat[prop] = val
 
-        features += feat_objs
+    #     features += feat_objs
 
     return jsonify(features=features)
 
@@ -420,15 +420,23 @@ def create_pyramids(exp_id):
     return 'Creation ok', 200
 
 
-@api.route('/experiments/<experiment_id>/cells', methods=['GET'])
+@api.route('/experiments/<experiment_id>/<object_name>', methods=['GET'])
 @jwt_required()
-def get_cells(experiment_id):
+def get_objects(experiment_id, object_name):
     ex = Experiment.get(experiment_id)
     if not ex:
         return RESOURCE_NOT_FOUND_RESPONSE
 
-    loc = os.path.join(ex.location, 'outlines.json')
-    return send_file(loc)
+    # Load outlines for each object from the HDF5 file
+    experiment = tmlib.experiment.Experiment(ex.location)
+    filename = os.path.join(experiment.dir, experiment.layers_file)
+    outlines = dict()
+    with DatasetReader(filename) as data:
+        ids = data.list_dataset_names('/%s' % object_name)
+        for i in ids:
+            outlines[i] = data.read('/%s/%s' % (object_name, i)).tolist()
+
+    return jsonify(outlines)
 
 
 @api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])
