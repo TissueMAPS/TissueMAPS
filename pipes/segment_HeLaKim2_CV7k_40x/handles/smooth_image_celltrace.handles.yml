@@ -14,30 +14,27 @@ input:
   - bilateral
   value: median
 - class: parameter
-  help: 'Size (width and height) of the kernel. Provide a single positive and odd
+  help: > 
+    Size (width and height) of the kernel. Provide a single positive and odd
     integer value.
-
-    '
   name: filter_size
   value: 15
 - class: parameter
-  help: 'Standard deviation of the Gaussian kernel, only relevant for "gaussian" filter
-
-    '
+  help: >
+    Standard deviation of the Gaussian kernel,
+    only relevant for "gaussian" filter.
   name: sigma
   value: null
 - class: parameter
-  help: 'Gaussian component applied in the intensity domain (color space), only relevant
-    for "bilateral" filter
-
-    '
+  help: >
+    Gaussian component applied in the intensity domain (color space), only relevant
+    for "bilateral" filter.
   name: sigma_color
   value: null
 - class: parameter
-  help: 'Gaussian component applied in the spatial domain (coordinate space), only
-    relevant for "bilateral" filter
-
-    '
+  help: >
+    Gaussian component applied in the spatial domain (coordinate space), only
+    relevant for "bilateral" filter.
   name: sigma_space
   value: null
 output:

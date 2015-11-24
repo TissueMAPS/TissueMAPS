@@ -5,9 +5,9 @@ input:
   name: labeled_image
   value: prenuclei.separated
 - class: parameter
-  help: 'Name of the region property based on which the image should be filtered.
-
-    '
+  help: >
+    Name of the region property based on
+    which the image should be filtered.
   name: feature
   value: area
 - class: parameter
@@ -15,11 +15,13 @@ input:
   name: threshold
   value: 500
 - class: parameter
-  help: Whether values "above" or "below" threshold level should be kept.
+  help: >
+    Whether objects "above" or "below" threshold level should be kept.
   name: keep
   value: above
 - class: parameter
-  help: Whether objects should be relabeled after filtering.
+  help: >
+    Whether objects should be relabeled after filtering.
   name: relabel
   options:
   - true
