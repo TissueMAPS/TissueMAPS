@@ -10,12 +10,12 @@ image-registration==0.2.1
 ipython==3.2.0
 julia==0.1.1
 matlab-wrapper==0.9.6
-matplotlib==1.5.0
+matplotlib>=1.5.0
 mock==1.0.1
 natsort==4.0.3
 nose==1.3.7
 openslide-python==1.1.0
-pandas==0.16.2
+pandas>=0.17.1
 paramiko==1.15.3
 parsedatetime==1.5
 Pillow==2.9.0
@@ -27,7 +27,8 @@ python-dateutil==2.4.2
 pytest==2.8.2
 pytz==2015.4
 PyYAML==3.11
-scikit-image==0.11.3
+rpy2>=2.7.4
+scikit-image>=0.11.3
 sphinxcontrib-autoprogram==0.1.2
 sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12
