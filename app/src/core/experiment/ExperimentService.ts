@@ -31,6 +31,7 @@ class ExperimentService {
     }
 
     // TODO: error handling
+    // TODO: more general approach for different objects getObjectsForExample()
     getCellsForExperiment(id: ExperimentId): ng.IPromise<Cell[]> {
         var def = this.$q.defer();
         if (this.cachedCells[id] !== undefined) {
@@ -48,11 +49,6 @@ class ExperimentService {
                     // i coordinate, whereas the second is the j
                     // coordinate. TissueMAPS works with (x, y) coordinates instead,
                     // where the y axis is inverted (origin in the topleft corner).
-                    // TODO: Move the site one back since the outlines
-                    // were computed with a too large offset
-                    c[0] -= 1919;
-                    c[1] -= 2165;
-
                     return [c[1], -1 * c[0]];
                 });
 
