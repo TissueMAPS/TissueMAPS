@@ -345,7 +345,7 @@ class DatasetReader(object):
         else:
             return True
 
-    def list_dataset_names(self, path):
+    def list_datasets(self, path):
         '''
         Parameters
         ----------
@@ -364,7 +364,7 @@ class DatasetReader(object):
 
         return names
 
-    def list_group_names(self, path):
+    def list_groups(self, path):
         '''
         Parameters
         ----------
@@ -462,7 +462,8 @@ class DatasetReader(object):
         attribute = dataset.attrs.get(name)
         if not attribute:
             raise AttributeError(
-                    'Dataset does not have an attribute "%s": %s' % path)
+                    'Dataset doesn\'t have an attribute "%s": %s'
+                    % (name, path))
         return attribute
 
     def __exit__(self, except_type, except_value, except_trace):
