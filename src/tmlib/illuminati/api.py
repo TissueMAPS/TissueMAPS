@@ -129,8 +129,8 @@ class PyramidBuilder(ClusterRoutines):
             # NOTE: this may cause problems on NFS
             shutil.rmtree(output_dir)
 
-        logger.info('create image pyramid: %s', output_dir)
-        layer.create_pyramid(output_dir)
+        logger.info('save image pyramid: %s', output_dir)
+        layer.save(output_dir)
 
     def collect_job_output(self, batch):
         '''

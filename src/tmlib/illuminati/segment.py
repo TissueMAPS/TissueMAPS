@@ -5,7 +5,8 @@ import numpy as np
 import h5py
 import scipy
 import logging
-from skimage.measure import find_contours, approximate_polygon
+from skimage.measure import find_contours
+from skimage.measure import approximate_polygon
 from .. import image_utils
 
 logger = logging.getLogger(__name__)
