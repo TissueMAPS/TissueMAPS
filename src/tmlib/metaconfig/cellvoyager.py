@@ -197,7 +197,6 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     @staticmethod
     def _calculate_coordinates(positions):
         # y axis is inverted
-        logger.debug('flip y axis for calculation of grid coordinates')
         coordinates = stitch.calc_grid_coordinates_from_positions(
                         positions, reverse_rows=True)
         return coordinates

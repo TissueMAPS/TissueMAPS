@@ -366,7 +366,7 @@ class MetadataHandler(object):
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
             # regular expression, which is supposed to match a pattern in the
-            # image file name and is able to extract the required information
+            # image filename and is able to extract the required information.
             # Here we create a lookup table with a mapping of captured matches
             # to the ID of the corresponding image element.
             if len(self.file_mapper[i].files) > 1:
@@ -939,6 +939,7 @@ class MetadataHandler(object):
             which specify the location in the original file, from where the
             image plane should be extracted
         '''
+        logger.info('build image file mapper')
         hashmap = list()
         if len(self.file_mapper[0].files) > 1:
             # In this case individual focal planes that should be projected

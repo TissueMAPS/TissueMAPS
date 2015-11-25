@@ -209,11 +209,11 @@ class ChannelImage(Image):
             when metadata of illumination statistic images and channel image
             do not match
         '''
-        if (stats.mean.metadata.channel_ix != self.metadata.channel_ix
-                or stats.std.metadata.channel_ix != self.metadata.channel_ix):
+        if (stats.mean.metadata.channel_ix != self.metadata.channel_ix or
+                stats.std.metadata.channel_ix != self.metadata.channel_ix):
             raise ValueError('Channel indices must match.')
-        if (stats.mean.pixels.type != self.pixels.type
-                or stats.std.pixels.type != self.pixels.type):
+        if (stats.mean.pixels.type != self.pixels.type or
+                stats.std.pixels.type != self.pixels.type):
             raise TypeError('Pixels type must match.')
         new_object = ChannelImage()
         new_object.metadata = self.metadata
