@@ -287,8 +287,8 @@ class DatasetWriter(object):
         '''
         if isinstance(data, basestring):
             data = np.string_(data)
-        if ((isinstance(data, np.ndarray) or isinstance(data, list))
-                and all([isinstance(d, basestring) for d in data])):
+        if ((isinstance(data, np.ndarray) or isinstance(data, list)) and
+                all([isinstance(d, basestring) for d in data])):
             data = [np.string_(d) for d in data]
         if isinstance(data, list):
             data = np.array(data)
@@ -306,8 +306,9 @@ class DatasetWriter(object):
         else:
             dt = h5py.special_dtype(vlen=data_type[0])
         dataset = self._stream.create_dataset(path, (len(data),), dtype=dt)
+        # dataset = self._stream.create_dataset(path, data.shape, dtype=dt)
         for i, d in enumerate(data):
-            dataset[i] = d
+            dataset[i] = d.tolist()  # doesn't work with numpy.ndarray!!!
 
     def set_attribute(self, path, name, data):
         '''
