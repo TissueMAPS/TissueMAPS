@@ -1,11 +1,16 @@
 import os
 import numpy as np
+import pandas as pd
 from collections import defaultdict
+from skimage.measure import approximate_polygon
 from . import utils
 from . import image_utils
 from .mosaic import Mosaic
 from .metadata import MosaicMetadata
 from .readers import OpenslideImageReader
+from .readers import DatasetReader
+from .writers import DatasetWriter
+from .writers import JsonWriter
 from .errors import NotSupportedError
 from .errors import PyramidCreationError
 import logging
@@ -16,22 +21,25 @@ logger = logging.getLogger(__name__)
 class ChannelLayer(object):
 
     '''
-    Class for a channel layer, i.e. a mosaic layer that can be displayed
-    in TissueMAPS as a single grayscale channel or blended with other channels
-    to RGB (additive color blending).
+    Channel layers are displayed as raster images. They are stored in form of
+    `zoomify <http://www.zoomify.com/>`_ pyramids, which are represented on
+    disk by JPEG files stored across multiple directories.
     '''
 
-    def __init__(self, mosaic, metadata):
+    def __init__(self, name, mosaic, metadata):
         '''
         Initialize an instance of class ChannelLayer.
 
         Parameters
         ----------
+        name: str
+            name of the layer
         mosaic: tmlib.mosaic.Mosaic
             stitched mosaic image
         metadata: tmlib.metadata.MosaicMetadata
             metadata corresponding to the mosaic image
         '''
+        self.name = name
         self.mosaic = mosaic
         self.metadata = metadata
 
@@ -65,14 +73,18 @@ class ChannelLayer(object):
             whether images should be aligned between cycles
             (default: ``False``)
         spacer_size: int, optional
-            size of the spacer (in pixels unit) that should be inserted
-            between individual wells/plates to visually separate them from
-            each other 
+            number of pixels that should be introduced between wells
+            (default: ``500``)
 
         Returns
         -------
         ChannelLayer
             stitched mosaic image
+
+        Raises
+        ------
+        MetadataError
+            when images are not all of the same cycle, channel, plane, or well
 
         Note
         ----
@@ -80,26 +92,26 @@ class ChannelLayer(object):
         plate is created. To this end, individual wells are stitched together
         and background pixels are inserted between wells to visually separate
         them from each other. Empty wells will also be filled with background.
-
-        Raises
-        ------
-        MetadataError
-            when images are not all of the same cycle, channel, plane, or well
         '''
+        name = [
+            lmd.name for lmd in experiment.layer_metadata.values()
+            if lmd.tpoint_ix == tpoint_ix and
+            lmd.channel_ix == channel_ix and
+            lmd.zplane_ix == zplane_ix
+        ][0]
+        logger.info('create layer "%s"', name)
 
         logger.info('stitch images to mosaic')
-        layer_name = [
-            lmd.name for lmd in experiment.layer_metadata.values()
-            if lmd.tpoint_ix == tpoint_ix
-            and lmd.channel_ix == channel_ix
-            and lmd.zplane_ix == zplane_ix
-        ][0]
+
+        # Set the size of the spacer. Note that this parameter has to be the
+        # same for the creation of the corresponding object layers!
+        logger.debug('spacer size: %d', spacer_size)
 
         nonempty_rows = defaultdict(list)
         nonempty_cols = defaultdict(list)
         for p, plate in enumerate(experiment.plates):
 
-            plate_grid = ChannelLayer._build_plate_grid(plate)
+            plate_grid = plate.grid
             # In case entire rows or columns are empty, we fill the gaps with
             # smaller spacer images to save disk space and computation time
             # NOTE: all plate of an experiment must have the same layout, i.e.
@@ -231,21 +243,11 @@ class ChannelLayer(object):
 
         mosaic = Mosaic(layer_img)
         metadata = MosaicMetadata()
-        metadata.name = layer_name
         metadata.tpoint_ix = tpoint_ix
         metadata.channel_ix = channel_ix
         metadata.zplane_ix = zplane_ix
 
-        return ChannelLayer(mosaic, metadata)
-
-    @staticmethod
-    def _build_plate_grid(plate):
-        plate_cooridinates = plate.well_coordinates
-        height, width = plate.dimensions  # one-based
-        plate_grid = np.empty((height, width), dtype=object)
-        for i, c in enumerate(plate_cooridinates):
-            plate_grid[c[0], c[1]] = plate.wells[i]
-        return plate_grid
+        return ChannelLayer(name, mosaic, metadata)
 
     def scale(self):
         '''
@@ -266,7 +268,7 @@ class ChannelLayer(object):
             when mosaic does not exist
         '''
         scaled_image = self.mosaic.array.scale()
-        return ChannelLayer(Mosaic(scaled_image), self.metadata)
+        return ChannelLayer(self.name, Mosaic(scaled_image), self.metadata)
 
     def clip(self, value=None, percentile=None):
         '''
@@ -291,19 +293,27 @@ class ChannelLayer(object):
             value = self.mosaic.array.percent(percentile)
         lut = image_utils.create_thresholding_LUT(value)
         clipped_image = self.mosaic.array.maplut(lut)
-        return ChannelLayer(Mosaic(clipped_image), self.metadata)
+        return ChannelLayer(self.name, Mosaic(clipped_image), self.metadata)
 
-    def create_pyramid(self, pyramid_dir):
+    def save(self, directory):
         '''
-        Create zoomify pyramid (8-bit grayscale JPEG images) of mosaic.
+        Create *zoomify* pyramid (8-bit grayscale JPEG images) of mosaic.
 
         Parameters
         ----------
-        pyramid_dir: str
+        directory: str
             path to the folder where pyramid should be saved
+
+        Note
+        ----
+        `directory` shouldn't exist, but will be created automatically
+
+        See also
+        --------
+        :py:attribute:`tmlib.experiment.Experiment.layers_dir`
         '''
         self.mosaic.array.dzsave(
-            pyramid_dir, layout='zoomify', suffix='.jpg[Q=100]')
+            directory, layout='zoomify', suffix='.jpg[Q=100]')
 
 
 class BrightfieldLayer(object):
@@ -340,7 +350,7 @@ class BrightfieldLayer(object):
         '''
         # TODO
         # with OpenslideMetadataReader() as reader:
-        #     metadata = reader.read(slide_file)
+        #     metadata = data.read(slide_file)
         raise NotSupportedError('Not yet implemented')
 
     @staticmethod
@@ -397,5 +407,244 @@ class BrightfieldLayer(object):
 
 class ObjectLayer(object):
 
-    def __init__(self):
-        pass
+    '''
+    Object layers are displayed as vector graphics. The objects are represented
+    by coordinates, which are stored in a HDF5 file.
+    '''
+
+    def __init__(self, name, coordinates):
+        '''
+        Initialize an object of class ObjectLayer.
+
+        Parameters
+        ----------
+        name: str
+            name of the layer
+        coordinates: Dict[int, pandas.DataFrame]
+            y, x coordinates of the outlines of each object
+        '''
+        self.name = name
+        self.coordinates = coordinates
+
+    @staticmethod
+    def create(experiment, name, dx=0, dy=0, spacer_size=500):
+        '''
+        Create an object layer based on segmentations stored in data file.
+
+        Parameters
+        ----------
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
+        name: str
+            name of the objects for which a layer should be created;
+            a corresponding subgroup must exist in "/objects" within the data
+            file
+        dx: int, optional
+            displacement in x direction in pixels; useful when images are
+            acquired with an overlap in x direction (negative integer value)
+        dy: int, optional
+            displacement in y direction in pixels; useful when images are
+            acquired with an overlap in y direction (negative integer value)
+        spacer_size: int, optional
+            number of pixels that should be introduced between wells
+            (default: ``500``)
+
+        Warning
+        -------
+        Argument `spacer_size` must be the same as for the
+        :py:class:`tmlib.layer.ChannelLayer`, otherwise objects will not
+        align with the images.
+        '''
+        logger.info('create layer "%s"', name)
+
+        filename = os.path.join(experiment.dir, experiment.data_file)
+        segmentation_path = '/objects/%s/segmentation' % name
+        with DatasetReader(filename) as data:
+            # Get the site indices of individual images.
+            # (can be used to obtain the position of the image within the grid)
+            unique_job_ids = map(int, data.list_groups('/metadata'))
+            # Get the dimensions of the original, unaligned image
+            metadata_path = '/metadata/%s' % unique_job_ids[0]
+            image_dimensions = (
+                data.read('%s/image_dimension_y' % metadata_path),
+                data.read('%s/image_dimension_x' % metadata_path)
+            )
+            # Get the indices of objects at the border of images
+            # (using the parent objects as references)
+            if 'plate_name' in data.list_groups(segmentation_path):
+                parent = data.read('%s/parent_name' % segmentation_path)
+                parent_segmentation_path = '/objects/%s/segmentation' % parent
+                border = data.read('%s/is_border' % parent_segmentation_path)
+            else:
+                border = data.read('%s/is_border' % segmentation_path)
+
+            # Get the coordinates of object outlines within individual images.
+            coords_y = data.read('%s/outlines/y' % segmentation_path)
+            coords_x = data.read('%s/outlines/x' % segmentation_path)
+
+            # A jterator job represents a unique image acquisition site.
+            # We have to identify the position of each site within the overall
+            # acquisition grid and update the outline coordinates accordingly,
+            # i.e. translate site-specific coordinates into global ones.
+
+            # Get the dimensions of wells from one example well. It's assumed
+            # that all wells have the same dimensions!
+            cycle = experiment.plates[0].cycles[0]
+            md = cycle.image_metadata_table
+            well_name = data.read('/metadata/%d/well_name' % unique_job_ids[0])
+            index = (
+                        (md['tpoint_ix'] == 0) &
+                        (md['channel_ix'] == 0) &
+                        (md['zplane_ix'] == 0) &
+                        (md['well_name'] == well_name)
+            )
+            # Determine the dimensions of a well in pixels, accounting for a
+            # potential overlap of images.
+            n_rows = np.max(md['well_pos_y'][index]) + 1
+            n_cols = np.max(md['well_pos_x'][index]) + 1
+            well_dimensions = (
+                n_rows * image_dimensions[0] + dy * (n_rows - 1),
+                n_cols * image_dimensions[1] + dx * (n_cols - 1)
+            )
+
+            # Plate dimensions are defined as number of pixels along each
+            # axis of the plate. Note that empty rows and columns are also
+            # filled with "spacers", which has to be considered as well.
+            plate = experiment.plates[0]
+            empty_row_indices = list(utils.missing_elements(
+                                    plate.nonempty_row_indices))
+            n_nonempty_rows = len(plate.nonempty_row_indices)
+            n_empty_rows = len(empty_row_indices)
+            empty_column_indices = list(utils.missing_elements(
+                                        plate.nonempty_column_indices))
+            n_nonempty_cols = len(plate.nonempty_column_indices)
+            n_empty_cols = len(empty_column_indices)
+            plate_y_dim = (
+                n_nonempty_rows * well_dimensions[0] +
+                n_empty_rows * spacer_size +
+                # Spacer between wells
+                (n_nonempty_rows - 1) * spacer_size +
+                # Spacer on upper and lower side of plate
+                2 * spacer_size
+            )
+            plate_x_dim = (
+                n_nonempty_cols * well_dimensions[1] +
+                n_empty_cols * spacer_size +
+                # Spacer between wells
+                (n_nonempty_cols - 1) * spacer_size +
+                # Spacer on left and right side of plate
+                2 * spacer_size
+            )
+            plate_dimensions = (plate_y_dim, plate_x_dim)
+
+            plate_names = [p.name for p in experiment.plates]
+            job_ids = data.read('%s/job_ids' % segmentation_path)
+            global_coords = dict()
+            # global_coords['y'] = list()
+            # global_coords['x'] = list()
+            for j in unique_job_ids:
+                metadata_path = '/metadata/%d' % j
+                plate_name = data.read('%s/plate_name' % metadata_path)
+                plate_index = plate_names.index(plate_name)
+                well_name = data.read('%s/well_name' % metadata_path)
+
+                plate_coords = plate.map_well_id_to_coordinate(well_name)
+                well_coords = (
+                    data.read('%s/well_pos_y' % metadata_path),
+                    data.read('%s/well_pos_x' % metadata_path)
+                )
+
+                # Images may be aligned and the resulting shift must be
+                # considered.
+                shift_offset_y = data.read('%s/shift_offset_y' % metadata_path)
+                shift_offset_x = data.read('%s/shift_offset_x' % metadata_path)
+
+                n_prior_well_rows = plate.nonempty_row_indices.index(
+                                            plate_coords[0])
+                n_prior_empty_well_rows = len([
+                    e for e in empty_row_indices if e < plate_coords[0]
+                ])
+                offset_y = (
+                    # Each plate starts with a row spacer
+                    spacer_size +
+                    # Images in the current well above the image
+                    well_coords[0] * image_dimensions[0] +
+                    # Potential overlap of images in y-direction
+                    well_coords[0] * dy +
+                    # Wells in the current plate above the current well
+                    n_prior_well_rows * well_dimensions[0] +
+                    n_prior_empty_well_rows * spacer_size +
+                    # Potential shift of images downwards
+                    shift_offset_y +
+                    # Plates above the current plate
+                    plate_index * plate_dimensions[0] +
+                    # Gap introduced between wells
+                    # plate_coords[0] * spacer_size +
+                    n_prior_well_rows * spacer_size
+                )
+
+                n_prior_well_cols = plate.nonempty_column_indices.index(
+                                            plate_coords[1])
+                n_prior_empty_well_cols = len([
+                    e for e in empty_column_indices if e < plate_coords[1]
+                ])
+                offset_x = (
+                    # Each plate starts with a column spacer
+                    spacer_size +
+                    # Images in the current well left of the image
+                    well_coords[1] * image_dimensions[1] +
+                    # Potential overlap of images in y-direction
+                    well_coords[1] * dy +
+                    # Wells in the current plate left of the current well
+                    n_prior_well_cols * well_dimensions[1] +
+                    n_prior_empty_well_cols * spacer_size +
+                    # Potential shift of images to the right
+                    shift_offset_x +
+                    # Gap introduced between wells
+                    n_prior_well_cols * spacer_size
+                )
+
+                job_ix = np.where(job_ids == j)[0]
+                for ix in job_ix:
+                    # Remove border objects
+                    if border[ix]:
+                        continue
+                    # Reduce the number of outlines points
+                    contour = np.array([coords_y[ix], coords_x[ix]]).T
+                    poly = approximate_polygon(contour, 0.95).astype(int)
+                    # Add offset
+                    # global_coords['y'].append(poly.T[0] + offset_y)
+                    # global_coords['x'].append(poly.T[1] + offset_x)
+                    global_coords[ix] = pd.DataFrame({
+                        'y': poly[:, 0] + offset_y,
+                        'x': poly[:, 1] + offset_x
+                    }).sort_index(axis=1, ascending=False)
+                    # NOTE: Columns of data frame have to be sorted, such that
+                    # the y coordinate is in the first column and the x
+                    # coordinate in the second. This makes it easy to convert
+                    # it back into a numpy array as expected by many
+                    # scikit-image functions, for example.
+
+        return ObjectLayer(name, global_coords)
+
+    def save(self, filename):
+        '''
+        Write the coordinates to the HDF5 layers file.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the HDF5 file
+
+        See also
+        --------
+        :py:attribute:`tmlib.experiment.Experiment.layers_file`
+        '''
+        logger.info('save layer "%s" to HDF5 file', self.name)
+
+        with DatasetWriter(filename) as data:
+            # data.write('%s/y' % group_name, data=self.coordinates['y'])
+            # data.write('%s/x' % group_name, data=self.coordinates['x'])
+            for object_id, value in self.coordinates.iteritems():
+                data.write('/objects/%s/layer/%d' % (self.name, object_id),
+                           data=value)

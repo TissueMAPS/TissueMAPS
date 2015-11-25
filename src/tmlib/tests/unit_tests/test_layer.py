@@ -1,5 +1,6 @@
 import os
 import unittest
+import logging
 from cached_property import cached_property
 from gi.repository import Vips
 from tmlib.experiment import Experiment
@@ -26,6 +27,7 @@ class TestLayer(unittest.TestCase):
                     spacer_size=spacer_size)
         self.assertIsInstance(layer, ChannelLayer)
         self.assertIsInstance(layer.mosaic, Mosaic)
+        self.assertIsInstance(layer.mosaic.array, Vips.Image)
         self.assertIsInstance(layer.metadata, MosaicMetadata)
         self.assertEqual(layer.mosaic.dtype, Vips.BandFormat.USHORT)
         # There are two plates with one well each, so there should be
@@ -47,8 +49,7 @@ class TestLayer(unittest.TestCase):
     def layer(self):
         return ChannelLayer.create(
                     experiment=self.experiment,
-                    tpoint_ix=0, channel_ix=0, zplane_ix=0,
-                    spacer_size=10)
+                    tpoint_ix=0, channel_ix=0, zplane_ix=0)
 
     def test_clip_value(self):
         value = 100
@@ -70,8 +71,7 @@ class TestLayer(unittest.TestCase):
     def test_align(self):
         aligned_layer = ChannelLayer.create(
                             experiment=self.experiment,
-                            tpoint_ix=0, channel_ix=0, zplane_ix=0,
-                            spacer_size=10, align=True)
+                            tpoint_ix=0, channel_ix=0, zplane_ix=0, align=True)
         self.assertEqual(aligned_layer.mosaic.dtype, Vips.BandFormat.USHORT)
         self.assertEqual(aligned_layer.mosaic.dimensions,
                          self.layer.mosaic.dimensions)
@@ -82,7 +82,7 @@ class TestLayer(unittest.TestCase):
         corrected_layer = ChannelLayer.create(
                             experiment=self.experiment,
                             tpoint_ix=0, channel_ix=0, zplane_ix=0,
-                            spacer_size=10, illumcorr=True)
+                            illumcorr=True)
         self.assertEqual(corrected_layer.mosaic.dtype, Vips.BandFormat.USHORT)
         self.assertEqual(corrected_layer.mosaic.dimensions,
                          self.layer.mosaic.dimensions)

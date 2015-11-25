@@ -25,8 +25,8 @@ def list_jtprojects(directory):
     projects = [
         os.path.join(directory, name)
         for name in os.listdir(directory)
-        if os.path.isdir(os.path.join(directory, name))
-        and glob.glob(os.path.join(directory, name, '*.pipe.yml'))
+        if os.path.isdir(os.path.join(directory, name)) and
+        glob.glob(os.path.join(directory, name, '*.pipe.yml'))
     ]
     if not projects:
         logger.warning('No Jterator projects found in %s' % directory)
@@ -142,36 +142,31 @@ class JtProject(object):
 
     @staticmethod
     def _replace_values(old, new):
-        # Recursively replace the values of key-value pairs.
-        # The comments below are guides for the .pipe pipeline descriptor file,
-        # but it works similarly for .handles files.
+        # Recursively replace values in the `old` mapping with those of `new`.
+        # NOTE: This is not a general approach, but targeted for the design of
+        # the .pipe pipeline and .handles module descriptor files.
         for k1, v1 in old.iteritems():
-            # These are the main keys in the pipeline descriptor file:
-            # 'project', 'jobs', 'description'
+            # 'project', 'images', and 'description' keys in the pipeline
+            # descriptor file or 'input' and 'output' keys in the module
+            # descriptor file
             if isinstance(v1, dict):
-                # This affects 'project' and 'jobs'
+                # this affects 'project' and 'jobs'
                 for k2, v2 in v1.iteritems():
                     if isinstance(v2, list):
-                        # This is the array of 'pattern' in the 'jobs' section
+                        # this is the array of 'layers' in the 'images' section
                         old[k1][k2] = []
                         for i, element in enumerate(new[k1][k2]):
                             if isinstance(element, dict):
-                                for k3 in copy(element):
-                                    # Remove 'hashKey' elements
-                                    if re.search(r'\$\$hashKey', k3):
-                                        new[k1][k2][i].pop(k3, None)
                                 old[k1][k2].append(new[k1][k2][i])
 
                     else:
                         old[k1][k2] = new[k1][k2]
             elif isinstance(v1, list):
-                # This affects 'description' (the array of modules)
+                # this affects the 'description' key in the pipeline descriptor
+                # file and the 'input' and 'output' keys in the module
+                # descriptor file
                 old[k1] = []
                 for i, element in enumerate(new[k1]):
-                    for k2 in copy(element):
-                        # Remove 'hashKey' elements
-                        if re.search(r'\$\$hashKey', k2):
-                            new[k1][i].pop(k2, None)
                     if isinstance(element, dict):
                         old[k1].append(new[k1][i])
             else:

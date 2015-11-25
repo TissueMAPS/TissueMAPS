@@ -17,6 +17,8 @@ from .. import image_utils
 from ..api import ClusterRoutines
 from ..errors import PipelineDescriptionError
 from ..writers import DatasetWriter
+from ..readers import DatasetReader
+from ..layer import ObjectLayer
 
 logger = logging.getLogger(__name__)
 
@@ -167,12 +169,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         ----
         Directory is created if it doesn't exist.
         '''
-        self._module_log_dir = os.path.join(self.project_dir, 'log_modules')
-        if not os.path.exists(self._module_log_dir):
+        module_log_dir = os.path.join(self.project_dir, 'log_modules')
+        if not os.path.exists(module_log_dir):
             logger.debug('create directory for module log output: %s'
-                         % self._module_log_dir)
-            os.mkdir(self._module_log_dir)
-        return self._module_log_dir
+                         % module_log_dir)
+            os.mkdir(module_log_dir)
+        return module_log_dir
 
     def remove_previous_output(self):
         '''
@@ -386,21 +388,26 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_id = batch['id']
         data_file = self.build_data_filename(job_id)
         # Create the HDF5 file (truncate in case it already exists)
+        logger.debug('create data file: %s', data_file)
         h5py.File(data_file, 'w').close()
 
         # Load the image and correct/align it if required (requested)
         layer_images = dict()
         layers = self.project.pipe['description']['images']['layers']
         for i, layer in enumerate(layers):
+            logger.info('load images of layer "%s"', layer['name'])
             filename = batch['inputs']['image_files'][layer['name']]
             image = self.experiment.get_image_by_name(filename)
             if layer['correct']:
+                logger.info('correct images for illumination artifacts')
                 for plate in self.experiment.plates:
                     if plate.name != image.metadata.plate_name:
                         continue
                     cycle = plate.cycles[image.metadata.tpoint_ix]
                     stats = cycle.illumstats_images[image.metadata.channel_ix]
                     image = image.correct(stats)
+            logger.info('align images')
+            orig_dims = image.pixels.dimensions
             image = image.align()
             if not isinstance(image.pixels, np.ndarray):
                 image_array = image_utils.vips_image_to_np_array(
@@ -410,17 +417,37 @@ class ImageAnalysisPipeline(ClusterRoutines):
             layer_images[layer['name']] = image_array
             # Add some metadata to the HDF5 file, which may be required later
             if i == 0:
+                logger.info('add metadata to data file')
+                md = image.metadata
+                shift_y = md.upper_overhang - md.y_shift
+                if shift_y < 0:
+                    offset_y = abs(shift_y)
+                else:
+                    offset_y = 0
+                shift_x = md.left_overhang - md.x_shift
+                if shift_x < 0:
+                    offset_x = abs(shift_x)
+                else:
+                    offset_x = 0
                 # All images processed per job were acquired at the same site
                 # and thus share the positional metadata information
-                with DatasetWriter(data_file) as writer:
-                    writer.write('/metadata/plate_name',
-                                 data=image.metadata.plate_name)
-                    writer.write('/metadata/well_name',
-                                 data=image.metadata.well_name)
-                    writer.write('/metadata/well_position/x',
-                                 data=image.metadata.well_pos_x)
-                    writer.write('/metadata/well_position/y',
-                                 data=image.metadata.well_pos_y)
+                with DatasetWriter(data_file) as data:
+                    data.write('/metadata/%s/plate_name' % job_id,
+                               data=md.plate_name)
+                    data.write('/metadata/%s/well_name' % job_id,
+                               data=md.well_name)
+                    data.write('/metadata/%s/well_pos_x' % job_id,
+                               data=md.well_pos_x)
+                    data.write('/metadata/%s/well_pos_y' % job_id,
+                               data=md.well_pos_y)
+                    data.write('/metadata/%s/image_dimension_y' % job_id,
+                               data=orig_dims[0])
+                    data.write('/metadata/%s/image_dimension_x' % job_id,
+                               data=orig_dims[1])
+                    data.write('/metadata/%s/shift_offset_y' % job_id,
+                               data=offset_y)
+                    data.write('/metadata/%s/shift_offset_x' % job_id,
+                               data=offset_x)
 
         outputs = collections.defaultdict(dict)
         outputs['data'] = dict()
@@ -467,9 +494,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Parameters
         ----------
         batch: dict
-            job description  
+            job description
         '''
-        # NOTE: the job id should correspond to the site number
         logger.info('fuse datasets of different jobs into a single data file')
         datasets = data_fusion.fuse_datasets(batch['inputs']['data_files'])
         filename = batch['outputs']['data_files'][0]
@@ -477,12 +503,23 @@ class ImageAnalysisPipeline(ClusterRoutines):
             for path, data in datasets.iteritems():
                 f.write(path, data)
 
-        # TODO: include metadata: image filename for each job
-
+        # NOTE: In principle, individual files could be removed during data
+        # fusion to prevent looping over files twice. However, in case an error
+        # occurs during data fusion the files would already be lost and we
+        # would have to re-run all jobs. Safety first!
         logger.info('remove data files generated by individual jobs')
         for k in batch['removals']:
             for f in batch['inputs'][k]:
-                os.remove(f)
+                logger.debug('remove data file: %s', f)
+                # os.remove(f)
+
+        logger.info('create object layers')
+        with DatasetReader(filename) as f:
+            objects = f.list_groups('/objects')
+
+        for obj in objects:
+            layer = ObjectLayer.create(self.experiment, obj)
+            layer.save(filename)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
