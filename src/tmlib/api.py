@@ -312,6 +312,35 @@ class ClusterRoutines(BasicClusterRoutines):
                 job_descriptions['collect'] = reader.read(collect_job_files[0])
         return job_descriptions
 
+    def get_log_output_from_files(self, job_id):
+        '''
+        Get log outputs (standard output and error) from files.
+
+        Parameters
+        ----------
+        job_id: int
+            one-based job identifier number
+
+        Returns
+        -------
+        Dict[str, str]
+            "stdout" and "stderr" for the given job
+        '''
+        directory = self.log_dir
+        stdout_files = glob.glob(os.path.join(
+                                 directory, '*_run_%.6d_*.out' % job_id))
+        stderr_files = glob.glob(os.path.join(
+                                 directory, '*_run_%.6d_*.err' % job_id))
+        if not stdout_files or not stderr_files:
+            raise IOError('No log files found for job # %d' % job_id)
+        # Take the most recent log files
+        log = dict()
+        with open(stdout_files[-1], 'r') as f:
+            log['stdout'] = f.read()
+        with open(stderr_files[-1], 'r') as f:
+            log['stderr'] = f.read()
+        return log
+
     def list_output_files(self, job_descriptions):
         '''
         Provide a list of all output files that should be created by the

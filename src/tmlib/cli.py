@@ -14,6 +14,7 @@ from .args import SubmitArgs
 from .args import RunArgs
 from .args import CollectArgs
 from .args import CleanupArgs
+from .args import LogArgs
 from .tmaps.description import load_method_args
 from .tmaps.description import load_var_method_args
 from .logging_utils import configure_logging
@@ -50,7 +51,7 @@ def command_line_call(parser):
     logger = logging.getLogger('tmlib')
     level = map_logging_verbosity(arguments.verbosity)
     logger.setLevel(level)
-    logger.info('processing on node: %s', socket.gethostname())
+    logger.debug('processing on node: %s', socket.gethostname())
     logger.debug('running program: %s' % parser.prog)
 
     # Fine tune the output of some loggers
@@ -288,12 +289,17 @@ class CommandLineInterface(object):
     def run(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments provided by the "run" subparser.
+        and process arguments provided by the "run" subparser, which runs
+        an individual job on the local computer.
 
         Parameters
         ----------
         args: tmlib.args.RunArgs
             method-specific arguments
+
+        Note
+        ----
+        Requires calling :py:method:`tmlib.cli.init` first.
         '''
         self._print_logo()
         api = self._api_instance
@@ -302,6 +308,22 @@ class CommandLineInterface(object):
         batch = api.read_job_file(job_file)
         logger.info('run job #%d' % batch['id'])
         api.run_job(batch)
+
+    def log(self, args):
+        '''
+        Initialize an instance of the API class corresponding to the program
+        and process arguments provided by the "lob" subparser, which prints the
+        log output of an individual job to the console.
+
+        Parameters
+        ----------
+        args: tmlib.args.LogArgs
+            method-specific arguments
+        '''
+        api = self._api_instance
+        log = api.get_log_output_from_files(args.job)
+        print('\nOUTPUT\n======\n\n%s\n\nERROR\n=====\n\n%s'
+              % (log['stdout'], log['stderr']))
 
     @cached_property
     def _job_descriptions(self):
@@ -366,12 +388,17 @@ class CommandLineInterface(object):
     def submit(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments provided by the "submit" subparser.
+        and process arguments provided by the "submit" subparser, which submits
+        all jobs and monitors their status.
 
         Parameters
         ----------
         args: tmlib.args.SubmitArgs
             method-specific arguments
+
+        Note
+        ----
+        Requires calling :py:method:`tmlib.cli.init` first.
         '''
         self._print_logo()
         api = self._api_instance
@@ -388,12 +415,18 @@ class CommandLineInterface(object):
     def collect(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments of the "collect" subparser.
+        and process arguments of the "collect" subparser, which collects the
+        output of previously run jobs.
 
         Parameters
         ----------
         args: tmlib.args.CollectArgs
             method-specific arguments
+
+        Note
+        ----
+        Requires calling :py:method:`tmlib.cli.init` and
+        :py:method:`tmlib.cli.submit` first.
         '''
         self._print_logo()
         api = self._api_instance
@@ -413,7 +446,7 @@ class CommandLineInterface(object):
     @staticmethod
     def get_parser_and_subparsers(
             required_subparsers=[
-                'init', 'run', 'submit', 'collect', 'cleanup']):
+                'init', 'run', 'submit', 'collect', 'cleanup', 'log']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -424,7 +457,7 @@ class CommandLineInterface(object):
         ----------
         required_subparsers: List[str]
             subparsers that should be returned (default: 
-            ``["init", "run", "submit", "collect", cleanup"]``)
+            ``["init", "run", "submit", "collect", cleanup", "log"]``)
 
         Returns
         -------
@@ -496,5 +529,14 @@ class CommandLineInterface(object):
                 Remove files and folders generated upon previous submissions.
             '''
             CleanupArgs().add_to_argparser(cleanup_parser)
+
+        if 'log' in required_subparsers:
+            log_parser = subparsers.add_parser(
+                'log', help='show log output of a job')
+            log_parser.description = '''
+                Print the log output (standard output and error) of a job
+                to the console.
+            '''
+            LogArgs().add_to_argparser(log_parser)
 
         return (parser, subparsers)

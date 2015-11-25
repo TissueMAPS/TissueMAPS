@@ -489,6 +489,55 @@ class RunArgs(GeneralArgs):
         }
 
 
+class LogArgs(GeneralArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class LogArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict, optional
+            arguments as key-value pairs
+        '''
+        super(LogArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return {'job'}
+
+    @property
+    def _persistent_attrs(self):
+        return {'job'}
+
+    @property
+    def job(self):
+        '''
+        Returns
+        -------
+        int
+            one-based job index
+        '''
+        return self._job
+
+    @job.setter
+    def job(self, value):
+        if not isinstance(value, self._job_params['type']):
+            raise TypeError('Attribute "job" must have type %s'
+                            % self._job_params['type'])
+        self._job = value
+
+    @property
+    def _job_params(self):
+        return {
+            'type': int,
+            'required': True,
+            'help': '''
+                one-based job index
+            '''
+        }
+
+
 class ApplyArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
