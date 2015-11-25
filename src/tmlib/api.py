@@ -105,6 +105,26 @@ class BasicClusterRoutines(object):
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
 
+    @staticmethod
+    def log_task_data(task_data, monitoring_depth):
+        def log_recursive(data, i):
+            logger.info('%s: %s (%.2f %%)',
+                        data['name'], data['state'],
+                        data['percent_done'])
+            if i < monitoring_depth:
+                for subtd in data.get('subtasks', list()):
+                    log_recursive(subtd, i+1)
+        log_recursive(task_data, 0)
+
+    @staticmethod
+    def log_task_failure(task_data):
+        def log_recursive(data, i):
+            if data['failed']:
+                logger.error('%s: failed', data['name'])
+            for subtd in data.get('subtasks', list()):
+                log_recursive(subtd, i+1)
+        log_recursive(task_data, 0)
+
     def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=1):
         '''
         Create a GC3Pie engine that submits jobs to a cluster
@@ -134,24 +154,6 @@ class BasicClusterRoutines(object):
         if monitoring_depth < 0:
             monitoring_depth = 0
         logger.debug('monitoring depth: %d' % monitoring_depth)
-
-        def log_task_data(task_data, monitoring_depth):
-            def log_recursive(data, i):
-                logger.info('%s: %s (%.2f %%)',
-                            data['name'], data['state'],
-                            data['percent_done'])
-                if i < monitoring_depth:
-                    for subtd in data.get('subtasks', list()):
-                        log_recursive(subtd, i+1)
-            log_recursive(task_data, 0)
-
-        def log_task_failure(task_data):
-            def log_recursive(data, i):
-                if data['failed']:
-                    logger.error('%s: failed', data['name'])
-                for subtd in data.get('subtasks', list()):
-                    log_recursive(subtd, i+1)
-            log_recursive(task_data, 0)
 
         # Create an `Engine` instance for running jobs in parallel
         logger.debug('create engine')
@@ -198,7 +200,7 @@ class BasicClusterRoutines(object):
 
             task_data = get_task_data(task)
 
-            log_task_data(task_data, monitoring_depth)
+            self.log_task_data(task_data, monitoring_depth)
             logger.info('------------------------------------------')
 
             # break out of the loop when all jobs are done
@@ -207,7 +209,7 @@ class BasicClusterRoutines(object):
                 if aggregate['count_terminated'] == aggregate['count_total']:
                     break_next = True
 
-        log_task_failure(task_data)
+        self.log_task_failure(task_data)
 
         return task_data
 
@@ -638,6 +640,13 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         Create a GC3Pie task collection of "jobs".
 
+        The following two tasks are created:
+        * *run*: a :py:class:`gc3libs.workflow.ParallelTaskCollection` of
+          individual jobs (:py:class:`gc3libs.Appliction`)
+          that should be processed in parallel on the cluster
+        * *collect*: an individual job (:py:class:`gc3libs.Appliction`) that
+          should be processed after all parallel jobs have been terminated
+
         Parameters
         ----------
         job_descriptions: Dict[List[dict]]
@@ -708,7 +717,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     stderr=log_err_file
             )
             collect_job.requested_walltime = Duration('01:00:00')
-            collect_job.requested_memory = Memory(16, Memory.GB)
+            collect_job.requested_memory = Memory(4, Memory.GB)
 
             logger.debug('add run & collect jobs to SequentialTaskCollection')
             jobs = SequentialTaskCollection(
