@@ -203,12 +203,11 @@ class Plate(object):
         List[Tuple[int]]
             zero-based row, column position of each well in the plate
         '''
-        self._well_coordinates = [
-            (self.map_well_id_to_coordinate(w)[0]-1,
-             self.map_well_id_to_coordinate(w)[1]-1)
+        return [
+            (self.map_well_id_to_coordinate(w)[0],
+             self.map_well_id_to_coordinate(w)[1])
             for w in self.wells
         ]
-        return self._well_coordinates
 
     @cached_property
     def wells(self):
@@ -221,8 +220,69 @@ class Plate(object):
             well of the plate
         '''
         md = self.cycles[0].image_metadata_table
-        self._wells = np.unique(md['well_name']).tolist()
-        return self._wells
+        return np.unique(md['well_name']).tolist()
+
+    @property
+    def grid(self):
+        '''
+        Returns
+        -------
+        numpy.ndarray[str]
+            wells arranged according to their position within the well
+        '''
+        plate_cooridinates = self.well_coordinates
+        height, width = self.dimensions  # one-based
+        plate_grid = np.empty((height, width), dtype=object)
+        for i, c in enumerate(plate_cooridinates):
+            plate_grid[c[0], c[1]] = self.wells[i]
+        return plate_grid
+
+    @property
+    def empty_wells_coordinates(self):
+        '''
+        Returns
+        -------
+        List[Tuple[int]]
+            y, x coordinates of each empty well in the plate, i.e. wells that
+            were not imaged
+        '''
+        empty_wells = np.where(np.logical_not(self.grid))
+        coordinates = list()
+        for i in xrange(len(empty_wells[0])):
+            coordinates.append(
+                (empty_wells[0][i], empty_wells[1][i])
+            )
+        return coordinates
+
+    @property
+    def nonempty_column_indices(self):
+        '''
+        Returns
+        -------
+        List[int]
+            indices of nonempty columns, i.e. columns of the plate where every
+            well has been imaged
+        '''
+        nonempty_columns = list()
+        for i in xrange(self.grid.shape[1]):
+            if any(self.grid[:, i]):
+                nonempty_columns.append(i)
+        return nonempty_columns
+
+    @property
+    def nonempty_row_indices(self):
+        '''
+        Returns
+        -------
+        List[int]
+            indices of nonempty rows, i.e. rows of the plate where every well
+            has been imaged
+        '''
+        nonempty_rows = list()
+        for i in xrange(self.grid.shape[0]):
+            if any(self.grid[i, :]):
+                nonempty_rows.append(i)
+        return nonempty_rows
 
     @property
     def n_acquired_wells(self):
@@ -248,16 +308,16 @@ class Plate(object):
         Returns
         -------
         Tuple[int]
-            one-based row, column position of a given well within the plate
+            zero-based row, column position of a given well within the plate
 
         Examples
         --------
         >>>WellPlate.map_well_id_to_coordinate("A02")
-        (1, 2)
+        (0, 1)
         '''
         row_name, col_name = re.match(r'([A-Z])(\d{2})', well_id).group(1, 2)
-        row_index = utils.map_letter_to_number(row_name)
-        col_index = int(col_name)
+        row_index = utils.map_letter_to_number(row_name) - 1
+        col_index = int(col_name) - 1
         return (row_index, col_index)
 
     @staticmethod
@@ -269,7 +329,7 @@ class Plate(object):
         Parameters
         ----------
         well_position: Tuple[int]
-            one-based row, column position of a given well within the plate
+            zero-based row, column position of a given well within the plate
 
         Returns
         -------
@@ -278,9 +338,9 @@ class Plate(object):
 
         Examples
         --------
-        >>>WellPlate.map_well_coordinate_to_id((1, 2))
+        >>>WellPlate.map_well_coordinate_to_id((0, 1))
         "A02"
         '''
         row_index, col_index = well_position[0], well_position[1]
-        row_name = utils.map_number_to_letter(row_index)
-        return '%s%.2d' % (row_name, col_index)
+        row_name = utils.map_number_to_letter(row_index + 1)
+        return '%s%.2d' % (row_name, col_index + 1)

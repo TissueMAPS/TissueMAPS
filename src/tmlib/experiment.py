@@ -355,13 +355,14 @@ class Experiment(object):
         Returns
         -------
         str
-            absolute path to the HDF5 file holding the measurement datasets,
+            name of the HDF5 file holding the measurement datasets,
             i.e. the results of an image analysis pipeline such as
             segmentations and features for the segmented objects
 
         See also
         --------
-        :py:func:`tmlib.jterator.data_fusion`
+        :py:func:`tmlib.jterator.data_fusion.fuse_datasets`
+        :py:class:`tmlib.layer.ObjectLayer`
         '''
         return 'data.h5'
 

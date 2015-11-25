@@ -267,7 +267,7 @@ class Cycle(object):
                 formatted_metadata[i]['y_shift'] = shift.y
         # Sort entries according to "name" to have the same order as the
         # values of attribute "image_files"
-        metadata_table = pd.DataFrame(formatted_metadata).sort(['name'])
+        metadata_table = pd.DataFrame(formatted_metadata).sort_values(by='name')
         metadata_table.index = range(len(metadata_table))
         return metadata_table
 
