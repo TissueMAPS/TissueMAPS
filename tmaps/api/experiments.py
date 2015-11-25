@@ -429,12 +429,13 @@ def get_objects(experiment_id, object_name):
 
     # Load outlines for each object from the HDF5 file
     experiment = tmlib.experiment.Experiment(ex.location)
-    filename = os.path.join(experiment.dir, experiment.layers_file)
+    filename = os.path.join(experiment.dir, experiment.data_file)
     outlines = dict()
     with DatasetReader(filename) as data:
-        ids = data.list_dataset_names('/%s' % object_name)
+        group_name = '/objects/%s/layer' % object_name
+        ids = data.list_datasets(group_name)
         for i in ids:
-            outlines[i] = data.read('/%s/%s' % (object_name, i)).tolist()
+            outlines[i] = data.read('%s/%s' % (group_name, i)).tolist()
 
     return jsonify(outlines)
 
