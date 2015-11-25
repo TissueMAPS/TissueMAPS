@@ -114,6 +114,6 @@ class TestPlate(fake_filesystem_unittest.TestCase):
 
     def test_well_related_methods(self):
         well_coordinate = Plate.map_well_id_to_coordinate('A02')
-        self.assertEqual(well_coordinate, (1, 2))
-        well_id = Plate.map_well_coordinate_to_id((1, 2))
+        self.assertEqual(well_coordinate, (0, 1))
+        well_id = Plate.map_well_coordinate_to_id((0, 1))
         self.assertEqual(well_id, 'A02')
