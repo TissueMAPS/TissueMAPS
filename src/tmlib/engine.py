@@ -6,8 +6,6 @@ import time
 import gc3libs
 import gc3libs.core
 import gc3libs.session
-from .cluster_utils import get_stats_data
-from .cluster_utils import get_task_data
 # Copyright (C) 2015 S3IT, University of Zurich.
 #
 # Authors:
