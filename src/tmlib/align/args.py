@@ -172,7 +172,7 @@ class AlignApplyArgs(VariableArgs):
             indicator that images should also be corrected for illumination
             artifacts (default: ``False``)
         '''
-        return self._file_format
+        return self._illumcorr
 
     @illumcorr.setter
     def illumcorr(self, value):
