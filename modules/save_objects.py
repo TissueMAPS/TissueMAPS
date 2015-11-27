@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage import measure
+from skimage.measure import find_contours
 from tmlib.writers import DatasetWriter
-from tmlib.illuminati import segment
+# from tmlib.illuminati import segment
+from skimage import measure
 from tmlib.image_utils import find_border_objects
 from jtlib import plotting
 
@@ -25,16 +26,22 @@ def save_objects(image, name, **kwargs):
     objects_ids = np.unique(image[image != 0])
     y_coordinates = list()
     x_coordinates = list()
-    outline_image = segment.compute_outlines_numpy(
-                        image, keep_ids=True)
+
+    # NOTE: Looping over individual objects ensures the correct number of
+    # objects and the ID that's assigned to each object.
+    # Using find_contours() directly may give different results.
 
     for obj_id in objects_ids:
-        coordinates = np.where(outline_image == obj_id)
-        y_coordinates.append(coordinates[0])  # row
-        x_coordinates.append(coordinates[1])  # column
+        # Find the contours of the current object
+        # NOTE: Points need to be provided in counter-clockwise order, which
+        # is ensured by find_contours().
+        current_obj_image = image == obj_id
+        contours = find_contours(current_obj_image, 0.5)[0]
+        y_coordinates.append(contours[:, 0].astype(np.int64))  # row
+        x_coordinates.append(contours[:, 1].astype(np.int64))  # column
 
     # NOTE: Storing the outline coordinates per object works fine as long as
-    # there are only a few (hundreds) of large objects, but it gets crazy for
+    # there are only a few (hundreds) of large objects, but it can go crazy for
     # a large number (thousands) of small objects.
     # Storing the actual image directly would be way faster in these cases,
     # but it would cost a lot more memory.
@@ -42,7 +49,7 @@ def save_objects(image, name, **kwargs):
     border_indices = find_border_objects(image)
 
     regions = measure.regionprops(image)
-    centroids = np.array([r.centroid for r in regions])
+    centroids = np.array([r.centroid for r in regions]).astype(np.int64)
 
     if len(objects_ids) > 0:
 
@@ -53,7 +60,7 @@ def save_objects(image, name, **kwargs):
                     data=objects_ids)
             f.write('%s/is_border' % group_name,
                     data=border_indices)
-            f.write('%s/site_ids' % group_name,
+            f.write('%s/job_ids' % group_name,
                     data=[kwargs['job_id'] for x in xrange(len(objects_ids))])
             f.write('%s/image_dimensions/y' % group_name,
                     data=image.shape[0])

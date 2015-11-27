@@ -1,14 +1,16 @@
+import os
 import numpy as np
 import mahotas as mh
 from scipy import ndimage as ndi
 import matplotlib.pyplot as plt
+from skimage import morphology
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import mpld3
 import collections
 from jtlib import plotting
 from tmlib.readers import DatasetReader
-from tmlib.experiment import ExperimentFactory
-from tmlib import cfg
+from tmlib.experiment import Experiment
+from tmlib.image_utils import find_border_objects
 
 
 def load_objects(objects_name, **kwargs):
@@ -31,23 +33,39 @@ def load_objects(objects_name, **kwargs):
     collections.namedtuple[numpy.ndarray[uint]]
         label image that encodes the objects: "loaded_objects"
     '''
-    experiment = ExperimentFactory(kwargs['experiment_dir'], cfg).create()
+    experiment = Experiment(kwargs['experiment_dir'])
+    filename = os.path.join(experiment.dir, experiment.data_file)
 
     # Does job_id do it? Consider matching metadata such site, channel, ...
 
-    with DatasetReader(experiment.data_file) as f:
-        sites = f.read('%s/segmentation/site_ids' % objects_name)
-        site_index = sites == kwargs['job_id']
-        y_coordinates = f.read('%s/segmentation/coordinates/y' % objects_name,
-                               index=site_index)
-        x_coordinates = f.read('%s/segmentation/coordinates/x' % objects_name,
-                               index=site_index)
-        image_dims = f.read('%s/segmentation/image_dimensions' % objects_name,
-                            index=site_index)
+    group_name = '/objects/%s/segmentation' % objects_name
 
-    outline_image = np.zeros(image_dims)
-    outline_image[y_coordinates, x_coordinates] = 1
+    with DatasetReader(filename) as f:
+        jobs = f.read('%s/job_ids' % group_name)
+        job_ix = jobs == kwargs['job_id']
+        y_coordinates = f.read('%s/outlines/y' % group_name, index=job_ix)
+        x_coordinates = f.read('%s/outlines/x' % group_name, index=job_ix)
+        image_dim_y = f.read('%s/image_dimensions/y' % group_name)
+        image_dim_x = f.read('%s/image_dimensions/x' % group_name)
+
+    outline_image = np.zeros((image_dim_y, image_dim_x), dtype=np.int32)
+    for y, x in zip(y_coordinates, x_coordinates):
+        outline_image[y, x] = 1
+
+    # Fill objects
     mask_image = ndi.binary_fill_holes(outline_image)
+
+    # Hack to also fill border objects:
+    # Identify border objects in inverted image
+    inverted_mask_image = np.logical_not(mask_image)
+    labeled_image, n_objects = mh.label(inverted_mask_image)
+    is_border_object = find_border_objects(labeled_image)
+    border_ids = np.where(is_border_object)[0]
+    for b in border_ids:
+        # The original background is now 1, so we have to add 2 to each label.
+        mask_image[labeled_image == (b+2)] = True
+
+    # # Label the created mask
     labeled_image, n_objects = mh.label(mask_image)
 
     if kwargs['plot']:
@@ -55,7 +73,9 @@ def load_objects(objects_name, **kwargs):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 
-        im = ax.imshow(labeled_image)
+        img_obj = labeled_image.astype(float)
+        img_obj[labeled_image == 0] = np.nan
+        im = ax.imshow(img_obj)
         ax.set_title(objects_name, size=20)
 
         divider = make_axes_locatable(ax)
