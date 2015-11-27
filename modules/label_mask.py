@@ -37,7 +37,7 @@ def label_mask(mask, **kwargs):
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
 
-        img_obj = labeled_image.copy().astype(float)
+        img_obj = labeled_image.astype(float)
         img_obj[labeled_image == 0] = np.nan
 
         ax1.imshow(img_obj, cmap=plt.cm.jet)
