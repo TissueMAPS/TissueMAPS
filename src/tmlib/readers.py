@@ -428,7 +428,7 @@ class DatasetReader(object):
                 raise IndexError(
                     'Dataset dimensions do not allow row/column-wise indexing')
             return dataset[row_index, column_index]
-        elif index:
+        elif index is not None:
             return dataset[index]
         else:
             return dataset[()]
