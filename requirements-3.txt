@@ -4,7 +4,7 @@ Cython==0.22.1
 decorator==3.4.2
 filemagic==1.6
 FITS-tools
-gc3pie>=2.4.2
+#gc3pie>=2.4.2
 h5py==2.5.0
 image-registration==0.2.1
 ipython==3.2.0
