@@ -16,7 +16,8 @@ input:
   value: 500
 - class: parameter
   help: >
-    Whether objects "above" or "below" threshold level should be kept.
+    Whether objects with values "above" or "below" threshold
+    level should be kept.
   name: keep
   value: above
 - class: parameter
