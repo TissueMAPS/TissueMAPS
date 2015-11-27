@@ -1,7 +1,22 @@
 import numpy as np
 import mahotas as mh
 from mahotas.features import surf
-from plia import image_util
+from scipy import ndimage as ndi
+from skimage.filters import gabor_kernel
+from jtlib import utils
+
+
+GABOR_KERNELS = dict()
+for theta in range(4):
+    theta = theta / 4. * np.pi
+    for sigma in (1, 3):
+        for frequency in (0.05, 0.25):
+            # Use the real parts of the Gabor filter kernel
+            k = np.real(
+                    gabor_kernel(
+                        frequency, theta=theta, sigma_x=sigma, sigma_y=sigma))
+            name = 'frequency%.2f-theta%.2f-sigma%d' % (frequency, theta, sigma)
+            GABOR_KERNELS[name] = k
 
 
 def build_dataset_name(objects_name, feature_name, subfeature_name,
@@ -39,22 +54,34 @@ def build_dataset_name(objects_name, feature_name, subfeature_name,
     return name
 
 
-def measure_intensity(region, im):
+def measure_intensity(im, mask, region):
     '''
     Return intensity features from pre-calculated region properties.
 
-    Parameters:
-        :region:        item of a region property list
-                        (as returned by skimage.measure.regionprops)
-        :im:            cropped gray-scale image (numpy array)
-                        with non-object pixels set to zero
+    Parameters
+    ----------
+    im: numpy.ndarray[int]
+        intensity image
+    mask: numpy.ndarray[bool]
+        mask image containing one object (i.e. one connected pixel component);
+        must have the same size as `im`
+    region: skimage.measure._regionprops._RegionProperties
+        item of a region property list as returned by
+        :py:func:`skimage.measure.regionprops`
 
-    Returns:
-        dictionary with names of the features as keys and the calculated values
+    Raises
+    ------
+    ValueError
+        when `im` and `mask` don't have the same size
+    TypeError
+        when elements of `mask` don't have type bool
     '''
-    # Values outside of the object should be zero!
-    # In fluorescent microscopy we should never have zero values.
-    im_nan = im.copy()
+    if not im.shape == mask.shape:
+        raise ValueError('Images must have the same size.')
+    if not mask.dtype == 'bool':
+        raise TypeError('Mask image must have type bool.')
+    im[mask == 0] = 0
+    im_nan = im.astype(np.float)
     im_nan[im == 0] = np.nan  # replace zero values by NaN's
     feats = [
         region.max_intensity,
@@ -78,9 +105,11 @@ def measure_area_shape(region):
     '''
     Return morphological features from pre-calculated region properties.
 
-    Parameters:
-        :region:        item of a region property list
-                        (as returned by skimage.measure.regionprops)
+    Parameters
+    ----------
+    region: skimage.measure._regionprops._RegionProperties
+        item of a region property list as returned by
+        :py:func:`skimage.measure.regionprops`
 
     Returns:
         dictionary with names of the features as keys and the calculated values
@@ -117,22 +146,39 @@ def measure_hu(region):
     return dict(zip(names, feats))
 
 
-def measure_haralick(im, bins):
+def measure_haralick(im, mask, bins=32):
     '''
     Calculate Haralick texture features.
 
-    Parameters:
-        :im:            cropped gray-scale image (numpy array)
-                        with non-object pixels set to zero
-        :bins:          integer for downsampling of the image
+    Parameters
+    ----------
+    im: numpy.ndarray[int]
+        intensity image
+    mask: numpy.ndarray[bool]
+        mask image containing one object (i.e. one connected pixel component);
+        must have the same size as `im`
+    bins: int
+        number of bins for downsampling of `im`
 
-    Returns:
-        dictionary with names of the features as keys and the calculated values
+    Returns
+    -------
+    dict
+        features
+
+    Raises
+    ------
+    ValueError
+        when `im` and `mask` don't have the same size
+    TypeError
+        when elements of `mask` don't have type bool
     '''
-    im_int = im.copy()
-    im_int = im_int.astype(int)
-    im_ds = image_util.downsample_image(im_int, bins=bins)
-    feats = mh.features.haralick(im_ds, ignore_zeros=True, return_mean=True)
+    if not im.shape == mask.shape:
+        raise ValueError('Images must have the same size.')
+    if not mask.dtype == 'bool':
+        raise TypeError('Mask image must have type bool.')
+    im[~mask] = 0
+    # im_ds = utils.downsample_image(im, bins=bins)
+    feats = mh.features.haralick(im, ignore_zeros=True, return_mean=True)
     names = [
         'angular-second-moment',
         'contrast',
@@ -152,21 +198,40 @@ def measure_haralick(im, bins):
     return dict(zip(names, feats))
 
 
-def measure_tas(im, threshold):
+def measure_tas(im, mask, threshold):
     '''
     Calculate Threshold Adjacency Statistics.
 
     Hamilton et al. 2007
     "Fast automated cell phenotype image classification"
 
-    Parameters:
-        :im:            cropped gray-scale image (numpy array)
-                        with non-object pixels set to zero
-        :threshold:     integer for thresholding the image
+    Parameters
+    ----------
+    im: numpy.ndarray[int]
+        intensity image
+    mask: numpy.ndarray[bool]
+        mask image containing one object (i.e. one connected pixel component);
+        must have the same size as `im`
+    threshold: int
+        threshold level
 
-    Returns:
-        dictionary with names of the features as keys and the calculated values
+    Returns
+    -------
+    dict
+        features
+
+    Raises
+    ------
+    ValueError
+        when `im` and `mask` don't have the same size
+    TypeError
+        when elements of `mask` don't have type bool
     '''
+    if not im.shape == mask.shape:
+        raise ValueError('Images must have the same size.')
+    if not mask.dtype == 'bool':
+        raise TypeError('Mask image must have type bool.')
+    im[~mask] = 0
     feats = mh.features.pftas(im, T=threshold)
     names = ['center-%s' % i for i in xrange(9)] + \
             ['n-center-%s' % i for i in xrange(9)] + \
@@ -178,19 +243,35 @@ def measure_tas(im, threshold):
     return dict(zip(names, feats))
 
 
-def measure_zernike(im, radius):
+def measure_zernike(mask, radius=100):
     '''
     Calculate Zernike moments.
 
-    Parameters:
-        :im:            cropped binary image (numpy array)
-        :radius:        integer for scaling of the image
+    Parameters
+    ----------
+    mask: numpy.ndarray[bool]
+        mask image containing one object (i.e. one connected pixel component);
+        must have the same size as `im`
+    radius: int, optional
+        scaling of `im` for normalization (default: ``100``) to account for the
+        scale-invariance of Zernike moments
 
-    Returns:
-        dictionary with names of the features as keys and the calculated values
+    Returns
+    -------
+    dict
+        features
+
+    Raises
+    ------
+    ValueError
+        when `im` and `mask` don't have the same size
+    TypeError
+        when elements of `mask` don't have type bool
     '''
+    if not mask.dtype == 'bool':
+        raise TypeError('Mask image must have type bool.')
     degree = 12
-    im_rs = mh.imresize(im, [radius*2, radius*2])  # scaling invariant!
+    im_rs = mh.imresize(mask, [radius*2, radius*2])  # scaling invariant!
     feats = mh.features.zernike_moments(im_rs, degree=degree, radius=radius)
     names = []
     for n in xrange(degree+1):
@@ -201,6 +282,42 @@ def measure_zernike(im, radius):
     return dict(zip(names, feats))
 
 
+def measure_gabor(im, mask):
+    '''
+    Calculate Gabor texture features.
+
+    Parameters
+    ----------
+    im: numpy.ndarray[int]
+        intensity image
+    mask: numpy.ndarray[bool]
+        mask image containing one object (i.e. one connected pixel component);
+        must have the same size as `im`
+
+    Returns
+    -------
+    dict
+        features
+
+    Raises
+    ------
+    ValueError
+        when `im` and `mask` don't have the same size
+    TypeError
+        when elements of `mask` don't have type bool
+    '''
+    if not im.shape == mask.shape:
+        raise ValueError('Images must have the same size.')
+    if not mask.dtype == 'bool':
+        raise TypeError('Mask image must have type bool.')
+    feats = dict()
+    for name, kernel in GABOR_KERNELS.iteritems():
+        filtered = ndi.convolve(im.astype(float), kernel, mode='wrap')
+        feats['Gabor_mean-%s' % name] = filtered[mask].mean()
+        feats['Gabor_var-%s' % name] = filtered[mask].var()
+        return feats
+
+
 def measure_surf(im):
     '''
     Calculate Speeded-Up Robust Features (SURF).
@@ -209,11 +326,15 @@ def measure_surf(im):
     "Determining the subcellular location of new proteins from microscope
     images using local features"
 
-    Parameters:
-        :im:            cropped binary image (numpy array)
+    Parameters
+    ----------
+    im: numpy.ndarray[int]
+        intensity image
 
-    Returns:
-        dictionary with names of the features as keys and the calculated values
+    Returns
+    -------
+    dict
+        features
     '''
     # im_i = surf.integral(im.copy())
     # points = surf.interest_points(im_i,
