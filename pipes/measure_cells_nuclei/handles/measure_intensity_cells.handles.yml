@@ -11,9 +11,9 @@ input:
 - class: pipeline
   help: Greyscale input image.
   name: intensity_image
-  value: t001_c002_z000
+  value:
 - class: parameter
   help: Name of the layer that should be used for the measurements.
   name: layer_name
-  value: t001_c002_z000
+  value:
 output: null

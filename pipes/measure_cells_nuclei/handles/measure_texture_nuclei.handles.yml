@@ -11,11 +11,11 @@ input:
 - class: pipeline
   help: Greyscale input image.
   name: intensity_image
-  value: t000_c000_z000
+  value: 
 - class: parameter
   help: Name of the layer that should be used for the measurements.
   name: layer_name
-  value: t000_c000_z000
+  value: 
 - class: parameter
   help: Should Hu moments be measured?
   name: hu
