@@ -2,21 +2,61 @@ import numpy as np
 import mahotas as mh
 from mahotas.features import surf
 from scipy import ndimage as ndi
+from scipy.spatial import distance
 from skimage.filters import gabor_kernel
 from jtlib import utils
 
 
-GABOR_KERNELS = dict()
-for theta in range(4):
-    theta = theta / 4. * np.pi
-    for sigma in (1, 3):
-        for frequency in (0.05, 0.25):
-            # Use the real parts of the Gabor filter kernel
-            k = np.real(
-                    gabor_kernel(
-                        frequency, theta=theta, sigma_x=sigma, sigma_y=sigma))
-            name = 'frequency%.2f-theta%.2f-sigma%d' % (frequency, theta, sigma)
-            GABOR_KERNELS[name] = k
+def get_gabor_kernels(theta_range=4, sigmas={1, 3}, frequencies={0.05, 0.25}):
+    '''
+    Build Gabor kernels for the calculation of texture features.
+
+    Parameters
+    ----------
+    theta_range: int
+        number of `theta` values
+    sigmas: Set[int]
+        values for `sigma_x` and `sigma_y`
+    frequencies: Set[float]
+        values for `frequency`
+
+    Returns
+    -------
+    Dict[str, numpy.ndarray]
+        real parts of the Garbor kernel for each combination of theta, sigma
+        and frequency values
+
+    Raises
+    ------
+    TypeError
+        when arguments have wrong type
+
+    See also
+    --------
+    :py:func:`skimage.filters.gabor_kernel`
+    '''
+    if not isinstance(theta_range, int):
+        raise TypeError('Argument "theta_range" must have type int.')
+    if not isinstance(sigmas, set):
+        raise TypeError('Argument "sigmas" must have type set.')
+    if not all([isinstance(e, int) for e in sigmas]):
+        raise TypeError('Elements of "sigmas" must have type int.')
+    if not isinstance(frequencies, set):
+        raise TypeError('Argument "frequencies" must have type set.')
+    if not all([isinstance(e, float) for e in frequencies]):
+        raise TypeError('Elements of "frequencies" must have type float.')
+    gabor_kernels = dict()
+    for t in range(theta_range):
+        theta = t / 4. * np.pi
+        for sigma in sigmas:
+            for freq in frequencies:
+                # Use the real parts of the Gabor filter kernel
+                k = np.real(
+                        gabor_kernel(
+                            freq, theta=theta, sigma_x=sigma, sigma_y=sigma))
+                name = 'frequency%.2f-theta%.2f-sigma%d' % (freq, theta, sigma)
+                gabor_kernels[name] = k
+    return gabor_kernels
 
 
 def build_dataset_name(objects_name, feature_name, subfeature_name,
@@ -310,47 +350,75 @@ def measure_gabor(im, mask):
         raise ValueError('Images must have the same size.')
     if not mask.dtype == 'bool':
         raise TypeError('Mask image must have type bool.')
-    feats = dict()
-    for name, kernel in GABOR_KERNELS.iteritems():
+    features = dict()
+    gabor_kernels = get_gabor_kernels()
+    for name, kernel in gabor_kernels.items():
         filtered = ndi.convolve(im.astype(float), kernel, mode='wrap')
-        feats['Gabor_mean-%s' % name] = filtered[mask].mean()
-        feats['Gabor_var-%s' % name] = filtered[mask].var()
-        return feats
+        features['Gabor_mean-%s' % name] = filtered[mask].mean()
+        features['Gabor_var-%s' % name] = filtered[mask].var()
+    return features
 
 
-def measure_surf(im):
+def measure_surf(im, mask):
     '''
-    Calculate Speeded-Up Robust Features (SURF).
-
-    Coelho et al. 2013
-    "Determining the subcellular location of new proteins from microscope
-    images using local features"
+    Calculate statisics based on the Speeded-Up Robust Features (SURF).
 
     Parameters
     ----------
     im: numpy.ndarray[int]
         intensity image
+    mask: numpy.ndarray[bool]
+        mask image containing one object (i.e. one connected pixel component);
+        must have the same size as `im`
 
     Returns
     -------
     dict
         features
+
+    Raises
+    ------
+    ValueError
+        when `im` and `mask` don't have the same size
+    TypeError
+        when elements of `mask` don't have type bool
+
+    See also
+    --------
+    :py:func:`mahotas.features.surf`
     '''
-    # im_i = surf.integral(im.copy())
-    # points = surf.interest_points(im_i,
-    #                               nr_octaves=6,
-    #                               nr_scales=24,
-    #                               max_points=1024,
-    #                               is_integral=True)
-    # feats = surf.descriptors(im_i,
-    #                          interest_points=points,
-    #                          is_integral=True,
-    #                          descriptor_only=True)
-    feats = surf.surf(im, nr_octaves=6, nr_scales=24, max_points=1024,
-                      descriptor_only=True)
-    # For some images no interest points are found. How do we handle these
-    # features?
-    print 'SURF features:'
-    print feats
-    names = ['SURF_%d' % i for i in range(1, len(feats)+1)]
-    return dict(zip(names, feats))
+    if not im.shape == mask.shape:
+        raise ValueError('Images must have the same size.')
+    if not mask.dtype == 'bool':
+        raise TypeError('Mask image must have type bool.')
+
+    points = surf.surf(im, descriptor_only=True)
+
+    features = dict()
+    if len(points) == 0:
+        features['SURF_n-points'] = 0
+        features['SURF_mean-inter-point-distance'] = np.nan
+        features['SURF_var-inter-point-distance'] = np.nan
+        features['SURF_mean-point-scale'] = np.nan
+        features['SURF_var-point-scale'] = np.nan
+        features['SURF_mean-descriptor-value'] = np.nan
+        features['SURF_var-descriptor-value'] = np.nan
+    else:
+        # Number of detected interest points
+        features['SURF_n-points'] = len(points)
+        # Mean distance between interest points normalized for object size
+        # (size of the image, which represents the bounding box of the object)
+        y = points[:, 0]
+        x = points[:, 1]
+        coordinates = np.array((y, x)).T
+        dist = distance.cdist(coordinates, coordinates)
+        features['SURF_mean-inter-point-distance'] = np.mean(dist) / im.size
+        features['SURF_var-inter-point-distance'] = np.var(dist) / im.size
+        # Mean scale of interest points
+        scale = points[:, 2]
+        features['SURF_mean-point-scale'] = np.mean(scale)
+        features['SURF_var-point-scale'] = np.var(scale)
+        descriptors = points[:, 6:]
+        features['SURF_mean-descriptor-value'] = np.mean(descriptors)
+        features['SURF_var-descriptor-value'] = np.var(descriptors)
+    return features
