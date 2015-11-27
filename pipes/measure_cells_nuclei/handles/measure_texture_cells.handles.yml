@@ -1,0 +1,54 @@
+---
+input:
+- class: pipeline
+  help: Labeled input image.
+  name: labeled_image
+  value: cells
+- class: parameter
+  help: Name of the objects that should be measured.
+  name: objects_name
+  value: cells
+- class: pipeline
+  help: Greyscale input image.
+  name: intensity_image
+  value: t001_c002_z000
+- class: parameter
+  help: Name of the layer that should be used for the measurements.
+  name: layer_name
+  value: t001_c002_z000
+- class: parameter
+  help: Should Hu moments be measured?
+  name: hu
+  options:
+  - true
+  - false
+  value: true
+- class: parameter
+  help: Should Haralick features be measured?
+  name: haralick
+  options:
+  - true
+  - false
+  value: false
+- class: parameter
+  help: Should Threshold Adjancency Statistics be measured?
+  name: tas
+  options:
+  - true
+  - false
+  value: true
+- class: parameter
+  help: Should Gabor features be measured?
+  name: gabor
+  options:
+  - true
+  - false
+  value: false
+- class: parameter
+  help: Should Speeded-Up Robust Features (SURF) be measured?
+  name: surf
+  options:
+  - true
+  - false
+  value: false
+output: null

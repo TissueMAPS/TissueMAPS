@@ -1,0 +1,19 @@
+---
+input:
+- class: pipeline
+  help: Labeled input image.
+  name: labeled_image
+  value: nuclei
+- class: parameter
+  help: Name of the objects that should be measured.
+  name: objects_name
+  value: nuclei
+- class: pipeline
+  help: Greyscale input image.
+  name: intensity_image
+  value: t000_c000_z000
+- class: parameter
+  help: Name of the layer that should be used for the measurements.
+  name: layer_name
+  value: t000_c000_z000
+output: null
