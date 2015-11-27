@@ -13,7 +13,8 @@ input:
         - average
         - gaussian
         - median
-        - bilateral
+        - gaussian-bilateral
+        - median-bilateral
       help: Filter kernel that should be applied.
 
     - name: filter_size

@@ -1,6 +1,7 @@
 import cv2
 from skimage.morphology import disk
 from skimage.filters.rank import median
+from skimage.filters.rank import mean_bilateral
 import collections
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,7 +26,7 @@ def smooth_image(image, filter, filter_size, sigma=0, sigma_color=0,
         grayscale image that should be smoothed
     filter: str
         filter kernel that should be applied: "avarage", "gaussian", "median"
-        "bilateral" or "bilateral-adaptive"
+        "median-bilateral", or "gaussian-bilateral" or
     filter_size: int
         size (width/height) of the kernel (must be positive and odd)
     sigma: int, optional
@@ -62,13 +63,16 @@ def smooth_image(image, filter, filter_size, sigma=0, sigma_color=0,
         img = cv2.blur(image, (filter_size, filter_size))
     elif filter == 'gaussian':
         img = cv2.GaussianBlur(image, (filter_size, filter_size), sigma)
+    elif filter == 'gaussian-bilateral':
+        img = cv2.bilateralFilter(image, filter_size, sigma_color, sigma_space)
     elif filter == 'median':
         # img = cv2.medianBlur(image, filter_size)
         # TODO: the cv2 filter has some problems related to filter_size
         # consider mahotas (http://mahotas.readthedocs.org/en/latest/api.html?highlight=median#mahotas.median_filter)
         img = median(image, disk(filter_size))
-    elif filter == 'bilateral':
-        img = cv2.bilateralFilter(image, filter_size, sigma_color, sigma_space)
+    elif filter == 'median-bilateral':
+        img = mean_bilateral(image, disk(filter_size),
+                             s0=sigma_space, s1=sigma_space)
     else:
         raise ValueError('Unknown filter. Implemented filters are:\n'
                          '"average", "gaussian", "median", and "bilateral"')

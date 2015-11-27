@@ -45,6 +45,22 @@ input:
         - false
       help: Should Threshold Adjancency Statistics be measured?
 
+    - name: gabor
+      class: parameter
+      value: false
+      options:
+        - true
+        - false
+      help: Should Gabor features be measured?
+
+    - name: surf
+      class: parameter
+      value: false
+      options:
+        - true
+        - false
+      help: Should Speeded-Up Robust Features (SURF) be measured?
+
 output:
 
 

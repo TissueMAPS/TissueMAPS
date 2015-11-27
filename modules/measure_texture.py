@@ -94,7 +94,7 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
 
         # Speeded-Up Robust Features
         if 'surf' in measurements:
-            feats = features.measure_surf(img)
+            feats = features.measure_surf(img, mask)
             measurements['surf'].append(feats)
 
     with DatasetWriter(kwargs['data_file']) as data:

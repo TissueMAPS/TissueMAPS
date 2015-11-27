@@ -36,8 +36,6 @@ def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
     # Get coordinates of region containing individual objects
     regions = measure.regionprops(labeled_image)
 
-    print 'identified %d regions' % len(regions)
-
     for j, r in enumerate(regions):
 
         # Crop images to region of current object
