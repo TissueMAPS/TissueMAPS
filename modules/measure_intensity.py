@@ -37,10 +37,8 @@ def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
     TypeError
         when `intensity_image` doesn't have unsigned integer type
     '''
-    if str(intensity_image.dtype).startswith('uint'):
+    if not str(intensity_image.dtype).startswith('uint'):
         raise TypeError('"intensity_image" must have unsigned integer type')
-
-    data = dict()
 
     if labeled_image.shape != intensity_image.shape:
         raise ValueError(
@@ -58,19 +56,15 @@ def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
         mask = mask == (j+1)
 
         img = utils.crop_image(intensity_image, bbox=r.bbox, pad=True)
-        img[~mask] = 0
-        img[mask] += 1  # in case background subtraction was done
 
         # Intensity
-        feats = features.measure_intensity(r, img)
+        feats = features.measure_intensity(img, mask, r)
         measurements.append(feats)
 
     feature_names = measurements[0].keys()
-    for f in feature_names:
-        feats = [item[f] for item in measurements]
-        data['Intensity_%s_%s' % (layer_name, f)] = feats
-
-    with DatasetWriter(kwargs['data_file']) as f:
-        for k, v in data.iteritems():
-            f.write('%s/features/%s' % (objects_name, k), data=v)
-
+    with DatasetWriter(kwargs['data_file']) as data:
+        for f in feature_names:
+            feats = [item[f] for item in measurements]
+            data.write('/objects/%s/features/Intensity_%s_%s'
+                       % (objects_name, layer_name, f),
+                       data=feats)

@@ -27,22 +27,16 @@ def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
     --------
     `jtlib.features`
     '''
-    measurement_names = []
-    measurement_names.append('area_shape')  # measure by default
-    if zernike:
-        measurement_names.append('zernike')
 
-    data = dict()
+    measurements = dict()
+    measurements['area_shape'] = list()  # measure by default
+    if zernike:
+        measurements['zernike'] = list()
 
     # Get coordinates of region containing individual objects
     regions = measure.regionprops(labeled_image)
 
-    # Calculate threshold across the whole image
-    RADIUS = 100
-
-    measurements = dict()
-    for m in measurement_names:
-        measurements[m] = list()
+    print 'identified %d regions' % len(regions)
 
     for j, r in enumerate(regions):
 
@@ -51,24 +45,23 @@ def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
         mask = mask == (j+1)  # only current object
 
         # basic area/shape features
-        feats = features.measure_morphology(r)
+        feats = features.measure_area_shape(r)
         measurements['area_shape'].append(feats)
 
         # zernike moments
-        if 'zernike' in measurement_names:
-            feats = features.measure_zernike(mask, radius=RADIUS)
+        if 'zernike' in measurements:
+            feats = features.measure_zernike(mask)
             measurements['zernike'].append(feats)
 
-    for m in measurement_names:
-        feature_names = measurements[m][0].keys()
-        for f in feature_names:
-            feats = [item[f] for item in measurements[m]]
-            data['Morphology_%s' % f] = feats
+    with DatasetWriter(kwargs['data_file']) as data:
+        for m in measurements:
+            feature_names = measurements[m][0].keys()
+            for f in feature_names:
+                feats = [item[f] for item in measurements[m]]
+                data.write('/objects/%s/features/Morphology_%s'
+                           % (objects_name, f),
+                           data=feats)
 
     # TODO: make a nice plot showing the label image and some features
     # in form of a scatterplot with the data points colored the same
     # as the objects in the label image
-
-    with DatasetWriter(kwargs['data_file']) as f:
-        for k, v in data.iteritems():
-            f.write('%s/features/%s' % (objects_name, k), data=v)

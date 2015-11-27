@@ -6,7 +6,8 @@ from tmlib.writers import DatasetWriter
 
 
 def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
-                    hu=False, haralick=False, tas=False, **kwargs):
+                    hu=False, haralick=False, tas=False, gabor=False, surf=False,
+                    **kwargs):
     '''
     Jterator module for measuring texture features in an image.
     For more details see
@@ -23,12 +24,16 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
     layer_name: str
         name of the `intensity_image` channel
     hu: bool, optional
-        whether Hu moments should be measured (defaults to False)
+        whether Hu moments should be measured (default: ``False``)
     haralick: bool, optional
-        whether Haralick features should be measured (defaults to False)
+        whether Haralick features should be measured (default: ``False``)
     tas: bool, optional
         whether Threshold Adjancency Statistics (TAS) should be measured
-        (defaults to False)
+        (default: ``False``)
+    gabor: bool, optional
+        whether Gabor texture features should be measured
+    surf: bool, optional
+        whether Speeded-Up Robust Features should be measured
     **kwargs: dict
         additional arguments provided by Jterator:
         "data_file", "figure_file", "experiment_dir", "plot", "job_id"
@@ -37,13 +42,17 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
     --------
     `jtlib.features`
     '''
-    measurement_names = []
+    measurements = dict()
     if hu:
-        measurement_names.append('hu')
+        measurements['hu'] = list()
     if haralick:
-        measurement_names.append('haralick')
+        measurements['haralick'] = list()
     if tas:
-        measurement_names.append('tas')
+        measurements['tas'] = list()
+    if gabor:
+        measurements['gabor'] = list()
+    if surf:
+        measurements['surf'] = list()
 
     if labeled_image.shape != intensity_image.shape:
         raise Exception('Size of intensity and object image must be identical')
@@ -54,44 +63,45 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
 
     # Calculate threshold across the whole image
     threshold = filters.threshold_otsu(intensity_image)
-    BINS = 32
 
-    data = dict()
-    measurements = dict()
-    for m in measurement_names:
-        measurements[m] = list()
     for j, r in enumerate(regions):
 
-        # Crop images to region of current object
+        # Extract region of current object
         mask = utils.crop_image(labeled_image, bbox=r.bbox)
         mask = mask == (j+1)  # only current object
 
-        tas = utils.crop_image(intensity_image, bbox=r.bbox)
-        tas[~mask] = 0
+        img = utils.crop_image(intensity_image, bbox=r.bbox)
 
         # Weighted hu moments
-        if 'hu' in measurement_names:
+        if 'hu' in measurements:
             feats = features.measure_hu(r)
             measurements['hu'].append(feats)
 
-        # haralick texture features
-        if 'haralick' in measurement_names:
-            feats = features.measure_haralick(tas, bins=BINS)
+        # Haralick texture features
+        if 'haralick' in measurements:
+            feats = features.measure_haralick(img, mask)
             measurements['haralick'].append(feats)
 
         # Threshold Adjacency Statistics
-        if 'tas' in measurement_names:
-            feats = features.measure_tas(tas, threshold=threshold)
+        if 'tas' in measurements:
+            feats = features.measure_tas(img, mask, threshold=threshold)
             measurements['tas'].append(feats)
 
-        # TODO: Gabour filters
+        # Gabour filters
+        if 'gabor' in measurements:
+            feats = features.measure_gabor(img, mask)
+            measurements['gabor'].append(feats)
 
-    for m in measurement_names:
-        feature_names = measurements[m][0].keys()
-        for f in feature_names:
-            feats = [item[f] for item in measurements[m]]
-            data['Texture_%s_%s' % layer_name, f] = feats
+        # Speeded-Up Robust Features
+        if 'surf' in measurements:
+            feats = features.measure_surf(img)
+            measurements['surf'].append(feats)
 
-    with DatasetWriter(kwargs['data_file']) as f:
-        for k, v in data.iteritems():
-            f.write('%s/features/%s' % (objects_name, k), data=v)
+    with DatasetWriter(kwargs['data_file']) as data:
+        for m in measurements:
+            feature_names = measurements[m][0].keys()
+            for f in feature_names:
+                feats = [item[f] for item in measurements[m]]
+                data.write('/objects/%s/features/Texture_%s_%s'
+                           % (objects_name, layer_name, f),
+                           data=feats)
