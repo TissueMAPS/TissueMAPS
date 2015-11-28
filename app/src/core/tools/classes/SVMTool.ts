@@ -20,22 +20,23 @@ class SVMTool extends Tool {
 
     handleResult(res: ClassificationResult) {
         this.appInstance.experiment.cellMap.then((cellMap) => {
-            var cells = [];
-            var i;
-            var nCells = res.cell_ids.length;
-            for (i = 0; i < nCells; i++) {
-                var id = res.cell_ids[i]
-                var cell = cellMap[id];
-                if (cell !== undefined) {
-                    var label = res.predicted_labels[i];
-                    var color = res.colors[label];
-                    cells.push(cell.withFillColor(Color.fromObject(color)));
-                }
-            }
-            var layer = new ObjectLayer('SVM', {
-                objects: cells
-            });
-            this.appInstance.viewport.addObjectLayer(layer);
+            // var cells = [];
+            // var i;
+            // var nCells = res.cell_ids.length;
+            // for (i = 0; i < nCells; i++) {
+            //     var id = res.cell_ids[i]
+            //     var cell = cellMap[id];
+            //     if (cell !== undefined) {
+            //         var label = res.predicted_labels[i];
+            //         var color = res.colors[label];
+            //         cells.push(cell.withFillColor(Color.fromObject(color)));
+            //     }
+            // }
+            // TODO: Implement
+            // var layer = new VisualLayer('SVM', {
+            //     visuals: cells
+            // });
+            // this.appInstance.viewport.addObjectLayer(layer);
         });
     }
 }

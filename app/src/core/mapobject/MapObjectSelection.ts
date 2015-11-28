@@ -1,83 +1,91 @@
-type CellSelectionId = number;
+type MapObjectSelectionId = number;
 
-class CellSelection implements Serializable<CellSelection> {
+class MapObjectSelection implements Serializable<MapObjectSelection> {
 
+    id: MapObjectSelectionId;
     name: string;
-    id: CellSelectionId;
+    mapObjectType: string;
+
     color: Color;
-    layer: SelectionLayer;
-    cells: { [cellId: string]: MapPosition; } = {};
 
-    private $rootScope: ng.IRootScopeService;
+    mapObjects: { [objectId: string]: MapPosition; } = {};
 
-    constructor(id: CellSelectionId, color: Color) {
+    private _layer: SelectionLayer;
+    private _$rootScope: ng.IRootScopeService;
+
+    constructor(id: MapObjectSelectionId,
+                mapObjectType: string,
+                color: Color) {
 
         this.id = id;
+        this.mapObjectType = mapObjectType;
         this.color = color;
         this.name = 'Selection #' + id;
 
-        this.layer = new SelectionLayer(this.name, this.color);
+        this._layer = new SelectionLayer(this.name, this.color);
 
-        this.$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
+        this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
     }
 
+    // TODO: Is this used anywhere?
     addToMap(map: ol.Map) {
-        this.layer.addToMap(map);
+        this._layer.addToMap(map);
     }
 
-    getCells() {
-        var cellIds = _.chain(this.cells)
-                       .keys()
-                       .map(function(k) { return parseInt(k); })
-                       .value();
-        return cellIds;
+    getMapObjects() {
+        var mapObjectIds =
+            _.chain(this.mapObjects)
+             .keys()
+             .map(function(k) { return parseInt(k); })
+             .value();
+        return mapObjectIds;
     }
 
     removeFromMap(map: ol.Map) {
         // Somehow the markers won't get removed when removing the layer
         // and clear needs to be called beforehand.
         this.clear();
-        this.layer.removeFromMap(map);
+        this._layer.removeFromMap(map);
     }
 
-    removeCell(cellId: CellId) {
-        if (this.cells.hasOwnProperty(cellId)) {
-            delete this.cells[cellId];
-            this.layer.removeCellMarker(cellId);
+    removeMapObject(mapObjectId: MapObjectId) {
+        if (this.mapObjects.hasOwnProperty(mapObjectId)) {
+            delete this.mapObjects[mapObjectId];
+            this._layer.removeMapObjectMarker(mapObjectId);
         };
-        this.$rootScope.$broadcast('cellSelectionChanged', this);
+        this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
     }
 
     /**
-     * Remove all cells from this selection, but don't delete it.
+     * Remove all mapObjects from this selection, but don't delete it.
      */
     clear() {
         // TODO: Consider doing this via some batch mechanism if it proves to be slow
-        _.keys(this.cells).forEach((cellId: string) => {
-            this.removeCell(cellId);
+        _.keys(this.mapObjects).forEach((mapObjectId: MapObjectId) => {
+            this.removeMapObject(mapObjectId);
         });
-        this.$rootScope.$broadcast('cellSelectionChanged', this);
+        this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
     }
 
-    addCell(markerPos: MapPosition, cellId: CellId) {
-        if (this.cells.hasOwnProperty(cellId)) {
-            this.removeCell(cellId);
+    addMapObjectAt(markerPos: MapPosition, mapObjectId: MapObjectId) {
+        if (this.mapObjects.hasOwnProperty(mapObjectId)) {
+            this.removeMapObject(mapObjectId);
         } else {
-            this.cells[cellId] = markerPos;
-            this.layer.addCellMarker(cellId, markerPos);
+            this.mapObjects[mapObjectId] = markerPos;
+            this._layer.addMapObjectMarker(mapObjectId, markerPos);
         }
-        this.$rootScope.$broadcast('cellSelectionChanged', this);
+        this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
     }
 
-    isCellSelected(cell: Cell) {
-        return this.cells[cell.id] !== undefined;
+    isMapObjectSelected(mapObject: MapObject) {
+        return this.mapObjects[mapObject.id] !== undefined;
     }
 
     serialize() {
         return this.color.serialize().then((serColor) => {
             var ser = {
                 id: this.id,
-                cells: this.cells,
+                mapObjects: this.mapObjects,
                 color: serColor
             };
             return ser;
@@ -87,8 +95,8 @@ class CellSelection implements Serializable<CellSelection> {
 }
 
 
-interface SerializedCellSelection extends Serialized<CellSelection> {
-    id: CellSelectionId;
-    cells: { [cellId: string]: MapPosition; };
+interface SerializedMapObjectSelection extends Serialized<MapObjectSelection> {
+    id: MapObjectSelectionId;
+    mapObjects: { [mapObjectId: string]: MapPosition; };
     color: SerializedColor;
 }

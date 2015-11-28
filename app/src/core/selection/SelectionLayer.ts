@@ -1,7 +1,7 @@
 class SelectionLayer extends BaseLayer<ol.layer.Vector> {
 
     color: Color;
-    cellMarkers = {};
+    mapObjectMarkers = {};
 
     constructor(name: string,
                 color: Color) {
@@ -20,7 +20,7 @@ class SelectionLayer extends BaseLayer<ol.layer.Vector> {
                 'resources/img/marker/marker-' + colorRgbString + '-' + size +'.png';
             var style = new ol.style.Style({
                 image: new ol.style.Icon({
-                    // the bottom of the marker should point to the cell's
+                    // the bottom of the marker should point to the mapObject's
                     // center
                     anchor: [0.5, 0.9],
                     src: imageSrc
@@ -35,23 +35,23 @@ class SelectionLayer extends BaseLayer<ol.layer.Vector> {
         });
     }
 
-    addCellMarker(cellId: CellId, position: MapPosition) {
-        if (!this.cellMarkers.hasOwnProperty(cellId)) {
+    addMapObjectMarker(mapObjectId: MapObjectId, position: MapPosition) {
+        if (!this.mapObjectMarkers.hasOwnProperty(mapObjectId)) {
             var feat = new ol.Feature({
                 geometry: new ol.geom.Point([position.x, position.y])
             });
             var src = <ol.source.Vector> this.olLayer.getSource();
             src.addFeature(feat);
-            this.cellMarkers[cellId] = feat;
+            this.mapObjectMarkers[mapObjectId] = feat;
         }
     }
 
-    removeCellMarker(cellId: CellId) {
-        var feat = this.cellMarkers[cellId];
+    removeMapObjectMarker(mapObjectId: MapObjectId) {
+        var feat = this.mapObjectMarkers[mapObjectId];
         if (feat) {
             var src = <ol.source.Vector> this.olLayer.getSource();
             src.removeFeature(feat);
-            delete this.cellMarkers[cellId];
+            delete this.mapObjectMarkers[mapObjectId];
         }
     }
 

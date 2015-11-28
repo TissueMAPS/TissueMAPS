@@ -1,7 +1,7 @@
 interface ToolResult {};
 
 interface LayerToolResult extends ToolResult {
-    asObjectLayer(): ObjectLayer;
+    asVisualLayer(): VisualLayer;
 }
 
 interface PrintableToolResult extends ToolResult {

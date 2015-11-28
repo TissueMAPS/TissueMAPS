@@ -125,6 +125,10 @@ class Color implements Serializable<Color> {
         return new Color(o.r, o.g, o.b, alpha);
     }
 
+    static fromOlColor(c: ol.Color) {
+        return new Color(c[0], c[1], c[2], c[3]);
+    }
+
     static get RED() {
         return new Color(255, 0, 0);
     }

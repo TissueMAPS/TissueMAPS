@@ -28,9 +28,9 @@ class Viewport implements Serializable<Viewport> {
     map: ng.IPromise<ol.Map>;
 
     channelLayers: ChannelLayer[] = [];
-    objectLayers: ObjectLayer[] = [];
+    visualLayers: VisualLayer[] = [];
 
-    selectionHandler: CellSelectionHandler;
+    selectionHandler: MapObjectSelectionHandler;
 
     private _mapDef: ng.IDeferred<ol.Map>;
     private _elementDef: ng.IDeferred<JQuery>;
@@ -54,7 +54,7 @@ class Viewport implements Serializable<Viewport> {
         this.elementScope = this._elementScopeDef.promise;
 
         // Helper class to manage the differently marker selections
-        this.selectionHandler = new CellSelectionHandler(this);
+        this.selectionHandler = new MapObjectSelectionHandler(this);
 
         // var createDemoRectangles = function(startx, starty) {
         //     var side = 100;
@@ -95,23 +95,23 @@ class Viewport implements Serializable<Viewport> {
 
     }
 
-    setSelectionHandler(csh: CellSelectionHandler) {
-        this.selectionHandler = csh;
+    setSelectionHandler(sh: MapObjectSelectionHandler) {
+        this.selectionHandler = sh;
     }
 
-    addObjectLayer(objLayer: ObjectLayer) {
-        this.objectLayers.push(objLayer);
+    addVisualLayer(visLayer: VisualLayer) {
+        this.visualLayers.push(visLayer);
         this.map.then((map) => {
-            objLayer.addToMap(map);
+            visLayer.addToMap(map);
         });
     }
 
-    removeObjectLayer(objLayer: ObjectLayer) {
-        var idx = this.objectLayers.indexOf(objLayer)
+    removeVisualLayer(visLayer: VisualLayer) {
+        var idx = this.visualLayers.indexOf(visLayer)
         if (idx !== -1) {
             this.map.then((map) => {
-                objLayer.removeFromMap(map);
-                this.objectLayers.splice(idx, 1);
+                visLayer.removeFromMap(map);
+                this.visualLayers.splice(idx, 1);
             });
         }
     }
@@ -207,7 +207,7 @@ class Viewport implements Serializable<Viewport> {
 
     goToMapObject(obj: MapObject) {
         this.map.then((map) => {
-            var feat = obj.getOLFeature();
+            var feat = obj.getVisual().olFeature;
             map.getView().fit(<ol.geom.SimpleGeometry> feat.getGeometry(), map.getSize(), {
                 padding: [100, 100, 100, 100]
             });

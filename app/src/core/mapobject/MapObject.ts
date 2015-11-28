@@ -1,5 +1,7 @@
-interface MapObject {
+type MapObjectId = string;
+type MapObjectType = string;
+
+interface MapObject extends Visualizable {
     id: string;
-    position: MapPosition;
-    getOLFeature(): ol.Feature;
+    type: MapObjectType;
 }

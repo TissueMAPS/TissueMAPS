@@ -1,11 +1,11 @@
-interface ObjectLayerArgs {
-    objects?: MapObject[];
+interface VisualLayerArgs {
+    visuals?: Visual[];
     strokeColor?: Color;
     fillColor?: Color;
     visible?: boolean;
 }
 
-class ObjectLayer extends BaseLayer<ol.layer.Vector> {
+class VisualLayer extends BaseLayer<ol.layer.Vector> {
     styles: any;
 
     private strokeColor: Color;
@@ -14,9 +14,9 @@ class ObjectLayer extends BaseLayer<ol.layer.Vector> {
     private defaultStrokeColor = new Color(255, 0, 0);
     private defaultFillColor = new Color(255, 0, 0, 0.1);
 
-    private _objects: MapObject[] = [];
+    private _visuals: Visual[] = [];
 
-    constructor(name: string, opt: ObjectLayerArgs = {}) {
+    constructor(name: string, opt: VisualLayerArgs = {}) {
         super(name);
 
         var vectorSource = new ol.source.Vector({
@@ -33,8 +33,8 @@ class ObjectLayer extends BaseLayer<ol.layer.Vector> {
             visible: opt.visible === undefined ? true : false
         });
 
-        if (opt.objects !== undefined) {
-            this.addObjects(opt.objects);
+        if (opt.visuals !== undefined) {
+            this.addVisuals(opt.visuals);
         }
 
         if (opt.strokeColor === undefined) {
@@ -77,30 +77,30 @@ class ObjectLayer extends BaseLayer<ol.layer.Vector> {
         };
     }
 
-    getObjects() {
-        return this._objects;
+    getVisuals() {
+        return this._visuals;
     }
 
-    addObject(obj: MapObject) {
-        if (obj !== undefined && obj !== null) {
-            this._objects.push(obj);
+    addVisual(v: Visual) {
+        if (v !== undefined && v !== null) {
+            this._visuals.push(v);
             var src = this.olLayer.getSource();
-            var feat = obj.getOLFeature();
+            var feat = v.olFeature
             src.addFeature(feat);
         } else {
-            console.log('Warning: trying to add undefined or null MapObject.');
+            console.log('Warning: trying to add undefined or null Visual.');
         }
     }
 
-    addObjects(objs: MapObject[]) {
-        var objects = _(objs).filter((o) => {
-            return o !== undefined && o !==  null;
+    addVisuals(vs: Visual[]) {
+        var visuals = _(vs).filter((v) => {
+            return v !== undefined && v !==  null;
         });
-        objects.forEach((o) => {
-            this._objects.push(o);
+        visuals.forEach((v) => {
+            this._visuals.push(v);
         });
-        var features = _(objects).map((o) => {
-            var feat = o.getOLFeature();
+        var features = _(visuals).map((v) => {
+            var feat = v.olFeature;
             return feat;
         });
         this.olLayer.getSource().addFeatures(features);

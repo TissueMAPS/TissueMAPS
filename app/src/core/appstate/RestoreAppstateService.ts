@@ -29,8 +29,8 @@ class RestoreAppstateService {
 
     private restoreViewport(vp: Viewport, vpState: SerializedViewport) {
         // Create and initialize the selection handler
-        var selHandler = new CellSelectionHandler(vp);
-        this.restoreCellSelectionHandler(selHandler, vpState.selectionHandler);
+        var selHandler = new MapObjectSelectionHandler(vp);
+        this.restoreSelectionHandler(selHandler, vpState.selectionHandler);
         vp.setSelectionHandler(selHandler);
 
         // Add all layers
@@ -53,13 +53,13 @@ class RestoreAppstateService {
         });
     }
 
-    private restoreCellSelectionHandler(csh: CellSelectionHandler,
+    private restoreSelectionHandler(csh: MapObjectSelectionHandler,
                                         cshState: SerializedSelectionHandler) {
         var activeSelId = cshState.activeSelectionId;
         var selections = cshState.selections;
         selections.forEach((ser) => {
             var selColor = Color.fromObject(ser.color);
-            var sel = new CellSelection(ser.id, selColor);
+            var sel = new MapObjectSelection(ser.id, selColor);
             for (var cellId in ser.cells) {
                 var markerPos = ser.cells[cellId];
                 sel.addCell(markerPos, cellId);

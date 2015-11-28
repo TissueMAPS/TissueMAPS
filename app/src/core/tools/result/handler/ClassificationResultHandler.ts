@@ -1,5 +1,5 @@
 interface CellClassificationResult {
-    classes: Array<{classLabel: CellId; }>
+    classes: Array<{classLabel: MapObjectId; }>
 }
 
 class CellClassificationResultHandler implements ToolResultHandler {
