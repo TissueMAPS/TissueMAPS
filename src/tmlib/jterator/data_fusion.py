@@ -53,7 +53,7 @@ def combine_datasets(data_files):
                     dataset_names = f.list_datasets(features_path)
                     for name in dataset_names:
                         dataset_path = '{group}/{dataset}'.format(
-                                        group=segmentation_path, dataset=name)
+                                        group=features_path, dataset=name)
                         if i == 0:
                             data[dataset_path] = f.read(dataset_path)
                         else:
@@ -126,6 +126,10 @@ def update_datasets(old_filename, new_filename):
                 for g in groups:
                     group_path = '{group}/{subgroup}'.format(
                                     group=p, subgroup=g)
+                    if g == 'coordinates':
+                        # The coordinates for the visualization have to be
+                        # recalculated in case the segmentation has changed.
+                        continue
                     for d in old_file.list_datasets(group_path):
                         dataset_path = '{group}/{dataset}'.format(
                                             group=group_path, dataset=d)

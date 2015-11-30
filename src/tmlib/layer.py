@@ -12,6 +12,7 @@ from .readers import DatasetReader
 from .writers import DatasetWriter
 from .errors import NotSupportedError
 from .errors import PyramidCreationError
+from .errors import DataError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -459,6 +460,10 @@ class ObjectLayer(object):
         filename = os.path.join(experiment.dir, experiment.data_file)
         segmentation_path = '/objects/%s/segmentation' % name
         with DatasetReader(filename) as data:
+            if not data.exists(segmentation_path):
+                raise DataError(
+                        'The data file does\'t contain any segmentations: %s'
+                        % segmentation_path)
             # Get the site indices of individual images.
             # (can be used to obtain the position of the image within the grid)
             unique_job_ids = map(int, data.list_groups('/metadata'))
@@ -639,7 +644,7 @@ class ObjectLayer(object):
         Within the file the datasets are located in the subgroup "coordinates".
         So in case of objects called ``"cells"``
         ``/objects/cells/coordinates``.
-        
+
         Parameters
         ----------
         filename: str
@@ -655,4 +660,4 @@ class ObjectLayer(object):
             for object_id, value in self.coordinates.iteritems():
                 path = '/objects/%s/coordinates/%d' % (self.name, object_id)
                 data.write(path, value)
-                data.set_attribute(path, 'columns', value.columns)
+                data.set_attribute(path, 'columns', value.columns.tolist())
