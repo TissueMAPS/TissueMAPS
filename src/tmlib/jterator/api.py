@@ -350,7 +350,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     os.path.join(self.experiment.dir,
                                  self.experiment.data_file)
                 ]
-            }
+            },
+            'removals': [
+                'data_files'
+            ]
         }
 
         return job_descriptions
