@@ -1,5 +1,6 @@
 import numpy as np
 from ..readers import DatasetReader
+from ..writers import DatasetWriter
 from ..errors import DataError
 
 
@@ -119,7 +120,7 @@ def update_datasets(old_filename, new_filename):
         absolute path to the file, which should be updated
     '''
     with DatasetReader(old_filename) as old_file:
-        with DatasetReader(new_filename) as new_file:
+        with DatasetWriter(new_filename) as new_file:
             def copy_recursively(p):
                 groups = old_file.list_groups(p)
                 for g in groups:

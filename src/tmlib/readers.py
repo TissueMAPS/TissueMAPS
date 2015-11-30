@@ -313,7 +313,7 @@ class DatasetReader(object):
 
     def exists(self, path):
         '''
-        Check whether a `path` exists within a file.
+        Check whether a `path` exists within the file.
 
         Parameters
         ----------
