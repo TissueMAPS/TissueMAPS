@@ -346,10 +346,10 @@ class DatasetWriter(object):
             data = np.string_(data)
         elif isinstance(data, list):
             data = [
-                np.string(d) if isinstance(d, basestring) else d
+                np.string_(d) if isinstance(d, basestring) else d
                 for d in data
             ]
-        self._stream[path].create(name, data)
+        self._stream[path].attrs.create(name, data)
 
     def __exit__(self, except_type, except_value, except_trace):
         self._stream.close()
