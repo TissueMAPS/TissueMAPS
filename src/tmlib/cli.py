@@ -257,7 +257,6 @@ class CommandLineInterface(object):
         dict
             job descriptions
         '''
-        import ipdb; ipdb.set_trace()
         if not args.keep_output:
             self._cleanup()
         api = self._api_instance
