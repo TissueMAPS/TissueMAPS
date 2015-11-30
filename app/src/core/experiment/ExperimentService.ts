@@ -24,7 +24,7 @@ class ExperimentService {
 
     // TODO: error handling
     getFeaturesForExperiment(id: ExperimentId): ng.IPromise<Feature[]> {
-        return this.$http.get('/api/experiments/' + id + '/features?include=min,max')
+        return this.$http.get('/api/experiments/' + id + '/cells' + '/features?include=min,max')
         .then((resp: any) => {
             return resp.data.features;
         });
