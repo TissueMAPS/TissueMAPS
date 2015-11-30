@@ -3,9 +3,9 @@ from ..readers import DatasetReader
 from ..errors import DataError
 
 
-def fuse_datasets(data_files):
+def combine_datasets(data_files):
     '''
-    Fuse Jterator data stored across several HDF5 files.
+    Combine data stored across several HDF5 files into one HDF5 file.
 
     Parameters
     ----------
@@ -104,3 +104,34 @@ def fuse_datasets(data_files):
                                     )
 
     return data
+
+
+def update_datasets(old_filename, new_filename):
+    '''
+    Recursively copy all datasets from one HDF5 file to a new HDF5 file without
+    overwriting existing ones.
+
+    Parameters
+    ----------
+    old_filename: str
+        absolute path to the file whose content should be copied
+    new_filename: str
+        absolute path to the file, which should be updated
+    '''
+    with DatasetReader(old_filename) as old_file:
+        with DatasetReader(new_filename) as new_file:
+            def copy_recursively(p):
+                groups = old_file.list_groups(p)
+                for g in groups:
+                    group_path = '{group}/{subgroup}'.format(
+                                    group=p, subgroup=g)
+                    for d in old_file.list_datasets(group_path):
+                        dataset_path = '{group}/{dataset}'.format(
+                                            group=group_path, dataset=d)
+                        if not new_file.exists(dataset_path):
+                            # Keep the more recent dataset.
+                            new_file.write(
+                                    dataset_path,
+                                    data=old_file.read(dataset_path))
+                    copy_recursively(group_path)
+            copy_recursively('/')

@@ -497,40 +497,24 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job description
         '''
         logger.info('fuse datasets of different jobs into a single data file')
-        datasets = data_fusion.fuse_datasets(batch['inputs']['data_files'])
+        datasets = data_fusion.combine_datasets(batch['inputs']['data_files'])
         filename = batch['outputs']['data_files'][0]
         # There could be several pipelines, and each pipeline may only provide
         # some of the data, e.g. one pipeline may provide segmentations, while
         # another may add measurements for the segmented objects.
         # Since it's not possible to delete datasets in an HDF5 file and free
-        # the allocated memory. Therefore, a new file will be created temporary
-        # to which already existing datasets will be copied. This new, updated
-        # file will then subsequently replace the original file.
-        def update_datasets(old_file_stream, new_file_stream):
-            # Helper function to recursively copy datasets from the "old"
-            # file to the "new" file in case the dataset don't already exist.
-            def copy_recursively(p):
-                groups = old_file_stream.list_groups(p)
-                for g in groups:
-                    group_path = '{group}/{subgroup}'.format(
-                                    group=p, subgroup=g)
-                    for d in old_file_stream.list_datasets(group_path):
-                        dataset_path = '{group}/{dataset}'.format(
-                                            group=group_path, dataset=d)
-                        if not new_file_stream.exists(dataset_path):
-                            # Keep the more recent dataset.
-                            new.write(dataset_path,
-                                      old_file_stream.read(dataset_path))
-                    copy_recursively(group_path)
-            copy_recursively('/')
+        # the allocated memory, a new temporary file is created, which is
+        # complemented with the datasets of the already existing file.
+        # The updated file will then subsequently replace the original file.
 
         tmp_filename = '%s.tmp' % batch['outputs']['data_files'][0]
         with DatasetWriter(tmp_filename) as new:
             for path, data in datasets.iteritems():
                 new.write(path, data)
-            with DatasetReader(filename) as old:
-                update_datasets(old, new)
-        
+
+        # Update the temporary file with the content of the already existing file
+        data_fusion.update_datasets(filename, tmp_filename)
+
         # Replace the original file with the updated version
         os.remove(filename)
         os.rename(tmp_filename, filename)
