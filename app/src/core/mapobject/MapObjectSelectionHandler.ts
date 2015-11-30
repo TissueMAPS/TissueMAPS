@@ -7,13 +7,11 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     viewport: Viewport;
 
-    // selections: MapObjectSelection[] = [];
     availableColors: Color[];
-
-    markerSelectionModeActive: boolean = false;
 
     private _selectionsByType: { [objectType: string]: MapObjectSelection[]; } = {};
 
+    markerSelectionModeActive: boolean = false;
     activeMapObjectType: MapObjectType;
     activeSelectionId: MapObjectSelectionId;
 
@@ -33,7 +31,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     getSelectionsForType(type: string) {
-        if (this._selectionsByType[type] == undefined) {
+        if (this._selectionsByType[type] === undefined) {
             this._selectionsByType[type] = [];
         }
         return this._selectionsByType[type];
@@ -71,11 +69,13 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     clickOnMapObject(clickPos: MapPosition, mapObject: MapObject) {
-        var sel = this.getActiveSelection();
-        if (sel) {
-            sel.addMapObjectAt(clickPos, mapObject.id);
-        } else {
-            console.log('No active selection found');
+        if (this.markerSelectionModeActive) {
+            var sel = this.getActiveSelection();
+            if (sel) {
+                sel.addMapObject(mapObject, clickPos);
+            } else {
+                console.log('No active selection found');
+            }
         }
     }
 
