@@ -11,7 +11,8 @@ Jinja2==2.8
 Mako==1.0.3
 MarkupSafe==0.23
 matplotlib==1.5.0
-numpy==1.10.1
+numpy>=1.10.1
+pandas>=0.17.1
 passlib==1.6.5
 psycopg2==2.6.1
 PyJWT==1.4.0
