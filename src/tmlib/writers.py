@@ -267,6 +267,25 @@ class DatasetWriter(object):
             self._stream = h5py.File(self.filename, 'a')
         return self
 
+    def exists(self, path):
+        '''
+        Check whether a `path` exists within the file.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to a group or dataset in the file
+
+        Returns
+        -------
+        bool
+            ``True`` if `path` exists and ``False`` otherwise
+        '''
+        if path in self._stream:
+            return True
+        else:
+            return False
+
     def write(self, path, data):
         '''
         Create a dataset.
@@ -325,8 +344,12 @@ class DatasetWriter(object):
         '''
         if isinstance(data, basestring):
             data = np.string_(data)
+        elif isinstance(data, list):
+            data = [
+                np.string(d) if isinstance(d, basestring) else d
+                for d in data
+            ]
         self._stream[path].create(name, data)
 
     def __exit__(self, except_type, except_value, except_trace):
         self._stream.close()
-
