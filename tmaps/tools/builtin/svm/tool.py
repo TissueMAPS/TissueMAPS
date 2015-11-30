@@ -3,7 +3,10 @@ from tmaps.tools import register_tool, Tool
 
 from sklearn import svm
 import numpy as np
+import pandas as pd
 from matplotlib import cm
+
+from tmlib.readers import DatasetReader
 
 
 @register_tool('SVM')
@@ -56,13 +59,16 @@ class SVMTool(Tool):
         features = payload.get('selected_features')
         cell_ids_per_class = payload.get('training_cell_ids')
 
-        dataset = experiment.dataset
+        dataset = pd.DataFrame()
+        with DatasetReader(experiment.dataset_path) as data:
+            group = '/objects/cells/features'
+            datasets = data.list_datasets(group)
+            for d in datasets:
+                dataset[d] = data.read('%s/%s' % (group, d))
 
         # Classification routine is in a sub function, call it now.
         predicted_labels = self._classify_dtree(
             dataset, features, cell_ids_per_class)
-
-        ids = dataset['/objects/cells/ids'][:]
 
         available_colors = [
             {'r': 255, 'g': 0, 'b': 0},
@@ -76,7 +82,7 @@ class SVMTool(Tool):
         colors = dict(zip(cls_labels, available_colors[:len(cls_labels)]))
 
         return {
-            'cell_ids': ids.tolist(),
+            'cell_ids': dataset.index.tolist(),
             'predicted_labels': predicted_labels.tolist(),
             'colors': colors
         }
@@ -167,26 +173,20 @@ class SVMTool(Tool):
 
         training_cell_ids = np.array(sum(cell_ids_per_class.values(), []))
 
-        # Go through all features that should be used in training
-        header = data['/objects/cells/features'].attrs['names']
-        is_col_included = reduce(np.logical_or, [header == f for f in feature_names])
-
-        cell_ids = data['/objects/cells/ids'][()]
+        cell_ids = cell_ids = data.index.tolist()
 
         # Create a matrix with the columns that correspond to the features
         # in `feats`.
-        mat = data['/objects/cells/features'][()]  # as numpy array
-
         ix = np.array(
             [np.where(cell_id == cell_ids)[0] for cell_id in training_cell_ids]
         )
 
-        X_train = mat[ix, is_col_included]
+        X_train = data.loc[ix, feature_names]
         y_train = np.array(
             [class_per_cell_id[cell_id] for cell_id in training_cell_ids]
         )
 
-        X_new = mat[:, is_col_included]
+        X_new = data.loc[:, feature_names]
 
         clf = tree.DecisionTreeClassifier()
 
