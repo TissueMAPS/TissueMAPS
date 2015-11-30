@@ -170,7 +170,6 @@ class VariableArgs(Args):
         return set()
 
 
-
 class InitArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
@@ -193,7 +192,7 @@ class InitArgs(GeneralArgs):
     @property
     def _persistent_attrs(self):
         return {
-            'display', 'backup', 'variable_args'
+            'display', 'backup', 'keep_output'
         }
 
     @property
@@ -252,6 +251,32 @@ class InitArgs(GeneralArgs):
             'help': '''
                 create a backup of the job descriptions and log output
                 of a previous submission
+            '''
+        }
+
+    @property
+    def keep_output(self):
+        '''
+        Returns
+        -------
+        bool
+            indicator that the output of a prior submission should be kept,
+            i.e. not cleaned up
+        '''
+        return self._keep_output
+
+    @keep_output.setter
+    def keep_output(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "keep_output" must have type bool.')
+        self._keep_output = value
+
+    @property
+    def _keep_output_params(self):
+        return {
+            'action': 'store_true',
+            'help': '''
+                keep output of a prior submission, i.e. don't cleanup
             '''
         }
 

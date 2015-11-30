@@ -214,7 +214,7 @@ class CommandLineInterface(object):
                     logger.warning('some outputs don\'t exist')
                 for out in outputs:
                     if not os.path.exists(out):
-                        continue
+                        logger.debug('output doesn\'t exist: %s', out)
                     if os.path.isdir(out):
                         logger.debug('remove output directory: %s' % out)
                         shutil.rmtree(out)
@@ -222,12 +222,16 @@ class CommandLineInterface(object):
                         logger.debug('remove output file: %s' % out)
                         os.remove(out)
         except JobDescriptionError:
+            # Expected outputs are retrieved from job descriptor files.
+            # One ends up here in case no job descriptor files have been
+            # created so far.
             logger.debug('nothing to clean up')
 
     def cleanup(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments provided by the "cleanup" subparser.
+        and process arguments provided by the "cleanup" subparser, which
+        removes all output files or directories from a previous submission.
 
         Parameters
         ----------
@@ -240,7 +244,8 @@ class CommandLineInterface(object):
     def init(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments provided by the "init" subparser.
+        and process arguments provided by the "init" subparser, which creates
+        the job descriptor files required for submission.
 
         Parameters
         ----------
@@ -252,7 +257,9 @@ class CommandLineInterface(object):
         dict
             job descriptions
         '''
-        self._cleanup()
+        import ipdb; ipdb.set_trace()
+        if not args.keep_output:
+            self._cleanup()
         api = self._api_instance
         if args.backup:
             logger.info('backup log reports and job descriptions '
