@@ -1,4 +1,8 @@
 type MapObjectSelectionId = number;
+interface SelectionEntry {
+    markerPosition: MapPosition;
+    mapObject: MapObject;
+}
 
 class MapObjectSelection implements Serializable<MapObjectSelection> {
 
@@ -8,8 +12,7 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
 
     color: Color;
 
-    mapObjects: { [objectId: string]: MapPosition; } = {};
-
+    private _entries: { [objectId: number]: SelectionEntry; } = {};
     private _layer: SelectionLayer;
     private _$rootScope: ng.IRootScopeService;
 
@@ -27,18 +30,17 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
         this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
     }
 
-    // TODO: Is this used anywhere?
     addToMap(map: ol.Map) {
         this._layer.addToMap(map);
     }
 
     getMapObjects() {
-        var mapObjectIds =
-            _.chain(this.mapObjects)
-             .keys()
-             .map(function(k) { return parseInt(k); })
-             .value();
-        return mapObjectIds;
+        var objects = [];
+        for (mapObjectId in this._entries) {
+            var entry = this._entries[mapObjectId];
+            objects.push(entry.mapObject);
+        }
+        return objects;
     }
 
     removeFromMap(map: ol.Map) {
@@ -48,44 +50,55 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
         this._layer.removeFromMap(map);
     }
 
-    removeMapObject(mapObjectId: MapObjectId) {
-        if (this.mapObjects.hasOwnProperty(mapObjectId)) {
-            delete this.mapObjects[mapObjectId];
-            this._layer.removeMapObjectMarker(mapObjectId);
+    isMapObjectSelected(mapObject: MapObject) {
+        return this._entries.hasOwnProperty(mapObject.id);
+    }
+
+    removeMapObject(mapObject: MapObject) {
+        if (this._entries.hasOwnProperty(mapObject.id)) {
+            delete this._entries[mapObject.id];
+            this._layer.removeMapObjectMarker(mapObject.id);
+            this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
         };
-        this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
+    }
+
+    addMapObject(mapObject: MapObject, markerPos?: MapPosition) {
+        if (!this.isMapObjectSelected(mapObject)) {
+            this._entries[mapObject.id] = {
+                markerPosition: markerPos,
+                mapObject: mapObject
+            };
+            this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
+            if (markerPos !== undefined) {
+                this._layer.addMapObjectMarker(mapObject.id, markerPos);
+            }
+        }
+    }
+
+    addRemoveMapObject(mapObject: MapObject, markerPos?: MapPosition) {
+        if (this.isMapObjectSelected(mapObject)) {
+            this.removeMapObject(mapObject);
+        } else {
+            this.addMapObject(mapObject, markerPos)
+        }
     }
 
     /**
-     * Remove all mapObjects from this selection, but don't delete it.
+     * Remove all _entries from this selection, but don't delete it.
      */
     clear() {
         // TODO: Consider doing this via some batch mechanism if it proves to be slow
-        _.keys(this.mapObjects).forEach((mapObjectId: MapObjectId) => {
+        _.keys(this._entries).forEach((mapObjectId: MapObjectId) => {
             this.removeMapObject(mapObjectId);
         });
         this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
-    }
-
-    addMapObjectAt(markerPos: MapPosition, mapObjectId: MapObjectId) {
-        if (this.mapObjects.hasOwnProperty(mapObjectId)) {
-            this.removeMapObject(mapObjectId);
-        } else {
-            this.mapObjects[mapObjectId] = markerPos;
-            this._layer.addMapObjectMarker(mapObjectId, markerPos);
-        }
-        this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
-    }
-
-    isMapObjectSelected(mapObject: MapObject) {
-        return this.mapObjects[mapObject.id] !== undefined;
     }
 
     serialize() {
         return this.color.serialize().then((serColor) => {
             var ser = {
                 id: this.id,
-                mapObjects: this.mapObjects,
+                entries: this._entries,
                 color: serColor
             };
             return ser;
@@ -94,9 +107,8 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
 
 }
 
-
 interface SerializedMapObjectSelection extends Serialized<MapObjectSelection> {
     id: MapObjectSelectionId;
-    mapObjects: { [mapObjectId: string]: MapPosition; };
+    entries: { [mapObjectId: number]: SelectionEntry; };
     color: SerializedColor;
 }
