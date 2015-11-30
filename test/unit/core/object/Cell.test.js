@@ -21,18 +21,15 @@ describe('In Cell', function() {
             [0, 1],
             [1, 0],
             [1, 1]
-        ], Color.RED);
+        ]);
 
     });
 
+    it('should return a PolygonVisual as its Visual', function() {
+        expect(cell.getVisual).toBeDefined();
 
-
-    describe('the function withFillColor', function() {
-
-        it('should return the same cell with a new fillColor', function() {
-            expect(cell.fillColor).not.toEqual(Color.GREEN);
-            expect(cell.withFillColor(Color.GREEN).fillColor).toEqual(Color.GREEN);
-        });
-
+        var v = cell.getVisual();
+        console.log(v);
     });
+
 });

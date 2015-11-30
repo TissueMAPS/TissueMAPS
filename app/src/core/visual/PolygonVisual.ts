@@ -1,7 +1,7 @@
 type PolygonCoordinates = Array<ol.Coordinate>;
 type PolygonCoordinatesOL = Array<Array<ol.Coordinate>>;
 
-class PolygonVisual extends Visual {
+class PolygonVisual extends Visual implements StrokeVisual, FillVisual {
 
     constructor(position: MapPosition, outline: PolygonCoordinates) {
         var coord = [position.x, position.y];
@@ -19,5 +19,25 @@ class PolygonVisual extends Visual {
             feat.setStyle(style);
         }
         super(feat);
+    }
+
+    get fillColor() {
+        // Color.fromOlColor(this.olFeature.getStyle.fill);
+        return Color.RED;
+    }
+
+    set fillColor(c: Color) {
+        // Color.fromOlColor(this.olFeature.getStyle.fill);
+        // return Color.RED;
+    }
+
+    get strokeColor() {
+        // Color.fromOlColor(this.olFeature.getStyle.stroke);
+        return Color.RED;
+    }
+
+    set strokeColor(c: Color) {
+        // Color.fromOlColor(this.olFeature.getStyle.stroke);
+        // return Color.RED;
     }
 }

@@ -1,0 +1,101 @@
+describe('In VisualLayer', function() {
+    // Load the module of ObjectLayer and its dependencies
+    beforeEach(module('tmaps.core'));
+
+    // Some fake data
+    var v1, v2, visuals;
+
+    beforeEach(inject(function(_Cell_) {
+        // Some fake data (assign again before each test in case functions would
+        // modifies their arguments).
+        v1 = new PolygonVisual({x: 100, y: -100}, [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0]
+        ]);
+        v2 = new PolygonVisual({x: 200, y: -100}, [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0]
+        ]);
+        visuals = [v1, v2];
+        console = jasmine.createSpyObj('console', ['log']);
+    }));
+
+    describe('the constructor', function() {
+        it('will accept a visuals argument that will set the visuals', function() {
+            var l = new VisualLayer('some layer', {
+                visuals: visuals
+            });
+
+            expect(l._visuals.length).toEqual(2);
+        })
+    });
+
+    describe('the function addVisuals', function() {
+        var layer;
+
+        beforeEach(function() {
+            layer = new VisualLayer('Cell layer')
+        });
+
+        it('should add a feature to the openlayers layer', function() {
+            layer.addVisuals(visuals);
+
+            expect(layer._olLayer.getSource().getFeatures()[0]).toBeDefined();
+            expect(layer._olLayer.getSource().getFeatures()[1]).toBeDefined();
+            expect(layer._olLayer.getSource().getFeatures()[2]).toBeUndefined();
+        });
+
+        it('should add a feature to layer itself', function() {
+            layer.addVisuals(visuals);
+
+            expect(layer.getVisuals()[0]).toEqual(visuals[0]);
+            expect(layer.getVisuals()[1]).toEqual(visuals[1]);
+            expect(layer.getVisuals()[2]).toBeUndefined();
+        });
+
+        it('should not add any undefined or null visuals', function() {
+            visuals.push(null);
+            visuals.push(undefined);
+            layer.addVisuals(visuals);
+
+            expect(layer.getVisuals()[0]).toEqual(visuals[0]);
+            expect(layer.getVisuals()[1]).toEqual(visuals[1]);
+            expect(layer.getVisuals()[2]).toBeUndefined();
+        });
+    });
+
+    describe('the function addVisual', function() {
+        var layer;
+
+        beforeEach(function() {
+            layer = new VisualLayer('some layer')
+        });
+
+        it('should add a single MapVisual', function() {
+            layer.addVisual(visuals[0]);
+
+            expect(layer.getVisuals()[0]).toEqual(visuals[0]);
+            expect(layer.getVisuals()[1]).toBeUndefined();
+        });
+
+        it('should issue a warning when an undefined or null object is added', function() {
+            layer.addVisual(null);
+            expect(console.log).toHaveBeenCalled();
+        });
+    });
+
+    describe('the function getVisuals', function() {
+        it('should get the visuals', function() {
+            var l = new VisualLayer('some layer', {
+                visuals: visuals
+            });
+
+            expect(l.getVisuals()).toEqual(visuals);
+        });
+    });
+});
+
