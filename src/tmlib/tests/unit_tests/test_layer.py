@@ -1,6 +1,5 @@
 import os
 import unittest
-import logging
 from cached_property import cached_property
 from gi.repository import Vips
 from tmlib.experiment import Experiment

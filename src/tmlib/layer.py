@@ -10,7 +10,6 @@ from .metadata import MosaicMetadata
 from .readers import OpenslideImageReader
 from .readers import DatasetReader
 from .writers import DatasetWriter
-from .writers import JsonWriter
 from .errors import NotSupportedError
 from .errors import PyramidCreationError
 import logging
@@ -540,8 +539,6 @@ class ObjectLayer(object):
             plate_names = [p.name for p in experiment.plates]
             job_ids = data.read('%s/job_ids' % segmentation_path)
             global_coords = dict()
-            # global_coords['y'] = list()
-            # global_coords['x'] = list()
             for j in unique_job_ids:
                 metadata_path = '/metadata/%d' % j
                 plate_name = data.read('%s/plate_name' % metadata_path)
@@ -612,9 +609,7 @@ class ObjectLayer(object):
                     # Reduce the number of outlines points
                     contour = np.array([coords_y[ix], coords_x[ix]]).T
                     poly = approximate_polygon(contour, 0.95).astype(int)
-                    # Add offset
-                    # global_coords['y'].append(poly.T[0] + offset_y)
-                    # global_coords['x'].append(poly.T[1] + offset_x)
+                    # Add offset to coordinates
                     global_coords[ix] = pd.DataFrame({
                         'y': poly[:, 0] + offset_y,
                         'x': poly[:, 1] + offset_x
@@ -631,6 +626,20 @@ class ObjectLayer(object):
         '''
         Write the coordinates to the HDF5 layers file.
 
+        The *y*, *x* coordinates of each object will be stored in a
+        separate dataset of shape (n, 2), where n is the number of points
+        on the perimeter sorted in counter-clockwise order.
+        The name of the dataset is the global ID of the object, which
+        corresponds to the column index of the object in the `features`
+        dataset.
+        The first column of the dataset contains the *y* coordinate and the
+        second column the *x* coordinate. The dataset has an attribute called
+        "columns" that holds the names of the two columns.
+
+        Within the file the datasets are located in the subgroup "coordinates".
+        So in case of objects called ``"cells"``
+        ``/objects/cells/coordinates``.
+        
         Parameters
         ----------
         filename: str
@@ -643,8 +652,7 @@ class ObjectLayer(object):
         logger.info('save layer "%s" to HDF5 file', self.name)
 
         with DatasetWriter(filename) as data:
-            # data.write('%s/y' % group_name, data=self.coordinates['y'])
-            # data.write('%s/x' % group_name, data=self.coordinates['x'])
             for object_id, value in self.coordinates.iteritems():
-                data.write('/objects/%s/layer/%d' % (self.name, object_id),
-                           data=value)
+                path = '/objects/%s/coordinates/%d' % (self.name, object_id)
+                data.write(path, value)
+                data.set_attribute(path, 'columns', value.columns)

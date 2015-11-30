@@ -2,7 +2,6 @@ import os
 import re
 import glob
 import logging
-from copy import copy
 import shutil
 from natsort import natsorted
 from ..readers import YamlReader
