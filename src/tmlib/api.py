@@ -176,38 +176,49 @@ class BasicClusterRoutines(object):
                 raise ValueError('Session should only contain a single task.')
             logger.debug('add task "%s" to engine', task_ids[-1])
             task = jobs.load(task_ids[-1])
-            e.add(task)
+            if not isinstance(task, TaskCollection):
+                raise TypeError(
+                        'The session should contain a '
+                        'gc3libs.workflow.TaskCollection')
         elif isinstance(jobs, TaskCollection):
             task = jobs
-            e.add(task)
         else:
             raise TypeError(
                     'Argument "jobs" must either be a GC3Pie task collection '
                     'or a GC3Pie session.')
+        logger.debug('add task %s to engine', task)
+        e.add(task)
 
         # periodically check the status of submitted jobs
-        break_next = False
-        while True:
+        try:
+            break_next = False
+            while True:
 
-            time.sleep(monitoring_interval)
-            logger.debug('wait %d seconds', monitoring_interval)
+                time.sleep(monitoring_interval)
+                logger.debug('wait %d seconds', monitoring_interval)
 
-            logger.info('progress ...')
+                logger.info('progress ...')
+                e.progress()
+
+                if break_next:
+                    break
+
+                task_data = get_task_data(task)
+
+                self.log_task_data(task_data, monitoring_depth)
+                logger.info('------------------------------------------')
+
+                # break out of the loop when all jobs are done
+                aggregate = format_stats_data(e.stats())
+                if aggregate['count_total'] > 0:
+                    if aggregate['count_terminated'] == aggregate['count_total']:
+                        break_next = True
+        except KeyboardInterrupt:
+            # User interrupted process, which should kill all running jobs
+            logger.info('killing jobs')
+            logger.debug('killing task %s', task)
+            e.kill(task)
             e.progress()
-
-            if break_next:
-                break
-
-            task_data = get_task_data(task)
-
-            self.log_task_data(task_data, monitoring_depth)
-            logger.info('------------------------------------------')
-
-            # break out of the loop when all jobs are done
-            aggregate = format_stats_data(e.stats())
-            if aggregate['count_total'] > 0:
-                if aggregate['count_terminated'] == aggregate['count_total']:
-                    break_next = True
 
         self.log_task_failure(task_data)
 
@@ -302,14 +313,14 @@ class ClusterRoutines(BasicClusterRoutines):
             raise JobDescriptionError('No job descriptor files found.')
         collect_job_files = glob.glob(os.path.join(
                                       directory, '*_collect.job.json'))
-        if not collect_job_files:
-            logger.debug('no "collect" job descriptor file found')
-        with JsonReader() as reader:
-            for f in run_job_files:
-                batch = reader.read(f)
-                job_descriptions['run'].append(batch)
-            if collect_job_files:
-                job_descriptions['collect'] = reader.read(collect_job_files[0])
+
+        for f in run_job_files:
+            batch = self.read_job_file(f)
+            job_descriptions['run'].append(batch)
+        if collect_job_files:
+            f = collect_job_files[0]
+            job_descriptions['collect'] = self.read_job_file(f)
+
         return job_descriptions
 
     def get_log_output_from_files(self, job_id):
@@ -325,6 +336,11 @@ class ClusterRoutines(BasicClusterRoutines):
         -------
         Dict[str, str]
             "stdout" and "stderr" for the given job
+
+        Note
+        ----
+        In case there are several log files present for the given the most
+        recent one will be used (sorted by submission date and time point).
         '''
         directory = self.log_dir
         stdout_files = glob.glob(os.path.join(
@@ -462,9 +478,30 @@ class ClusterRoutines(BasicClusterRoutines):
         ------
         OSError
             when `filename` does not exist
+
+        Note
+        ----
+        The relative paths for "inputs" and "outputs" are made absolute.
         '''
+        def make_paths_absolute(batch):
+            for key, value in batch['inputs'].items():
+                if isinstance(value, dict):
+                    for k, v in batch['inputs'][key].items():
+                        batch['inputs'][key][k] = \
+                            os.path.join(self.experiment.dir, v)
+                else:
+                    batch['inputs'][key] = [
+                        os.path.join(self.experiment.dir, v) for v in value
+                    ]
+            for key, value in batch['outputs'].items():
+                batch['outputs'][key] = [
+                    os.path.join(self.experiment.dir, v) for v in value
+                ]
+            return batch
+
         with JsonReader() as reader:
-            return reader.read(filename)
+            batch = reader.read(filename)
+            return make_paths_absolute(batch)
 
     @staticmethod
     def _check_io_description(job_descriptions):
@@ -506,8 +543,25 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Note
         ----
-        Log directory is created if it does not exist.
+        The paths for "inputs" and "outputs" are made relative to the
+        experiment directory.
         '''
+        def make_paths_relative(batch):
+            for key, value in batch['inputs'].items():
+                if isinstance(value, dict):
+                    for k, v in batch['inputs'][key].items():
+                        batch['inputs'][key][k] = \
+                            os.path.relpath(v, self.experiment.dir)
+                else:
+                    batch['inputs'][key] = [
+                        os.path.relpath(v, self.experiment.dir) for v in value
+                    ]
+            for key, value in batch['outputs'].items():
+                batch['outputs'][key] = [
+                    os.path.relpath(v, self.experiment.dir) for v in value
+                ]
+            return batch
+
         if not os.path.exists(self.job_descriptions_dir):
             logger.debug('create directories for job descriptor files')
             os.makedirs(self.job_descriptions_dir)
@@ -515,11 +569,14 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('write job descriptor files')
         with JsonWriter() as writer:
             for batch in job_descriptions['run']:
+                logger.debug('make paths relative to experiment directory')
+                batch = make_paths_relative(batch)
                 job_file = self.build_run_job_filename(batch['id'])
                 writer.write(job_file, batch)
             if 'collect' in job_descriptions.keys():
+                batch = make_paths_relative(job_descriptions['collect'])
                 job_file = self.build_collect_job_filename()
-                writer.write(job_file, job_descriptions['collect'])
+                writer.write(job_file, batch)
 
     def _build_run_command(self, batch):
         # Build a command for GC3Pie submission. For further information on
