@@ -150,16 +150,16 @@ class Experiment(HashIdModel, CRUDMixin):
     def belongs_to(self, user):
         return self.owner == user
 
-    @property
-    def dataset(self):
-        import h5py
-        fpath = self.dataset_path
-        if os.path.exists(fpath):
-            print 'LOADING DATA SET'
-            print fpath
-            return h5py.File(fpath, 'r')
-        else:
-            return None
+    # @property
+    # def dataset(self):
+    #     import h5py
+    #     fpath = self.dataset_path
+    #     if os.path.exists(fpath):
+    #         print 'LOADING DATA SET'
+    #         print fpath
+    #         return h5py.File(fpath, 'r')
+    #     else:
+    #         return None
 
     def __repr__(self):
         return '<Experiment %r>' % self.name

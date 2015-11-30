@@ -7,6 +7,7 @@ from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 import numpy as np
+import pandas as pd
 
 import tmlib.experiment
 import tmlib.tmaps.workflow
@@ -48,9 +49,9 @@ def expdata_file(experiment_id, layer_name, filename):
 
 
 # TODO: Make auth required. tools subapp should receive token
-@api.route('/experiments/<experiment_id>/features', methods=['GET'])
+@api.route('/experiments/<experiment_id>/<object_name>/features', methods=['GET'])
 # @jwt_required()
-def get_features(experiment_id):
+def get_features(experiment_id, object_name):
     """
     Send a list of feature objects. In addition to the name and the channel
     to which each feature belongs, the caller may request additional properties
@@ -87,19 +88,23 @@ def get_features(experiment_id):
         print props
 
     features = []
+    dset = pd.DataFrame()
 
-    # with DatasetReader(exp.dataset_path) as dataset:
-    #     dset = dataset.read('/objects/cells/features')
-    #     feat_names = dataset.get_attribute('/objects/cells/features', 'names')
-    # feat_objs = [{'name': f} for f in feat_names]
+    with DatasetReader(exp.dataset_path) as data:
+        group = '/objects/%s/features' % object_name
+        datasets = data.list_datasets(group)
+        for d in datasets:
+            dset[d] = data.read('%s/%s' % (group, d))
 
-    # for prop in props:
-    #     f = _get_feat_property_extractor(prop)
-    #     prop_values = f(dset)
-    #     for feat, val in zip(feat_objs, prop_values):
-    #         feat[prop] = val
+    feat_objs = [{'name': f} for f in dset.columns.tolist()]
 
-    #     features += feat_objs
+    for prop in props:
+        f = _get_feat_property_extractor(prop)
+        prop_values = f(dset)
+        for feat, val in zip(feat_objs, prop_values):
+            feat[prop] = val
+
+        features += feat_objs
 
     return jsonify(features=features)
 
@@ -432,7 +437,8 @@ def get_objects(experiment_id, object_name):
     filename = os.path.join(experiment.dir, experiment.data_file)
     outlines = dict()
     with DatasetReader(filename) as data:
-        group_name = '/objects/%s/layer' % object_name
+        print 'object name: ', object_name
+        group_name = '/objects/%s/coordinates' % object_name
         ids = data.list_datasets(group_name)
         for i in ids:
             outlines[i] = data.read('%s/%s' % (group_name, i)).tolist()
