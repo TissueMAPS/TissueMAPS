@@ -3,6 +3,7 @@ import yaml
 import glob
 import time
 import datetime
+from natsort import natsorted
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
@@ -351,9 +352,9 @@ class ClusterRoutines(BasicClusterRoutines):
             raise IOError('No log files found for job # %d' % job_id)
         # Take the most recent log files
         log = dict()
-        with open(stdout_files[-1], 'r') as f:
+        with open(natsorted(stdout_files)[-1], 'r') as f:
             log['stdout'] = f.read()
-        with open(stderr_files[-1], 'r') as f:
+        with open(natsorted(stderr_files)[-1], 'r') as f:
             log['stderr'] = f.read()
         return log
 
