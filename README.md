@@ -1,7 +1,3 @@
-.. _introduction:
-
-Introduction
-============
 
 Jterator is a **cross-language pipeline engine** for scientific computing and image analysis.
 
@@ -22,8 +18,6 @@ Jterator pipes data as `numpy <http://www.numpy.org/>`_ arrays and allows integr
 
 This can be useful to combine Jterator modules with existing code without having to rewrite everything in Python.
 
-.. _main-ideas:
-
 The main ideas
 ==============
 
@@ -31,8 +25,6 @@ The main ideas
 - clear separation of GUI handling from actual processing
 - short list of (difficult to build) dependencies
 - cross-language compatibility
-
-.. _project:
 
 Project
 =======
@@ -102,14 +94,12 @@ Example of a *.pipe.yml* YAML descriptor file:
 Note that the working directory is by default the project folder. You can provide either a full path to modules and handles files or a path relative to the project folder. You can also make use of the ``lib`` variable within the pipeline descriptor file to specify the location where you keep your module files (python format string, note that in this case you need parenthesis for strings containing ``{}`` brackets!). Best practice is to have the ``handles`` folder in you project directory, because the specifications in the handles descriptor files are usually project specific (this is even required for the user interface).   
 The **images** section will create a list of jobs with filenames and id for each job that will be stored in a *.jobs.json* job descriptor file in JSON format.    
 
-.. _modules:
 
 Modules
 =======
 
 Modules are the actual executable code in your pipeline. Each module is simply a file that defines a function with the same name as the file.
 
-.. _data:
 
 Data
 ----
@@ -117,8 +107,6 @@ Data
 Measurement data are written to *.data.h5* HDF5 files to disk and stored in the *data* folder, a subdirectory of the project folder.
 
 The name of the data file is available to the module as ``kwargs["data_file"]``.
-
-.. _figures:
 
 Figures
 -------
@@ -130,10 +118,10 @@ To this end, modules can use the **savefigure** API function.
 The name of the figure file is available to the module as ``kwargs["figure_file"]``.
 
 
-.. _module-expamples:
-
 Module examples
 ---------------
+
+A simple example of a module function for each language that simply returns the input in the expected format.
 
 **Python example**:     
 
@@ -192,8 +180,6 @@ Module examples
     R functions should provide output as a `list` with named members.
 
 
-.. _module_descriptor-files:
-
 Module descriptor files
 -----------------------
 
@@ -250,12 +236,9 @@ Jterator internally adds the following keys in order to make this information av
 - **job_id**: one-based job identifier number
 
 
-.. _developer-documentation:
-
 Developer documentation
 =======================
 
-.. _naming-conventions:
 
 Naming conventions
 ==================
@@ -266,8 +249,6 @@ In the case of Python, a jterator module is simply a Python module that contains
 This approach also works for `Matlab function files <http://ch.mathworks.com/help/matlab/matlab_prog/create-functions-in-files.html>`_ and `R scripts <https://cran.r-project.org/doc/contrib/Lemon-kickstart/kr_scrpt.html>`_.
 
 
-.. _module-outut:
-
 Module output
 =============
 
@@ -277,8 +258,6 @@ Output of modules is either returned or written to the provided HDF5 file. The r
 
     Avoid writing to disk other than to the provided HDF5 file.
 
-
-.. _non-pyhon-modules:
 
 Non-Python modules
 ==================
