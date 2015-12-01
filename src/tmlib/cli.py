@@ -215,6 +215,7 @@ class CommandLineInterface(object):
                 for out in outputs:
                     if not os.path.exists(out):
                         logger.debug('output doesn\'t exist: %s', out)
+                        continue
                     if os.path.isdir(out):
                         logger.debug('remove output directory: %s' % out)
                         shutil.rmtree(out)
