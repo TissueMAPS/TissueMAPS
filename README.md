@@ -1,8 +1,7 @@
 .. _introduction:
 
-************
 Introduction
-************
+============
 
 Jterator is a **cross-language pipeline engine** for scientific computing and image analysis.
 
@@ -253,9 +252,8 @@ Jterator internally adds the following keys in order to make this information av
 
 .. _developer-documentation:
 
-***********************
 Developer documentation
-***********************
+=======================
 
 .. _naming-conventions:
 
