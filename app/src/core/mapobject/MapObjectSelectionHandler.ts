@@ -1,5 +1,5 @@
 interface SerializedSelectionHandler extends Serialized<MapObjectSelectionHandler> {
-    activeSelectionId: MapObjectSelectionId;
+    _activeSelectionId: MapObjectSelectionId;
     selections: SerializedMapObjectSelection[];
 }
 
@@ -10,12 +10,11 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     availableColors: Color[];
 
     private _selectionsByType: { [objectType: string]: MapObjectSelection[]; } = {};
+    private _markerSelectionModeActive: boolean = false;
+    private _activeMapObjectType: MapObjectType;
+    private _activeSelection: MapObjectSelection;
 
-    markerSelectionModeActive: boolean = false;
-    activeMapObjectType: MapObjectType;
-    activeSelectionId: MapObjectSelectionId;
-
-    constructor(viewport: Viewport) {
+    constructor(viewport: Viewport, mapObjectTypes: MapObjectType[]) {
 
         this.viewport = viewport;
 
@@ -28,13 +27,38 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             return Color.fromRGBString(rgb);
         });
         this.availableColors = availableColors;
+
+        _(mapObjectTypes).each((t) => {
+            this._selectionsByType[t] = [];
+        });
+
+        this.setActiveMapObjectType(mapObjectTypes[0]);
+    }
+
+    getActiveMapObjectType() {
+        return this._activeMapObjectType;
+    }
+
+    setActiveMapObjectType(t: MapObjectType) {
+        this._checkObjectType(t);
+        this._activeMapObjectType = t;
     }
 
     getSelectionsForType(type: string) {
-        if (this._selectionsByType[type] === undefined) {
-            this._selectionsByType[type] = [];
-        }
+        this._checkObjectType(type);
         return this._selectionsByType[type];
+    }
+
+    setActiveSelection(sel: MapObjectSelection) {
+        this._activeSelection = sel;
+    }
+
+    getActiveSelection(): MapObjectSelection {
+        if (this._activeSelection !== undefined) {
+            return this._activeSelection;
+        } else {
+            return undefined;
+        }
     }
 
     addMapObjectOutlines(cells: MapObject[]) {
@@ -56,7 +80,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         //             // subclass Feature directly.
         //             var mapObjectId = feat.get('name');
         //             var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
-        //             if (this.activeSelectionId !== -1) {
+        //             if (this._activeSelectionId !== -1) {
         //                 this.clickOnMapObject(clickPos, mapObjectId);
         //             }
         //         });
@@ -64,28 +88,20 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         // });
     }
 
-    addSelection(type: string, sel: MapObjectSelection) {
-        this.getSelectionsForType(type).push(sel);
+    addSelection(sel: MapObjectSelection) {
+        this._checkObjectType(sel.mapObjectType);
+        this.getSelectionsForType(sel.mapObjectType).push(sel);
     }
 
-    clickOnMapObject(clickPos: MapPosition, mapObject: MapObject) {
-        if (this.markerSelectionModeActive) {
+    clickOnMapObject(mapObject: MapObject, clickPos: MapPosition) {
+        this._checkObjectType(mapObject.type);
+        if (this._markerSelectionModeActive) {
             var sel = this.getActiveSelection();
             if (sel) {
                 sel.addMapObject(mapObject, clickPos);
             } else {
                 console.log('No active selection found');
             }
-        }
-    }
-
-    getActiveSelection(): MapObjectSelection {
-        if (this.activeSelectionId !== -1) {
-            return this.getSelection(
-                this.activeMapObjectType, this.activeSelectionId
-            );
-        } else {
-            return undefined;
         }
     }
 
@@ -101,6 +117,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     // }
 
     getSelection(type: string, selectionId: MapObjectSelectionId): MapObjectSelection {
+        this._checkObjectType(type);
         var selections = this.getSelectionsForType(type);
         return _(selections).find((s) => {
             return s.id === selectionId;
@@ -112,19 +129,32 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     //     return sel !== undefined ? sel.getMapObjects() : [];
     // }
 
-    addNewMapObjectSelection(type: string) {
+    addNewSelection(type: string) {
+        this._checkObjectType(type);
         var id = this.getSelectionsForType(type).length;
         var color = this._getNextColor(type);
         var newSel = new MapObjectSelection(id, type, color);
         this.viewport.map.then((map) => {
             newSel.addToMap(map);
         });
-        var selections = this.getSelectionsForType(type);
-        selections.push(newSel);
+        this.addSelection(newSel);
         return newSel;
     }
 
+    activateMarkerSelectionMode() {
+        this._markerSelectionModeActive = true;
+    }
+
+    deactivateMarkerSelectionMode() {
+        this._markerSelectionModeActive = false;
+    }
+
+    isMarkerSelectionModeActive() {
+        return this._markerSelectionModeActive;
+    }
+
     private _getNextColor(type: string) {
+        this._checkObjectType(type);
         var sels = this.getSelectionsForType(type);
         var possibleIds = _.range(this.availableColors.length);
         var usedIds = _(sels).map(function(s) { return s.id; });
@@ -151,6 +181,12 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         }
     };
 
+    private _checkObjectType(t: MapObjectType) {
+        if (this._selectionsByType[t] === undefined) {
+            throw new Error('Not a supported type');
+        }
+    }
+
     serialize() {
         var $q = $injector.get<ng.IQService>('$q');
         var selectionPromisesPerType = {};
@@ -166,7 +202,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         // mapObjectSelectionHandler.
         return $q.all(<any>selectionPromisesPerType).then((selections) => {
             var ser = {
-                activeSelectionId: this.activeSelectionId,
+                activeSelectionId: this._activeSelection === undefined ? -1 : this._activeSelection.id,
                 selections: selections
             };
             return ser;

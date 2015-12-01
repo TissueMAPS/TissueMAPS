@@ -36,7 +36,7 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
 
     getMapObjects() {
         var objects = [];
-        for (mapObjectId in this._entries) {
+        for (var mapObjectId in this._entries) {
             var entry = this._entries[mapObjectId];
             objects.push(entry.mapObject);
         }
@@ -51,11 +51,11 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
     }
 
     isMapObjectSelected(mapObject: MapObject) {
-        return this._entries.hasOwnProperty(mapObject.id);
+        return this._entries.hasOwnProperty(mapObject.id.toString());
     }
 
     removeMapObject(mapObject: MapObject) {
-        if (this._entries.hasOwnProperty(mapObject.id)) {
+        if (this.isMapObjectSelected(mapObject)) {
             delete this._entries[mapObject.id];
             this._layer.removeMapObjectMarker(mapObject.id);
             this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
@@ -88,9 +88,10 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
      */
     clear() {
         // TODO: Consider doing this via some batch mechanism if it proves to be slow
-        _.keys(this._entries).forEach((mapObjectId: MapObjectId) => {
-            this.removeMapObject(mapObjectId);
-        });
+        for (var k in this._entries) {
+            var o = this._entries[k].mapObject;
+            this.removeMapObject(o);
+        }
         this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
     }
 

@@ -13,7 +13,7 @@ describe('In MapObjectSelection', function() {
     }));
 
     beforeEach(function() {
-        l = new MapObjectSelection('some selection');
+        l = new MapObjectSelection('some selection', 'cell', Color.RED);
     });
 
     it('should have a VisualLayer as a property', function() {
