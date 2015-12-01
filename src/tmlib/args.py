@@ -183,6 +183,7 @@ class InitArgs(GeneralArgs):
         '''
         self.backup = False
         self.display = False
+        self.keep_output = False
         super(InitArgs, self).__init__(**kwargs)
 
     @property
