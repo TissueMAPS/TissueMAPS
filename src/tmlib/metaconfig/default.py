@@ -57,13 +57,14 @@ class MetadataHandler(object):
         self.omexml_files = omexml_files
         self.plate_name = plate_name
         self.metadata = bioformats.OMEXML(XML_DECLARATION)
-        self.file_mapper = list()
+        self.file_mapper_list = list()
+        self.file_mapper_dict = defaultdict(list)
         self.id_to_image_ix_ref = dict()
         self.id_to_well_id_ref = dict()
         self.id_to_wellsample_ix_ref = dict()
         self.channels = set()
         self.planes = set()
-        self.time_points = set()
+        self.tpoints = set()
 
     @cached_property
     def ome_image_metadata(self):
@@ -89,6 +90,15 @@ class MetadataHandler(object):
 
     @staticmethod
     def _create_channel_planes(pixels):
+        '''
+        Add new `Plane` elements to an existing OMEXML `Pixels` element for
+        each channel, z-plane or time point.
+
+        Parameters
+        ----------
+        pixels: bioformats.OMEXML.Image.Pixels
+            pixels element to which new planes should be added
+        '''
         # Add new *Plane* elements to an existing OMEXML *Pixels* object,
         # such that z-stacks are grouped by channel.
         n_channels = pixels.SizeC
@@ -170,14 +180,14 @@ class MetadataHandler(object):
                 pixels = image.Pixels
                 n_planes = pixels.plane_count
                 if n_planes == 0:
-                    # Sometimes an image doesn't have plane elements.
+                    # Sometimes an image doesn't have any plane elements.
                     # Let's create them for consistency.
                     pixels = self._create_channel_planes(pixels)
                     n_planes = pixels.plane_count  # update plane count
 
                 # Each metadata element represents an image, which could
                 # correspond to an individual plane or a z-stack, i.e. a
-                # collection of several focal planes with the same channel
+                # collection of several focal planes for the same channel
                 # and time point.
                 for p in xrange(n_planes):
                     plane = pixels.Plane(p)
@@ -203,12 +213,12 @@ class MetadataHandler(object):
                     pln.PositionY = plane.PositionY
                     pln.TheZ = plane.TheZ
                     # "TheC" will be defined later on, because this information
-                    # is often not yet available at this point
+                    # is often not yet available at this point.
                     if pxl.Channel(0).Name is not None:
                         self.channels.add(pxl.Channel(0).Name)
 
                     # Create a lookup table that will make it easier later on
-                    # to get an image given its ID
+                    # to get an image given its ID.
                     self.id_to_image_ix_ref[new_img.ID] = count
 
                     fm = ImageFileMapper()
@@ -218,7 +228,8 @@ class MetadataHandler(object):
                     fm.files = [f]
                     fm.series = [s]
                     fm.planes = [p]
-                    self.file_mapper.append(fm)
+                    self.file_mapper_list.append(fm)
+                    self.file_mapper_dict[new_img.Name].append(fm)
 
                     count += 1
 
@@ -236,7 +247,21 @@ class MetadataHandler(object):
         pass
 
     def _update_metadata(self, ome_image_element, metadata):
-        # NOTE: The parameter "metadata" is a list of OME *Image* objects.
+        '''
+        Update an existing OME `Image` element with additional metadata.
+
+        Parameters
+        ----------
+        ome_image_element: bioformats.OMEXML.Image
+            image element with additional information
+        metadata: List[bioformats.OMEXML.Image]
+            metadata of `Image` elements that should be updated
+
+        Returns
+        -------
+        List[bioformats.OMEXML.Image]
+            metadata of updated `Image` elements
+        '''
         updated_metadata = list(metadata)
         pixels = ome_image_element.Pixels
 
@@ -256,10 +281,10 @@ class MetadataHandler(object):
                 if hasattr(pixels.Channel(c), 'Name'):
                     img.Pixels.Channel(0).Name = pixels.Channel(c).Name
                     self.channels.add(img.Pixels.Channel(0).Name)
-            if not(hasattr(img.Pixels.Plane(0), 'PositionX')
-                   and hasattr(img.Pixels.Plane(0), 'PositionY')):
-                if (hasattr(pixels.Plane(0), 'PositionX')
-                        and hasattr(pixels.Plane(0), 'PositionY')):
+            if not(hasattr(img.Pixels.Plane(0), 'PositionX') and
+                    hasattr(img.Pixels.Plane(0), 'PositionY')):
+                if (hasattr(pixels.Plane(0), 'PositionX') and
+                        hasattr(pixels.Plane(0), 'PositionY')):
                     img.Pixels.Plane(0).PositionX = pixels.Plane(0).PositionX
                     img.Pixels.Plane(0).PositionY = pixels.Plane(0).PositionY
             updated_metadata[c] = img
@@ -360,54 +385,68 @@ class MetadataHandler(object):
 
         logger.info('update Image elements with additional metadata')
 
+        ################
+        # Bottleneck 1 #  30 min
+        ################
+
         lut = dict()
         r = re.compile(self.REGEX)
         for i in xrange(n_images):
+            image = self.metadata.image(i)
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
             # regular expression, which is supposed to match a pattern in the
             # image filename and is able to extract the required information.
             # Here we create a lookup table with a mapping of captured matches
             # to the ID of the corresponding image element.
-            if len(self.file_mapper[i].files) > 1:
+            if len(self.file_mapper_list[i].files) > 1:
                 raise ValueError('There should only be a single filename.')
-            filename = os.path.basename(self.file_mapper[i].files[0])
+            filename = os.path.basename(self.file_mapper_list[i].files[0])
             match = r.search(filename)
             if not match:
                 raise RegexError(
                         'Incorrect reference to image files in plate element.')
             captures = match.groupdict()
             if 'z' not in captures.keys():
-                captures['z'] = self.metadata.image(i).Pixels.Plane(0).TheZ
+                captures['z'] = image.Pixels.Plane(0).TheZ
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
-            lut[key] = self.metadata.image(i).ID
+            lut[key] = image.ID
 
             # Update metadata with information provided from additional files.
-            # NOTE: Only image elements are considered for which the value
-            # of the *Name* attribute matches.
             if self.ome_additional_metadata.image(i).Name == 'default.png':
-                img = self.metadata.image(i)
-                self.time_points.add(img.Pixels.Plane(0).TheT)
-                self.planes.add(img.Pixels.Plane(0).TheZ)
+                # Collect this information so that we don't have
+                # to loop over the whole metadata again to retrieve it later on
+                self.tpoints.add(image.Pixels.Plane(0).TheT)
+                self.planes.add(image.Pixels.Plane(0).TheZ)
                 continue
-            image = self.ome_additional_metadata.image(i)
-            matched_elements = {
-                ix: self.metadata.image(ix)
-                for ix, fm in enumerate(self.file_mapper)
-                if fm.name == image.Name
-            }
+
+            # Only consider image elements for which the value of the *Name*
+            # attribute matches.
+            name = self.ome_additional_metadata.image(i).Name
+            matched_indices = [
+                e.ref_index for e in self.file_mapper_dict[name]
+            ]
+            matched_elements = [
+                self.metadata.image(ix) for ix in matched_indices
+            ]
             updated_elements = self._update_metadata(
-                                    image, matched_elements.values())
-            for j, ix in enumerate(matched_elements.keys()):
+                                    self.ome_additional_metadata.image(i),
+                                    matched_elements)
+            for j, ix in enumerate(matched_indices):
+                # Update the Image element
                 img = self.metadata.image(ix)
                 img = updated_elements[j]
-                # Collect this information in a list so that we don't have
-                # to loop over the whole metadata
-                self.time_points.add(img.Pixels.Plane(0).TheT)
+                # Collect this information so that we don't have
+                # to loop over the whole metadata again to retrieve it later on
+                self.tpoints.add(img.Pixels.Plane(0).TheT)
                 self.planes.add(img.Pixels.Plane(0).TheZ)
 
         logger.info('create a Plate element based on additional metadata')
+
+        ################
+        # Bottleneck 2 #  2 h 30 min
+        ################
 
         # NOTE: Plate information is usually not readily available from images
         # or additional metadata files and thus requires custom readers/handlers
@@ -455,7 +494,7 @@ class MetadataHandler(object):
             missing_metadata.add('channel')
         if not self.planes:
             missing_metadata.add('focal plane')
-        if not self.time_points:
+        if not self.tpoints:
             missing_metadata.add('time point')
         if not hasattr(self.metadata, 'Plate'):
             missing_metadata.add('plate')
@@ -501,7 +540,7 @@ class MetadataHandler(object):
             metadata with one *Image* element for each 2D *Plane* element
         '''
         filenames = natsorted(list(set([
-            f for fm in self.file_mapper for f in fm.files
+            f for fm in self.file_mapper_list for f in fm.files
         ])))
         if self.metadata.image_count != len(filenames):
             raise MetadataError(
@@ -547,7 +586,7 @@ class MetadataHandler(object):
             wells[capture['w']].append(i)
             self.channels.add(img.Pixels.Channel(0).Name)
             self.planes.add(img.Pixels.Plane(0).TheZ)
-            self.time_points.add(img.Pixels.Plane(0).TheT)
+            self.tpoints.add(img.Pixels.Plane(0).TheT)
 
         logger.info('create a Plate element based on additional metadata')
 
@@ -791,9 +830,9 @@ class MetadataHandler(object):
             fm.ref_index = i
             for ref_id in ids[i]:
                 ref_ix = self.id_to_image_ix_ref[ref_id]
-                fm.files.extend(self.file_mapper[ref_ix].files)
-                fm.series.extend(self.file_mapper[ref_ix].series)
-                fm.planes.extend(self.file_mapper[ref_ix].planes)
+                fm.files.extend(self.file_mapper_list[ref_ix].files)
+                fm.series.extend(self.file_mapper_list[ref_ix].series)
+                fm.planes.extend(self.file_mapper_list[ref_ix].planes)
             proj_file_mapper.append(fm)
 
 
@@ -828,7 +867,7 @@ class MetadataHandler(object):
         # accounting for projection
         self.metadata = proj_metadata
         self.planes = set([0])  # projected!
-        self.file_mapper = proj_file_mapper
+        self.file_mapper_list = proj_file_mapper
         self.id_to_image_ix_ref = proj_id_to_image_ix_ref
         self.id_to_well_id_ref = proj_id_to_well_id_ref
         self.id_to_wellsample_ix_ref = proj_id_to_wellsample_ix_ref
@@ -941,7 +980,7 @@ class MetadataHandler(object):
         '''
         logger.info('build image file mapper')
         hashmap = list()
-        if len(self.file_mapper[0].files) > 1:
+        if len(self.file_mapper_list[0].files) > 1:
             # In this case individual focal planes that should be projected
             # to the final 2D plane are distributed across several files.
             # These files have to be loaded on the same node in order to be
@@ -951,13 +990,13 @@ class MetadataHandler(object):
                 element.ref_index = i
                 element.ref_id = self.metadata.image(i).ID
                 element.ref_file = self.metadata.image(i).Name
-                element.files = self.file_mapper[i].files
-                element.series = self.file_mapper[i].series
-                element.planes = self.file_mapper[i].planes
+                element.files = self.file_mapper_list[i].files
+                element.series = self.file_mapper_list[i].series
+                element.planes = self.file_mapper_list[i].planes
                 hashmap.append(dict(element))
         else:
             # In this case images files contain one or multiple planes
-            filenames = [f for fm in self.file_mapper for f in fm.files]
+            filenames = [f for fm in self.file_mapper_list for f in fm.files]
             for f in filenames:
                 ix = utils.indices(filenames, f)
                 for i in ix:
@@ -966,8 +1005,8 @@ class MetadataHandler(object):
                     element.ref_id = self.metadata.image(i).ID
                     element.ref_file = self.metadata.image(i).Name
                     element.files = [f]
-                    element.series = self.file_mapper[i].series
-                    element.planes = self.file_mapper[i].planes
+                    element.series = self.file_mapper_list[i].series
+                    element.planes = self.file_mapper_list[i].planes
                     hashmap.append(dict(element))
 
         return hashmap
