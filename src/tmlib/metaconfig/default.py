@@ -471,10 +471,11 @@ class MetadataHandler(object):
                 reference = plate.Well[w].Sample[s].ImageRef
                 index = sorted(reference.keys())
                 key = tuple([reference[ix] for ix in index])
-                new_samples[s].ImageRef = lut[key]
+                image_id = lut[key]
+                new_samples[s].ImageRef = image_id
                 # Create a reference from Image ID to Well and WellSample Index
-                self.id_to_well_id_ref[lut[key]] = well_id
-                self.id_to_wellsample_ix_ref[lut[key]] = s
+                self.id_to_well_id_ref[image_id] = well_id
+                self.id_to_wellsample_ix_ref[image_id] = s
 
         return self.metadata
 
