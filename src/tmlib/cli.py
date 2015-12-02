@@ -286,6 +286,8 @@ class CommandLineInterface(object):
 
         logger.info('create job descriptions')
         job_descriptions = api.create_job_descriptions(args.variable_args)
+        if not job_descriptions['run']:
+            raise ValueError('No job descriptions were created.')
         if args.display:
             api.print_job_descriptions(job_descriptions)
         else:

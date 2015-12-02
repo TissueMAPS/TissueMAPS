@@ -490,7 +490,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     for k, v in batch['inputs'][key].items():
                         batch['inputs'][key][k] = \
                             os.path.join(self.experiment.dir, v)
-                else:
+                elif isinstance(value, list):
                     if isinstance(value[0], list):
                         for i, v in enumerate(value):
                             batch['inputs'][key][i] = [
@@ -501,10 +501,15 @@ class ClusterRoutines(BasicClusterRoutines):
                         batch['inputs'][key] = [
                             os.path.join(self.experiment.dir, v) for v in value
                         ]
+                else:
+                    raise TypeError('Value of "inputs" must have type list or dict.')
             for key, value in batch['outputs'].items():
-                batch['outputs'][key] = [
-                    os.path.join(self.experiment.dir, v) for v in value
-                ]
+                if isinstance(value, list):
+                    batch['outputs'][key] = [
+                        os.path.join(self.experiment.dir, v) for v in value
+                    ]
+                else:
+                    raise TypeError('Value of "outputs" must have type list.')
             return batch
 
         with JsonReader() as reader:
@@ -560,7 +565,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     for k, v in batch['inputs'][key].items():
                         batch['inputs'][key][k] = \
                             os.path.relpath(v, self.experiment.dir)
-                else:
+                elif isinstance(value, list):
                     if isinstance(value[0], list):
                         for i, v in enumerate(value):
                             batch['inputs'][key][i] = [
@@ -572,17 +577,22 @@ class ClusterRoutines(BasicClusterRoutines):
                             os.path.relpath(v, self.experiment.dir)
                             for v in value
                         ]
+                else:
+                    raise TypeError('Value of "inputs" must have type list or dict.')
             for key, value in batch['outputs'].items():
-                batch['outputs'][key] = [
-                    os.path.relpath(v, self.experiment.dir) for v in value
-                ]
+                if isinstance(value, list):
+                    batch['outputs'][key] = [
+                        os.path.relpath(v, self.experiment.dir) for v in value
+                    ]
+                else:
+                    raise TypeError('Value of "outputs" must have type list.')
             return batch
 
         if not os.path.exists(self.job_descriptions_dir):
             logger.debug('create directories for job descriptor files')
             os.makedirs(self.job_descriptions_dir)
         self._check_io_description(job_descriptions)
-        logger.debug('write job descriptor files')
+
         with JsonWriter() as writer:
             for batch in job_descriptions['run']:
                 logger.debug('make paths relative to experiment directory')
