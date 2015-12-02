@@ -83,11 +83,13 @@ class IllumstatsGenerator(ClusterRoutines):
                             ]
                         },
                         'outputs': {
-                            'stats_file':
+                            'stats_files': [
                                 os.path.join(
                                     cycle.stats_dir,
                                     self.stats_file_format_string.format(
-                                        channel_ix=channels[i]))
+                                        channel_ix=channels[i])
+                                )
+                            ]
                         },
                         'channel': channels[i],
                         'cycle': cycle.index
@@ -113,7 +115,7 @@ class IllumstatsGenerator(ClusterRoutines):
                              os.path.basename(f))
                 img = reader.read(f)
                 stats.update(img)
-        stats_file = batch['outputs']['stats_file']
+        stats_file = batch['outputs']['stats_files'][0]
         logger.info('write calculated statistics to file')
         with DatasetWriter(stats_file, truncate=True) as writer:
             writer.write('/images/mean', data=stats.mean)
