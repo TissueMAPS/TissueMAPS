@@ -507,6 +507,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             /metadata/<job_id>/image_dimension_y                    # Dataset {SCALAR}
             /objects                                                # Group
             /objects/<object_name>                                  # Group
+            /objects/<object_name>/ids                              # Dataset {n}
             /objects/<object_name>/segmentation                     # Group
             /objects/<object_name>/segmentation/job_ids             # Dataset {n}
             /objects/<object_name>/segmentation/object_ids          # Dataset {n}
@@ -522,8 +523,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
             /objects/<object_name>/segmentation/image_dimensions/x  # Dataset {n}
             /objects/<object_name>/features                         # Group
             /objects/<object_name>/features/<feature_name>          # Dataset {n}
-            /objects/<object_name>/coordinates                      # Group
-            /objects/<object_name>/coordinates/<object_id>          # Dataset {m, 2}
+            /objects/<object_name>/map_data                         # Group
+            /objects/<object_name>/map_data/coordinates             # Group
+            /objects/<object_name>/map_data/coordinates/<object_id> # Dataset {m, 2}
+
+        where *n* is the total number of objects and *m* is the number of
+        a objects in an object subset (*m* <= *n*).
 
         Parameters
         ----------
