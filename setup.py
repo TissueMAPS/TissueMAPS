@@ -193,11 +193,11 @@ if scripts is None:
 setuptools.setup(
     name='tmlib',
     version=get_version(),
-    description='TissueMAPS toolbox. Image processing and data analysis '
+    description='TissueMAPS library. Image processing and data analysis '
                 'routines for TissueMAPS.',
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann at gmail dot com',
-    url='https://github.com/hackermd/tissuemapstoolbox',
+    url='https://github.com/tissuemaps/tmlibrary',
     platforms=['Linux', 'OS-X'],
     classifiers=[
         'Topic :: Scientific/Engineering :: Image Recognition',
