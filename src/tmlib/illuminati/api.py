@@ -64,15 +64,16 @@ class PyramidBuilder(ClusterRoutines):
                         batch_indices.append(md[ix].index.tolist())
 
                 for j, indices in enumerate(batch_indices):
+                    logger.debug('create description for job # %d', j+1)
                     image_files = md.loc[indices]['name']
                     channel = np.unique(md.loc[indices]['channel_ix'])[0]
                     zplane = np.unique(md.loc[indices]['zplane_ix'])[0]
                     layer_names = [
                         lmd.name
                         for lmd in self.experiment.layer_metadata.values()
-                        if lmd.channel_ix == channel
-                        and lmd.tpoint_ix == cycle.index
-                        and lmd.zplane_ix == zplane
+                        if lmd.channel_ix == channel and
+                        lmd.tpoint_ix == cycle.index and
+                        lmd.zplane_ix == zplane
                     ]
                     if len(layer_names) != 1:
                         raise ValueError('Wrong number of layer names.')

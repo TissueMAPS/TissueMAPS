@@ -101,8 +101,6 @@ class ChannelLayer(object):
         ][0]
         logger.info('create layer "%s"', name)
 
-        logger.info('stitch images to mosaic')
-
         # Set the size of the spacer. Note that this parameter has to be the
         # same for the creation of the corresponding object layers!
         logger.debug('spacer size: %d', spacer_size)
@@ -148,11 +146,15 @@ class ChannelLayer(object):
         # Column spacer: insert between two wells in each row
         # (and instead of a well in case the whole column is empty
         # and lies between other nonempty columns)
+        logger.debug('create column spacer: %d x %d pixels',
+                     mosaic.dimensions[0], spacer_size)
         column_spacer = image_utils.create_spacer_image(
                 mosaic.dimensions[0], spacer_size,
                 dtype=mosaic.dtype, bands=1)
         # Empty well spacer: insert instead of a well in case the well
         # is empty, but not the whole row or column is empty
+        logger.debug('create empty well spacer: %d x %d pixels',
+                     mosaic.dimensions[0], mosaic.dimensions[1])
         empty_well_spacer = image_utils.create_spacer_image(
                 mosaic.dimensions[0], mosaic.dimensions[1],
                 dtype=mosaic.dtype, bands=1)
@@ -165,11 +167,13 @@ class ChannelLayer(object):
                                     list(set(nonempty_rows))))
         n_nonempty_cols = len(nonempty_columns)
         n_empty_cols_2fill = len(empty_columns_2fill)
+        row_height = (
+            mosaic.dimensions[1] * n_nonempty_cols +
+            column_spacer.width * n_empty_cols_2fill +
+            column_spacer.width * (plate_grid.shape[1] + 1)
+        )
         row_spacer = image_utils.create_spacer_image(
-                spacer_size,
-                mosaic.dimensions[1]*n_nonempty_cols +
-                column_spacer.width*n_empty_cols_2fill +
-                column_spacer.width*(plate_grid.shape[1]+1),
+                spacer_size, row_height,
                 dtype=mosaic.dtype, bands=1)
 
         # Start each plate with a spacer
@@ -658,6 +662,13 @@ class ObjectLayer(object):
 
         with DatasetWriter(filename) as data:
             for object_id, value in self.coordinates.iteritems():
-                path = '/objects/%s/coordinates/%d' % (self.name, object_id)
+                data.set_attribute(
+                    'objects/{name}'.format(name=self.name),
+                    name='visual_type', data='polygon'
+                )
+                path = '/objects/{name}/map_data/coordinates/{id}'.format(
+                            name=self.name, id=object_id)
                 data.write(path, value)
-                data.set_attribute(path, 'columns', value.columns.tolist())
+                data.set_attribute(
+                    path, name='columns', data=value.columns.tolist()
+                )

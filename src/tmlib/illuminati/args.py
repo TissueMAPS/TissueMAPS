@@ -157,6 +157,6 @@ class IlluminatiInitArgs(VariableArgs):
             'type': float,
             'default': 99.9,
             'help': '''
-                percentage of pixel values below clip level
+                percentage of pixel values below clip level (default: 99.9)
             '''
         }

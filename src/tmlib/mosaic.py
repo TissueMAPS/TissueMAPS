@@ -176,9 +176,7 @@ class Mosaic(StichedImage):
             raise ValueError('"dy" has to be a negative integer value')
 
         grid = Mosaic._build_image_grid(images)
-        # rows = list()
         for i in xrange(grid.shape[0]):
-            # current_row = list()
             for j in xrange(grid.shape[1]):
 
                 img = grid[i, j]
@@ -190,24 +188,16 @@ class Mosaic(StichedImage):
                 if j == 0:
                     row = img.pixels.array
                 else:
-                    row = row.merge(img.pixels.array, 'horizontal',
-                                    -row.width-dx, 0)
-
-                print row.height, row.width
+                    row = row.merge(
+                            img.pixels.array, 'horizontal', -row.width-dx, 0
+                    )
 
             if i == 0:
                 mosaic = row
             else:
-                mosaic = mosaic.merge(row, 'vertical',
-                                      0, -mosaic.height-dy)
-
-            print mosaic.height, mosaic.width
-
-        #         current_row.append(img.pixels.array)
-        #     rows.append(reduce(lambda x, y:
-        #                 x.merge(y, 'horizontal', -x.width-dx, 0), current_row))
-        # img = reduce(lambda x, y:
-        #              x.merge(y, 'vertical', 0, -x.height-dy), rows)
+                mosaic = mosaic.merge(
+                            row, 'vertical', 0, -mosaic.height-dy
+                )
 
         return Mosaic(mosaic)
 
