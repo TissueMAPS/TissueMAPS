@@ -174,6 +174,7 @@ class JsonReader(TextReader):
             filename = os.path.join(self.directory, filename)
         if not os.path.exists(filename):
             raise OSError('File does not exist: %s' % filename)
+        logger.debug('read file: %s', filename)
         with open(filename, 'r') as f:
             return load_json(f.read())
 
@@ -268,6 +269,7 @@ class YamlReader(TextReader):
             filename = os.path.join(self.directory, filename)
         if not os.path.exists(filename):
             raise OSError('File does not exist: %s' % filename)
+        logger.debug('read file: %s', filename)
         with open(filename, 'r') as f:
             yaml_content = load_yaml(f.read(), use_ruamel)
         return yaml_content
@@ -306,6 +308,7 @@ class DatasetReader(object):
         self.filename = filename
 
     def __enter__(self):
+        logger.debug('read file: %s', self.filename)
         self._stream = h5py.File(self.filename, 'r')
         return self
 
