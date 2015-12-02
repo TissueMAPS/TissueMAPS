@@ -151,8 +151,8 @@ class Experiment(HashIdModel, CRUDMixin):
     def belongs_to(self, user):
         return self.owner == user
 
-    @contextmanager
     @property
+    @contextmanager
     def dataset(self):
         import h5py
         fpath = self.dataset_path
