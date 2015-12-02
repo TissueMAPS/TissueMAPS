@@ -11,10 +11,10 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     private _selectionsByType: { [objectType: string]: MapObjectSelection[]; } = {};
     private _markerSelectionModeActive: boolean = false;
-    private _activeMapObjectType: MapObjectType;
+    private _activeMapObjectType: MapObjectType = null;
     private _activeSelection: MapObjectSelection;
 
-    constructor(viewport: Viewport, mapObjectTypes: MapObjectType[]) {
+    constructor(viewport: Viewport) {
 
         this.viewport = viewport;
 
@@ -27,16 +27,17 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             return Color.fromRGBString(rgb);
         });
         this.availableColors = availableColors;
+    }
 
-        _(mapObjectTypes).each((t) => {
-            this._selectionsByType[t] = [];
-        });
-
-        this.setActiveMapObjectType(mapObjectTypes[0]);
+    addMapObjectType(t: MapObjectType) {
+        this._selectionsByType[t] = [];
+        if (this._activeMapObjectType === null) {
+            this._activeMapObjectType = t;
+        }
     }
 
     getActiveMapObjectType() {
-        return this._activeMapObjectType;
+        return this._activeMapObjectType !== null ? this._activeMapObjectType : 'None';
     }
 
     setActiveMapObjectType(t: MapObjectType) {
@@ -183,7 +184,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     private _checkObjectType(t: MapObjectType) {
         if (this._selectionsByType[t] === undefined) {
-            throw new Error('Not a supported type');
+            throw new Error('Not a supported type. Did you add it already?');
         }
     }
 

@@ -6,7 +6,6 @@ interface MapState {
 }
 
 interface SerializedViewport extends Serialized<Viewport> {
-    selectionHandler: SerializedSelectionHandler;
     // TODO: Create separate interface for serialized layer options.
     // The color object on channelLayerOptions isn't a full Color object
     // when restored.
@@ -30,8 +29,6 @@ class Viewport implements Serializable<Viewport> {
     channelLayers: ChannelLayer[] = [];
     visualLayers: VisualLayer[] = [];
 
-    selectionHandler: MapObjectSelectionHandler;
-
     private _mapDef: ng.IDeferred<ol.Map>;
     private _elementDef: ng.IDeferred<JQuery>;
     private _elementScopeDef: ng.IDeferred<ViewportElementScope>;
@@ -52,10 +49,6 @@ class Viewport implements Serializable<Viewport> {
 
         this._elementScopeDef = this._$q.defer();
         this.elementScope = this._elementScopeDef.promise;
-
-        // Helper class to manage the differently marker selections
-        // TODO: dsf
-        this.selectionHandler = new MapObjectSelectionHandler(this, ['cell']);
 
         // var createDemoRectangles = function(startx, starty) {
         //     var side = 100;
@@ -94,10 +87,6 @@ class Viewport implements Serializable<Viewport> {
         // this.addObjectLayer(objLayerA);
         // this.addObjectLayer(objLayerB);
 
-    }
-
-    setSelectionHandler(sh: MapObjectSelectionHandler) {
-        this.selectionHandler = sh;
     }
 
     addVisualLayer(visLayer: VisualLayer) {
@@ -218,16 +207,13 @@ class Viewport implements Serializable<Viewport> {
             var channelOptsPr = this._$q.all(_(this.channelLayers).map((l) => {
                 return l.serialize();
             }));
-            var selectionHandlerPr = this.selectionHandler.serialize();
             var bundledPromises: any = {
                 channels: channelOptsPr,
-                selHandler: selectionHandlerPr
             };
             return this._$q.all(bundledPromises).then((res: any) => {
                 return {
                     channelLayerOptions: res.channels,
-                    mapState: mapState,
-                    selectionHandler: res.selHandler
+                    mapState: mapState
                 };
             });
         });
