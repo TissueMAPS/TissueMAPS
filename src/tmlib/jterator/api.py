@@ -438,10 +438,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                data=md.plate_name)
                     data.write('/metadata/%s/well_name' % job_id,
                                data=md.well_name)
-                    data.write('/metadata/%s/well_pos_x' % job_id,
-                               data=md.well_pos_x)
-                    data.write('/metadata/%s/well_pos_y' % job_id,
+                    data.write('/metadata/%s/well_position_y' % job_id,
                                data=md.well_pos_y)
+                    data.write('/metadata/%s/well_position_x' % job_id,
+                               data=md.well_pos_x)
                     data.write('/metadata/%s/image_dimension_y' % job_id,
                                data=orig_dims[0])
                     data.write('/metadata/%s/image_dimension_x' % job_id,
@@ -490,8 +490,40 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def collect_job_output(self, batch):
         '''
-        Collect the data stored across individual HDF5 files, fuse them and
-        store them in a single, separate HDF5 file.
+        Collect the data stored across individual HDF5 files, fuse, and store
+        them in a single HDF5 file.
+
+        The final file has the following hierarchical structure::
+
+            /metadata                                               # Group
+            /metadata/<job_id>                                      # Group
+            /metadata/<job_id>/plate_name                           # Dataset {SCALAR}
+            /metadata/<job_id>/well_name                            # Dataset {SCALAR}
+            /metadata/<job_id>/well_posistion_x                     # Dataset {SCALAR}
+            /metadata/<job_id>/well_posistion_y                     # Dataset {SCALAR}
+            /metadata/<job_id>/shift_offset_x                       # Dataset {SCALAR}
+            /metadata/<job_id>/shift_offset_y                       # Dataset {SCALAR}
+            /metadata/<job_id>/image_dimension_x                    # Dataset {SCALAR}
+            /metadata/<job_id>/image_dimension_y                    # Dataset {SCALAR}
+            /objects                                                # Group
+            /objects/<object_name>                                  # Group
+            /objects/<object_name>/segmentation                     # Group
+            /objects/<object_name>/segmentation/job_ids             # Dataset {n}
+            /objects/<object_name>/segmentation/object_ids          # Dataset {n}
+            /objects/<object_name>/segmentation/is_border           # Dataset {n}
+            /objects/<object_name>/segmentation/centroids           # Group
+            /objects/<object_name>/segmentation/centroids/y         # Dataset {n}
+            /objects/<object_name>/segmentation/centroids/x         # Dataset {n}
+            /objects/<object_name>/segmentation/outlines            # Group
+            /objects/<object_name>/segmentation/outlines/y          # Dataset {n}
+            /objects/<object_name>/segmentation/outlines/x          # Dataset {n}
+            /objects/<object_name>/segmentation/image_dimensions    # Group
+            /objects/<object_name>/segmentation/image_dimensions/y  # Dataset {n}
+            /objects/<object_name>/segmentation/image_dimensions/x  # Dataset {n}
+            /objects/<object_name>/features                         # Group
+            /objects/<object_name>/features/<feature_name>          # Dataset {n}
+            /objects/<object_name>/coordinates                      # Group
+            /objects/<object_name>/coordinates/<object_id>          # Dataset {m, 2}
 
         Parameters
         ----------

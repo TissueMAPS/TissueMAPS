@@ -314,7 +314,7 @@ class ImageProcessingModule(object):
         Returns
         -------
         dict
-            keys: name of the input argument, values: input data
+            input arguments
         '''
         # Prepare input provided by handles
         inputs = collections.OrderedDict()
