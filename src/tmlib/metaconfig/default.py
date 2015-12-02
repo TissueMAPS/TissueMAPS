@@ -475,6 +475,9 @@ class MetadataHandler(object):
                 # Create a reference from Image ID to Well and WellSample Index
                 self.id_to_well_id_ref[image_id] = well_id
                 self.id_to_wellsample_ix_ref[image_id] = i
+                # Store the well object
+                # NOTE: There is a problem with the __getitem__ method of the
+                # WellDucttype class.
                 self.wells[well_id] = well
 
         return self.metadata

@@ -57,8 +57,8 @@ class CellvoyagerMetadataReader(MetadataReader):
             image and plate metadata
         '''
         metadata = bioformats.OMEXML(XML_DECLARATION)
-        # 1) Obtain the positional information for each image acquisition site
-        #    from the ".mlf" file:
+        # Obtain the positional information for each image acquisition site
+        # from the ".mlf" file:
         mlf_tree = etree.parse(mlf_filename)
         mlf_root = mlf_tree.getroot()
         mlf_elements = mlf_root.xpath('.//bts:MeasurementRecord',
@@ -66,7 +66,7 @@ class CellvoyagerMetadataReader(MetadataReader):
         mlf_ns = mlf_root.nsmap['bts']
 
         metadata.image_count = len(mlf_elements)
-        lut = defaultdict(list)
+        lookup = defaultdict(list)
         r = re.compile(CellvoyagerMetadataHandler.REGEX)
         for i, e in enumerate(mlf_elements):
             img = metadata.image(i)
@@ -96,11 +96,10 @@ class CellvoyagerMetadataReader(MetadataReader):
                             int(e.attrib['{%s}Row' % mlf_ns]))
             well_col = int(e.attrib['{%s}Column' % mlf_ns])
             well_id = '%s%.2d' % (well_row, well_col)
-            lut[well_id].append(captures)
+            lookup[well_id].append(captures)
 
-        # 2) Obtain the general experiment information and well plate format
-        #    specifications from the ".mrf" file and store them in the OMEXML
-        #    object as well:
+        # Obtain the general experiment information and well plate format
+        # specifications from the ".mrf" file:
         mrf_tree = etree.parse(mrf_filename)
         mrf_root = mrf_tree.getroot()
         mrf_ns = mrf_root.nsmap['bts']
@@ -111,14 +110,14 @@ class CellvoyagerMetadataReader(MetadataReader):
         plate.ColumnNamingConvention = 'number'
         plate.Rows = e.attrib['{%s}RowCount' % mrf_ns]
         plate.Columns = e.attrib['{%s}ColumnCount' % mrf_ns]
-        wells = lut.keys()
+        wells = lookup.keys()
         for w in set(wells):
             # Create a *Well* element for each imaged well in the plate
             row = utils.map_letter_to_number(w[0]) - 1
             col = int(w[1:]) - 1
             well = metadata.WellsDucktype(plate).new(row=row, column=col)
             well_samples = metadata.WellSampleDucktype(well.node)
-            for i, reference in enumerate(lut[w]):
+            for i, reference in enumerate(lookup[w]):
                 # Create a *WellSample* element for each acquisition site
                 well_samples.new(index=i)
                 well_samples[i].ImageRef = reference
