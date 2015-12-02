@@ -420,23 +420,59 @@ def create_pyramids(exp_id):
     return 'Creation ok', 200
 
 
-@api.route('/experiments/<experiment_id>/<object_name>', methods=['GET'])
+@api.route('/experiments/<experiment_id>/objects', methods=['GET'])
 @jwt_required()
-def get_objects(experiment_id, object_name):
+def get_objects(experiment_id):
+    """
+    The response will be built depending on whether the GET arguments
+    ?types or ?objects are given.
+
+    Response:
+    
+    Either
+
+    {
+        types: ['cell', 'nucleus']
+    }
+
+    or
+
+    {
+        objects: {
+            1: [[x1, y1], [x2, y2], ....],
+            2: [[x1, y1], [x2, y2], ....],
+            ...
+        }
+    }
+
+    or both responses merged into one.
+
+    """
     ex = Experiment.get(experiment_id)
     if not ex:
         return RESOURCE_NOT_FOUND_RESPONSE
 
-    # Load outlines for each object from the HDF5 file
-    experiment = tmlib.experiment.Experiment(ex.location)
-    filename = os.path.join(experiment.dir, experiment.layers_file)
-    outlines = dict()
-    with DatasetReader(filename) as data:
-        ids = data.list_dataset_names('/%s' % object_name)
-        for i in ids:
-            outlines[i] = data.read('/%s/%s' % (object_name, i)).tolist()
+    if not ex.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
 
-    return jsonify(outlines)
+    response = {}
+
+    if 'types' in request.args:
+        with ex.dataset as data:
+            response['types'] = data['/objects'].keys()
+    if 'objects' in request.args:
+        with ex.dataset as data:
+            objects = {}
+            types = data['/objects'].keys()
+            for t in types:
+                objects[t] = {}
+                object_data = data['/objects/%s' % t]
+                object_ids = object_data.keys()
+                for id in object_ids:
+                    objects[t][id] = object_data[id][()].tolist()
+            response['objects'] = objects
+
+    return jsonify(response)
 
 
 @api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])
