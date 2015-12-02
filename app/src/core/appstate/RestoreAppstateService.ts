@@ -27,10 +27,6 @@ class RestoreAppstateService {
     private restoreViewport(vp: Viewport, vpState: SerializedViewport) {
         // Create and initialize the selection handler
         // TODO
-        var selHandler = new MapObjectSelectionHandler(vp, ['cell']);
-        this.restoreSelectionHandler(selHandler, vpState.selectionHandler);
-        vp.setSelectionHandler(selHandler);
-
         // Add all layers
         vpState.channelLayerOptions.forEach((ch) => {
             // Colors were serialized as mere objects holding r, g, b.

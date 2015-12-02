@@ -1,4 +1,4 @@
-type MapObjectMap = { [objectType: string]: MapObject[]; };
+type MapObjectMap = { [objectType: string]: { [objectId: number]: MapObject}; };
 
 interface MapObjectTypeResponse {
     ids: number[];

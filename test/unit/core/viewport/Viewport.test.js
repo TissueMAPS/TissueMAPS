@@ -107,16 +107,6 @@ describe('In Viewport', function() {
         });
     });
 
-    describe('the function setSelectionHandler', function() {
-        it('should set the CellSelectionHandler', function() {
-            var selHandler = {};
-            var vp = new Viewport();
-
-            vp.setSelectionHandler(selHandler);
-            expect(vp.selectionHandler).toEqual(selHandler);
-        });
-    });
-
     describe('the function addObjectLayer', function() {
         pending();
         var l;
@@ -330,23 +320,6 @@ describe('In Viewport', function() {
                 done();
             });
 
-            $rootScope.$apply();
-        });
-
-        it('should serialize the selection handler\'s state', function(done) {
-            var fakeSelectionHandlerState = 'this_would_be_an_object';
-            vp.selectionHandler.serialize =
-                jasmine.createSpy('serialize').and.returnValue(fakeSelectionHandlerState);
-
-            var serializedVp = vp.serialize();
-            $rootScope.$apply();
-
-            expect(vp.selectionHandler.serialize).toHaveBeenCalled();
-
-            serializedVp.then(function(ser) {
-                expect(ser.selectionHandler).toEqual('this_would_be_an_object');
-                done();
-            });
             $rootScope.$apply();
         });
 

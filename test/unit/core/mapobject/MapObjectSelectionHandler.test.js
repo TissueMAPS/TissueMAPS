@@ -13,7 +13,9 @@ describe('In MapObjectSelectionHandler', function() {
 
     beforeEach(function() {
         vp = {};
-        sh = new MapObjectSelectionHandler(vp, ['cell', 'nucleus']);
+        sh = new MapObjectSelectionHandler(vp);
+        sh.addMapObjectType('cell');
+        sh.addMapObjectType('nucleus');
         sel1 = new MapObjectSelection(0, 'cell', Color.RED);
         sel2 = new MapObjectSelection(0, 'nucleus', Color.BLUE);
         cell = {id: 1, type: 'cell'};
