@@ -491,9 +491,16 @@ class ClusterRoutines(BasicClusterRoutines):
                         batch['inputs'][key][k] = \
                             os.path.join(self.experiment.dir, v)
                 else:
-                    batch['inputs'][key] = [
-                        os.path.join(self.experiment.dir, v) for v in value
-                    ]
+                    if isinstance(value[0], list):
+                        for i, v in enumerate(value):
+                            batch['inputs'][key][i] = [
+                                os.path.join(self.experiment.dir, sub_v)
+                                for sub_v in v
+                            ]
+                    else:
+                        batch['inputs'][key] = [
+                            os.path.join(self.experiment.dir, v) for v in value
+                        ]
             for key, value in batch['outputs'].items():
                 batch['outputs'][key] = [
                     os.path.join(self.experiment.dir, v) for v in value
@@ -554,9 +561,17 @@ class ClusterRoutines(BasicClusterRoutines):
                         batch['inputs'][key][k] = \
                             os.path.relpath(v, self.experiment.dir)
                 else:
-                    batch['inputs'][key] = [
-                        os.path.relpath(v, self.experiment.dir) for v in value
-                    ]
+                    if isinstance(value[0], list):
+                        for i, v in enumerate(value):
+                            batch['inputs'][key][i] = [
+                                os.path.relpath(sub_v, self.experiment.dir)
+                                for sub_v in v
+                            ]
+                    else:
+                        batch['inputs'][key] = [
+                            os.path.relpath(v, self.experiment.dir)
+                            for v in value
+                        ]
             for key, value in batch['outputs'].items():
                 batch['outputs'][key] = [
                     os.path.relpath(v, self.experiment.dir) for v in value
