@@ -8,7 +8,7 @@ from .args import CorillaInitArgs
 from ..args import ApplyArgs
 
 parser, subparsers = Corilla.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'cleanup'])
+    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log'])
 
 parser.description = '''
     Calculate illumination statistics over a set of images of the same
