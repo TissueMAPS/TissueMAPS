@@ -58,21 +58,28 @@ describe('In MapObjectManager', function() {
         it('should return the map objects requested', function(done) {
             m.getMapObjectsById('cells', [1, 2]).then(function(res) {
                 expect(res.length).toEqual(2);
-                // expect(res[0].id).toEqual(1);
-                // expect(res[1].id).toEqual(2);
                 done();
             });
             $rootScope.$apply();
         });
     });
 
-    describe('the function getMapObjectsByType', function() {
+    describe('the function getMapObjectsForType', function() {
         it('should return the map objects requested', function(done) {
-            m.getMapObjectsByType('cells').then(function(objs) {
+            m.getMapObjectsForType('cells').then(function(objs) {
                 console.log('adjfhalksdhfasdkhfaklshdflk');
                 expect(objs[1].id).toEqual(1);
                 expect(objs[2].id).toEqual(2);
                 done();
+            });
+            $rootScope.$apply();
+        });
+    });
+
+    describe('the function getMapObjectTypes', function() {
+        it('should return the supported object types', function() {
+            m.getMapObjectTypes().then(function(types) {
+                expect(_.intersection(types, ['cells']).length === 1).toEqual(true);
             });
             $rootScope.$apply();
         });

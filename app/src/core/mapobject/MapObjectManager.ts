@@ -26,7 +26,7 @@ class MapObjectManager {
         this._fetchMapObjects(experiment);
     }
 
-    getMapObjectsByType(t: MapObjectType): ng.IPromise<MapObject[]> {
+    getMapObjectsForType(t: MapObjectType): ng.IPromise<MapObject[]> {
         var def = this._$q.defer();
         this.mapObjectsByType.then((objs) => {
             if (objs[t] === undefined) {
@@ -36,6 +36,12 @@ class MapObjectManager {
             }
         });
         return def.promise;
+    }
+
+    getMapObjectTypes(): ng.IPromise<string[]> {
+        return this.mapObjectsByType.then((map) => {
+            return _.keys(map);
+        });
     }
 
     getMapObjectsById(type: MapObjectType,
