@@ -502,14 +502,19 @@ class ClusterRoutines(BasicClusterRoutines):
                             os.path.join(self.experiment.dir, v) for v in value
                         ]
                 else:
-                    raise TypeError('Value of "inputs" must have type list or dict.')
+                    raise TypeError(
+                            'Value of "inputs" must have type list or dict.')
             for key, value in batch['outputs'].items():
                 if isinstance(value, list):
                     batch['outputs'][key] = [
                         os.path.join(self.experiment.dir, v) for v in value
                     ]
+                elif isinstance(value, basestring):
+                    batch['outputs'][key] = \
+                        os.path.join(self.experiment.dir, value)
                 else:
-                    raise TypeError('Value of "outputs" must have type list.')
+                    raise TypeError(
+                            'Value of "outputs" must have type list or str.')
             return batch
 
         with JsonReader() as reader:
@@ -578,14 +583,19 @@ class ClusterRoutines(BasicClusterRoutines):
                             for v in value
                         ]
                 else:
-                    raise TypeError('Value of "inputs" must have type list or dict.')
+                    raise TypeError(
+                            'Value of "inputs" must have type list or dict.')
             for key, value in batch['outputs'].items():
                 if isinstance(value, list):
                     batch['outputs'][key] = [
                         os.path.relpath(v, self.experiment.dir) for v in value
                     ]
+                elif isinstance(value, basestring):
+                    batch['outputs'][key] = \
+                        os.path.relpath(value, self.experiment.dir)
                 else:
-                    raise TypeError('Value of "outputs" must have type list.')
+                    raise TypeError(
+                            'Value of "outputs" must have type list or str.')
             return batch
 
         if not os.path.exists(self.job_descriptions_dir):
