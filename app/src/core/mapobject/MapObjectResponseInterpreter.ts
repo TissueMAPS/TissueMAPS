@@ -1,6 +1,6 @@
 class MapObjectResponseInterpreter {
     getObjectsForResponse(response: MapObjectTypeResponse): MapObject[] {
-        switch (response.visualType) {
+        switch (response.visual_type) {
             case 'polygon':
                 return this._getForPolygonVisualType(response);
                 break;

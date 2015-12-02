@@ -2,7 +2,7 @@ type MapObjectMap = { [objectType: string]: MapObject[]; };
 
 interface MapObjectTypeResponse {
     ids: number[];
-    visualType: string;
+    visual_type: string;
     map_data: any;
 }
 interface MapObjectsServerResponse {
@@ -29,12 +29,11 @@ class MapObjectManager {
     getMapObjectsByType(t: MapObjectType): ng.IPromise<MapObject[]> {
         var def = this._$q.defer();
         this.mapObjectsByType.then((objs) => {
-            def.resolve(objs[t]);
-            // if (objs[t] === undefined) {
-            //     def.reject('No map objects for this type');
-            // } else {
-            //     def.resolve(objs[t]);
-            // }
+            if (objs[t] === undefined) {
+                def.reject('No map objects for this type');
+            } else {
+                def.resolve(objs[t]);
+            }
         });
         return def.promise;
     }
@@ -44,6 +43,7 @@ class MapObjectManager {
         return this.mapObjectsByType.then((objs) => {
             var foundObjects = [];
             _(ids).each((id) => {
+                console.log(id);
                 var o = objs[type][id];
                 if (o !== undefined) {
                     foundObjects.push(o);
@@ -63,12 +63,18 @@ class MapObjectManager {
         var $http = $injector.get<ng.IHttpService>('$http');
         $http.get('/api/experiments/' + e.id + '/objects')
         .success((resp: MapObjectsServerResponse) => {
-            // Inferred type is just '{}' so we need to typecast
             var objs: MapObjectMap = {};
             var responseInterpreter = new MapObjectResponseInterpreter();
             for (var t in resp.objects) {
+                objs[t] = {};
+                // The response for some specific type
                 var responseForType = resp.objects[t];
-                objs[t] = responseInterpreter.getObjectsForResponse(responseForType);
+                // Get an array of map objects for this response
+                var mapObjects = responseInterpreter.getObjectsForResponse(responseForType);
+                // Add each of those objects to the object map
+                _(mapObjects).each((o) => {
+                    objs[t][o.id] = o;
+                });
             }
             this._mapObjectsByTypeDef.resolve(objs);
         })
