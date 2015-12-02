@@ -62,6 +62,7 @@ class MetadataHandler(object):
         self.id_to_image_ix_ref = dict()
         self.id_to_well_id_ref = dict()
         self.id_to_wellsample_ix_ref = dict()
+        self.wells = dict()
         self.channels = set()
         self.planes = set()
         self.tpoints = set()
@@ -385,11 +386,7 @@ class MetadataHandler(object):
 
         logger.info('update Image elements with additional metadata')
 
-        ################
-        # Bottleneck 1 #  30 min
-        ################
-
-        lut = dict()
+        lookup = dict()
         r = re.compile(self.REGEX)
         for i in xrange(n_images):
             image = self.metadata.image(i)
@@ -411,7 +408,7 @@ class MetadataHandler(object):
                 captures['z'] = image.Pixels.Plane(0).TheZ
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
-            lut[key] = image.ID
+            lookup[key] = image.ID
 
             # Update metadata with information provided from additional files.
             if self.ome_additional_metadata.image(i).Name == 'default.png':
@@ -444,38 +441,41 @@ class MetadataHandler(object):
 
         logger.info('create a Plate element based on additional metadata')
 
-        ################
-        # Bottleneck 2 #  2 h 30 min
-        ################
-
         # NOTE: Plate information is usually not readily available from images
         # or additional metadata files and thus requires custom readers/handlers
-        plate = self.ome_additional_metadata.plates[0]
-        new_plate = self.metadata.PlatesDucktype(
+        p = self.ome_additional_metadata.plates[0]
+        plate = self.metadata.PlatesDucktype(
                         self.metadata.root_node).newPlate(name='default')
-        new_plate.RowNamingConvention = plate.RowNamingConvention
-        new_plate.ColumnNamingConvention = plate.ColumnNamingConvention
-        new_plate.Rows = plate.Rows
-        new_plate.Columns = plate.Columns
+        plate.RowNamingConvention = p.RowNamingConvention
+        plate.ColumnNamingConvention = p.ColumnNamingConvention
+        plate.Rows = p.Rows
+        plate.Columns = p.Columns
 
-        for w, well_id in enumerate(plate.Well):
-            new_well = self.metadata.WellsDucktype(new_plate).new(
-                            row=plate.Well[w].Row, column=plate.Well[w].Column)
-            new_samples = self.metadata.WellSampleDucktype(new_well.node)
-            n_samples = len(plate.Well[w].Sample)
-            for s in xrange(n_samples):
-                new_samples.new(index=s)
+        # NOTE: the following code represents a major bottleneck
+
+        for well_id in p.Well:
+            well = self.metadata.WellsDucktype(plate).new(
+                            row=p.Well[well_id].Row,
+                            column=p.Well[well_id].Column)
+            samples = self.metadata.WellSampleDucktype(well.node)
+            w = p.Well[well_id]
+            n_samples = len(w.Sample)
+            for i in xrange(n_samples):
+                samples.new(index=i)
                 # Find the reference *Image* elements for the current
                 # well sample using the above created lookup table
                 # (using the same sorting logic!)
-                reference = plate.Well[w].Sample[s].ImageRef
+                # TODO: retrieval of the reference ID takes a very long time,
+                # also use a dictionary for that in cellvoyager and visiview
+                reference = w.Sample[i].ImageRef
                 index = sorted(reference.keys())
                 key = tuple([reference[ix] for ix in index])
-                image_id = lut[key]
-                new_samples[s].ImageRef = image_id
+                image_id = lookup[key]
+                samples[i].ImageRef = image_id
                 # Create a reference from Image ID to Well and WellSample Index
                 self.id_to_well_id_ref[image_id] = well_id
-                self.id_to_wellsample_ix_ref[image_id] = s
+                self.id_to_wellsample_ix_ref[image_id] = i
+                self.wells[well_id] = well
 
         return self.metadata
 
@@ -604,19 +604,19 @@ class MetadataHandler(object):
         well_ids = wells.keys()
         if not(utils.is_number(well_ids[0][1:]) and well_ids[0][0].isupper()):
             raise MetadataError('Plate naming convention is not understood.')
-        for i, w in enumerate(well_ids):
-            well = well_ids[i]
+        for i, well_id in enumerate(well_ids):
             row = rows[i]
             col = cols[i]
             well = self.metadata.WellsDucktype(plate).new(row=row, column=col)
             well_samples = self.metadata.WellSampleDucktype(well.node)
-            for j, ix in enumerate(wells[w]):
+            for j, ix in enumerate(wells[well_id]):
                 img_id = self.metadata.image(ix).ID
                 well_samples.new(index=j)
                 well_samples[j].ImageRef = img_id
                 # Create a reference from Image ID to Well and WellSample Index
                 self.id_to_wellsample_ix_ref[img_id] = j
-                self.id_to_well_id_ref[img_id] = w
+                self.id_to_well_id_ref[img_id] = well_id
+                self.wells[well_id] = well
 
         return self.metadata
 
@@ -650,8 +650,8 @@ class MetadataHandler(object):
         for i in xrange(self.metadata.image_count):
             img = self.metadata.image(i)
             p = img.Pixels.Plane(0)
-            if (not(hasattr(p, 'PositionY')) or p.PositionY is None
-                    or not(hasattr(p, 'PositionX')) or p.PositionX is None):
+            if (not(hasattr(p, 'PositionY')) or p.PositionY is None or
+                    not(hasattr(p, 'PositionX')) or p.PositionX is None):
                 raise MetadataError(
                     'Stage position information is not available for image: %s'
                     % img.Name)
@@ -660,9 +660,9 @@ class MetadataHandler(object):
                     'relative acquisition grid coordinates')
 
         plate = self.metadata.plates[0]
-        for w in plate.Well:
+        for well_id in plate.Well:
 
-            well = plate.Well[w]
+            well = plate.Well[well_id]
 
             positions = list()
             for i, sample in enumerate(well.Sample):
@@ -677,6 +677,7 @@ class MetadataHandler(object):
             for i, sample in enumerate(well.Sample):
                 sample.PositionY = coordinates[i][0]
                 sample.PositionX = coordinates[i][1]
+                self.wells[well_id] = well
 
         return self.metadata
 
@@ -736,12 +737,13 @@ class MetadataHandler(object):
         logger.debug('stitch layout: {0}; stitch dimensions: {1}'.format(
                      stitch_layout, stitch_dimensions))
 
-        for w in plate.Well:
+        for well_id in plate.Well:
 
             coordinates = stitch.calc_grid_coordinates_from_layout(
                                         stitch_dimensions, stitch_layout)
 
-            for i, sample in enumerate(plate.Well[w].Sample):
+            well = plate.Well[well_id]
+            for i, sample in enumerate(well.Sample):
                 # Map coordinates back to the corresponding well samples
                 ref_id = sample.ImageRef
                 ref_ix = self.id_to_image_ix_ref[ref_id]
@@ -752,6 +754,7 @@ class MetadataHandler(object):
                 s_ix = samples[k].index(i)
                 sample.PositionY = coordinates[s_ix][0]
                 sample.PositionX = coordinates[s_ix][1]
+                self.wells[well_id] = well
 
         return self.metadata
 
@@ -785,8 +788,8 @@ class MetadataHandler(object):
                 k = (w, sample.PositionY, sample.PositionX, c, t)
                 zstacks[k].append(ref_id)
 
-        lut, ids = pd.DataFrame(zstacks.keys()), zstacks.values()
-        lut.columns = ['w', 'y', 'x', 'c', 't']
+        lookup, ids = pd.DataFrame(zstacks.keys()), zstacks.values()
+        lookup.columns = ['w', 'y', 'x', 'c', 't']
 
         # Create a new metadata object, which only contains *Image* elements
         # for the projected planes
@@ -816,8 +819,8 @@ class MetadataHandler(object):
             pln = pxl.Plane(0)
             pln.TheT = ref_im.Pixels.Plane(0).TheT
             pln.TheZ = 0  # projected!
-            if (hasattr(ref_im.Pixels.Plane(0), 'PositionY')
-                    and hasattr(ref_im.Pixels.Plane(0), 'PositionX')):
+            if (hasattr(ref_im.Pixels.Plane(0), 'PositionY') and
+                    hasattr(ref_im.Pixels.Plane(0), 'PositionX')):
                 pln.PositionY = ref_im.Pixels.Plane(0).PositionY
                 pln.PositionX = ref_im.Pixels.Plane(0).PositionX
 
@@ -854,15 +857,16 @@ class MetadataHandler(object):
             well = proj_metadata.WellsDucktype(proj_plate).new(
                             row=p.Well[w].Row, column=p.Well[w].Column)
             samples = proj_metadata.WellSampleDucktype(well.node)
-            well_ix = lut[(lut['w'] == well_id)].index.tolist()
+            well_ix = lookup[(lookup['w'] == well_id)].index.tolist()
             for s, ix in enumerate(well_ix):
                 samples.new(index=s)
-                samples[s].PositionX = lut.iloc[ix]['x']
-                samples[s].PositionY = lut.iloc[ix]['y']
+                samples[s].PositionX = lookup.iloc[ix]['x']
+                samples[s].PositionY = lookup.iloc[ix]['y']
                 im_id = proj_metadata.image(ix).ID
                 samples[s].ImageRef = im_id
                 proj_id_to_well_id_ref[im_id] = well_id
                 proj_id_to_wellsample_ix_ref[im_id] = s
+                self.wells[well_id] = well
 
         # Update all other data that links to the metadata prior to 
         # accounting for projection
@@ -894,6 +898,7 @@ class MetadataHandler(object):
         '''
         logger.info('update channel ids')
         for i in xrange(self.metadata.image_count):
+            # TODO: optimize
             for j, c in enumerate(self.channels):
                 if self.metadata.image(i).Pixels.Channel(0).Name == c:
                     self.metadata.image(i).Pixels.Plane(0).TheC = j
@@ -918,6 +923,7 @@ class MetadataHandler(object):
         Apply this method only at the end of the configuration process.
         '''
         logger.info('update plane ids')
+        # TODO: optimize
         planes = sorted(set([
             self.metadata.image(i).Pixels.Plane(0).TheZ
             for i in xrange(self.metadata.image_count)
@@ -952,7 +958,7 @@ class MetadataHandler(object):
             img = self.metadata.image(i)
             well_id = self.id_to_well_id_ref[img.ID]
             site_ix = self.id_to_wellsample_ix_ref[img.ID]
-            site = self.metadata.plates[0].Well[well_id].Sample[site_ix]
+            site = self.wells[well_id].Sample[site_ix]
             fieldnames = {
                 'plate_name': self.plate_name,
                 'w': well_id,
