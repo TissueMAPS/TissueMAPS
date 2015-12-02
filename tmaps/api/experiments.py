@@ -424,24 +424,25 @@ def create_pyramids(exp_id):
 @jwt_required()
 def get_objects(experiment_id):
     """
-    The response will be built depending on whether the GET arguments
-    ?types or ?objects are given.
 
     Response:
-    
-    Either
-
-    {
-        types: ['cell', 'nucleus']
-    }
-
-    or
 
     {
         objects: {
-            1: [[x1, y1], [x2, y2], ....],
-            2: [[x1, y1], [x2, y2], ....],
-            ...
+            -- Each supported type will get an entry
+            cells: {
+                ids: [1, 2, ..., n],
+                visual_type: 'polygon',
+                -- map_data can store information that is
+                -- specific to the chosen visual_type.
+                map_data: {
+                    coordinates: {
+                        1: [[x1, y1], [x2, y2], ....],
+                        2: [[x1, y1], [x2, y2], ....],
+                        ...
+                    }
+                }
+            }
         }
     }
 
@@ -455,24 +456,32 @@ def get_objects(experiment_id):
     if not ex.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
 
-    response = {}
+    objects = {}
 
-    if 'types' in request.args:
-        with ex.dataset as data:
-            response['types'] = data['/objects'].keys()
-    if 'objects' in request.args:
-        with ex.dataset as data:
-            objects = {}
-            types = data['/objects'].keys()
-            for t in types:
-                objects[t] = {}
-                object_data = data['/objects/%s' % t]
-                object_ids = object_data.keys()
-                for id in object_ids:
-                    objects[t][id] = object_data[id][()].tolist()
-            response['objects'] = objects
+    with ex.dataset as data:
+        types = data['/objects'].keys()
 
-    return jsonify(response)
+        for t in types:
+            objects[t] = {}
+
+            object_data = data['/objects/%s' % t]
+
+            objects[t]['visual_type'] = object_data.attrs['visual_type']
+            objects[t]['ids'] = object_data['ids'][()].tolist()
+            objects[t]['map_data'] = {}
+
+            # TODO: This should be done in a generic fashion.
+            # The whole content of map_data should be added to objects[t]['map_data'],
+            # regardless of its actual structure. The content should be converted
+            # to dicts and lists, s.t. they can be jsonified.
+            objects[t]['map_data']['coordinates'] = {}
+            for id in object_data['map_data/coordinates']:
+                objects[t]['map_data']['coordinates'][int(id)] = \
+                    object_data['map_data/coordinates/%s' % id][()].tolist()
+
+    return jsonify({
+        'objects': objects
+    })
 
 
 @api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])

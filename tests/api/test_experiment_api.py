@@ -1,4 +1,5 @@
 import os.path as p
+import os
 import pytest
 import numpy as np
 import mock
@@ -127,31 +128,28 @@ def test_get_objects(authclient, testexp):
 
     def create_object(typenames):
         import h5py
-        f = h5py.File(p.join(testexp.location, 'data.h5'), 'w')
+        filename = p.join(testexp.location, 'data.h5')
+        f = h5py.File(filename, 'w')
         for t in typenames:
-            f.create_group('/objects/%s' % t)
-            objs = f['/objects/%s' % t]
-            objs['1'] = np.array([[0, 0], [0, 1]])
-            objs['2'] = np.array([[0, 0], [0, 1]])
+            g = f.create_group('/objects/%s' % t)
+            g.attrs['visual_type'] = 'polygon'
+
+            g['ids'] = np.array([1, 2])
+            g['map_data/coordinates/1'] = np.array([[0, 0], [0, 1]])
+            g['map_data/coordinates/2'] = np.array([[0, 0], [0, 1]])
         f.close()
+        return filename
 
-    create_object(['cells', 'nuclei'])
+    filename = create_object(['cells', 'nuclei'])
 
-    resp = authclient.get('/api/experiments/%s/objects?types' % testexp.hash)
+    resp = authclient.get('/api/experiments/%s/objects' % testexp.hash)
     data = json.loads(resp.data)
-    assert 'types' in data
-    assert data['types'] == ['cells', 'nuclei']
 
-    resp = authclient.get('/api/experiments/%s/objects?objects' % testexp.hash)
-    data = json.loads(resp.data)
-    assert 'objects' in data
-    assert data['objects']['cells']['1'] == [[0, 0], [0, 1]]
+    assert 'cells' in data['objects']
+    assert 'nuclei' in data['objects']
+    assert data['objects']['cells']['map_data']['coordinates']['1'] == [[0, 0], [0, 1]]
 
-    # Both at the same time
-    resp = authclient.get('/api/experiments/%s/objects?types&objects' % testexp.hash)
-    data = json.loads(resp.data)
-    assert 'objects' in data
-    assert 'types' in data
+    os.remove(filename)
 
 
 @pytest.mark.skipif(True, reason='Throws error')
