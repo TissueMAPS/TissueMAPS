@@ -28,8 +28,6 @@ class Experiment implements Serializable<Experiment> {
     description: string;
     // TODO: Move this property into a new extending class.
     channels: Channel[];
-    cells: ng.IPromise<Cell[]>;
-    cellMap: ng.IPromise<{ [cellId: number]: Cell }>;
     features: ng.IPromise<any>;
 
     constructor(opt: ExperimentArgs) {
@@ -49,16 +47,6 @@ class Experiment implements Serializable<Experiment> {
             featuresDef.resolve(feats);
         });
         this.features = featuresDef.promise;
-
-        this.cells = expService.getCellsForExperiment(this.id);
-        this.cellMap = this.cells.then((cells) => {
-            var map = {};
-            var nCells = cells.length;
-            for (let i = 0; i < nCells; i++) {
-                map[cells[i].id] = cells[i];
-            }
-            return map;
-        });
     }
 
     serialize(): ng.IPromise<SerializedExperiment> {

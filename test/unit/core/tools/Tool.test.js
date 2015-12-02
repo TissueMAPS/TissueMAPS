@@ -203,6 +203,7 @@ describe('In Tool', function() {
             }).respond(200, response);
         });
         it('should send the payload to the right endpoint', function() {
+            pending();
             var payload = {
                 message: 'hello'
             };
@@ -214,6 +215,7 @@ describe('In Tool', function() {
         });
 
         it('should broadcast messages on the viewport scope when succeeding', function(done) {
+            pending();
             tool.sendRequest(payload);
             $httpBackend.flush();
             tool.appInstance.viewport.elementScope.then(function(vpScope) {
@@ -227,6 +229,7 @@ describe('In Tool', function() {
         });
 
         it('should broadcast messages on the viewport scope when failing', function(done) {
+            pending();
             handler.respond(500, 'some error message');
             var payload = {
                 message: 'hello'
@@ -244,6 +247,7 @@ describe('In Tool', function() {
         });
 
         it('should add the result to the results array', function() {
+            pending();
             expect(tool.results.length).toEqual(0);
             tool.sendRequest(payload);
             $httpBackend.flush();

@@ -1,0 +1,79 @@
+type MapObjectMap = { [objectType: string]: MapObject[]; };
+
+interface MapObjectTypeResponse {
+    ids: number[];
+    visualType: string;
+    map_data: any;
+}
+interface MapObjectsServerResponse {
+    objects: { [type: string]: MapObjectTypeResponse };
+}
+
+class MapObjectManager {
+
+    mapObjectsByType: ng.IPromise<MapObjectMap>;
+    experiment: Experiment;
+
+    private _mapObjectsByTypeDef: ng.IDeferred<MapObjectMap>;
+    private _$q: ng.IQService;
+
+    constructor(experiment: Experiment) {
+        this.experiment = experiment;
+
+        this._$q = $injector.get<ng.IQService>('$q');
+        this._mapObjectsByTypeDef = this._$q.defer();
+        this.mapObjectsByType = this._mapObjectsByTypeDef.promise;
+        this._fetchMapObjects(experiment);
+    }
+
+    getMapObjectsByType(t: MapObjectType): ng.IPromise<MapObject[]> {
+        var def = this._$q.defer();
+        this.mapObjectsByType.then((objs) => {
+            def.resolve(objs[t]);
+            // if (objs[t] === undefined) {
+            //     def.reject('No map objects for this type');
+            // } else {
+            //     def.resolve(objs[t]);
+            // }
+        });
+        return def.promise;
+    }
+
+    getMapObjectsById(type: MapObjectType,
+                      ids: MapObjectId[]): ng.IPromise<MapObject[]> {
+        return this.mapObjectsByType.then((objs) => {
+            var foundObjects = [];
+            _(ids).each((id) => {
+                var o = objs[type][id];
+                if (o !== undefined) {
+                    foundObjects.push(o);
+                }
+            })
+            return foundObjects;
+        });
+    }
+
+    getSupportedMapObjectTypes(): ng.IPromise<MapObjectType[]> {
+        return this.mapObjectsByType.then((objs) => {
+            return _(objs).keys();
+        });
+    }
+
+    private _fetchMapObjects(e: Experiment) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        $http.get('/api/experiments/' + e.id + '/objects')
+        .success((resp: MapObjectsServerResponse) => {
+            // Inferred type is just '{}' so we need to typecast
+            var objs: MapObjectMap = {};
+            var responseInterpreter = new MapObjectResponseInterpreter();
+            for (var t in resp.objects) {
+                var responseForType = resp.objects[t];
+                objs[t] = responseInterpreter.getObjectsForResponse(responseForType);
+            }
+            this._mapObjectsByTypeDef.resolve(objs);
+        })
+        .error((err) => {
+            this._mapObjectsByTypeDef.reject(err);
+        });
+    }
+}

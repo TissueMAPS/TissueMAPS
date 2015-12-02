@@ -12,7 +12,20 @@ type MapObjectType = string;
  *
  * The id attribute should identify a object uniquely within its type.
  */
-interface MapObject extends Visualizable {
-    id: MapObjectId;
-    type: MapObjectType;
+class MapObject {
+
+    constructor(public id: MapObjectId,
+                public type: MapObjectType,
+                public visualType: string,
+                public extraData: any) {}
+
+    getVisual() {
+        switch (this.visualType) {
+            case 'polygon':
+                return new PolygonVisual(this.extraData.coordinates);
+                break;
+            default:
+                throw new Error('Unknown visual type');
+        }
+    }
 }

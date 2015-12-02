@@ -54,7 +54,8 @@ class Viewport implements Serializable<Viewport> {
         this.elementScope = this._elementScopeDef.promise;
 
         // Helper class to manage the differently marker selections
-        this.selectionHandler = new MapObjectSelectionHandler(this);
+        // TODO: dsf
+        this.selectionHandler = new MapObjectSelectionHandler(this, ['cell']);
 
         // var createDemoRectangles = function(startx, starty) {
         //     var side = 100;
@@ -115,17 +116,6 @@ class Viewport implements Serializable<Viewport> {
             });
         }
     }
-
-    // TODO: Handle this via mapobjects.
-    // getCellAtPos(pos: MapPosition) {
-    //     return this.$http.get(
-    //         '/experiments/' + this.experiment.id +
-    //         '/cells?x=' + pos.x + '&y=' + pos.y
-    //     ).then((resp) => {
-    //         console.log(resp);
-    //         return resp.data['cell_id'];
-    //     });
-    // }
 
     addChannelLayer(channelLayer: ChannelLayer) {
         var alreadyHasLayers = this.channelLayers.length !== 0;

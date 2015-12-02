@@ -3,13 +3,12 @@ type PolygonCoordinatesOL = Array<Array<ol.Coordinate>>;
 
 class PolygonVisual extends Visual implements StrokeVisual, FillVisual {
 
-    constructor(position: MapPosition, outline: PolygonCoordinates) {
-        var coord = [position.x, position.y];
-        var feat = new ol.Feature({
-            labelPoint: new ol.geom.Point(coord)
-        });
+    constructor(outline: PolygonCoordinates) {
         var outl: PolygonCoordinatesOL = [outline];
-        feat.setGeometry(new ol.geom.Polygon(outl));
+        var geom = new ol.geom.Polygon(outl);
+        var feat = new ol.Feature({
+            geometry: geom
+        });
         if (this.fillColor !== undefined) {
             var style = new ol.style.Style({
                 fill: new ol.style.Fill({

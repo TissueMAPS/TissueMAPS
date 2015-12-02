@@ -2,6 +2,7 @@ class SelectionLayer extends BaseLayer<ol.layer.Vector> {
 
     color: Color;
     mapObjectMarkers = {};
+    private _olLayer: ol.layer.Vector;
 
     constructor(name: string,
                 color: Color) {
@@ -29,18 +30,18 @@ class SelectionLayer extends BaseLayer<ol.layer.Vector> {
             return [style];
         };
 
-        this.olLayer = new ol.layer.Vector({
+        this._olLayer = new ol.layer.Vector({
             source: new ol.source.Vector(),
             style: styleFunc
         });
     }
 
     addMapObjectMarker(mapObjectId: MapObjectId, position: MapPosition) {
-        if (!this.mapObjectMarkers.hasOwnProperty(mapObjectId)) {
+        if (!this.mapObjectMarkers.hasOwnProperty(mapObjectId.toString())) {
             var feat = new ol.Feature({
                 geometry: new ol.geom.Point([position.x, position.y])
             });
-            var src = <ol.source.Vector> this.olLayer.getSource();
+            var src = <ol.source.Vector> this._olLayer.getSource();
             src.addFeature(feat);
             this.mapObjectMarkers[mapObjectId] = feat;
         }
@@ -49,7 +50,7 @@ class SelectionLayer extends BaseLayer<ol.layer.Vector> {
     removeMapObjectMarker(mapObjectId: MapObjectId) {
         var feat = this.mapObjectMarkers[mapObjectId];
         if (feat) {
-            var src = <ol.source.Vector> this.olLayer.getSource();
+            var src = <ol.source.Vector> this._olLayer.getSource();
             src.removeFeature(feat);
             delete this.mapObjectMarkers[mapObjectId];
         }

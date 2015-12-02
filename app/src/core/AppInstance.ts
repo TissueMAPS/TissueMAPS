@@ -44,11 +44,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             var layer = new ChannelLayer(opt);
             this.viewport.addChannelLayer(layer);
         });
-
-        this.experiment.cells.then((cells) => {
-            this.viewport.selectionHandler.addCellOutlines(cells);
-        });
-
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {

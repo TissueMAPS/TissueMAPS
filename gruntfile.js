@@ -419,7 +419,7 @@ module.exports = function(grunt) {
                     'app/assets/libs/bower_components/underscore/underscore.js',
 
                     // 'app/assets/libs/ol3/build/ol.js',
-                    'app/assets/libs/ol.js',
+                    'app/assets/libs/ol-debug.js',
 
                     'app/assets/libs/bower_components/angular/angular.js',
                     'app/assets/libs/bower_components/angular-mocks/angular-mocks.js',

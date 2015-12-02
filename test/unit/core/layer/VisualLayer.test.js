@@ -5,16 +5,16 @@ describe('In VisualLayer', function() {
     // Some fake data
     var v1, v2, visuals;
 
-    beforeEach(inject(function(_Cell_) {
+    beforeEach(inject(function() {
         // Some fake data (assign again before each test in case functions would
         // modifies their arguments).
-        v1 = new PolygonVisual({x: 100, y: -100}, [
+        v1 = new PolygonVisual([
             [0, 0],
             [0, 1],
             [1, 1],
             [1, 0]
         ]);
-        v2 = new PolygonVisual({x: 200, y: -100}, [
+        v2 = new PolygonVisual([
             [0, 0],
             [0, 1],
             [1, 1],

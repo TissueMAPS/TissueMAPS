@@ -22,14 +22,12 @@ class RestoreAppstateService {
 
     private restoreAppInstance(inst: AppInstance, ai: SerializedAppInstance) {
         this.restoreViewport(inst.viewport, ai.viewport);
-        inst.experiment.cells.then((cells) => {
-            inst.viewport.selectionHandler.addCellOutlines(cells);
-        });
     }
 
     private restoreViewport(vp: Viewport, vpState: SerializedViewport) {
         // Create and initialize the selection handler
-        var selHandler = new MapObjectSelectionHandler(vp);
+        // TODO
+        var selHandler = new MapObjectSelectionHandler(vp, ['cell']);
         this.restoreSelectionHandler(selHandler, vpState.selectionHandler);
         vp.setSelectionHandler(selHandler);
 
@@ -55,20 +53,20 @@ class RestoreAppstateService {
 
     private restoreSelectionHandler(csh: MapObjectSelectionHandler,
                                         cshState: SerializedSelectionHandler) {
-        var activeSelId = cshState.activeSelectionId;
+        // var activeSelId = cshState.activeSelectionId;
         var selections = cshState.selections;
         selections.forEach((ser) => {
             var selColor = Color.fromObject(ser.color);
-            var sel = new MapObjectSelection(ser.id, selColor);
-            for (var cellId in ser.cells) {
-                var markerPos = ser.cells[cellId];
-                sel.addCell(markerPos, cellId);
-            }
-            csh.addSelection(sel);
+            // var sel = new MapObjectSelection(ser.id, selColor);
+            // for (var cellId in ser.cells) {
+            //     var markerPos = ser.cells[cellId];
+            //     sel.addCell(markerPos, cellId);
+            // }
+            // csh.addSelection(sel);
         });
-        if (activeSelId !== undefined) {
-            csh.activeSelectionId = activeSelId;
-        }
+        // if (activeSelId !== undefined) {
+        //     csh.activeSelectionId = activeSelId;
+        // }
     }
 }
 
