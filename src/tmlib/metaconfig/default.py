@@ -58,14 +58,14 @@ class MetadataHandler(object):
         self.additional_files = additional_files
         self.omexml_files = omexml_files
         self.plate_name = plate_name
-        self.metadata = pd.DataFrame(
-            columns=[
-                'name', 'date',
-                'tpoint_ix', 'zplane_ix', 'channel_ix', 'channel_name',
-                'well_id', 'well_position_y', 'well_position_x', 'site_ix',
-                'stage_position_y', 'stage_position_x'
-            ]
-        )
+        # self.metadata = pd.DataFrame(
+        #     columns=[
+        #         'name', 'date',
+        #         'tpoint_ix', 'zplane_ix', 'channel_ix', 'channel_name',
+        #         'well_id', 'well_position_y', 'well_position_x', 'site_ix',
+        #         'stage_position_y', 'stage_position_x'
+        #     ]
+        # )
         self.file_mapper_list = list()
         self.file_mapper_lookup = defaultdict(list)
         self.id_to_well_id_ref = dict()
@@ -169,6 +169,14 @@ class MetadataHandler(object):
         i = 0
         # NOTE: The order of files is important for some metadata information!
         filenames = natsorted(self.ome_image_metadata.keys())
+
+        metadata = dict()
+        metadata['name'] = list()
+        metadata['channel_name'] = list()
+        metadata['tpoint_ix'] = list()
+        metadata['zplane_ix'] = list()
+        metadata['stage_position_y'] = list()
+        metadata['stage_position_x'] = list()
         for f in filenames:
             n_series = self.ome_image_metadata[f].image_count
             # The number of series corresponds to the number of planes
@@ -193,35 +201,35 @@ class MetadataHandler(object):
                 # and time point.
                 for p in xrange(n_planes):
                     plane = pixels.Plane(p)
-                    md = self.metadata
-                    md.at[i, 'name'] = image.Name
-                    md.at[i, 'channel_name'] = pixels.Channel(plane.TheC).Name
+                    metadata['name'].append(image.Name)
+                    metadata['channel_name'].append(pixels.Channel(plane.TheC).Name)
 
-                    md.at[i, 'tpoint_ix'] = plane.TheT
-                    md.at[i, 'zplane_ix'] = plane.TheZ
+                    metadata['tpoint_ix'].append(plane.TheT)
+                    metadata['zplane_ix'].append(plane.TheZ)
                     # "TheC" will be defined later on, because this information
                     # is often not yet available at this point.
 
-                    md.at[i, 'stage_position_x'] = plane.PositionX
-                    md.at[i, 'stage_position_y'] = plane.PositionY
+                    metadata['stage_position_y'].append(plane.PositionY)
+                    metadata['stage_position_x'].append(plane.PositionX)
 
                     fm = ImageFileMapper()
-                    fm.name = md.name
+                    fm.name = image.Name
                     fm.ref_index = i
                     fm.files = [f]
                     fm.series = [s]
                     fm.planes = [p]
                     self.file_mapper_list.append(fm)
-                    self.file_mapper_lookup[md.at[i, 'name']].append(fm)
+                    self.file_mapper_lookup[image.Name].append(fm)
 
                     i += 1
 
-            # NOTE: Columns must have numpy data types, otherwise the
-            # serialization via PyTables will fail
-            md.tpoint_ix = md.tpoint_ix.astype(int)
-            md.zplane_ix = md.zplane_ix.astype(int)
-            md.stage_position_y = md.stage_position_y.astype(float)
-            md.stage_position_x = md.stage_position_x.astype(float)
+        self.metadata = pd.DataFrame(metadata)
+        length = self.metadata.shape[0]
+        self.metadata['date'] = np.empty((length, ), dtype='str')
+        self.metadata['well_id'] = np.empty((length, ), dtype='str')
+        self.metadata['well_position_y'] = np.empty((length, ), dtype='int')
+        self.metadata['well_position_x'] = np.empty((length, ), dtype='int')
+        self.metadata['site_ix'] = np.empty((length, ), dtype='int')
 
         return self.metadata
 
