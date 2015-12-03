@@ -19,6 +19,8 @@ describe('In MapObjectSelectionHandler', function() {
         sel1 = new MapObjectSelection(0, 'cell', Color.RED);
         sel2 = new MapObjectSelection(0, 'nucleus', Color.BLUE);
         cell = {id: 1, type: 'cell'};
+
+        sh.viewport.map = jasmine.createSpyObj('map', ['then']);
     });
 
     describe('the active MapObject type', function() {
@@ -27,10 +29,9 @@ describe('In MapObjectSelectionHandler', function() {
             expect(sh.getActiveMapObjectType()).toEqual('cell');
         });
 
-        it('should initially be set to the first object type', function() {
+        it('should initially be set to the first object type added', function() {
             expect(sh.getActiveMapObjectType()).toEqual('cell');
         });
-        
     });
 
     describe('the function getSelectionsForType', function() {
@@ -102,10 +103,6 @@ describe('In MapObjectSelectionHandler', function() {
     });
 
     describe('the function addNewSelection', function() {
-        beforeEach(function() {
-            sh.viewport.map = jasmine.createSpyObj('map', ['then']);
-        });
-        
         it('should add a new selection for some type', function() {
             sh.addNewSelection('cell');
             expect(sh.getSelectionsForType('cell').length).toEqual(1);
@@ -124,9 +121,11 @@ describe('In MapObjectSelectionHandler', function() {
             .toEqual(sh.availableColors[2]);
 
             sh.removeSelection(sel2);
+            expect(sh.getSelectionsForType('cell').length).toEqual(2);
+
             // Assign the color that got freed up by removing sel2
             var newSel2 = sh.addNewSelection('cell');
-            expect(sh.getSelectionsForType('cell')[1].color)
+            expect(sh.getSelectionsForType('cell')[2].color)
             .toEqual(sh.availableColors[1]);
         });
 
@@ -151,8 +150,23 @@ describe('In MapObjectSelectionHandler', function() {
         });
 
         it('should remove the selection from the handler itself', function() {
-            pending();
+            var sel1 = sh.addNewSelection('cell');
+            expect(sh.getSelection('cell', sel1.id)).toBeDefined();
+
+            sh.removeSelection(sel1);
+            expect(sh.getSelection('cell', sel1.id)).not.toBeDefined();
         });
+
+        it('should set the active selection to null if the selection to be removed was active', function() {
+            var sel1 = sh.addNewSelection('cell');
+            sh.setActiveSelection(sel1);
+
+            sh.removeSelection(sel1);
+
+            expect(sh.getActiveSelection()).toEqual(null);
+        });
+        
+        
     });
 
     describe('the function serialize', function() {

@@ -1,3 +1,5 @@
+type MapObjectSelectionByType = { [objectType: string]: MapObjectSelection[]; };
+
 interface SerializedSelectionHandler extends Serialized<MapObjectSelectionHandler> {
     _activeSelectionId: MapObjectSelectionId;
     selections: SerializedMapObjectSelection[];
@@ -9,10 +11,10 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     availableColors: Color[];
 
-    private _selectionsByType: { [objectType: string]: MapObjectSelection[]; } = {};
+    private _selectionsByType: MapObjectSelectionByType = {};
     private _markerSelectionModeActive: boolean = false;
     private _activeMapObjectType: MapObjectType = null;
-    private _activeSelection: MapObjectSelection;
+    private _activeSelection: MapObjectSelection = null;
 
     constructor(viewport: Viewport) {
 
@@ -37,7 +39,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     getActiveMapObjectType() {
-        return this._activeMapObjectType !== null ? this._activeMapObjectType : 'None';
+        return this._activeMapObjectType;
     }
 
     setActiveMapObjectType(t: MapObjectType) {
@@ -50,16 +52,28 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._selectionsByType[type];
     }
 
+    /**
+     * Set the active selection, i.e., the selection to which new objects
+     * are added.
+     *
+     * By passing null as the argument, the currently active selection will be 
+     * set as inactive.
+     */
     setActiveSelection(sel: MapObjectSelection) {
-        this._activeSelection = sel;
+        if (sel === null) {
+            this._activeSelection = null;
+        } else {
+            this._activeSelection = sel;
+        }
     }
 
+    /**
+     * Get the selection that is currently active.
+     *
+     * If no selection is chosen as active, the return value will be null.
+     */
     getActiveSelection(): MapObjectSelection {
-        if (this._activeSelection !== undefined) {
-            return this._activeSelection;
-        } else {
-            return undefined;
-        }
+        return this._activeSelection;
     }
 
     addMapObjectOutlines(cells: MapObject[]) {
@@ -157,9 +171,11 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _getNextColor(type: string) {
         this._checkObjectType(type);
         var sels = this.getSelectionsForType(type);
-        var possibleIds = _.range(this.availableColors.length);
-        var usedIds = _(sels).map(function(s) { return s.id; });
+        var nColors = this.availableColors.length;
+        var possibleIds = _.range(nColors);
+        var usedIds = _(sels).map(function(s) { return s.id % nColors; });
         var availableIds = _.difference(possibleIds, usedIds);
+        // throw new Error(JSON.stringify(availableIds));
         if (availableIds.length != 0) {
             var id = availableIds[0];
             return this.availableColors[id];
@@ -172,11 +188,14 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     removeSelection = function(sel: MapObjectSelection) {
         if (sel) {
+            if (sel === this._activeSelection) {
+                this.setActiveSelection(null);
+            }
             this.viewport.map.then((map: ol.Map) => {
                 sel.removeFromMap(map);
-                var selections = this.getSelectionsForType(sel.mapObjectType);
-                selections.splice(selections.indexOf(sel), 1);
             });
+            var selections = this.getSelectionsForType(sel.mapObjectType);
+            selections.splice(selections.indexOf(sel), 1);
         } else {
             console.log('Trying to delete nonexistant selection with id ' + sel.id);
         }
@@ -203,7 +222,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         // mapObjectSelectionHandler.
         return $q.all(<any>selectionPromisesPerType).then((selections) => {
             var ser = {
-                activeSelectionId: this._activeSelection === undefined ? -1 : this._activeSelection.id,
+                activeSelectionId: this._activeSelection === null ? -1 : this._activeSelection.id,
                 selections: selections
             };
             return ser;
