@@ -14,23 +14,23 @@ describe('In MapObjectSelectionHandler', function() {
     beforeEach(function() {
         vp = {};
         sh = new MapObjectSelectionHandler(vp);
+        sh.viewport.map = jasmine.createSpyObj('map', ['then']);
+
         sh.addMapObjectType('cell');
         sh.addMapObjectType('nucleus');
         sel1 = new MapObjectSelection(0, 'cell', Color.RED);
         sel2 = new MapObjectSelection(0, 'nucleus', Color.BLUE);
         cell = {id: 1, type: 'cell'};
-
-        sh.viewport.map = jasmine.createSpyObj('map', ['then']);
     });
 
     describe('the active MapObject type', function() {
         it('should be settable and gettable', function() {
-            sh.setActiveMapObjectType('cell');
-            expect(sh.getActiveMapObjectType()).toEqual('cell');
+            sh.activeMapObjectType = 'cell';
+            expect(sh.activeMapObjectType).toEqual('cell');
         });
 
         it('should initially be set to the first object type added', function() {
-            expect(sh.getActiveMapObjectType()).toEqual('cell');
+            expect(sh.activeMapObjectType).toEqual('cell');
         });
     });
 
@@ -62,7 +62,7 @@ describe('In MapObjectSelectionHandler', function() {
         
         beforeEach(function() {
             sh.addSelection(sel1);
-            sh.setActiveSelection(sel1);
+            sh.activeSelection = sel1;
             spyOn(sel1, 'addMapObject');
             clickPos = {x: 10, y: 20};
         });
@@ -84,13 +84,12 @@ describe('In MapObjectSelectionHandler', function() {
         
     });
 
-    describe('the function getActiveSelection', function() {
-        it('should return the active selection if there is one', function() {
+    describe('the property activeSelection', function() {
+        it('should be settable and gettable', function() {
             sh.addSelection(sel1);
-            sh.setActiveSelection(sel1);
+            sh.activeSelection = sel1;
 
-            var sel = sh.getActiveSelection();
-            expect(sel).toEqual(sel1);
+            expect(sh.activeSelection).toEqual(sel1);
         });
     });
 
@@ -159,11 +158,11 @@ describe('In MapObjectSelectionHandler', function() {
 
         it('should set the active selection to null if the selection to be removed was active', function() {
             var sel1 = sh.addNewSelection('cell');
-            sh.setActiveSelection(sel1);
+            sh.activeSelection = sel1;
 
             sh.removeSelection(sel1);
 
-            expect(sh.getActiveSelection()).toEqual(null);
+            expect(sh.activeSelection).toEqual(null);
         });
         
         

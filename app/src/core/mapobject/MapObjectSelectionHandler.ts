@@ -31,25 +31,13 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         this.availableColors = availableColors;
     }
 
-    addMapObjectType(t: MapObjectType) {
-        this._selectionsByType[t] = [];
-        if (this._activeMapObjectType === null) {
-            this._activeMapObjectType = t;
-        }
-    }
-
-    getActiveMapObjectType() {
+    get activeMapObjectType() {
         return this._activeMapObjectType;
     }
 
-    setActiveMapObjectType(t: MapObjectType) {
+    set activeMapObjectType(t: MapObjectType) {
         this._checkObjectType(t);
         this._activeMapObjectType = t;
-    }
-
-    getSelectionsForType(type: string) {
-        this._checkObjectType(type);
-        return this._selectionsByType[type];
     }
 
     /**
@@ -59,7 +47,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
      * By passing null as the argument, the currently active selection will be 
      * set as inactive.
      */
-    setActiveSelection(sel: MapObjectSelection) {
+    set activeSelection(sel: MapObjectSelection) {
         if (sel === null) {
             this._activeSelection = null;
         } else {
@@ -72,9 +60,23 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
      *
      * If no selection is chosen as active, the return value will be null.
      */
-    getActiveSelection(): MapObjectSelection {
+    get activeSelection(): MapObjectSelection {
         return this._activeSelection;
     }
+
+    getSelectionsForType(type: string) {
+        this._checkObjectType(type);
+        return this._selectionsByType[type];
+    }
+
+    addMapObjectType(t: MapObjectType) {
+        this._selectionsByType[t] = [];
+        if (this.activeMapObjectType === null) {
+            this.activeMapObjectType = t;
+        }
+        // this.addNewSelection(t);
+    }
+
 
     addMapObjectOutlines(cells: MapObject[]) {
         // TODO: Generalize and implement
@@ -111,7 +113,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     clickOnMapObject(mapObject: MapObject, clickPos: MapPosition) {
         this._checkObjectType(mapObject.type);
         if (this._markerSelectionModeActive) {
-            var sel = this.getActiveSelection();
+            var sel = this.activeSelection;
             if (sel) {
                 sel.addMapObject(mapObject, clickPos);
             } else {
@@ -189,7 +191,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     removeSelection = function(sel: MapObjectSelection) {
         if (sel) {
             if (sel === this._activeSelection) {
-                this.setActiveSelection(null);
+                this.activeSelection = null;
             }
             this.viewport.map.then((map: ol.Map) => {
                 sel.removeFromMap(map);
