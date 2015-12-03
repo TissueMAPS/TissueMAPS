@@ -549,7 +549,7 @@ module.exports = function(grunt) {
         'concat:generated',
         'cssmin:generated',
         // XXX: Isn't it already included in usemin?
-        'uglify:generated', 
+        // 'uglify:generated', 
         'usebanner', // needs to be before filerev
         'filerev',
         'usemin',
