@@ -117,8 +117,8 @@ class ChannelLayer(object):
             # empty these must be same across all wells (e.g. for each plate
             # the outer rim of wells can be left out during image acquisition)
             nonempty_wells = np.where(plate_grid)
-            nonempty_rows[tuple(nonempty_wells[0])].append(plate.name)
-            nonempty_cols[tuple(nonempty_wells[1])].append(plate.name)
+            nonempty_rows[tuple(np.unique(nonempty_wells[0]))].append(plate.name)
+            nonempty_cols[tuple(np.unique(nonempty_wells[1]))].append(plate.name)
 
         if len(set([plate.n_wells for plate in experiment.plates])) > 1:
             raise PyramidCreationError('Layout of plates must be identical.')
@@ -167,13 +167,13 @@ class ChannelLayer(object):
                                     list(set(nonempty_rows))))
         n_nonempty_cols = len(nonempty_columns)
         n_empty_cols_2fill = len(empty_columns_2fill)
-        row_height = (
+        row_width = (
             mosaic.dimensions[1] * n_nonempty_cols +
             column_spacer.width * n_empty_cols_2fill +
             column_spacer.width * (plate_grid.shape[1] + 1)
         )
         row_spacer = image_utils.create_spacer_image(
-                spacer_size, row_height,
+                spacer_size, row_width,
                 dtype=mosaic.dtype, bands=1)
 
         # Start each plate with a spacer
@@ -182,7 +182,7 @@ class ChannelLayer(object):
         # Plates are joined vertically:
         for p, plate in enumerate(experiment.plates):
 
-            logger.info('stitching images of plate "%s" '
+            logger.info('stitch images of plate "%s" '
                         'for channel #%d and z-plane #%d',
                         plate.name, channel_ix, zplane_ix)
 

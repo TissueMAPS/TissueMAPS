@@ -195,14 +195,26 @@ class Experiment(object):
         plate_dirs = [
             os.path.join(self.plates_dir, d)
             for d in os.listdir(self.plates_dir)
-            if os.path.isdir(os.path.join(self.plates_dir, d))
-            and self._is_plate_dir(d)
+            if os.path.isdir(os.path.join(self.plates_dir, d)) and
+            self._is_plate_dir(d)
         ]
         plate_dirs = natsorted(plate_dirs)
         return [
             Plate(d, self.user_cfg.plate_format, self.library)
             for d in plate_dirs
         ]
+        # plate_dirs = [
+        #     os.path.join(self.plates_dir, d)
+        #     for d in os.listdir(self.plates_dir)
+        #     if os.path.isdir(os.path.join(self.plates_dir, d)) and
+        #     self._is_plate_dir(d)
+        # ]
+        # plate_dirs = natsorted(plate_dirs)
+        # plates = dict()
+        # for d in plate_dirs:
+        #     p = Plate(d, self.user_cfg.plate_format, self.library)
+        #     plates[p.name] = p
+        # return plates
 
     def add_plate(self, plate_name):
         '''
@@ -287,8 +299,8 @@ class Experiment(object):
         plate_source_dirs = natsorted([
             os.path.join(self.sources_dir, d)
             for d in os.listdir(self.sources_dir)
-            if os.path.isdir(os.path.join(self.sources_dir, d))
-            and self._is_plate_source_dir(d)
+            if os.path.isdir(os.path.join(self.sources_dir, d)) and
+            self._is_plate_source_dir(d)
         ])
         return [PlateSource(d)for d in plate_source_dirs]
 
@@ -315,6 +327,26 @@ class Experiment(object):
             os.mkdir(layers_dir)
         return layers_dir
 
+    @cached_property
+    def layer_names(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names of layers
+        '''
+        names = list()
+        for plate in self.plates:
+            for cycle in plate.cycles:
+                md = cycle.image_metadata
+                channels = np.unique(md['channel_ix'])
+                zplanes = np.unique(md['zplane_ix'])
+                for c in channels:
+                    for z in zplanes:
+                        names.append(cfg.LAYER_NAME_FORMAT.format(
+                                            t=cycle.index, c=c, z=z))
+        return names
+
     @property
     def layer_metadata(self):
         '''
@@ -328,7 +360,7 @@ class Experiment(object):
         layer_metadata = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
-                md = cycle.image_metadata_table
+                md = cycle.image_metadata
                 channels = np.unique(md['channel_ix'])
                 zplanes = np.unique(md['zplane_ix'])
                 for c in channels:
@@ -391,7 +423,7 @@ class Experiment(object):
             for cycle in plate.cycles:
                 if cycle.index != int(captures['t']):
                     continue
-                md = cycle.image_metadata_table
+                md = cycle.image_metadata
                 ix = np.where(
                         (md['channel_ix'] == int(captures['c'])) &
                         (md['zplane_ix'] == int(captures['z'])) &

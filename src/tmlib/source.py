@@ -1,13 +1,12 @@
 import os
 import re
 import logging
-import bioformats
+import pandas as pd
 from cached_property import cached_property
 from natsort import natsorted
 from . import utils
 from .metadata import ImageFileMapper
 from .formats import Formats
-from .readers import XmlReader
 from .readers import JsonReader
 from .errors import RegexError
 
@@ -362,21 +361,23 @@ class PlateAcquisition(object):
         Returns
         -------
         str
-            name of the file that contains image related metadata
+            name of the HDF5 file contains acquisition-specific image metadata
         '''
-        return 'configured_metadata.ome.xml'
+        return 'image_metadata.h5'
 
     @property
     def image_metadata(self):
         '''
         Returns
         -------
-        bioformats.OMEXML
+        pandas.DataFrame
             image metadata
         '''
-        with XmlReader(self.dir) as reader:
-            omexml = reader.read(self.image_metadata_file)
-        return bioformats.OMEXML(omexml)
+        filename = os.path.join(self.dir, self.image_metadata_file)
+        store = pd.HDFStore(filename)
+        metadata = store.select('metadata')
+        store.close()
+        return metadata
 
     @property
     def image_mapper_file(self):

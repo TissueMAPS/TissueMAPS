@@ -488,9 +488,17 @@ class ClusterRoutines(BasicClusterRoutines):
             for key, value in batch['inputs'].items():
                 if isinstance(value, dict):
                     for k, v in batch['inputs'][key].items():
-                        batch['inputs'][key][k] = \
-                            os.path.join(self.experiment.dir, v)
+                        if isinstance(v, list):
+                            batch['inputs'][key][k] = [
+                                os.path.join(self.experiment.dir, sub_v)
+                                for sub_v in v
+                            ]
+                        else:
+                            batch['inputs'][key][k] = \
+                                os.path.join(self.experiment.dir, v)
                 elif isinstance(value, list):
+                    if len(value) == 0:
+                        continue
                     if isinstance(value[0], list):
                         for i, v in enumerate(value):
                             batch['inputs'][key][i] = [
@@ -506,9 +514,19 @@ class ClusterRoutines(BasicClusterRoutines):
                             'Value of "inputs" must have type list or dict.')
             for key, value in batch['outputs'].items():
                 if isinstance(value, list):
-                    batch['outputs'][key] = [
-                        os.path.join(self.experiment.dir, v) for v in value
-                    ]
+                    if len(value) == 0:
+                        continue
+                    if isinstance(value[0], list):
+                        for i, v in enumerate(value):
+                            batch['outputs'][key][i] = [
+                                os.path.join(self.experiment.dir, sub_v)
+                                for sub_v in v
+                            ]
+                    else:
+                        batch['outputs'][key] = [
+                            os.path.join(self.experiment.dir, v)
+                            for v in value
+                        ]
                 elif isinstance(value, basestring):
                     batch['outputs'][key] = \
                         os.path.join(self.experiment.dir, value)
@@ -568,9 +586,17 @@ class ClusterRoutines(BasicClusterRoutines):
             for key, value in batch['inputs'].items():
                 if isinstance(value, dict):
                     for k, v in batch['inputs'][key].items():
-                        batch['inputs'][key][k] = \
-                            os.path.relpath(v, self.experiment.dir)
+                        if isinstance(v, list):
+                            batch['inputs'][key][k] = [
+                                os.path.relpath(sub_v, self.experiment.dir)
+                                for sub_v in v
+                            ]
+                        else:
+                            batch['inputs'][key][k] = \
+                                os.path.relpath(v, self.experiment.dir)
                 elif isinstance(value, list):
+                    if len(value) == 0:
+                        continue
                     if isinstance(value[0], list):
                         for i, v in enumerate(value):
                             batch['inputs'][key][i] = [
@@ -587,9 +613,19 @@ class ClusterRoutines(BasicClusterRoutines):
                             'Value of "inputs" must have type list or dict.')
             for key, value in batch['outputs'].items():
                 if isinstance(value, list):
-                    batch['outputs'][key] = [
-                        os.path.relpath(v, self.experiment.dir) for v in value
-                    ]
+                    if len(value) == 0:
+                        continue
+                    if isinstance(value[0], list):
+                        for i, v in enumerate(value):
+                            batch['outputs'][key][i] = [
+                                os.path.relpath(sub_v, self.experiment.dir)
+                                for sub_v in v
+                            ]
+                    else:
+                        batch['outputs'][key] = [
+                            os.path.relpath(v, self.experiment.dir)
+                            for v in value
+                        ]
                 elif isinstance(value, basestring):
                     batch['outputs'][key] = \
                         os.path.relpath(value, self.experiment.dir)

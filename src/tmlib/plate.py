@@ -122,16 +122,13 @@ class Plate(object):
         cycle_dirs = [
             os.path.join(self.dir, d)
             for d in os.listdir(self.dir)
-            if os.path.isdir(os.path.join(self.dir, d))
-            and self._is_cycle_dir(d)
-            and not d.startswith('.')
+            if os.path.isdir(os.path.join(self.dir, d)) and
+            self._is_cycle_dir(d) and
+            not d.startswith('.')
         ]
         cycle_dirs = natsorted(cycle_dirs)
         return [
-            Cycle(
-                cycle_dir=d,
-                plate_name=self.name,
-                library=self.library)
+            Cycle(cycle_dir=d, library=self.library)
             for d in cycle_dirs
         ]
 
@@ -153,10 +150,7 @@ class Plate(object):
         logger.debug('add cycle: %s', cycle_index)
         logger.debug('create directory for new cycle: %s', new_cycle_dir)
         os.mkdir(new_cycle_dir)
-        new_cycle = Cycle(
-                      cycle_dir=new_cycle_dir,
-                      plate_name=self.name,
-                      library=self.library)
+        new_cycle = Cycle(cycle_dir=new_cycle_dir, library=self.library)
         self.cycles.append(new_cycle)
         return new_cycle
 

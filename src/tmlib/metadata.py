@@ -443,7 +443,7 @@ class ImageFileMapper(object):
     '''
 
     _PERSISTENT_ATTRS = {
-        'files', 'series', 'planes', 'ref_index', 'ref_file', 'ref_id'
+        'files', 'series', 'planes', 'ref_index', 'ref_file'
     }
 
     def __init__(self, **kwargs):
@@ -529,23 +529,6 @@ class ImageFileMapper(object):
         if not isinstance(value, int):
             raise TypeError('Attribute "ref_index" must have type int')
         self._ref_index = value
-
-    @property
-    def ref_id(self):
-        '''
-        Returns
-        -------
-        List[str]
-            identifier string of the image in the configured OMEXML
-            (pattern: (Image:\S+)); e.g. "Image:0")
-        '''
-        return self._ref_id
-
-    @ref_id.setter
-    def ref_id(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "ref_id" must have type str')
-        self._ref_id = value
 
     @property
     def ref_file(self):

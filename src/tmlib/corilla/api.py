@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import numpy as np
 from .stats import OnlineStatistics
 from ..writers import DatasetWriter
 from ..readers import NumpyImageReader
@@ -64,13 +65,13 @@ class IllumstatsGenerator(ClusterRoutines):
         count = 0
         for plate in self.experiment.plates:
             for cycle in plate.cycles:
-                md = cycle.image_metadata_table
+                md = cycle.image_metadata
 
                 # Group image files per channel
-                channels = list(set(md['channel_ix'].tolist()))
+                channels = np.unique(md.channel_ix)
                 img_batches = list()
                 for c in channels:
-                    files = md[(md['channel_ix'] == c)]['name'].tolist()
+                    files = md[(md.channel_ix == c)].name
                     img_batches.append(files)
 
                 for i, batch in enumerate(img_batches):
@@ -157,7 +158,7 @@ class IllumstatsGenerator(ClusterRoutines):
                 if tpoints:
                     if cycle.index not in tpoints:
                         continue
-                md = cycle.image_metadata_table
+                md = cycle.image_metadata
                 sld = md.copy()
                 if sites:
                     sld = sld[sld['site_ix'].isin(sites)]

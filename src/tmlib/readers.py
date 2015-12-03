@@ -65,6 +65,8 @@ class TextReader(Reader):
 
 class XmlReader(TextReader):
 
+    # TODO: implement xpath subset reading via lxml
+
     def __init__(self, directory=None):
         '''
         Initialize an object of class XmlReader.

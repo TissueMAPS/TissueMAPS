@@ -76,7 +76,7 @@ class ImageRegistration(ClusterRoutines):
             job descriptions
         '''
         def get_targets(cycle):
-            md = cycle.image_metadata_table.sort('site_ix')
+            md = cycle.image_metadata.sort_values('site_ix')
             ix = md['channel_ix'] == args.ref_channel
             return md[ix]['name'].tolist()
 
@@ -96,7 +96,7 @@ class ImageRegistration(ClusterRoutines):
             'removals': ['registration_files']
         }
         for plate in self.experiment.plates:
-            md = plate.cycles[0].image_metadata_table.sort('site_ix')
+            md = plate.cycles[0].image_metadata.sort_values('site_ix')
             if len(np.unique(md['zplane_ix'])) > 1:
                 raise NotSupportedError(
                     'Alignment is currently only supported for 2D datasets.')
@@ -146,16 +146,14 @@ class ImageRegistration(ClusterRoutines):
                             'reference_files': batch['references']
                         },
                         'outputs': {
-                            'registration_files': [registration_files[i]]
+                            'registration_file': registration_files[i]
                         },
                         'sites': site_batches[i]
                 })
 
             jdc = job_descriptions['collect']
             jdc['plates'].append(plate.name)
-            jdc['inputs']['registration_files'].append(
-                registration_files
-            )
+            jdc['inputs']['registration_files'].append(registration_files)
             jdc['outputs']['align_descriptor_files'].append([
                 os.path.join(c.dir, c.align_descriptor_file)
                 for c in plate.cycles
@@ -182,7 +180,7 @@ class ImageRegistration(ClusterRoutines):
         reg.register_images(batch['sites'],
                             batch['inputs']['target_files'],
                             batch['inputs']['reference_files'],
-                            batch['outputs']['registration_files'][0])
+                            batch['outputs']['registration_file'])
 
     def collect_job_output(self, batch):
         '''
@@ -288,7 +286,7 @@ class ImageRegistration(ClusterRoutines):
                 if tpoints:
                     if cycle.index not in tpoints:
                         continue
-                md = cycle.image_metadata_table
+                md = cycle.image_metadata
                 sld = md.copy()
                 if sites:
                     sld = sld[sld['site_ix'].isin(sites)]

@@ -1,13 +1,11 @@
 import re
 import os
 import logging
+import numpy as np
 import pandas as pd
-import bioformats
 from natsort import natsorted
-from collections import defaultdict
 from cached_property import cached_property
 from . import utils
-from .readers import XmlReader
 from .readers import JsonReader
 from .image import is_image_file
 from .image import ChannelImage
@@ -15,7 +13,6 @@ from .image import IllumstatsImages
 from .metadata import ChannelImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .errors import RegexError
-from metaconfig import ome_xml
 from align.description import AlignmentDescription
 
 logger = logging.getLogger(__name__)
@@ -38,7 +35,7 @@ class Cycle(object):
 
     STATS_FILE_FORMAT = 'channel_{channel_ix}.stat.h5'
 
-    def __init__(self, cycle_dir, plate_name, library):
+    def __init__(self, cycle_dir, library):
         '''
         Initialize an instance of class Cycle.
 
@@ -46,8 +43,6 @@ class Cycle(object):
         ----------
         cycle_dir: str
             absolute path to the cycle directory
-        plate_name: str
-            name of the corresponding plate
         library: str
             image library that should be used
             (options: ``"vips"`` or ``"numpy"``)
@@ -62,7 +57,6 @@ class Cycle(object):
             when `cycle_dir` does not exist
         '''
         self.cycle_dir = os.path.abspath(cycle_dir)
-        self.plate_name = plate_name
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
         self.library = library
@@ -174,9 +168,9 @@ class Cycle(object):
         Returns
         -------
         str
-            name of the OMEXML file containing cycle-specific image metadata
+            name of the HDF5 file containing cycle-specific image metadata
         '''
-        return 'image_metadata.ome.xml'
+        return 'image_metadata.h5'
 
     @property
     def align_descriptor_file(self):
@@ -191,7 +185,7 @@ class Cycle(object):
         return 'alignment_description.json'
 
     @cached_property
-    def image_metadata_table(self):
+    def image_metadata(self):
         '''
         Returns
         -------
@@ -213,39 +207,11 @@ class Cycle(object):
         for details on indexing and selecting data.
         '''
         metadata_file = os.path.join(self.dir, self.image_metadata_file)
-        with XmlReader() as reader:
-            omexml = reader.read(metadata_file)
-            metadata = bioformats.OMEXML(omexml)
-        # Bring metadata into the following format: List[dict], which makes
-        # it easy to convert it into a pandas.DataFrame
-        formatted_metadata = list()
-        site_mapper = defaultdict(list)
-        count = 0
-        plt = metadata.plates[0]
-        for w in plt.Well:
-            for s in plt.Well[w].Sample:
-                ref_id = s.ImageRef
-                ref_ix = ome_xml.get_image_ix(ref_id)
-                ref_im = metadata.image(ref_ix)
-                formatted_metadata.append({
-                    'name': ref_im.Name,
-                    'plate_name': self.plate_name,
-                    'well_name': w,
-                    'well_pos_y': int(s.PositionY),
-                    'well_pos_x': int(s.PositionX),
-                    'channel_ix': ref_im.Pixels.Plane(0).TheC,
-                    'channel_name': ref_im.Pixels.Channel(0).Name,
-                    'zplane_ix': ref_im.Pixels.Plane(0).TheZ,
-                    'tpoint_ix': ref_im.Pixels.Plane(0).TheT
-                })
-                # Collect list indices per unique acquisition site
-                site_mapper[(w, s.PositionY, s.PositionX)].append(count)
-                count += 1
-        # Add the acquisition site index "site_ix" to each image element
-        sites = range(len(site_mapper))
-        for i, indices in enumerate(site_mapper.values()):
-            for ix in indices:
-                formatted_metadata[ix]['site_ix'] = sites[i]
+        logger.debug('read image metadata from HDF5 file')
+        store = pd.HDFStore(metadata_file)
+        metadata = store.select('metadata')
+        store.close()
+
         # Add the alignment description to each image element (if available)
         alignment_file = os.path.join(self.dir, self.align_descriptor_file)
         if os.path.exists(alignment_file):
@@ -253,23 +219,20 @@ class Cycle(object):
                 description = reader.read(alignment_file)
             align_description = AlignmentDescription(description)
             # Match shift descriptions via "site_ix"
-            fmd_sites = [fmd['site_ix'] for fmd in formatted_metadata]
+            sites = metadata['site_ix']
+            overhang = align_description.overhang
             align_sites = [shift.site_ix for shift in align_description.shifts]
-            for i, s in enumerate(fmd_sites):
-                overhang = align_description.overhang
-                formatted_metadata[i]['upper_overhang'] = overhang.upper
-                formatted_metadata[i]['lower_overhang'] = overhang.lower
-                formatted_metadata[i]['right_overhang'] = overhang.right
-                formatted_metadata[i]['left_overhang'] = overhang.left
+            for i, s in enumerate(sites):
+                metadata.at[i, 'upper_overhang'] = overhang.upper
+                metadata.at[i, 'lower_overhang'] = overhang.lower
+                metadata.at[i, 'right_overhang'] = overhang.right
+                metadata.at[i, 'left_overhang'] = overhang.left
                 ix = align_sites.index(s)
                 shift = align_description.shifts[ix]
-                formatted_metadata[i]['x_shift'] = shift.x
-                formatted_metadata[i]['y_shift'] = shift.y
-        # Sort entries according to "name" to have the same order as the
-        # values of attribute "image_files"
-        metadata_table = pd.DataFrame(formatted_metadata).sort_values(by='name')
-        metadata_table.index = range(len(metadata_table))
-        return metadata_table
+                metadata.at[i, 'x_shift'] = shift.x
+                metadata.at[i, 'y_shift'] = shift.y
+
+        return metadata
 
     @property
     def images(self):
@@ -297,7 +260,7 @@ class Cycle(object):
             raise ValueError('Names of images do not match')
         for i, f in enumerate(self.image_files):
             image_metadata = ChannelImageMetadata()
-            table = self.image_metadata_table[(filenames == f)]
+            table = self.image_metadata[(filenames == f)]
             for attr in table:
                 value = table.iloc[0][attr]
                 setattr(image_metadata, attr, value)

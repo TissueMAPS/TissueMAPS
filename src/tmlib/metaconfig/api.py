@@ -2,17 +2,13 @@ import os
 import re
 import logging
 import importlib
+import numpy as np
 import pandas as pd
-import bioformats
-from collections import defaultdict
-from .ome_xml import XML_DECLARATION
-from .. import utils
 from .. import cfg
 from ..plate import determine_plate_dimensions
 from ..metadata import ImageFileMapper
 from ..api import ClusterRoutines
 from ..writers import JsonWriter
-from ..writers import XmlWriter
 from ..errors import NotSupportedError
 from ..errors import MetadataError
 from ..formats import Formats
@@ -257,21 +253,23 @@ class MetadataConfigurator(ClusterRoutines):
             handler.reconfigure_ome_metadata_for_projection()
         else:
             logger.info('keep individual focal planes')
+
         # Create consistent zero-based ids
         # (some microscopes use one-based indexing)
         handler.update_channel_ixs()
         handler.update_zplane_ixs()
-        md = handler.build_image_filenames(self.image_file_format_string)
+        handler.build_image_filenames(self.image_file_format_string)
+        handler.assign_acquisition_site_indices()
+        md = handler.remove_redundant_columns()
         fmap = handler.create_image_file_mapper()
         self._write_metadata_to_file(batch['outputs']['metadata_files'][0], md)
         self._write_mapper_to_file(batch['outputs']['mapper_files'][0], fmap)
 
     @staticmethod
     def _write_metadata_to_file(filename, metadata):
-        with XmlWriter() as writer:
-            data = metadata.to_xml()
-            logger.info('write configured metadata to file')
-            writer.write(filename, data)
+        store = pd.HDFStore(filename, 'w')  # truncate file!
+        store.put('metadata', metadata, format='table', data_columns=True)
+        store.close()
 
     @staticmethod
     def _write_mapper_to_file(filename, hashmap):
@@ -297,7 +295,7 @@ class MetadataConfigurator(ClusterRoutines):
         batch: dict
             description of the *collect* job
         '''
-        plate_file_mapper = list()
+        file_mapper = list()
         for i, source in enumerate(self.experiment.sources):
             # Create new plate
             self.experiment.add_plate(source.name)
@@ -306,33 +304,12 @@ class MetadataConfigurator(ClusterRoutines):
 
                 metadata = acquisition.image_metadata
 
-                # Create a lookup table for well information
-                tpoint_samples = defaultdict(list)
-                plate = metadata.plates[0]
-                for w, well_id in enumerate(plate.Well):
-                    for s in plate.Well[w].Sample:
-                        ref_id = s.ImageRef
-                        ref_ix = int(re.search(
-                                     r'Image:(\d+)$', ref_id).group(1))
-                        ref_im = metadata.image(ref_ix)
-                        c = ref_im.Pixels.Channel(0).Name
-                        t = ref_im.Pixels.Plane(0).TheT
-                        k = (w, s.PositionY, s.PositionX, c, t)
-                        tpoint_samples[k].append(ref_id)
-
-                ids = utils.flatten(tpoint_samples.values())
-                # NOTE: There should be only one value per key
-                lut = pd.DataFrame(tpoint_samples.keys())
-                lut.columns = ['w', 'y', 'x', 'c', 't']
-
-                tpoints = lut['t'].tolist()
-                unique_tpoints = set(tpoints)
+                tpoints = np.unique(metadata.tpoint_ix)
                 logger.info('%d time points found in source directory "%s"',
-                            len(unique_tpoints),
-                            os.path.basename(acquisition.dir))
+                            len(tpoints), os.path.basename(acquisition.dir))
 
                 # Create a cycle for each acquired time point
-                for t in unique_tpoints:
+                for t in tpoints:
 
                     logger.info('update metadata information for cycle #%d',
                                 cycle_count)
@@ -342,96 +319,31 @@ class MetadataConfigurator(ClusterRoutines):
                         # Create cycle if it doesn't exist
                         cycle = self.experiment.plates[i].add_cycle()
 
-                    cycle_indices = lut[lut['t'] == t].index.tolist()
+                    # Create a metadata subset that only contains information
+                    # about image elements belonging to the currently processed
+                    # cycle (time point)
+                    cycle_metadata = metadata[metadata.tpoint_ix == t]
 
-                    # Create a new metadata object that only contains *Image*
-                    # elements belonging to the currently processed cycle
-                    # (time point)
-                    cycle_metadata = bioformats.OMEXML(XML_DECLARATION)
-                    cycle_metadata.image_count = len(cycle_indices)
+                    # Add the corresponding plate name
+                    cycle_metadata.plate_name = pd.Series(
+                        np.repeat(source.name, cycle_metadata.shape[0])
+                    )
 
-                    # Create a plate element, where wells only contain the samples
-                    # that belong to the currently processed cycle (time point)
-                    cpla = cycle_metadata.PlatesDucktype(
-                                    cycle_metadata.root_node).newPlate(
-                                        name='{plate}_{cycle}'.format(
-                                                plate=cycle.plate_name,
-                                                cycle=cycle.index))
-                    upla = metadata.plates[0]
-                    cpla.RowNamingConvention = upla.RowNamingConvention
-                    cpla.ColumnNamingConvention = upla.ColumnNamingConvention
-                    cpla.Rows = upla.Rows
-                    cpla.Columns = upla.Columns
-                    im_count = 0
-                    fm_lut = dict()
-                    for w, well_id in enumerate(plate.Well):
-                        well = cycle_metadata.WellsDucktype(cpla).new(
-                            row=upla.Well[w].Row, column=upla.Well[w].Column)
-                        samples = cycle_metadata.WellSampleDucktype(well.node)
-                        well_ix = lut[
-                            (lut['w'] == w) & (lut['t'] == t)
-                        ].index.tolist()
-                        for s, ix in enumerate(well_ix):
-                            samples.new(index=s)
-                            samples[s].PositionX = lut.iloc[ix]['x']
-                            samples[s].PositionY = lut.iloc[ix]['y']
-                            ref_id = ids[ix]
-                            ref_ix = int(re.search(
-                                         r'Image:(\d+)$', ref_id).group(1))
-                            ref_im = metadata.image(ref_ix)
-                            # Create a new *Image* element
-                            im = cycle_metadata.image(im_count)
-                            # Copy the contents of the reference
-                            im.AcquisitionDate = ref_im.AcquisitionDate
-                            pxl = im.Pixels
-                            pxl.plane_count = 1
-                            pxl.Channel(0).Name = ref_im.Pixels.Channel(0).Name
-                            pxl.PixelType = ref_im.Pixels.PixelType
-                            pxl.SizeX = ref_im.Pixels.SizeX
-                            pxl.SizeY = ref_im.Pixels.SizeY
-                            pxl.SizeT = 1
-                            pxl.SizeC = 1
-                            pxl.SizeZ = 1
-                            pln = pxl.Plane(0)
-                            pln.TheT = ref_im.Pixels.Plane(0).TheT
-                            pln.TheZ = ref_im.Pixels.Plane(0).TheZ
-                            pln.TheC = ref_im.Pixels.Plane(0).TheC
-                            pln.PositionY = ref_im.Pixels.Plane(0).PositionY
-                            pln.PositionX = ref_im.Pixels.Plane(0).PositionX
-                             # Assign a new ID
-                            im.ID = 'Image:%d' % im_count
-                            # Update the time point (cycle identifier)
-                            im.Pixels.Plane(0).TheT = cycle_count
-                            # Update the name
-                            fn = {
-                                'plate_name': source.name,
-                                'w': well_id,
-                                'y': int(samples[s].PositionY),
-                                'x': int(samples[s].PositionX),
-                                'c': im.Pixels.Plane(0).TheC,
-                                'z': im.Pixels.Plane(0).TheZ,
-                                't': im.Pixels.Plane(0).TheT
-                            }
-                            im.Name = self.image_file_format_string.format(**fn)
-                            samples[s].ImageRef = im.ID
-                            # Map original index to new cycle-specific index
-                            fm_lut[ref_ix] = im_count
-                            im_count += 1
-
-                    # Store the updated metadata as XML in the cycle directory
-                    with XmlWriter() as writer:
-                        filename = os.path.join(cycle.dir,
-                                                cycle.image_metadata_file)
-                        data = cycle_metadata.to_xml()
-                        writer.write(filename, data)
+                    # Store the updated metadata in an HDF5 file
+                    filename = os.path.join(cycle.dir,
+                                            cycle.image_metadata_file)
+                    store = pd.HDFStore(filename, 'w')
+                    store.append('metadata', cycle_metadata,
+                                 format='table', data_columns=True)
+                    store.close()
 
                     # Update "ref_index" and "name" in the file mapper with the
-                    # absolute path to the final image file (in the respective
-                    # cycle folder) and store it in the main upload directory
-                    file_mapper = acquisition.image_mapper
-                    for element in file_mapper:
+                    # path to the final image file relative to the experiment
+                    # root directory
+                    for element in acquisition.image_mapper:
                         new_element = ImageFileMapper()
-                        ix = fm_lut[element.ref_index]
+                        ref_name = metadata.at[element.ref_index, 'name']
+                        ix = np.where(cycle_metadata.name == ref_name)[0][0]
                         new_element.series = element.series
                         new_element.planes = element.planes
                         new_element.files = [
@@ -439,12 +351,13 @@ class MetadataConfigurator(ClusterRoutines):
                             for f in element.files
                         ]
                         new_element.ref_index = ix
-                        new_element.ref_id = cycle_metadata.image(ix).ID
-                        new_element.ref_file = os.path.join(
-                            cycle.image_dir,
-                            cycle_metadata.image(ix).Name
+                        new_element.ref_file = os.path.relpath(os.path.join(
+                                cycle.image_dir,
+                                cycle_metadata.at[ix, 'name']
+                            ),
+                            self.experiment.dir
                         )
-                        plate_file_mapper.append(dict(new_element))
+                        file_mapper.append(dict(new_element))
 
                     # Remove the intermediate cycle-specific mapper file
                     os.remove(os.path.join(acquisition.dir,
@@ -454,8 +367,7 @@ class MetadataConfigurator(ClusterRoutines):
 
                 with JsonWriter() as writer:
                     filename = batch['outputs']['mapper_files'][i]
-                    data = plate_file_mapper
-                    writer.write(filename, data)
+                    writer.write(filename, file_mapper)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):

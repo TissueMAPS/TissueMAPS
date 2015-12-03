@@ -104,9 +104,7 @@ class TestCycle(fake_filesystem_unittest.TestCase):
                 f.write('')
             self.image_files.append(md.image(i).Name)
 
-        self.cycle = Cycle(
-                        cycle_dir=self.cycle_dir, plate_name=self.plate_name,
-                        library='vips')
+        self.cycle = Cycle(cycle_dir=self.cycle_dir, library='vips')
 
         # Add illumination correction statistics file
         stats_dir = os.path.join(self.cycle_dir, 'stats')
