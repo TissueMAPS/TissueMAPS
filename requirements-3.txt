@@ -32,5 +32,6 @@ scikit-image>=0.11.3
 sphinxcontrib-autoprogram==0.1.2
 sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12
+tables>=3.2.2
 tifffile==0.6.2
 ruamel.yaml==0.10.11
