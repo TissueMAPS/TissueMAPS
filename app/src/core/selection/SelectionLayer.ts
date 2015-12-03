@@ -2,7 +2,6 @@ class SelectionLayer extends BaseLayer<ol.layer.Vector> {
 
     color: Color;
     mapObjectMarkers = {};
-    private _olLayer: ol.layer.Vector;
 
     constructor(name: string,
                 color: Color) {

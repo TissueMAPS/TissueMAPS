@@ -13,7 +13,6 @@ class VisualLayer extends BaseLayer<ol.layer.Vector> {
     // private defaultFillColor = new Color(255, 0, 0, 0.1);
 
     private _visuals: Visual[] = [];
-    private _olLayer: ol.layer.Vector;
 
     constructor(name: string, opt: VisualLayerArgs = {}) {
         super(name);
