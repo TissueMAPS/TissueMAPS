@@ -76,9 +76,9 @@ describe('In MapObjectManager', function() {
         });
     });
 
-    describe('the function getMapObjectTypes', function() {
-        it('should return the supported object types', function() {
-            m.getMapObjectTypes().then(function(types) {
+    describe('the property mapObjectTypes', function() {
+        it('should return the supported object types as a promise', function() {
+            m.mapObjectTypes.then(function(types) {
                 expect(_.intersection(types, ['cells']).length === 1).toEqual(true);
             });
             $rootScope.$apply();

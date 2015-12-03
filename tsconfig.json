@@ -64,6 +64,8 @@
         "app/src/toolwindow/ToolContentCtrl.ts",
 
         "app/src/ui/toolbar/tmToolbar.ts",
-        "app/src/ui/toolbar/ToolbarCtrl.ts"
+        "app/src/ui/toolbar/ToolbarCtrl.ts",
+        "app/src/ui/sidebar/selections/SelectionSettingsCtrl.ts",
+        "app/src/ui/sidebar/selections/SelectionControlsCtrl.ts"
     ]
 }

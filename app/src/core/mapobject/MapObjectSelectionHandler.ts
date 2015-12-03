@@ -7,6 +7,7 @@ interface SerializedSelectionHandler extends Serialized<MapObjectSelectionHandle
 
 class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandler> {
 
+    mapObjectManager: MapObjectManager;
     viewport: Viewport;
 
     availableColors: Color[];
@@ -16,8 +17,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _activeMapObjectType: MapObjectType = null;
     private _activeSelection: MapObjectSelection = null;
 
-    constructor(viewport: Viewport) {
+    constructor(viewport: Viewport, mapObjectManager: MapObjectManager) {
 
+        this.mapObjectManager = mapObjectManager;
         this.viewport = viewport;
 
         var colorsRGBString = [
@@ -87,6 +89,16 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = t;
         }
+        this.mapObjectManager.getMapObjectsForType(t).then((objs) => {
+            console.log(objs);
+            var visuals = _(objs).map((o) => { return o.getVisual(); });
+            var visualLayer = new VisualLayer(t, {
+                visuals: visuals
+            });
+            this.viewport.map.then((map) => {
+                visualLayer.addToMap(map);
+            });
+        });
     }
 
 

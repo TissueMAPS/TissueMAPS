@@ -38,7 +38,7 @@ class MapObjectManager {
         return def.promise;
     }
 
-    getMapObjectTypes(): ng.IPromise<string[]> {
+    get mapObjectTypes(): ng.IPromise<string[]> {
         return this.mapObjectsByType.then((map) => {
             return _.keys(map);
         });
@@ -56,12 +56,6 @@ class MapObjectManager {
                 }
             })
             return foundObjects;
-        });
-    }
-
-    getSupportedMapObjectTypes(): ng.IPromise<MapObjectType[]> {
-        return this.mapObjectsByType.then((objs) => {
-            return _(objs).keys();
         });
     }
 

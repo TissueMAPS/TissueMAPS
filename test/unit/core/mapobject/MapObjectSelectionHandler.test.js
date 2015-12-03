@@ -12,12 +12,20 @@ describe('In MapObjectSelectionHandler', function() {
     var cell;
 
     beforeEach(function() {
-        vp = {};
-        sh = new MapObjectSelectionHandler(vp);
-        sh.viewport.map = jasmine.createSpyObj('map', ['then']);
+        vp = {
+            map: jasmine.createSpyObj('map', ['then'])
+        };
+        var mapObjectManager = {
+            getMapObjectsForType: jasmine.createSpy('getMapObjectsForType').and.returnValue(
+                jasmine.createSpyObj('mapObjects', ['then'])
+            )
+        };
+
+        sh = new MapObjectSelectionHandler(vp, mapObjectManager);
 
         sh.addMapObjectType('cell');
         sh.addMapObjectType('nucleus');
+
         sel1 = new MapObjectSelection(0, 'cell', Color.RED);
         sel2 = new MapObjectSelection(0, 'nucleus', Color.BLUE);
         cell = {id: 1, type: 'cell'};

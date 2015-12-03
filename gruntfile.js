@@ -405,6 +405,7 @@ module.exports = function(grunt) {
         karma: {
             options: {
                 frameworks: ['jasmine'],
+                logLevel: 'INFO',
                 browsers: [
                     'PhantomJS'
                     // 'Chrome'
@@ -452,7 +453,9 @@ module.exports = function(grunt) {
             },
             unit: {
                 singleRun: false,
+                captureConsole: true,
                 reporters: 'mocha',
+                logLevel: 'INFO',
                 files: [
                     { src: ['test/unit/**/*.js'] }
                 ]
