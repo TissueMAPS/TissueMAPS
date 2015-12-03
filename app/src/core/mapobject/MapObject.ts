@@ -22,7 +22,10 @@ class MapObject {
     getVisual() {
         switch (this.visualType) {
             case 'polygon':
-                return new PolygonVisual(this.extraData.coordinates);
+                return new PolygonVisual(this.extraData.coordinates, {
+                    fillColor: Color.WHITE.withAlpha(0.02),
+                    strokeColor: Color.WHITE
+                });
                 break;
             default:
                 throw new Error('Unknown visual type');
