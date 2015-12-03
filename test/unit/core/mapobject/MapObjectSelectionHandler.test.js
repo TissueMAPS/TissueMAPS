@@ -41,12 +41,18 @@ describe('In MapObjectSelectionHandler', function() {
             expect(sh.getSelectionsForType(sel1.mapObjectType)[0]).toEqual(sel1);
         });
 
-        it('should throw an error if an object of unknown type is requested', function() {
-            var call = function() {
-                sh.getSelectionsForType('some type');
-            };
-            expect(call).toThrowError();
+        it('should return an empty list if an object of unknown type is requested', function() {
+            expect(sh.getSelectionsForType('some type')).toEqual([]);
         });
+    });
+
+    describe('the property selectionsForActiveType', function() {
+       it('should provide all selections of the active type', function() {
+            sh.addSelection(sel1);
+            sh.activeMapObjectType = sel1.mapObjectType;
+
+            expect(sh.selectionsForActiveType[0]).toEqual(sel1);
+       });
     });
 
     describe('the function addSelection', function() {
@@ -90,6 +96,14 @@ describe('In MapObjectSelectionHandler', function() {
             sh.activeSelection = sel1;
 
             expect(sh.activeSelection).toEqual(sel1);
+        });
+    });
+
+    describe('the property supportedMapObjectTypes', function() {
+        it('should correspond to all types that are selectable', function() {
+            sh.addSelection(sel1);
+
+            expect(sh.supportedMapObjectTypes).toEqual(['cell', 'nucleus']);
         });
     });
 

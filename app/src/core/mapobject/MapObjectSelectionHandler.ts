@@ -36,7 +36,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     set activeMapObjectType(t: MapObjectType) {
-        this._checkObjectType(t);
+        if (!this._isValidType(t)) {
+            return;
+        }
         this._activeMapObjectType = t;
     }
 
@@ -64,8 +66,19 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._activeSelection;
     }
 
-    getSelectionsForType(type: string) {
-        this._checkObjectType(type);
+    get supportedMapObjectTypes(): MapObjectType[] {
+        return _.keys(this._selectionsByType);
+    }
+
+    get selectionsForActiveType(): MapObjectSelection[] {
+        return this.activeMapObjectType === null ? []
+            : this._selectionsByType[this.activeMapObjectType];
+    }
+
+    getSelectionsForType(type: string): MapObjectSelection[] {
+        if (!this._isValidType(type)) {
+            return [];
+        }
         return this._selectionsByType[type];
     }
 
@@ -74,7 +87,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = t;
         }
-        // this.addNewSelection(t);
     }
 
 
@@ -106,12 +118,16 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     addSelection(sel: MapObjectSelection) {
-        this._checkObjectType(sel.mapObjectType);
+        if (!this._isValidType(sel.mapObjectType)) {
+            return;
+        }
         this.getSelectionsForType(sel.mapObjectType).push(sel);
     }
 
     clickOnMapObject(mapObject: MapObject, clickPos: MapPosition) {
-        this._checkObjectType(mapObject.type);
+        if (!this._isValidType(mapObject.type)) {
+            return;
+        }
         if (this._markerSelectionModeActive) {
             var sel = this.activeSelection;
             if (sel) {
@@ -134,7 +150,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     // }
 
     getSelection(type: string, selectionId: MapObjectSelectionId): MapObjectSelection {
-        this._checkObjectType(type);
+        if (!this._isValidType(type)) {
+            return undefined;
+        }
         var selections = this.getSelectionsForType(type);
         return _(selections).find((s) => {
             return s.id === selectionId;
@@ -147,7 +165,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     // }
 
     addNewSelection(type: string) {
-        this._checkObjectType(type);
+        if (!this._isValidType(type)) {
+            return undefined;
+        }
         var id = this.getSelectionsForType(type).length;
         var color = this._getNextColor(type);
         var newSel = new MapObjectSelection(id, type, color);
@@ -171,7 +191,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     private _getNextColor(type: string) {
-        this._checkObjectType(type);
         var sels = this.getSelectionsForType(type);
         var nColors = this.availableColors.length;
         var possibleIds = _.range(nColors);
@@ -203,9 +222,12 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         }
     };
 
-    private _checkObjectType(t: MapObjectType) {
-        if (this._selectionsByType[t] === undefined) {
-            throw new Error('Not a supported type. Did you add it already?');
+    private _isValidType(t: MapObjectType) {
+        if (t === undefined || this._selectionsByType[t] === undefined) {
+            console.log('Not a valid type: ', t);
+            return false;
+        } else {
+            return true;
         }
     }
 
