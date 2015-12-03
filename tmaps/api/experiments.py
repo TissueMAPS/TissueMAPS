@@ -446,8 +446,6 @@ def get_objects(experiment_id):
         }
     }
 
-    or both responses merged into one.
-
     """
     ex = Experiment.get(experiment_id)
     if not ex:
@@ -466,7 +464,9 @@ def get_objects(experiment_id):
 
             object_data = data['/objects/%s' % t]
 
-            objects[t]['visual_type'] = object_data.attrs['visual_type']
+            # TODO: Fix this
+            # objects[t]['visual_type'] = object_data.attrs['visual_type']
+            objects[t]['visual_type'] = 'polygon'
             objects[t]['ids'] = object_data['ids'][()].tolist()
             objects[t]['map_data'] = {}
 
