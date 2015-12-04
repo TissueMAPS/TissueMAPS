@@ -219,7 +219,7 @@ class MetadataHandler(object):
         self.metadata = pd.DataFrame(metadata)
         length = self.metadata.shape[0]
         self.metadata['date'] = np.empty((length, ), dtype='str')
-        self.metadata['well_id'] = np.empty((length, ), dtype='str')
+        self.metadata['well_name'] = np.empty((length, ), dtype='str')
         self.metadata['well_position_y'] = np.empty((length, ), dtype='int')
         self.metadata['well_position_x'] = np.empty((length, ), dtype='int')
         self.metadata['site_ix'] = np.empty((length, ), dtype='int')
@@ -380,8 +380,8 @@ class MetadataHandler(object):
         # NOTE: Plate information is usually not readily available from images
         # or additional metadata files and thus requires custom readers/handlers
         plate = self.ome_additional_metadata.plates[0]
-        for well_id in plate.Well:
-            well = plate.Well[well_id]
+        for w in plate.Well:
+            well = plate.Well[w]
             n_samples = len(well.Sample)
             for i in xrange(n_samples):
                 # Find the reference *Image* elements for the current
@@ -390,7 +390,7 @@ class MetadataHandler(object):
                 index = sorted(reference.keys())
                 key = tuple([reference[ix] for ix in index])
                 image_id = lookup[key]
-                md.at[image_id, 'well_id'] = well_id
+                md.at[image_id, 'well_name'] = w
 
         return self.metadata
 
@@ -498,7 +498,7 @@ class MetadataHandler(object):
             md.at[i, 'channel_name'] = capture['c']
             md.at[i, 'zplane_ix'] = capture['z']
             md.at[i, 'tpoint_ix'] = capture['t']
-            md.at[i, 'well_id'] = capture['w']
+            md.at[i, 'well_name'] = capture['w']
             md.at[i, 'site_ix'] = capture['s']
 
         return self.metadata
@@ -537,9 +537,9 @@ class MetadataHandler(object):
         logger.info('translate absolute microscope stage positions into '
                     'relative acquisition grid coordinates')
 
-        for well_id in np.unique(md.well_id):
+        for well_name in np.unique(md.well_name):
 
-            ix = np.where(md.well_id == well_id)[0]
+            ix = np.where(md.well_name == well_name)[0]
             positions = zip(md.loc[ix, 'stage_position_y'],
                             md.loc[ix, 'stage_position_x'])
 
@@ -588,7 +588,7 @@ class MetadataHandler(object):
 
         # Determine the number of unique positions per well
         acquisitions_per_well = md.groupby([
-            'well_id', 'channel_name', 'zplane_ix', 'tpoint_ix'
+            'well_name', 'channel_name', 'zplane_ix', 'tpoint_ix'
         ])
 
         n_acquisitions_per_well = acquisitions_per_well.count().name
@@ -641,7 +641,7 @@ class MetadataHandler(object):
 
         # Remove all z-plane image entries except for the first
         projected_md = md.drop_duplicates([
-            'well_id', 'well_position_x', 'well_position_y',
+            'well_name', 'well_position_x', 'well_position_y',
             'channel_name', 'tpoint_ix'
         ]).reindex()
         # Update z-plane index for the projected image entries
@@ -651,7 +651,7 @@ class MetadataHandler(object):
 
         # Group metadata by focal planes (z-stacks)
         zstacks = md.groupby([
-            'well_id', 'well_position_x', 'well_position_y',
+            'well_name', 'well_position_x', 'well_position_y',
             'channel_name', 'tpoint_ix'
         ])
         logger.debug('identified %d z-stacks', zstacks.ngroups)
@@ -754,7 +754,7 @@ class MetadataHandler(object):
         for i in xrange(md.shape[0]):
             fieldnames = {
                 'plate_name': self.plate_name,
-                'w': md.at[i, 'well_id'],
+                'w': md.at[i, 'well_name'],
                 'y': md.at[i, 'well_position_y'],
                 'x': md.at[i, 'well_position_x'],
                 'c': md.at[i, 'channel_ix'],
@@ -777,7 +777,7 @@ class MetadataHandler(object):
         logger.info('assign plate wide acquisition site indices')
         md = self.metadata
         sites = md.groupby([
-            'well_id', 'well_position_x', 'well_position_y'
+            'well_name', 'well_position_x', 'well_position_y'
         ])
         site_indices = sorted(sites.groups.values())
         for i, indices in enumerate(site_indices):
