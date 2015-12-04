@@ -126,31 +126,31 @@ class TestCycle(fake_filesystem_unittest.TestCase):
 
     def test_image_metadata(self):
         self.assertEqual(
-            self.cycle.image_metadata_table['name'].tolist(),
+            self.cycle.image_metadata['name'].tolist(),
             natsorted(self.image_files))
         self.assertEqual(
-            self.cycle.image_metadata_table.loc[0, 'name'],
+            self.cycle.image_metadata.loc[0, 'name'],
             self.image_files[0])
         self.assertEqual(
-            len(np.unique(self.cycle.image_metadata_table['plate_name'])),
+            len(np.unique(self.cycle.image_metadata['plate_name'])),
             1)
         self.assertEqual(
-            self.cycle.image_metadata_table.loc[0, 'plate_name'],
+            self.cycle.image_metadata.loc[0, 'plate_name'],
             self.plate_name)
         self.assertEqual(
-            len(np.unique(self.cycle.image_metadata_table['tpoint_ix'])),
+            len(np.unique(self.cycle.image_metadata['tpoint_ix'])),
             1)
         self.assertEqual(
-            self.cycle.image_metadata_table.loc[0, 'tpoint_ix'],
+            self.cycle.image_metadata.loc[0, 'tpoint_ix'],
             self.cycle_index)
         self.assertEqual(
-            self.cycle.image_metadata_table.loc[0, 'channel_ix'],
+            self.cycle.image_metadata.loc[0, 'channel_ix'],
             0)
         self.assertEqual(
-            self.cycle.image_metadata_table.loc[0, 'channel_name'],
+            self.cycle.image_metadata.loc[0, 'channel_name'],
             self.channel_name)
         self.assertEqual(
-            self.cycle.image_metadata_table.loc[0, 'zplane_ix'],
+            self.cycle.image_metadata.loc[0, 'zplane_ix'],
             0)
 
     def test_images(self):

@@ -258,7 +258,7 @@ class Cycle(object):
             the same
         '''
         images = list()
-        filenames = self.image_metadata_table['name']
+        filenames = self.image_metadata['name']
         if self.image_files != filenames.tolist():
             raise ValueError('Names of images do not match')
         for i, f in enumerate(self.image_files):
