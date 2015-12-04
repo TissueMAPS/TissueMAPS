@@ -764,6 +764,9 @@ class MetadataHandler(object):
             }
             md.at[i, 'name'] = image_file_format_string.format(**fieldnames)
 
+        # Sort metadata according to image name
+        self.metadata = md.sort_values(by='name').reindex()
+
         return self.metadata
 
     def assign_acquisition_site_indices(self):
