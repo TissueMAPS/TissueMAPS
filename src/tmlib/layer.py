@@ -132,7 +132,7 @@ class ChannelLayer(object):
         # Determine the dimensions of wells based on one example well.
         # NOTE: all wells in an experiment must have the same dimensions!
         cycle = experiment.plates[0].cycles[tpoint_ix]
-        md = cycle.image_metadata_table
+        md = cycle.image_metadata
         wells = np.unique(md['well_name'])
         index = np.where(
                     (md['tpoint_ix'] == tpoint_ix) &
@@ -498,7 +498,7 @@ class ObjectLayer(object):
             # Get the dimensions of wells from one example well. It's assumed
             # that all wells have the same dimensions!
             cycle = experiment.plates[0].cycles[0]
-            md = cycle.image_metadata_table
+            md = cycle.image_metadata
             well_name = data.read('/metadata/%d/well_name' % unique_job_ids[0])
             index = (
                         (md['tpoint_ix'] == 0) &

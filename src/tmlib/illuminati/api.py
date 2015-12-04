@@ -49,7 +49,7 @@ class PyramidBuilder(ClusterRoutines):
         job_count = 0
         for plate in self.experiment.plates:
             for i, cycle in enumerate(plate.cycles):
-                md = cycle.image_metadata_table
+                md = cycle.image_metadata
                 channels = np.unique(md['channel_ix'])
                 zplanes = np.unique(md['zplane_ix'])
                 batch_indices = list()

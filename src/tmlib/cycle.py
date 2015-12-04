@@ -212,6 +212,9 @@ class Cycle(object):
         metadata = store.select('metadata')
         store.close()
 
+        # TODO: consider returning the store for subset selection using the
+        # select() or select_column() methods
+
         # Add the alignment description to each image element (if available)
         alignment_file = os.path.join(self.dir, self.align_descriptor_file)
         if os.path.exists(alignment_file):

@@ -213,7 +213,7 @@ class Plate(object):
             one-based index number for column position) for each imaged
             well of the plate
         '''
-        md = self.cycles[0].image_metadata_table
+        md = self.cycles[0].image_metadata
         return np.unique(md['well_name']).tolist()
 
     @property
