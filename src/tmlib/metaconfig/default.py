@@ -58,19 +58,12 @@ class MetadataHandler(object):
         self.additional_files = additional_files
         self.omexml_files = omexml_files
         self.plate_name = plate_name
-        # self.metadata = pd.DataFrame(
-        #     columns=[
-        #         'name', 'date',
-        #         'tpoint_ix', 'zplane_ix', 'channel_ix', 'channel_name',
-        #         'well_id', 'well_position_y', 'well_position_x', 'site_ix',
-        #         'stage_position_y', 'stage_position_x'
-        #     ]
-        # )
         self.file_mapper_list = list()
         self.file_mapper_lookup = defaultdict(list)
         self.id_to_well_id_ref = dict()
         self.id_to_wellsample_ix_ref = dict()
         self.wells = dict()
+        self.metadata = pd.DataFrame()
 
     @cached_property
     def ome_image_metadata(self):
@@ -805,9 +798,9 @@ class MetadataHandler(object):
         '''
         logger.info('remove redundant metadata')
         logger.debug('remove column "stage_position_y"')
-        del self.metadata.stage_position_y
+        del self.metadata['stage_position_y']
         logger.debug('remove column "stage_position_x"')
-        del self.metadata.stage_position_x
+        del self.metadata['stage_position_x']
 
         return self.metadata
 
