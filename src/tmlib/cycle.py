@@ -259,7 +259,7 @@ class Cycle(object):
         '''
         images = list()
         filenames = self.image_metadata['name']
-        if self.image_files != filenames.tolist():
+        if self.image_files != filenames:
             raise ValueError('Names of images do not match')
         for i, f in enumerate(self.image_files):
             image_metadata = ChannelImageMetadata()

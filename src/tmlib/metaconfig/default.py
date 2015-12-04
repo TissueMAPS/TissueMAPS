@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from collections import defaultdict
+from collections import OrderedDict
 from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
@@ -163,7 +164,7 @@ class MetadataHandler(object):
         # NOTE: The order of files is important for some metadata information!
         filenames = natsorted(self.ome_image_metadata.keys())
 
-        metadata = dict()
+        metadata = OrderedDict()
         metadata['name'] = list()
         metadata['channel_name'] = list()
         metadata['tpoint_ix'] = list()
