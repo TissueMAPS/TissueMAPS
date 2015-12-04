@@ -131,7 +131,7 @@ class Mosaic(StichedImage):
     @staticmethod
     def _build_image_grid(images):
         coordinates = [
-            (im.metadata.well_pos_y, im.metadata.well_pos_x)
+            (im.metadata.well_position_y, im.metadata.well_position_x)
             for im in images
         ]
         height, width = np.max(coordinates, axis=0)  # zero-based

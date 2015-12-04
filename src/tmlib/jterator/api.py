@@ -439,9 +439,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     data.write('/metadata/%s/well_name' % job_id,
                                data=md.well_name)
                     data.write('/metadata/%s/well_position_y' % job_id,
-                               data=md.well_pos_y)
+                               data=md.well_position_y)
                     data.write('/metadata/%s/well_position_x' % job_id,
-                               data=md.well_pos_x)
+                               data=md.well_position_x)
                     data.write('/metadata/%s/image_dimension_y' % job_id,
                                data=orig_dims[0])
                     data.write('/metadata/%s/image_dimension_x' % job_id,

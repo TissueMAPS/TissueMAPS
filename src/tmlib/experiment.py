@@ -428,8 +428,8 @@ class Experiment(object):
                         (md['channel_ix'] == int(captures['c'])) &
                         (md['zplane_ix'] == int(captures['z'])) &
                         (md['well_name'] == captures['w']) &
-                        (md['well_pos_x'] == int(captures['x'])) &
-                        (md['well_pos_y'] == int(captures['y'])))[0]
+                        (md['well_position_x'] == int(captures['x'])) &
+                        (md['well_position_y'] == int(captures['y'])))[0]
                 if len(ix) > 1:
                     raise MetadataError(
                             'A filename has to correspond to a single image.')

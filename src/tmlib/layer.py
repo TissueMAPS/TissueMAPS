@@ -508,8 +508,8 @@ class ObjectLayer(object):
             )
             # Determine the dimensions of a well in pixels, accounting for a
             # potential overlap of images.
-            n_rows = np.max(md['well_pos_y'][index]) + 1
-            n_cols = np.max(md['well_pos_x'][index]) + 1
+            n_rows = np.max(md['well_position_y'][index]) + 1
+            n_cols = np.max(md['well_position_x'][index]) + 1
             well_dimensions = (
                 n_rows * image_dimensions[0] + dy * (n_rows - 1),
                 n_cols * image_dimensions[1] + dx * (n_cols - 1)
@@ -556,8 +556,8 @@ class ObjectLayer(object):
 
                 plate_coords = plate.map_well_id_to_coordinate(well_name)
                 well_coords = (
-                    data.read('%s/well_pos_y' % metadata_path),
-                    data.read('%s/well_pos_x' % metadata_path)
+                    data.read('%s/well_position_y' % metadata_path),
+                    data.read('%s/well_position_x' % metadata_path)
                 )
 
                 # Images may be aligned and the resulting shift must be

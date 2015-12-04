@@ -15,7 +15,7 @@ class ImageMetadata(object):
 
     _PERSISTENT_ATTRS = {
         'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix',
-        'plate_name', 'well_name', 'well_pos_x', 'well_pos_y',
+        'plate_name', 'well_name', 'well_position_x', 'well_position_y',
         'x_shift', 'y_shift',
         'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
         'is_aligned', 'is_omitted'
@@ -118,36 +118,36 @@ class ImageMetadata(object):
         self._site_ix = value
 
     @property
-    def well_pos_y(self):
+    def well_position_y(self):
         '''
         Returns
         -------
         int
             zero-based row (y) index of the image within the well
         '''
-        return self._well_pos_y
+        return self._well_position_y
 
-    @well_pos_y.setter
-    def well_pos_y(self, value):
+    @well_position_y.setter
+    def well_position_y(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "well_pos_y" must have type int')
-        self._well_pos_y = int(value)
+            raise TypeError('Attribute "well_position_y" must have type int')
+        self._well_position_y = int(value)
 
     @property
-    def well_pos_x(self):
+    def well_position_x(self):
         '''
         Returns
         -------
         int
             zero-based column (x) index of the image within the well
         '''
-        return self._well_pos_x
+        return self._well_position_x
 
-    @well_pos_x.setter
-    def well_pos_x(self, value):
+    @well_position_x.setter
+    def well_position_x(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "well_pos_x" must have type int')
-        self._well_pos_x = int(value)
+            raise TypeError('Attribute "well_position_x" must have type int')
+        self._well_position_x = int(value)
 
     @property
     def well_name(self):

@@ -48,8 +48,8 @@ class TestChannelImageMetadata(unittest.TestCase):
             'zplane_ix': 0,
             'tpoint_ix': 0,
             'channel_name': 'channel_test',
-            'well_pos_x': 0,
-            'well_pos_y': 0,
+            'well_position_x': 0,
+            'well_position_y': 0,
             'site_ix': 0
         }
         metadata = ChannelImageMetadata(**args)
@@ -159,37 +159,37 @@ class TestChannelImageMetadata(unittest.TestCase):
         with self.assertRaises(TypeError):
             metadata.well_name = 0
 
-    def test_well_pos_x_attribute_1(self):
+    def test_well_position_x_attribute_1(self):
         metadata = ChannelImageMetadata()
-        metadata.well_pos_x = 0
-        self.assertIsInstance(metadata.well_pos_x, int)
-        self.assertEqual(metadata.well_pos_x, 0)
+        metadata.well_position_x = 0
+        self.assertIsInstance(metadata.well_position_x, int)
+        self.assertEqual(metadata.well_position_x, 0)
 
-    def test_well_pos_x_attribute_wrong_datatype_1(self):
+    def test_well_position_x_attribute_wrong_datatype_1(self):
         metadata = ChannelImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.well_pos_x = float(0)
+            metadata.well_position_x = float(0)
 
-    def test_well_pos_x_attribute_wrong_datatype(self):
+    def test_well_position_x_attribute_wrong_datatype(self):
         metadata = ChannelImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.well_pos_x = '0'
+            metadata.well_position_x = '0'
 
-    def test_well_pos_y_attribute(self):
+    def test_well_position_y_attribute(self):
         metadata = ChannelImageMetadata()
-        metadata.well_pos_y = 0
-        self.assertIsInstance(metadata.well_pos_y, int)
-        self.assertEqual(metadata.well_pos_y, 0)
+        metadata.well_position_y = 0
+        self.assertIsInstance(metadata.well_position_y, int)
+        self.assertEqual(metadata.well_position_y, 0)
 
-    def test_well_pos_y_attribute_wrong_datatype_1(self):
-        metadata = ChannelImageMetadata()
-        with self.assertRaises(TypeError):
-            metadata.well_pos_y = float(0)
-
-    def test_well_pos_y_attribute_wrong_datatype_2(self):
+    def test_well_position_y_attribute_wrong_datatype_1(self):
         metadata = ChannelImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.well_pos_y = '0'
+            metadata.well_position_y = float(0)
+
+    def test_well_position_y_attribute_wrong_datatype_2(self):
+        metadata = ChannelImageMetadata()
+        with self.assertRaises(TypeError):
+            metadata.well_position_y = '0'
 
     def test_upper_overhang_attribute(self):
         metadata = ChannelImageMetadata()
@@ -288,8 +288,8 @@ class TestChannelImageMetadata(unittest.TestCase):
             'zplane_ix': 0,
             'tpoint_ix': 0,
             'channel_name': 'channel_test',
-            'well_pos_x': 0,
-            'well_pos_y': 0,
+            'well_position_x': 0,
+            'well_position_y': 0,
             'site_ix': 0
         }
         metadata = ChannelImageMetadata(**args)
