@@ -224,6 +224,7 @@ class MetadataHandler(object):
         self.metadata['well_position_y'] = np.empty((length, ), dtype='int')
         self.metadata['well_position_x'] = np.empty((length, ), dtype='int')
         self.metadata['site_ix'] = np.empty((length, ), dtype='int')
+        self.metadata['plate_name'] = np.repeat(str(self.plate_name), length)
 
         return self.metadata
 
