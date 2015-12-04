@@ -209,7 +209,7 @@ class Cycle(object):
         metadata_file = os.path.join(self.dir, self.image_metadata_file)
         logger.debug('read image metadata from HDF5 file')
         store = pd.HDFStore(metadata_file)
-        metadata = store.select('metadata')
+        self._metadata = store.select('metadata').sort_values(by='name')
         store.close()
 
         # TODO: consider returning the store for subset selection using the
@@ -222,20 +222,20 @@ class Cycle(object):
                 description = reader.read(alignment_file)
             align_description = AlignmentDescription(description)
             # Match shift descriptions via "site_ix"
-            sites = metadata['site_ix']
+            sites = self._metadata['site_ix']
             overhang = align_description.overhang
             align_sites = [shift.site_ix for shift in align_description.shifts]
             for i, s in enumerate(sites):
-                metadata.at[i, 'upper_overhang'] = overhang.upper
-                metadata.at[i, 'lower_overhang'] = overhang.lower
-                metadata.at[i, 'right_overhang'] = overhang.right
-                metadata.at[i, 'left_overhang'] = overhang.left
+                self._metadata.at[i, 'upper_overhang'] = overhang.upper
+                self._metadata.at[i, 'lower_overhang'] = overhang.lower
+                self._metadata.at[i, 'right_overhang'] = overhang.right
+                self._metadata.at[i, 'left_overhang'] = overhang.left
                 ix = align_sites.index(s)
                 shift = align_description.shifts[ix]
-                metadata.at[i, 'x_shift'] = shift.x
-                metadata.at[i, 'y_shift'] = shift.y
+                self._metadata.at[i, 'x_shift'] = shift.x
+                self._metadata.at[i, 'y_shift'] = shift.y
 
-        return metadata
+        return self._metadata
 
     @property
     def images(self):
@@ -259,7 +259,7 @@ class Cycle(object):
         '''
         images = list()
         filenames = self.image_metadata['name']
-        if self.image_files != filenames:
+        if self.image_files != filenames.tolist():
             raise ValueError('Names of images do not match')
         for i, f in enumerate(self.image_files):
             image_metadata = ChannelImageMetadata()

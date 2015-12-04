@@ -332,19 +332,21 @@ class Experiment(object):
         '''
         Returns
         -------
-        List[str]
-            names of layers
+        Dict[collections.namedtuple, str]
+            names of layers for each combination of time point, channel,
+            and z-plane
         '''
-        names = list()
+        names = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
+                t = cycle.index
                 md = cycle.image_metadata
                 channels = np.unique(md['channel_ix'])
                 zplanes = np.unique(md['zplane_ix'])
                 for c in channels:
                     for z in zplanes:
-                        names.append(cfg.LAYER_NAME_FORMAT.format(
-                                            t=cycle.index, c=c, z=z))
+                        names[(t, c, z)] = cfg.LAYER_NAME_FORMAT.format(
+                                                    t=t, c=c, z=z)
         return names
 
     @property

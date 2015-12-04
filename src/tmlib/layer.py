@@ -93,12 +93,8 @@ class ChannelLayer(object):
         and background pixels are inserted between wells to visually separate
         them from each other. Empty wells will also be filled with background.
         '''
-        name = [
-            lmd.name for lmd in experiment.layer_metadata.values()
-            if lmd.tpoint_ix == tpoint_ix and
-            lmd.channel_ix == channel_ix and
-            lmd.zplane_ix == zplane_ix
-        ][0]
+        layer_md = experiment.layer_metadata[(tpoint_ix, channel_ix, zplane_ix)]
+        name = layer_md.name
         logger.info('create layer "%s"', name)
 
         # Set the size of the spacer. Note that this parameter has to be the
