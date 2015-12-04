@@ -347,7 +347,9 @@ class MetadataConfigurator(ClusterRoutines):
                         new_element.series = element.series
                         new_element.planes = element.planes
                         new_element.files = [
-                            os.path.join(acquisition.image_dir, f)
+                            os.path.relpath(
+                                os.path.join(acquisition.image_dir, f),
+                                self.experiment.sources_dir)
                             for f in element.files
                         ]
                         new_element.ref_index = ix
@@ -355,7 +357,7 @@ class MetadataConfigurator(ClusterRoutines):
                                 cycle.image_dir,
                                 cycle_metadata.at[ix, 'name']
                             ),
-                            self.experiment.dir
+                            self.experiment.plates_dir
                         )
                         file_mapper.append(dict(new_element))
 

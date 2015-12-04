@@ -69,12 +69,18 @@ class ImageExtractor(ClusterRoutines):
                     'id': job_count,
                     'inputs': {
                         'image_files': [
-                            mapper[ix].files for ix in indices
+                            os.path.join(
+                                self.experiment.sources_dir,
+                                mapper[ix].files)
+                            for ix in indices
                         ]
                     },
                     'outputs': {
                         'image_files': [
-                            mapper[ix].ref_file for ix in indices
+                            os.path.join(
+                                self.experiment.plates_dir,
+                                mapper[ix].ref_file)
+                            for ix in indices
                         ]
                     },
                     'series': [
