@@ -3,8 +3,7 @@ interface Visualizable {
 }
 
 abstract class Visual {
-
-    private _olFeature: ol.Feature;
+    protected _olFeature: ol.Feature;
 
     get olFeature() {
         return this._olFeature;
@@ -13,32 +12,34 @@ abstract class Visual {
     constructor(olFeature: ol.Feature) {
         this._olFeature = olFeature;
     }
-
-//     get fillColor(): Color {
-//         // var st: ol.style.Style = this._olFeature.getStyle();
-//         // return Color.fromOlColor(st.getFill());
-//         return Color.RED;
-//     }
-
-//     set fillColor(c: Color) {
-//         // var st: ol.style.Style = this._olFeature.getStyle();
-//         // st.getFill().setColor(c.toOlColor());
-//     }
-
-//     get strokeColor(): Color {
-//         return Color.RED;
-//     }
-
-//     set strokeColor(c: Color) {
-
-//     }
-
 }
 
-interface StrokeVisual {
-    strokeColor: Color;
+class ColorizableVisual extends Visual {
+    get strokeColor(): Color {
+        var feat = this._olFeature;
+        var st = <ol.style.Style> this._olFeature.getStyle();
+        return Color.fromOlColor(st.getStroke().getColor());
+        return Color.RED;
+    }
+
+    set strokeColor(c: Color) {
+        var st = <ol.style.Style> this._olFeature.getStyle();
+        st.getStroke().setColor(c.toOlColor());
+    }
+
+    get fillColor(): Color {
+        var st = <ol.style.Style> this._olFeature.getStyle();
+        return Color.fromOlColor(<ol.Color> st.getFill().getColor());
+    }
+
+    set fillColor(c: Color) {
+        var st = <ol.style.Style> this._olFeature.getStyle();
+        st.getFill().setColor(c.toOlColor());
+    }
 }
 
-interface FillVisual {
-    fillColor: Color;
+interface ColorizableOpts {
+    fillColor?: Color;
+    strokeColor?: Color;
 }
+
