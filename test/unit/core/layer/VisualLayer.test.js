@@ -52,9 +52,9 @@ describe('In VisualLayer', function() {
         it('should add a feature to layer itself', function() {
             layer.addVisuals(visuals);
 
-            expect(layer.getVisuals()[0]).toEqual(visuals[0]);
-            expect(layer.getVisuals()[1]).toEqual(visuals[1]);
-            expect(layer.getVisuals()[2]).toBeUndefined();
+            expect(layer.visuals[0]).toEqual(visuals[0]);
+            expect(layer.visuals[1]).toEqual(visuals[1]);
+            expect(layer.visuals[2]).toBeUndefined();
         });
 
         it('should not add any undefined or null visuals', function() {
@@ -62,9 +62,9 @@ describe('In VisualLayer', function() {
             visuals.push(undefined);
             layer.addVisuals(visuals);
 
-            expect(layer.getVisuals()[0]).toEqual(visuals[0]);
-            expect(layer.getVisuals()[1]).toEqual(visuals[1]);
-            expect(layer.getVisuals()[2]).toBeUndefined();
+            expect(layer.visuals[0]).toEqual(visuals[0]);
+            expect(layer.visuals[1]).toEqual(visuals[1]);
+            expect(layer.visuals[2]).toBeUndefined();
         });
     });
 
@@ -78,8 +78,8 @@ describe('In VisualLayer', function() {
         it('should add a single MapVisual', function() {
             layer.addVisual(visuals[0]);
 
-            expect(layer.getVisuals()[0]).toEqual(visuals[0]);
-            expect(layer.getVisuals()[1]).toBeUndefined();
+            expect(layer.visuals[0]).toEqual(visuals[0]);
+            expect(layer.visuals[1]).toBeUndefined();
         });
 
         it('should issue a warning when an undefined or null object is added', function() {
@@ -88,13 +88,13 @@ describe('In VisualLayer', function() {
         });
     });
 
-    describe('the function getVisuals', function() {
+    describe('the getter visuals', function() {
         it('should get the visuals', function() {
             var l = new VisualLayer('some layer', {
                 visuals: visuals
             });
 
-            expect(l.getVisuals()).toEqual(visuals);
+            expect(l.visuals).toEqual(visuals);
         });
     });
 });

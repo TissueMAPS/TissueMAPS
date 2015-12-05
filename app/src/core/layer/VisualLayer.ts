@@ -1,29 +1,36 @@
-interface VisualLayerArgs {
+/**
+ * A short descriptor of the type content that is visualized with this
+ * VisualLayer. The UI might choose to differentiate between layers of
+ * different content types.
+ * On Viewport all VisualLayers are stored within the same container.
+ */
+enum ContentType {mapObject, result, default};
+
+/**
+ * Optional arguments for the VisualLayer constructor.
+ */
+interface VisualLayerOpts {
     visuals?: Visual[];
-    // strokeColor?: Color;
-    // fillColor?: Color;
     visible?: boolean;
+    contentType?: ContentType;
 }
 
+/**
+ * Layer class for Visuals, i.e. visualizable objects.
+ * This is a wrapper around an openlayers vector layer.
+ */
 class VisualLayer extends BaseLayer<ol.layer.Vector> {
-    // private strokeColor: Color;
-    // private fillColor: Color;
 
-    // private defaultStrokeColor = new Color(255, 0, 0);
-    // private defaultFillColor = new Color(255, 0, 0, 0.1);
+    contentType: ContentType;
 
     private _visuals: Visual[] = [];
 
-    constructor(name: string, opt: VisualLayerArgs = {}) {
+    constructor(name: string, opt: VisualLayerOpts = {}) {
         super(name);
 
         var vectorSource = new ol.source.Vector({
             features: []
         });
-
-        // var styleFunction = (feature, resolution) => {
-        //     return this.styles[feature.getGeometry().getType()];
-        // }
 
         this._olLayer = new ol.layer.Vector({
             source: vectorSource,
@@ -35,47 +42,10 @@ class VisualLayer extends BaseLayer<ol.layer.Vector> {
             this.addVisuals(opt.visuals);
         }
 
-        // if (opt.strokeColor === undefined) {
-        //     this.strokeColor = this.defaultStrokeColor;
-        // } else if (opt.strokeColor === null) {
-        //     this.strokeColor = new Color(0, 0, 0, 0);
-        // } else {
-        //     this.strokeColor = opt.strokeColor;
-        // }
-
-        // if (opt.fillColor === undefined) {
-        //     this.fillColor = this.defaultFillColor;
-        // } else if (opt.fillColor === null) {
-        //     this.fillColor = new Color(0, 0, 0, 0);
-        // } else {
-        //     this.fillColor = opt.fillColor;
-        // }
-
-        // var olStrokeColor = this.strokeColor === null ? null : this.strokeColor.toRGBAString();
-        // var olFillColor = this.fillColor === null ? null : this.fillColor.toRGBAString();
-
-        // this.styles = {
-        //     'Point': [new ol.style.Style({
-        //         image: new ol.style.Circle({
-        //             radius: 5,
-        //             fill: null,
-        //             stroke: new ol.style.Stroke({color: olStrokeColor, width: 1})
-        //         })
-        //     })],
-        //     'Polygon': [new ol.style.Style({
-        //         stroke: new ol.style.Stroke({
-        //             color: olStrokeColor,
-        //             lineDash: [1],
-        //             width: 1
-        //         }),
-        //         fill: new ol.style.Fill({
-        //             color: olFillColor
-        //         })
-        //     })]
-        // };
+        this.contentType = opt.contentType || ContentType.default;
     }
 
-    getVisuals() {
+    get visuals() {
         return this._visuals;
     }
 
