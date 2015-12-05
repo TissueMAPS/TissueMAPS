@@ -10,12 +10,13 @@ describe('In MapObjectSelectionHandler', function() {
     var sh, vp;
     var sel1, sel2;
     var cell;
+    var mapObjectManager;
 
     beforeEach(function() {
         vp = {
             map: jasmine.createSpyObj('map', ['then'])
         };
-        var mapObjectManager = {
+        mapObjectManager = {
             getMapObjectsForType: jasmine.createSpy('getMapObjectsForType').and.returnValue(
                 jasmine.createSpyObj('mapObjects', ['then'])
             )
@@ -31,6 +32,7 @@ describe('In MapObjectSelectionHandler', function() {
         cell = {id: 1, type: 'cell'};
     });
 
+
     describe('the active MapObject type', function() {
         it('should be settable and gettable', function() {
             sh.activeMapObjectType = 'cell';
@@ -39,6 +41,11 @@ describe('In MapObjectSelectionHandler', function() {
 
         it('should initially be set to the first object type added', function() {
             expect(sh.activeMapObjectType).toEqual('cell');
+        });
+
+        it('should initially be null and lead to 0 selections', function() {
+            var sh2 = new MapObjectSelectionHandler(vp, mapObjectManager);
+            expect(sh2.selectionsForActiveType).toEqual([]);
         });
     });
 

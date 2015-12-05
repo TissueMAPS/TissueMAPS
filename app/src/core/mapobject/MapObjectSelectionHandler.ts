@@ -12,7 +12,17 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     availableColors: Color[];
 
-    private _selectionsByType: MapObjectSelectionByType = {};
+    /**
+     * A hash where the selections are stored by their type.
+     * When an object of class MapObjectSelectionHandler is created, the
+     * active selection type will be null. For this reason there has to be an empty
+     * array for this 'null' type, since otherwise this._selectionsByType[this._activeMapObjectType]
+     * would be undefined, which would in turn lead to problems with angulars data binding.
+     */
+    private _selectionsByType: MapObjectSelectionByType = {
+        null: []
+    };
+
     private _markerSelectionModeActive: boolean = false;
     private _activeMapObjectType: MapObjectType = null;
     private _activeSelection: MapObjectSelection = null;
@@ -69,12 +79,11 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     get supportedMapObjectTypes(): MapObjectType[] {
-        return _.keys(this._selectionsByType);
+        return _.chain(this._selectionsByType).keys().difference(['null']).value();
     }
 
     get selectionsForActiveType(): MapObjectSelection[] {
-        return this.activeMapObjectType === null ? []
-            : this._selectionsByType[this.activeMapObjectType];
+        return this._selectionsByType[this.activeMapObjectType];
     }
 
     getSelectionsForType(type: string): MapObjectSelection[] {
@@ -90,7 +99,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             this.activeMapObjectType = t;
         }
         this.mapObjectManager.getMapObjectsForType(t).then((objs) => {
-            console.log(objs);
             var visuals = _(objs).map((o) => { return o.getVisual(); });
             var visualLayer = new VisualLayer(t, {
                 visuals: visuals,
