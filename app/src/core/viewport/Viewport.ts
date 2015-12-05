@@ -37,7 +37,6 @@ class Viewport implements Serializable<Viewport> {
     private _$rootScope: ng.IRootScopeService;
 
     constructor() {
-
         this._$q = $injector.get<ng.IQService>('$q');
         this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
 
@@ -49,44 +48,6 @@ class Viewport implements Serializable<Viewport> {
 
         this._elementScopeDef = this._$q.defer();
         this.elementScope = this._elementScopeDef.promise;
-
-        // var createDemoRectangles = function(startx, starty) {
-        //     var side = 100;
-        //     var nRect = 100;
-        //     var cells = [];
-        //     for (var i = startx; i <  side * nRect + startx; i += side) {
-        //         for (var j = starty; j < side * nRect + starty; j += side) {
-        //             var coords = [[
-        //                 [i, -j],
-        //                 [i + side, -j],
-        //                 [i + side, -j - side],
-        //                 [i, -j - side],
-        //                 [i, -j]
-        //             ]];
-        //             var c = new this.Cell('bla', {x: i, y: -j}, coords);
-        //             cells.push(c);
-        //         }
-        //     }
-        //     return cells;
-        // }
-
-        // var cellsA = createDemoRectangles(0, 0);
-        // var cellsB = createDemoRectangles(10000, 0);
-
-        // var objLayerA = this.objectLayerFactory.create('Cells A', {
-        //     objects: cellsA,
-        //     fillColor: 'rgba(0, 0, 255, 0.5)',
-        //     strokeColor: 'rgba(0, 0, 255, 1)'
-        // });
-        // var objLayerB = this.objectLayerFactory.create('Cells B', {
-        //     objects: cellsB,
-        //     fillColor: 'rgba(255, 0, 0, 0.5)',
-        //     strokeColor: 'rgba(255, 0, 0, 1)'
-        // });
-
-        // this.addObjectLayer(objLayerA);
-        // this.addObjectLayer(objLayerB);
-
     }
 
     addVisualLayer(visLayer: VisualLayer) {
