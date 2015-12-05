@@ -137,7 +137,7 @@ class Cycle(object):
             os.mkdir(image_dir)
         return image_dir
 
-    @property
+    @cached_property
     def image_files(self):
         '''
         Returns
@@ -209,11 +209,11 @@ class Cycle(object):
         metadata_file = os.path.join(self.dir, self.image_metadata_file)
         logger.debug('read image metadata from HDF5 file')
         store = pd.HDFStore(metadata_file)
-        self._metadata = store.select('metadata').sort_values(by='name')
+        metadata = store.select('metadata').sort_values(by='name')
         store.close()
 
         # TODO: consider returning the store for subset selection using the
-        # select() or select_column() methods
+        # select(), select_column(), or select_as_multiple() methods
 
         # Add the alignment description to each image element (if available)
         alignment_file = os.path.join(self.dir, self.align_descriptor_file)
@@ -222,20 +222,20 @@ class Cycle(object):
                 description = reader.read(alignment_file)
             align_description = AlignmentDescription(description)
             # Match shift descriptions via "site_ix"
-            sites = self._metadata['site_ix']
+            sites = metadata['site_ix']
             overhang = align_description.overhang
             align_sites = [shift.site_ix for shift in align_description.shifts]
             for i, s in enumerate(sites):
-                self._metadata.at[i, 'upper_overhang'] = overhang.upper
-                self._metadata.at[i, 'lower_overhang'] = overhang.lower
-                self._metadata.at[i, 'right_overhang'] = overhang.right
-                self._metadata.at[i, 'left_overhang'] = overhang.left
+                metadata.at[i, 'upper_overhang'] = overhang.upper
+                metadata.at[i, 'lower_overhang'] = overhang.lower
+                metadata.at[i, 'right_overhang'] = overhang.right
+                metadata.at[i, 'left_overhang'] = overhang.left
                 ix = align_sites.index(s)
                 shift = align_description.shifts[ix]
-                self._metadata.at[i, 'x_shift'] = shift.x
-                self._metadata.at[i, 'y_shift'] = shift.y
+                metadata.at[i, 'x_shift'] = shift.x
+                metadata.at[i, 'y_shift'] = shift.y
 
-        return self._metadata
+        return metadata
 
     @property
     def images(self):
@@ -257,16 +257,37 @@ class Cycle(object):
             when names of image files and names in the image metadata are not
             the same
         '''
+        # Get all images
+        index = xrange(len(self.image_files))
+        return self.get_image_subset(index)
+
+    def get_image_subset(self, index):
+        '''
+        Create image objects for a subset of image files in `image_dir`.
+
+        Parameters
+        ----------
+        index: List[int]
+            indices of image files for which an image object should be created
+
+        Returns
+        -------
+        List[tmlib.image.ChannelImage]
+            image objects
+        '''
         images = list()
-        filenames = self.image_metadata['name']
+        filenames = self.image_metadata.name
         if self.image_files != filenames.tolist():
             raise ValueError('Names of images do not match')
-        for i, f in enumerate(self.image_files):
+        for i in index:
+            f = self.image_files[i]
+            logger.debug('create image "%s"', f)
             image_metadata = ChannelImageMetadata()
             table = self.image_metadata[(filenames == f)]
             for attr in table:
                 value = table.iloc[0][attr]
                 setattr(image_metadata, attr, value)
+            image_metadata.id = table.index[0]
             img = ChannelImage.create_from_file(
                     filename=os.path.join(self.image_dir, f),
                     metadata=image_metadata,

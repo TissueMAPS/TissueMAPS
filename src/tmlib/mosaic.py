@@ -106,7 +106,7 @@ class StichedImage(object):
         pass
 
     @abstractmethod
-    def create_from_images(images, dx=0, dy=0, stats=None, align=None):
+    def create(images, dx=0, dy=0, stats=None, align=None):
         pass
 
 
@@ -141,7 +141,7 @@ class Mosaic(StichedImage):
         return grid
 
     @staticmethod
-    def create_from_images(images, dx=0, dy=0, stats=None, align=False):
+    def create(images, dx=0, dy=0, stats=None, align=False):
         '''
         Create a Mosaic object from image objects.
 
@@ -180,7 +180,9 @@ class Mosaic(StichedImage):
             for j in xrange(grid.shape[1]):
 
                 img = grid[i, j]
+                logger.debug('add image "%s"', img.metadata.name)
                 if stats:
+                    logger.debug('correct image for illumination')
                     img = img.correct(stats)
                 if align:
                     img = img.align(crop=False)
