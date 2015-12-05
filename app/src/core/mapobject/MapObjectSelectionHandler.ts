@@ -102,7 +102,8 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             var visuals = _(objs).map((o) => { return o.getVisual(); });
             var visualLayer = new VisualLayer(t, {
                 visuals: visuals,
-                visible: false
+                visible: false,
+                contentType: ContentType.mapObject
             });
             this.viewport.addVisualLayer(visualLayer);
         });

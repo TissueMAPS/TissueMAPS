@@ -14,7 +14,8 @@ describe('In MapObjectSelectionHandler', function() {
 
     beforeEach(function() {
         vp = {
-            map: jasmine.createSpyObj('map', ['then'])
+            map: jasmine.createSpyObj('map', ['then']),
+            addVisualLayer: jasmine.createSpy('addVisualLayer')
         };
         mapObjectManager = {
             getMapObjectsForType: jasmine.createSpy('getMapObjectsForType').and.returnValue(
@@ -220,4 +221,21 @@ describe('In MapObjectSelectionHandler', function() {
         
     });
 
+    describe('the function addMapObjectType', function() {
+        var sh3;
+
+        beforeEach(function() {
+            sh3 = new MapObjectSelectionHandler(vp, mapObjectManager);
+            sh3.addMapObjectType('cell');
+        });
+        
+        it('should add a new type', function() {
+            expect(sh3.supportedMapObjectTypes).toEqual(['cell'])
+        });
+
+        it('should set the active type if not set already', function() {
+            sh3.addMapObjectType('nuclei');
+            expect(sh3.activeMapObjectType).toEqual('cell');
+        });
+    });
 });
