@@ -322,20 +322,28 @@ class MetadataConfigurator(ClusterRoutines):
                     # Create a metadata subset that only contains information
                     # about image elements belonging to the currently processed
                     # cycle (time point)
-                    cycle_metadata = metadata[metadata.tpoint_ix == t]
+                    md = metadata[metadata.tpoint_ix == t]
+                    for ix in md.index:
+                        # Update name according to new time point index
+                        md.at[ix, 'tpoint_ix'] = cycle_count
+                        fieldnames = {
+                            'plate_name': md.at[ix, 'plate_name'],
+                            'w': md.at[ix, 'well_name'],
+                            'y': md.at[ix, 'well_position_y'],
+                            'x': md.at[ix, 'well_position_x'],
+                            'c': md.at[ix, 'channel_ix'],
+                            'z': md.at[ix, 'zplane_ix'],
+                            't': md.at[ix, 'tpoint_ix'],
+                        }
+                        md.at[ix, 'name'] = \
+                            cfg.IMAGE_NAME_FORMAT.format(**fieldnames)
 
                     # Add the corresponding plate name
-                    cycle_metadata.plate_name = pd.Series(
-                        np.repeat(source.name, cycle_metadata.shape[0])
+                    md.plate_name = pd.Series(
+                        np.repeat(source.name, md.shape[0])
                     )
 
-                    # Store the updated metadata in an HDF5 file
-                    filename = os.path.join(cycle.dir,
-                                            cycle.image_metadata_file)
-                    store = pd.HDFStore(filename, 'w')
-                    store.append('metadata', cycle_metadata,
-                                 format='table', data_columns=True)
-                    store.close()
+                    md = md.sort_values('name').reindex()
 
                     # Update "ref_index" and "name" in the file mapper with the
                     # path to the final image file relative to the experiment
@@ -344,27 +352,23 @@ class MetadataConfigurator(ClusterRoutines):
                         new_element = ImageFileMapper()
                         new_element.series = element.series
                         new_element.planes = element.planes
-                        # Find the corresponding row in the new metadata table
-                        ref_name = metadata.at[element.ref_index, 'name']
-                        ix = np.where(cycle_metadata.name == ref_name)[0][0]
-                        new_element.ref_index = ix
-                        # Update name according to new time point index
-                        cycle_metadata.at[ix, 'tpoint_ix'] = cycle_count
-                        fieldnames = {
-                            'plate_name': cycle_metadata.at[ix, 'plate_name'],
-                            'w': cycle_metadata.at[ix, 'well_name'],
-                            'y': cycle_metadata.at[ix, 'well_position_y'],
-                            'x': cycle_metadata.at[ix, 'well_position_x'],
-                            'c': cycle_metadata.at[ix, 'channel_ix'],
-                            'z': cycle_metadata.at[ix, 'zplane_ix'],
-                            't': cycle_metadata.at[ix, 'tpoint_ix'],
-                        }
-                        cycle_metadata.at[ix, 'name'] = \
-                            cfg.IMAGE_NAME_FORMAT.format(**fieldnames)
+                        # Since we assigned new indices, we have to map the
+                        # the reference back
+                        ref_md = metadata.iloc[element.ref_index]
+                        ix = np.where(
+                            (md.well_name == ref_md.well_name) &
+                            (md.well_position_y == ref_md.well_position_y) &
+                            (md.well_position_x == ref_md.well_position_x) &
+                            (md.channel_ix == ref_md.channel_ix) &
+                            (md.zplane_ix == ref_md.zplane_ix)
+                        )[0]
+                        if len(ix) > 1:
+                            raise ValueError('One than one reference found.')
+                        new_element.ref_index = ix[0]
                         # Update name in the file mapper and make path relative
                         new_element.ref_file = os.path.relpath(os.path.join(
                                 cycle.image_dir,
-                                cycle_metadata.at[ix, 'name']
+                                md.at[new_element.ref_index, 'name']
                             ),
                             self.experiment.plates_dir
                         )
@@ -376,6 +380,14 @@ class MetadataConfigurator(ClusterRoutines):
                             for f in element.files
                         ]
                         file_mapper.append(dict(new_element))
+
+                    # Store the updated metadata in an HDF5 file
+                    filename = os.path.join(cycle.dir,
+                                            cycle.image_metadata_file)
+                    store = pd.HDFStore(filename, 'w')
+                    store.append('metadata', md,
+                                 format='table', data_columns=True)
+                    store.close()
 
                     # Remove the intermediate cycle-specific mapper file
                     os.remove(os.path.join(acquisition.dir,
