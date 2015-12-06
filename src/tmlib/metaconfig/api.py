@@ -321,8 +321,21 @@ class MetadataConfigurator(ClusterRoutines):
 
                     # Create a metadata subset that only contains information
                     # about image elements belonging to the currently processed
-                    # cycle (time point)
+                    # cycle (time point) and update the image names accordingly
                     cycle_metadata = metadata[metadata.tpoint_ix == t]
+                    for j in xrange(cycle_metadata.shape[0]):
+                        cycle_metadata.at[j, 'tpoint_ix'] = cycle_count
+                        fieldnames = {
+                            'plate_name': cycle_metadata.at[j, 'plate_name'],
+                            'w': cycle_metadata.at[j, 'well_name'],
+                            'y': cycle_metadata.at[j, 'well_position_y'],
+                            'x': cycle_metadata.at[j, 'well_position_x'],
+                            'c': cycle_metadata.at[j, 'cycle_ix'],
+                            'z': cycle_metadata.at[j, 'zplane_ix'],
+                            't': cycle_metadata.at[j, 'tpoint_ix'],
+                        }
+                        cycle_metadata.at[j, 'name'] = \
+                            cfg.IMAGE_NAME_FORMAT.format(**fieldnames)
 
                     # Add the corresponding plate name
                     cycle_metadata.plate_name = pd.Series(
