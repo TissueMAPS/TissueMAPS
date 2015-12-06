@@ -223,18 +223,23 @@ class Cycle(object):
             align_description = AlignmentDescription(description)
             # Match shift descriptions via "site_ix"
             sites = metadata['site_ix']
+            n_sites = len(sites)
             overhang = align_description.overhang
+            metadata['upper_overhang'] = np.repeat(overhang.upper, n_sites)
+            metadata['lower_overhang'] = np.repeat(overhang.lower, n_sites)
+            metadata['right_overhang'] = np.repeat(overhang.right, n_sites)
+            metadata['left_overhang'] = np.repeat(overhang.left, n_sites)
+            metadata['x_shift'] = np.repeat(0, n_sites)
+            metadata['y_shift'] = np.repeat(0, n_sites)
             align_sites = [shift.site_ix for shift in align_description.shifts]
             for i, s in enumerate(sites):
-                metadata.at[i, 'upper_overhang'] = overhang.upper
-                metadata.at[i, 'lower_overhang'] = overhang.lower
-                metadata.at[i, 'right_overhang'] = overhang.right
-                metadata.at[i, 'left_overhang'] = overhang.left
                 ix = align_sites.index(s)
                 shift = align_description.shifts[ix]
                 metadata.at[i, 'x_shift'] = shift.x
                 metadata.at[i, 'y_shift'] = shift.y
 
+        # TODO: why is this property not cached???
+        
         return metadata
 
     @property
@@ -261,13 +266,13 @@ class Cycle(object):
         index = xrange(len(self.image_files))
         return self.get_image_subset(index)
 
-    def get_image_subset(self, index):
+    def get_image_subset(self, indices):
         '''
         Create image objects for a subset of image files in `image_dir`.
 
         Parameters
         ----------
-        index: List[int]
+        indices: List[int]
             indices of image files for which an image object should be created
 
         Returns
@@ -279,7 +284,7 @@ class Cycle(object):
         filenames = self.image_metadata.name
         if self.image_files != filenames.tolist():
             raise ValueError('Names of images do not match')
-        for i in index:
+        for i in indices:
             f = self.image_files[i]
             logger.debug('create image "%s"', f)
             image_metadata = ChannelImageMetadata()
