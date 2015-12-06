@@ -330,7 +330,7 @@ class MetadataConfigurator(ClusterRoutines):
                             'w': cycle_metadata.at[j, 'well_name'],
                             'y': cycle_metadata.at[j, 'well_position_y'],
                             'x': cycle_metadata.at[j, 'well_position_x'],
-                            'c': cycle_metadata.at[j, 'cycle_ix'],
+                            'c': cycle_metadata.at[j, 'channel_ix'],
                             'z': cycle_metadata.at[j, 'zplane_ix'],
                             't': cycle_metadata.at[j, 'tpoint_ix'],
                         }
