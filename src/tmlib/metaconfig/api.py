@@ -321,21 +321,8 @@ class MetadataConfigurator(ClusterRoutines):
 
                     # Create a metadata subset that only contains information
                     # about image elements belonging to the currently processed
-                    # cycle (time point) and update the image names accordingly
+                    # cycle (time point)
                     cycle_metadata = metadata[metadata.tpoint_ix == t]
-                    for j in xrange(cycle_metadata.shape[0]):
-                        cycle_metadata.at[j, 'tpoint_ix'] = cycle_count
-                        fieldnames = {
-                            'plate_name': cycle_metadata.at[j, 'plate_name'],
-                            'w': cycle_metadata.at[j, 'well_name'],
-                            'y': cycle_metadata.at[j, 'well_position_y'],
-                            'x': cycle_metadata.at[j, 'well_position_x'],
-                            'c': cycle_metadata.at[j, 'channel_ix'],
-                            'z': cycle_metadata.at[j, 'zplane_ix'],
-                            't': cycle_metadata.at[j, 'tpoint_ix'],
-                        }
-                        cycle_metadata.at[j, 'name'] = \
-                            cfg.IMAGE_NAME_FORMAT.format(**fieldnames)
 
                     # Add the corresponding plate name
                     cycle_metadata.plate_name = pd.Series(
@@ -355,23 +342,39 @@ class MetadataConfigurator(ClusterRoutines):
                     # root directory
                     for element in acquisition.image_mapper:
                         new_element = ImageFileMapper()
-                        ref_name = metadata.at[element.ref_index, 'name']
-                        ix = np.where(cycle_metadata.name == ref_name)[0][0]
                         new_element.series = element.series
                         new_element.planes = element.planes
-                        new_element.files = [
-                            os.path.relpath(
-                                os.path.join(acquisition.image_dir, f),
-                                self.experiment.sources_dir)
-                            for f in element.files
-                        ]
+                        # Find the corresponding row in the new metadata table
+                        ref_name = metadata.at[element.ref_index, 'name']
+                        ix = np.where(cycle_metadata.name == ref_name)[0][0]
                         new_element.ref_index = ix
+                        # Update name according to new time point index
+                        cycle_metadata.at[ix, 'tpoint_ix'] = cycle_count
+                        fieldnames = {
+                            'plate_name': cycle_metadata.at[ix, 'plate_name'],
+                            'w': cycle_metadata.at[ix, 'well_name'],
+                            'y': cycle_metadata.at[ix, 'well_position_y'],
+                            'x': cycle_metadata.at[ix, 'well_position_x'],
+                            'c': cycle_metadata.at[ix, 'channel_ix'],
+                            'z': cycle_metadata.at[ix, 'zplane_ix'],
+                            't': cycle_metadata.at[ix, 'tpoint_ix'],
+                        }
+                        cycle_metadata.at[ix, 'name'] = \
+                            cfg.IMAGE_NAME_FORMAT.format(**fieldnames)
+                        # Update name in the file mapper and make path relative
                         new_element.ref_file = os.path.relpath(os.path.join(
                                 cycle.image_dir,
                                 cycle_metadata.at[ix, 'name']
                             ),
                             self.experiment.plates_dir
                         )
+                        # Make path to source files relative
+                        new_element.files = [
+                            os.path.relpath(
+                                os.path.join(acquisition.image_dir, f),
+                                self.experiment.sources_dir)
+                            for f in element.files
+                        ]
                         file_mapper.append(dict(new_element))
 
                     # Remove the intermediate cycle-specific mapper file
