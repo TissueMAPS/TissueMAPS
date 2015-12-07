@@ -4115,6 +4115,9 @@ declare module ol {
 
         class Stroke {
             constructor(options: olx.style.StrokeOptions);
+
+            getColor(): ol.Color;
+            setColor(c: ol.Color);
         }
 
         /**
@@ -4124,6 +4127,12 @@ declare module ol {
          */
         class Style {
           constructor(opts: olx.style.StyleOptions);
+
+          setStroke(st: ol.style.Stroke);
+          getStroke(): ol.style.Stroke;
+
+          setFill(st: ol.style.Fill);
+          getFill(): ol.style.Fill;
         }
 
         /**
