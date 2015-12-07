@@ -35,6 +35,8 @@ angular.module('tmaps.toolwindow')
         controller: ['$http', '$scope', 'tmapsProxy',
             function($http, $scope, tmapsProxy) {
 
+            $scope.activeObjectType = tmapsProxy.appInstance.mapObjectSelectionHandler.activeMapObjectType;
+
             // Add a default class label to each selection
             _($scope.selections).each(function(sel, i) {
                 sel.viewProps = {
@@ -51,11 +53,13 @@ angular.module('tmaps.toolwindow')
                     if (clsName) {
                         if (_.isUndefined(classes[clsName])) {
                             classes[clsName] = {
-                                cells: []
+                                mapObjectIds: []
                             };
                         }
-                        classes[clsName].cells = classes[clsName].cells.concat(
-                            sel.getCells()
+                        classes[clsName].mapObjects = classes[clsName].mapObjectIds.concat(
+                            sel.getMapObjects().map(function(o) {
+                                return o.id;
+                            })
                         );
                         if (!classes[clsName].color) {
                             classes[clsName].color = sel.color.toOlColor();
@@ -71,7 +75,7 @@ angular.module('tmaps.toolwindow')
                 _(classes).each(function(classObj, clsName) {
                     clsArray.push({
                         name: clsName,
-                        cellIds: classObj.cells
+                        mapObjectIds: classObj.mapObjects
                     });
                 });
                 $scope.classArray = clsArray;

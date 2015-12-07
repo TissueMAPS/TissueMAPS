@@ -9,7 +9,7 @@
       <tr ng-repeat="sel in selections">
         <td>
           <span class="flag-label">
-            <i class="fa fa-flag" ng-style="{'color': sel.getColor().toRGBString()}"></i>
+            <i class="fa fa-flag" ng-style="{'color': sel.color.toRGBString()}"></i>
           </span>
           <span>
             {{ sel.name }}
@@ -31,7 +31,7 @@
     <ul class="list-group">
       <li ng-repeat="cls in classArray"
         class="list-group-item">
-      {{cls.name}} <span class="badge">{{cls.cellIds.length}} cells</span>
+          {{cls.name}} <span class="badge">{{cls.mapObjectIds.length}} {{activeMapObjectType}}</span>
       </li>
     </ul>
   </div>

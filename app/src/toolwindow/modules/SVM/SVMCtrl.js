@@ -2,7 +2,8 @@ angular.module('tmaps.toolwindow')
 .controller('SVMCtrl', ['$scope', '$rootScope', 'tmapsProxy',
             function($scope, $rootScope, tmapsProxy) {
 
-    // $scope.selections = tmapsProxy.appInstance.viewport.selectionHandler.selections;
+    
+    $scope.selections = tmapsProxy.appInstance.mapObjectSelectionHandler.selectionsForActiveType;
 
     $scope.sendRequest = function() {
         // var cls = $scope.classes;
