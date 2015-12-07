@@ -143,7 +143,8 @@ class JtProject(object):
     def _replace_values(old, new):
         # Recursively replace values in the `old` mapping with those of `new`.
         # NOTE: This is not a general approach, but targeted for the design of
-        # the .pipe pipeline and .handles module descriptor files.
+        # the pipeline and module descriptor files.
+        # TODO: make this general using a recursive strategy
         for k1, v1 in old.iteritems():
             # 'project', 'images', and 'description' keys in the pipeline
             # descriptor file or 'input' and 'output' keys in the module
@@ -227,7 +228,7 @@ class JtProject(object):
                 'description': str()
             },
             'images': {
-                'layers': [
+                'planes': [
                     {'name': str(), 'correct': True}
                 ]
             },

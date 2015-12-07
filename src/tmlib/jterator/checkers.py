@@ -53,27 +53,29 @@ class PipelineChecker(object):
         if 'images' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
                     'Pipe file must contain the key "images".')
-        if 'layers' not in self.pipe_description['images'].keys():
-            raise PipelineDescriptionError(
-                    'Pipe file must contain the key "layers" '
-                    'as a subkey of "images".')
-        if self.pipe_description['images']['layers']:
-            if not isinstance(self.pipe_description['images']['layers'], list):
+        possible_keys = {'planes', 'stacks', 'series'}
+        for key in self.pipe_description['images'].keys():
+            if key not in possible_keys:
                 raise PipelineDescriptionError(
-                        'The value of "layers" in the "images" section '
-                        'of the pipe file must be a list.')
+                    'Pipe file must contain one of the following keys '
+                    'as a subkey of "images": "%s"'
+                    % ", ".join(possible_keys))
 
-        # Check for presence of required keys
-        required_subkeys = ['name']
-        layers = self.pipe_description['images']['layers']
-        if layers:
-            for pattern_description in layers:
-                for key in required_subkeys:
-                    if key not in pattern_description:
-                        raise PipelineDescriptionError(
-                                'Each element of "layers" in the "images" '
-                                'section in the pipe file requires a key "%s".'
-                                % key)
+            if not isinstance(self.pipe_description['images'][key], list):
+                raise PipelineDescriptionError(
+                        'The value of "%s" in the "images" section '
+                        'of the pipe file must be a list.' % key)
+            # Check for presence of required keys
+            required_subkeys = ['name']
+            images = self.pipe_description['images'][key]
+            if images:
+                for img in images:
+                    for subkey in required_subkeys:
+                        if subkey not in img:
+                            raise PipelineDescriptionError(
+                                    'Each element of "%s" in the "images" '
+                                    'section in the pipe file requires '
+                                    'a "%s" key.' % (key, subkey))
 
         # Check "pipeline" section
         if 'pipeline' not in self.pipe_description.keys():
@@ -272,9 +274,9 @@ class PipelineChecker(object):
                         # We only check for non-empty data passed via the HDF5 file
                         continue
                     name = input_arg['value']
-                    layers = self.pipe_description['images']['layers']
-                    if layers:
-                        layer_names = [layer['name'] for layer in layers]
+                    planes = self.pipe_description['images']['planes']
+                    if planes:
+                        layer_names = [layer['name'] for layer in planes]
                         if name in layer_names:
                             # These names are written into the HDF5 file by
                             # the program and are therefore not created

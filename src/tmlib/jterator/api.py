@@ -274,7 +274,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                  '%s_%.5d.data.h5' % (self.pipe_name, job_id))
         return data_file
 
-    def create_job_descriptions(self, args):
+    def create_job_descriptions(self, args, job_ids=None):
         '''
         Create job descriptions for parallel computing.
 
@@ -282,6 +282,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         ----------
         args: tmlib.metaconfig.args.JteratorInitArgs
             program-specific arguments
+        job_ids: List[int], optional
+            subset of jobs for which descriptions should be generated
+            (default: ``None``)
 
         Returns
         -------
@@ -292,31 +295,49 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
-        layers = self.project.pipe['description']['images']['layers']
-        layer_names = [layer['name'] for layer in layers]
+        if 'planes' in self.project.pipe['description']['images']:
 
-        images = dict()
-        for name in layer_names:
-            if name is None:
-                continue
-            images[name] = self.experiment.layer_metadata[name]
+            planes = self.project.pipe['description']['images']['planes']
+            plane_names = [item['name'] for item in planes]
 
-        if not images:
-            # This is useful for testing purposes, where a pipeline should
-            # be run that doesn't require any input
-            logger.warning('no layers provided')
-            logger.info('create one empty job description')
-            job_descriptions['run'] = [{
-                'id': 1,
-                'inputs': dict(),
-                'outputs': dict()
-            }]
-            return job_descriptions
+            images = dict()
+            for name in plane_names:
+                if name is None:
+                    continue
+                images[name] = self.experiment.layer_metadata[name]
 
-        batches = [
-            {k: v.filenames[i] for k, v in images.iteritems()}
-            for i in xrange(len(images.values()[0].filenames))
-        ]
+            if not images:
+                # This is useful for testing purposes, where a pipeline should
+                # be run that doesn't require any input
+                logger.warning('no planes provided')
+                logger.info('create one empty job description')
+                job_descriptions['run'] = [{
+                    'id': 1,
+                    'inputs': dict(),
+                    'outputs': dict()
+                }]
+                return job_descriptions
+
+            batches = [
+                {k: v.filenames[i] for k, v in images.iteritems()}
+                for i in xrange(len(images.values()[0].filenames))
+            ]
+
+        elif 'stacks' in self.project.pipe['description']['images']:
+            # stack: group of planes acquired at different z-resolutions
+
+            stacks = self.project.pipe['description']['images']['stacks']
+            stack_names = [item['name'] for item in stacks]
+
+        elif 'series' in self.project.pipe['description']['images']:
+            # series: group of planes acquired at different time points
+
+            series = self.project.pipe['description']['images']['stacks']
+            series_names = [item['name'] for item in series]
+
+        else:
+            raise ValueError(
+                    'Images can be loaded as "planes", "stacks", or "series"')
 
         job_descriptions['run'] = [{
             'id': i+1,
@@ -355,7 +376,16 @@ class ImageAnalysisPipeline(ClusterRoutines):
             ]
         }
 
-        return job_descriptions
+        if job_ids:
+            job_description_subset = dict()
+            job_description_subset['run'] = list()
+            for j in job_ids:
+                job_description_subset['run'].append(
+                    job_descriptions['run'][j-1]  # job IDs are one-based
+                )
+            return job_description_subset
+        else:
+            return job_descriptions
 
     def _build_run_command(self, batch):
         # Overwrite method to account for additional "--pipeline" argument
@@ -394,13 +424,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
         h5py.File(data_file, 'w').close()
 
         # Load the image and correct/align it if required (requested)
-        layer_images = dict()
-        layers = self.project.pipe['description']['images']['layers']
-        for i, layer in enumerate(layers):
-            logger.info('load images of layer "%s"', layer['name'])
-            filename = batch['inputs']['image_files'][layer['name']]
-            image = self.experiment.get_image_by_name(filename)
-            if layer['correct']:
+        plane_images = dict()
+        planes = self.project.pipe['description']['images']['planes']
+        for i, plane in enumerate(planes):
+            logger.info('load images of plane "%s"', plane['name'])
+            filename = batch['inputs']['image_files'][plane['name']]
+            name = os.path.basename(filename)
+            image = self.experiment.get_image_by_name(name)
+            if plane['correct']:
                 logger.info('correct images for illumination artifacts')
                 for plate in self.experiment.plates:
                     if plate.name != image.metadata.plate_name:
@@ -416,7 +447,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                                 image.pixels.array)
             else:
                 image_array = image.pixels.array
-            layer_images[layer['name']] = image_array
+            plane_images[plane['name']] = image_array
             # Add some metadata to the HDF5 file, which may be required later
             if i == 0:
                 logger.info('add metadata to data file')
@@ -457,7 +488,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             log_files = module.build_log_filenames(self.module_log_dir, job_id)
             figure_file = module.build_figure_filename(self.figures_dir, job_id)
             inputs = module.prepare_inputs(
-                        layers=layer_images,
+                        planes=plane_images,
                         upstream_output=outputs['data'],
                         data_file=data_file, figure_file=figure_file,
                         job_id=job_id,
