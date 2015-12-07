@@ -143,7 +143,9 @@ class Mosaic(StichedImage):
     @staticmethod
     def create(images, dx=0, dy=0, stats=None, align=False):
         '''
-        Create a Mosaic object from image objects.
+        Create a mosaic image by stitching individual images together.
+        The grid layout, i.e. the order in which images are stitched,
+        is determined from the image metadata.
 
         Parameters
         ----------
@@ -164,12 +166,14 @@ class Mosaic(StichedImage):
         Returns
         -------
         Mosaic
+            stitched mosaic image
 
         Raises
         ------
         ValueError
-            when `dx` or `dy` are positive
+            when `dx` or `dy` are not positive integer values
         '''
+        logger.debug('create mosaic')
         if not isinstance(dx, int) or dx > 0:
             raise ValueError('"dx" has to be a negative integer value')
         if not isinstance(dy, int) or dy > 0:
@@ -181,25 +185,28 @@ class Mosaic(StichedImage):
 
                 img = grid[i, j]
                 logger.debug('add image "%s"', img.metadata.name)
+
+                # Correct and align image
                 if stats:
                     logger.debug('correct image for illumination')
                     img = img.correct(stats)
                 if align:
                     img = img.align(crop=False)
 
+                # Extract the actual pixels array from the image object
+                arr = img.pixels.array
+
                 if j == 0:
-                    row = img.pixels.array
+                    row = arr
                 else:
-                    row = row.merge(
-                            img.pixels.array, 'horizontal', -row.width-dx, 0
-                    )
+                    x_overlap = -row.width - dx
+                    row = row.merge(arr, 'horizontal', x_overlap, 0)
 
             if i == 0:
                 mosaic = row
             else:
-                mosaic = mosaic.merge(
-                            row, 'vertical', 0, -mosaic.height-dy
-                )
+                y_overlap = -mosaic.height - dy
+                mosaic = mosaic.merge(row, 'vertical', 0, y_overlap)
 
         return Mosaic(mosaic)
 

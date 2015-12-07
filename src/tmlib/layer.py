@@ -292,6 +292,7 @@ class ChannelLayer(object):
         if not value:
             # TODO: only consider non-empty wells
             value = self.mosaic.array.percent(percentile)
+        logger.debug('clip layer at level: %d', value)
         lut = image_utils.create_thresholding_LUT(value)
         clipped_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(self.name, Mosaic(clipped_image), self.metadata)
