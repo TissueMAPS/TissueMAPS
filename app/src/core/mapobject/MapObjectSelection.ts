@@ -1,10 +1,25 @@
+
 type MapObjectSelectionId = number;
+
 interface SelectionEntry {
     markerPosition: MapPosition;
     mapObject: MapObject;
+    markerVisual: MarkerImageVisual;
 }
 
 class MapObjectSelection implements Serializable<MapObjectSelection> {
+
+    static availableColors = [
+        new Color(228,26,28),
+        new Color(55,126,184),
+        new Color(77,175,74),
+        new Color(152,78,163),
+        new Color(255,127,0),
+        new Color(255,255,51),
+        new Color(166,86,40),
+        new Color(247,129,191),
+        new Color(153,153,153)
+    ];
 
     id: MapObjectSelectionId;
     name: string;
@@ -30,8 +45,13 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
         this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
     }
 
-    addToMap(map: ol.Map) {
-        this._layer.addToMap(map);
+    get selectionLayer() {
+        return this._layer;
+    }
+
+    visualizeOnViewport(vp: Viewport) {
+        console.log('VISUALIXZ WON VIEWPORT');
+        vp.addVisualLayer(this._layer);
     }
 
     getMapObjects() {
@@ -56,22 +76,23 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
 
     removeMapObject(mapObject: MapObject) {
         if (this.isMapObjectSelected(mapObject)) {
+            var entry = this._entries[mapObject.id];
+            this._layer.removeVisual(entry.markerVisual);
             delete this._entries[mapObject.id];
-            this._layer.removeMapObjectMarker(mapObject.id);
             this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
         };
     }
 
-    addMapObject(mapObject: MapObject, markerPos?: MapPosition) {
+    addMapObject(mapObject: MapObject, markerPos: MapPosition) {
         if (!this.isMapObjectSelected(mapObject)) {
+            var visual = new MarkerImageVisual(markerPos, this.color);
             this._entries[mapObject.id] = {
+                mapObject: mapObject,
                 markerPosition: markerPos,
-                mapObject: mapObject
+                markerVisual: visual
             };
             this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
-            if (markerPos !== undefined) {
-                this._layer.addMapObjectMarker(mapObject.id, markerPos);
-            }
+            this._layer.addVisual(visual);
         }
     }
 

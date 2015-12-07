@@ -18,6 +18,8 @@
         "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
         "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
 
+        "app/src/core/util/Color.ts",
+
         "app/src/core/AppInstance.ts",
         "app/src/core/Application.ts",
         "app/src/core/appstate/Appstate.ts",
@@ -43,8 +45,8 @@
         "app/src/core/mapobject/MapObjectSelectionHandler.ts",
         "app/src/core/mapobject/MapObjectResponseInterpreter.ts",
         "app/src/core/mapobject/MapObjectManager.ts",
-        "app/src/core/selection/SelectionLayer.ts",
-        "app/src/core/selection/typedefs.d.ts",
+        "app/src/core/mapobject/SelectionLayer.ts",
+
         "app/src/core/serialize/typedefs.ts",
 
         "app/src/core/tools/Tool.ts",
@@ -56,7 +58,6 @@
         "app/src/core/tools/classes/FeatureStatsTool.ts",
         "app/src/core/tools/classes/SVMTool.ts",
 
-        "app/src/core/util/Color.ts",
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/MapPosition.ts",
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
@@ -67,6 +68,9 @@
         "app/src/ui/toolbar/tmToolbar.ts",
         "app/src/ui/toolbar/ToolbarCtrl.ts",
         "app/src/ui/sidebar/selections/SelectionSettingsCtrl.ts",
-        "app/src/ui/sidebar/selections/SelectionControlsCtrl.ts"
+        "app/src/ui/sidebar/selections/SelectionControlsCtrl.ts",
+        "app/src/ui/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
+        "app/src/ui/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
+        "app/src/ui/sidebar/visuallayers/VisualLayerCtrl.ts"
     ]
 }

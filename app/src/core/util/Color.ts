@@ -85,7 +85,7 @@ class Color implements Serializable<Color> {
      * Convert a hex string like '#ffffff' to a RGB
      * color given as an array of numbers between 0 and 1.
      */
-    static fromHex(hex: string, alpha: number): Color {
+    static fromHex(hex: string, alpha: number = 1): Color {
         hex = hex.toLowerCase();
         // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
         var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;

@@ -20,12 +20,11 @@ describe('In MapObjectSelection', function() {
         expect(l._layer).toBeDefined();
     });
 
-    describe('the function addToMap', function() {
+    describe('the function visualizeOnViewport', function() {
         it('should add the map', function() {
-            spyOn(l._layer, 'addToMap');
-            var fakeMap = {};
-            l.addToMap(fakeMap);
-            expect(l._layer.addToMap).toHaveBeenCalledWith(fakeMap);
+            var viewport = jasmine.createSpyObj('viewport', ['addVisualLayer']);
+            l.visualizeOnViewport(viewport);
+            expect(viewport.addVisualLayer).toHaveBeenCalledWith(l._layer);
         });
     });
 
@@ -60,7 +59,7 @@ describe('In MapObjectSelection', function() {
         beforeEach(function() {
             o = {id: 1, type: 'cell'};
             l.addMapObject(o);
-            spyOn(l._layer, 'removeMapObjectMarker');
+            spyOn(l._layer, 'removeVisual');
         });
         
         it('should remove the object from the selection', function() {
@@ -74,7 +73,7 @@ describe('In MapObjectSelection', function() {
         it('should remove the object from the layer', function() {
             expect(l.isMapObjectSelected(o)).toEqual(true);
             l.removeMapObject(o);
-            expect(l._layer.removeMapObjectMarker).toHaveBeenCalledWith(o.id);
+            expect(l._layer.removeVisual).toHaveBeenCalled();
         });
         
         it('should should broadcast a `mapObjectSelectionChanged` event', function() {
@@ -89,7 +88,7 @@ describe('In MapObjectSelection', function() {
 
         beforeEach(function() {
             o = {id: 1, type: 'cell'};
-            spyOn(l._layer, 'addMapObjectMarker');
+            spyOn(l._layer, 'addVisual');
         });
         
         it('should add a object if it was not added yet', function() {
@@ -109,11 +108,11 @@ describe('In MapObjectSelection', function() {
             expect($rootScope.$broadcast).toHaveBeenCalledWith('mapObjectSelectionChanged', l);
         });
 
-        it('should add a marker position if one was supplied', function() {
+        it('should add a marker icon', function() {
             var pos = {x: 10, y: 10};
             l.addMapObject(o, pos);
 
-            expect(l._layer.addMapObjectMarker).toHaveBeenCalledWith(o.id, pos);
+            expect(l._layer.addVisual).toHaveBeenCalled();
         });
     });
 

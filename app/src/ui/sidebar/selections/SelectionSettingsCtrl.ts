@@ -6,8 +6,6 @@ class SelectionSettingsCtrl {
 
     constructor($scope: ViewportElementScope) {
         this.selHandler = $scope.appInstance.mapObjectSelectionHandler;
-        window['selHandler'] = this.selHandler;
-        window['selCtrl'] = this;
     }
 
     isActiveSelection(sel: MapObjectSelection) {

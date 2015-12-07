@@ -1,0 +1,52 @@
+<div class="visuallayer-settings">
+
+  <tm-multi-selection-box items="visualLayerCtrl.layers" by-name="'layer'"
+                          filter-properties="{contentType: visualLayerCtrl.contentTypeEnum}">
+    <tm-selectable-tabs>
+        <tm-selectable-tab ng-controller="VisualLayerCtrl as layerCtrl">
+
+        <tm-selectable-tab-popup>
+          <!-- <div ng-repeat="color in layerCtrl.supportedColorProperties" ng-show="layer[color.property] !== undefined"> -->
+          <!--   {{::color.label}}:<br> -->
+          <!--   <ng-color-picker selected='layerCtrl.selectedColor[color.property]' colors="layerCtrl.selectableColors"></ng-color-picker> -->
+          <!-- </div> -->
+
+          <p>
+            Fill color:<br>
+            <ng-color-picker selected="layerCtrl.selectedColor.fillColor" colors="layerCtrl.selectableColors"></ng-color-picker>
+          </p>
+
+          <p>
+            Stroke color:<br>
+            <ng-color-picker selected="layerCtrl.selectedColor.strokeColor" colors="layerCtrl.selectableColors"></ng-color-picker>
+          </p>
+
+        </tm-selectable-tab-popup>
+
+        <tm-selectable-tab-content>
+          <span class="inline-layer-control" tm-stop-click>
+              <i ng-show="layer.visible" ng-click="layer.visible = false" class="fa fa-eye"></i>
+              <i ng-hide="layer.visible" ng-click="layer.visible = true" class="fa fa-circle-thin"></i>
+          </span>
+
+          <!-- <input type="text" ng-model="layer.name" tm-stop-click></input> -->
+          <span contenteditable strip-br="true" ng-model="layer.name"
+               select-non-editable="true">
+          </span>
+
+        </tm-selectable-tab-content>
+
+      </tm-selectable-tab>
+
+    </tm-selectable-tabs>
+
+    <tm-multi-selection-controls ng-controller="VisualLayerControlsCtrl as controlsCtrl">
+      <button ng-click="controlsCtrl.removeSelectedLayers()"
+              ng-show="selectionBox.hasSelectedItems()">
+        <i class="fa fa-trash"></i>
+      </button>
+    </tm-multi-selection-controls>
+
+  </tm-multi-selection-box>
+
+</div>

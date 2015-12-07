@@ -24,7 +24,7 @@
                 </span>
             </div>
             <div class="sidebar-section-content">
-                <tm-object-settings viewport="viewport"/>
+                <tm-visual-layer-settings viewport="viewport" content-type="'mapObject'"/>
             </div>
         </div>
 
@@ -36,6 +36,15 @@
             </div>
             <div class="sidebar-section-content">
                 <tm-selection-settings viewport="viewport"/>
+            </div>
+        </div>
+
+        <div class="sidebar-section result-section">
+            <div class="sidebar-section-title" tm-resize-handle>
+                <span>Results</span>
+            </div>
+            <div class="sidebar-section-content">
+                <tm-visual-layer-settings viewport="viewport" content-type="'result'"/>
             </div>
         </div>
     </div>
