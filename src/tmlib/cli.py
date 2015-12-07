@@ -335,7 +335,13 @@ class CommandLineInterface(object):
               % (log['stdout'], log['stderr']))
 
     @cached_property
-    def _job_descriptions(self):
+    def job_descriptions(self):
+        '''
+        Returns
+        -------
+        dict
+            job descriptions retrieved from files
+        '''
         api = self._api_instance
         logger.debug('read job descriptions from files')
         return api.get_job_descriptions_from_files()
@@ -352,7 +358,7 @@ class CommandLineInterface(object):
         '''
         api = self._api_instance
         logger.debug('get expected outputs from job descriptions')
-        return api.list_output_files(self._job_descriptions)
+        return api.list_output_files(self.job_descriptions)
 
     @property
     def required_inputs(self):
@@ -366,7 +372,7 @@ class CommandLineInterface(object):
         '''
         api = self._api_instance
         logger.debug('get required inputs from job descriptions')
-        return api.list_input_files(self._job_descriptions)
+        return api.list_input_files(self.job_descriptions)
 
     def build_jobs(self, duration, memory, cores):
         '''
@@ -392,7 +398,7 @@ class CommandLineInterface(object):
         logger.debug('allocated memory: %d GB', memory)
         logger.debug('allocated cores: %d', cores)
         jobs = api.create_jobs(
-                job_descriptions=self._job_descriptions,
+                job_descriptions=self.job_descriptions,
                 duration=duration,
                 memory=memory,
                 cores=cores)
