@@ -297,6 +297,7 @@ class SubmitArgs(GeneralArgs):
         self.depth = self._depth_params['default']
         self.duration = self._duration_params['default']
         self.memory = self._memory_params['default']
+        self.cores = self._cores_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -305,7 +306,7 @@ class SubmitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'interval', 'depth', 'memory', 'duration'}
+        return {'interval', 'depth', 'memory', 'duration', 'cores'}
 
     @property
     def interval(self):
@@ -319,8 +320,8 @@ class SubmitArgs(GeneralArgs):
 
     @interval.setter
     def interval(self, value):
-        if not(isinstance(value, self._interval_params['type'])
-               or value is None):
+        if not(isinstance(value, self._interval_params['type']) or
+               value is None):
             raise TypeError('Attribute "interval" must have type %s'
                             % self._interval_params['type'])
         self._interval = value
@@ -418,6 +419,34 @@ class SubmitArgs(GeneralArgs):
             'default': 4,
             'help': '''
                 amount of memory that should be allocated for each job in GB
+            '''
+        }
+
+    @property
+    def cores(self):
+        '''
+        Returns
+        -------
+        int
+            number of CPUs that should be allocated for each job
+            (default: ``1``)
+        '''
+        return self._cores
+
+    @cores.setter
+    def cores(self, value):
+        if not isinstance(value, self._cores_params['type']):
+            raise TypeError('Attribute "cores" must have type %s'
+                            % self._cores_params['type'])
+        self._cores = value
+
+    @property
+    def _cores_params(self):
+        return {
+            'type': int,
+            'default': 1,
+            'help': '''
+                number of CPUs that should be allocated for each job
             '''
         }
 

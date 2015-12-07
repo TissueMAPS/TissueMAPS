@@ -794,7 +794,8 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         print yaml.safe_dump(job_descriptions, default_flow_style=False)
 
-    def create_jobs(self, job_descriptions, duration=None, memory=None):
+    def create_jobs(self, job_descriptions,
+                    duration=None, memory=None, cores=None):
         '''
         Create a GC3Pie task collection of "jobs".
 
@@ -815,6 +816,9 @@ class ClusterRoutines(BasicClusterRoutines):
         memory: int, optional
             amount of memory in Megabyte that should be allocated for a single
             job (default: ``None``)
+        cores: int, optional
+            number of CPU cores that should be allocated for a single job
+            (default: ``None``)
 
         Returns
         -------
@@ -853,6 +857,13 @@ class ClusterRoutines(BasicClusterRoutines):
                 job.requested_walltime = Duration(duration)
             if memory:
                 job.requested_memory = Memory(memory, Memory.GB)
+            if cores:
+                if not isinstance(cores, int):
+                    raise TypeError('Argument "cores" must have type int.')
+                if not cores > 0:
+                    raise ValueError('The value of "cores" must be positive.')
+                job.requested_cores = cores
+
             run_jobs.add(job)
 
         if 'collect' in job_descriptions.keys():

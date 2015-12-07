@@ -368,7 +368,7 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from job descriptions')
         return api.list_input_files(self._job_descriptions)
 
-    def build_jobs(self, duration, memory):
+    def build_jobs(self, duration, memory, cores):
         '''
         Build *jobs* based on prior created job descriptions.
 
@@ -377,7 +377,9 @@ class CommandLineInterface(object):
         duration: str
             time allocated for a job in the format "HH:MM:SS"
         memory: int
-            memory allocated for a job in GB
+            amount of memory allocated for a job in GB
+        cores: int
+            number of cores allocated for a job
 
         Returns
         -------
@@ -386,12 +388,14 @@ class CommandLineInterface(object):
         '''
         api = self._api_instance
         logger.info('create jobs')
-        logger.info('allocated time: %s', duration)
-        logger.info('allocated memory: %s', memory)
+        logger.debug('allocated time: %s', duration)
+        logger.debug('allocated memory: %d GB', memory)
+        logger.debug('allocated cores: %d', cores)
         jobs = api.create_jobs(
                 job_descriptions=self._job_descriptions,
                 duration=duration,
-                memory=memory)
+                memory=memory,
+                cores=cores)
         return jobs
 
     def submit(self, args):

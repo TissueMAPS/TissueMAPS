@@ -175,9 +175,11 @@ class Workflow(SequentialTaskCollection, StopOnError):
         logger.debug('build GC3Pie jobs')
         logger.info('allocated time for jobs: %s', step.duration)
         logger.info('allocated memory for jobs: %d GB', step.memory)
+        logger.info('allocated cores for jobs: %d', step.cores)
         jobs = prog_instance.build_jobs(
                         duration=step.duration,
-                        memory=step.memory)
+                        memory=step.memory,
+                        cores=step.cores)
         # jobs: gc3libs.workflow.SequentialTaskCollection
         return jobs
 
