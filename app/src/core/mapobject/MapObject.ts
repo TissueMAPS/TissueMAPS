@@ -20,9 +20,10 @@ class MapObject {
                 public extraData: any) {}
 
     getVisual() {
+        var visual: Visual;
         switch (this.visualType) {
             case 'polygon':
-                return new PolygonVisual(this.extraData.coordinates, {
+                visual = new PolygonVisual(this.extraData.coordinates, {
                     fillColor: Color.WHITE.withAlpha(0.02),
                     strokeColor: Color.WHITE
                 });
@@ -30,5 +31,11 @@ class MapObject {
             default:
                 throw new Error('Unknown visual type');
         }
+        // Set this mapobject as a property on the visual's underlying
+        // openlayers feature, so this information can be restored when the user
+        // clicks on the feature.
+        var feat = <any> visual.olFeature;
+        feat.set('mapObject', this);
+        return visual;
     }
 }

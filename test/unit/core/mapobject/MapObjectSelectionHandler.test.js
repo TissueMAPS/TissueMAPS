@@ -3,8 +3,11 @@ var $injector;
 describe('In MapObjectSelectionHandler', function() {
     beforeEach(module('tmaps.core'));
 
-    beforeEach(inject(function(_$injector_) {
+    var $q;
+
+    beforeEach(inject(function(_$injector_, _$q_) {
         $injector = _$injector_;
+        $q = _$q_;
     }));
 
     var sh, vp;
@@ -14,12 +17,12 @@ describe('In MapObjectSelectionHandler', function() {
 
     beforeEach(function() {
         vp = {
-            map: jasmine.createSpyObj('map', ['then']),
+            map: jasmine.createSpyObj('map', ['then', 'on']),
             addVisualLayer: jasmine.createSpy('addVisualLayer')
         };
         mapObjectManager = {
             getMapObjectsForType: jasmine.createSpy('getMapObjectsForType').and.returnValue(
-                jasmine.createSpyObj('mapObjects', ['then'])
+                $q.when()
             )
         };
 
@@ -32,7 +35,6 @@ describe('In MapObjectSelectionHandler', function() {
         sel2 = new MapObjectSelection(0, 'nucleus', Color.BLUE);
         cell = {id: 1, type: 'cell'};
     });
-
 
     describe('the active MapObject type', function() {
         it('should be settable and gettable', function() {
@@ -85,22 +87,33 @@ describe('In MapObjectSelectionHandler', function() {
         beforeEach(function() {
             sh.addSelection(sel1);
             sh.activeSelection = sel1;
-            spyOn(sel1, 'addMapObject');
+            spyOn(sel1, 'addMapObject').and.callThrough();
             clickPos = {x: 10, y: 20};
         });
         
         it('should add an object to the active selection', function() {
-            pending();
             sh.activateMarkerSelectionMode();
 
-            sh.clickOnMapObject(cell);
+            sh.clickOnMapObject(cell, clickPos);
             expect(sel1.addMapObject).toHaveBeenCalledWith(cell, clickPos);
+            expect(sel1.isMapObjectSelected(cell)).toEqual(true);
         });
 
+        it('should remove the object if it was already added', function() {
+            sh.activateMarkerSelectionMode();
+
+            sh.clickOnMapObject(cell, clickPos);
+            expect(sel1.isMapObjectSelected(cell)).toEqual(true);
+            sh.clickOnMapObject(cell, clickPos);
+            expect(sel1.isMapObjectSelected(cell)).toEqual(false);
+            sh.clickOnMapObject(cell, clickPos);
+            expect(sel1.isMapObjectSelected(cell)).toEqual(true);
+        });
+        
         it('do nothing if selection mode isn\'t active', function() {
             sh.deactivateMarkerSelectionMode();
 
-            sh.clickOnMapObject(cell);
+            sh.clickOnMapObject(cell, clickPos);
             expect(sel1.addMapObject).not.toHaveBeenCalled();
         });
         
@@ -143,11 +156,11 @@ describe('In MapObjectSelectionHandler', function() {
             var sel3 = sh.addNewSelection('cell');
 
             expect(sh.getSelectionsForType('cell')[0].color)
-            .toEqual(sh.availableColors[0]);
+            .toEqual(MapObjectSelection.availableColors[0]);
             expect(sh.getSelectionsForType('cell')[1].color)
-            .toEqual(sh.availableColors[1]);
+            .toEqual(MapObjectSelection.availableColors[1]);
             expect(sh.getSelectionsForType('cell')[2].color)
-            .toEqual(sh.availableColors[2]);
+            .toEqual(MapObjectSelection.availableColors[2]);
 
             sh.removeSelection(sel2);
             expect(sh.getSelectionsForType('cell').length).toEqual(2);
@@ -155,18 +168,18 @@ describe('In MapObjectSelectionHandler', function() {
             // Assign the color that got freed up by removing sel2
             var newSel2 = sh.addNewSelection('cell');
             expect(sh.getSelectionsForType('cell')[2].color)
-            .toEqual(sh.availableColors[1]);
+            .toEqual(MapObjectSelection.availableColors[1]);
         });
 
         it('should cycle colors when there are more selections than colors', function() {
-            var nColors = sh.availableColors.length;
+            var nColors = MapObjectSelection.availableColors.length;
             for (var i = 0; i < 2 * nColors; i++) {
                 sh.addNewSelection('cell');
             }
             expect(sh.getSelectionsForType('cell').length).toEqual(2 * nColors);
             for (var i = 0; i < nColors; i++) {
                 expect(sh.getSelectionsForType('cell')[i + nColors].color)
-                .toEqual(sh.availableColors[i]);
+                .toEqual(MapObjectSelection.availableColors[i]);
             }
         });
         

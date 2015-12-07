@@ -10,8 +10,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     mapObjectManager: MapObjectManager;
     viewport: Viewport;
 
-    availableColors: Color[];
-
     /**
      * A hash where the selections are stored by their type.
      * When an object of class MapObjectSelectionHandler is created, the
@@ -32,15 +30,17 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         this.mapObjectManager = mapObjectManager;
         this.viewport = viewport;
 
-        var colorsRGBString = [
-            'rgb(228,26,28)','rgb(55,126,184)','rgb(77,175,74)','rgb(152,78,163)',
-            'rgb(255,127,0)','rgb(255,255,51)','rgb(166,86,40)','rgb(247,129,191)',
-            'rgb(153,153,153)'
-        ];
-        var availableColors = _(colorsRGBString).map((rgb) => {
-            return Color.fromRGBString(rgb);
+        // Register click listeners on the map.
+        this.viewport.map.then((map) => {
+            map.on('singleclick', (evt) => {
+                map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
+                    console.log(evt);
+                    var mapObject = feat.get('mapObject');
+                    var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
+                    this.clickOnMapObject(mapObject, clickPos);
+                });
+            });
         });
-        this.availableColors = availableColors;
     }
 
     get activeMapObjectType() {
@@ -51,6 +51,19 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (!this._isValidType(t)) {
             return;
         }
+        // Hide all other selections on the map
+        this.supportedMapObjectTypes.forEach((t2) => {
+            if (t2 !== t) {
+                var sels = this.getSelectionsForType(t2);
+                sels.forEach((s) => {
+                    s.selectionLayer.visible = false;
+                });
+            }
+        });
+        // Show only the selections for the just activated type 
+        this.getSelectionsForType(t).forEach((s) => {
+            s.selectionLayer.visible = true;
+        });
         this._activeMapObjectType = t;
     }
 
@@ -98,43 +111,17 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = t;
         }
-        this.mapObjectManager.getMapObjectsForType(t).then((objs) => {
+        // Get all objects for this type and add an outline layer to the viewport.
+        this.mapObjectManager.getMapObjectsForType(t)
+        .then((objs) => {
             var visuals = _(objs).map((o) => { return o.getVisual(); });
             var visualLayer = new VisualLayer(t, {
                 visuals: visuals,
                 visible: false,
                 contentType: ContentType.mapObject
             });
-            this.viewport.addVisualLayer(visualLayer);
+            return this.viewport.addVisualLayer(visualLayer)
         });
-    }
-
-
-    addMapObjectOutlines(cells: MapObject[]) {
-        // TODO: Generalize and implement
-        // var cellLayer = new MapObjectLayer('MapObjects', {
-        //     objects: cells,
-        //     // Upon testing 0.002 was the lowest alpha value which still caused to
-        //     // hitDetection mechanism to find the cell. Lower values get probably floored to 0.
-        //     fillColor: Color.RED.withAlpha(0.005),
-        //     strokeColor: Color.WHITE,
-        //     visible: false
-        // });
-        // this.viewport.addMapObjectLayer(cellLayer);
-        // this.viewport.map.then((map) => {
-        //     map.on('singleclick', (evt) => {
-        //         map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
-        //             console.log(evt);
-        //             // FIXME: Maybe we should save the whole mapobject on the feature, or
-        //             // subclass Feature directly.
-        //             var mapObjectId = feat.get('name');
-        //             var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
-        //             if (this._activeSelectionId !== -1) {
-        //                 this.clickOnMapObject(clickPos, mapObjectId);
-        //             }
-        //         });
-        //     });
-        // });
     }
 
     addSelection(sel: MapObjectSelection) {
@@ -145,29 +132,21 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     clickOnMapObject(mapObject: MapObject, clickPos: MapPosition) {
+        console.log('Clicked on: ', mapObject);
         if (!this._isValidType(mapObject.type)) {
             return;
         }
         if (this._markerSelectionModeActive) {
             var sel = this.activeSelection;
             if (sel) {
-                sel.addMapObject(mapObject, clickPos);
+                sel.addRemoveMapObject(mapObject, clickPos);
             } else {
                 console.log('No active selection found');
             }
         }
+        // TODO: Issue some kind of "clicked on mapobject X type of event and callback
+        // registered listeners"
     }
-
-    // addMapObjectToSelection(markerPosition: MapPosition,
-    //                         mapObject: MapObject,
-    //                         selectionId: MapObjectSelectionId) {
-    //     this.selections[mapObject]
-    //     var selection = this.getSelectionById(selectionId);
-    //     if (selection === undefined) {
-    //         throw new Error('Unknown selection id: ' + selectionId);
-    //     }
-    //     selection.addMapObjectAt(markerPosition, mapObjectId);
-    // }
 
     getSelection(type: string, selectionId: MapObjectSelectionId): MapObjectSelection {
         if (!this._isValidType(type)) {
@@ -179,11 +158,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         });
     }
 
-    // getSelectedMapObjects(selectionId: MapObjectSelectionId) {
-    //     var sel = this.getSelectionById(selectionId);
-    //     return sel !== undefined ? sel.getMapObjects() : [];
-    // }
-
     addNewSelection(type: string) {
         if (!this._isValidType(type)) {
             return undefined;
@@ -191,9 +165,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         var id = this.getSelectionsForType(type).length;
         var color = this._getNextColor(type);
         var newSel = new MapObjectSelection(id, type, color);
-        this.viewport.map.then((map) => {
-            newSel.addToMap(map);
-        });
+        newSel.visualizeOnViewport(this.viewport);
         this.addSelection(newSel);
         return newSel;
     }
@@ -212,17 +184,17 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     private _getNextColor(type: string) {
         var sels = this.getSelectionsForType(type);
-        var nColors = this.availableColors.length;
+        var nColors = MapObjectSelection.availableColors.length;
         var possibleIds = _.range(nColors);
         var usedIds = _(sels).map(function(s) { return s.id % nColors; });
         var availableIds = _.difference(possibleIds, usedIds);
         // throw new Error(JSON.stringify(availableIds));
         if (availableIds.length != 0) {
             var id = availableIds[0];
-            return this.availableColors[id];
+            return MapObjectSelection.availableColors[id];
         } else {
-            return this.availableColors[
-                sels.length % this.availableColors.length
+            return MapObjectSelection.availableColors[
+                sels.length % MapObjectSelection.availableColors.length
             ];
         }
     }

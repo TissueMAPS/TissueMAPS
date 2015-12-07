@@ -4,7 +4,21 @@
  * different content types.
  * On Viewport all VisualLayers are stored within the same container.
  */
-enum ContentType {mapObject, result, default};
+enum ContentType {mapObject, result, marker, default};
+
+/**
+ * Convert a string to a ContentType. This function is mainly to circumvent
+ * having to pass integers in angular templates.
+ */
+function stringToContentType(t: string): ContentType {
+    switch (t) {
+        case 'mapObject': return ContentType.mapObject;
+        case 'result': return ContentType.result;
+        case 'marker': return ContentType.marker;
+        case 'default': return ContentType.default;
+        default: throw new Error('Unknown content type: ' + t);
+    }
+}
 
 /**
  * Optional arguments for the VisualLayer constructor.
@@ -42,7 +56,7 @@ class VisualLayer extends BaseLayer<ol.layer.Vector> {
             this.addVisuals(opt.visuals);
         }
 
-        this.contentType = opt.contentType || ContentType.default;
+        this.contentType = opt.contentType !== undefined ? opt.contentType : ContentType.default;
     }
 
     get visuals() {
@@ -54,6 +68,7 @@ class VisualLayer extends BaseLayer<ol.layer.Vector> {
             this._visuals.push(v);
             var src = this._olLayer.getSource();
             var feat = v.olFeature
+            console.log(feat);
             src.addFeature(feat);
         } else {
             console.log('Warning: trying to add undefined or null Visual.');
@@ -74,9 +89,13 @@ class VisualLayer extends BaseLayer<ol.layer.Vector> {
         });
         var features = _(visuals).map((v) => {
             var feat = v.olFeature;
-            console.log(feat);
             return feat;
         });
         this._olLayer.getSource().addFeatures(features);
+    }
+
+    removeVisual(v: Visual) {
+        var src = this._olLayer.getSource();
+        src.removeFeature(v.olFeature);
     }
 }

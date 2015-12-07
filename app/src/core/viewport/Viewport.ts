@@ -43,6 +43,11 @@ class Viewport implements Serializable<Viewport> {
         this._mapDef = this._$q.defer();
         this.map = this._mapDef.promise;
 
+        // DEBUG
+        this.map.then((map) => {
+            window['map'] = map;
+        });
+
         this._elementDef = this._$q.defer();
         this.element = this._elementDef.promise;
 
@@ -50,10 +55,25 @@ class Viewport implements Serializable<Viewport> {
         this.elementScope = this._elementScopeDef.promise;
     }
 
-    addVisualLayer(visLayer: VisualLayer) {
+    addVisualLayer(visLayer: VisualLayer): ng.IPromise<VisualLayer> {
         this.visualLayers.push(visLayer);
-        this.map.then((map) => {
-            visLayer.addToMap(map);
+
+        // Workaround: Check where this visuallayer should be added.
+        // When a new outline selection is added, it shouldn't be added on top of
+        // already existing marker layers.
+        // TODO: This should be done through a more general mechanism.
+        insertAtPos;
+        if (visLayer.contentType === ContentType.mapObject) {
+            var firstMarkerLayer = _(this.visualLayers).find((l) => {
+                return l.contentType === ContentType.marker;
+            });
+            if (firstMarkerLayer !== undefined) {
+                var insertAtPos = this.visualLayers.indexOf(firstMarkerLayer);
+            }
+        }
+        return this.map.then((map) => {
+            visLayer.addToMap(map, insertAtPos);
+            return visLayer;
         });
     }
 

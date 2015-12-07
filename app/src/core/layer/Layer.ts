@@ -2,6 +2,11 @@ interface Layer {
     name: string;
     addToMap(map: ol.Map);
     removeFromMap(map: ol.Map);
+
+    // Change to this:
+    // addToViewport(vp: Viewport);
+    // removeFromViewport(vp: Viewport);
+
     visible: boolean;
 }
 
@@ -20,9 +25,19 @@ class BaseLayer<LayerT extends ol.layer.Layer> implements Layer {
 
     /*
      * Draw the layer on the given openlayers map object
+     *
+     * Adding layer on top of all other layers is achieved by leaving the position
+     * argument undefined. If the requested position is 0, the layer will
+     * be added at the bottom.
      */
-    addToMap(olMap: ol.Map) {
-        olMap.addLayer(this._olLayer);
+    addToMap(olMap: ol.Map, position?: number) {
+        // olMap.addLayer(this._olLayer);
+        var coll = olMap.getLayerGroup().getLayers();
+        if (position !== undefined) {
+            coll.insertAt(position, this._olLayer)
+        } else {
+            coll.push(this._olLayer);
+        }
     }
 
     /*

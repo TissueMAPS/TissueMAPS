@@ -4,6 +4,8 @@ angular.module('tmaps.ui')
 
     var tabs = [];
 
+    this.filterProperties = this.filterProperties || {};
+
     this.removeTab = function(tab) {
         var ind = tabs.indexOf(tab);
         if (ind > -1) {

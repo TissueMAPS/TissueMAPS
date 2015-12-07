@@ -70,7 +70,7 @@ class MapObjectManager {
                 // The response for some specific type
                 var responseForType = resp.objects[t];
                 // Get an array of map objects for this response
-                var mapObjects = responseInterpreter.getObjectsForResponse(responseForType);
+                var mapObjects = responseInterpreter.getObjectsForResponse(t, responseForType);
                 // Add each of those objects to the object map
                 _(mapObjects).each((o) => {
                     objs[t][o.id] = o;
