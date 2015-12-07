@@ -61,8 +61,6 @@ class MetadataHandler(object):
         self.plate_name = plate_name
         self.file_mapper_list = list()
         self.file_mapper_lookup = defaultdict(list)
-        self.id_to_well_id_ref = dict()
-        self.id_to_wellsample_ix_ref = dict()
         self.wells = dict()
         self.metadata = pd.DataFrame()
 
@@ -661,13 +659,13 @@ class MetadataHandler(object):
         # Map the locations of each plane with the original image files
         # in order to be able to perform the intensity projection later on
         projected_file_mapper_list = list()
-        for i, indices in enumerate(zstacks.groups.values()):
+        for i, indices in enumerate(sorted(zstacks.groups.values())):
             fm = ImageFileMapper()
-            fm.ref_index = i
             fm.files = list()
             fm.series = list()
             fm.planes = list()
             for ref_ix in indices:
+                fm.ref_index = ref_ix
                 fm.files.extend(self.file_mapper_list[ref_ix].files)
                 fm.series.extend(self.file_mapper_list[ref_ix].series)
                 fm.planes.extend(self.file_mapper_list[ref_ix].planes)
@@ -831,26 +829,21 @@ class MetadataHandler(object):
             # These files have to be loaded on the same node in order to be
             # able to perform the projection.
             for i in xrange(md.shape[0]):
+                ref_ix = self.file_mapper_list[i].ref_index
                 element = ImageFileMapper()
-                element.ref_index = i
-                element.ref_file = md.at[i, 'name']
+                element.ref_index = ref_ix
+                element.ref_file = md.at[ref_ix, 'name']
                 element.files = self.file_mapper_list[i].files
                 element.series = self.file_mapper_list[i].series
                 element.planes = self.file_mapper_list[i].planes
                 mapper.append(dict(element))
         else:
             # In this case images files contain one or multiple planes
-            filenames = [f for fm in self.file_mapper_list for f in fm.files]
-            for f in filenames:
-                ix = utils.indices(filenames, f)
-                for i in ix:
-                    element = ImageFileMapper()
-                    element.ref_index = i
-                    element.ref_file = md.at[i, 'name']
-                    element.files = [f]
-                    element.series = self.file_mapper_list[i].series
-                    element.planes = self.file_mapper_list[i].planes
-                    mapper.append(dict(element))
+            for item in self.file_mapper_list:
+                # Update image names
+                ref_ix = item.ref_index
+                item.ref_file = md.at[ref_ix, 'name']
+                mapper.append(dict(item))
 
         return mapper
 
