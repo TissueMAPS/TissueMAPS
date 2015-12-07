@@ -395,6 +395,7 @@ class WorkflowStepDescription(object):
         submit_args = submit_args_handler(**kwargs)
         self.duration = submit_args.duration
         self.memory = submit_args.memory
+        self.cores = submit_args.cores
 
     @property
     def args(self):
@@ -449,8 +450,8 @@ class WorkflowStepDescription(object):
         Returns
         -------
         int
-            memory that should be allocated to individual jobs of the step
-            in gigabytes (GB)
+            amount of memory that should be allocated to individual jobs of
+            the step in gigabytes (GB)
         '''
         return self._memory
 
@@ -459,6 +460,23 @@ class WorkflowStepDescription(object):
         if not isinstance(value, int):
             raise TypeError('Attribute "memory" must have type int.')
         self._memory = value
+
+    @property
+    def cores(self):
+        '''
+        Returns
+        -------
+        int
+            number of cores that should be allocated to individual jobs of
+            the step
+        '''
+        return self._cores
+
+    @cores.setter
+    def cores(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "cores" must have type int.')
+        self._cores = value
 
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
@@ -472,3 +490,5 @@ class WorkflowStepDescription(object):
             yield ('duration', getattr(self, 'duration'))
         if hasattr(self, 'memory'):
             yield ('memory', getattr(self, 'memory'))
+        if hasattr(self, 'cores'):
+            yield ('cores', getattr(self, 'cores'))
