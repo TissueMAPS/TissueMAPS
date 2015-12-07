@@ -363,24 +363,24 @@ class Experiment(object):
         for plate in self.plates:
             for cycle in plate.cycles:
                 md = cycle.image_metadata
-                channels = np.unique(md['channel_ix'])
-                zplanes = np.unique(md['zplane_ix'])
-                for c in channels:
-                    for z in zplanes:
-                        metadata = MosaicMetadata()
-                        metadata.name = cfg.LAYER_NAME_FORMAT.format(
-                                            t=cycle.index, c=c, z=z)
-                        metadata.channel_ix = c
-                        metadata.zplane_ix = z
-                        metadata.tpoint_ix = cycle.index
-                        ix = ((md['channel_ix'] == c) & (md['zplane_ix'] == z))
-                        files = md[ix]['name'].tolist()
-                        metadata.filenames = [
-                            os.path.join(cycle.image_dir, f) for f in files
-                        ]
-                        sites = md[ix]['site_ix'].tolist()
-                        metadata.site_ixs = sites
-                        layer_metadata[metadata.name] = metadata
+                for index, name in self.layer_names.items():
+                    if index[0] != cycle.index:
+                        continue
+                    c = index[1]
+                    z = index[2]
+                    metadata = MosaicMetadata()
+                    metadata.name = name
+                    metadata.channel_ix = c
+                    metadata.zplane_ix = z
+                    metadata.tpoint_ix = cycle.index
+                    ix = ((md['channel_ix'] == c) & (md['zplane_ix'] == z))
+                    files = md[ix]['name'].tolist()
+                    metadata.filenames = [
+                        os.path.join(cycle.image_dir, f) for f in files
+                    ]
+                    sites = md[ix]['site_ix'].tolist()
+                    metadata.site_ixs = sites
+                    layer_metadata[name] = metadata
         return layer_metadata
 
     @property
@@ -413,26 +413,18 @@ class Experiment(object):
         -------
         tmlib.image.ChannelImage
             corresponding image object
+
+        Raises
+        ------
+        tmlibs.errors.MetadataError
+            when no or more than one image are found for `name`
         '''
-        regex = utils.regex_from_format_string(cfg.IMAGE_NAME_FORMAT)
-        match = re.search(regex, os.path.basename(name))
-        if not match:
-            raise RegexError('Metadata could not be determined from filename')
-        captures = match.groupdict()
         for plate in self.plates:
-            if plate.name != captures['plate_name']:
-                continue
             for cycle in plate.cycles:
-                if cycle.index != int(captures['t']):
-                    continue
                 md = cycle.image_metadata
-                ix = np.where(
-                        (md['channel_ix'] == int(captures['c'])) &
-                        (md['zplane_ix'] == int(captures['z'])) &
-                        (md['well_name'] == captures['w']) &
-                        (md['well_position_x'] == int(captures['x'])) &
-                        (md['well_position_y'] == int(captures['y'])))[0]
+                ix = md[md.name == name].index
                 if len(ix) > 1:
-                    raise MetadataError(
-                            'A filename has to correspond to a single image.')
-                return cycle.images[ix]
+                    raise MetadataError('Image names must be unique.')
+                elif len(ix) == 1:
+                    return cycle.get_image_subset(ix)[0]
+        raise MetadataError('There is no image with name "%s"' % name)
