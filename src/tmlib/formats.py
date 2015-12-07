@@ -3,6 +3,7 @@ import re
 import lxml
 import lxml.html
 import lxml.etree
+from cached_property import cached_property
 from .utils import flatten
 from .readers import JsonReader
 from .writers import JsonWriter
@@ -29,7 +30,7 @@ class Formats(object):
                                        'supported-formats.json')
         return self.__filename
 
-    @property
+    @cached_property
     def supported_formats(self):
         '''
         Returns
@@ -38,10 +39,10 @@ class Formats(object):
             names and file extensions of supported formats as key-value pairs
         '''
         with JsonReader() as reader:
-            self._supported_formats = reader.read(self._filename)
-        self._supported_formats.update({u'Visiview': [u'.tiff']})
-        self._supported_formats.update({u'Visiview (STK)': [u'.stk', u'.nd']})
-        return self._supported_formats
+            supported_formats = reader.read(self._filename)
+        supported_formats.update({u'Visiview': [u'.tiff']})
+        supported_formats.update({u'Visiview (STK)': [u'.stk', u'.nd']})
+        return supported_formats
 
     @property
     def supported_extensions(self):
