@@ -417,7 +417,8 @@ class CommandLineInterface(object):
         api = self._api_instance
         jobs = self.build_jobs(
                     duration=args.duration,
-                    memory=args.memory)
+                    memory=args.memory,
+                    cores=args.cores)
         # TODO: check whether jobs were actually created
         # session = api.create_session(jobs)
         logger.info('submit and monitor jobs')
