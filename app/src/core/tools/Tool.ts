@@ -25,7 +25,7 @@ abstract class Tool {
         this.results = [];
     }
 
-    abstract handleResult(result: ToolResult);
+    abstract handleResult(res: ToolResult);
 
     getIdSlug(): string {
         return this.id.toLowerCase()

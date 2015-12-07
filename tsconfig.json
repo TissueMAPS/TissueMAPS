@@ -52,9 +52,8 @@
         "app/src/core/tools/Tool.ts",
         "app/src/core/tools/ToolLoader.ts",
         "app/src/core/tools/result/ToolResult.ts",
-        "app/src/core/tools/result/handler/ToolResultHandler.ts",
-        "app/src/core/tools/result/handler/EchoResultHandler.ts",
-        "app/src/core/tools/result/handler/ClassificationResultHandler.ts",
+        "app/src/core/tools/result/ResultLayer.ts",
+        "app/src/core/tools/classes/ClassificationTool.ts",
         "app/src/core/tools/classes/FeatureStatsTool.ts",
         "app/src/core/tools/classes/SVMTool.ts",
 

@@ -19,8 +19,8 @@ class MapObject {
                 public visualType: string,
                 public extraData: any) {}
 
-    getVisual() {
-        var visual: Visual;
+    getVisual(): ColorizableVisual {
+        var visual: ColorizableVisual;
         switch (this.visualType) {
             case 'polygon':
                 visual = new PolygonVisual(this.extraData.coordinates, {
