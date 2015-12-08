@@ -28,7 +28,7 @@ describe('In MapObjectSelection', function() {
         });
     });
 
-    describe('the function getMapObjects', function() {
+    describe('the property mapObjects', function() {
         it('should return the selected map objects', function() {
             pending();
         });
@@ -100,7 +100,7 @@ describe('In MapObjectSelection', function() {
             l.addMapObject(o, {x: 10, y: -10});
             l.addMapObject(o, {x: 10, y: -10});
 
-            expect(l.getMapObjects().length).toEqual(1);
+            expect(l.mapObjects.length).toEqual(1);
         });
         
         it('should broadcast a `mapObjectSelectionChanged` event', function() {

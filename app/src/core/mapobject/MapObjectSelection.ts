@@ -54,7 +54,7 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
         vp.addVisualLayer(this._layer);
     }
 
-    getMapObjects() {
+    get mapObjects() {
         var objects = [];
         for (var mapObjectId in this._entries) {
             var entry = this._entries[mapObjectId];

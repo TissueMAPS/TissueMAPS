@@ -1,37 +1,46 @@
 <div class="class-selection-widget panel panel-default">
   <div class="panel-body">
 
+    <label>Object type: </label>
+    <select ng-model="selWidget.chosenMapObjectType">
+      <option value="{{::t}}" ng-repeat="t in selWidget.selHandler.supportedMapObjectTypes">
+      {{::t}}
+      </option>
+    </select>
+
     <table class="table table-condensed">
       <tr>
         <th>Selection</th>
         <th>Label</th>
       </tr>
-      <tr ng-repeat="sel in selections">
+      <tr ng-repeat="objSelection in selWidget.getSelectionsForChosenType()"
+          ng-controller="ClassSelectionCtrl as sel">
         <td>
           <span class="flag-label">
-            <i class="fa fa-flag" ng-style="{'color': sel.color.toRGBString()}"></i>
+            <i class="fa fa-flag" ng-style="{'color': objSelection.color.toRGBString()}"></i>
           </span>
           <span>
-            {{ sel.name }}
+            {{ objSelection.name }}
           </span>
         </td>
 
         <td>
-          <div class="input-group">
+          <input type="checkbox" class="form-control" ng-model="sel.useAsClass">
             <div class="input-group-addon">label</div>
             <input
-              type="text" class="form-control" placeholder="Don't use in training" ng-model="sel.viewProps.class"
+              type="text" class="form-control"
+              placeholder="Don't use in training"
+              ng-model="sel.className"
               ng-change="updateClasses()">
-            </input>
           </div>
         </td>
       </tr>
     </table>
 
     <ul class="list-group">
-      <li ng-repeat="cls in classArray"
+      <li ng-repeat="cls in selWidget.getClassesForChosenType()"
         class="list-group-item">
-          {{cls.name}} <span class="badge">{{cls.mapObjectIds.length}} {{activeMapObjectType}}</span>
+          {{cls.name}} <span class="badge">{{cls.selection.mapObjects.length}} {{::selWidget.chosenMapObjectType}}</span>
       </li>
     </ul>
   </div>

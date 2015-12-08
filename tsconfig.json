@@ -64,6 +64,8 @@
         "app/src/toolwindow/TmapsProxy.ts",
         "app/src/toolwindow/ToolContentCtrl.ts",
 
+        "app/src/toolwindow/widgets/classselection/ClassSelectionWidgetCtrl.ts",
+
         "app/src/ui/toolbar/tmToolbar.ts",
         "app/src/ui/toolbar/ToolbarCtrl.ts",
         "app/src/ui/sidebar/selections/SelectionSettingsCtrl.ts",

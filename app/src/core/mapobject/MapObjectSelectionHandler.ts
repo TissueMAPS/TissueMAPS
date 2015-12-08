@@ -24,6 +24,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _markerSelectionModeActive: boolean = false;
     private _activeMapObjectType: MapObjectType = null;
     private _activeSelection: MapObjectSelection = null;
+    private _outlineLayers: {[objectType: string]: VisualLayer;} = {};
 
     constructor(viewport: Viewport, mapObjectManager: MapObjectManager) {
 
@@ -65,6 +66,15 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             s.selectionLayer.visible = true;
         });
         this._activeMapObjectType = t;
+
+        if (this._outlineLayers[t] !== undefined) {
+            this._outlineLayers[t].visible = true;
+            for (var t2 in this._outlineLayers) {
+                if (t2 !== t) {
+                    this._outlineLayers[t2].visible = false;
+                }
+            }
+        }
     }
 
     /**
@@ -120,6 +130,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
                 visible: false,
                 contentType: ContentType.mapObject
             });
+            this._outlineLayers[t] = visualLayer;
             return this.viewport.addVisualLayer(visualLayer)
         });
     }

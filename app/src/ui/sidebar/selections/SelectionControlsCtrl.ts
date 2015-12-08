@@ -20,14 +20,6 @@ class SelectionControlsCtrl {
         this.selHandler = $scope.appInstance.mapObjectSelectionHandler;
     }
 
-    toggleMarkerSelectionMode() {
-        if (this.selHandler.isMarkerSelectionModeActive()) {
-            this.selHandler.deactivateMarkerSelectionMode();
-        } else {
-            this.selHandler.activateMarkerSelectionMode();
-        }
-    }
-
     clearSelectedSelections() {
         _(this._$scope.selectionBox.getSelectedItems()).each((s) => {
             s.clear();

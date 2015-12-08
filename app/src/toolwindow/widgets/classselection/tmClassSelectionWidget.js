@@ -27,72 +27,8 @@ angular.module('tmaps.toolwindow')
 .directive('tmClassSelectionWidget', function() {
     return {
         restrict: 'E',
-        scope: {
-            selections: '=',
-            onChangeExpr: '&onChange'
-        },
         templateUrl: '/templates/tools/widgets/tm-class-selection-widget.html',
-        controller: ['$http', '$scope', 'tmapsProxy',
-            function($http, $scope, tmapsProxy) {
-
-            $scope.activeObjectType = tmapsProxy.appInstance.mapObjectSelectionHandler.activeMapObjectType;
-
-            // Add a default class label to each selection
-            _($scope.selections).each(function(sel, i) {
-                sel.viewProps = {
-                    class: 'CLASS_' + i
-                };
-            });
-
-            $scope.classArray = [];
-
-            $scope.updateClasses = function() {
-                var classes = {};
-                $scope.selections.forEach(function(sel) {
-                    var clsName = sel.viewProps.class;
-                    if (clsName) {
-                        if (_.isUndefined(classes[clsName])) {
-                            classes[clsName] = {
-                                mapObjectIds: []
-                            };
-                        }
-                        classes[clsName].mapObjects = classes[clsName].mapObjectIds.concat(
-                            sel.getMapObjects().map(function(o) {
-                                return o.id;
-                            })
-                        );
-                        if (!classes[clsName].color) {
-                            classes[clsName].color = sel.color.toOlColor();
-                        }
-                    }
-                });
-
-                $scope.onChangeExpr({
-                    classes: classes
-                });
-
-                var clsArray = [];
-                _(classes).each(function(classObj, clsName) {
-                    clsArray.push({
-                        name: clsName,
-                        mapObjectIds: classObj.mapObjects
-                    });
-                });
-                $scope.classArray = clsArray;
-            };
-
-            // Update the 'classes' variable in the expression
-            // for the first time. This will set the class assignments
-            // to the default ones.
-            $scope.updateClasses();
-
-            // Update the classes whenever a selection changes.
-            // This ensures that the onChange expression is up to date.
-            tmapsProxy.viewportScope.then(function(scope) {
-                scope.$on('cellSelectionChanged', function(sel) {
-                    $scope.updateClasses();
-                });
-            });
-        }]
+        controller: 'ClassSelectionWidgetCtrl',
+        controllerAs: 'selWidget'
     };
 });
