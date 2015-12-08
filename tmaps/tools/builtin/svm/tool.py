@@ -33,25 +33,15 @@ class SVMTool(Tool):
         # request_type = payload['request_type']
         # selected_feature_names = \
             # [f['name'] for f in payload['selected_features']]
-        # return {
-        #     'classes': [
-        #         {
-        #             'label': 'class1',
-        #             'color': {'r': 255, 'g': 0, 'b': 0},
-        #             'cell_ids': map(str, range(0, 200))
-        #         },
-        #         {
-        #             'label': 'class2',
-        #             'color': {'r': 0, 'g': 255, 'b': 0},
-        #             'cell_ids': map(str, range(400, 600))
-        #         },
-        #         {
-        #             'label': 'class3',
-        #             'color': {'r': 0, 'g': 0, 'b': 255},
-        #             'cell_ids': map(str, range(800, 1000))
-        #         }
-        #     ]
-        # }
+        return {
+            'object_type': 'nuclei',
+            'predicted_labels': ['A'] * 100 + ['B'] * 100,
+            'colors': {
+                'A': {'r': 255, 'g': 0, 'b': 0},
+                'B': {'r': 0, 'g': 0, 'b': 255}
+            },
+            'object_ids': range(200)
+        }
 
         features = payload.get('selected_features')
         cell_ids_per_class = payload.get('training_cell_ids')
