@@ -126,7 +126,7 @@ class Jterator(CommandLineInterface):
         --------
         :py:mod:`tmlib.jterator.argparser`
         '''
-        experiment = Experiment(args.experiment_dir)
+        experiment = Experiment(args.experiment_dir, library='numpy')
         if args.method_name == 'run':
             cli = Jterator(experiment, args.verbosity, args.pipeline,
                            not args.plot)

@@ -442,9 +442,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             logger.info('align images between cycles')
             orig_dims = image.pixels.dimensions
             image = image.align()
-            if not isinstance(image.pixels, np.ndarray):
-                image_array = image_utils.vips_image_to_np_array(
-                                                image.pixels.array)
+            if not isinstance(image.pixels.array, np.ndarray):
+                # image_array = image_utils.vips_image_to_np_array(
+                #                                 image.pixels.array)
+                raise TypeError('Jterator requires images as "numpy" arrays.')
             else:
                 image_array = image.pixels.array
             plane_images[plane['name']] = image_array
