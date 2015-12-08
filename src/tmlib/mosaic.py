@@ -153,10 +153,10 @@ class Mosaic(StichedImage):
             set of images that are all of the same *cycle* and *channel*
         dx: int, optional
             displacement in x direction in pixels; i.e. overlap of images
-            in x direction (negative integer value; default: ``0``)
+            in x direction (default: ``0``)
         dy: int, optional
             displacement in y direction in pixels; i.e. overlap of images
-            in y direction (negative integer value; default: ``0``)
+            in y direction (default: ``0``)
         stats: IllumstatsImages, optional
             illumination statistics to correct images for
             illumination artifacts
@@ -174,10 +174,10 @@ class Mosaic(StichedImage):
             when `dx` or `dy` are not positive integer values
         '''
         logger.debug('create mosaic')
-        if not isinstance(dx, int) or dx > 0:
-            raise ValueError('"dx" has to be a negative integer value')
-        if not isinstance(dy, int) or dy > 0:
-            raise ValueError('"dy" has to be a negative integer value')
+        if not isinstance(dx, int) or dx < 0:
+            raise ValueError('"dx" has to be a positive integer value')
+        if not isinstance(dy, int) or dy < 0:
+            raise ValueError('"dy" has to be a positive integer value')
 
         grid = Mosaic._build_image_grid(images)
         for i in xrange(grid.shape[0]):
@@ -199,14 +199,14 @@ class Mosaic(StichedImage):
                 if j == 0:
                     row = arr
                 else:
-                    x_overlap = -row.width - dx
-                    row = row.merge(arr, 'horizontal', x_overlap, 0)
+                    x_overlap = -dx
+                    row = row.join(arr, 'horizontal', shim=x_overlap)
 
             if i == 0:
                 mosaic = row
             else:
-                y_overlap = -mosaic.height - dy
-                mosaic = mosaic.merge(row, 'vertical', 0, y_overlap)
+                y_overlap = -dy
+                mosaic = mosaic.join(row, 'vertical', shim=y_overlap)
 
         return Mosaic(mosaic)
 

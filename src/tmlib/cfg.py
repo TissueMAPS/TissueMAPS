@@ -23,7 +23,7 @@ LAYER_NAME_FORMAT = 't{t:0>3}_c{c:0>3}_z{z:0>3}'
 
 #: Format string for building image filenames based on plate name, time point index, well name,
 #: y and x coordinates of the image within the well, channel index and z-plane index.
-IMAGE_NAME_FORMAT = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.png'
+IMAGE_NAME_FORMAT = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.tif'
 
 
 class UserConfiguration(object):

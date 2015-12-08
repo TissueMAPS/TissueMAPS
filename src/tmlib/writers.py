@@ -212,6 +212,11 @@ class ImageWriter(Writer):
         '''
         Write an image to file.
 
+        The format depends on the file extension:
+        - *.png for PNG (8-bit and 16-bit)
+        - *.tiff or *.tif for TIFF (8-bit and 16-bit)
+        - *.jpeg or *.jpg for JPEG (only supports 8-bit)
+
         Parameters
         ----------
         data: numpy.ndarray or Vips.Image 

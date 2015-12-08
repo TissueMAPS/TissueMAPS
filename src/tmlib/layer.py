@@ -269,6 +269,8 @@ class ChannelLayer(object):
             when mosaic does not exist
         '''
         scaled_image = self.mosaic.array.scale()
+        # arr = self.mosaic.array
+        # scaled_image = (arr.cast('float') / 2**12 * 255).cast('uchar')
         return ChannelLayer(self.name, Mosaic(scaled_image), self.metadata)
 
     def clip(self, value=None, percentile=None):
