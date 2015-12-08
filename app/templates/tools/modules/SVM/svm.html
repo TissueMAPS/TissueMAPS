@@ -1,11 +1,8 @@
-<div ng-controller="SVMCtrl">
+<div ng-controller="SVMCtrl as svm">
 
   <p>
 
-    <tm-class-selection-widget
-      selections="selections"
-      on-change="classes = classes">
-    </tm-class-selection-widget>
+  <tm-class-selection-widget></tm-class-selection-widget>
 
   </p>
 
@@ -18,7 +15,7 @@
   </p>
 
   <p>
-    <button class="btn btn-primary" ng-click="sendRequest()">Classify</button>
+    <button class="btn btn-primary" ng-click="svm.sendRequest()">Classify</button>
   </p>
 
 </div>
