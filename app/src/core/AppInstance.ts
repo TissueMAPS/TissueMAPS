@@ -7,7 +7,10 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     name: string;
     experiment: Experiment;
     viewport: Viewport;
+
     mapObjectManager: MapObjectManager;
+    featureManager: FeatureManager;
+
     mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
 
@@ -21,7 +24,9 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.viewport.injectIntoDocumentAndAttach(this);
         this.tools = $injector.get<ToolLoader>('toolLoader').loadTools(this);
 
+        this.featureManager = new FeatureManager(experiment);
         this.mapObjectManager = new MapObjectManager(experiment);
+
         this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this.viewport, this.mapObjectManager);
         this.mapObjectManager.mapObjectTypes.then((types) => {
             _(types).each((t) => {

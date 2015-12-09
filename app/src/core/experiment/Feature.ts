@@ -1,1 +1,3 @@
-interface Feature {}
+interface Feature {
+    name: string;
+}

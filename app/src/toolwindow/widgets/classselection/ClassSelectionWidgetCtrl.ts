@@ -6,26 +6,31 @@ interface Class {
 class ClassSelectionWidgetCtrl {
     static $inject = ['$scope', 'tmapsProxy'];
 
+    selHandler: MapObjectSelectionHandler;
+    toolOptions: ToolOptions;
+
     private _classes: {[objectType: string]: Class[];} = {};
 
-    selHandler: MapObjectSelectionHandler;
-    chosenMapObjectType: MapObjectType = '';
+    constructor($scope: ToolContentScope, tmapsProxy: TmapsProxy) {
+        this.selHandler = tmapsProxy.appInstance.mapObjectSelectionHandler;
+        this.toolOptions = $scope.toolOptions;
+    }
 
     /**
      * To be called from the controller using this widget, e.g.:
      * var theClasses = $scope.selWidget.classes;
      */
     get classes() {
-        var cls = this._classes[this.chosenMapObjectType];
+        var cls = this._classes[this.toolOptions.chosenMapObjectType];
         return cls === undefined ? [] : cls;
     }
 
     getClassesForChosenType(): Class[] {
-        return this._classes[this.chosenMapObjectType];
+        return this._classes[this.toolOptions.chosenMapObjectType];
     }
 
     getSelectionsForChosenType() {
-        return this.selHandler.getSelectionsForType(this.chosenMapObjectType);
+        return this.selHandler.getSelectionsForType(this.toolOptions.chosenMapObjectType);
     }
 
     registerSelectionAsClass(sel: MapObjectSelection, className: string) {
@@ -68,10 +73,6 @@ class ClassSelectionWidgetCtrl {
         }
     }
 
-    constructor($scope, tmapsProxy) {
-        this.selHandler = tmapsProxy.appInstance.mapObjectSelectionHandler;
-        window['scope'] = $scope;
-    }
 }
 
 class ClassSelectionCtrl {

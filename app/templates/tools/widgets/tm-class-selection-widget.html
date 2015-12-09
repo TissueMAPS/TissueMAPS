@@ -2,7 +2,7 @@
   <div class="panel-body">
 
     <label>Object type: </label>
-    <select ng-model="selWidget.chosenMapObjectType">
+    <select ng-model="toolOptions.chosenMapObjectType">
       <option value="{{::t}}" ng-repeat="t in selWidget.selHandler.supportedMapObjectTypes">
       {{::t}}
       </option>
@@ -40,7 +40,7 @@
     <ul class="list-group">
       <li ng-repeat="cls in selWidget.getClassesForChosenType()"
         class="list-group-item">
-          {{cls.name}} <span class="badge">{{cls.selection.mapObjects.length}} {{::selWidget.chosenMapObjectType}}</span>
+          {{cls.name}} <span class="badge">{{cls.selection.mapObjects.length}} {{toolOptions.chosenMapObjectType}}</span>
       </li>
     </ul>
   </div>

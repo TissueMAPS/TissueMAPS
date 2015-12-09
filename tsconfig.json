@@ -29,8 +29,9 @@
         "app/src/core/appstate/ctrl/ShareAppstateCtrl.ts",
         "app/src/core/appstate/api.ts",
         "app/src/core/experiment/Experiment.ts",
-        "app/src/core/experiment/ExperimentService.ts",
         "app/src/core/experiment/Feature.ts",
+        "app/src/core/experiment/FeatureManager.ts",
+        "app/src/core/experiment/ExperimentService.ts",
         "app/src/core/experiment/api.ts",
         "app/src/core/layer/ChannelLayer.ts",
         "app/src/core/layer/Layer.ts",
@@ -62,9 +63,11 @@
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
 
         "app/src/toolwindow/TmapsProxy.ts",
+        "app/src/toolwindow/FeatureService.ts",
         "app/src/toolwindow/ToolContentCtrl.ts",
 
         "app/src/toolwindow/widgets/classselection/ClassSelectionWidgetCtrl.ts",
+        "app/src/toolwindow/widgets/featureselection/FeatureSelectionWidgetCtrl.ts",
 
         "app/src/toolwindow/modules/SVM/SVMCtrl.ts",
 
