@@ -118,10 +118,11 @@ class PyramidBuilder(ClusterRoutines):
                     illumcorr=batch['illumcorr'], align=batch['align'])
 
         if batch['clip']:
-            logger.info('threshold intensities')
+            logger.info('clip intensities')
             layer = layer.clip(value=batch['clip_value'],
                                percentile=batch['clip_percentile'])
 
+        logger.info('rescale intensities to 8-bit')
         layer = layer.scale()
 
         output_dir = batch['outputs']['pyramid_dir']

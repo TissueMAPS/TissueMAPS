@@ -180,10 +180,17 @@ class Mosaic(StichedImage):
             raise ValueError('"dy" has to be a positive integer value')
 
         grid = Mosaic._build_image_grid(images)
-        for i in xrange(grid.shape[0]):
-            for j in xrange(grid.shape[1]):
 
-                img = grid[i, j]
+        y_overlap = -dy
+        x_overlap = -dx
+
+        row_pairs = list()
+        for r in xrange(grid.shape[0]):
+
+            col_pairs = list()
+            for c in xrange(grid.shape[1]):
+
+                img = grid[r, c]
                 logger.debug('add image "%s"', img.metadata.name)
 
                 # Correct and align image
@@ -193,20 +200,39 @@ class Mosaic(StichedImage):
                 if align:
                     img = img.align(crop=False)
 
-                # Extract the actual pixels array from the image object
-                arr = img.pixels.array
+                img = img.pixels.array
 
-                if j == 0:
-                    row = arr
+                # Join a pair of images together and then join the pair
+                # with the row image
+                if c % 2 == 0:  # even column number
+                    previous_img = img
+
+                    # In case this is the last column
+                    if c == (grid.shape[1] - 1):
+                        col_pairs.append(previous_img)
                 else:
-                    x_overlap = -dx
-                    row = row.join(arr, 'horizontal', shim=x_overlap)
+                    joined_img = previous_img.join(
+                                    img, 'horizontal', shim=x_overlap)
+                    col_pairs.append(joined_img)
 
-            if i == 0:
-                mosaic = row
+            row = reduce(
+                lambda x, y: x.join(y, 'horizontal', shim=x_overlap), col_pairs
+            )
+
+            if r % 2 == 0:
+                previous_row = row
+
+                # In case this is the last row
+                if r == (grid.shape[0] - 1):
+                    row_pairs.append(previous_row)
             else:
-                y_overlap = -dy
-                mosaic = mosaic.join(row, 'vertical', shim=y_overlap)
+                joined_row = previous_row.join(
+                                row, 'vertical', shim=y_overlap)
+                row_pairs.append(joined_row)
+
+        mosaic = reduce(
+            lambda x, y: x.join(y, 'vertical', shim=y_overlap), row_pairs
+        )
 
         return Mosaic(mosaic)
 
