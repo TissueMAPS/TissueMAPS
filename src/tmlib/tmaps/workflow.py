@@ -212,8 +212,9 @@ class Workflow(SequentialTaskCollection, StopOnError):
         '''
         if done+1 < len(self._steps_to_process):
             logger.info('step "%s" is done', self._steps_to_process[done].name)
-            logger.info('waiting to give NFS time to get up-to-date')
-            time.sleep(60)
+            wait = 120
+            logger.debug('wait %d seconds', wait)
+            time.sleep(wait)
             try:
                 logger.info('progress to next step ({0} of {1}): "{2}"'.format(
                                 (done+1)+1, len(self._steps_to_process),
