@@ -49,44 +49,44 @@ def expdata_file(experiment_id, layer_name, filename):
 
 # TODO: Make auth required. tools subapp should receive token
 @api.route('/experiments/<experiment_id>/features', methods=['GET'])
-# @jwt_required()
+@jwt_required()
 def get_features(experiment_id):
     """
-    Send a list of feature objects. In addition to the name and the channel
-    to which each feature belongs, the caller may request additional properties
-    by listing those as query parameters:
-
-    /experiments/<expid>/features?include=prop1,prop2,...
-
-    where available properties are:
-
-        min, max, mean, median,
-        percXX (e.g. perc25 for the 25% percentile),
-        var, std
+    Send a list of feature objects.
 
     Response:
 
     {
         "features": [
             {
-                "name": string (the feature's name),
-                // additional properties:
-                "min": float,
-                ....
-            }
+                "name": string 
+            },
+            ...
         ]
     }
+
     """
 
-    exp = Experiment.get(experiment_id)
-    features = []
+    ex = Experiment.get(experiment_id)
+    if not ex:
+        return RESOURCE_NOT_FOUND_RESPONSE
 
-    props = []
-    if 'include' in request.args:
-        props = request.args.get('include').split(',')
-        print props
+    if not ex.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
 
-    features = []
+    features = {}
+
+    with ex.dataset as data:
+        types = data['/objects'].keys()
+        for t in types:
+            feature_names = data['/objects/%s/features' % t].keys()
+            features[t] = [{'name': f} for f in feature_names]
+
+    return jsonify({
+        'features': features
+    })
+
+
 
     # with DatasetReader(exp.dataset_path) as dataset:
     #     dset = dataset.read('/objects/cells/features')
@@ -101,7 +101,7 @@ def get_features(experiment_id):
 
     #     features += feat_objs
 
-    return jsonify(features=features)
+    # return jsonify(features=features)
 
 
 @api.route('/experiments', methods=['GET'])
