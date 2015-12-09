@@ -277,9 +277,8 @@ def calc_threshold_level(sample_images, percent=99.9):
     ----------
     sample_images: List[gi.overrides.Vips.Image[gi.overrides.Vips.BandFormat.USHORT]]
         images that are representative of the images that are to be thresholded
-
-    top_percent: float, optional
-        quantile (default: 99.9)
+    percent: float, optional
+        quantile (default: `99.9`)
 
     Returns
     -------
@@ -290,7 +289,6 @@ def calc_threshold_level(sample_images, percent=99.9):
     # `percent` % of all pixels lie below `thresh`
     thresholds = map(lambda img: img.percent(percent), sample_images)
     avg_thresh = int(float(sum(thresholds)) / len(thresholds))
-    print '   ... values above %d will be thresholded' % avg_thresh
     return avg_thresh
 
 
