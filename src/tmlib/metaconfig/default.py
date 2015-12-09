@@ -13,7 +13,6 @@ from abc import abstractproperty
 from .ome_xml import XML_DECLARATION
 from ..metadata import ImageFileMapper
 from ..illuminati import stitch
-from .. import utils
 from ..errors import MetadataError
 from ..errors import RegexError
 from ..errors import NotSupportedError
