@@ -223,8 +223,9 @@ class ChannelLayer(object):
                         mosaic = Mosaic.create(images, displacement, stats, align)
                         processed_images.append(mosaic.array)
 
+        n = len(nonempty_columns) + len(empty_columns_2fill)
         layer_image = Vips.Image.arrayjoin(
-                        processed_images, across=n_cols, shim=spacer_size)
+                        processed_images, across=n, shim=spacer_size)
 
         mosaic = Mosaic(layer_image)
         metadata = MosaicMetadata()
