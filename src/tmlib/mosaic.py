@@ -141,7 +141,7 @@ class Mosaic(StichedImage):
         return grid
 
     @staticmethod
-    def create(images, dx=0, dy=0, stats=None, align=False):
+    def create(images, displacement=0, stats=None, align=False):
         '''
         Create a mosaic image by stitching individual images together.
         The grid layout, i.e. the order in which images are stitched,
@@ -151,12 +151,9 @@ class Mosaic(StichedImage):
         ----------
         images: List[ChannelImage]
             set of images that are all of the same *cycle* and *channel*
-        dx: int, optional
-            displacement in x direction in pixels; i.e. overlap of images
-            in x direction (default: ``0``)
-        dy: int, optional
-            displacement in y direction in pixels; i.e. overlap of images
-            in y direction (default: ``0``)
+        displacement: int, optional
+            displacement in x and y direction in pixels;
+            i.e. overlap of two neighboring images (default: ``0``)
         stats: IllumstatsImages, optional
             illumination statistics to correct images for
             illumination artifacts
@@ -174,20 +171,16 @@ class Mosaic(StichedImage):
             when `dx` or `dy` are not positive integer values
         '''
         logger.debug('create mosaic')
-        if not isinstance(dx, int) or dx < 0:
-            raise ValueError('"dx" has to be a positive integer value')
-        if not isinstance(dy, int) or dy < 0:
-            raise ValueError('"dy" has to be a positive integer value')
+        if not isinstance(displacement, int) or displacement < 0:
+            raise ValueError(
+                    'Argument "displacement" has to be a positive integer.')
 
         grid = Mosaic._build_image_grid(images)
 
-        y_overlap = -dy
-        x_overlap = -dx
+        overlap = -displacement
 
-        row_pairs = list()
+        processed_images = list()
         for r in xrange(grid.shape[0]):
-
-            col_pairs = list()
             for c in xrange(grid.shape[1]):
 
                 img = grid[r, c]
@@ -200,39 +193,10 @@ class Mosaic(StichedImage):
                 if align:
                     img = img.align(crop=False)
 
-                img = img.pixels.array
+                processed_images.append(img.pixels.array)
 
-                # Join a pair of images together and then join the pair
-                # with the row image
-                if c % 2 == 0:  # even column number
-                    previous_img = img
-
-                    # In case this is the last column
-                    if c == (grid.shape[1] - 1):
-                        col_pairs.append(previous_img)
-                else:
-                    joined_img = previous_img.join(
-                                    img, 'horizontal', shim=x_overlap)
-                    col_pairs.append(joined_img)
-
-            row = reduce(
-                lambda x, y: x.join(y, 'horizontal', shim=x_overlap), col_pairs
-            )
-
-            if r % 2 == 0:
-                previous_row = row
-
-                # In case this is the last row
-                if r == (grid.shape[0] - 1):
-                    row_pairs.append(previous_row)
-            else:
-                joined_row = previous_row.join(
-                                row, 'vertical', shim=y_overlap)
-                row_pairs.append(joined_row)
-
-        mosaic = reduce(
-            lambda x, y: x.join(y, 'vertical', shim=y_overlap), row_pairs
-        )
+        mosaic = Vips.Image.arrayjoin(
+                    processed_images, across=grid.shape[1], shim=overlap)
 
         return Mosaic(mosaic)
 

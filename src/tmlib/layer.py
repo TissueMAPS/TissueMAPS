@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 from skimage.measure import approximate_polygon
+from gi.repository import Vips
 from . import utils
 from . import image_utils
 from .mosaic import Mosaic
@@ -45,7 +46,7 @@ class ChannelLayer(object):
 
     @staticmethod
     def create(experiment, tpoint_ix, channel_ix, zplane_ix,
-               dx=0, dy=0, illumcorr=False, align=False, spacer_size=500):
+               displacement=0, illumcorr=False, align=False, spacer_size=500):
         '''
         Load individual images and stitch them together according to the
         metadata.
@@ -60,12 +61,9 @@ class ChannelLayer(object):
             channel index
         zplane_ix: int
             z-plane index
-        dx: int, optional
-            displacement in x direction in pixels; useful when images are
-            acquired with an overlap in x direction (negative integer value)
-        dy: int, optional
-            displacement in y direction in pixels; useful when images are
-            acquired with an overlap in y direction (negative integer value)
+        displacement: int, optional
+            displacement in x, y direction in pixels; useful when images are
+            acquired with an overlap direction (positive value; default: ``0``)
         illumcorr: bool, optional
             whether images should be corrected for illumination artifacts
             (default: ``False``)
@@ -131,12 +129,11 @@ class ChannelLayer(object):
         md = cycle.image_metadata
         image = cycle.get_image_subset([0])[0]
 
-        # mosaic = Mosaic.create(images, dx, dy, None, align)
         n_rows = np.max(md.well_position_y) + 1
         n_cols = np.max(md.well_position_x) + 1
         well_dimensions = (
-            n_rows * image.pixels.dimensions[0] + dy * (n_rows - 1),
-            n_cols * image.pixels.dimensions[1] + dx * (n_cols - 1)
+            n_rows * image.pixels.dimensions[0] + displacement * (n_rows - 1),
+            n_cols * image.pixels.dimensions[1] + displacement * (n_cols - 1)
         )
         # Column spacer: insert between two wells in each row
         # (and instead of a well in case the whole column is empty
@@ -160,21 +157,16 @@ class ChannelLayer(object):
                                     list(set(nonempty_columns))))
         empty_rows_2fill = list(utils.missing_elements(
                                     list(set(nonempty_rows))))
-        n_nonempty_cols = len(nonempty_columns)
-        n_empty_cols_2fill = len(empty_columns_2fill)
-        row_width = (
-            well_dimensions[1] * n_nonempty_cols +
-            column_spacer.width * n_empty_cols_2fill +
-            column_spacer.width * (plate_grid.shape[1] + 1)
-        )
-        row_spacer = image_utils.create_spacer_image(
-                spacer_size, row_width,
-                dtype=image.pixels.dtype, bands=1)
+        row_spacer = list()
+        for j in xrange(plate_grid.shape[1]):
+            if j not in nonempty_columns:
+                if j in empty_columns_2fill:
+                    row_spacer.append(column_spacer)
+                continue
+            row_spacer.append(empty_well_spacer)
 
-        # Start each plate with a spacer
-        layer_img = row_spacer
-
-        # Plates are joined vertically:
+        # Joined plates vertically
+        processed_images = [row_spacer]
         for p, plate in enumerate(experiment.plates):
 
             logger.info('stitch images of plate "%s" '
@@ -194,27 +186,23 @@ class ChannelLayer(object):
                     if i in empty_rows_2fill:
                         # Fill empty row with spacer
                         # (if it lies between nonempty rows)
-                        layer_img = layer_img.join(row_spacer, 'vertical')
+                        processed_images.append(row_spacer)
                     continue
 
                 for j in xrange(plate_grid.shape[1]):
-
-                    if j == 0:
-                        # Start each row with a spacer
-                        row_img = column_spacer
 
                     if j not in nonempty_columns:
                         if j in empty_columns_2fill:
                             # Fill empty column with spacer
                             # (if it lies between nonempty columns)
-                            row_img = row_img.join(column_spacer, 'horizontal')
+                            processed_images.append(column_spacer)
                         continue
 
                     well = plate_grid[i, j]
                     logger.debug('stitch images of well "%s"', well)
                     if well is None:
                         # Fill empty well with spacer
-                        row_img = row_img.join(empty_well_spacer, 'horizontal')
+                        processed_images.append(empty_well_spacer)
                     else:
                         index = np.where(
                                     (md['tpoint_ix'] == tpoint_ix) &
@@ -223,26 +211,14 @@ class ChannelLayer(object):
                                     (md['well_name'] == well)
                         )[0]
                         images = cycle.get_image_subset(index)
-                        mosaic = Mosaic.create(images, dx, dy, stats, align)
-                        row_img = row_img.join(mosaic.array, 'horizontal')
+                        mosaic = Mosaic.create(images, displacement, stats, align)
+                        processed_images.append(mosaic.array)
 
-                    # Add small vertical gab between wells
-                    row_img = row_img.join(column_spacer, 'horizontal')
+        layer_image = Vips.Image.arrayjoin(
+                        processed_images,
+                        across=plate_grid.shape[1], shim=spacer_size)
 
-                # Join rows together
-                if p == 0 and i == 0:
-                    layer_img = row_img
-                else:
-                    layer_img = layer_img.join(row_img, 'vertical')
-
-                # Add small horizontal gab between rows of wells
-                layer_img = layer_img.join(row_spacer, 'vertical')
-
-            if len(experiment.plates) > 1:
-                # Add an additional vertical gab between plates
-                layer_img = layer_img.join(row_spacer, 'vertical')
-
-        mosaic = Mosaic(layer_img)
+        mosaic = Mosaic(layer_image)
         metadata = MosaicMetadata()
         metadata.tpoint_ix = tpoint_ix
         metadata.channel_ix = channel_ix
