@@ -161,12 +161,21 @@ class ChannelLayer(object):
         for j in xrange(plate_grid.shape[1]):
             if j not in nonempty_columns:
                 if j in empty_columns_2fill:
-                    row_spacer.append(column_spacer)
+                    row_spacer.append(
+                        image_utils.create_spacer_image(
+                            spacer_size, spacer_size,
+                            dtype=image.pixels.dtype, bands=1)
+                    )
                 continue
-            row_spacer.append(empty_well_spacer)
+            row_spacer.append(
+                image_utils.create_spacer_image(
+                    spacer_size, well_dimensions[1],
+                    dtype=image.pixels.dtype, bands=1)
+            )
 
         # Joined plates vertically
-        processed_images = [row_spacer]
+        processed_images = list()
+        processed_images.extend(row_spacer)
         for p, plate in enumerate(experiment.plates):
 
             logger.info('stitch images of plate "%s" '
@@ -186,7 +195,7 @@ class ChannelLayer(object):
                     if i in empty_rows_2fill:
                         # Fill empty row with spacer
                         # (if it lies between nonempty rows)
-                        processed_images.append(row_spacer)
+                        processed_images.extend(row_spacer)
                     continue
 
                 for j in xrange(plate_grid.shape[1]):
@@ -215,8 +224,7 @@ class ChannelLayer(object):
                         processed_images.append(mosaic.array)
 
         layer_image = Vips.Image.arrayjoin(
-                        processed_images,
-                        across=plate_grid.shape[1], shim=spacer_size)
+                        processed_images, across=n_cols, shim=spacer_size)
 
         mosaic = Mosaic(layer_image)
         metadata = MosaicMetadata()
