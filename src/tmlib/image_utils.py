@@ -134,26 +134,19 @@ def np_array_to_vips_image(nparray):
     -------
     gi.overrides.Vips.image
     '''
-    # Look up what VIPS format corresponds to the type of this np array
     vips_format = np_dtype_to_vips_format(nparray.dtype)
+    dims = nparray.shape
+    height = dims[0]
+    width = 1
+    bands = 1
+    if len(dims) > 1:
+        width = dims[1]
+    if len(dims) > 2:
+        bands = dims[2]
+    img = Vips.Image.new_from_memory_copy(
+            nparray.data, width, height, bands, vips_format)
 
-    # VIPS reads the buffer as if the data is saved column by column (column major)
-    # but numpy saves it in row major order.
-    nparray_trans = nparray.T
-    buf = np.getbuffer(nparray_trans)
-    height, width = nparray_trans.shape
-    img = Vips.Image.new_from_memory(buf, width, height, 1, vips_format)
-
-    # Resulting image has the wrong orientation
-    #
-    #      |  rotate 90 CW and flip
-    #     _|       ------>           ___|
-    #
-    # (same as horizontal flip and 90 deg CCW, but VIPS can't seem to do CCW rotations)
-    img = img.rot(1)
-    img = img.flip('horizontal')
-
-    return img.copy()
+    return img
 
 
 def vips_image_to_np_array(vips_image):
