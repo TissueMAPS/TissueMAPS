@@ -135,14 +135,6 @@ class ChannelLayer(object):
             n_rows * image.pixels.dimensions[0] + displacement * (n_rows - 1),
             n_cols * image.pixels.dimensions[1] + displacement * (n_cols - 1)
         )
-        # Column spacer: insert between two wells in each row
-        # (and instead of a well in case the whole column is empty
-        # and lies between other nonempty columns)
-        logger.debug('create column spacer: %d x %d pixels',
-                     well_dimensions[0], spacer_size)
-        column_spacer = image_utils.create_spacer_image(
-                well_dimensions[0], spacer_size,
-                dtype=image.pixels.dtype, bands=1)
         # Empty well spacer: insert instead of a well in case the well
         # is empty, but not the whole row or column is empty
         logger.debug('create empty well spacer: %d x %d pixels',
@@ -150,32 +142,9 @@ class ChannelLayer(object):
         empty_well_spacer = image_utils.create_spacer_image(
                 well_dimensions[0], well_dimensions[1],
                 dtype=image.pixels.dtype, bands=1)
-        # Row spacer: insert between rows
-        # (and instead of wells in case the whole row is empty and
-        # the empty row lies between other nonempty rows)
-        empty_columns_2fill = list(utils.missing_elements(
-                                    list(set(nonempty_columns))))
-        empty_rows_2fill = list(utils.missing_elements(
-                                    list(set(nonempty_rows))))
-        row_spacer = list()
-        for j in xrange(plate_grid.shape[1]):
-            if j not in nonempty_columns:
-                if j in empty_columns_2fill:
-                    row_spacer.append(
-                        image_utils.create_spacer_image(
-                            spacer_size, spacer_size,
-                            dtype=image.pixels.dtype, bands=1)
-                    )
-                continue
-            row_spacer.append(
-                image_utils.create_spacer_image(
-                    spacer_size, well_dimensions[1],
-                    dtype=image.pixels.dtype, bands=1)
-            )
 
         # Joined plates vertically
         processed_images = list()
-        processed_images.extend(row_spacer)
         for p, plate in enumerate(experiment.plates):
 
             logger.info('stitch images of plate "%s" '
@@ -189,26 +158,21 @@ class ChannelLayer(object):
 
             for i in xrange(plate_grid.shape[0]):
 
-                logger.debug('stitch images of row # %d', i)
-
                 if i not in nonempty_rows:
-                    if i in empty_rows_2fill:
-                        # Fill empty row with spacer
-                        # (if it lies between nonempty rows)
-                        processed_images.extend(row_spacer)
+                    # Skip empty rows
                     continue
+
+                logger.debug('stitch images of row # %d', i)
 
                 for j in xrange(plate_grid.shape[1]):
 
                     if j not in nonempty_columns:
-                        if j in empty_columns_2fill:
-                            # Fill empty column with spacer
-                            # (if it lies between nonempty columns)
-                            processed_images.append(column_spacer)
+                        # Skip empty columns
                         continue
 
                     well = plate_grid[i, j]
                     logger.debug('stitch images of well "%s"', well)
+
                     if well is None:
                         # Fill empty well with spacer
                         processed_images.append(empty_well_spacer)
@@ -220,12 +184,13 @@ class ChannelLayer(object):
                                     (md['well_name'] == well)
                         )[0]
                         images = cycle.get_image_subset(index)
-                        mosaic = Mosaic.create(images, displacement, stats, align)
+                        mosaic = Mosaic.create(
+                                    images, displacement, stats, align)
                         processed_images.append(mosaic.array)
 
-        n = len(nonempty_columns) + len(empty_columns_2fill)
         layer_image = Vips.Image.arrayjoin(
-                        processed_images, across=n, shim=spacer_size)
+                        processed_images,
+                        across=len(nonempty_columns), shim=spacer_size)
 
         mosaic = Mosaic(layer_image)
         metadata = MosaicMetadata()
@@ -254,8 +219,8 @@ class ChannelLayer(object):
             when mosaic does not exist
         '''
         scaled_image = self.mosaic.array.scale()
-        # arr = self.mosaic.array
-        # scaled_image = (arr.cast('float') / 2**12 * 255).cast('uchar')
+        # image = self.mosaic.array
+        # scaled_image = (image.cast('float') / 2**16 * 255).cast('uchar')
         return ChannelLayer(self.name, Mosaic(scaled_image), self.metadata)
 
     def clip(self, value=None, percentile=None):
