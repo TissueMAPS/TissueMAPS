@@ -204,7 +204,8 @@ class ChannelLayer(object):
                                         range(n_images), size=n_samples,
                                         replace=False)
                             for s in samples:
-                                thresh = images[s].percent(clip_percentile)
+                                img = images[s].pixels.array
+                                thresh = img.percent(clip_percentile)
                                 thresholds.append(thresh)
 
         overview = Vips.Image.arrayjoin(
