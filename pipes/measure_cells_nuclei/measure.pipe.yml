@@ -3,7 +3,7 @@ project:
   description: ''
   lib: ''
 images:
-  layers:
+  planes: []
 pipeline:
 - active: true
   handles: handles/load_nuclei.handles.yml

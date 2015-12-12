@@ -43,7 +43,7 @@ input:
   options:
   - true
   - false
-  value: false
+  value: true
 - class: parameter
   help: Should Speeded-Up Robust Features (SURF) be measured?
   name: surf

@@ -3,7 +3,7 @@ project:
   description: ''
   lib: ''
 images:
-  layers: []
+  planes: []
 pipeline:
 - active: true
   handles: handles/smooth_image_dapi.handles.yml
