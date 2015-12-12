@@ -149,8 +149,8 @@ class ChannelLayer(object):
                 dtype=image.pixels.dtype, bands=1)
 
         # Joined plates vertically
-        processed_images = list()
         thresholds = list()
+        mosaics_images = list()
         for p, plate in enumerate(experiment.plates):
 
             logger.info('stitch images of plate "%s" '
@@ -162,6 +162,7 @@ class ChannelLayer(object):
             else:
                 stats = None
 
+            overview = None
             for i in xrange(plate_grid.shape[0]):
 
                 if i not in nonempty_rows:
@@ -170,6 +171,7 @@ class ChannelLayer(object):
 
                 logger.debug('stitch images of row # %d', i)
 
+                # row_images = list()
                 for j in xrange(plate_grid.shape[1]):
 
                     if j not in nonempty_columns:
@@ -181,7 +183,8 @@ class ChannelLayer(object):
 
                     if well is None:
                         # Fill empty well with spacer
-                        processed_images.append(empty_well_spacer)
+                        # row_images.append(empty_well_spacer)
+                        mosaics_images.append(empty_well_spacer)
                     else:
                         index = np.where(
                                     (md['tpoint_ix'] == tpoint_ix) &
@@ -192,7 +195,8 @@ class ChannelLayer(object):
                         images = cycle.get_image_subset(index)
                         mosaic = Mosaic.create(
                                     images, displacement, stats, align)
-                        processed_images.append(mosaic.array)
+                        # row_images.append(mosaic.array)
+                        mosaics_images.append(mosaic.array)
                         # Calculate clip threshold for a few sampled images
                         if clip_value is None:
                             n_images = len(images)
@@ -208,8 +212,18 @@ class ChannelLayer(object):
                                 thresh = img.percent(clip_percentile)
                                 thresholds.append(thresh)
 
+                # row = reduce(
+                #     lambda x, y: x.join(y, 'horizontal', shim=spacer_size),
+                #     row_images
+                # )
+
+            # if overview is None:
+            #     overview = row
+            # else:
+            #     overview = overview.join(row, 'vertical', shim=spacer_size)
+
         overview = Vips.Image.arrayjoin(
-                            processed_images,
+                            mosaics_images,
                             across=len(nonempty_columns), shim=spacer_size)
 
         mosaic = Mosaic(overview)
@@ -244,7 +258,7 @@ class ChannelLayer(object):
             scaled mosaic image
         '''
         logger.info('rescale intensities between 0 and %d', max_value)
-        mat = Vips.Image.new_from_array([[0, 0], [255, max_value]])
+        mat = Vips.Image.new_from_array([[0, 0], [max_value, 255]])
         lut = mat.buildlut()
         scaled_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(self.name, Mosaic(scaled_image), self.metadata)
@@ -252,8 +266,7 @@ class ChannelLayer(object):
     def clip(self, max_value=65536):
         '''
         Set values outside of the interval to the values of the interval edges,
-        i.e. set values below `min_value` to `min_value` and values above
-        `max_value` to `max_value` 
+        i.e. set values above `max_value` to `max_value` 
 
         Parameters
         ----------
@@ -268,8 +281,8 @@ class ChannelLayer(object):
         logger.info('clip intensities above %d', max_value)
         identity = Vips.Image.identity(ushort=True)
         # Create lookup table
-        condition_lower = (identity > max_value)
-        lut = condition_lower.ifthenelse(min_value, identity)
+        condition = (identity > max_value)
+        lut = condition.ifthenelse(max_value, identity)
         # Map the image through the lookup table
         clipped_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(self.name, Mosaic(clipped_image), self.metadata)
@@ -406,7 +419,7 @@ class ObjectLayer(object):
         self.coordinates = coordinates
 
     @staticmethod
-    def create(experiment, name, dx=0, dy=0, spacer_size=500):
+    def create(experiment, name, displacement=0, spacer_size=500):
         '''
         Create an object layer based on segmentations stored in data file.
 
@@ -418,12 +431,9 @@ class ObjectLayer(object):
             name of the objects for which a layer should be created;
             a corresponding subgroup must exist in "/objects" within the data
             file
-        dx: int, optional
-            displacement in x direction in pixels; useful when images are
-            acquired with an overlap in x direction (negative integer value)
-        dy: int, optional
-            displacement in y direction in pixels; useful when images are
-            acquired with an overlap in y direction (negative integer value)
+        displacement: int, optional
+            displacement in x, y direction in pixels; useful when images are
+            acquired with an overlap (positive value, default: ``0``)
         spacer_size: int, optional
             number of pixels that should be introduced between wells
             (default: ``500``)
@@ -486,37 +496,25 @@ class ObjectLayer(object):
             n_rows = np.max(md['well_position_y'][index]) + 1
             n_cols = np.max(md['well_position_x'][index]) + 1
             well_dimensions = (
-                n_rows * image_dimensions[0] + dy * (n_rows - 1),
-                n_cols * image_dimensions[1] + dx * (n_cols - 1)
+                n_rows * image_dimensions[0] + displacement * (n_rows - 1),
+                n_cols * image_dimensions[1] + displacement * (n_cols - 1)
             )
 
             # Plate dimensions are defined as number of pixels along each
             # axis of the plate. Note that empty rows and columns are also
             # filled with "spacers", which has to be considered as well.
             plate = experiment.plates[0]
-            empty_row_indices = list(utils.missing_elements(
-                                    plate.nonempty_row_indices))
             n_nonempty_rows = len(plate.nonempty_row_indices)
-            n_empty_rows = len(empty_row_indices)
-            empty_column_indices = list(utils.missing_elements(
-                                        plate.nonempty_column_indices))
             n_nonempty_cols = len(plate.nonempty_column_indices)
-            n_empty_cols = len(empty_column_indices)
             plate_y_dim = (
                 n_nonempty_rows * well_dimensions[0] +
-                n_empty_rows * spacer_size +
                 # Spacer between wells
-                (n_nonempty_rows - 1) * spacer_size +
-                # Spacer on upper and lower side of plate
-                2 * spacer_size
+                (n_nonempty_rows - 1) * spacer_size
             )
             plate_x_dim = (
                 n_nonempty_cols * well_dimensions[1] +
-                n_empty_cols * spacer_size +
                 # Spacer between wells
-                (n_nonempty_cols - 1) * spacer_size +
-                # Spacer on left and right side of plate
-                2 * spacer_size
+                (n_nonempty_cols - 1) * spacer_size
             )
             plate_dimensions = (plate_y_dim, plate_x_dim)
 
@@ -542,47 +540,35 @@ class ObjectLayer(object):
 
                 n_prior_well_rows = plate.nonempty_row_indices.index(
                                             plate_coords[0])
-                n_prior_empty_well_rows = len([
-                    e for e in empty_row_indices if e < plate_coords[0]
-                ])
                 offset_y = (
-                    # Each plate starts with a row spacer
-                    spacer_size +
                     # Images in the current well above the image
                     well_coords[0] * image_dimensions[0] +
                     # Potential overlap of images in y-direction
-                    well_coords[0] * dy +
+                    well_coords[0] * displacement +
                     # Wells in the current plate above the current well
                     n_prior_well_rows * well_dimensions[0] +
-                    n_prior_empty_well_rows * spacer_size +
+                    # Gap introduced between wells
+                    # plate_coords[0] * spacer_size +
+                    n_prior_well_rows * spacer_size +
                     # Potential shift of images downwards
                     shift_offset_y +
                     # Plates above the current plate
-                    plate_index * plate_dimensions[0] +
-                    # Gap introduced between wells
-                    # plate_coords[0] * spacer_size +
-                    n_prior_well_rows * spacer_size
+                    plate_index * plate_dimensions[0]
                 )
 
                 n_prior_well_cols = plate.nonempty_column_indices.index(
                                             plate_coords[1])
-                n_prior_empty_well_cols = len([
-                    e for e in empty_column_indices if e < plate_coords[1]
-                ])
                 offset_x = (
-                    # Each plate starts with a column spacer
-                    spacer_size +
                     # Images in the current well left of the image
                     well_coords[1] * image_dimensions[1] +
                     # Potential overlap of images in y-direction
-                    well_coords[1] * dy +
+                    well_coords[1] * displacement +
                     # Wells in the current plate left of the current well
                     n_prior_well_cols * well_dimensions[1] +
-                    n_prior_empty_well_cols * spacer_size +
-                    # Potential shift of images to the right
-                    shift_offset_x +
                     # Gap introduced between wells
-                    n_prior_well_cols * spacer_size
+                    n_prior_well_cols * spacer_size +
+                    # Potential shift of images to the right
+                    shift_offset_x
                 )
 
                 job_ix = np.where(job_ids == j)[0]

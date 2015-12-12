@@ -770,7 +770,9 @@ class VipsImageReader(ImageReader):
             filename = os.path.join(self.directory, filename)
         if not os.path.exists(filename):
             raise OSError('Image file does not exist: %s' % filename)
-        image = Vips.Image.new_from_file(filename)
+        image = Vips.Image.new_from_file(
+                    filename,
+                    access=Vips.Access.SEQUENTIAL_UNBUFFERED)
         return image
 
     def read_subset(self, filename, series=None, plane=None):
