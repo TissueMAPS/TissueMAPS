@@ -115,15 +115,9 @@ class PyramidBuilder(ClusterRoutines):
         layer = ChannelLayer.create(
                     experiment=self.experiment, tpoint_ix=batch['cycle'],
                     channel_ix=batch['channel'], zplane_ix=batch['zplane'],
+                    clip_percentile=batch['clip_percentile'],
+                    clip_value=batch['clip_value'],
                     illumcorr=batch['illumcorr'], align=batch['align'])
-
-        if batch['clip']:
-            logger.info('clip intensities')
-            layer = layer.clip(value=batch['clip_value'],
-                               percentile=batch['clip_percentile'])
-
-        logger.info('rescale intensities to 8-bit')
-        layer = layer.scale()
 
         output_dir = batch['outputs']['pyramid_dir']
         if os.path.exists(output_dir):

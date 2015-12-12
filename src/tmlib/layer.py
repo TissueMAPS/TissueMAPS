@@ -46,6 +46,7 @@ class ChannelLayer(object):
 
     @staticmethod
     def create(experiment, tpoint_ix, channel_ix, zplane_ix,
+               clip_percentile=99.9, clip_value=None,
                displacement=0, illumcorr=False, align=False, spacer_size=500):
         '''
         Load individual images and stitch them together according to the
@@ -61,6 +62,10 @@ class ChannelLayer(object):
             channel index
         zplane_ix: int
             z-plane index
+        clip_percentile: float, optional
+            threshold percentile (default: ``99.9``)
+        clip_value: int, optional
+            fixed threshold value (default: ``None``)
         displacement: int, optional
             displacement in x, y direction in pixels; useful when images are
             acquired with an overlap direction (positive value; default: ``0``)
@@ -145,6 +150,7 @@ class ChannelLayer(object):
 
         # Joined plates vertically
         processed_images = list()
+        thresholds = list()
         for p, plate in enumerate(experiment.plates):
 
             logger.info('stitch images of plate "%s" '
@@ -187,12 +193,32 @@ class ChannelLayer(object):
                         mosaic = Mosaic.create(
                                     images, displacement, stats, align)
                         processed_images.append(mosaic.array)
+                        # Calculate clip threshold for a few sampled images
+                        if clip_value is None:
+                            n_images = len(images)
+                            if n_images < 10:
+                                n_samples = n_images
+                            else:
+                                n_samples = 10
+                            samples = np.random.choice(
+                                        range(n_images), size=n_samples,
+                                        replace=False)
+                            for s in samples:
+                                thresh = images[s].percent(clip_percentile)
+                                thresholds.append(thresh)
 
-        layer_image = Vips.Image.arrayjoin(
-                        processed_images,
-                        across=len(nonempty_columns), shim=spacer_size)
+        overview = Vips.Image.arrayjoin(
+                            processed_images,
+                            across=len(nonempty_columns), shim=spacer_size)
 
-        mosaic = Mosaic(layer_image)
+        # Rescale images to 8-bit, limiting the range of intensity values for
+        # visualization
+        if clip_value is None:
+            clip_value = np.median(thresholds)
+        overview = overview.clip(max_value=clip_value)
+        overview = overview.scale(max_value=clip_value)
+
+        mosaic = Mosaic(overview)
         metadata = MosaicMetadata()
         metadata.tpoint_ix = tpoint_ix
         metadata.channel_ix = channel_ix
@@ -200,52 +226,48 @@ class ChannelLayer(object):
 
         return ChannelLayer(name, mosaic, metadata)
 
-    def scale(self):
+    def scale(self, max_value=65536):
         '''
-        Scale mosaic.
+        Scale the mosaic as unsigned 8-bit, such that `max_value` is 255.
 
-        Searches the image for the maximum and minimum value,
-        then returns the image as unsigned 8-bit, scaled such that the maximum
-        value is 255 and the minimum is zero.
+        Parameters
+        ----------
+        max_value: int, optional
+            maximum value (default: ``65536``)
 
         Returns
         -------
         ChannelLayer
             scaled mosaic image
-
-        Raises
-        ------
-        AttributeError
-            when mosaic does not exist
         '''
-        scaled_image = self.mosaic.array.scale()
-        # image = self.mosaic.array
-        # scaled_image = (image.cast('float') / 2**16 * 255).cast('uchar')
+        logger.info('rescale intensities between 0 and %d', max_value)
+        mat = Vips.Image.new_from_array([[0, 0], [255, max_value]])
+        lut = mat.buildlut()
+        scaled_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(self.name, Mosaic(scaled_image), self.metadata)
 
-    def clip(self, value=None, percentile=None):
+    def clip(self, max_value=65536):
         '''
-        Clip (limit) the pixel values in the mosaic image.
+        Set values outside of the interval to the values of the interval edges,
+        i.e. set values below `min_value` to `min_value` and values above
+        `max_value` to `max_value` 
 
         Parameters
         ----------
-        value: int
-            value for the clip level
-        percentile: int
-            percentile to calculate the clip level,
-            e.g. if `percentile` is 99.9% then 0.1% of pixels will lie
-            above the clip level
+        max_value: int, optional
+            maximum value (default: ``65536``)
 
         Returns
         -------
         ChannelLayer
             clipped mosaic image
         '''
-        if not value:
-            # TODO: only consider non-empty wells
-            value = self.mosaic.array.percent(percentile)
-        logger.debug('clip layer at level: %d', value)
-        lut = image_utils.create_thresholding_LUT(value)
+        logger.info('clip intensities above %d', max_value)
+        identity = Vips.Image.identity(ushort=True)
+        # Create lookup table
+        condition_lower = (identity > max_value)
+        lut = condition_lower.ifthenelse(min_value, identity)
+        # Map the image through the lookup table
         clipped_image = self.mosaic.array.maplut(lut)
         return ChannelLayer(self.name, Mosaic(clipped_image), self.metadata)
 
