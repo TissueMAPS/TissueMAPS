@@ -189,8 +189,6 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
         
     end
 
-    output_mask = jtlib.removeSmallObjects(output_mask, min_cut_area);
-
     if varargin{4}  % plot
 
         if perimeter_test_mode
