@@ -1,3 +1,5 @@
+type HexColorString = string;
+
 /**
  * Classification server tools should use this structure
  * in for their response.
@@ -6,7 +8,7 @@ interface ClassificationResult extends ToolResult {
     object_type: MapObjectType;
     predicted_labels: string[];
     object_ids: number[];
-    colors: { [label:string]: {r: number, g: number, b: number}; };
+    colors: { [label:string]: HexColorString; };
 }
 
 
@@ -18,16 +20,18 @@ abstract class ClassificationTool extends Tool {
         .then((objs) => {
             var visuals = objs.map((o) => {
                 var label = res.predicted_labels[o.id];
-                var color = Color.fromObject(res.colors[label]);
-                var visual = o.getVisual();
-                visual.fillColor = color;
-                visual.strokeColor = Color.BLACK;
+                var color = Color.fromHex(res.colors[label]);
+                var visual = o.getVisual({
+                    strokeColor: Color.BLACK.withAlpha(0),
+                    fillColor: color
+                });
                 return visual;
             });
             var layer = new ResultLayer(this.name, {
                 visuals: visuals
             });
             this.appInstance.viewport.addVisualLayer(layer);
+            window['vp'] = this.appInstance.viewport;
         });
     }
 }

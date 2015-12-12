@@ -45,7 +45,7 @@ class FeatureSelectionWidgetCtrl {
         return this._featureTabsByType[this.toolOptions.chosenMapObjectType];
     }
 
-    get features() {
+    get selectedFeatures() {
         var feats = [];
         this.featureTabsForChosenType.map((tab) => {
             if (tab.selected) {

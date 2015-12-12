@@ -3,7 +3,7 @@
 
     <label>Object type: </label>
     <select ng-model="toolOptions.chosenMapObjectType">
-      <option value="{{::t}}" ng-repeat="t in selWidget.selHandler.supportedMapObjectTypes">
+      <option value="{{::t}}" ng-repeat="t in classSelectionWidget.selHandler.supportedMapObjectTypes">
       {{::t}}
       </option>
     </select>
@@ -13,7 +13,7 @@
         <th>Selection</th>
         <th>Label</th>
       </tr>
-      <tr ng-repeat="objSelection in selWidget.getSelectionsForChosenType()"
+      <tr ng-repeat="objSelection in classSelectionWidget.getSelectionsForChosenType()"
           ng-controller="ClassSelectionCtrl as sel">
         <td>
           <span class="flag-label">
@@ -38,7 +38,7 @@
     </table>
 
     <ul class="list-group">
-      <li ng-repeat="cls in selWidget.getClassesForChosenType()"
+      <li ng-repeat="cls in classSelectionWidget.getClassesForChosenType()"
         class="list-group-item">
           {{cls.name}} <span class="badge">{{cls.selection.mapObjects.length}} {{toolOptions.chosenMapObjectType}}</span>
       </li>

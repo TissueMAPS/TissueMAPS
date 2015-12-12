@@ -43,7 +43,6 @@ class VisualLayerCtrl {
             if (newVal !== oldVal && newVal !== undefined) {
                 var fillColor = Color.fromHex(<string>newVal);
                 console.log(fillColor);
-                window['layer'] = layer;
                 layer.visuals.forEach((v: ColorizableVisual) => {
                     v.fillColor = fillColor;
                 });

@@ -29,6 +29,6 @@ angular.module('tmaps.toolwindow')
         restrict: 'E',
         templateUrl: '/templates/tools/widgets/tm-class-selection-widget.html',
         controller: 'ClassSelectionWidgetCtrl',
-        controllerAs: 'selWidget'
+        controllerAs: 'classSelectionWidget'
     };
 });

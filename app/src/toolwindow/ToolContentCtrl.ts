@@ -8,6 +8,7 @@ interface ToolContentScope extends ng.IScope {
     toolOptions: ToolOptions;
 }
 
+
 angular.module('tmaps.toolwindow')
 .controller(
     'ToolContentCtrl',

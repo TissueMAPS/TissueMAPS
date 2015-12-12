@@ -19,7 +19,6 @@ class ColorizableVisual extends Visual {
         var feat = this._olFeature;
         var st = <ol.style.Style> this._olFeature.getStyle();
         return Color.fromOlColor(st.getStroke().getColor());
-        return Color.RED;
     }
 
     set strokeColor(c: Color) {

@@ -1,6 +1,7 @@
-interface SVMScope extends ng.IScope {
+interface SVMScope extends ToolContentScope {
     svm: SVMCtrl;
-    selWidget: ClassSelectionWidgetCtrl;
+    classSelectionWidget: ClassSelectionWidgetCtrl;
+    featureWidget: FeatureSelectionWidgetCtrl;
 }
 
 class SVMCtrl {
@@ -17,19 +18,21 @@ class SVMCtrl {
     sendRequest() {
         // Build the request object
         var trainingClasses = [];
-        this._$scope.selWidget.classes.forEach((cls) => {
+        this._$scope.classSelectionWidget.classes.forEach((cls) => {
             trainingClasses.push({
                 name: cls.name,
-                object_ids: _(cls.selection.mapObjects).pluck('id')
+                object_ids: _(cls.selection.mapObjects).pluck('id'),
+                color: cls.selection.color.toHex()
             });
         });
-        // TODO:
-        // var selectedFeatures = this._$scope.featWidget.selectedFeatures;
-        var selectedFeatures = {};
+        var selectedFeatures =
+            _(this._$scope.featureWidget.selectedFeatures).pluck('name');
         var payload = {
+            chosen_object_type: this._$scope.toolOptions.chosenMapObjectType,
             training_classes: trainingClasses,
             selected_features: selectedFeatures
         };
+        console.log(payload);
         this._tool.sendRequest(payload).then(function(response) {
             console.log(response);
         });

@@ -18,7 +18,7 @@ class ClassSelectionWidgetCtrl {
 
     /**
      * To be called from the controller using this widget, e.g.:
-     * var theClasses = $scope.selWidget.classes;
+     * var theClasses = $scope.classSelectionWidget.classes;
      */
     get classes() {
         var cls = this._classes[this.toolOptions.chosenMapObjectType];
@@ -83,20 +83,20 @@ class ClassSelectionCtrl {
 
     constructor($scope) {
         // Above one level is the scope introduced for the current ng-repeat,
-        // one lever further is the scope that is used by the selWidget ctrl.
+        // one lever further is the scope that is used by the classSelectionWidget ctrl.
         $scope.$watch('sel.className', (newVal) => {
             if (newVal !== undefined && newVal !== '') {
                 this.useAsClass = true;
-                $scope.selWidget.updateClassName($scope.objSelection, this.className);
+                $scope.classSelectionWidget.updateClassName($scope.objSelection, this.className);
             } else {
                 this.useAsClass = false;
             }
         });
         $scope.$watch('sel.useAsClass', (doUse) => {
             if (doUse !== undefined && doUse) {
-                $scope.selWidget.registerSelectionAsClass($scope.objSelection, this.className);
+                $scope.classSelectionWidget.registerSelectionAsClass($scope.objSelection, this.className);
             } else {
-                $scope.selWidget.deregisterSelection($scope.objSelection);
+                $scope.classSelectionWidget.deregisterSelection($scope.objSelection);
             }
         });
 

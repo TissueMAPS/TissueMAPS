@@ -124,7 +124,12 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         // Get all objects for this type and add an outline layer to the viewport.
         this.mapObjectManager.getMapObjectsForType(t)
         .then((objs) => {
-            var visuals = _(objs).map((o) => { return o.getVisual(); });
+            var visuals = _(objs).map((o) => {
+                return o.getVisual({
+                    fillColor: Color.WHITE.withAlpha(0.02),
+                    strokeColor: Color.BLUE
+                });
+            });
             var visualLayer = new VisualLayer(t, {
                 visuals: visuals,
                 visible: false,

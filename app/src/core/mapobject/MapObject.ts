@@ -19,14 +19,11 @@ class MapObject {
                 public visualType: string,
                 public extraData: any) {}
 
-    getVisual(): ColorizableVisual {
+    getVisual(opt?: any): ColorizableVisual {
         var visual: ColorizableVisual;
         switch (this.visualType) {
             case 'polygon':
-                visual = new PolygonVisual(this.extraData.coordinates, {
-                    fillColor: Color.WHITE.withAlpha(0.02),
-                    strokeColor: Color.WHITE
-                });
+                visual = new PolygonVisual(this.extraData.coordinates, opt);
                 break;
             default:
                 throw new Error('Unknown visual type');
