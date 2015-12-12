@@ -343,8 +343,6 @@ class MetadataConfigurator(ClusterRoutines):
                         np.repeat(source.name, md.shape[0])
                     )
 
-                    md = md.sort_values('name').reindex()
-
                     # Update "ref_index" and "name" in the file mapper with the
                     # path to the final image file relative to the experiment
                     # root directory
@@ -380,6 +378,10 @@ class MetadataConfigurator(ClusterRoutines):
                             for f in element.files
                         ]
                         file_mapper.append(dict(new_element))
+
+                    # Sort metadata according to name and reset indices
+                    md = md.sort_values('name')
+                    md.index = range(md.shape[0])
 
                     # Store the updated metadata in an HDF5 file
                     filename = os.path.join(cycle.dir,

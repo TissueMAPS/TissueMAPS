@@ -210,6 +210,7 @@ class Cycle(object):
         logger.debug('read image metadata from HDF5 file')
         store = pd.HDFStore(metadata_file)
         metadata = store.select('metadata').sort_values(by='name')
+        metadata.index = range(metadata.shape[0])
         store.close()
 
         # TODO: consider returning the store for subset selection using the
