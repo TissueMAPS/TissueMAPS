@@ -213,20 +213,21 @@ class ChannelLayer(object):
                             across=len(nonempty_columns), shim=spacer_size)
 
         mosaic = Mosaic(overview)
-
-        # Rescale images to 8-bit, limiting the range of intensity values for
-        # visualization
-        if clip_value is None:
-            clip_value = np.median(thresholds)
-        mosaic = mosaic.clip(max_value=clip_value)
-        mosaic = mosaic.scale(max_value=clip_value)
-
         metadata = MosaicMetadata()
         metadata.tpoint_ix = tpoint_ix
         metadata.channel_ix = channel_ix
         metadata.zplane_ix = zplane_ix
 
-        return ChannelLayer(name, mosaic, metadata)
+        layer = ChannelLayer(name, mosaic, metadata)
+
+        # Rescale images to 8-bit, limiting the range of intensity values for
+        # visualization
+        if clip_value is None:
+            clip_value = np.median(thresholds)
+        layer = layer.clip(max_value=clip_value)
+        layer = layer.scale(max_value=clip_value)
+
+        return layer
 
     def scale(self, max_value=65536):
         '''
