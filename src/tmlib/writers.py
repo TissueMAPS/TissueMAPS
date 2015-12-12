@@ -185,11 +185,11 @@ class YamlWriter(TextWriter):
             use_ruamel = False
         with open(filename, 'w') as f:
             if use_ruamel:
-                f.write(ruamel.yaml.dump(data,
+                f.write(ruamel.yaml.safe_dump(data,
                         Dumper=ruamel.yaml.RoundTripDumper,
                         explicit_start=True))
             else:
-                f.write(yaml.dump(data,
+                f.write(yaml.safe_dump(data,
                         default_flow_style=False,
                         explicit_start=True))
 
