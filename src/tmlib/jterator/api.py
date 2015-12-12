@@ -13,7 +13,6 @@ from .project import JtProject
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
 from .. import utils
-from .. import image_utils
 from ..api import ClusterRoutines
 from ..errors import PipelineDescriptionError
 from ..writers import DatasetWriter
