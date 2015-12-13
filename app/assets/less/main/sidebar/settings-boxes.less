@@ -105,6 +105,11 @@
         height: 100%;
     }
 
+    select {
+        background-color: darken(@panel-bg-color, 10%);
+        border: 1px solid @panel-fg;
+    }
+
     // The div holding the selection controls for the active map object etc.
     .selection-controls {
         height: @selection-controls-height;
@@ -113,6 +118,7 @@
     button.marker-mode-switch {
         // TODO: Use standard tmaps style
         border: 1px solid black;
+        width: 30px;
         &.active {
             background: orange;
             i {
