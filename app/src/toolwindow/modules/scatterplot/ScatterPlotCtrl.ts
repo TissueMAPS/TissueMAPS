@@ -25,7 +25,6 @@ class ScatterPlotCtrl {
                         point: {
                             events: {
                                 click: (e) => {
-                                    console.log(e);
                                     var type = $scope.toolOptions.chosenMapObjectType;
                                     var id = e.point.index;
                                     mapObjectManager.getMapObjectsById(type, [id]).then((objs) => {

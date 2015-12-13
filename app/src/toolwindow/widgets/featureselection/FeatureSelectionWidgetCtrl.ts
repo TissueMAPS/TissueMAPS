@@ -62,13 +62,14 @@ class FeatureSelectionWidgetCtrl {
     }
 
     selectFeature(tab) {
+        console.log(this.maxSelections);
         if (this.nSelected < this.maxSelections) {
             var wasSelected = tab.selected;
             tab.selected = true;
             if (!wasSelected) {
                 this._parentScope.$broadcast('featureSelected', tab, this);
+                this.nSelected += 1;
             }
-            this.nSelected += 1;
         } else {
             console.log('Can\'t select any more features, deselect some!');
         }
@@ -79,8 +80,8 @@ class FeatureSelectionWidgetCtrl {
         tab.selected = false;
         if (wasSelected) {
             this._parentScope.$broadcast('featureDeselected', tab, this);
+            this.nSelected -= 1;
         }
-        this.nSelected -= 1;
     }
 
     get featureTabsForChosenType() {
