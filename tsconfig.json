@@ -58,6 +58,9 @@
         "app/src/core/tools/classes/FeatureStatsTool.ts",
         "app/src/core/tools/classes/SVMTool.ts",
 
+        "app/src/core/tools/classes/ClusterTool.ts",
+        "app/src/toolwindow/modules/cluster/ClusterCtrl.ts",
+
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/MapPosition.ts",
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
@@ -66,6 +69,7 @@
         "app/src/toolwindow/FeatureService.ts",
         "app/src/toolwindow/ToolContentCtrl.ts",
 
+        "app/src/toolwindow/widgets/objecttypeselection/tmObjectTypeSelectionWidget.ts",
         "app/src/toolwindow/widgets/classselection/ClassSelectionWidgetCtrl.ts",
         "app/src/toolwindow/widgets/featureselection/FeatureSelectionWidgetCtrl.ts",
 

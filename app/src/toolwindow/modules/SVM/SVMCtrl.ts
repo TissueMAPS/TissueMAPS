@@ -32,7 +32,6 @@ class SVMCtrl {
             training_classes: trainingClasses,
             selected_features: selectedFeatures
         };
-        console.log(payload);
         this._tool.sendRequest(payload).then(function(response) {
             console.log(response);
         });

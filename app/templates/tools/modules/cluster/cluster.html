@@ -1,16 +1,19 @@
-<div ng-controller="ClusterCtrl">
+<div ng-controller="ClusterCtrl as clu">
+  <p>
+    <tm-object-type-selection-widget></tm-object-type-selection-widget>
+  </p>
+
   <p>
     <label>Select features</label>
-    <tm-feature-selection-widget
-      on-change="selectedFeatures = selectedFeatures"/>
+    <tm-feature-selection-widget></tm-feature-selection-widget>
   </p>
 
   <p class="form-group">
     <label>Number of clusters (k)</label>
-    <input type="number" class="form-control" ng-model="k">
+    <input type="number" class="form-control" ng-model="clu.nClusters">
   </p>
 
   <p>
-    <button class="btn btn-primary" ng-click="sendRequest()">Find clusters</button>
+    <button class="btn btn-primary" ng-click="clu.sendRequest()">Find clusters</button>
   </p>
 </div>

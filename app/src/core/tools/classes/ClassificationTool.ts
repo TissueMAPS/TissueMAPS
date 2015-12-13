@@ -31,7 +31,6 @@ abstract class ClassificationTool extends Tool {
                 visuals: visuals
             });
             this.appInstance.viewport.addVisualLayer(layer);
-            window['vp'] = this.appInstance.viewport;
         });
     }
 }
