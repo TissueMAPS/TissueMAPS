@@ -10,65 +10,72 @@ from tmaps.tools import register_tool, Tool
 
 @register_tool('Cluster')
 class ClusterTool(Tool):
-    def process_request(self, payload):
+    def process_request(self, payload, experiment):
         """
-        Process a request sent by the client-side representation of ClusterTool.
-        A request may look as follows:
-
-        - Perform the clustering and respond with a layer mod
-
-            Request:
-            {
-                "request_type": "perform_clustering",
-                "features": [
-                    {
-                        "name": string
-                    }
-                    ...
-                ],
-                "k": integer (number of clusters to find with kmeans)
-            }
+        {
+            "chosen_object_type": str,
+            "selected_features": List[str],
+            "k": int
+        }
 
         """
-        request_type = payload.get('request_type', None)
 
-        if not request_type:
-            raise Exception('Tool "Cluster" needs a "request_type"'
-                            ' key in its payload!')
-        elif request_type == 'perform_clustering':
+        feature_names = payload['selected_features']
+        object_type = payload['chosen_object_type']
+        k = payload['k']
 
-            features = payload['features']
-            k = payload['k']
+        with experiment.dataset as dataset:
+            labels = self._perform_clustering(dataset, object_type, feature_names, k)
 
-            clusterlabels = self._perform_clustering(
-                self.experiment_dataset, features, k)
+        available_colors = \
+            ['#00ecff', '#ff5a00', '#56ff00', '#c900ff', '#ff00f4'] + \
+            ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a', '#ffff99', '#b15928']
+        colors = dict(zip(range(len(available_colors)), available_colors))
 
-            self.client_proxy.add_layer_mod(
-                'CLU',
-                source='area',
-                funcname='modify_layer',
-                modfunc_arg=clusterlabels
-            )
+        return {
+            'object_type': object_type,
+            'predicted_labels': labels,
+            'object_ids': range(len(labels)),
+            'colors': colors
+        }
 
-        else:
-            raise Exception('Not a known request type: ' + request_type)
 
-    def _perform_clustering(self, dataset, features, k):
-        feature_names = [f['name'] for f in features]
+    def _perform_clustering(self, data, object_type, feature_names, k):
+        """Cluster map objects of a given type based on a set of selected features.
+        
+        Parameters
+        ----------
+        data : h5py dataset
+            The experiments dataset.
+        object_type : str
+            The object type as a string. This will be used to index into the dataset.
+        feature_names : List[str]
+            A list of feature names on which to cluster the examples.
+        k : int
+            The number of clusters to find.
+        
+        Returns
+        -------
+        np.array
+            An array of predicted cluster labels for all objects of the chosen type.
+        
+        """
+        from scipy.cluster.vq import kmeans, vq
 
-        # available feature names for channel `channel`
-        h5_location = '/objects/cells/features'
-        cell_ids = dataset['/objects/cells/ids'][()]
+        ### Build training data set
+        # Construct design matrix from features and objects that were selected.
+        # Select the HDF5 group for the chosen object type, e.g. 'cells' or 'nuclei'.
+        object_data = data['/objects/%s' % object_type]
 
-        header = dataset[h5_location].attrs['names']
-        is_col_included = reduce(np.logical_or, [header == f for f in feature_names])
-
-        # Feature dataset as numpy array
-        mat = dataset[h5_location][()]
-
-        # Extract a submatrix that only contains the features wich should be
-        # used to perform the clustering
-        X = mat[:, is_col_included]
+        # Go through all features that should be used in training.
+        # Build the matrix of all data points by stacking the feature vectors 
+        # horizontally.
+        feature_vectors = []
+        for f in feature_names:
+            feature_array_1d = object_data['features/%s' % f][()]
+            column_vector = feature_array_1d.reshape((len(feature_array_1d), 1))
+            feature_vectors.append(column_vector)
+        X = np.hstack(feature_vectors)
 
         # Compute the cluster centroids
         # centroids is a (k, p) where each row is a centroid in the
@@ -79,35 +86,5 @@ class ClusterTool(Tool):
         # each observation is to be assigned (as an integer).
         clusterlabels, _ = vq(X, centroids)
 
-        # import ipdb; ipdb.set_trace()
+        return clusterlabels.tolist()
 
-        # A vector of ids. Each id has the format '{rownr}-{colnr}-{localid}'
-        # ids = dataset['ids'][()]
-
-        # import ipdb; ipdb.set_trace()
-        # Expand range of labels s.t. resulting colors will be more dissimilar
-        clusterlabels = clusterlabels * 256 / k
-        colors_walpha = cm.jet(clusterlabels) * 256
-        # Delete last column (corresponds to alpha values)
-        colors = np.delete(colors_walpha, 3, axis=1)
-        colors = colors.astype('uint8') # convert from float to uchar
-        # Add black in front so that cell id 0 (which is the background) gets black
-        # NOTE: This LUT assumed that all cell ids go from 1 to nrow(dataset)
-
-
-        highest_cell_id = np.max(cell_ids)
-        for x in range(100):
-            print highest_cell_id
-        color_lut = np.zeros((highest_cell_id + 1, 3))
-        color_lut[cell_ids, :] = colors
-        # color_lut = np.vstack([(0, 0, 0), colors])
-
-        # is_larger = X.reshape(-1) > np.median(X)
-        # color_lut[is_larger, :] = (200, 50, 20)
-        # color_lut[np.logical_not(is_larger), :] = (0, 0, 255)
-        return color_lut.tolist()
-
-    @staticmethod
-    def modify_layer(idmat, colors_lut):
-        colors_lut = np.array(colors_lut)
-        return colors_lut[idmat]

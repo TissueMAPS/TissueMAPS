@@ -22,22 +22,7 @@ class SVMTool(Tool):
             ]
         }
         
-
         """
-        # import ipdb; ipdb.set_trace()
-        # message = payload.get('message', 'no message given')
-        # request_type = payload['request_type']
-        # selected_feature_names = \
-            # [f['name'] for f in payload['selected_features']]
-        # return {
-        #     'object_type': 'nuclei',
-        #     'predicted_labels': ['A'] * 100 + ['B'] * 100,
-        #     'colors': {
-        #         'A': {'r': 255, 'g': 0, 'b': 0},
-        #         'B': {'r': 0, 'g': 0, 'b': 255}
-        #     },
-        #     'object_ids': range(200)
-        # }
 
         features = payload['selected_features']
         object_ids_per_class = \
@@ -58,61 +43,6 @@ class SVMTool(Tool):
             'predicted_labels': predicted_labels.tolist(),
             'colors': class_color_map
         }
-
-    def _classify(self, data, features, cell_ids_per_class):
-        # Extract the class names that were sent from the client
-        classname_to_color = {}
-
-        # Simplify the received dictionary and extract requested label colors.
-        # cell_ids_per_class should have the structure: string => list[int]
-        for classname, classobj in cell_ids_per_class.items():
-            cell_ids = map(int, classobj['cells'])
-            cell_ids_per_class[classname] = cell_ids
-            classname_to_color[classname] = classobj['color']
-
-        feature_names = [f['name'] for f in features]
-
-        # Create a map cell id to class name
-        class_per_cell_id = {}
-        for cls, ids in cell_ids_per_class.items():
-            for id in ids:
-                class_per_cell_id[id] = cls
-
-        ## Build training data set
-
-        # Construct design matrix from features that were selected on a
-        # per-channel basis and from the selected cells.
-
-        training_cell_ids = np.array(sum(cell_ids_per_class.values(), []))
-        training_cell_ids_zb = training_cell_ids - 1  # zero based
-
-        # Go through all features that should be used in training
-        header = data['/objects/cells/features'].attrs['names']
-        is_col_included = reduce(np.logical_or, [header == f for f in feature_names])
-
-        cell_ids = data['/objects/cells/ids'][()]
-
-        # Create a matrix with the columns that correspond to the features
-        # in `feats`.
-        mat = data['/objects/cells/features'][()]  # as numpy array
-        X_train = mat[training_cell_ids_zb, :][:, is_col_included]
-        X_new = mat[:, is_col_included]
-
-        # A vector of class labels for the cells that should be used in training
-        y_train = np.array(map(lambda id: class_per_cell_id[id], training_cell_ids))
-
-        # TODO: Allow specification of other kernels.
-        # TODO: Does the SVC routine automatically tune its hyper parameters or
-        # do we have to perform a gridsearch for the optimal lambda?
-        cls = svm.SVC(kernel='rbf')
-
-        # Perform the actual model fitting
-        cls.fit(X_train, y_train)
-
-        # Predict all cells using the new classifier
-        y_pred = cls.predict(X_new)
-
-        return y_pred
 
 
     def _classify_dtree(self, data, object_type, feature_names, object_ids_per_class):
@@ -173,6 +103,11 @@ class SVMTool(Tool):
         ### Perform the actual model fitting
         clf = tree.DecisionTreeClassifier()
         clf.fit(X_train, y_train)
+
+        # TODO: Hyper parameter tuning
+        # clf = svm.SVC(kernel='rbf')
+        # clf.fit(X_train, y_train)
+        # y_pred = cls.predict(X_new)
 
         ### Predict all cells using the new classifier
         y_pred = clf.predict(X_new)
