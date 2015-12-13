@@ -21,7 +21,6 @@ class ScatterPlotTool extends Tool {
         return $http.get('/api/experiments/' + this.appInstance.experiment.id +
                   '/features/' + objectType + '/' + featureName)
         .then((resp: any) => {
-            console.log(resp);
             return resp.data.data;
         });
     }
