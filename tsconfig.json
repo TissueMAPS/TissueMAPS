@@ -75,6 +75,9 @@
 
         "app/src/toolwindow/modules/SVM/SVMCtrl.ts",
 
+        "app/src/core/tools/classes/ScatterPlotTool.ts",
+        "app/src/toolwindow/modules/scatterplot/ScatterPlotCtrl.ts",
+
         "app/src/ui/toolbar/tmToolbar.ts",
         "app/src/ui/toolbar/ToolbarCtrl.ts",
         "app/src/ui/sidebar/selections/SelectionSettingsCtrl.ts",

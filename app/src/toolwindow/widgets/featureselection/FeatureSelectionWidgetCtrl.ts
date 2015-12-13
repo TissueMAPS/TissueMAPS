@@ -1,5 +1,6 @@
 type FeatureTab = {
     selected: boolean;
+    mapObjectType: MapObjectType;
     name: string;
 }
 
@@ -7,6 +8,9 @@ class FeatureSelectionWidgetCtrl {
 
     static $inject = ['$http', 'tmapsProxy', '$scope'];
 
+    name: string;
+    maxSelections: number = Infinity;
+    nSelected: number = 0;
     featureQuery: { name: string; } = {
         name: undefined
     };
@@ -14,13 +18,21 @@ class FeatureSelectionWidgetCtrl {
 
     private _featureTabsByType: {[objType: string]: FeatureTab[];} = {};
     private _selHandler: MapObjectSelectionHandler;
+    private _parentScope: ToolContentScope;
 
     constructor($http: ng.IHttpService,
                 tmapsProxy: TmapsProxy,
                 $scope: ToolContentScope) {
 
+        // Default
+        if (this.name === undefined) {
+            this.name = 'featureWidget';
+        }
+        $scope.$parent[this.name] = this;
+
+        this._parentScope = <ToolContentScope>$scope.$parent;
         this._selHandler = tmapsProxy.appInstance.mapObjectSelectionHandler;
-        this.toolOptions = $scope.toolOptions;
+        this.toolOptions = this._parentScope.toolOptions;
         var featManager = tmapsProxy.appInstance.featureManager;
 
         this._selHandler.supportedMapObjectTypes.forEach((t) => {
@@ -33,12 +45,42 @@ class FeatureSelectionWidgetCtrl {
                 this._featureTabsByType[t] = feats.map((f) => {
                     return {
                         name: f.name,
+                        mapObjectType: t,
                         selected: false
                     };
                 });
             });
         });
-        window['$scope'] = $scope;
+    }
+
+    toggleFeatureSelection(tab: FeatureTab) {
+        if (tab.selected) {
+            this.deselectFeature(tab);
+        } else {
+            this.selectFeature(tab);
+        }
+    }
+
+    selectFeature(tab) {
+        if (this.nSelected < this.maxSelections) {
+            var wasSelected = tab.selected;
+            tab.selected = true;
+            if (!wasSelected) {
+                this._parentScope.$broadcast('featureSelected', tab, this);
+            }
+            this.nSelected += 1;
+        } else {
+            console.log('Can\'t select any more features, deselect some!');
+        }
+    }
+
+    deselectFeature(tab) {
+        var wasSelected = tab.selected;
+        tab.selected = false;
+        if (wasSelected) {
+            this._parentScope.$broadcast('featureDeselected', tab, this);
+        }
+        this.nSelected -= 1;
     }
 
     get featureTabsForChosenType() {
@@ -60,58 +102,14 @@ class FeatureSelectionWidgetCtrl {
     setAll(isSelected: boolean) {
         for (var t in this._featureTabsByType) {
             this._featureTabsByType[t].forEach((tab) => {
-                tab.selected = isSelected;
+                if (isSelected) {
+                    this.selectFeature(tab);
+                } else {
+                    this.deselectFeature(tab);
+                }
             });
         }
     }
-
 }
 
 angular.module('tmaps.toolwindow').controller('FeatureSelectionWidgetCtrl', FeatureSelectionWidgetCtrl);
-
-        //     console.log(tmapsProxy);
-        //     tmapsProxy.appInstance.experiment.features
-        //     .then(function(feats) {
-        //         self.features = feats;
-        //         $scope.$digest();
-        //     });
-
-        //     this.toggleSelection = function(feat) {
-
-        //         if (self.singleSelection) {
-        //             _(self.features).each(function(f) {
-        //                 if (f != feat) {
-        //                     f.selected = false;
-        //                 }
-        //             });
-        //         }
-        //         feat.selected = !feat.selected;
-
-        //         // Extract only those values that are of interest to
-        //         // the user of this directive.
-        //         // Also, we need to recalculate the original values to which
-        //         // the slider range corresponds.
-        //         var selectedFeatures = _.chain(self.features)
-        //              .filter(function(f) {
-        //                 return f.selected;
-        //               })
-        //              .map(function(f) {
-        //                 var feat = { name: f.name };
-        //                 if (self.showRange) {
-        //                     feat.range = [f.normRange[0] / f.fac, f.normRange[1] / f.fac];
-        //                 }
-        //                 return feat;
-        //               })
-        //              .value();
-
-        //         self.onChange({
-        //             selectedFeatures: selectedFeatures
-        //         });
-        //     };
-
-        //     this.setAll = function(val) {
-        //         _(self.features).each(function(f) {
-        //             f.selected  = val;
-        //         });
-        //     };
-        // }],

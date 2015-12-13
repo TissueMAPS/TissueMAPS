@@ -11,6 +11,11 @@ angular.module('tmaps.toolwindow')
         restrict: 'E',
         templateUrl: '/templates/tools/widgets/tm-feature-selection-widget.html',
         controller: 'FeatureSelectionWidgetCtrl',
-        controllerAs: 'featureWidget'
+        controllerAs: 'featureWidget',
+        bindToController: true,
+        scope: {
+            name: '@name',
+            maxSelections: '@maxSelections'
+        }
     };
 });

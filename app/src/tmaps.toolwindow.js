@@ -1,7 +1,8 @@
 (function() {
     var module = angular.module('tmaps.toolwindow', [
         'tmaps.core',
-        'tmaps.ui'
+        'tmaps.ui',
+        'highcharts-ng'
     ]);
 
     module.config(['$httpProvider', function($httpProvider) {

@@ -2,6 +2,7 @@
     "loadClasses": [
         "FeatureStatsTool",
         "SVMTool",
-        "ClusterTool"
+        "ClusterTool",
+        "ScatterPlotTool"
     ]
 }
