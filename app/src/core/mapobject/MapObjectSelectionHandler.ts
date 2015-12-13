@@ -127,7 +127,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             var visuals = _(objs).map((o) => {
                 return o.getVisual({
                     fillColor: Color.WHITE.withAlpha(0.02),
-                    strokeColor: Color.BLUE
+                    strokeColor: Color.WHITE
                 });
             });
             var visualLayer = new VisualLayer(t, {
