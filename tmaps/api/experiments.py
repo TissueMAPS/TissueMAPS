@@ -87,21 +87,44 @@ def get_features(experiment_id):
     })
 
 
+# TODO: Make auth required. tools subapp should receive token
+@api.route('/experiments/<experiment_id>/features/<object_type>/<feature_name>', methods=['GET'])
+@jwt_required()
+def get_feature_data(experiment_id, object_type, feature_name):
+    """
+    Send a list of feature objects.
 
-    # with DatasetReader(exp.dataset_path) as dataset:
-    #     dset = dataset.read('/objects/cells/features')
-    #     feat_names = dataset.get_attribute('/objects/cells/features', 'names')
-    # feat_objs = [{'name': f} for f in feat_names]
+    Response:
 
-    # for prop in props:
-    #     f = _get_feat_property_extractor(prop)
-    #     prop_values = f(dset)
-    #     for feat, val in zip(feat_objs, prop_values):
-    #         feat[prop] = val
+    {
+        "name": str,
+        "data": List[number]
+    }
 
-    #     features += feat_objs
+    """
 
-    # return jsonify(features=features)
+    ex = Experiment.get(experiment_id)
+    if not ex:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    if not ex.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+
+    response = {}
+    with ex.dataset as data:
+        types = data['/objects'].keys()
+        if not object_type in set(types):
+            return RESOURCE_NOT_FOUND_RESPONSE
+        else:
+            feature_data = data['/objects/%s/features' % object_type]
+            feature_names = feature_data.keys()
+            if not feature_name in set(feature_names):
+                return RESOURCE_NOT_FOUND_RESPONSE
+            else:
+                values = feature_data[feature_name][()].tolist()
+                response['name'] = feature_name
+                response['data'] = values
+
+    return jsonify(response)
 
 
 @api.route('/experiments', methods=['GET'])
