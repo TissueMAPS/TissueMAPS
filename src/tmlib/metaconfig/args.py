@@ -14,7 +14,7 @@ class MetaconfigInitArgs(VariableArgs):
             arguments as key-value pairs
         '''
         self.file_format = self._file_format_params['default']
-        self.z_stacks = False
+        self.z_stacks = self._z_stacks_params['default']
         self.regex = self._regex_params['default']
         self.stitch_layout = self._stitch_layout_params['default']
         self.stitch_major_axis = self._stitch_major_axis_params['default']
@@ -81,14 +81,16 @@ class MetaconfigInitArgs(VariableArgs):
 
     @z_stacks.setter
     def z_stacks(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "z_stacks" must have type bool.')
+        if not isinstance(value, self._z_stacks_params['type']):
+            raise TypeError('Attribute "z_stacks" must have type %s.'
+                            % self._z_stacks_params['type'])
         self._z_stacks = value
 
     @property
     def _z_stacks_params(self):
         return {
-            'action': 'store_true',
+            'type': bool,
+            'default': False,
             'help': '''
                 if individual focal planes should be kept,
                 i.e. no intensity projection performed

@@ -12,9 +12,9 @@ class IlluminatiInitArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
-        self.align = False
-        self.illumcorr = False
-        self.clip = False
+        self.align = self._align_params['default']
+        self.illumcorr = self._illumcorr_params['default']
+        self.clip = self._clip_params['default']
         self.clip_value = self._clip_value_params['default']
         self.clip_percentile = self._clip_percentile_params['default']
         super(IlluminatiInitArgs, self).__init__(**kwargs)
@@ -41,14 +41,16 @@ class IlluminatiInitArgs(VariableArgs):
 
     @align.setter
     def align(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "align" must have type bool.')
+        if not isinstance(value, self._align_params['type']):
+            raise TypeError('Attribute "align" must have type %s.'
+                            % self._align_params['type'])
         self._align = value
 
     @property
     def _align_params(self):
         return {
-            'action': 'store_true',
+            'type': bool,
+            'default': False,
             'help': '''
                 align images between cycles
             '''
@@ -67,14 +69,16 @@ class IlluminatiInitArgs(VariableArgs):
 
     @illumcorr.setter
     def illumcorr(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "illumcorr" must have type bool.')
+        if not isinstance(value, self._illumcorr_params['type']):
+            raise TypeError('Attribute "illumcorr" must have type %s.'
+                            % self._illumcorr_params['type'])
         self._illumcorr = value
 
     @property
     def _illumcorr_params(self):
         return {
-            'action': 'store_true',
+            'type': bool,
+            'default': False,
             'help': '''
                 correct images for illumination artifacts
             '''
@@ -93,14 +97,16 @@ class IlluminatiInitArgs(VariableArgs):
 
     @clip.setter
     def clip(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "clip" must have type bool.')
+        if not isinstance(value, self._clip_params['type']):
+            raise TypeError('Attribute "clip" must have type %s.'
+                            % self._clip_params['type'])
         self._clip = value
 
     @property
     def _clip_params(self):
         return {
-            'action': 'store_true',
+            'type': bool,
+            'default': False,
             'help': '''
                 clip pixel values above a certain level,
                 i.e. rescale images between min value and clip level

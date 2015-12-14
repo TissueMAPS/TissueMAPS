@@ -12,6 +12,8 @@ class AlignInitArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
+        self.ref_channel = self._ref_channel_params['default']
+        self.ref_cycle = self._ref_cycle_params['default']
         self.batch_size = self._batch_size_params['default']
         self.limit = self._limit_params['default']
         super(AlignInitArgs, self).__init__(**kwargs)
@@ -76,9 +78,9 @@ class AlignInitArgs(VariableArgs):
     def _ref_cycle_params(self):
         return {
             'type': int,
-            'required': True,
+            'default': 0,
             'help': '''
-                zero-based index of the reference cycle
+                zero-based index of the reference cycle (default: 0)
             '''
         }
 
@@ -100,9 +102,9 @@ class AlignInitArgs(VariableArgs):
     def _ref_channel_params(self):
         return {
             'type': int,
-            'required': True,
+            'default': 0,
             'help': '''
-                zero-based ID of the reference channel
+                zero-based ID of the reference channel (default: 0)
             '''
         }
 
@@ -152,7 +154,7 @@ class AlignApplyArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
-        self.illumcorr = False
+        self.illumcorr = self._illumcorr_params['default']
         super(AlignApplyArgs, self).__init__(**kwargs)
 
     @property
@@ -169,22 +171,24 @@ class AlignApplyArgs(VariableArgs):
         Returns
         -------
         bool
-            indicator that images should also be corrected for illumination
+            indicator that images should be corrected for illumination
             artifacts (default: ``False``)
         '''
         return self._illumcorr
 
     @illumcorr.setter
     def illumcorr(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "illumcorr" must have type bool')
+        if not isinstance(value, self._illumcorr_params['type']):
+            raise TypeError('Attribute "illumcorr" must have type %s'
+                            % self._illumcorr_params['type'])
         self._illumcorr = value
 
     @property
     def _illumcorr_params(self):
         return {
-            'action': 'store_true',
+            'default': False,
+            'type': bool,
             'help': '''
-                also correct images for illumination artifacts
+                correct images for illumination artifacts
             '''
         }

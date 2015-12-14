@@ -1,7 +1,9 @@
 import re
+import json
 from abc import ABCMeta
 from abc import abstractproperty
 import logging
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -85,10 +87,41 @@ class Args(object):
                     raise AttributeError(
                             '"%s" object must have an "%s" attribute'
                             % (self.__class__.__name__, params))
-                kwargs = getattr(self, params)
+                kwargs = dict(getattr(self, params))  # make a copy
+                if kwargs['type'] == bool:
+                    if kwargs['default']:
+                        kwargs['action'] = 'store_false'
+                    else:
+                        kwargs['action'] = 'store_true'
+                    del kwargs['type']
                 if attr in self._required_args:
                     kwargs['required'] = True
                 parser.add_argument(*[flag], **kwargs)
+
+    def jsonify(self):
+        '''
+        Returns
+        -------
+        str
+            JSON string that encodes for each argument a mapping "description",
+            with key "value" (representing the actual attribute value) and
+            optional keys "help", "default", "options", "action"
+            (representing hyper-parameters)
+        '''
+        mapping = defaultdict(dict)
+        for attr in dir(self):
+            if attr.startswith('__') or attr.endswith('__'):
+                continue
+            if attr.startswith('_'):
+                attr = re.search(r'_(.*)', attr).group(1)
+            if attr in self._persistent_attrs:
+                mapping[attr]['value'] = getattr(self, attr)
+
+        for attr in mapping:
+            params = dict(getattr(self, '_%s_params' % attr))
+            del params['type']  # data types are not JSON serializable  
+            mapping[attr].update(params)
+        return json.dumps(mapping)
 
 
 class GeneralArgs(Args):
@@ -181,9 +214,9 @@ class InitArgs(GeneralArgs):
         **kwargs: dict, optional
             arguments as key-value pairs
         '''
-        self.backup = False
-        self.display = False
-        self.keep_output = False
+        self.backup = self._backup_params['default']
+        self.display = self._display_params['default']
+        self.keep_output = self._keep_output_params['default']
         super(InitArgs, self).__init__(**kwargs)
 
     @property
@@ -221,7 +254,8 @@ class InitArgs(GeneralArgs):
     @property
     def _display_params(self):
         return {
-            'action': 'store_true',
+            'default': False,
+            'type': bool,
             'help': '''
                 display job descriptions, i.e. pretty print descriptions
                 to standard output without writing them to files
@@ -248,7 +282,8 @@ class InitArgs(GeneralArgs):
     @property
     def _backup_params(self):
         return {
-            'action': 'store_true',
+            'default': False,
+            'type': bool,
             'help': '''
                 create a backup of the job descriptions and log output
                 of a previous submission
@@ -275,7 +310,8 @@ class InitArgs(GeneralArgs):
     @property
     def _keep_output_params(self):
         return {
-            'action': 'store_true',
+            'default': False,
+            'type': bool,
             'help': '''
                 keep output of a prior submission, i.e. don't cleanup
             '''

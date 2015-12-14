@@ -14,7 +14,7 @@ class TmapsSubmitArgs(Args):
         '''
         self.stage = self._stage_params['default']
         self.step = self._step_params['default']
-        self.backup = False
+        self.backup = self._backup_params['default']
         super(TmapsSubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -94,14 +94,16 @@ class TmapsSubmitArgs(Args):
 
     @backup.setter
     def backup(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "backup" must have type bool.')
+        if not isinstance(value, self._backup_params['type']):
+            raise TypeError('Attribute "backup" must have type %s.'
+                            % self._backup_params['type'])
         self._backup = value
 
     @property
     def _backup_params(self):
         return {
-            'action': 'store_true',
+            'type': bool,
+            'default': False,
             'help': '''
                 backup an existing session
             '''
