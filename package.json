@@ -49,6 +49,7 @@
     "load-grunt-tasks": "^3.1.0",
     "protractor": "^2.1.0",
     "time-grunt": "^1.1.0",
-    "typescript": "^1.6.2"
+    "typescript": "^1.6.2",
+    "uglify-js": "2.6.1"
   }
 }

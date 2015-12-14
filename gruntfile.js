@@ -206,6 +206,14 @@ module.exports = function(grunt) {
             }
         },
 
+        uglify: {             
+            options: {
+                mangle: false,
+                compress: false
+            },
+        },
+
+
         /**
          * Compute a hash for each of the listed files and append it to the file's name.
          * Usemin will then replace the standard filename with the new one.
@@ -547,9 +555,8 @@ module.exports = function(grunt) {
         'includeSource',  // call before useminPrepare
         'useminPrepare',
         'concat:generated',
-        'cssmin:generated',
-        // XXX: Isn't it already included in usemin?
-        // 'uglify:generated', 
+        'cssmin:generated',        
+        'uglify:generated', 
         'usebanner', // needs to be before filerev
         'filerev',
         'usemin',
