@@ -48,7 +48,7 @@ def load_objects(objects_name, **kwargs):
         image_dim_y = f.read('%s/image_dimensions/y' % group_name, index=job_ix)
         image_dim_x = f.read('%s/image_dimensions/x' % group_name, index=job_ix)
 
-    outline_image = np.zeros((image_dim_y, image_dim_x), dtype=np.int32)
+    outline_image = np.zeros((image_dim_y[0], image_dim_x[0]), dtype=np.int32)
     for y, x in zip(y_coordinates, x_coordinates):
         outline_image[y, x] = 1
 
