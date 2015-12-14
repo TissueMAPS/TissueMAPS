@@ -185,7 +185,7 @@ class YamlWriter(TextWriter):
             use_ruamel = False
         with open(filename, 'w') as f:
             if use_ruamel:
-                f.write(ruamel.yaml.safe_dump(data,
+                f.write(ruamel.yaml.dump(data,
                         Dumper=ruamel.yaml.RoundTripDumper,
                         explicit_start=True))
             else:
@@ -235,7 +235,10 @@ class ImageWriter(Writer):
             filename = os.path.join(self.directory, filename)
         logger.debug('write image to file: %s' % filename)
         if isinstance(data, np.ndarray):
-            cv2.imwrite(filename, data)
+            if filename.endswith('.ppm'):
+                cv2.imwrite(filename, data, [cv2.IMWRITE_PXM_BINARY, 0])
+            else:
+                cv2.imwrite(filename, data)
         elif isinstance(data, Vips.Image):
             data.write_to_file(filename)
         else:
@@ -291,7 +294,7 @@ class DatasetWriter(object):
         else:
             return False
 
-    def write(self, path, data):
+    def write(self, path, data, index=None, row_index=None, column_index=None):
         '''
         Create a dataset.
 
@@ -301,6 +304,26 @@ class DatasetWriter(object):
             absolute path to the dataset within the file
         data:
             dataset; will be put through ``numpy.array(data)``
+        index: int or List[int], optional
+            zero-based index
+        row_index: int or List[int], optional
+            zero-based row index
+        column_index: int or List[int], optional
+            zero-based column index
+
+        Returns
+        -------
+        h5py._hl.dataset.Dataset
+
+        Raises
+        ------
+        TypeError
+            when `data` has a different data type than an existing dataset
+        IndexError
+            when a provided index exceeds dimensions of an existing dataset
+        KeyError
+            when a subset of the dataset should be written, i.e. an index is
+            provided, but the dataset does not yet exist
 
         Note
         ----
@@ -316,12 +339,95 @@ class DatasetWriter(object):
             data = [np.string_(d) for d in data]
         if isinstance(data, list):
             data = np.array(data)
-        if isinstance(data, np.ndarray) and data.dtype == 'O':
-            logger.debug('write dataset "%s" as variable length', path)
-            self._write_vlen(path, data)
+        if index is None and row_index is None and column_index is None:
+            if isinstance(data, np.ndarray) and data.dtype == 'O':
+                logger.debug('write dataset "%s" as variable length', path)
+                dset = self._write_vlen(path, data)
+            else:
+                logger.debug('write dataset "%s"', path)
+                dset = self._stream.create_dataset(path, data=data)
         else:
-            logger.debug('write dataset "%s"', path)
-            self._stream.create_dataset(path, data=data)
+            if not self.exists(path):
+                raise KeyError(
+                        'In order to be able to write a subset of data, '
+                        'the dataset has to exist: %s', path)
+            dset = self._stream[path]
+
+            if dset.dtype != data.dtype:
+                raise TypeError(
+                        'Data must have data type as dataset: '
+                        'Dataset dtype: {0} - Data dtype: {1}'.format(
+                            dset.dtype, data.dtype
+                        ))
+
+            if any(np.array(data.shape) > np.array(dset.shape)):
+                raise IndexError(
+                        'Data dimensions exceed dataset dimensions: '
+                        'Dataset dims: {0} - Data dims: {1}'.format(
+                            dset.shape, data.shape
+                        ))
+            if row_index is not None:
+                if len(dset.shape) == 1:
+                    raise IndexError(
+                        'One-dimensional dataset does not allow '
+                        'row-wise indexing: Dataset dims: {0}'.format(
+                            dset.shape))
+                if (len(list(row_index)) > data.shape[0] or
+                        any(np.array(row_index) > dset.shape[0])):
+                    raise IndexError(
+                        'Row index exceeds dataset dimensions: '
+                        'Dataset dims: {0}'.format(dset.shape))
+            if column_index is not None:
+                if len(dset.shape) == 1:
+                    raise IndexError(
+                        'One-dimensional dataset does not allow '
+                        'column-wise indexing: Dataset dims: {0}'.format(
+                            dset.shape))
+                if (len(list(column_index)) > data.shape[1] or
+                        any(np.array(column_index) > dset.shape[1])):
+                    raise IndexError(
+                        'Column index exceeds dataset dimension: '
+                        'Dataset dims: {0}'.format(dset.shape))
+            if index is not None:
+                if len(dset.shape) > 1:
+                    raise IndexError(
+                        'Multi-dimensional dataset does not allow '
+                        'element-wise indexing: Dataset dims: {0}'.format(
+                            dset.shape))
+                if (isinstance(index, list) and
+                        isinstance(data, np.ndarray)):
+                    if (len(index) > len(data) or
+                            any(np.array(index) > len(dset))):
+                        import ipdb; ipdb.set_trace()
+                        raise IndexError(
+                            'Index exceeds dataset dimensions: '
+                            'Dataset dims: {0}'.format(dset.shape))
+                elif (isinstance(index, int) and
+                        not isinstance(data, np.ndarray)):
+                    if index > data:
+                        raise IndexError(
+                            'Index exceeds dataset dimensions: '
+                            'Dataset dims: {0}'.format(dset.shape))
+                else:
+                    TypeError(
+                        'Index must have have type int or list of int.')
+
+            logger.debug('write data to a subset of dataset "%s"', path)
+            if row_index and not column_index:
+                dset[row_index, :] = data
+            elif not row_index and column_index:
+                dset[:, column_index] = data
+            elif row_index and column_index:
+                dset[row_index, column_index] = data
+            elif index is not None:
+                if (isinstance(index, list) and
+                        isinstance(data, np.ndarray)):
+                    for i, d in zip(index, data):
+                        dset[i] = d.tolist()
+                else:
+                    dset[index] = data
+
+        return dset
 
     def _write_vlen(self, path, data):
         data_type = np.unique([d.dtype for d in data])
@@ -329,10 +435,29 @@ class DatasetWriter(object):
             dt = h5py.special_dtype(vlen=np.int64)
         else:
             dt = h5py.special_dtype(vlen=data_type[0])
-        dataset = self._stream.create_dataset(path, (len(data),), dtype=dt)
-        # dataset = self._stream.create_dataset(path, data.shape, dtype=dt)
+        dset = self._stream.create_dataset(path, data.shape, dtype=dt)
         for i, d in enumerate(data):
-            dataset[i] = d.tolist()  # doesn't work with numpy.ndarray!!!
+            dset[i] = d.tolist()  # doesn't work with numpy.ndarray!!!
+        return dset
+
+    def preallocate(self, path, dims, dtype):
+        '''
+        Create a dataset with a given size and data type.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to the dataset within the file
+        dims: Tuple[int]
+            dimensions of the dataset (number of rows and columns)
+        dtype: type
+            datatype the dataset
+
+        Returns
+        -------
+        h5py._hl.dataset.Dataset
+        '''
+        return self._stream.create_dataset(path, dims, dtype)
 
     def set_attribute(self, path, name, data):
         '''

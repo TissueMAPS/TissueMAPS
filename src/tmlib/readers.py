@@ -361,9 +361,18 @@ class DatasetReader(object):
         -------
         List[str]
             names of the datasets in `path`
+
+        Raises
+        ------
+        KeyError
+            when `path` does not exist
         '''
+        try:
+            group = self._stream[path]
+        except KeyError:
+            raise KeyError('Group does not exist: %s' % path)
         names = list()
-        for name, value in self._stream[path].iteritems():
+        for name, value in group.iteritems():
             if self._is_dataset(value):
                 names.append(name)
 
@@ -380,9 +389,18 @@ class DatasetReader(object):
         -------
         List[str]
             names of the groups in `path`
+
+        Raises
+        ------
+        KeyError
+            when `path` does not exist
         '''
+        try:
+            group = self._stream[path]
+        except KeyError:
+            raise KeyError('Group does not exist: %s' % path)
         names = list()
-        for name, value in self._stream[path].iteritems():
+        for name, value in group.iteritems():
             if not self._is_dataset(value):
                 names.append(name)
 
@@ -397,7 +415,7 @@ class DatasetReader(object):
         ----------
         path: str
             absolute path to the dataset within the file
-        index: int or List[int], option
+        index: int or List[int], optional
             zero-based index
         row_index: int or List[int], optional
             zero-based row index
@@ -412,31 +430,31 @@ class DatasetReader(object):
         Raises
         ------
         KeyError
-            when `path` doesn't point to an existing dataset
+            when `path` does not exist
         '''
         try:
-            dataset = self._stream[path]
+            dset = self._stream[path]
         except KeyError:
             raise KeyError('Dataset does not exist: %s' % path)
         if row_index and not column_index:
-            if len(dataset.shape) == 1:
+            if len(dset.shape) == 1:
                 raise IndexError(
                     'Dataset dimensions do not allow row-wise indexing')
-            return dataset[row_index, :]
+            return dset[row_index, :]
         elif not row_index and column_index:
-            if len(dataset.shape) == 1:
+            if len(dset.shape) == 1:
                 raise IndexError(
                     'Dataset dimensions do not allow column-wise indexing')
-            return dataset[:, column_index]
+            return dset[:, column_index]
         elif row_index and column_index:
-            if len(dataset.shape) == 1:
+            if len(dset.shape) == 1:
                 raise IndexError(
                     'Dataset dimensions do not allow row/column-wise indexing')
-            return dataset[row_index, column_index]
+            return dset[row_index, column_index]
         elif index is not None:
-            return dataset[index]
+            return dset[index]
         else:
-            return dataset[()]
+            return dset[()]
 
     def get_attribute(self, path, name):
         '''
@@ -456,20 +474,70 @@ class DatasetReader(object):
         Raises
         ------
         KeyError
-            when `path` doesn't point to an existing dataset
+            when `path` does not exist
         AttributeError
             when dataset does not have an attribute called `name`
         '''
         try:
-            dataset = self._stream[path]
+            dset = self._stream[path]
         except KeyError:
             raise KeyError('Dataset does not exist: %s' % path)
-        attribute = dataset.attrs.get(name)
+        attribute = dset.attrs.get(name)
         if not attribute:
             raise AttributeError(
                     'Dataset doesn\'t have an attribute "%s": %s'
                     % (name, path))
         return attribute
+
+    def get_dimensions(self, path):
+        '''
+        Get the dimensions of a dataset.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to the dataset within the file
+
+        Returns
+        -------
+        Tuple[int]
+            number of rows and columns of the dataset
+
+        Raises
+        ------
+        KeyError
+            when `path` does not exist
+        '''
+        try:
+            dims = self._stream[path].shape
+        except KeyError:
+            raise KeyError('Dataset does not exist: %s' % path)
+        return dims
+
+    def get_type(self, path):
+        ''''
+        Get the data type of a dataset.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to the dataset within the file
+
+        Returns
+        -------
+        type
+            data type of the dataset
+
+        Raises
+        ------
+        KeyError
+            when `path` does not exist
+        '''
+        try:
+            dtype = self._stream[path].dtype
+        except KeyError:
+            raise KeyError('Dataset does not exist: %s' % path)
+        return dtype
 
     def __exit__(self, except_type, except_value, except_trace):
         self._stream.close()
@@ -765,6 +833,12 @@ class VipsImageReader(ImageReader):
         ------
         OSError
             when `filename` does not exist
+
+        Note
+        ----
+        Images are read with access mode `Vips.Access.SEQUENTIAL_UNBUFFERED`
+        to save memory. For more information, please refer to the
+        `Vips documentation <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/libvips-VipsImage.html#VIPS-ACCESS-SEQUENTIAL-UNBUFFERED:CAPS>`_
         '''
         if self.directory:
             filename = os.path.join(self.directory, filename)
