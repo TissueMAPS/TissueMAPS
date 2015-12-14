@@ -63,9 +63,9 @@ def save_objects(image, name, **kwargs):
             f.write('%s/job_ids' % group_name,
                     data=[kwargs['job_id'] for x in xrange(len(objects_ids))])
             f.write('%s/image_dimensions/y' % group_name,
-                    data=image.shape[0])
+                    data=np.repeat(image.shape[0], len(objects_ids)))
             f.write('%s/image_dimensions/x' % group_name,
-                    data=image.shape[1])
+                    data=np.repeat(image.shape[1], len(objects_ids)))
             f.write('%s/outlines/y' % group_name,
                     data=y_coordinates)
             f.write('%s/outlines/x' % group_name,
