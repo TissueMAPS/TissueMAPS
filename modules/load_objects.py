@@ -45,8 +45,8 @@ def load_objects(objects_name, **kwargs):
         job_ix = jobs == kwargs['job_id']
         y_coordinates = f.read('%s/outlines/y' % group_name, index=job_ix)
         x_coordinates = f.read('%s/outlines/x' % group_name, index=job_ix)
-        image_dim_y = f.read('%s/image_dimensions/y' % group_name)
-        image_dim_x = f.read('%s/image_dimensions/x' % group_name)
+        image_dim_y = f.read('%s/image_dimensions/y' % group_name, index=job_ix)
+        image_dim_x = f.read('%s/image_dimensions/x' % group_name, index=job_ix)
 
     outline_image = np.zeros((image_dim_y, image_dim_x), dtype=np.int32)
     for y, x in zip(y_coordinates, x_coordinates):
