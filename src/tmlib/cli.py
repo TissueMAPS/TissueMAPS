@@ -220,6 +220,10 @@ class CommandLineInterface(object):
                         logger.debug('remove output directory: %s' % out)
                         shutil.rmtree(out)
                     else:
+                        if out.endswith('data.h5'):
+                            # Special case that is handled separately
+                            logger.debug('keep data file: %s' % out)
+                            continue
                         logger.debug('remove output file: %s' % out)
                         os.remove(out)
         except JobDescriptionError:
