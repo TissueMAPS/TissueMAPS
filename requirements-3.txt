@@ -1,5 +1,5 @@
 apscheduler>=3.0.4
-cached-property==1.2.0
+cached-property>=1.3.0
 Cython==0.22.1
 decorator==3.4.2
 filemagic==1.6
