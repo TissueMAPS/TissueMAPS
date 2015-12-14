@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from cached_property import cached_property
+from cached_property import threaded_cached_property
 from . import utils
 from .readers import JsonReader
 from .image import is_image_file
@@ -184,7 +185,7 @@ class Cycle(object):
         '''
         return 'alignment_description.json'
 
-    @cached_property
+    @threaded_cached_property
     def image_metadata(self):
         '''
         Returns

@@ -10,7 +10,6 @@ from .plate import Plate
 from .source import PlateSource
 from .metadata import MosaicMetadata
 from .errors import NotSupportedError
-from .errors import RegexError
 from .errors import MetadataError
 from .readers import YamlReader
 
