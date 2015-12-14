@@ -110,7 +110,8 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                 features_path = 'objects/%s/features' % obj_name
                 segmentation_path = 'objects/%s/segmentation' % obj_name
                 if f.exists(features_path):
-                    dims = f.get_dimensions(datasets[obj_name]['features'][0])
+                    feat_path = datasets[obj_name]['features'][0]['path']
+                    dims = f.get_dimensions(feat_path)
                 elif f.exists(segmentation_path):
                     obj_ids_path = '%s/object_ids' % segmentation_path
                     dims = f.get_dimensions(obj_ids_path)
