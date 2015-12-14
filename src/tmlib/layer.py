@@ -446,8 +446,8 @@ class ObjectLayer(object):
             # Get the dimensions of the original, unaligned image
             metadata_path = '/metadata/%s' % unique_job_ids[0]
             image_dimensions = (
-                data.read('%s/image_dimension_y' % metadata_path),
-                data.read('%s/image_dimension_x' % metadata_path)
+                data.read('%s/image_dimension_y' % metadata_path, index=0),
+                data.read('%s/image_dimension_x' % metadata_path, index=0)
             )
             # Get the indices of objects at the border of images
             # (using the parent objects as references)
@@ -509,21 +509,20 @@ class ObjectLayer(object):
             job_ids = data.read('%s/job_ids' % segmentation_path)
             global_coords = dict()
             for j in unique_job_ids:
-                metadata_path = '/metadata/%d' % j
-                plate_name = data.read('%s/plate_name' % metadata_path)
+                plate_name = data.read('metadata/plate_name', index=j)
                 plate_index = plate_names.index(plate_name)
-                well_name = data.read('%s/well_name' % metadata_path)
+                well_name = data.read('metadata/well_name', index=j)
 
                 plate_coords = plate.map_well_id_to_coordinate(well_name)
                 well_coords = (
-                    data.read('%s/well_position_y' % metadata_path),
-                    data.read('%s/well_position_x' % metadata_path)
+                    data.read('metadata/well_position_y', index=j),
+                    data.read('metadata/well_position_x', index=j)
                 )
 
                 # Images may be aligned and the resulting shift must be
                 # considered.
-                shift_offset_y = data.read('%s/shift_offset_y' % metadata_path)
-                shift_offset_x = data.read('%s/shift_offset_x' % metadata_path)
+                shift_offset_y = data.read('/metadata/shift_offset_y', index=j)
+                shift_offset_x = data.read('metadata/shift_offset_x', index=j)
 
                 n_prior_well_rows = plate.nonempty_row_indices.index(
                                             plate_coords[0])
