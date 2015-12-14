@@ -365,9 +365,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 ]
             },
             'outputs': {
-                'data_file':
+                'data_files': [
                     os.path.join(self.experiment.dir,
                                  self.experiment.data_file)
+                ]
             },
             'removals': [
                 'data_files'
@@ -568,7 +569,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job description
         '''
         logger.info('fuse datasets of different jobs into a single file')
-        output_file = batch['outputs']['data_file']
+        output_file = batch['outputs']['data_files'][0]
         tmp_file = '%s.tmp' % output_file
         data_fusion.combine_datasets(
                         input_files=batch['inputs']['data_files'],
