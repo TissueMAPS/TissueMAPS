@@ -369,9 +369,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     os.path.join(self.experiment.dir,
                                  self.experiment.data_file)
             },
-            # 'removals': [
-            #     'data_files'
-            # ]
+            'removals': [
+                'data_files'
+            ],
+            'merge': args.merge
         }
 
         if job_ids:
@@ -582,7 +583,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # complemented with the datasets of the already existing file.
         # The updated file will then subsequently replace the previous file.
 
-        if os.path.exists(output_file):
+        if os.path.exists(output_file) and batch['merge']:
             # Update the temporary file with the content of the already
             # existing file
             data_fusion.update_datasets(output_file, tmp_file)
