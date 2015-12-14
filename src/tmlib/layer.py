@@ -440,9 +440,6 @@ class ObjectLayer(object):
                 raise DataError(
                         'The data file does\'t contain any segmentations: %s'
                         % segmentation_path)
-            # Get the site indices of individual images.
-            # (can be used to obtain the position of the image within the grid)
-            unique_job_ids = map(int, data.list_groups('/metadata'))
             # Get the dimensions of the original, unaligned image
             image_dimensions = (
                 data.read('/metadata/image_dimension_y', index=0),
@@ -470,8 +467,7 @@ class ObjectLayer(object):
             # that all wells have the same dimensions!
             cycle = experiment.plates[0].cycles[0]
             md = cycle.image_metadata
-            well_name = data.read('/metadata/well_name',
-                                  index=unique_job_ids[0]-1)
+            well_name = data.read('/metadata/well_name', index=0)
             index = (
                         (md['tpoint_ix'] == 0) &
                         (md['channel_ix'] == 0) &
@@ -508,22 +504,21 @@ class ObjectLayer(object):
             plate_names = [p.name for p in experiment.plates]
             job_ids = data.read('%s/job_ids' % segmentation_path)
             global_coords = dict()
-            for j in unique_job_ids:
-                i = j - 1  # job ids are one-based
-                plate_name = data.read('metadata/plate_name', index=i)
+            for j in xrange(data.get_dimensions('/metadata/plate_name')[0]):
+                plate_name = data.read('metadata/plate_name', index=j)
                 plate_index = plate_names.index(plate_name)
-                well_name = data.read('metadata/well_name', index=i)
+                well_name = data.read('metadata/well_name', index=j)
 
                 plate_coords = plate.map_well_id_to_coordinate(well_name)
                 well_coords = (
-                    data.read('metadata/well_position_y', index=i),
-                    data.read('metadata/well_position_x', index=i)
+                    data.read('metadata/well_position_y', index=j),
+                    data.read('metadata/well_position_x', index=j)
                 )
 
                 # Images may be aligned and the resulting shift must be
                 # considered.
-                shift_offset_y = data.read('/metadata/shift_offset_y', index=i)
-                shift_offset_x = data.read('metadata/shift_offset_x', index=i)
+                shift_offset_y = data.read('/metadata/shift_offset_y', index=j)
+                shift_offset_x = data.read('metadata/shift_offset_x', index=j)
 
                 n_prior_well_rows = plate.nonempty_row_indices.index(
                                             plate_coords[0])
