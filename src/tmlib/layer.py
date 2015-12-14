@@ -4,7 +4,6 @@ import pandas as pd
 from collections import defaultdict
 from skimage.measure import approximate_polygon
 from gi.repository import Vips
-from . import utils
 from . import image_utils
 from .mosaic import Mosaic
 from .metadata import MosaicMetadata
@@ -171,7 +170,6 @@ class ChannelLayer(object):
 
                 logger.debug('stitch images of row # %d', i)
 
-                # row_images = list()
                 for j in xrange(plate_grid.shape[1]):
 
                     if j not in nonempty_columns:
@@ -183,7 +181,6 @@ class ChannelLayer(object):
 
                     if well is None:
                         # Fill empty well with spacer
-                        # row_images.append(empty_well_spacer)
                         mosaics_images.append(empty_well_spacer)
                     else:
                         index = np.where(
@@ -195,7 +192,7 @@ class ChannelLayer(object):
                         images = cycle.get_image_subset(index)
                         mosaic = Mosaic.create(
                                     images, displacement, stats, align)
-                        # row_images.append(mosaic.array)
+                        img = mosaic.array
                         mosaics_images.append(mosaic.array)
                         # Calculate clip threshold for a few sampled images
                         if clip_value is None:
@@ -212,19 +209,9 @@ class ChannelLayer(object):
                                 thresh = img.percent(clip_percentile)
                                 thresholds.append(thresh)
 
-                # row = reduce(
-                #     lambda x, y: x.join(y, 'horizontal', shim=spacer_size),
-                #     row_images
-                # )
-
-            # if overview is None:
-            #     overview = row
-            # else:
-            #     overview = overview.join(row, 'vertical', shim=spacer_size)
-
         overview = Vips.Image.arrayjoin(
-                            mosaics_images,
-                            across=len(nonempty_columns), shim=spacer_size)
+                        mosaics_images,
+                        across=len(nonempty_columns), shim=spacer_size)
 
         mosaic = Mosaic(overview)
         metadata = MosaicMetadata()
@@ -237,7 +224,7 @@ class ChannelLayer(object):
         # Rescale images to 8-bit, limiting the range of intensity values for
         # visualization
         if clip_value is None:
-            clip_value = np.median(thresholds)
+            clip_value = int(np.median(thresholds))
         layer = layer.clip(max_value=clip_value)
         layer = layer.scale(max_value=clip_value)
 
