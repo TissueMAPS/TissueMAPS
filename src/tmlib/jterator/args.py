@@ -34,7 +34,7 @@ class JteratorRunArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
-        self.plot = False
+        self.plot = self._plot_params['default']
         super(JteratorRunArgs, self).__init__(**kwargs)
 
     @property
@@ -53,20 +53,22 @@ class JteratorRunArgs(VariableArgs):
         bool
             indicator that modules should generate plots (default: ``False``)
         '''
-        return self._headless
+        return self._plot
 
     @plot.setter
     def plot(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "plot" must have type bool.')
-        self._headless = value
+        if not isinstance(value, self._plot_params['type']):
+            raise TypeError('Attribute "plot" must have type %s.'
+                            % self._plot_params['type'])
+        self._plot = value
 
     @property
     def _plot_params(self):
         return {
-            'action': 'store_true',
+            'type': bool,
+            'default': False,
             'help': '''
-                turn on plotting mode
+                activate plotting
             '''
 
         }

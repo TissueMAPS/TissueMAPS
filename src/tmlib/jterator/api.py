@@ -365,14 +365,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 ]
             },
             'outputs': {
-                'data_files': [
+                'data_file':
                     os.path.join(self.experiment.dir,
                                  self.experiment.data_file)
-                ]
             },
-            'removals': [
-                'data_files'
-            ]
+            # 'removals': [
+            #     'data_files'
+            # ]
         }
 
         if job_ids:
@@ -442,8 +441,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             orig_dims = image.pixels.dimensions
             image = image.align()
             if not isinstance(image.pixels.array, np.ndarray):
-                # image_array = image_utils.vips_image_to_np_array(
-                #                                 image.pixels.array)
+                # image_array = vips_image_to_np_array(image.pixels.array)
                 raise TypeError('Jterator requires images as "numpy" arrays.')
             else:
                 image_array = image.pixels.array
@@ -465,35 +463,37 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # All images processed per job were acquired at the same site
                 # and thus share the positional metadata information
                 with DatasetWriter(data_file) as data:
-                    data.write('/metadata/%s/plate_name' % job_id,
+                    data.write('/metadata/plate_name',
                                data=md.plate_name)
-                    data.write('/metadata/%s/well_name' % job_id,
+                    data.write('/metadata/well_name',
                                data=md.well_name)
-                    data.write('/metadata/%s/well_position_y' % job_id,
+                    data.write('/metadata/well_position_y',
                                data=md.well_position_y)
-                    data.write('/metadata/%s/well_position_x' % job_id,
+                    data.write('/metadata/well_position_x',
                                data=md.well_position_x)
-                    data.write('/metadata/%s/image_dimension_y' % job_id,
+                    data.write('/metadata/image_dimension_y',
                                data=orig_dims[0])
-                    data.write('/metadata/%s/image_dimension_x' % job_id,
+                    data.write('/metadata/image_dimension_x',
                                data=orig_dims[1])
-                    data.write('/metadata/%s/shift_offset_y' % job_id,
+                    data.write('/metadata/shift_offset_y',
                                data=offset_y)
-                    data.write('/metadata/%s/shift_offset_x' % job_id,
+                    data.write('/metadata/shift_offset_x',
                                data=offset_x)
 
         outputs = collections.defaultdict(dict)
         outputs['data'] = dict()
         for module in self.pipeline:
-            log_files = module.build_log_filenames(self.module_log_dir, job_id)
-            figure_file = module.build_figure_filename(self.figures_dir, job_id)
+            log_files = module.build_log_filenames(
+                                self.module_log_dir, job_id)
+            figure_file = module.build_figure_filename(
+                                self.figures_dir, job_id)
             inputs = module.prepare_inputs(
-                        planes=plane_images,
-                        upstream_output=outputs['data'],
-                        data_file=data_file, figure_file=figure_file,
-                        job_id=job_id,
-                        experiment_dir=self.experiment.dir,
-                        headless=self.headless)
+                                planes=plane_images,
+                                upstream_output=outputs['data'],
+                                data_file=data_file, figure_file=figure_file,
+                                job_id=job_id,
+                                experiment_dir=self.experiment.dir,
+                                headless=self.headless)
             logger.info('run module "%s"', module.name)
             logger.debug('module file: %s', module.module_file)
             out = module.run(inputs, self.engines[module.language])
@@ -567,47 +567,38 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job description
         '''
         logger.info('fuse datasets of different jobs into a single file')
-        datasets = data_fusion.combine_datasets(batch['inputs']['data_files'])
-        filename = batch['outputs']['data_files'][0]
+        output_file = batch['outputs']['data_file']
+        tmp_file = '%s.tmp' % output_file
+        data_fusion.combine_datasets(
+                        input_files=batch['inputs']['data_files'],
+                        output_file=tmp_file,
+                        delete_input_files=False)  # TODO: delete them
+
         # There could be several pipelines, and each pipeline may only provide
         # some of the data, e.g. one pipeline may provide segmentations, while
         # another may add measurements for the segmented objects.
         # Since it's not possible to delete datasets in an HDF5 file and free
         # the allocated memory, a new temporary file is created, which is
         # complemented with the datasets of the already existing file.
-        # The updated file will then subsequently replace the original file.
+        # The updated file will then subsequently replace the previous file.
 
-        tmp_filename = '%s.tmp' % batch['outputs']['data_files'][0]
-        with DatasetWriter(tmp_filename) as new:
-            for path, data in datasets.iteritems():
-                new.write(path, data)
+        if os.path.exists(output_file):
+            # Update the temporary file with the content of the already
+            # existing file
+            data_fusion.update_datasets(output_file, tmp_file)
+            # Remove the old file, which will be replaced by the new one
+            os.remove(output_file)
 
-        if os.path.exists(filename):
-            # Update the temporary file with the content of the already existing file
-            data_fusion.update_datasets(filename, tmp_filename)
-            # Remove the original file, which will be replaced
-            os.remove(filename)
+        # Replace the old file with the new, updated file
+        os.rename(tmp_file, output_file)
 
-        # Replace the original file with the updated version
-        os.rename(tmp_filename, filename)
-
-        logger.info('remove data files generated by individual jobs')
-        # NOTE: In principle, individual files could be removed during data
-        # fusion to prevent looping over files twice. However, in case an error
-        # occurs during data fusion the files would already be lost and we
-        # would have to re-run all jobs. Safety first!
-        for k in batch['removals']:
-            for f in batch['inputs'][k]:
-                logger.debug('remove data file: %s', f)
-                # os.remove(f)
-
-        logger.info('calculate object coordinates')
-        with DatasetReader(filename) as f:
+        logger.info('calculate object coordinates for visualization')
+        with DatasetReader(output_file) as f:
             objects = f.list_groups('/objects')
 
         for obj in objects:
             layer = ObjectLayer.create(self.experiment, obj)
-            layer.save(filename)
+            layer.save(output_file)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
