@@ -599,8 +599,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             objects = f.list_groups('/objects')
 
         for obj in objects:
-            layer = ObjectLayer.create(self.experiment, obj)
-            layer.save(output_file)
+            ObjectLayer.create(self.experiment, obj)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):

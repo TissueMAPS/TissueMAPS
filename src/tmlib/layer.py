@@ -411,6 +411,20 @@ class ObjectLayer(object):
         '''
         Create an object layer based on segmentations stored in data file.
 
+        Write coordinates of object contours to the HDF5 data file:
+        The *y*, *x* coordinates of each object will be stored in a
+        separate dataset of shape (n, 2), where n is the number of points
+        on the perimeter sorted in counter-clockwise order.
+        The name of the dataset is the global ID of the object, which
+        corresponds to the row index of the object in the `features`
+        dataset.
+        The first column of the dataset contains the *y* coordinate and the
+        second column the *x* coordinate. The dataset has an attribute called
+        "columns" that holds the names of the two columns.
+
+        Within the file the datasets are located in the subgroup "coordinates":
+        ``/objects/<object_name>/map_data/coordinates/<object_id>``.
+
         Parameters
         ----------
         experiment: tmlib.experiment.Experiment
@@ -435,195 +449,223 @@ class ObjectLayer(object):
         logger.info('create layer "%s"', name)
 
         filename = os.path.join(experiment.dir, experiment.data_file)
-        segmentation_path = '/objects/%s/segmentation' % name
-        with DatasetReader(filename) as data:
-            if not data.exists(segmentation_path):
-                raise DataError(
+        segm_path = '/objects/%s/segmentation' % name
+        with DatasetWriter(filename) as out:
+            out.set_attribute(
+                '/objects/%s' % name,
+                name='visual_type', data='polygon'
+            )
+            coordinates_path = '/objects/%s/map_data/coordinates' % name
+            with DatasetReader(filename) as data:
+                if not data.exists(segm_path):
+                    raise DataError(
                         'The data file does\'t contain any segmentations: %s'
-                        % segmentation_path)
-            # Get the dimensions of the original, unaligned image
-            image_dimensions = (
-                data.read('/metadata/image_dimension_y', index=0),
-                data.read('/metadata/image_dimension_x', index=0)
-            )
-            # Get the indices of objects at the border of images
-            # (using the parent objects as references)
-            if 'plate_name' in data.list_groups(segmentation_path):
-                parent = data.read('%s/parent_name' % segmentation_path)
-                parent_segmentation_path = '/objects/%s/segmentation' % parent
-                border = data.read('%s/is_border' % parent_segmentation_path)
-            else:
-                border = data.read('%s/is_border' % segmentation_path)
+                        % segm_path)
+                # Get the dimensions of the original, unaligned image
+                image_dimensions = (
+                    data.read('/metadata/image_dimension_y', index=0),
+                    data.read('/metadata/image_dimension_x', index=0)
+                )
+                # Get the indices of objects at the border of images
+                # (using the parent objects as references)
+                if 'parent_name' in data.list_datasets(segm_path):
+                    parent = data.read('%s/parent_name' % segm_path, index=0)
+                    p_segmentation_path = '/objects/%s/segmentation' % parent
+                    is_border = data.read('%s/is_border' % p_segmentation_path)
+                else:
+                    is_border = data.read('%s/is_border' % segm_path)
 
-            # Get the coordinates of object outlines within individual images.
-            coords_y = data.read('%s/outlines/y' % segmentation_path)
-            coords_x = data.read('%s/outlines/x' % segmentation_path)
+                # Get the coordinates of object outlines relative to individual
+                # images
+                coords_y = data.read('%s/outlines/y' % segm_path)
+                coords_x = data.read('%s/outlines/x' % segm_path)
 
-            # A jterator job represents a unique image acquisition site.
-            # We have to identify the position of each site within the overall
-            # acquisition grid and update the outline coordinates accordingly,
-            # i.e. translate site-specific coordinates into global ones.
+                # A jterator job represents a unique image acquisition site.
+                # We have to identify the position of each site within the
+                # overall acquisition grid and update the outline coordinates
+                # accordingly, i.e. translate site-specific coordinates into
+                # global ones.
 
-            # Get the dimensions of wells from one example well. It's assumed
-            # that all wells have the same dimensions!
-            cycle = experiment.plates[0].cycles[0]
-            md = cycle.image_metadata
-            well_name = data.read('/metadata/well_name', index=0)
-            index = (
-                        (md['tpoint_ix'] == 0) &
-                        (md['channel_ix'] == 0) &
-                        (md['zplane_ix'] == 0) &
-                        (md['well_name'] == well_name)
-            )
-            # Determine the dimensions of a well in pixels, accounting for a
-            # potential overlap of images.
-            n_rows = np.max(md['well_position_y'][index]) + 1
-            n_cols = np.max(md['well_position_x'][index]) + 1
-            well_dimensions = (
-                n_rows * image_dimensions[0] - displacement * (n_rows - 1),
-                n_cols * image_dimensions[1] - displacement * (n_cols - 1)
-            )
-
-            # Plate dimensions are defined as number of pixels along each
-            # axis of the plate. Note that empty rows and columns are also
-            # filled with "spacers", which has to be considered as well.
-            plate = experiment.plates[0]
-            n_nonempty_rows = len(plate.nonempty_row_indices)
-            n_nonempty_cols = len(plate.nonempty_column_indices)
-            plate_y_dim = (
-                n_nonempty_rows * well_dimensions[0] +
-                # Spacer between wells
-                (n_nonempty_rows - 1) * spacer_size
-            )
-            plate_x_dim = (
-                n_nonempty_cols * well_dimensions[1] +
-                # Spacer between wells
-                (n_nonempty_cols - 1) * spacer_size
-            )
-            plate_dimensions = (plate_y_dim, plate_x_dim)
-
-            plate_names = [p.name for p in experiment.plates]
-            job_ids = data.read('%s/job_ids' % segmentation_path)
-            global_coords = OrderedDict()
-            for j in np.unique(job_ids):
-                index = j - 1  # job indices are one-based
-                plate_name = data.read('metadata/plate_name', index=index)
-                plate_index = plate_names.index(plate_name)
-                well_name = data.read('metadata/well_name', index=index)
-
-                plate_coords = plate.map_well_id_to_coordinate(well_name)
-                well_coords = (
-                    data.read('metadata/well_position_y', index=index),
-                    data.read('metadata/well_position_x', index=index)
+                # Get the dimensions of wells from one example well.
+                # NOTE: It's assumed that all wells have the same dimensions!
+                cycle = experiment.plates[0].cycles[0]
+                md = cycle.image_metadata
+                well_name = data.read('/metadata/well_name', index=0)
+                index = (
+                            (md['tpoint_ix'] == 0) &
+                            (md['channel_ix'] == 0) &
+                            (md['zplane_ix'] == 0) &
+                            (md['well_name'] == well_name)
+                )
+                # Determine the dimensions of a well in pixels, accounting for a
+                # potential overlap of images.
+                n_rows = np.max(md['well_position_y'][index]) + 1
+                n_cols = np.max(md['well_position_x'][index]) + 1
+                well_dimensions = (
+                    n_rows * image_dimensions[0] - displacement * (n_rows - 1),
+                    n_cols * image_dimensions[1] - displacement * (n_cols - 1)
                 )
 
-                # Images may be aligned and the resulting shift must be
-                # considered.
-                shift_offset_y = data.read('/metadata/shift_offset_y',
-                                           index=index)
-                shift_offset_x = data.read('metadata/shift_offset_x',
-                                           index=index)
-
-                n_prior_well_rows = plate.nonempty_row_indices.index(
-                                            plate_coords[0])
-                offset_y = (
-                    # Images in the current well above the image
-                    well_coords[0] * image_dimensions[0] -
-                    # Potential overlap of images in y-direction
-                    well_coords[0] * displacement +
-                    # Wells in the current plate above the current well
-                    n_prior_well_rows * well_dimensions[0] +
-                    # Gap introduced between wells
-                    n_prior_well_rows * spacer_size +
-                    # Potential shift of images downwards
-                    shift_offset_y +
-                    # Plates above the current plate
-                    plate_index * plate_dimensions[0]
+                # Plate dimensions are defined as number of pixels along each
+                # axis of the plate. Note that empty rows and columns are also
+                # filled with "spacers", which has to be considered as well.
+                plate = experiment.plates[0]
+                n_nonempty_rows = len(plate.nonempty_row_indices)
+                n_nonempty_cols = len(plate.nonempty_column_indices)
+                plate_y_dim = (
+                    n_nonempty_rows * well_dimensions[0] +
+                    # Spacer between wells
+                    (n_nonempty_rows - 1) * spacer_size
                 )
-
-                n_prior_well_cols = plate.nonempty_column_indices.index(
-                                            plate_coords[1])
-
-                offset_x = (
-                    # Images in the current well left of the image
-                    well_coords[1] * image_dimensions[1] -
-                    # Potential overlap of images in y-direction
-                    well_coords[1] * displacement +
-                    # Wells in the current plate left of the current well
-                    n_prior_well_cols * well_dimensions[1] +
-                    # Gap introduced between wells
-                    n_prior_well_cols * spacer_size +
-                    # Potential shift of images to the right
-                    shift_offset_x
+                plate_x_dim = (
+                    n_nonempty_cols * well_dimensions[1] +
+                    # Spacer between wells
+                    (n_nonempty_cols - 1) * spacer_size
                 )
+                plate_dimensions = (plate_y_dim, plate_x_dim)
 
-                job_ix = np.where(job_ids == j)[0]
-                for ix in job_ix:
-                    # Remove border objects
-                    if border[ix]:
-                        continue
-                    # Reduce the number of outlines points
-                    contour = np.array([coords_y[ix], coords_x[ix]]).T
-                    poly = approximate_polygon(contour, 0.95).astype(int)
-                    # Add offset to coordinates
-                    global_coords[ix] = pd.DataFrame({
-                        'y': poly[:, 0] + offset_y,
-                        'x': poly[:, 1] + offset_x
-                    }).sort_index(axis=1, ascending=False)
-                    # NOTE: Columns of data frame have to be sorted, such that
-                    # the y coordinate is in the first column and the x
-                    # coordinate in the second. This makes it easy to convert
-                    # it back into a numpy array as expected by many
-                    # scikit-image functions, for example.
+                plate_names = [p.name for p in experiment.plates]
+                job_ids = data.read('%s/job_ids' % segm_path)
+                global_coords = OrderedDict()
+                for j in np.unique(job_ids):
+                    logger.debug('process image acquisition site # %d', j)
+                    index = j - 1  # job indices are one-based
+
+                    plate_name = data.read('metadata/plate_name', index=index)
+                    plate_index = plate_names.index(plate_name)
+                    well_name = data.read('metadata/well_name', index=index)
+                    plate_coords = plate.map_well_id_to_coordinate(well_name)
+                    well_coords = (
+                        data.read('metadata/well_position_y', index=index),
+                        data.read('metadata/well_position_x', index=index)
+                    )
+                    logger.debug('plate name: %s', plate_name)
+                    logger.debug('plate coorinates: {0}'.format(plate_coords))
+                    logger.debug('well name: %s', plate_name)
+                    logger.debug('well coorinates: {0}'.format(well_coords))
+
+                    # Images may have been aligned and the resulting shift must
+                    # be accounted for.
+                    shift_offset_y = data.read('/metadata/shift_offset_y',
+                                               index=index)
+                    shift_offset_x = data.read('metadata/shift_offset_x',
+                                               index=index)
+
+                    n_prior_well_rows = plate.nonempty_row_indices.index(
+                                                plate_coords[0])
+                    offset_y = (
+                        # Images in the current well above the image
+                        well_coords[0] * image_dimensions[0] -
+                        # Potential overlap of images in y-direction
+                        well_coords[0] * displacement +
+                        # Wells in the current plate above the current well
+                        n_prior_well_rows * well_dimensions[0] +
+                        # Gap introduced between wells
+                        n_prior_well_rows * spacer_size +
+                        # Potential shift of images downwards
+                        shift_offset_y +
+                        # Plates above the current plate
+                        plate_index * plate_dimensions[0]
+                    )
+                    logger.debug('y offset: %d', offset_y)
+
+                    n_prior_well_cols = plate.nonempty_column_indices.index(
+                                                plate_coords[1])
+
+                    offset_x = (
+                        # Images in the current well left of the image
+                        well_coords[1] * image_dimensions[1] -
+                        # Potential overlap of images in y-direction
+                        well_coords[1] * displacement +
+                        # Wells in the current plate left of the current well
+                        n_prior_well_cols * well_dimensions[1] +
+                        # Gap introduced between wells
+                        n_prior_well_cols * spacer_size +
+                        # Potential shift of images to the right
+                        shift_offset_x
+                    )
+                    logger.debug('x offset: %d', offset_x)
+
+                    job_ix = np.where(job_ids == j)[0]
+                    for ix in job_ix:
+                        # Remove is_border objects
+                        if is_border[ix]:
+                            continue
+                        # Reduce the number of outlines points
+                        contour = np.array([coords_y[ix], coords_x[ix]]).T
+                        poly = approximate_polygon(contour, 0.95).astype(int)
+                        # Add offset to coordinates
+                        global_coordinates = pd.DataFrame({
+                            'y': poly[:, 0] + offset_y,
+                            'x': poly[:, 1] + offset_x
+                        }).sort_index(axis=1, ascending=False)
+                        # NOTE: Columns of data frame are sorted, such
+                        # that the y coordinate is in the first column and the
+                        # x coordinate in the second.
+                        # This makes it easy to convert it back into a numpy
+                        # array as expected by many functions.
+                        # However, Openlayers requires the x coordinate in the
+                        # first column and the inverted y coordinate in the
+                        # second. This should be adapted.
+                        path = '%s/%d' % (coordinates_path, ix)
+                        out.write(path, data=global_coordinates)
+                        out.set_attribute(
+                            path, name='columns',
+                            data=global_coordinates.columns.tolist()
+                        )
+
+                global_obj_ids = data.list_datasets(coordinates_path)
+                obj_ids_path = '/objects/%s/ids' % name
+                out.write(obj_ids_path, data=global_obj_ids)
 
         return ObjectLayer(name, global_coords)
 
-    def save(self, filename):
-        '''
-        Write the coordinates to the HDF5 layers file.
+    # def save(self, filename):
+    #     '''
+    #     Write the coordinates to the HDF5 layers file.
 
-        The *y*, *x* coordinates of each object will be stored in a
-        separate dataset of shape (n, 2), where n is the number of points
-        on the perimeter sorted in counter-clockwise order.
-        The name of the dataset is the global ID of the object, which
-        corresponds to the row index of the object in the `features`
-        dataset.
-        The first column of the dataset contains the *y* coordinate and the
-        second column the *x* coordinate. The dataset has an attribute called
-        "columns" that holds the names of the two columns.
+    #     The *y*, *x* coordinates of each object will be stored in a
+    #     separate dataset of shape (n, 2), where n is the number of points
+    #     on the perimeter sorted in counter-clockwise order.
+    #     The name of the dataset is the global ID of the object, which
+    #     corresponds to the row index of the object in the `features`
+    #     dataset.
+    #     The first column of the dataset contains the *y* coordinate and the
+    #     second column the *x* coordinate. The dataset has an attribute called
+    #     "columns" that holds the names of the two columns.
 
-        Within the file the datasets are located in the subgroup "coordinates":
-        ``/objects/<object_name>/map_data/coordinates``.
+    #     Within the file the datasets are located in the subgroup "coordinates":
+    #     ``/objects/<object_name>/map_data/coordinates``.
 
-        Parameters
-        ----------
-        filename: str
-            absolute path to the HDF5 file
+    #     Parameters
+    #     ----------
+    #     filename: str
+    #         absolute path to the HDF5 file
 
-        See also
-        --------
-        :py:attribute:`tmlib.experiment.Experiment.data_file`
-        '''
-        logger.info('save layer "%s" to HDF5 file', self.name)
-        # TODO: coordinates shouldn't be accumulated in memory, but rather
-        # directly written back to the file
-        with DatasetWriter(filename) as f:
-            obj_ids_path = '/objects/{name}/ids'.format(name=self.name)
-            # Store object ids in a separate dataset for consistency
-            f.write(obj_ids_path, data=self.coordinates.keys())
-            # Store the coordinates of each object in a dataset, where the
-            # name of the dataset is the global object id and the value are
-            # the global y, x coordinates in the map
-            for object_id, value in self.coordinates.iteritems():
-                f.set_attribute(
-                    '/objects/{name}'.format(name=self.name),
-                    name='visual_type', data='polygon'
-                )
-                path = '/objects/{name}/map_data/coordinates/{id}'.format(
-                            name=self.name, id=object_id)
-                f.write(
-                    path, data=value
-                )
-                f.set_attribute(
-                    path, name='columns', data=value.columns.tolist()
-                )
+    #     See also
+    #     --------
+    #     :py:attribute:`tmlib.experiment.Experiment.data_file`
+    #     '''
+    #     logger.info('save layer "%s" to HDF5 file', self.name)
+    #     # TODO: coordinates shouldn't be accumulated in memory, but rather
+    #     # directly written back to the file
+    #     with DatasetWriter(filename) as f:
+    #         obj_ids_path = '/objects/{name}/ids'.format(name=self.name)
+    #         # Store object ids in a separate dataset for consistency
+    #         f.write(obj_ids_path, data=self.coordinates.keys())
+    #         f.set_attribute(
+    #             '/objects/{name}'.format(name=self.name),
+    #             name='visual_type', data='polygon'
+    #         )
+    #         # Store the coordinates of each object in a dataset, where the
+    #         # name of the dataset is the global object id and the value are
+    #         # the global y, x coordinates in the map
+    #         for object_id, value in self.coordinates.iteritems():
+    #             path = '/objects/{name}/map_data/coordinates/{id}'.format(
+    #                         name=self.name, id=object_id)
+    #             f.write(
+    #                 path, data=value
+    #             )
+    #             f.set_attribute(
+    #                 path, name='columns', data=value.columns.tolist()
+    #             )
