@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage.measure import find_contours
 from tmlib.writers import DatasetWriter
-import cv2
+# import cv2
 from skimage import measure
 from tmlib.image_utils import find_border_objects
 from jtlib import plotting
@@ -36,6 +36,8 @@ def save_objects(image, name, **kwargs):
     # NOTE: Looping over individual objects ensures the correct total number of
     # objects and the ID that's assigned to each object.
     # Using find_contours() directly gives different results.
+
+    border_indices = find_border_objects(image)
 
     # Set border pixels to background to find complete contours of border objects
     image[0, :] = 0
@@ -73,8 +75,6 @@ def save_objects(image, name, **kwargs):
     # a large number (thousands) of small objects.
     # Storing the actual image directly would be way faster in these cases,
     # but it would cost a lot more memory.
-
-    border_indices = find_border_objects(image)
 
     regions = measure.regionprops(image)
     centroids = np.array([r.centroid for r in regions]).astype(np.int64)
