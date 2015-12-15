@@ -3,14 +3,12 @@ import numpy as np
 import mahotas as mh
 from scipy import ndimage as ndi
 import matplotlib.pyplot as plt
-from skimage import morphology
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import mpld3
 import collections
 from jtlib import plotting
 from tmlib.readers import DatasetReader
 from tmlib.experiment import Experiment
-from tmlib.image_utils import find_border_objects
 
 
 def load_objects(objects_name, **kwargs):
@@ -49,23 +47,16 @@ def load_objects(objects_name, **kwargs):
         image_dim_x = f.read('%s/image_dimensions/x' % group_name, index=job_ix)
 
     outline_image = np.zeros((image_dim_y[0], image_dim_x[0]), dtype=np.int32)
-    for y, x in zip(y_coordinates, x_coordinates):
+    coordinates = zip(y_coordinates, x_coordinates)
+    # for i, c in enumerate(coordinates):
+    #     outline_image[c[0], c[1]] = i + 1
+    for y, x in coordinates:
         outline_image[y, x] = 1
 
     # Fill objects
     mask_image = ndi.binary_fill_holes(outline_image)
 
-    # Hack to also fill border objects:
-    # Identify border objects in inverted image
-    inverted_mask_image = np.logical_not(mask_image)
-    labeled_image, n_objects = mh.label(inverted_mask_image)
-    is_border_object = find_border_objects(labeled_image)
-    border_ids = np.where(is_border_object)[0]
-    for b in border_ids:
-        # The original background is now 1, so we have to add 2 to each label.
-        mask_image[labeled_image == (b+2)] = True
-
-    # # Label the created mask
+    # Label the created mask
     labeled_image, n_objects = mh.label(mask_image)
 
     if kwargs['plot']:

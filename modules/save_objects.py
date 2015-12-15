@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 from skimage.measure import find_contours
 from tmlib.writers import DatasetWriter
 # from tmlib.illuminati import segment
+import cv2
 from skimage import measure
 from tmlib.image_utils import find_border_objects
 from jtlib import plotting
+from jtlib import utils
 
 
 def save_objects(image, name, **kwargs):
@@ -31,14 +33,23 @@ def save_objects(image, name, **kwargs):
     # objects and the ID that's assigned to each object.
     # Using find_contours() directly may give different results.
 
+    # Set border pixels to background to find complete contours of border objects
+    image[0, :] = 0
+    image[-1, :] = 0
+    image[:, 0] = 0
+    image[:, -1] = 0
+
     for obj_id in objects_ids:
         # Find the contours of the current object
         # NOTE: Points need to be provided in counter-clockwise order, which
         # is ensured by find_contours().
-        current_obj_image = image == obj_id
-        contours = find_contours(current_obj_image, 0.5)[0]
-        y_coordinates.append(contours[:, 0].astype(np.int64))  # row
-        x_coordinates.append(contours[:, 1].astype(np.int64))  # column
+        im = image == obj_id
+        contours = find_contours(im, 0.5)[0]
+        # Calculate coordinates
+        y = contours[:, 0].astype(np.int64)
+        x = contours[:, 1].astype(np.int64)
+        y_coordinates.append(y)
+        x_coordinates.append(x)
 
     # NOTE: Storing the outline coordinates per object works fine as long as
     # there are only a few (hundreds) of large objects, but it can go crazy for
