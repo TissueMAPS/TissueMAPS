@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from collections import defaultdict
+from collections import OrderedDict
 from skimage.measure import approximate_polygon
 from gi.repository import Vips
 from . import image_utils
@@ -503,7 +504,7 @@ class ObjectLayer(object):
 
             plate_names = [p.name for p in experiment.plates]
             job_ids = data.read('%s/job_ids' % segmentation_path)
-            global_coords = dict()
+            global_coords = OrderedDict()
             for j in xrange(data.get_dimensions('/metadata/plate_name')[0]):
                 plate_name = data.read('metadata/plate_name', index=j)
                 plate_index = plate_names.index(plate_name)
@@ -524,13 +525,12 @@ class ObjectLayer(object):
                                             plate_coords[0])
                 offset_y = (
                     # Images in the current well above the image
-                    well_coords[0] * image_dimensions[0] +
+                    well_coords[0] * image_dimensions[0] -
                     # Potential overlap of images in y-direction
                     well_coords[0] * displacement +
                     # Wells in the current plate above the current well
                     n_prior_well_rows * well_dimensions[0] +
                     # Gap introduced between wells
-                    # plate_coords[0] * spacer_size +
                     n_prior_well_rows * spacer_size +
                     # Potential shift of images downwards
                     shift_offset_y +
@@ -542,7 +542,7 @@ class ObjectLayer(object):
                                             plate_coords[1])
                 offset_x = (
                     # Images in the current well left of the image
-                    well_coords[1] * image_dimensions[1] +
+                    well_coords[1] * image_dimensions[1] -
                     # Potential overlap of images in y-direction
                     well_coords[1] * displacement +
                     # Wells in the current plate left of the current well
@@ -582,15 +582,14 @@ class ObjectLayer(object):
         separate dataset of shape (n, 2), where n is the number of points
         on the perimeter sorted in counter-clockwise order.
         The name of the dataset is the global ID of the object, which
-        corresponds to the column index of the object in the `features`
+        corresponds to the row index of the object in the `features`
         dataset.
         The first column of the dataset contains the *y* coordinate and the
         second column the *x* coordinate. The dataset has an attribute called
         "columns" that holds the names of the two columns.
 
-        Within the file the datasets are located in the subgroup "coordinates".
-        So in case of objects called ``"cells"``
-        ``/objects/cells/coordinates``.
+        Within the file the datasets are located in the subgroup "coordinates":
+        ``/objects/<object_name>/map_data/coordinates``.
 
         Parameters
         ----------
@@ -599,19 +598,28 @@ class ObjectLayer(object):
 
         See also
         --------
-        :py:attribute:`tmlib.experiment.Experiment.layers_file`
+        :py:attribute:`tmlib.experiment.Experiment.data_file`
         '''
         logger.info('save layer "%s" to HDF5 file', self.name)
-
-        with DatasetWriter(filename) as data:
+        # TODO: coordinates shouldn't be accumulated in memory, but rather
+        # directly written back to the file
+        with DatasetWriter(filename) as f:
+            obj_ids_path = '/objects/{name}/ids'.format(name=self.name)
+            # Store object ids in a separate dataset for consistency
+            f.write(obj_ids_path, data=self.coordinates.keys())
+            # Store the coordinates of each object in a dataset, where the
+            # name of the dataset is the global object id and the value are
+            # the global y, x coordinates in the map
             for object_id, value in self.coordinates.iteritems():
-                data.set_attribute(
-                    'objects/{name}'.format(name=self.name),
+                f.set_attribute(
+                    '/objects/{name}'.format(name=self.name),
                     name='visual_type', data='polygon'
                 )
                 path = '/objects/{name}/map_data/coordinates/{id}'.format(
                             name=self.name, id=object_id)
-                data.write(path, value)
-                data.set_attribute(
+                f.write(
+                    path, data=value
+                )
+                f.set_attribute(
                     path, name='columns', data=value.columns.tolist()
                 )

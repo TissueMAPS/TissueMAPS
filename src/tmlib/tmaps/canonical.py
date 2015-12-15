@@ -10,6 +10,7 @@ workflow we would like to ensure that the sequence of steps in the workflow
 description is correct and thereby prevent submission of an incorrectly
 described workflow in the first place.
 '''
+from collections import OrderedDict
 from .description import WorkflowDescription
 from .description import WorkflowStageDescription
 from .description import WorkflowStepDescription
@@ -23,12 +24,12 @@ logger = logging.getLogger(__name__)
 #: Implemented workflow stages:
 #: For more information please refer to the corresponding section in
 #: :ref:`introduction <workflow>`
-STAGES = {
+STAGES = [
     'image_conversion', 'image_preprocessing',
     'pyramid_creation', 'image_analysis'
-}
+]
 
-STEPS_PER_STAGE = {
+STEPS_PER_STAGE = OrderedDict({
     'image_conversion':
         ['metaextract', 'metaconfig', 'imextract'],
     'image_preprocessing':
@@ -37,11 +38,11 @@ STEPS_PER_STAGE = {
         ['illuminati'],
     'image_analysis':
         ['jterator']
-}
-# Note: there could be more than one pipeline!
+})
+# Note: there could be more than one image analysis pipeline!
 
 #: Dependencies between individual workflow stages.
-INTER_STAGE_DEPENDENCIES = {
+INTER_STAGE_DEPENDENCIES = OrderedDict({
     'image_conversion': {
 
     },
@@ -54,7 +55,7 @@ INTER_STAGE_DEPENDENCIES = {
     'image_analysis': {
         'image_conversion', 'image_preprocessing'
     }
-}
+})
 
 #: Dependencies between individual workflow steps within one stage.
 INTRA_STAGE_DEPENDENCIES = {
@@ -148,7 +149,7 @@ class CanonicalWorkflowDescription(WorkflowDescription):
         Parameters
         ----------
         **kwargs: dict, optional
-            workflow descriptors as key-value pairs
+            workflow description as a mapping of as key-value pairs
         '''
         super(CanonicalWorkflowDescription, self).__init__(**kwargs)
         if kwargs:

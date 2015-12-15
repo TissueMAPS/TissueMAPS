@@ -218,7 +218,6 @@ def load_yaml(string, use_ruamel=False):
     else:
         return yaml.load(string)
 
-
 class YamlReader(TextReader):
     '''
     Class for reading YAML from files on disk.
@@ -311,10 +310,10 @@ class DatasetReader(object):
 
     def __enter__(self):
         logger.debug('read file: %s', self.filename)
-        self._stream = h5py.File(self.filename, 'r')
+        # NOTE: The file shouldn't be opened in read-only mode, because this
+        # would prevent concomitant writing
+        self._stream = h5py.File(self.filename, 'r+')
         return self
-
-    # TODO: raise Exception if dataset does not exist
 
     def exists(self, path):
         '''

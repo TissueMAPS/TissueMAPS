@@ -88,9 +88,10 @@ class PyramidBuilder(ClusterRoutines):
                             ]
                         },
                         'outputs': {
-                            'pyramid_dir':
+                            'pyramid_dirs': [
                                 os.path.join(
                                     self.experiment.layers_dir, name)
+                            ]
                         },
                         'cycle': cycle.index,
                         'channel': channel,
@@ -119,7 +120,7 @@ class PyramidBuilder(ClusterRoutines):
                     clip_value=batch['clip_value'],
                     illumcorr=batch['illumcorr'], align=batch['align'])
 
-        output_dir = batch['outputs']['pyramid_dir']
+        output_dir = batch['outputs']['pyramid_dirs'][0]
         if os.path.exists(output_dir):
             logger.info('remove existing image pyramid: %s', output_dir)
             # NOTE: this may cause problems on NFS

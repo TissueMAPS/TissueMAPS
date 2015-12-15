@@ -200,7 +200,8 @@ class ImageProcessingModule(object):
                 o['value'] for o in self.handles_description['output']
                 if o['name'] == name
             ][0]
-            self.outputs[output_value] = m_out
+            # NOTE: Matlab generates numpy array in Fortran order
+            self.outputs[output_value] = m_out.copy(order='C')
 
     def _exec_py_module(self, inputs, output_names):
         logger.debug('importing module: "%s"' % self.module_file)
@@ -319,21 +320,29 @@ class ImageProcessingModule(object):
         # Prepare input provided by handles
         inputs = collections.OrderedDict()
         input_names = list()
-        for i in self.handles_description['input']:
-            input_names.append(i['name'])
-            if i['class'] == 'parameter':
-                inputs[i['name']] = i['value']
+        for arg in self.handles_description['input']:
+            input_names.append(arg['name'])
+            if arg['class'] == 'parameter':
+                inputs[arg['name']] = arg['value']
             else:
-                if i['value'] in planes.keys():
+                if arg['value'] in planes.keys():
                     # Input pipeline data
-                    inputs[i['name']] = planes[i['value']]
+                    inputs[arg['name']] = planes[arg['value']]
                 else:
                     # Upstream pipeline data
-                    if i['value'] is None:
+                    if arg['value'] is None:
                         continue  # empty value is ok for pipeline data
-                    pipe_in = {k: v for k, v in upstream_output.iteritems()
-                               if k == i['value']}
-                    inputs[i['name']] = pipe_in[i['value']]
+                    pipe_in = {
+                        k: v for k, v in upstream_output.iteritems()
+                        if k == arg['value']
+                    }
+                    if arg['value'] not in pipe_in:
+                        # TODO: shouldn't this be handled by the checker?
+                        raise PipelineRunError(
+                                'Incorrect value "%s" for argument "%s" '
+                                'in moduel "%s"'
+                                % (arg['value'], arg, self.name))
+                    inputs[arg['name']] = pipe_in[arg['value']]
         # Add additional stuff => kwargs
         inputs['data_file'] = data_file
         inputs['figure_file'] = figure_file

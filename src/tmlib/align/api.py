@@ -146,7 +146,7 @@ class ImageRegistration(ClusterRoutines):
                             'reference_files': batch['references']
                         },
                         'outputs': {
-                            'registration_file': registration_files[i]
+                            'registration_files': [registration_files[i]]
                         },
                         'sites': site_batches[i]
                 })
@@ -180,7 +180,7 @@ class ImageRegistration(ClusterRoutines):
         reg.register_images(batch['sites'],
                             batch['inputs']['target_files'],
                             batch['inputs']['reference_files'],
-                            batch['outputs']['registration_file'])
+                            batch['outputs']['registration_files'][0])
 
     def collect_job_output(self, batch):
         '''

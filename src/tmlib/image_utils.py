@@ -169,7 +169,6 @@ def vips_image_to_np_array(vips_image):
     else:
         array = np.fromstring(mem_string, dtype=nptype).reshape(
                     vips_image.height, vips_image.width)
-    # TODO: 3D RGB images
     return array
 
 

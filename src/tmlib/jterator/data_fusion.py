@@ -1,6 +1,6 @@
 import os
+import re
 from collections import defaultdict
-from collections import Iterable
 import logging
 from ..readers import DatasetReader
 from ..writers import DatasetWriter
@@ -135,7 +135,7 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                 d.update({'dims': (n_objects[obj_name], )})
                 out.preallocate(**d)
 
-    logger.info('load individual datasets and write them into final datasets')
+    logger.info('load individual datasets and write data into final datasets')
     job_index_count = 0
     object_index_count = defaultdict(int)
     for obj_name in object_names:
@@ -208,13 +208,13 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
 
                         group_names = f.list_groups(segmentation_path)
                         for g_name in group_names:
-                            group_path = '{group}/{subgroup}'.format(
+                            g_path = '{group}/{subgroup}'.format(
                                             group=segmentation_path,
                                             subgroup=g_name)
-                            dataset_names = f.list_datasets(group_path)
+                            dataset_names = f.list_datasets(g_path)
                             for name in dataset_names:
                                 dataset_path = '{group}/{dataset}'.format(
-                                                group=group_path, dataset=name)
+                                                group=g_path, dataset=name)
                                 data = f.read(dataset_path)
                                 if len(data.shape) > 1:
                                     raise DataError(
@@ -230,7 +230,7 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                     object_index_count[obj_name] += len(data)
 
             if delete_input_files:
-                logger.debug('remove input file: %s', f)
+                logger.debug('remove input file: %s', filename)
                 os.remove(filename)
 
 
@@ -242,28 +242,34 @@ def update_datasets(old_filename, new_filename):
     Parameters
     ----------
     old_filename: str
-        absolute path to the file whose content should be copied
+        absolute path to the file with new content
     new_filename: str
-        absolute path to the file, which should be updated
+        absolute path to the file whose content should be updated
+
+    Note
+    ----
+    Datesets related to visualization of objects in *TissueMAPS*, such as the
+    map coordinates, are skipped. They should always be re-created, such that
+    any changes can immediately be visualized.
     '''
     with DatasetReader(old_filename) as old_file:
         with DatasetWriter(new_filename) as new_file:
-            def copy_recursively(p):
+            def copy_recursive(p):
                 groups = old_file.list_groups(p)
                 for g in groups:
-                    group_path = '{group}/{subgroup}'.format(
-                                    group=p, subgroup=g)
-                    if g == 'coordinates':
-                        # The coordinates for the visualization have to be
-                        # recalculated in case the segmentation has changed.
+                    g_path = '{path}/{group}'.format(path=p, group=g)
+                    if re.search(r'objects/[^/]+/map_data/', g_path):
+                        logger.debug('skip group: %s', g_path)
                         continue
-                    for d in old_file.list_datasets(group_path):
-                        dataset_path = '{group}/{dataset}'.format(
-                                            group=group_path, dataset=d)
-                        if not new_file.exists(dataset_path):
+                    for d in old_file.list_datasets(g_path):
+                        d_path = '{path}/{dataset}'.format(
+                                    path=g_path, dataset=d)
+                        if re.search(r'objects/[^/]+/ids', d_path):
+                            logger.debug('skip dataset: %s', d_path)
+                            continue
+                        if not new_file.exists(d_path):
                             # Keep the more recent dataset.
-                            new_file.write(
-                                    dataset_path,
-                                    data=old_file.read(dataset_path))
-                    copy_recursively(group_path)
-            copy_recursively('/')
+                            logger.debug('copy dataset: %s', d_path)
+                            new_file.write(d_path, data=old_file.read(d_path))
+                    copy_recursive(g_path)
+            copy_recursive('/')

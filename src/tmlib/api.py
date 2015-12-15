@@ -381,8 +381,8 @@ class ClusterRoutines(BasicClusterRoutines):
             else:
                 files.extend(run_files)
         if 'collect' in job_descriptions.keys():
-            collect_files =  \
-                utils.flatten(job_descriptions['collect']['outputs'].values())
+            outputs = job_descriptions['collect']['outputs']
+            collect_files = utils.flatten(outputs.values())
             if all([isinstance(f, list) for f in collect_files]):
                 collect_files = utils.flatten(collect_files)
                 if all([isinstance(f, list) for f in collect_files]):
@@ -554,9 +554,9 @@ class ClusterRoutines(BasicClusterRoutines):
                 for batch in job_descriptions['run']]):
             raise TypeError('"outputs" must have type dictionary')
         if not all([
-                isinstance(batch['outputs'].values(), list)
+                all([isinstance(o, list) for o in batch['outputs'].values()])
                 for batch in job_descriptions['run']]):
-            raise TypeError('Elements of "outputs" must have type list')
+            raise TypeError('Elements of "outputs" must have type list.')
         if 'collect' in job_descriptions:
             batch = job_descriptions['collect']
             if not isinstance(batch['inputs'], dict):
@@ -565,7 +565,7 @@ class ClusterRoutines(BasicClusterRoutines):
                 raise TypeError('Elements of "inputs" must have type list')
             if not isinstance(batch['outputs'], dict):
                 raise TypeError('"outputs" must have type dictionary')
-            if not isinstance(batch['outputs'].values(), list):
+            if not all([isinstance(o, list) for o in batch['outputs'].values()]):
                 raise TypeError('Elements of "outputs" must have type list')
 
     def write_job_files(self, job_descriptions):

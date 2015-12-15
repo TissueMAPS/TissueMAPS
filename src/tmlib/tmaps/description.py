@@ -1,6 +1,7 @@
 import re
-import os
+import json
 import importlib
+from collections import defaultdict
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
@@ -127,7 +128,7 @@ class WorkflowDescription(object):
     __metaclass__ = ABCMeta
 
     _PERSISTENT_ATTRS = {
-        'stages', 'virtualenv', 'type'
+        'stages', 'type'
     }
 
     def __init__(self, **kwargs):
@@ -146,7 +147,7 @@ class WorkflowDescription(object):
         '''
         # Set defaults
         self._type = None
-        self.virtualenv = None
+        # self.virtualenv = None
         # Check stage description
         for k in kwargs.keys():
             if k not in self._PERSISTENT_ATTRS:
@@ -173,37 +174,37 @@ class WorkflowDescription(object):
                 'Elements of "steps" must have type WorkflowStageDescription')
         self._stages = value
 
-    @property
-    def virtualenv(self):
-        '''
-        Returns
-        -------
-        str
-            name of a Python virtual environment that needs to be activated
-            (default: ``None``)
+    # @property
+    # def virtualenv(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     str
+    #         name of a Python virtual environment that needs to be activated
+    #         (default: ``None``)
 
-        Note
-        ----
-        Requires the environment variable "$WORKON_HOME" to point to the
-        virtual environment home directory, i.e. the directory where
-        `virtualenv` is located.
+    #     Note
+    #     ----
+    #     Requires the environment variable "$WORKON_HOME" to point to the
+    #     virtual environment home directory, i.e. the directory where
+    #     `virtualenv` is located.
 
-        See also
-        --------
-        `virtualenvwrapper <http://virtualenvwrapper.readthedocs.org/en/latest/>`_
-        '''
-        return self._virtualenv
+    #     See also
+    #     --------
+    #     `virtualenvwrapper <http://virtualenvwrapper.readthedocs.org/en/latest/>`_
+    #     '''
+    #     return self._virtualenv
 
-    @virtualenv.setter
-    def virtualenv(self, value):
-        if value is not None:
-            if 'WORKON_HOME' not in os.environ:
-                raise KeyError('No environment variable "WORKON_HOME".')
-            virtualenv_dir = os.path.join(os.environ['WORKON_HOME'], value)
-            if not os.path.exists(virtualenv_dir):
-                raise OSError('Virtual environment does not exist: %s'
-                              % virtualenv_dir)
-        self._virtualenv = value
+    # @virtualenv.setter
+    # def virtualenv(self, value):
+    #     if value is not None:
+    #         if 'WORKON_HOME' not in os.environ:
+    #             raise KeyError('No environment variable "WORKON_HOME".')
+    #         virtualenv_dir = os.path.join(os.environ['WORKON_HOME'], value)
+    #         if not os.path.exists(virtualenv_dir):
+    #             raise OSError('Virtual environment does not exist: %s'
+    #                           % virtualenv_dir)
+    #     self._virtualenv = value
 
     @abstractmethod
     def add_stage(self, stage_description):
@@ -265,6 +266,16 @@ class WorkflowDescription(object):
                     yield (attr, [dict(s) for s in getattr(self, attr)])
                 else:
                     yield (attr, getattr(self, attr))
+
+    def jsonify(self):
+        '''
+        Returns
+        -------
+        str
+            JSON string encoding the description of the step as a
+            mapping of key-value pairs
+        '''
+        pass
 
 
 class WorkflowStageDescription(object):
@@ -342,6 +353,19 @@ class WorkflowStageDescription(object):
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
         yield ('steps', [dict(s) for s in getattr(self, 'steps')])
+
+    def jsonify(self):
+        '''
+        Returns
+        -------
+        str
+            JSON string encoding the description of the step as a
+            mapping of key-value pairs
+        '''
+        d = defaultdict()
+        d['name'] = getattr(self, 'name')
+        d['steps'] = [json.loads(s.jsonify()) for s in getattr(self, 'steps')]
+        return json.dumps(d)
 
 
 class WorkflowStepDescription(object):
@@ -492,3 +516,20 @@ class WorkflowStepDescription(object):
             yield ('memory', getattr(self, 'memory'))
         if hasattr(self, 'cores'):
             yield ('cores', getattr(self, 'cores'))
+
+    def jsonify(self):
+        '''
+        Returns
+        -------
+        str
+            JSON string encoding the description of the step as a
+            mapping of key-value pairs
+        '''
+        d = defaultdict()
+        d['name'] = getattr(self, 'name')
+        d['memory'] = getattr(self, 'memory')
+        d['duration'] = getattr(self, 'duration')
+        d['cores'] = getattr(self, 'cores')
+        args = getattr(self.args, 'variable_args')
+        d['args'] = json.loads(args.jsonify())
+        return json.dumps(d)

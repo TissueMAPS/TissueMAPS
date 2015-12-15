@@ -324,6 +324,8 @@ class DatasetWriter(object):
         KeyError
             when a subset of the dataset should be written, i.e. an index is
             provided, but the dataset does not yet exist
+        IOError
+            when `path` already exists
 
         Note
         ----
@@ -340,6 +342,8 @@ class DatasetWriter(object):
         if isinstance(data, list):
             data = np.array(data)
         if index is None and row_index is None and column_index is None:
+            if self.exists(path):
+                raise IOError('Dataset already exists: %s', path)
             if isinstance(data, np.ndarray) and data.dtype == 'O':
                 logger.debug('write dataset "%s" as variable length', path)
                 dset = self._write_vlen(path, data)
@@ -456,7 +460,14 @@ class DatasetWriter(object):
         Returns
         -------
         h5py._hl.dataset.Dataset
+
+        Raises
+        ------
+        IOError
+            when `path` already exists
         '''
+        if self.exists(path):
+            raise IOError('Dataset already exists: %s', path)
         return self._stream.create_dataset(path, dims, dtype)
 
     def set_attribute(self, path, name, data):
