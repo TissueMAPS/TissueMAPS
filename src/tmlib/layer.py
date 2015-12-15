@@ -480,8 +480,8 @@ class ObjectLayer(object):
             n_rows = np.max(md['well_position_y'][index]) + 1
             n_cols = np.max(md['well_position_x'][index]) + 1
             well_dimensions = (
-                n_rows * image_dimensions[0] + displacement * (n_rows - 1),
-                n_cols * image_dimensions[1] + displacement * (n_cols - 1)
+                n_rows * image_dimensions[0] - displacement * (n_rows - 1),
+                n_cols * image_dimensions[1] - displacement * (n_cols - 1)
             )
 
             # Plate dimensions are defined as number of pixels along each
@@ -505,21 +505,24 @@ class ObjectLayer(object):
             plate_names = [p.name for p in experiment.plates]
             job_ids = data.read('%s/job_ids' % segmentation_path)
             global_coords = OrderedDict()
-            for j in xrange(data.get_dimensions('/metadata/plate_name')[0]):
-                plate_name = data.read('metadata/plate_name', index=j)
+            for j in np.unique(job_ids):
+                index = j - 1  # job indices are one-based
+                plate_name = data.read('metadata/plate_name', index=index)
                 plate_index = plate_names.index(plate_name)
-                well_name = data.read('metadata/well_name', index=j)
+                well_name = data.read('metadata/well_name', index=index)
 
                 plate_coords = plate.map_well_id_to_coordinate(well_name)
                 well_coords = (
-                    data.read('metadata/well_position_y', index=j),
-                    data.read('metadata/well_position_x', index=j)
+                    data.read('metadata/well_position_y', index=index),
+                    data.read('metadata/well_position_x', index=index)
                 )
 
                 # Images may be aligned and the resulting shift must be
                 # considered.
-                shift_offset_y = data.read('/metadata/shift_offset_y', index=j)
-                shift_offset_x = data.read('metadata/shift_offset_x', index=j)
+                shift_offset_y = data.read('/metadata/shift_offset_y',
+                                           index=index)
+                shift_offset_x = data.read('metadata/shift_offset_x',
+                                           index=index)
 
                 n_prior_well_rows = plate.nonempty_row_indices.index(
                                             plate_coords[0])
@@ -540,6 +543,7 @@ class ObjectLayer(object):
 
                 n_prior_well_cols = plate.nonempty_column_indices.index(
                                             plate_coords[1])
+
                 offset_x = (
                     # Images in the current well left of the image
                     well_coords[1] * image_dimensions[1] -
