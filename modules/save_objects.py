@@ -2,12 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage.measure import find_contours
 from tmlib.writers import DatasetWriter
-# from tmlib.illuminati import segment
 import cv2
 from skimage import measure
 from tmlib.image_utils import find_border_objects
 from jtlib import plotting
-from jtlib import utils
 
 
 def save_objects(image, name, **kwargs):
@@ -29,9 +27,15 @@ def save_objects(image, name, **kwargs):
     y_coordinates = list()
     x_coordinates = list()
 
-    # NOTE: Looping over individual objects ensures the correct number of
+    print 'WARNING: The retrieval of the objects doesn\'t work reliably!!!'
+
+    # TODO: How should be save objects? The safest would be to save the actual
+    # image, but that takes a lot of disk space. Storing all coordinates could
+    # be an alternative that would give some compression.
+
+    # NOTE: Looping over individual objects ensures the correct total number of
     # objects and the ID that's assigned to each object.
-    # Using find_contours() directly may give different results.
+    # Using find_contours() directly gives different results.
 
     # Set border pixels to background to find complete contours of border objects
     image[0, :] = 0
@@ -39,6 +43,7 @@ def save_objects(image, name, **kwargs):
     image[:, 0] = 0
     image[:, -1] = 0
 
+    # contour_im = np.zeros(image.shape).astype('uint8')
     for obj_id in objects_ids:
         # Find the contours of the current object
         # NOTE: Points need to be provided in counter-clockwise order, which
@@ -50,6 +55,18 @@ def save_objects(image, name, **kwargs):
         x = contours[:, 1].astype(np.int64)
         y_coordinates.append(y)
         x_coordinates.append(x)
+
+        # im = np.zeros(image.shape).astype('uint8')
+        # im[image == obj_id] = 255
+        # contour_im, contours, h = cv2.findContours(
+        #                             im,
+        #                             mode=cv2.RETR_LIST,
+        #                             method=cv2.CHAIN_APPROX_NONE)
+        # y = np.array([c[0][1] for c in contours[0]], dtype=np.int64)
+        # x = np.array([c[0][0] for c in contours[0]], dtype=np.int64)
+        # y_coordinates.append(y)
+        # x_coordinates.append(x)
+        # contour_im += contour_im
 
     # NOTE: Storing the outline coordinates per object works fine as long as
     # there are only a few (hundreds) of large objects, but it can go crazy for

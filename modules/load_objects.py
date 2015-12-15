@@ -1,9 +1,8 @@
 import os
 import numpy as np
-import mahotas as mh
-from scipy import ndimage as ndi
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import cv2
 import mpld3
 import collections
 from jtlib import plotting
@@ -34,8 +33,6 @@ def load_objects(objects_name, **kwargs):
     experiment = Experiment(kwargs['experiment_dir'])
     filename = os.path.join(experiment.dir, experiment.data_file)
 
-    # Does job_id do it? Consider matching metadata such site, channel, ...
-
     group_name = '/objects/%s/segmentation' % objects_name
 
     with DatasetReader(filename) as f:
@@ -46,18 +43,11 @@ def load_objects(objects_name, **kwargs):
         image_dim_y = f.read('%s/image_dimensions/y' % group_name, index=job_ix)
         image_dim_x = f.read('%s/image_dimensions/x' % group_name, index=job_ix)
 
-    outline_image = np.zeros((image_dim_y[0], image_dim_x[0]), dtype=np.int32)
-    coordinates = zip(y_coordinates, x_coordinates)
-    # for i, c in enumerate(coordinates):
-    #     outline_image[c[0], c[1]] = i + 1
-    for y, x in coordinates:
-        outline_image[y, x] = 1
-
-    # Fill objects
-    mask_image = ndi.binary_fill_holes(outline_image)
-
-    # Label the created mask
-    labeled_image, n_objects = mh.label(mask_image)
+    labeled_image = np.zeros((image_dim_y[0], image_dim_x[0]), dtype=np.int32)
+    for i in range(len(y_coordinates)):
+        # NOTE: OpenCV wants (x, y) coordinates rather than (y, x) coordinates
+        c = np.array(zip(x_coordinates[i], y_coordinates[i]), dtype=np.int32)
+        cv2.fillPoly(labeled_image, [c], i)
 
     if kwargs['plot']:
 
