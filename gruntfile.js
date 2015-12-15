@@ -205,6 +205,13 @@ module.exports = function(grunt) {
                 ]
             }
         },
+        uglify: {
+            options: {
+                sourceMap: true,
+                compress: true,
+                mangle: false,
+            }
+        },
 
         /**
          * Compute a hash for each of the listed files and append it to the file's name.
@@ -549,9 +556,9 @@ module.exports = function(grunt) {
         'exec:buildTypeScript',
         'includeSource',  // call before useminPrepare
         'useminPrepare',
-        'concat:generated',
-        'cssmin:generated',
-        'uglify:generated',
+        'concat',
+        'cssmin',
+        'uglify',
         'usebanner', // needs to be before filerev
         'filerev',
         'usemin',
