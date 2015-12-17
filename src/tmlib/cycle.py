@@ -241,7 +241,7 @@ class Cycle(object):
                 metadata.at[i, 'y_shift'] = shift.y
 
         # TODO: why is this property not cached???
-        
+
         return metadata
 
     @property
@@ -284,8 +284,8 @@ class Cycle(object):
         '''
         images = list()
         filenames = self.image_metadata.name
-        if self.image_files != filenames.tolist():
-            raise ValueError('Names of images do not match')
+        # if self.image_files != filenames.tolist():
+        #     raise ValueError('Names of images do not match')
         for i in indices:
             f = self.image_files[i]
             logger.debug('create image "%s"', f)
