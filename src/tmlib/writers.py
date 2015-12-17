@@ -402,7 +402,6 @@ class DatasetWriter(object):
                         isinstance(data, np.ndarray)):
                     if (len(index) > len(data) or
                             any(np.array(index) > len(dset))):
-                        import ipdb; ipdb.set_trace()
                         raise IndexError(
                             'Index exceeds dataset dimensions: '
                             'Dataset dims: {0}'.format(dset.shape))
