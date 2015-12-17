@@ -588,7 +588,7 @@ class ObjectLayer(object):
 
                     job_ix = np.where(job_ids == j)[0]
                     for ix in job_ix:
-                        # Remove is_border objects
+                        # Border objects should not be displayed
                         if is_border[ix]:
                             continue
                         # Reduce the number of outlines points
@@ -596,17 +596,11 @@ class ObjectLayer(object):
                         poly = approximate_polygon(contour, 0.95).astype(int)
                         # Add offset to coordinates
                         global_coordinates = pd.DataFrame({
-                            'y': poly[:, 0] + offset_y,
+                            'y': -1 * (poly[:, 0] + offset_y),
                             'x': poly[:, 1] + offset_x
-                        }).sort_index(axis=1, ascending=False)
-                        # NOTE: Columns of data frame are sorted, such
-                        # that the y coordinate is in the first column and the
-                        # x coordinate in the second.
-                        # This makes it easy to convert it back into a numpy
-                        # array as expected by many functions.
-                        # However, Openlayers requires the x coordinate in the
-                        # first column and the inverted y coordinate in the
-                        # second. This should be adapted.
+                        })
+                        # Openlayers wants the x coordinate in the first column
+                        # and the inverted y coordinate in the second.
                         path = '%s/%d' % (coordinates_path, ix)
                         out.write(path, data=global_coordinates)
                         out.set_attribute(
@@ -614,58 +608,9 @@ class ObjectLayer(object):
                             data=global_coordinates.columns.tolist()
                         )
 
-                global_obj_ids = data.list_datasets(coordinates_path)
+                # Store the objects separately as a sorted array of integers
+                global_obj_ids = map(int, data.list_datasets(coordinates_path))
                 obj_ids_path = '/objects/%s/ids' % name
-                out.write(obj_ids_path, data=global_obj_ids)
+                out.write(obj_ids_path, data=sorted(global_obj_ids))
 
         return ObjectLayer(name, global_coords)
-
-    # def save(self, filename):
-    #     '''
-    #     Write the coordinates to the HDF5 layers file.
-
-    #     The *y*, *x* coordinates of each object will be stored in a
-    #     separate dataset of shape (n, 2), where n is the number of points
-    #     on the perimeter sorted in counter-clockwise order.
-    #     The name of the dataset is the global ID of the object, which
-    #     corresponds to the row index of the object in the `features`
-    #     dataset.
-    #     The first column of the dataset contains the *y* coordinate and the
-    #     second column the *x* coordinate. The dataset has an attribute called
-    #     "columns" that holds the names of the two columns.
-
-    #     Within the file the datasets are located in the subgroup "coordinates":
-    #     ``/objects/<object_name>/map_data/coordinates``.
-
-    #     Parameters
-    #     ----------
-    #     filename: str
-    #         absolute path to the HDF5 file
-
-    #     See also
-    #     --------
-    #     :py:attribute:`tmlib.experiment.Experiment.data_file`
-    #     '''
-    #     logger.info('save layer "%s" to HDF5 file', self.name)
-    #     # TODO: coordinates shouldn't be accumulated in memory, but rather
-    #     # directly written back to the file
-    #     with DatasetWriter(filename) as f:
-    #         obj_ids_path = '/objects/{name}/ids'.format(name=self.name)
-    #         # Store object ids in a separate dataset for consistency
-    #         f.write(obj_ids_path, data=self.coordinates.keys())
-    #         f.set_attribute(
-    #             '/objects/{name}'.format(name=self.name),
-    #             name='visual_type', data='polygon'
-    #         )
-    #         # Store the coordinates of each object in a dataset, where the
-    #         # name of the dataset is the global object id and the value are
-    #         # the global y, x coordinates in the map
-    #         for object_id, value in self.coordinates.iteritems():
-    #             path = '/objects/{name}/map_data/coordinates/{id}'.format(
-    #                         name=self.name, id=object_id)
-    #             f.write(
-    #                 path, data=value
-    #             )
-    #             f.set_attribute(
-    #                 path, name='columns', data=value.columns.tolist()
-    #             )
