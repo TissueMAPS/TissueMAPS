@@ -41,8 +41,14 @@ class VisualLayerCtrl {
         // with the unwrapped openlayers classes).
         $scope.$watch('layerCtrl.selectedColor.fillColor', function(newVal, oldVal) {
             if (newVal !== oldVal && newVal !== undefined) {
-                var fillColor = Color.fromHex(<string>newVal);
-                console.log(fillColor);
+                // When white is selected it defaults back to "no" filling, 
+                // i.e. high transparency
+                if (newVal == '#ffffff') {
+                    var fillColor = Color.WHITE.withAlpha(0.02);
+                } else {
+                    var fillColor = Color.fromHex(<string>newVal);
+                }
+                console.log('changed fill color: ', fillColor)
                 layer.visuals.forEach((v: ColorizableVisual) => {
                     v.fillColor = fillColor;
                 });
