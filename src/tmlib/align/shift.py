@@ -48,14 +48,14 @@ def shift_and_crop_numpy(im, y, x, bottom, top, right, left,
     '''
     try:
         if shift:
-            row_start = top-y
-            row_end = bottom+y
+            row_start = top - y
+            row_end = bottom + y
             if row_end == 0:
                 row_end = im.shape[0]
             else:
                 row_end = -row_end
-            col_start = left-x
-            col_end = right+x
+            col_start = left - x
+            col_end = right + x
             if col_end == 0:
                 col_end = im.shape[1]
             else:
@@ -64,8 +64,10 @@ def shift_and_crop_numpy(im, y, x, bottom, top, right, left,
                 aligned_im = im[row_start:row_end, col_start:col_end]
             else:
                 aligned_im = np.zeros(im.shape, dtype=im.dtype)
-                aligned_im[row_start:row_end, col_start:col_end] = \
-                    im[row_start:row_end, col_start:col_end]
+                extracted_im = im[row_start:row_end, col_start:col_end]
+                row_end = top + extracted_im.shape[0]
+                col_end = left + extracted_im.shape[1]
+                aligned_im[top:row_end, left:col_end] = extracted_im
         else:
             row_start = top
             if bottom == 0:
@@ -137,10 +139,10 @@ def shift_and_crop_vips(im, y, x, bottom, top, right, left,
                     im.width, im.height, bands=im.bands).cast(im.get_format())
     try:
         if shift:
-            offset_left = left-x
-            offset_top = top-y
-            width = im.width-right-left
-            height = im.height-bottom-top
+            offset_left = left - x
+            offset_top = top - y
+            width = im.width - right - left
+            height = im.height - bottom - top
             if offset_left < 0:
                 width -= abs(offset_left)
                 offset_left = 0
@@ -158,8 +160,8 @@ def shift_and_crop_vips(im, y, x, bottom, top, right, left,
         else:
             offset_left = left
             offset_top = top
-            width = im.width-right-left
-            height = im.height-bottom-top
+            width = im.width - right - left
+            height = im.height - bottom - top
             if crop:
                 aligned_im = empty_im.crop(
                                 offset_left, offset_top, width, height)
