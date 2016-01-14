@@ -321,16 +321,22 @@ def create_thresholding_LUT(threshold):
     return condition_image.ifthenelse(threshold, identity_image)
 
 
-def convert_to_uint8(img):
+def convert_to_uint8(img, min_value=None, max_value=None):
     '''
-    Convert a 16-bit image to 8-bit by linearly scaling from 0-``max(img)``
-    to 0-255.
+    Convert a 16-bit image to 8-bit by linearly scaling from a given range
+    to 0-255. The lower and upper values of the range can be set. If not set
+    they default to the minimum and maximum intensity value of `img`.
     
     This can be useful for the display of an image in a figure.
 
     Parameters
     ----------
-    image: numpy.ndarray[uint16]
+    img: numpy.ndarray[uint16]
+        image that should be rescaled
+    min_value: int, optional
+        lower intensity value of rescaling range (default: `None`)
+    max_value: int, optional
+        upper intensity value of rescaling range (default: `None`)
 
     Returns
     -------
@@ -338,9 +344,22 @@ def convert_to_uint8(img):
 
     Note
     ----
-    This is equivalent to Image > Type > 8-bit in ImageJ.
+    When no `min_value` or `max_value` is provided the result is equivalent to
+    the corresponding method in ImageJ: Image > Type > 8-bit.
     '''
-    in_range = (np.min(img), np.max(img))
+    if min_value is not None:
+        if not isinstance(min_value, int):
+            raise TypeError('Argument "min_value" must have type int.')
+        min_value = min_value
+    else:
+        min_value = np.min(img)
+    if max_value is not None:
+        if not isinstance(max_value, int):
+            raise TypeError('Argument "max_value" must have type int.')
+        max_value = max_value
+    else:
+        max_value = np.max(img)
+    in_range = (min_value, max_value)
     img_rescaled = rescale_intensity(
                     img, out_range='uint8', in_range=in_range).astype(np.uint8)
     return img_rescaled
