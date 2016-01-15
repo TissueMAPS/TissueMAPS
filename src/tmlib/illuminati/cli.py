@@ -65,6 +65,6 @@ class Illuminati(CommandLineInterface):
         --------
         :py:mod:`tmlib.illuminati.argparser`
         '''
-        experiment = Experiment(args.experiment_dir)
+        experiment = Experiment(args.experiment_dir, library='numpy')
         cli = Illuminati(experiment, args.verbosity)
         cli._call(args)

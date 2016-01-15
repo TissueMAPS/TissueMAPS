@@ -16,7 +16,6 @@ class IlluminatiInitArgs(VariableArgs):
         self.illumcorr = self._illumcorr_params['default']
         self.clip = self._clip_params['default']
         self.clip_value = self._clip_value_params['default']
-        self.clip_percentile = self._clip_percentile_params['default']
         super(IlluminatiInitArgs, self).__init__(**kwargs)
 
     @property
@@ -26,7 +25,7 @@ class IlluminatiInitArgs(VariableArgs):
     @property
     def _persistent_attrs(self):
         return {
-            'align', 'illumcorr', 'clip', 'clip_value', 'clip_percentile'
+            'align', 'illumcorr', 'clip', 'clip_value'
         }
 
     @property
@@ -137,32 +136,5 @@ class IlluminatiInitArgs(VariableArgs):
             'default': None,
             'help': '''
                 pixel value that should be used as clip level
-            '''
-        }
-
-    @property
-    def clip_percentile(self):
-        '''
-        Returns
-        -------
-        float
-            percentage of pixel values below clip level (default: ``99.9``)
-        '''
-        return self._clip_percentile
-
-    @clip_percentile.setter
-    def clip_percentile(self, value):
-        if not isinstance(value, self._clip_percentile_params['type']):
-            raise TypeError('Attribute "clip_percentile" must have type %s.'
-                            % self._clip_percentile_params['type'])
-        self._clip_percentile = value
-
-    @property
-    def _clip_percentile_params(self):
-        return {
-            'type': float,
-            'default': 99.9,
-            'help': '''
-                percentage of pixel values below clip level (default: 99.9)
             '''
         }
