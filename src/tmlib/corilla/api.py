@@ -3,6 +3,7 @@ import re
 import logging
 import numpy as np
 from .stats import OnlineStatistics
+from .stats import OnlinePercentile
 from ..writers import DatasetWriter
 from ..readers import NumpyImageReader
 from ..api import ClusterRoutines
@@ -111,16 +112,19 @@ class IllumstatsGenerator(ClusterRoutines):
         with NumpyImageReader() as reader:
             img = reader.read(image_files[0])
             stats = OnlineStatistics(image_dimensions=img.shape)
+            pctl = OnlinePercentile()
             for f in image_files:
                 logger.debug('update statistics for image: %s',
                              os.path.basename(f))
                 img = reader.read(f)
                 stats.update(img)
+                pctl.update(img)
         stats_file = batch['outputs']['stats_files'][0]
         logger.info('write calculated statistics to file')
         with DatasetWriter(stats_file, truncate=True) as writer:
-            writer.write('/images/mean', data=stats.mean)
-            writer.write('/images/std', data=stats.std)
+            writer.write('/stats/mean', data=stats.mean)
+            writer.write('/stats/std', data=stats.std)
+            writer.write('/stats/percentile', data=pctl.percentile)
             writer.write('/metadata/tpoint_ix', data=batch['cycle'])
             writer.write('/metadata/channel_ix', data=batch['channel'])
 

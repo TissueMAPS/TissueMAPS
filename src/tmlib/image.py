@@ -477,8 +477,8 @@ class IllumstatsImages(object):
     @cached_property
     def _stats(self):
         with DatasetReader(self.filename) as reader:
-            mean = self._factory(reader.read('images/mean'))
-            std = self._factory(reader.read('images/std'))
+            mean = self._factory(reader.read('stats/mean'))
+            std = self._factory(reader.read('stats/std'))
             tpoint_ix = reader.read('metadata/tpoint_ix')
             channel_ix = reader.read('metadata/channel_ix')
         if tpoint_ix != self.metadata.tpoint_ix:
