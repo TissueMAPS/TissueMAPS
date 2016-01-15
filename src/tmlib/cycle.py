@@ -327,34 +327,8 @@ class Cycle(object):
         '''
         Returns
         -------
-        List[str]
-            names of illumination correction files in `stats_dir`
-
-        Raises
-        ------
-        OSError
-            when no illumination statistic files are found in `stats_dir`
-        '''
-        stats_pattern = self.STATS_FILE_FORMAT.format(channel_ix='\w+')
-        stats_pattern = re.compile(stats_pattern)
-        files = [
-            f for f in os.listdir(self.stats_dir)
-            if re.search(stats_pattern, f)
-        ]
-        files = natsorted(files)
-        if not files:
-            raise OSError('No illumination statistic files found in "%s"'
-                          % self.stats_dir)
-        illumstats_files = files
-        return illumstats_files
-
-    @property
-    def illumstats_metadata(self):
-        '''
-        Returns
-        -------
-        List[tmlib.image.IllumstatsImageMetadata]
-            metadata for each illumination statistic file in `stats_dir`
+        Dict[int, str]
+            name of the illumination correction file for each channel
 
         Note
         ----
@@ -363,26 +337,35 @@ class Cycle(object):
 
         Raises
         ------
-        tmlib.errors.RegexError
-            when required information could not be retrieved from filename
+        OSError
+            when no illumination statistic files are found in `stats_dir`
         '''
-        illumstats_metadata = list()
-        for f in self.illumstats_files:
+        stats_pattern = self.STATS_FILE_FORMAT.format(channel_ix='([0-9])')
+        regexp = re.compile(stats_pattern)
+        files = {
+            int(regexp.search(f).group(1)): f
+            for f in os.listdir(self.stats_dir) if regexp.search(f)
+        }
+        if not files:
+            raise OSError('No illumination statistic files found in "%s"'
+                          % self.stats_dir)
+        return files
+
+    @property
+    def illumstats_metadata(self):
+        '''
+        Returns
+        -------
+        Dict[int, tmlib.image.IllumstatsImageMetadata]
+            illumination statistics metadata for each channel
+        '''
+        illumstats_metadata = dict()
+        for c, f in self.illumstats_files.iteritems():
             md = IllumstatsImageMetadata()
-            regexp = utils.regex_from_format_string(self.STATS_FILE_FORMAT)
-            match = re.search(regexp, f)
-            if match:
-                md.channel_ix = int(match.group('channel_ix'))
-                md.tpoint_ix = self.index
-                md.filename = f
-            else:
-                raise RegexError(
-                        'Can\'t determine channel and cycle number '
-                        'from illumination statistic file "%s" '
-                        'using provided format "%s".\n'
-                        'Check your configuration settings!'
-                        % (f, self.STATS_FILE_FORMAT))
-            illumstats_metadata.append(md)
+            md.channel_ix = c
+            md.tpoint_ix = self.index
+            md.filename = f
+            illumstats_metadata[c] = md
         return illumstats_metadata
 
     @property
@@ -400,11 +383,10 @@ class Cycle(object):
         is accessed.
         '''
         illumstats_images = dict()
-        for i, f in enumerate(self.illumstats_files):
+        for c, f in self.illumstats_files.iteritems():
             img = IllumstatsImages.create_from_file(
                     filename=os.path.join(self.stats_dir, f),
-                    metadata=self.illumstats_metadata[i],
+                    metadata=self.illumstats_metadata[c],
                     library=self.library)
-            channel = self.illumstats_metadata[i].channel_ix
-            illumstats_images[channel] = img
+            illumstats_images[c] = img
         return illumstats_images
