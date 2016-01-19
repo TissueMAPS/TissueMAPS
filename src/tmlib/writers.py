@@ -204,9 +204,16 @@ class ImageWriter(Writer):
         ----------
         directory: str, optional
             absolute path to a directory where files are located
+
+        Raises
+        ------
+        OSError
+            when directory does not exist
         '''
         super(ImageWriter, self).__init__(directory)
         self.directory = directory
+        if not os.path.exists(self.directory):
+            raise OSError('Directory does not exist: %s', self.directory)
 
     def write(self, filename, data, **kwargs):
         '''

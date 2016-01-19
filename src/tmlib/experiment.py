@@ -331,7 +331,7 @@ class Experiment(object):
         '''
         Returns
         -------
-        Dict[collections.namedtuple, str]
+        Dict[tuple, str]
             names of layers for each combination of time point, channel,
             and z-plane
         '''

@@ -216,7 +216,7 @@ class Plate(object):
         md = self.cycles[0].image_metadata
         return np.unique(md['well_name']).tolist()
 
-    @property
+    @cached_property
     def grid(self):
         '''
         Returns
