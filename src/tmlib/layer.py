@@ -289,14 +289,15 @@ class ChannelLayer(Layer):
         }
 
     @cached_property
-    def base_tile_image_mappings(self):
+    def base_tile_mappings(self):
         '''
         Returns
         -------
         Dict[str, Dict[Tuple[int] or str, List[Dict[str or int] or Tuple[int]]]
-            mapping to retrieve information about images (name and y,x offsets)
-            for a given tile defined by its row, column coordinate and
-            mapping to retrieve tile coordinates for a given image name
+            "tile_to_images" mapping to retrieve information about images
+            (name and y,x offsets) for a given tile defined by its row, column
+            coordinate and "image_to_tiles" mapping to retrieve tile coordinates
+            for a given image name
         '''
         cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
         md = cycle.image_metadata
@@ -385,6 +386,40 @@ class ChannelLayer(Layer):
             'image_to_tiles': image_mapper
         }
 
+    @cached_property
+    def downsampled_tile_mappings(self):
+        '''
+        Returns
+        -------
+        Dict[int, Dict[str, List[Tuple[int]]]
+            mapping for each resolution level to retrieve the list of row,
+            column coordinates for the tiles of the next higher resolution
+            level for a given a tile filename of the current resolution level
+        '''
+        mapper = dict()
+        for level in reversed(range(len(self.zoom_level_info) - 1)):
+            mapper[level] = defaultdict(list)
+            tile_info = self.tile_files[level]
+            existing_coords = self.tile_files[level + 1].keys()
+            for coord, tile_file in tile_info.iteritems():
+                row = coord[0]
+                col = coord[1]
+                # Determine the row, column coordinate of the tiles of the next
+                # higher resolution level
+                rows = range(
+                        row * self.zoom_factor,
+                        (row * self.zoom_factor + self.zoom_factor - 1) + 1
+                )
+                cols = range(
+                        col * self.zoom_factor,
+                        (col * self.zoom_factor + self.zoom_factor - 1) + 1
+                )
+                for r, c in itertools.product(rows, cols):
+                    # Only include tiles that will actually be created
+                    if (r, c) in existing_coords:
+                        mapper[level][tile_file].append((r, c))
+        return mapper
+
     def _extract_tile_from_image(self, image, y_offset, x_offset):
         # Some tiles may lie on the border of wells and contain spacer
         # background pixels. The pixel offset for the corresponding
@@ -438,6 +473,17 @@ class ChannelLayer(Layer):
 
         return tile
 
+    @property
+    def base_level_index(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based index of the base level, i.e. the most zoomed in level
+            with the highest resolution
+        '''
+        return len(self.zoom_level_info) - 1
+
     def create_base_tiles(self, clip_value=None, illumcorr=False, align=False,
                           subset_indices=None):
         '''
@@ -478,7 +524,7 @@ class ChannelLayer(Layer):
         # They represent empty sites corresponding to well spacers and will
         # simply be filled with black pixels.
         logger.debug('create empty tiles')
-        tile_coords = self.base_tile_image_mappings['tile_to_images'].keys()
+        tile_coords = self.base_tile_mappings['tile_to_images'].keys()
         n_rows = self.zoom_level_info[-1]['n_tiles_height']
         n_cols = self.zoom_level_info[-1]['n_tiles_width']
         all_tile_coords = list(itertools.product(range(n_rows), range(n_cols)))
@@ -492,31 +538,36 @@ class ChannelLayer(Layer):
         # 2) Process tiles that that map to one or more images.
         logger.debug('create non-empty tiles')
         cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
+        stats = cycle.illumstats_images[self.channel_ix]
         md = cycle.image_metadata
         if subset_indices is None:
             filenames = self.metadata.filenames
         else:
-            filenames = np.array(self.metadata.filenames)[subset_indices]
+            filenames = list(np.array(self.metadata.filenames)[subset_indices])
         for f in filenames:
             name = os.path.basename(f)
             logger.debug('create tiles mapping to image "%s"', name)
             # Retrieve the coordinates of the corresponding tiles
-            tile_coords = self.base_tile_image_mappings['image_to_tiles'][name]
+            tile_coords = self.base_tile_mappings['image_to_tiles'][name]
             # Create individual tiles
+            indices = None
             for t in tile_coords:
                 logger.debug('create tile for column %d, row %d', t[1], t[0])
                 # Determine location of the tile within the image
-                image_info = self.base_tile_image_mappings['tile_to_images'][t]
-                # A tile may be composed of pixels of multiple images
-                # TODO: prevent loading the images several times
+                image_info = self.base_tile_mappings['tile_to_images'][t]
+                # A tile may be composed of pixels of multiple images:
+                # load all required images
                 names = [im['name'] for im in image_info]
-                indices = [np.where(md['name'] == n)[0][0] for n in names]
-                images = cycle.get_image_subset(indices)
+                # Cache images to prevent reloading when not necessary
+                new_indices = [np.where(md['name'] == n)[0][0] for n in names]
+                if indices is None or indices != new_indices:
+                    indices = new_indices
+                    images = cycle.get_image_subset(indices)
                 tiles = list()
                 for i, img in enumerate(images):
                     if illumcorr:
                         # Correct image for illumination artifacts
-                        img = img.correct(cycle.illumstats_images[self.channel_ix])
+                        img = img.correct(stats)
                     if align:
                         # Align image between cycles
                         img = img.align(crop=False)
@@ -596,42 +647,29 @@ class ChannelLayer(Layer):
         '''
         logger.info('create tiles for level %d', level)
         block_size = (self.zoom_factor, self.zoom_factor)
+        tile_info = self.tile_files[level]
+        pre_tile_files = self.tile_files[level + 1]
         if subset_indices is None:
-            tile_info = self.tile_files[level]
+            filenames = tile_info.values()
         else:
-            tile_info = self.tile_files[level].items()[subset_indices]
-        for t, tile_file in tile_info.iteritems():
-            logger.debug('create tile for column %d, row %d', t[1], t[0])
-            row = t[0]
-            col = t[1]
-            rows = range(
-                    row * self.zoom_factor,
-                    (row * self.zoom_factor + self.zoom_factor - 1) + 1
-            )
-            cols = range(
-                    col * self.zoom_factor,
-                    (col * self.zoom_factor + self.zoom_factor - 1) + 1
-            )
-            # Build the mosaic by loading the required higher level tiles and
-            # stitching them together
+            filenames = list(np.array(tile_info.values())[subset_indices])
+        for f in filenames:
+            logger.debug('create tile "%s"', f)
+            coordinates = self.downsampled_tile_mappings[level][f]
+            rows = np.unique([c[0] for c in coordinates])
+            cols = np.unique([c[1] for c in coordinates])
+            # Build the mosaic by loading the required higher level tiles
+            # (created in a previous run) and stitching them together
             with NumpyImageReader(self.dir) as reader:
-                mosaic = None
                 for i, r in enumerate(rows):
-                    row_image = None
                     for j, c in enumerate(cols):
-                        # Some calculated coordinates may not exist
-                        try:
-                            filename = self.tile_files[level+1][(r, c)]
-                        except:
-                            continue
-                        image = reader.read(filename)
-                        if row_image is None:
+                        pre_tile_filename = pre_tile_files[(r, c)]
+                        image = reader.read(pre_tile_filename)
+                        if j == 0:
                             row_image = image
                         else:
                             row_image = np.hstack([row_image, image])
-                    if row_image is None:
-                        continue
-                    if mosaic is None:
+                    if i == 0:
                         mosaic = row_image
                     else:
                         mosaic = np.vstack([mosaic, row_image])
@@ -639,7 +677,7 @@ class ChannelLayer(Layer):
             tile = block_reduce(mosaic, block_size, func=np.mean)
             # Write the tile to file on disk
             with ImageWriter(self.dir) as writer:
-                writer.write(tile_file, tile)
+                writer.write(f, tile)
 
     def create_tile_groups(self):
         '''
@@ -761,7 +799,7 @@ class ChannelLayer(Layer):
             'n_tiles': rows * cols
         }
 
-    @property
+    @cached_property
     def zoom_level_info(self):
         '''
         Returns
@@ -787,7 +825,7 @@ class ChannelLayer(Layer):
             levels.append(info)
         return list(reversed(levels))
 
-    @property
+    @cached_property
     def tile_files(self):
         '''
         Returns

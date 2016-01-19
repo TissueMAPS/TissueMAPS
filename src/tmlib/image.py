@@ -110,11 +110,6 @@ class Image(object):
         '''
         pass
 
-    @abstractmethod
-    @pixels.setter
-    def pixels(self, value):
-        self._pixels = value
-
     def save_as_png(self, filename):
         '''
         Write image to disk as PNG file.
@@ -166,7 +161,7 @@ class ChannelImage(Image):
         image.metadata = metadata
         return image
 
-    @property
+    @cached_property
     def pixels(self):
         '''
         Returns
@@ -188,10 +183,6 @@ class ChannelImage(Image):
         if not self._pixels.is_uint:
             raise TypeError('A channel image must have unsigned integer type.')
         return self._pixels
-
-    @pixels.setter
-    def pixels(self, value):
-        self._pixels = value
 
     def correct(self, stats):
         '''
