@@ -12,6 +12,7 @@ class IlluminatiInitArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
+        self.batch_size = self._batch_size_params['default']
         self.align = self._align_params['default']
         self.illumcorr = self._illumcorr_params['default']
         self.clip = self._clip_params['default']
@@ -25,7 +26,36 @@ class IlluminatiInitArgs(VariableArgs):
     @property
     def _persistent_attrs(self):
         return {
-            'align', 'illumcorr', 'clip', 'clip_value'
+            'batch_size', 'align', 'illumcorr', 'clip', 'clip_value'
+        }
+
+    @property
+    def batch_size(self):
+        '''
+        Returns
+        -------
+        int
+            number of image files that should be processed per job
+            (default: ``10``)
+        '''
+        return self._batch_size
+
+    @batch_size.setter
+    def batch_size(self, value):
+        if not(isinstance(value, self._batch_size_params['type'])):
+            raise TypeError('Attribute "batch_size" must have type %s'
+                            % self._batch_size_params['type'])
+        self._batch_size = value
+
+    @property
+    def _batch_size_params(self):
+        return {
+            'type': int,
+            'default': 10,
+            'help': '''
+                number of image files that should be processed per job
+                (default: 10)
+            '''
         }
 
     @property
@@ -137,4 +167,104 @@ class IlluminatiInitArgs(VariableArgs):
             'help': '''
                 pixel value that should be used as clip level
             '''
+        }
+
+
+class IlluminatiRunArgs(VariableArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class IlluminatiRunArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict
+            arguments as key-value pairs
+        '''
+        super(IlluminatiRunArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return {'level'}
+
+    @property
+    def _persistent_attrs(self):
+        return {'level'}
+
+    @property
+    def level(self):
+        '''
+        Returns
+        -------
+        bool
+            zero-based pyramid level index
+        '''
+        return self._level
+
+    @level.setter
+    def level(self, value):
+        if not isinstance(value, self._level_params['type']):
+            raise TypeError('Attribute "level" must have type %s.'
+                            % self._level_params['type'])
+        self._level = value
+
+    @property
+    def _level_params(self):
+        return {
+            'type': int,
+            'required': True,
+            'help': '''
+                zero-based pyramid level index
+            '''
+
+        }
+
+
+class IlluminatiLogArgs(VariableArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class IlluminatiLogArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict
+            arguments as key-value pairs
+        '''
+        super(IlluminatiLogArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return {'level'}
+
+    @property
+    def _persistent_attrs(self):
+        return {'level'}
+
+    @property
+    def level(self):
+        '''
+        Returns
+        -------
+        bool
+            zero-based pyramid level index
+        '''
+        return self._level
+
+    @level.setter
+    def level(self, value):
+        if not isinstance(value, self._level_params['type']):
+            raise TypeError('Attribute "level" must have type %s.'
+                            % self._level_params['type'])
+        self._level = value
+
+    @property
+    def _level_params(self):
+        return {
+            'type': int,
+            'required': True,
+            'help': '''
+                zero-based pyramid level index
+            '''
+
         }
