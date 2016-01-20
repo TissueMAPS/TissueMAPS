@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 import pandas as pd
 import logging
@@ -14,6 +15,7 @@ from .readers import DatasetReader
 from .writers import DatasetWriter
 from .errors import PyramidCreationError
 from .errors import DataError
+from .errors import RegexError
 from .writers import ImageWriter
 from .writers import XmlWriter
 from .readers import NumpyImageReader
@@ -386,40 +388,73 @@ class ChannelLayer(Layer):
             'image_to_tiles': image_mapper
         }
 
-    @cached_property
-    def downsampled_tile_mappings(self):
+    def get_level_and_coordinate(self, tile_filename):
         '''
+        Determine "level", "row", and "column" indices from tile filename
+        using a regular expression.
+
+        Parameters
+        ----------
+        tile_filename: str
+            name of a pyramid tile
+
         Returns
         -------
-        Dict[int, Dict[str, List[Tuple[int]]]
-            mapping for each resolution level to retrieve the list of row,
-            column coordinates for the tiles of the next higher resolution
-            level for a given a tile filename of the current resolution level
+        Dict[str, int]
+            zero-based indices for "level", "row", and "column" of a given tile
+
+        Raises
+        ------
+        tmlib.errors.RegexError
+            when indices cannot be determined from filename
         '''
-        mapper = dict()
-        for level in reversed(range(len(self.zoom_level_info) - 1)):
-            logger.debug('map level %d tiles', level)
-            mapper[level] = defaultdict(list)
-            tile_info = self.tile_files[level]
-            existing_coords = self.tile_files[level + 1].keys()
-            for coord, tile_file in tile_info.iteritems():
-                row = coord[0]
-                col = coord[1]
-                # Determine the row, column coordinate of the tiles of the next
-                # higher resolution level
-                rows = range(
-                        row * self.zoom_factor,
-                        (row * self.zoom_factor + self.zoom_factor - 1) + 1
-                )
-                cols = range(
-                        col * self.zoom_factor,
-                        (col * self.zoom_factor + self.zoom_factor - 1) + 1
-                )
-                for r, c in itertools.product(rows, cols):
-                    # Only include tiles that will actually be created
-                    if (r, c) in existing_coords:
-                        mapper[level][tile_file].append((r, c))
-        return mapper
+        r = re.compile('(?P<level>\d+)-(?P<column>\d+)-(?P<row>\d+).jpg')
+        m = r.search(tile_filename).groupdict()
+        if not m:
+            RegexError(
+                'Indices could not be determined from file: %s'
+                % tile_filename)
+        return {k: int(v) for k, v in m.iteritems()}
+
+    def _determine_higher_level_coordinates(self, level, row, column):
+        coordinates = list()
+        existing_coordinates = self.tile_files[level + 1].keys()
+        rows = range(
+                row * self.zoom_factor,
+                (row * self.zoom_factor + self.zoom_factor - 1) + 1
+        )
+        cols = range(
+                column * self.zoom_factor,
+                (column * self.zoom_factor + self.zoom_factor - 1) + 1
+        )
+        for r, c in itertools.product(rows, cols):
+            if (r, c) in existing_coordinates:
+                coordinates.append((r, c))
+        return coordinates
+
+    def get_tiles_of_next_higher_level(self, filename):
+        '''
+        Get the tiles of the next higher level that make up the given tile.
+
+        Parameters
+        ----------
+        filename: str
+            name of the tile file
+
+        Returns
+        -------
+        List[Tuple[int]
+            row, column coordinates for the tiles of the next higher resolution
+            level for a given a tile
+        '''
+        logger.debug('map tile %s to tiles of next higher level', filename)
+        indices = self.get_level_and_coordinate(filename)
+        level = indices['level']
+        row = indices['row']
+        col = indices['column']
+        # Determine the row, column coordinate of the tiles of the next
+        # higher resolution level
+        return self._determine_higher_level_coordinates(level, row, col)
 
     def _extract_tile_from_image(self, image, y_offset, x_offset):
         # Some tiles may lie on the border of wells and contain spacer
@@ -656,7 +691,7 @@ class ChannelLayer(Layer):
             filenames = list(np.array(tile_info.values())[subset_indices])
         for f in filenames:
             logger.debug('create tile "%s"', f)
-            coordinates = self.downsampled_tile_mappings[level][f]
+            coordinates = self.get_tiles_of_next_higher_level(f)
             rows = np.unique([c[0] for c in coordinates])
             cols = np.unique([c[1] for c in coordinates])
             # Build the mosaic by loading the required higher level tiles

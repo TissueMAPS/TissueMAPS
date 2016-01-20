@@ -111,11 +111,10 @@ class PyramidBuilder(ClusterRoutines):
                     # TODO: this takes very long
                     output_files = layer.tile_files[self.level].values()
                     output_files = list(np.array(output_files)[batch])
-                    tile_mapping = layer.downsampled_tile_mappings[self.level]
                     input_files = [
                         layer.tile_files[self.level + 1][c]
                         for f in output_files
-                        for c in tile_mapping[f]
+                        for c in layer.get_tiles_of_next_higher_level(f)
                     ]
                 description = {
                     'id': job_count,
