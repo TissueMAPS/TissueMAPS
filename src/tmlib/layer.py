@@ -306,7 +306,7 @@ class ChannelLayer(Layer):
         image_mapper = defaultdict(list)
         for p, plate in enumerate(self.experiment.plates):
 
-            logger.debug('map pyramid tiles to images of plate "%s"',
+            logger.debug('map base tiles to images of plate "%s"',
                          plate.name)
 
             h = range(plate.grid.shape[0])
@@ -327,7 +327,7 @@ class ChannelLayer(Layer):
                                  plate.map_well_coordinate_to_id((i, j)))
                     continue
 
-                logger.debug('well "%s"', well)
+                logger.debug('map base tiles to images of well "%s"', well)
                 n_prior_wells_y = plate.nonempty_row_indices.index(i)
                 n_prior_wells_x = plate.nonempty_column_indices.index(j)
                 prior_wells = (n_prior_wells_y, n_prior_wells_x)
@@ -341,7 +341,7 @@ class ChannelLayer(Layer):
 
                 for ix in index:
                     image_name = md.ix[ix, 'name']
-                    logger.debug('map tiles for image "%s"', image_name)
+                    logger.debug('map base tiles for image "%s"', image_name)
                     well_coords = (
                         md.ix[ix, 'well_position_y'],
                         md.ix[ix, 'well_position_x']
@@ -398,6 +398,7 @@ class ChannelLayer(Layer):
         '''
         mapper = dict()
         for level in reversed(range(len(self.zoom_level_info) - 1)):
+            logger.debug('map level %d tiles', level)
             mapper[level] = defaultdict(list)
             tile_info = self.tile_files[level]
             existing_coords = self.tile_files[level + 1].keys()
@@ -839,6 +840,7 @@ class ChannelLayer(Layer):
         n = 0
         tiles = list()
         for i, level in enumerate(self.zoom_level_info):
+            logger.debug('determine tile files for level %d', i)
             # Build the grid for the layout of the tiles
             n_rows = level['n_tiles_height']
             n_cols = level['n_tiles_width']
