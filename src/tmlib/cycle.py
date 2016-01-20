@@ -61,6 +61,7 @@ class Cycle(object):
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
         self.library = library
+        self._metadata = None
 
     @property
     def dir(self):
@@ -207,15 +208,18 @@ class Cycle(object):
         `pandas docs <http://pandas.pydata.org/pandas-docs/stable/indexing.html>`_
         for details on indexing and selecting data.
         '''
-        metadata_file = os.path.join(self.dir, self.image_metadata_file)
         logger.debug('read image metadata from HDF5 file')
+        metadata_file = os.path.join(self.dir, self.image_metadata_file)
         store = pd.HDFStore(metadata_file)
-        metadata = store.select('metadata').sort_values(by='name')
-        metadata.index = range(metadata.shape[0])
+        # metadata = store.select('metadata').sort_values(by='name')
+        metadata = store['metadata'].sort_values(by='name')
         store.close()
+        metadata.index = range(metadata.shape[0])
 
         # TODO: consider returning the store for subset selection using the
         # select(), select_column(), or select_as_multiple() methods
+
+        # TODO: this doesn't get cached???
 
         # Add the alignment description to each image element (if available)
         alignment_file = os.path.join(self.dir, self.align_descriptor_file)
@@ -239,8 +243,6 @@ class Cycle(object):
                 shift = align_description.shifts[ix]
                 metadata.at[i, 'x_shift'] = shift.x
                 metadata.at[i, 'y_shift'] = shift.y
-
-        # TODO: why is this property not cached???
 
         return metadata
 

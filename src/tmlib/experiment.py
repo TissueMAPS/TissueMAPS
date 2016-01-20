@@ -183,7 +183,7 @@ class Experiment(object):
         regexp = utils.regex_from_format_string(format_string)
         return True if re.match(regexp, folder) else False
 
-    @property
+    @cached_property
     def plates(self):
         '''
         Returns
