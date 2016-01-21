@@ -427,9 +427,9 @@ class ChannelLayer(Layer):
                 column * self.zoom_factor,
                 (column * self.zoom_factor + self.zoom_factor - 1) + 1
         )
-        for r, c in itertools.product(rows, cols):
-            if (r, c) in existing_coordinates:
-                coordinates.append((r, c))
+        for c in zip(rows, cols):
+            if c in existing_coordinates:
+                coordinates.append(c)
         return coordinates
 
     def get_tiles_of_next_higher_level(self, filename):
@@ -520,6 +520,28 @@ class ChannelLayer(Layer):
         '''
         return len(self.zoom_level_info) - 1
 
+    def create_empty_base_tiles(self, clip_value=None):
+        '''
+        Create empty tiles for the highest resolution level that do not map
+        that do not map to an image.
+
+        Parameters
+        ----------
+        clip_value: int, optional
+            fixed threshold value (default: ``None``)
+        '''
+        logger.debug('create empty tiles')
+        tile_coords = self.base_tile_mappings['tile_to_images'].keys()
+        n_rows = self.zoom_level_info[-1]['n_tiles_height']
+        n_cols = self.zoom_level_info[-1]['n_tiles_width']
+        all_tile_coords = list(itertools.product(range(n_rows), range(n_cols)))
+        missing_tile_coords = set(all_tile_coords) - set(tile_coords)
+        for t in missing_tile_coords:
+            tile = np.zeros((self.tile_size, self.tile_size), dtype=np.uint8)
+            tile_file = self.tile_files[-1][t]
+            with ImageWriter(self.dir) as writer:
+                writer.write(tile_file, tile)
+
     def create_base_tiles(self, clip_value=None, illumcorr=False, align=False,
                           subset_indices=None):
         '''
@@ -548,30 +570,18 @@ class ChannelLayer(Layer):
         This keeps memory requirements to a minimum and allows parallelization
         of the pyramid creation step.
         '''
-        # TODO: parallelize over image files
         logger.info('create tiles for level %d', len(self.zoom_level_info) - 1)
+        if illumcorr:
+            logger.info('correct images for illumination artifacts')
+        if align:
+            logger.info('align images between cycles')
 
         if clip_value is None:
             logger.debug('set default clip value')
             clip_value = 2**16
         logger.info('clip intensity values above %d', clip_value)
 
-        # 1) Process missing tiles, i.e. tiles not mapping to any images.
-        # They represent empty sites corresponding to well spacers and will
-        # simply be filled with black pixels.
-        logger.debug('create empty tiles')
-        tile_coords = self.base_tile_mappings['tile_to_images'].keys()
-        n_rows = self.zoom_level_info[-1]['n_tiles_height']
-        n_cols = self.zoom_level_info[-1]['n_tiles_width']
-        all_tile_coords = list(itertools.product(range(n_rows), range(n_cols)))
-        missing_tile_coords = set(all_tile_coords) - set(tile_coords)
-        for t in missing_tile_coords:
-            tile = np.zeros((self.tile_size, self.tile_size), dtype=np.uint8)
-            tile_file = self.tile_files[-1][t]
-            with ImageWriter(self.dir) as writer:
-                writer.write(tile_file, tile)
-
-        # 2) Process tiles that that map to one or more images.
+        # Process tiles that that map to one or more images.
         logger.debug('create non-empty tiles')
         cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
         stats = cycle.illumstats_images[self.channel_ix]
