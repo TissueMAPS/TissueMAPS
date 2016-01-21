@@ -82,9 +82,10 @@ class PyramidBuilder(ClusterRoutines):
                                 range(len(layer.metadata.filenames)),
                                 args.batch_size)
             else:
+                level_batch_size = args.batch_size * 10 * self.level
                 batches = self._create_batches(
                                 range(len(layer.tile_files[self.level])),
-                                args.batch_size)
+                                level_batch_size)
 
             for batch in batches:
                 job_count += 1
@@ -101,21 +102,27 @@ class PyramidBuilder(ClusterRoutines):
                         os.path.relpath(f, layer.dir)
                         for f in filenames
                     ]
-                    tile_mapping = layer.base_tile_mappings['image_to_tiles']
-                    output_files = [
-                        layer.tile_files[self.level][c]
-                        for f in input_files
-                        for c in tile_mapping[os.path.basename(f)]
-                    ]
+                    # tile_mapping = layer.base_tile_mappings['image_to_tiles']
+                    # output_files = [
+                    #     layer.tile_files[self.level][c]
+                    #     for f in input_files
+                    #     for c in tile_mapping[os.path.basename(f)]
+                    # ]
                 else:
-                    # TODO: this takes very long
-                    output_files = layer.tile_files[self.level].values()
-                    output_files = list(np.array(output_files)[batch])
-                    input_files = [
-                        layer.tile_files[self.level + 1][c]
-                        for f in output_files
-                        for c in layer.get_tiles_of_next_higher_level(f)
-                    ]
+                    input_files = []
+                # else:
+                #     output_files = layer.tile_files[self.level].values()
+                #     output_files = list(np.array(output_files)[batch])
+                #     input_files = [
+                #         layer.tile_files[self.level + 1][c]
+                #         for f in output_files
+                #         for c in layer.get_tiles_of_next_higher_level(f)
+                #     ]
+
+                # NOTE: keeping track of input/output files for each job
+                # becomes problematic because the number of tiles increases
+                # exponentially with the number of image files.
+ 
                 description = {
                     'id': job_count,
                     'inputs': {
@@ -123,11 +130,12 @@ class PyramidBuilder(ClusterRoutines):
                             os.path.join(layer.dir, f) for f in input_files
                         ]
                     },
-                    'outputs': {
-                        'image_files': [
-                            os.path.join(layer.dir, f) for f in output_files
-                        ]
-                    },
+                    # 'outputs': {
+                    #     'image_files': [
+                    #         os.path.join(layer.dir, f) for f in output_files
+                    #     ]
+                    # },
+                    'outputs': {},
                     'cycle': layer.tpoint_ix,
                     'channel': layer.channel_ix,
                     'zplane': layer.zplane_ix,
@@ -135,6 +143,8 @@ class PyramidBuilder(ClusterRoutines):
                     'subset_indices': batch
                 }
                 if self.level == layer.base_level_index:
+                    # Only base tiles need to be manipulated, this is then
+                    # automatically translated to the subsequent levels
                     description.update({
                         'align': args.align,
                         'illumcorr': args.illumcorr,
@@ -143,6 +153,19 @@ class PyramidBuilder(ClusterRoutines):
                     })
                 job_descriptions['run'].append(description)
 
+            if self.level == layer.base_level_index:
+                # Creation of empty base tiles that do not map to an image
+                job_count += 1
+                job_descriptions['run'].append({
+                    'id': job_count,
+                    'inputs': {},
+                    'outputs': {},
+                    'cycle': layer.tpoint_ix,
+                    'channel': layer.channel_ix,
+                    'zplane': layer.zplane_ix,
+                    'level': self.level,
+                    'subset_indices': None
+                })
         return job_descriptions
 
     def _build_run_command(self, batch):
@@ -184,17 +207,15 @@ class PyramidBuilder(ClusterRoutines):
             else:
                 clip_value = batch['clip_value']
 
-            if batch['illumcorr']:
-                logger.info('correct images for illumination artifacts')
-            if batch['align']:
-                logger.info('align images between cycles')
-
-            # TODO: make use of `subset_indices` to parallelize the step
-            layer.create_base_tiles(
-                        clip_value=clip_value,
-                        illumcorr=batch['illumcorr'],
-                        align=batch['align'],
-                        subset_indices=batch['subset_indices'])
+            if batch['inputs']['image_files']:
+                layer.create_base_tiles(
+                            clip_value=clip_value,
+                            illumcorr=batch['illumcorr'],
+                            align=batch['align'],
+                            subset_indices=batch['subset_indices'])
+            else:
+                layer.create_empty_base_tiles(
+                            clip_value=clip_value)
 
         else:
             logger.info(
