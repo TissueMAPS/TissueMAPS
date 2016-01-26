@@ -378,7 +378,7 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from job descriptions')
         return api.list_input_files(self.job_descriptions)
 
-    def build_jobs(self, duration, memory, cores):
+    def build_jobs(self, duration, memory, cores, ids=None):
         '''
         Build *jobs* based on prior created job descriptions.
 
@@ -390,6 +390,8 @@ class CommandLineInterface(object):
             amount of memory allocated for a job in GB
         cores: int
             number of cores allocated for a job
+        ids: List[int], optional
+            ids of jobs that should be submitted (default: ``None``)
 
         Returns
         -------
@@ -401,8 +403,17 @@ class CommandLineInterface(object):
         logger.debug('allocated time: %s', duration)
         logger.debug('allocated memory: %d GB', memory)
         logger.debug('allocated cores: %d', cores)
+        if ids is not None:
+            logger.info('build jobs %s', ', '.join(map(str, ids)))
+            job_descriptions = dict()
+            job_descriptions['run'] = [
+                j for j in self.job_descriptions['run'] if j['id'] in ids
+            ]
+        else:
+            logger.info('build all jobs')
+            job_descriptions = self.job_descriptions
         jobs = api.create_jobs(
-                job_descriptions=self.job_descriptions,
+                job_descriptions=job_descriptions,
                 duration=duration,
                 memory=memory,
                 cores=cores)
@@ -428,7 +439,8 @@ class CommandLineInterface(object):
         jobs = self.build_jobs(
                     duration=args.duration,
                     memory=args.memory,
-                    cores=args.cores)
+                    cores=args.cores,
+                    ids=args.jobs)
         # TODO: check whether jobs were actually created
         # session = api.create_session(jobs)
         logger.info('submit and monitor jobs')

@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 class Args(object):
 
     '''
-    Abstract base class with attributes for arguments of *TissueMAPS* steps,
-    i.e. the programs defined in *tmlib* subpackages. 
+    Abstract base class for arguments of *TissueMAPS* steps. 
     '''
 
     __metaclass__ = ABCMeta
@@ -100,28 +99,39 @@ class Args(object):
 
     def jsonify(self):
         '''
+        Convert the attributes of the class into a JSON encoded list.
+
         Returns
         -------
         str
-            JSON string that encodes for each argument a mapping "description",
-            with key "value" (representing the actual attribute value) and
-            optional keys "help", "default", "options", "action"
-            (representing hyper-parameters)
+            JSON string that encodes for each argument a mapping with "name",
+            "value", "help", "default", and "options" hyperparameters
         '''
-        mapping = defaultdict(dict)
+        args = list()
         for attr in dir(self):
-            if attr.startswith('__') or attr.endswith('__'):
-                continue
             if attr.startswith('_'):
-                attr = re.search(r'_(.*)', attr).group(1)
+                continue
             if attr in self._persistent_attrs:
-                mapping[attr]['value'] = getattr(self, attr)
-
-        for attr in mapping:
-            params = dict(getattr(self, '_%s_params' % attr))
-            del params['type']  # data types are not JSON serializable  
-            mapping[attr].update(params)
-        return json.dumps(mapping)
+                arg = dict()
+                arg['name'] = attr
+                arg['value'] = getattr(self, attr)
+                params = dict(getattr(self, '_%s_params' % attr))
+                if 'choices' in params:
+                    # sets are not JSON serializable
+                    params['choices'] = list(params['choices'])
+                if params['type'] == bool:
+                    params['choices'] = [True, False]
+                del params['type']  # types are not JSON serializable
+                if 'action' in params:
+                    del params['action']
+                if 'nargs' in params:
+                    del params['nargs']
+                # TODO: format value of type and nargs
+                # The information could be used in the GUI to check format
+                # the input accordingly (map to Javascript datatypes?)
+                arg.update(params)
+                args.append(arg)
+        return json.dumps(args)
 
 
 class GeneralArgs(Args):
@@ -342,7 +352,40 @@ class SubmitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'interval', 'depth', 'memory', 'duration', 'cores'}
+        return {'interval', 'jobs', 'depth', 'memory', 'duration', 'cores'}
+
+    @property
+    def jobs(self):
+        '''
+        Returns
+        -------
+        List[int]
+            ids of jobs that should be submitted (default: ``None``)
+        '''
+        return self._jobs
+
+    @jobs.setter
+    def jobs(self, value):
+        if not(isinstance(value, list) or value is None):
+            raise TypeError('Attribute "jobs" must have type list')
+        if value is None:
+            self._jobs = value
+            return
+        if any([not isinstance(e, self._jobs_params['type']) for e in value]):
+            raise TypeError('Elements of attribute "jobs" must have type %s.'
+                            % self._jobs_params['type'])
+        self._jobs = value
+
+    @property
+    def _jobs_params(self):
+        return {
+            'type': int,
+            'nargs': '+',
+            'default': None,
+            'help': '''
+                ids of jobs that should be submitted
+            '''
+        }
 
     @property
     def interval(self):
