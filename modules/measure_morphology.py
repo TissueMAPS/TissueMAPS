@@ -53,6 +53,8 @@ def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
 
     with DatasetWriter(kwargs['data_file']) as data:
         for m in measurements:
+            if len(measurements[m]) == 0:
+                continue
             feature_names = measurements[m][0].keys()
             for f in feature_names:
                 feats = [item[f] for item in measurements[m]]
