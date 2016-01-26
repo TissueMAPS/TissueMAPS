@@ -450,9 +450,9 @@ class DatasetWriter(object):
             dset[i] = d.tolist()  # doesn't work with numpy.ndarray!!!
         return dset
 
-    def preallocate(self, path, dims, dtype):
+    def create(self, path, dims, dtype):
         '''
-        Create a dataset with a given size and data type.
+        Create a dataset with a given size and data type without writing data.
 
         Parameters
         ----------
@@ -497,6 +497,18 @@ class DatasetWriter(object):
                 for d in data
             ]
         self._stream[path].attrs.create(name, data)
+
+    def create_group(self, path):
+        '''
+        Create a group.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to the group within the file
+        '''
+        if not self.exists(path):
+            self._stream.create_group(path)
 
     def __exit__(self, except_type, except_value, except_trace):
         self._stream.close()
