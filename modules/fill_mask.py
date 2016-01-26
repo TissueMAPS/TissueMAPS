@@ -41,5 +41,5 @@ def fill_mask(mask, **kwargs):
 
         plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
-    output = collections.namedtuple('Output', 'filled_mask')
-    return output(img)
+    Output = collections.namedtuple('Output', 'filled_mask')
+    return Output(img)

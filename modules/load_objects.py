@@ -70,5 +70,5 @@ def load_objects(objects_name, **kwargs):
 
         plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
-    output = collections.namedtuple('Output', 'loaded_objects')
-    return output(labeled_image)
+    Output = collections.namedtuple('Output', 'loaded_objects')
+    return Output(labeled_image)

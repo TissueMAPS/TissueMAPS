@@ -38,8 +38,6 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
     ValueError
         when value of `keep` is incorrect
     '''
-    # if not isinstance(labeled_image, np.uint):
-    #     raise TypeError('"labeled_image" must have unsigned integer type')
     regions = measure.regionprops(labeled_image)
     if keep == 'above':
         ids_to_keep = [r['label'] for r in regions if r[feature] > threshold]
@@ -65,20 +63,18 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
         img_obj = labeled_image.copy().astype(float)
         img_obj[labeled_image == 0] = np.nan
 
-        ax1.imshow(img_obj, cmap=plt.cm.jet)
+        ax1.imshow(img_obj, cmap=plt.cm.jet, interpolation='none')
         ax1.set_title('input objects', size=20)
 
         img_obj = filtered_image.copy().astype(float)
         img_obj[filtered_image == 0] = np.nan
 
-        # TODO: why do objects get a different color even without relabeling?
-
-        ax2.imshow(img_obj, cmap=plt.cm.jet)
+        ax2.imshow(img_obj, cmap=plt.cm.jet, interpolation='none')
         ax2.set_title('filtered objects', size=20)
 
         fig.tight_layout()
 
         plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
-    output = collections.namedtuple('Output', 'filtered_objects')
-    return output(filtered_image)
+    Output = collections.namedtuple('Output', 'filtered_objects')
+    return Output(filtered_image)

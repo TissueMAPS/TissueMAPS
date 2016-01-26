@@ -74,25 +74,14 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
 
-        ax1.imshow(img_overlay)
+        ax1.imshow(img_overlay, interpolation='none')
         ax1.set_title('overlay of outlines', size=20)
-
-        # img_mask = np.ma.array(rescaled_image, mask=~img_border)
-
-        # figargs = {
-        #     'interpolation': 'none',
-        #     'vmin': rescaled_image.min(),
-        #     'vmax': rescaled_image.max()
-        # }
-        # ax1.imshow(rescaled_image, cmap=plt.cm.Greys_r, **figargs)
-        # ax1.imshow(img_mask, cmap=plt.cm.jet, **figargs)
-        # ax1.set_title('mask trick', size=20)
 
         img_obj = np.zeros(thresh_image.shape)
         img_obj[thresh_image] = 1
         img_obj[~thresh_image] = np.nan
 
-        ax2.imshow(img_obj, cmap=plt.cm.Set1)
+        ax2.imshow(img_obj, cmap=plt.cm.Set1, interpolation='none')
         ax2.set_title('thresholded image', size=20)
 
         plotting.save_mpl_figure(fig, kwargs['figure_file'])
@@ -119,5 +108,5 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
         # plotting.save_bk_figure(fig, kwargs['figure_file'])
 
-    output = collections.namedtuple('Output', 'thresholded_image')
-    return output(thresh_image)
+    Output = collections.namedtuple('Output', 'thresholded_image')
+    return Output(thresh_image)

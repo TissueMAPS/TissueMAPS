@@ -40,12 +40,12 @@ def label_mask(mask, **kwargs):
         img_obj = labeled_image.astype(float)
         img_obj[labeled_image == 0] = np.nan
 
-        ax1.imshow(img_obj, cmap=plt.cm.jet)
+        ax1.imshow(img_obj, cmap=plt.cm.jet, interpolation='none')
         ax1.set_title('labeled objects', size=20)
 
         fig.tight_layout()
 
         plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
-    output = collections.namedtuple('Output', 'objects')
-    return output(labeled_image)
+    Output = collections.namedtuple('Output', 'objects')
+    return Output(labeled_image)

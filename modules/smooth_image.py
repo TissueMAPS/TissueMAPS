@@ -86,17 +86,19 @@ def smooth_image(image, filter, filter_size, sigma=0, sigma_color=0,
 
         ax1.imshow(image, cmap='gray',
                    vmin=np.percentile(image, 0.1),
-                   vmax=np.percentile(image, 99.9))
+                   vmax=np.percentile(image, 99.9),
+                   interpolation='none')
         ax1.set_title('input image', size=20)
 
         ax2.imshow(img, cmap='gray',
                    vmin=np.percentile(img, 0.1),
-                   vmax=np.percentile(img, 99.9))
+                   vmax=np.percentile(img, 99.9),
+                   interpolation='none')
         ax2.set_title('smoothed image', size=20)
 
         fig.tight_layout()
 
         plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
-    output = collections.namedtuple('Output', 'smoothed_image')
-    return output(img.astype(input_dtype))
+    Output = collections.namedtuple('Output', 'smoothed_image')
+    return Output(img.astype(input_dtype))
