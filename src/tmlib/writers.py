@@ -347,7 +347,18 @@ class DatasetWriter(object):
                 all([isinstance(d, basestring) for d in data])):
             data = [np.string_(d) for d in data]
         if isinstance(data, list):
-            data = np.array(data)
+            if len(data) == 1 and isinstance(data[0], np.ndarray):
+                # Work around inconsistent numpy behavior for vlen datasets:
+                # A list containing multiple numpy arrays of different shapes
+                # are converted to a one-dimensional nested array of arrays
+                # with object type, but a list containing a single numpy array
+                # or multiple numpy arrays with the same shape to a
+                # multi-dimensional array.
+                empty = np.empty((1,), dtype='O')
+                empty[0] = data[0]
+                data = empty
+            else:
+                data = np.array(data)
         if index is None and row_index is None and column_index is None:
             if self.exists(path):
                 raise IOError('Dataset already exists: %s', path)
