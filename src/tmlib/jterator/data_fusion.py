@@ -111,12 +111,21 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                 segmentation_path = 'objects/%s/segmentation' % obj_name
                 if f.exists(features_path):
                     feat_path = datasets[obj_name]['features'][0]['path']
-                    dims = f.get_dimensions(feat_path)
+                    if f.exists(feat_path):
+                        dims = f.get_dimensions(feat_path)
+                    else:
+                        dims = (0,)
                 elif f.exists(segmentation_path):
                     obj_ids_path = '%s/object_ids' % segmentation_path
-                    dims = f.get_dimensions(obj_ids_path)
+                    if f.exists(obj_ids_path):
+                        dims = f.get_dimensions(obj_ids_path)
+                    else:
+                        dims = (0,)
                 else:
-                    raise DataError('Features or segmentation data must exist.')
+                    raise DataError(
+                            'There must be features or segmentation data '
+                            'for objects "%s" in file "%s".'
+                            % (obj_name, filename))
                 n_objects[obj_name] += dims[0]
 
     # Create datasets on disk
@@ -130,10 +139,10 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
         for obj_name in object_names:
             for d in datasets[obj_name]['segmentation']:
                 d.update({'dims': (n_objects[obj_name], )})
-                out.preallocate(**d)
+                out.create(**d)
             for d in datasets[obj_name]['features']:
                 d.update({'dims': (n_objects[obj_name], )})
-                out.preallocate(**d)
+                out.create(**d)
 
     logger.info('load individual datasets and write data into final datasets')
     job_index_count = 0
