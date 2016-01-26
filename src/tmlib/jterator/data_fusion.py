@@ -134,7 +134,7 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
 
         for d in datasets['metadata']:
             d.update({'dims': (n_jobs, )})
-            out.preallocate(**d)
+            out.create(**d)
 
         for obj_name in object_names:
             for d in datasets[obj_name]['segmentation']:
@@ -167,8 +167,9 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                     data = f.read(dataset_path)
                     if len(data.shape) > 1:
                         raise DataError(
-                                'Dataset must be one-dimensional: %s'
-                                % dataset_path)
+                                'Dataset must be one-dimensional: %s '
+                                '(file: %s)'
+                                % (dataset_path, filename))
                     index = range(
                             job_index_count,
                             (1 + job_index_count)
@@ -181,6 +182,10 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                     features_path = 'objects/%s/features' % obj_name
                     segmentation_path = 'objects/%s/segmentation' % obj_name
 
+                    # In case there may be no objects
+                    dataset_path = None
+                    data = None
+
                     if f.exists(features_path):
                         dataset_names = f.list_datasets(features_path)
                         for name in dataset_names:
@@ -190,8 +195,9 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                             data = f.read(dataset_path)
                             if len(data.shape) > 1:
                                 raise DataError(
-                                        'Dataset must be one-dimensional: %s'
-                                        % dataset_path)
+                                        'Dataset must be one-dimensional: %s '
+                                        '(file: %s)'
+                                        % (dataset_path, filename))
                             index = range(
                                     object_index_count[obj_name],
                                     (len(data) + object_index_count[obj_name])
@@ -207,8 +213,9 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                             data = f.read(dataset_path)
                             if len(data.shape) > 1:
                                 raise DataError(
-                                        'Dataset must be one-dimensional: %s'
-                                        % dataset_path)
+                                        'Dataset must be one-dimensional: %s '
+                                        '(file: %s)'
+                                        % (dataset_path, filename))
                             index = range(
                                     object_index_count[obj_name],
                                     (len(data) + object_index_count[obj_name])
@@ -227,8 +234,9 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                                 data = f.read(dataset_path)
                                 if len(data.shape) > 1:
                                     raise DataError(
-                                            'Dataset must be one-dimensional: %s'
-                                            % dataset_path)
+                                        'Dataset must be one-dimensional: %s '
+                                        '(file: %s)'
+                                        % (dataset_path, filename))
                                 index = range(
                                         object_index_count[obj_name],
                                         (len(data) +
@@ -236,7 +244,8 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                                 )
                                 out.write(dataset_path, data=data, index=index)
 
-                    object_index_count[obj_name] += len(data)
+                    if data is not None:
+                        object_index_count[obj_name] += len(data)
 
             if delete_input_files:
                 logger.debug('remove input file: %s', filename)
