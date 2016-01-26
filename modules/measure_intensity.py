@@ -61,10 +61,11 @@ def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
         feats = features.measure_intensity(img, mask, r)
         measurements.append(feats)
 
-    feature_names = measurements[0].keys()
-    with DatasetWriter(kwargs['data_file']) as data:
-        for f in feature_names:
-            feats = [item[f] for item in measurements]
-            data.write('/objects/%s/features/Intensity_%s_%s'
-                       % (objects_name, layer_name, f),
-                       data=feats)
+    if not len(measurements) == 0:
+        feature_names = measurements[0].keys()
+        with DatasetWriter(kwargs['data_file']) as data:
+            for f in feature_names:
+                feats = [item[f] for item in measurements]
+                data.write('/objects/%s/features/Intensity_%s_%s'
+                           % (objects_name, layer_name, f),
+                           data=feats)
