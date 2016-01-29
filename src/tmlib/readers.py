@@ -488,7 +488,7 @@ class DatasetReader(object):
                     % (name, path))
         return attribute
 
-    def get_dimensions(self, path):
+    def get_dims(self, path):
         '''
         Get the dimensions of a dataset.
 
@@ -665,7 +665,7 @@ class BioformatsImageReader(ImageReader):
             filename = os.path.join(self.directory, filename)
         if not os.path.exists(filename):
             raise OSError('Image file does not exist: %s' % filename)
-        logger.debug('read image from file: %s', filename)
+        logger.debug('read image pixels from file: %s', filename)
         image = bioformats.load_image(filename, rescale=False)
         return image
 

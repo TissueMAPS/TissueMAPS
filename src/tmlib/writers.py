@@ -212,8 +212,9 @@ class ImageWriter(Writer):
         '''
         super(ImageWriter, self).__init__(directory)
         self.directory = directory
-        if not os.path.exists(self.directory):
-            raise OSError('Directory does not exist: %s', self.directory)
+        if self.directory is not None:
+            if not os.path.exists(self.directory):
+                raise OSError('Directory does not exist: %s', self.directory)
 
     def write(self, filename, data, **kwargs):
         '''
@@ -317,10 +318,6 @@ class DatasetWriter(object):
             zero-based row index
         column_index: int or List[int], optional
             zero-based column index
-
-        Returns
-        -------
-        h5py._hl.dataset.Dataset
 
         Raises
         ------
@@ -448,8 +445,6 @@ class DatasetWriter(object):
                 else:
                     dset[index] = data
 
-        return dset
-
     def _write_vlen(self, path, data):
         data_type = np.unique([d.dtype for d in data])
         if len(data_type) == 0:
@@ -461,7 +456,7 @@ class DatasetWriter(object):
             dset[i] = d.tolist()  # doesn't work with numpy.ndarray!!!
         return dset
 
-    def create(self, path, dims, dtype):
+    def create(self, path, dims, dtype, max_dims=None):
         '''
         Create a dataset with a given size and data type without writing data.
 
@@ -473,6 +468,11 @@ class DatasetWriter(object):
             dimensions of the dataset (number of rows and columns)
         dtype: type
             datatype the dataset
+        max_dims: Tuple[int]
+            maximal dimensions of the dataset, useful if the dataset should
+            be extendable along one or more dimensions (defaults to `dims`);
+            ``(None, None)`` would mean extendable infinitely along both
+            dimensions
 
         Returns
         -------
@@ -483,9 +483,134 @@ class DatasetWriter(object):
         IOError
             when `path` already exists
         '''
+        if max_dims is None:
+            max_dims = dims
         if self.exists(path):
             raise IOError('Dataset already exists: %s', path)
-        return self._stream.create_dataset(path, dims, dtype)
+        return self._stream.create_dataset(
+                        path, shape=dims, dtype=dtype, maxshape=max_dims)
+
+    def append(self, path, data):
+        '''
+        Append data to an existing one-dimensional dataset.
+        The dataset needs to be created first using the
+        :py:func:`tmlib.writers.DatasetWriter.create` method and the
+        `max_dims` entry for the vertical dimension needs to be
+        set to ``None``.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to the dataset within the file
+        data:
+            dataset; will be put through ``numpy.array(data)``
+
+        Raises
+        ------
+        IOError
+            when `path` doesn't exist
+        ValueError
+            when the dataset is one-dimensional or when vertical dimensions of
+            `data` and the dataset don't match
+        TypeError
+            when data types of `data` and the dataset don't match
+        '''
+        if not self.exists(path):
+            raise IOError('Dataset doesn\'t exist: %s', path)
+        dset = self._stream[path]
+        if len(dset.shape) > 1:
+            raise ValueError('Dataset is multi-dimensional: %s', path)
+        data = np.array(data)
+        if len(data.shape) > 1:
+            raise ValueError('Data dimensions do not match.')
+        if dset.dtype != data.dtype:
+            raise TypeError('Data types don\'t  match.')
+        dset.resize((len(dset) + len(data), ))
+        dset[len(dset):] = data
+
+    def vstack(self, path, data):
+        '''
+        Vertically append data to an existing multi-dimensional dataset.
+        The dataset needs to be created first using the
+        :py:func:`tmlib.writers.DatasetWriter.create` method and the
+        `max_dims` entry for the vertical dimension needs to be
+        set to ``None``.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to the dataset within the file
+        data:
+            dataset; will be put through ``numpy.array(data)``
+
+        Raises
+        ------
+        IOError
+            when `path` doesn't exist
+        ValueError
+            when the dataset is one-dimensional or when vertical dimensions of
+            `data` and the dataset don't match
+        TypeError
+            when data types of `data` and the dataset don't match
+        '''
+        if not self.exists(path):
+            raise IOError('Dataset doesn\'t exist: %s', path)
+        dset = self._stream[path]
+        if not len(dset.shape) > 1:
+            raise ValueError('Dataset is one-dimensional: %s', path)
+        data = np.array(data)
+        if len(data.shape) > 1:
+            if data.shape[1] != dset.shape[1]:
+                raise ValueError('Dataset dimensions do not match.')
+        else:
+            if data.shape[1] != len(dset):
+                raise ValueError('Dataset dimensions do not match.')
+        if dset.dtype != data.dtype:
+            raise TypeError('Data types don\'t  match.')
+        dset.resize((dset.shape[0] + data.shape[0], dset.shape[1]))
+        dset[:, dset.shape[1]:] = data
+
+    def hstack(self, path, data):
+        '''
+        Horizontally append data to an existing multi-dimensional dataset.
+        The dataset needs to be created first using the
+        :py:func:`tmlib.writers.DatasetWriter.create` method and the
+        `max_dims` entry for the horizontal dimension needs to be
+        set to ``None``.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to the dataset within the file
+        data:
+            dataset; will be put through ``numpy.array(data)``
+
+        Raises
+        ------
+        IOError
+            when `path` doesn't exist
+        ValueError
+            when the dataset is one-dimensional or when horizontal dimensions
+            of `data` and the dataset don't match
+        TypeError
+            when data types of `data` and the dataset don't match
+        '''
+        if not self.exists(path):
+            raise IOError('Dataset doesn\'t exist: %s', path)
+        dset = self._stream[path]
+        if not len(dset.shape) > 1:
+            raise ValueError('Dataset is one-dimensional: %s', path)
+        data = np.array(data)
+        if len(data.shape) > 1:
+            if data.shape[0] != dset.shape[0]:
+                raise ValueError('Dataset dimensions don\'t match.')
+        else:
+            if data.shape[0] != len(dset):
+                raise ValueError('Dataset dimensions don\'t match.')
+        if dset.dtype != data.dtype:
+            raise TypeError('Data types don\'t match.')
+        dset.resize((dset.shape[0], dset.shape[1] + data.shape[1]))
+        dset[dset.shape[0]:, :] = data
 
     def set_attribute(self, path, name, data):
         '''
