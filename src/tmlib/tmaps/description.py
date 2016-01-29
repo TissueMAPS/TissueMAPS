@@ -272,10 +272,13 @@ class WorkflowDescription(object):
         Returns
         -------
         str
-            JSON string encoding the description of the step as a
+            JSON string encoding the description of the workflow as a
             mapping of key-value pairs
         '''
-        pass
+        d = defaultdict()
+        d['type'] = getattr(self, 'type')
+        d['stages'] = [json.loads(s.jsonify()) for s in getattr(self, 'stages')]
+        return json.dumps(d)
 
 
 class WorkflowStageDescription(object):
@@ -359,7 +362,7 @@ class WorkflowStageDescription(object):
         Returns
         -------
         str
-            JSON string encoding the description of the step as a
+            JSON string encoding the description of the stage as a
             mapping of key-value pairs
         '''
         d = defaultdict()

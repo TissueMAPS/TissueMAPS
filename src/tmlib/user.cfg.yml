@@ -5,6 +5,7 @@ sources_dir:
 layers_dir:
 plate_format: 384
 workflow:
+  type: 'canonical'
   stages:
     - name: image_conversion
       steps:
@@ -19,8 +20,8 @@ workflow:
       steps:
         - name: align
           args:
-            ref_channel: 1
-            ref_cycle: 2
+            ref_channel: 0
+            ref_cycle: 1
         - name: corilla
           args:
     - name: pyramid_creation

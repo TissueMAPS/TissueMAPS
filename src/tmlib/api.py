@@ -2,7 +2,7 @@ import os
 import yaml
 import glob
 import time
-import datetime
+import logging
 from natsort import natsorted
 from abc import ABCMeta
 from abc import abstractmethod
@@ -13,15 +13,19 @@ from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 from gc3libs.session import Session
 from gc3libs.workflow import TaskCollection
-from gc3libs.workflow import ParallelTaskCollection
-from gc3libs.workflow import SequentialTaskCollection
-import logging
+
 from . import utils
 from .readers import JsonReader
 from .writers import JsonWriter
 from .errors import JobDescriptionError
 from .cluster_utils import format_stats_data
 from .cluster_utils import get_task_data
+from .cluster_utils import log_task_status
+from .cluster_utils import log_task_failure
+from .tmaps.workflow import RunJob
+from .tmaps.workflow import RunJobCollection
+from .tmaps.workflow import CollectJob
+from .tmaps.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)
 
@@ -75,30 +79,25 @@ class BasicClusterRoutines(object):
         '''
         return os.path.join(self.project_dir, 'session')
 
-    @staticmethod
-    def create_datetimestamp():
+    @property
+    def datetimestamp(self):
         '''
-        Create datetimestamp in the form "year-month-day_hour:minute:second".
         Returns
         -------
         str
-            datetimestamp
+            datetimestamp in the form "year-month-day_hour:minute:second"
         '''
-        t = time.time()
-        return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H-%M-%S')
+        return utils.create_datetimestamp()
 
-    @staticmethod
-    def create_timestamp():
+    @property
+    def timestamp(self):
         '''
-        Create timestamp in the form "hour:minute:second".
-
         Returns
         -------
         str
-            timestamp
+            timestamp in the form "hour:minute:second"
         '''
-        t = time.time()
-        return datetime.datetime.fromtimestamp(t).strftime('%H-%M-%S')
+        return utils.create_timestamp()
 
     @staticmethod
     def _create_batches(li, n):
@@ -108,23 +107,11 @@ class BasicClusterRoutines(object):
 
     @staticmethod
     def log_task_data(task_data, monitoring_depth):
-        def log_recursive(data, i):
-            logger.info('%s: %s (%.2f %%)',
-                        data['name'], data['state'],
-                        data['percent_done'])
-            if i < monitoring_depth:
-                for subtd in data.get('subtasks', list()):
-                    log_recursive(subtd, i+1)
-        log_recursive(task_data, 0)
+        return log_task_status(task_data, logger, monitoring_depth)
 
     @staticmethod
     def log_task_failure(task_data):
-        def log_recursive(data, i):
-            if data['failed']:
-                logger.error('%s: failed', data['name'])
-            for subtd in data.get('subtasks', list()):
-                log_recursive(subtd, i+1)
-        log_recursive(task_data, 0)
+        return log_task_failure(task_data, logger)
 
     def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=1):
         '''
@@ -210,10 +197,11 @@ class BasicClusterRoutines(object):
                 logger.info('------------------------------------------')
 
                 # break out of the loop when all jobs are done
-                aggregate = format_stats_data(e.stats())
-                if aggregate['count_total'] > 0:
-                    if aggregate['count_terminated'] == aggregate['count_total']:
+                stats = format_stats_data(e.stats())
+                if stats['count_total'] > 0:
+                    if stats['count_terminated'] == stats['count_total']:
                         break_next = True
+
         except KeyboardInterrupt:
             # User interrupted process, which should kill all running jobs
             logger.info('killing jobs')
@@ -797,14 +785,7 @@ class ClusterRoutines(BasicClusterRoutines):
     def create_jobs(self, job_descriptions,
                     duration=None, memory=None, cores=None):
         '''
-        Create a GC3Pie task collection of "jobs".
-
-        The following two tasks are created:
-        * *run*: a :py:class:`gc3libs.workflow.ParallelTaskCollection` of
-          individual jobs (:py:class:`gc3libs.Appliction`)
-          that should be processed in parallel on the cluster
-        * *collect*: an individual job (:py:class:`gc3libs.Appliction`) that
-          should be processed after all parallel jobs have been terminated
+        Create jobs that can be submitted for processing.
 
         Parameters
         ----------
@@ -822,36 +803,20 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Returns
         -------
-        gc3libs.workflow.SequentialTaskCollection
-            jobs
-
-        Note
-        ----
-        A `SequentialTaskCollection` is returned even if there is only one
-        parallel task (a collection of jobs that are processed in parallel).
-        This is done for consistency so that jobs from different steps can
-        be handled the same way and easily be combined into a larger workflow.
+        tmlib.tmaps.workflow.WorkflowStep
+            collection of jobs
         '''
-        run_jobs = ParallelTaskCollection(
-                        jobname='%s_run' % self.prog_name)
+        logger.info('create workflow step')
+        run_jobs = RunJobCollection(self.prog_name)
 
-        logger.debug('create run jobs: ParallelTaskCollection')
+        logger.info('create run jobs')
         for i, batch in enumerate(job_descriptions['run']):
 
-            jobname = '%s_run_%.6d' % (self.prog_name, batch['id'])
-            timestamp = self.create_datetimestamp()
-            log_out_file = '%s_%s.out' % (jobname, timestamp)
-            log_err_file = '%s_%s.err' % (jobname, timestamp)
-
-            # Add individual task to collection
-            job = gc3libs.Application(
+            job = RunJob(
+                    step_name=self.prog_name,
                     arguments=self._build_run_command(batch),
-                    inputs=list(),
-                    outputs=list(),
                     output_dir=self.log_dir,
-                    jobname=jobname,
-                    stdout=log_out_file,
-                    stderr=log_err_file
+                    job_id=batch['id']
             )
             if duration:
                 job.requested_walltime = Duration(duration)
@@ -867,39 +832,24 @@ class ClusterRoutines(BasicClusterRoutines):
             run_jobs.add(job)
 
         if 'collect' in job_descriptions.keys():
-            logger.debug('create collect job: Application')
-
+            logger.info('create collect job')
             batch = job_descriptions['collect']
 
-            jobname = '%s_collect' % self.prog_name
-            timestamp = self.create_datetimestamp()
-            log_out_file = '%s_%s.out' % (jobname, timestamp)
-            log_err_file = '%s_%s.err' % (jobname, timestamp)
-
-            collect_job = gc3libs.Application(
+            collect_job = CollectJob(
+                    step_name=self.prog_name,
                     arguments=self._build_collect_command(),
-                    inputs=list(),
-                    outputs=list(),
-                    output_dir=self.log_dir,
-                    jobname=jobname,
-                    stdout=log_out_file,
-                    stderr=log_err_file
+                    output_dir=self.log_dir
             )
             collect_job.requested_walltime = Duration('01:00:00')
             collect_job.requested_memory = Memory(4, Memory.GB)
 
-            logger.debug('add run & collect jobs to SequentialTaskCollection')
-            jobs = SequentialTaskCollection(
-                        tasks=[run_jobs, collect_job],
-                        jobname='%s' % self.prog_name)
-
-            # TODO: time and duration for "collect" jobs
-
         else:
+            collect_job = None
 
-            logger.debug('add run jobs to SequentialTaskCollection')
-            jobs = SequentialTaskCollection(
-                        tasks=[run_jobs],
-                        jobname='%s' % self.prog_name)
+        jobs = WorkflowStep(
+                    name=self.prog_name,
+                    run_jobs=run_jobs,
+                    collect_job=collect_job
+        )
 
         return jobs

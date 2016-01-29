@@ -94,8 +94,8 @@ class WorkflowDescriptionError(WorkflowError):
     '''
 
 
-class WorkflowNextStepError(WorkflowError):
+class WorkflowTransitionError(WorkflowError):
     '''
-    Error class that is raised when requirements for progressing to the next
-    step are not fulfilled.
+    Error class that is raised when requirements for transition to the next
+    workflow stage or step are not fulfilled.
     '''

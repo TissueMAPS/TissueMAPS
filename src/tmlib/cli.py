@@ -68,7 +68,7 @@ def command_line_call(parser):
         else:
             parser.print_help()
     except Exception as error:
-        sys.stderr.write('%s\n' % str(error))
+        sys.stderr.write('\nFAILED:\n%s\n' % str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):
             sys.stderr.write(tb)
         sys.exit(1)

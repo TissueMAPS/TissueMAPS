@@ -361,6 +361,10 @@ class SubmitArgs(GeneralArgs):
         -------
         List[int]
             ids of jobs that should be submitted (default: ``None``)
+
+        Note
+        ----
+        If not set, all jobs will be submitted by default.
         '''
         return self._jobs
 
