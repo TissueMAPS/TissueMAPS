@@ -60,7 +60,7 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                     for d in features_datasets
                 ]
                 # if features_datasets:
-                #     dims = f.get_dimensions(datasets[obj_name]['features'][0])
+                #     dims = f.get_dims(datasets[obj_name]['features'][0])
                 #     if len(dims) > 1:
                 #         n_features[obj_name] = dims[1]
                 #     elif len(dims) == 1:
@@ -112,13 +112,13 @@ def combine_datasets(input_files, output_file, delete_input_files=False):
                 if f.exists(features_path):
                     feat_path = datasets[obj_name]['features'][0]['path']
                     if f.exists(feat_path):
-                        dims = f.get_dimensions(feat_path)
+                        dims = f.get_dims(feat_path)
                     else:
                         dims = (0,)
                 elif f.exists(segmentation_path):
                     obj_ids_path = '%s/object_ids' % segmentation_path
                     if f.exists(obj_ids_path):
-                        dims = f.get_dimensions(obj_ids_path)
+                        dims = f.get_dims(obj_ids_path)
                     else:
                         dims = (0,)
                 else:

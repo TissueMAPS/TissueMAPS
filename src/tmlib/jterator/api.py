@@ -361,7 +361,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_descriptions['collect'] = {
             'inputs': {
                 'data_files': [
-                    self.build_data_filename(i+1) for i in xrange(len(batches))
+                    self.build_data_filename(i+1)
+                    for i in xrange(len(batches))
                 ]
             },
             'outputs': {
@@ -401,7 +402,40 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def run_job(self, batch):
         '''
         Run pipeline, i.e. execute each module in the order defined by the
-        pipeline description.
+        pipeline description. Each job stores its output in a HDF5 file
+        with the following structure::
+
+            /metadata                                               # Group
+            /metadata/job_id                                        # Dataset {SCALAR}
+            /metadata/plate_name                                    # Dataset {SCALAR}
+            /metadata/well_name                                     # Dataset {SCALAR}
+            /metadata/well_posistion                                # Group
+            /metadata/well_posistion/x                              # Dataset {SCALAR}
+            /metadata/well_posistion/y                              # Dataset {SCALAR}
+            /metadata/shift_offsets                                 # Group
+            /metadata/shift_offsets/x                               # Dataset {SCALAR}
+            /metadata/shift_offsets/y                               # Dataset {SCALAR}
+            /metadata/image_dimensions                              # Group
+            /metadata/image_dimensions/x                            # Dataset {SCALAR}
+            /metadata/image_dimensions/y                            # Dataset {SCALAR}
+            /objects                                                # Group
+            /objects/<object_name>                                  # Group
+            /objects/<object_name>/ids                              # Dataset {n}
+            /objects/<object_name>/segmentation                     # Group
+            /objects/<object_name>/segmentation/parent_name         # Dataset {n}
+            /objects/<object_name>/segmentation/object_ids          # Dataset {n}
+            /objects/<object_name>/segmentation/is_border           # Dataset {n}
+            /objects/<object_name>/segmentation/centroids           # Group
+            /objects/<object_name>/segmentation/centroids/y         # Dataset {n}
+            /objects/<object_name>/segmentation/centroids/x         # Dataset {n}
+            /objects/<object_name>/segmentation/outlines            # Group
+            /objects/<object_name>/segmentation/outlines/y          # Dataset {n}
+            /objects/<object_name>/segmentation/outlines/x          # Dataset {n}
+            /objects/<object_name>/segmentation/image_dimensions    # Group
+            /objects/<object_name>/segmentation/image_dimensions/y  # Dataset {n}
+            /objects/<object_name>/segmentation/image_dimensions/x  # Dataset {n}
+            /objects/<object_name>/features                         # Group
+            /objects/<object_name>/features/<feature_name>          # Dataset {n}
 
         Parameters
         ----------
@@ -465,21 +499,23 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # All images processed per job were acquired at the same site
                 # and thus share the positional metadata information
                 with DatasetWriter(data_file) as data:
+                    data.write('/metadata/job_id',
+                               data=batch['id'])
                     data.write('/metadata/plate_name',
                                data=md.plate_name)
                     data.write('/metadata/well_name',
                                data=md.well_name)
-                    data.write('/metadata/well_position_y',
+                    data.write('/metadata/well_position/y',
                                data=md.well_position_y)
-                    data.write('/metadata/well_position_x',
+                    data.write('/metadata/well_position/x',
                                data=md.well_position_x)
-                    data.write('/metadata/image_dimension_y',
+                    data.write('/metadata/image_dimensions/y',
                                data=orig_dims[0])
-                    data.write('/metadata/image_dimension_x',
+                    data.write('/metadata/image_dimensions/x',
                                data=orig_dims[1])
-                    data.write('/metadata/shift_offset_y',
+                    data.write('/metadata/shift_offsets/y',
                                data=offset_y)
-                    data.write('/metadata/shift_offset_x',
+                    data.write('/metadata/shift_offsets/x',
                                data=offset_x)
 
         outputs = collections.defaultdict(dict)
@@ -528,53 +564,27 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         The final file has the following hierarchical structure::
 
-            /metadata                                               # Group
-            /metadata/<job_id>                                      # Group
-            /metadata/<job_id>/plate_name                           # Dataset {SCALAR}
-            /metadata/<job_id>/well_name                            # Dataset {SCALAR}
-            /metadata/<job_id>/well_posistion_x                     # Dataset {SCALAR}
-            /metadata/<job_id>/well_posistion_y                     # Dataset {SCALAR}
-            /metadata/<job_id>/shift_offset_x                       # Dataset {SCALAR}
-            /metadata/<job_id>/shift_offset_y                       # Dataset {SCALAR}
-            /metadata/<job_id>/image_dimension_x                    # Dataset {SCALAR}
-            /metadata/<job_id>/image_dimension_y                    # Dataset {SCALAR}
-            /objects                                                # Group
-            /objects/<object_name>                                  # Group
-            /objects/<object_name>/ids                              # Dataset {n}
-            /objects/<object_name>/segmentation                     # Group
-            /objects/<object_name>/segmentation/job_ids             # Dataset {n}
-            /objects/<object_name>/segmentation/object_ids          # Dataset {n}
-            /objects/<object_name>/segmentation/is_border           # Dataset {n}
-            /objects/<object_name>/segmentation/centroids           # Group
-            /objects/<object_name>/segmentation/centroids/y         # Dataset {n}
-            /objects/<object_name>/segmentation/centroids/x         # Dataset {n}
-            /objects/<object_name>/segmentation/outlines            # Group
-            /objects/<object_name>/segmentation/outlines/y          # Dataset {n}
-            /objects/<object_name>/segmentation/outlines/x          # Dataset {n}
-            /objects/<object_name>/segmentation/image_dimensions    # Group
-            /objects/<object_name>/segmentation/image_dimensions/y  # Dataset {n}
-            /objects/<object_name>/segmentation/image_dimensions/x  # Dataset {n}
-            /objects/<object_name>/features                         # Group
-            /objects/<object_name>/features/<feature_name>          # Dataset {n}
+            /objects/<object_name>/features                         # Dataset {n, p}
             /objects/<object_name>/map_data                         # Group
             /objects/<object_name>/map_data/coordinates             # Group
             /objects/<object_name>/map_data/coordinates/<object_id> # Dataset {m, 2}
 
-        where *n* is the total number of objects and *m* is the number of
-        a objects in an object subset (*m* <= *n*).
+        where *n* is the total number of objects, *p* is the number of
+        features that were extracted for each object, and
+        *m* are the number of outline coordinates for each object
+        (*m* differs between object entities).
 
         Parameters
         ----------
         batch: dict
             job description
         '''
-        logger.info('fuse datasets of different jobs into a single file')
-        output_file = batch['outputs']['data_files'][0]
-        tmp_file = '%s.tmp' % output_file
-        data_fusion.combine_datasets(
-                        input_files=batch['inputs']['data_files'],
-                        output_file=tmp_file,
-                        delete_input_files=False)  # TODO: delete them
+        # logger.info('fuse datasets of different jobs into a single file')
+        # tmp_file = '%s.tmp' % output_file
+        # data_fusion.combine_datasets(
+        #                 input_files=batch['inputs']['data_files'],
+        #                 output_file=tmp_file,
+        #                 delete_input_files=False)  # TODO: delete them
 
         # There could be several pipelines, and each pipeline may only provide
         # some of the data, e.g. one pipeline may provide segmentations, while
@@ -584,22 +594,23 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # complemented with the datasets of the already existing file.
         # The updated file will then subsequently replace the previous file.
 
-        if os.path.exists(output_file) and batch['merge']:
-            # Update the temporary file with the content of the already
-            # existing file
-            data_fusion.update_datasets(output_file, tmp_file)
-            # Remove the old file, which will be replaced by the new one
-            os.remove(output_file)
+        # if os.path.exists(output_file) and batch['merge']:
+        #     # Update the temporary file with the content of the already
+        #     # existing file
+        #     data_fusion.update_datasets(output_file, tmp_file)
+        #     # Remove the old file, which will be replaced by the new one
+        #     os.remove(output_file)
 
-        # Replace the old file with the new, updated file
-        os.rename(tmp_file, output_file)
+        # # Replace the old file with the new, updated file
+        # os.rename(tmp_file, output_file)
 
-        logger.info('calculate object coordinates for visualization')
-        with DatasetReader(output_file) as f:
+        example_file = batch['inputs']['data_files'][0]
+        with DatasetReader(example_file) as f:
             objects = f.list_groups('/objects')
 
         for obj in objects:
-            ObjectLayer.create(self.experiment, obj)
+            layer = ObjectLayer(self.experiment, obj)
+            layer.create(batch['inputs']['data_files'])
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):

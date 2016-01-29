@@ -186,7 +186,7 @@ class Cycle(object):
         '''
         return 'alignment_description.json'
 
-    @threaded_cached_property
+    @property
     def image_metadata(self):
         '''
         Returns
@@ -219,7 +219,7 @@ class Cycle(object):
         # TODO: consider returning the store for subset selection using the
         # select(), select_column(), or select_as_multiple() methods
 
-        # TODO: this doesn't get cached???
+        # TODO: store alignment in pytables format and merge the tables
 
         # Add the alignment description to each image element (if available)
         alignment_file = os.path.join(self.dir, self.align_descriptor_file)

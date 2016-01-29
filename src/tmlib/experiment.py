@@ -3,6 +3,7 @@ import os
 import logging
 import numpy as np
 from natsort import natsorted
+from contextlib import contextmanager
 from cached_property import cached_property
 from . import cfg
 from . import utils
@@ -36,7 +37,7 @@ class Experiment(object):
     :py:class:`tmlib.cycle.Cycle`
     '''
 
-    def __init__(self, experiment_dir, user_cfg=None, library='vips'):
+    def __init__(self, experiment_dir, user_cfg=None, library='numpy'):
         '''
         Initialize an instance of class Experiment.
 
@@ -48,7 +49,7 @@ class Experiment(object):
             user configuration settings (default: ``None``)
         library: str, optional
             image library that should be used
-            (options: ``"vips"`` or ``"numpy"``)
+            (options: ``"vips"`` or ``"numpy"``, default: ``"numpy"``)
 
         Raises
         ------
@@ -155,8 +156,8 @@ class Experiment(object):
                     'Attribute "user_cfg" must have type UserConfiguration')
         # Update configuration on disk to make it persistent, otherwise
         # this would create inconsistencies in workflows.
-        if value:
-            value.dump_to_file()
+        # if value:
+            # value.dump_to_file()
         self._user_cfg = value
 
     @cached_property
@@ -394,10 +395,25 @@ class Experiment(object):
 
         See also
         --------
-        :py:func:`tmlib.jterator.data_fusion.fuse_datasets`
         :py:class:`tmlib.layer.ObjectLayer`
         '''
         return 'data.h5'
+
+    @property
+    @contextmanager
+    def data(self):
+        '''
+        Returns
+        -------
+        pandas.HDFStore
+            tables can be queried using :py:func:`select` method;
+            use `start` and `stop` arguments to select only a subset of the
+            data
+        '''
+        filename = os.path.join(self.dir, self.features_file)
+        store = pd.HDFStore(filename)
+        yield store
+        store.close()
 
     def get_image_by_name(self, name):
         '''

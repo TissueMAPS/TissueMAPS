@@ -85,7 +85,7 @@ class Layer(object):
         Tuple[int]
             height, width of images in pixels
         '''
-        cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
+        cycle = self.experiment.plates[0].cycles[0]
         image = cycle.get_image_subset([0])[0]
         return image.pixels.dimensions
 
@@ -99,7 +99,7 @@ class Layer(object):
         '''
         # Determine the dimensions of wells based on one example well.
         # NOTE: it is assumed that all wells have the same dimensions!
-        cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
+        cycle = self.experiment.plates[0].cycles[0]
         md = cycle.image_metadata
         n_rows = np.max(md.well_position_y) + 1
         n_cols = np.max(md.well_position_x) + 1
@@ -427,9 +427,9 @@ class ChannelLayer(Layer):
                 column * self.zoom_factor,
                 (column * self.zoom_factor + self.zoom_factor - 1) + 1
         )
-        for c in zip(rows, cols):
-            if c in existing_coordinates:
-                coordinates.append(c)
+        for r, c in itertools.product(rows, cols):
+            if (r, c) in existing_coordinates:
+                coordinates.append((r, c))
         return coordinates
 
     def get_tiles_of_next_higher_level(self, filename):
@@ -530,7 +530,7 @@ class ChannelLayer(Layer):
         clip_value: int, optional
             fixed threshold value (default: ``None``)
         '''
-        logger.debug('create empty tiles')
+        logger.debug('create empty tiles for level %d', self.base_level_index)
         tile_coords = self.base_tile_mappings['tile_to_images'].keys()
         n_rows = self.zoom_level_info[-1]['n_tiles_height']
         n_cols = self.zoom_level_info[-1]['n_tiles_width']
@@ -570,7 +570,7 @@ class ChannelLayer(Layer):
         This keeps memory requirements to a minimum and allows parallelization
         of the pyramid creation step.
         '''
-        logger.info('create tiles for level %d', len(self.zoom_level_info) - 1)
+        logger.info('create tiles for level %d', self.base_level_index)
         if illumcorr:
             logger.info('correct images for illumination artifacts')
         if align:
@@ -581,29 +581,30 @@ class ChannelLayer(Layer):
             clip_value = 2**16
         logger.info('clip intensity values above %d', clip_value)
 
-        # Process tiles that that map to one or more images.
-        logger.debug('create non-empty tiles')
+        # Process tiles that map to one or more images.
         cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
         stats = cycle.illumstats_images[self.channel_ix]
         md = cycle.image_metadata
         if subset_indices is None:
+            logger.info('process all image files')
             filenames = self.metadata.filenames
         else:
+            logger.info('process subset of image files')
             filenames = list(np.array(self.metadata.filenames)[subset_indices])
         for f in filenames:
             name = os.path.basename(f)
             logger.debug('create tiles mapping to image "%s"', name)
             # Retrieve the coordinates of the corresponding tiles
             tile_coords = self.base_tile_mappings['image_to_tiles'][name]
+            # Determine location of the tile within the image
+            image_info = self.base_tile_mappings['tile_to_images']
             # Create individual tiles
             indices = None
             for t in tile_coords:
                 logger.debug('create tile for column %d, row %d', t[1], t[0])
-                # Determine location of the tile within the image
-                image_info = self.base_tile_mappings['tile_to_images'][t]
                 # A tile may be composed of pixels of multiple images:
                 # load all required images
-                names = [im['name'] for im in image_info]
+                names = [im['name'] for im in image_info[t]]
                 # Cache images to prevent reloading when not necessary
                 new_indices = [np.where(md['name'] == n)[0][0] for n in names]
                 if indices is None or indices != new_indices:
@@ -617,8 +618,8 @@ class ChannelLayer(Layer):
                     if align:
                         # Align image between cycles
                         img = img.align(crop=False)
-                    y_offset = image_info[i]['y_offset']
-                    x_offset = image_info[i]['x_offset']
+                    y_offset = image_info[t][i]['y_offset']
+                    x_offset = image_info[t][i]['x_offset']
                     # We use the same approach for overlapping and
                     # non-overlapping tiles, i.e. tiles that are composed
                     # of pixels of a single image and those that contain pixels
@@ -633,11 +634,16 @@ class ChannelLayer(Layer):
                     # If a tile is composed of pixels of multiple images
                     # we need to extract the relevant pixels and join them
                     logger.debug('tile overlaps multiple images')
-                    y_offsets = np.array([im['y_offset'] for im in image_info])
-                    x_offsets = np.array([im['x_offset'] for im in image_info])
-                    vert = y_offsets < 0
-                    horz = x_offsets < 0
-                    # Take the top left tile and then insert the other pixels
+                    y_offsets = np.array([
+                                    im['y_offset'] for im in image_info[t]
+                    ])
+                    x_offsets = np.array([
+                                    im['x_offset'] for im in image_info[t]
+                    ])
+                    v = y_offsets < 0
+                    h = x_offsets < 0
+                    # Take the top left tile and then insert the relevant
+                    # pixels of the other tiles
                     y_pos = [md.ix[i, 'well_position_y'] for i in indices]
                     x_pos = [md.ix[i, 'well_position_x'] for i in indices]
                     ix_top = np.where(np.array(y_pos) == np.min(y_pos))[0]
@@ -646,20 +652,20 @@ class ChannelLayer(Layer):
                     tile = tiles[ix_top_left]
                     if len(ix_top) == 1:
                         logger.debug('2 images: vertical overlap')
-                        y = abs(y_offsets[vert][0]) - self.tile_size
-                        tile[y:, :] = tiles[vert][0][y:, :]
+                        y = abs(y_offsets[v][0]) - self.tile_size
+                        tile[y:, :] = tiles[v][0][y:, :]
                     elif len(ix_left) == 1:
                         logger.debug('2 images: horizontal overlap')
-                        x = abs(x_offsets[horz][0])
-                        tile[:, x:] = tiles[horz][0][:, x:]
+                        x = abs(x_offsets[h][0])
+                        tile[:, x:] = tiles[h][0][:, x:]
                     else:
                         logger.debug('4 images: vertical & horizontal overlap')
-                        y = abs(y_offsets[vert][0]) - self.tile_size
-                        x = abs(x_offsets[horz][0])
-                        tile[y:, x:] = tiles[vert & horz][0][y:, x:]
-                        tile[y:, :x] = tiles[vert & ~horz][0][y:, :x]
-                        tile[:y, x:] = tiles[~vert & horz][0][:y, x:]
-                        tile[:y, :x] = tiles[~vert & ~horz][0][:y, :x]
+                        y = abs(y_offsets[v][0]) - self.tile_size
+                        x = abs(x_offsets[h][0])
+                        tile[y:, x:] = tiles[v & h][0][y:, x:]
+                        tile[y:, :x] = tiles[v & ~h][0][y:, :x]
+                        tile[:y, x:] = tiles[~v & h][0][:y, x:]
+                        tile[:y, :x] = tiles[~v & ~h][0][:y, :x]
                 else:
                     tile = tiles[0]
 
@@ -912,7 +918,7 @@ class ObjectLayer(Layer):
     stored in a HDF5 file.
     '''
 
-    def __init__(self, experiment, name, coordinates,
+    def __init__(self, experiment, name,
                  image_displacement=0, well_spacer_size=500):
         '''
         Initialize an object of class ObjectLayer.
@@ -923,8 +929,6 @@ class ObjectLayer(Layer):
             configured experiment object
         name: str
             name of the layer (objects)
-        coordinates: Dict[int, pandas.DataFrame]
-            y, x coordinates of the outlines of each object
         image_displacement: int, optional
             displacement in x, y direction in pixels between individual images;
             useful to account for an overlap between images (default: ``0``)
@@ -936,11 +940,10 @@ class ObjectLayer(Layer):
                 experiment, image_displacement, well_spacer_size)
         self.experiment = experiment
         self.name = name
-        self.coordinates = coordinates
         self.image_displacement = image_displacement
         self.well_spacer_size = well_spacer_size
 
-    def create_coordinates(self, align=False):
+    def create(self, data_files, align=False):
         '''
         Determine the coordinates of simplified object contours (polygons with
         reduced number of points) to the HDF5 data file:
@@ -959,6 +962,8 @@ class ObjectLayer(Layer):
 
         Parameters
         ----------
+        data_files: List[str]
+            absolute path to individual data files
         align: bool, optional
             whether images should be aligned between cycles
             (default: ``False``)
@@ -969,30 +974,27 @@ class ObjectLayer(Layer):
         :py:class:`tmlib.layer.ChannelLayer`, otherwise objects will not
         align with the corresponding images. The same holds for `align`. 
         '''
-        logger.info('create object coordinates "%s"', self.name)
-
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
-        segm_path = '/objects/%s/segmentation' % self.name
-        with DatasetWriter(filename) as out:
-            out.set_attribute(
-                '/objects/%s' % self.name,
-                name='visual_type', data='polygon'
-            )
-            coordinates_path = '/objects/%s/map_data/coordinates' % self.name
-            with DatasetReader(filename) as data:
-                if not data.exists(segm_path):
-                    raise DataError(
-                        'The data file does\'t contain any segmentations: %s'
-                        % segm_path)
+        store = pd.HDFStore(filename)
+        p = 'objects/%s' % self.name
+        # TODO: how to set attribute for "visual_type"?
+        # store.get_storer(p).attrs.visual_type = 'polygon'
+
+        segm_path = 'objects/%s/segmentation' % self.name
+        feat_path = 'objects/%s/features' % self.name
+        coord_path = 'objects/%s/map_data/coordinates' % self.name
+        global_obj_id = 0
+        for j, f in enumerate(data_files):
+            with DatasetReader(f) as data:
 
                 # Get the indices of objects at the border of images
                 # (using the parent objects as references)
                 if 'parent_name' in data.list_datasets(segm_path):
-                    parent = data.read('%s/parent_name' % segm_path, index=0)
-                    p_segmentation_path = '/objects/%s/segmentation' % parent
-                    is_border = data.read('%s/is_border' % p_segmentation_path)
+                    parent = data.read('%s/parent_name' % segm_path)
+                    p_segm_path = 'objects/%s/segmentation' % parent
+                    is_border = data.read('%s/is_border' % p_segm_path).astype(bool)
                 else:
-                    is_border = data.read('%s/is_border' % segm_path)
+                    is_border = data.read('%s/is_border' % segm_path).astype(bool)
 
                 # Get the coordinates of object outlines relative to individual
                 # images
@@ -1005,71 +1007,76 @@ class ObjectLayer(Layer):
                 # accordingly, i.e. translate site-specific coordinates into
                 # global ones.
                 plate_names = [p.name for p in self.experiment.plates]
-                job_ids = data.read('%s/job_ids' % segm_path)
-                global_coords = OrderedDict()
-                for j in np.unique(job_ids):
-                    logger.debug('process image acquisition site # %d', j)
-                    index = j - 1  # job indices are one-based
 
-                    plate_name = data.read('metadata/plate_name', index=index)
-                    p = plate_names.index(plate_name)
-                    plate = self.experiment.plates[p]
-                    well_name = data.read('metadata/well_name', index=index)
-                    plate_coords = plate.map_well_id_to_coordinate(well_name)
-                    well_coords = (
-                        data.read('metadata/well_position_y', index=index),
-                        data.read('metadata/well_position_x', index=index)
-                    )
-                    logger.debug('plate name: %s', plate_name)
-                    logger.debug('plate coorinates: {0}'.format(plate_coords))
-                    logger.debug('well name: %s', plate_name)
-                    logger.debug('well coorinates: {0}'.format(well_coords))
+                plate_name = data.read('metadata/plate_name')
+                p = plate_names.index(plate_name)
+                plate = self.experiment.plates[p]
+                well_name = data.read('metadata/well_name')
+                plate_coords = plate.map_well_id_to_coordinate(well_name)
+                well_coords = (
+                    data.read('metadata/well_position/y'),
+                    data.read('metadata/well_position/x')
+                )
+                logger.debug('plate name: %s', plate_name)
+                logger.debug('plate coordinates: {0}'.format(plate_coords))
+                logger.debug('well name: %s', plate_name)
+                logger.debug('well coordinates: {0}'.format(well_coords))
 
-                    n_prior_well_rows = plate.nonempty_row_indices.index(
-                                                plate_coords[0])
-                    n_prior_well_cols = plate.nonempty_column_indices.index(
-                                                plate_coords[1])
-                    n_prior_wells = (n_prior_well_rows, n_prior_well_cols)
+                n_prior_well_rows = plate.nonempty_row_indices.index(
+                                            plate_coords[0])
+                n_prior_well_cols = plate.nonempty_column_indices.index(
+                                            plate_coords[1])
+                n_prior_wells = (n_prior_well_rows, n_prior_well_cols)
 
-                    y_offset, x_offset = self._calc_global_offset(
-                                                p, well_coords, n_prior_wells)
+                y_offset, x_offset = self._calc_global_offset(
+                                            p, well_coords, n_prior_wells)
 
-                    if align:
-                        # Images may need to be aligned between cycles
-                        shift_offset_y = data.read('/metadata/shift_offset_y',
-                                                   index=index)
-                        shift_offset_x = data.read('metadata/shift_offset_x',
-                                                   index=index)
-                        y_offset += shift_offset_y
-                        x_offset += shift_offset_x
+                if align:
+                    # Images may need to be aligned between cycles
+                    shift_offset_y = data.read('metadata/shift_offset/y')
+                    shift_offset_x = data.read('metadata/shift_offset/x')
+                    y_offset += shift_offset_y
+                    x_offset += shift_offset_x
 
-                    logger.debug('offset: y %d - x %d', y_offset, x_offset)
+                logger.debug('offset: y %d - x %d', y_offset, x_offset)
 
-                    job_ix = np.where(job_ids == j)[0]
-                    for ix in job_ix:
-                        # Border objects should not be displayed
-                        if is_border[ix]:
-                            continue
-                        # Reduce the number of outlines points
-                        contour = np.array([coords_y[ix], coords_x[ix]]).T
-                        poly = approximate_polygon(contour, 0.95).astype(int)
-                        # Add offset to coordinates
-                        global_coordinates = pd.DataFrame({
-                            'y': -1 * (poly[:, 0] + y_offset),
-                            'x': poly[:, 1] + x_offset
-                        })
-                        # Openlayers wants the x coordinate in the first column
-                        # and the inverted y coordinate in the second.
-                        path = '%s/%d' % (coordinates_path, ix)
-                        out.write(path, data=global_coordinates)
-                        out.set_attribute(
-                            path, name='columns',
-                            data=global_coordinates.columns.tolist()
-                        )
+                n_objects = len(coords_y)
+                for i in xrange(n_objects):
+                    # Remove border objects, they should not be displayed
+                    if is_border[i]:
+                        continue
+                    # Reduce the number of outlines points
+                    contour = np.array([coords_y[i], coords_x[i]]).T
+                    poly = approximate_polygon(contour, 0.95).astype(int)
+                    # Add offset to coordinates
+                    global_coordinates = pd.DataFrame({
+                        'y': -1 * (poly[:, 0] + y_offset),
+                        'x': poly[:, 1] + x_offset
+                    })
+                    # Openlayers wants the x coordinate in the first column
+                    # and the inverted y coordinate in the second.
+                    p = '%s/%d' % (coord_path, global_obj_id)
+                    store.put(p, global_coordinates)
+                    global_obj_id += 1
 
-                # Store objects separately as a sorted array of integers
-                global_obj_ids = map(int, data.list_datasets(coordinates_path))
-                obj_ids_path = '/objects/%s/ids' % self.name
-                out.write(obj_ids_path, data=sorted(global_obj_ids))
+                # Fuse feature datasets and discard border objects
+                # TODO: use pandas and pytables for features
+                feat_data = OrderedDict()
+                features = data.list_datasets(feat_path)
+                for feat in features:
+                    p = '%s/%s' % (feat_path, feat)
+                    # Remove border objects
+                    feat_data[feat] = data.read(p)[~is_border]
+                df = pd.DataFrame(feat_data)
+                # Append features without index for better performance
+                store.append(feat_path, df, index=False)
 
-        return ObjectLayer(self.name, global_coords)
+        # Create index for features
+        store.create_table_index(feat_path, optlevel=9, kind='full')
+
+        # Store objects separately as a sorted array of integers
+        global_obj_ids = pd.Series(range(global_obj_id))
+        obj_ids_path = 'objects/%s/ids' % self.name
+        store.put(obj_ids_path, global_obj_ids)
+
+        store.close()

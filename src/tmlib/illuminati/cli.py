@@ -66,13 +66,17 @@ class Illuminati(CommandLineInterface):
         ----------
         args: tmlib.args.InitArgs
             method-specific arguments
-        '''
-        logger.info('initialize jobs for base level')
-        super(Illuminati, self).init(args)
 
+        Note
+        ----
+        Overwrite of the base class method. Calls the method of the super class
+        recursively to create job descriptions for each pyramid level.
+        '''
         layer = ChannelLayer(self.experiment, 0, 0, 0)
+        logger.info('initialization for level %d', layer.base_level_index)
+        super(Illuminati, self).init(args)
         for level in reversed(range(layer.base_level_index)):
-            logger.info('initialize jobs for level # %d', level)
+            logger.info('initialization for level # %d', level)
             cli = Illuminati(self.experiment, self.verbosity, level)
             super(Illuminati, cli).init(args)
 
@@ -90,6 +94,11 @@ class Illuminati(CommandLineInterface):
         See also
         --------
         :py:mod:`tmlib.illuminati.argparser`
+
+        Note
+        ----
+        The "submit" method will be called repeatedly, once for each pyramid
+        level.
         '''
         experiment = Experiment(args.experiment_dir, library='numpy')
         if args.method_name == 'run' or args.method_name == 'log':
@@ -100,6 +109,8 @@ class Illuminati(CommandLineInterface):
             cli = Illuminati(experiment, args.verbosity, level)
         cli._call(args)
         if args.method_name == 'submit':
+            # TODO: wrap this into a SequentialTaskCollection with a custom
+            # implementation of the next() method
             for level in reversed(range(layer.base_level_index)):
                 cli = Illuminati(experiment, args.verbosity, level)
                 cli.submit(args)

@@ -1,10 +1,38 @@
 '''Utility functions for standard routines.'''
 
+import time
+import datetime
 import re
 import os
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def create_datetimestamp():
+    '''
+    Create a datetimestamp in the form "year-month-day_hour:minute:second".
+    
+    Returns
+    -------
+    str
+        datetimestamp
+    '''
+    t = time.time()
+    return datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d_%H-%M-%S')
+
+
+def create_timestamp():
+    '''
+    Create a timestamp in the form "hour:minute:second".
+
+    Returns
+    -------
+    str
+        timestamp
+    '''
+    t = time.time()
+    return datetime.datetime.fromtimestamp(t).strftime('%H-%M-%S')
 
 
 def regex_from_format_string(format_string):
