@@ -7,32 +7,32 @@ images:
 pipeline:
 - active: true
   handles: handles/smooth_image_dapi.handles.yml
-  module: $JTLIB/modules/smooth_image.py
+  module: smooth_image.py
 - active: true
   handles: handles/threshold_image.handles
-  module: $JTLIB/modules/threshold_image.py
+  module: threshold_image.py
 - active: true
   handles: handles/fill_mask.handles
-  module: $JTLIB/modules/fill_mask.py
+  module: fill_mask.py
 - active: true
   handles: handles/separate_objects.handles.yml
-  module: $JTLIB/modules/separate_objects.m
+  module: separate_objects.m
 - active: true
   handles: handles/filter_objects.handles
-  module: $JTLIB/modules/filter_objects.py
+  module: filter_objects.py
 - active: true
   handles: handles/save_nuclei.handles
-  module: $JTLIB/modules/save_objects.py
+  module: save_objects.py
 - active: true
   handles: handles/smooth_image_celltrace.handles.yml
-  module: $JTLIB/modules/smooth_image.py
+  module: smooth_image.py
 - active: true
   handles: handles/identify_cells.handles.yml
-  module: $JTLIB/modules/identify_secondary_objects_iw.m
+  module: identify_secondary_objects_iw.m
 - active: true
   handles: handles/save_cells.handles.yml
-  module: $JTLIB/modules/save_objects.py
+  module: save_objects.py
 - active: true
   handles: handles/relate_objects.handles.yml
-  module: $JTLIB/modules/relate_objects.py
+  module: relate_objects.py
 

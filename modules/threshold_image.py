@@ -65,6 +65,9 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
         # Get the contours of the mask
         img_border = mh.labeled.borders(thresh_image)
 
+        # Downsample image for display
+        # block_reduce()
+
         # Convert the image to 8-bit for display
         rescaled_image = image_utils.convert_to_uint8(image)
 

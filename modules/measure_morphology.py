@@ -66,3 +66,5 @@ def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
     # TODO: make a nice plot showing the label image and some features
     # in form of a scatterplot with the data points colored the same
     # as the objects in the label image
+    #
+    # TODO: report NaNs
