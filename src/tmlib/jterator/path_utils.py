@@ -1,5 +1,27 @@
 import os
-import re
+
+
+def get_module_directories(repo_dir):
+    '''
+    Get the directories were module source code files are located.
+
+    Parameters
+    ----------
+    repo_dir: str
+        value of the "lib" key in the pipeline descriptor file
+
+    Returns
+    -------
+    Dict[str, str]
+        paths to module directories for each language relative to the
+        repository directory
+    '''
+    dirs = {
+        'Python': 'python/jtlib/modules',
+        'Matlab': 'matlab/+jtlib/+modules',
+        'R': 'r/jtlib/modules',  # TODO: package layout in R???
+    }
+    return {k: os.path.join(repo_dir, v) for k, v in dirs.iteritems()}
 
 
 def complete_path(input_path, project_dir):
@@ -28,37 +50,24 @@ def complete_path(input_path, project_dir):
         return input_path
 
 
-def complete_module_path(input_path, repo_dir, project_dir):
+def get_module_path(module_file, repo_dir):
     '''
-    Complete module path, which can be provided in the pipeline descriptor
-    file as full path, relative path or a path containing format string.
-
+    Get absolute path to module file.
     Parameters
     ----------
-    input_path: str
-        relative path to module file the should be completed
+    module_file: str
+        name of the module file
     repo_dir: str
-        value of the "lib" key in the pipeline descriptor file
-    project_dir: str
-        absolute path to project folder
+        absolute path to the local copy of the `jtlib` repository
 
     Returns
     -------
     str
         absolute path to module file
     '''
-    # Replace the `variable` name with the actual value
-    if repo_dir and re.search(r'^{lib}', input_path):
-        re_path = input_path.format(lib=repo_dir)
-    else:
-        re_path = input_path
-    # Expand path containing environment variables '$'
-    complete_path = os.path.expandvars(re_path)
-    # Expand path starting with `~`
-    complete_path = os.path.expanduser(complete_path)
-    if not os.path.isabs(complete_path):
-        complete_path = os.path.join(project_dir, complete_path)
-    return complete_path
+    language = determine_language(module_file)
+    modules_dir = get_module_directories(repo_dir)[language]
+    return os.path.join(modules_dir, module_file)
 
 
 def determine_language(filename):

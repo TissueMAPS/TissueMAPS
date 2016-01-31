@@ -4,6 +4,7 @@ import glob
 import logging
 import shutil
 from natsort import natsorted
+from . import path_utils
 from ..readers import YamlReader
 from ..writers import YamlWriter
 from ..errors import PipelineOSError
@@ -224,7 +225,6 @@ class JtProject(object):
                         '%s.pipe.yml' % self.pipe_name)
         pipe_skeleton = {
             'project': {
-                'lib': repo_dir,
                 'description': str()
             },
             'images': {
@@ -249,7 +249,6 @@ class JtProject(object):
         else:
             with YamlReader() as reader:
                 pipe_content = reader.read(pipe_file, use_ruamel=True)
-            pipe_content['project']['lib'] = repo_dir
             new_pipe_file = os.path.join(
                                 self.project_dir,
                                 '%s.pipe.yml' % self.pipe_name)
@@ -405,8 +404,6 @@ class JtAvailableModules(object):
     in the `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
     '''
 
-    MODULE_FILE_EXT = {'r', 'R', 'm', 'jl', 'py'}
-
     def __init__(self, repo_dir):
         '''
         Initialize an instance of class JtAvailableModules.
@@ -421,28 +418,35 @@ class JtAvailableModules(object):
     @property
     def module_files(self):
         '''
-        Module files are assumed to reside in a subfolder called "modules"
-        and have one the following suffixes: ".py", ".m", ".jl", ".r" or ".R".
+        Module files are assumed to reside in a package called "modules"
+        as a subpackage of the "jtlib" package. Module files can have one of
+        the following extensions: ".py", ".m", ".jl", ".r" or ".R".
 
         Returns
         -------
         List[str]
-            paths to the module files
+            absolute paths to module files
         '''
-        modules_dir = os.path.join(self.repo_dir, 'modules')
-        search_string = '\.(%s)$' % '|'.join(self.MODULE_FILE_EXT)
-        regexp_pattern = re.compile(search_string)
-        return natsorted([
-            os.path.join(modules_dir, f)
-            for f in os.listdir(modules_dir)
-            if re.search(regexp_pattern, f)
-        ])
+        dirs = path_utils.get_module_directories(self.repo_dir)
+        search_strings = {
+            'Python': '\.py$',
+            'Matlab': '\.m$',
+            'R': '\.(%s)$' % '|'.join(['r', 'R']),
+        }
+        modules = list()
+        for languange, d in dirs.iteritems():
+            r = re.compile(search_strings[languange])
+            modules.extend([
+                os.path.join(d, f)
+                for f in os.listdir(d) if r.search(f)
+            ])
+        return natsorted(modules)
 
     @property
     def module_names(self):
         '''
-        Module names are the basenames of the `module_files`
-        without the suffix.
+        Names are determined from the module files, they are the
+        basenames without the suffix.
 
         Returns
         -------
@@ -453,6 +457,34 @@ class JtAvailableModules(object):
             os.path.splitext(os.path.basename(f))[0]
             for f in self.module_files
         ]
+
+    @property
+    def module_languages(self):
+        '''
+        Languages are determined from the module file suffixes.
+
+        Returns
+        -------
+        List[str]
+            languages of the modules
+        '''
+        mapping = {
+            '.py': 'python',
+            '.m': 'matlab',
+            '.jl': 'julia',
+            '.r': 'r',
+            '.R': 'r'
+        }
+        suffixes = [
+            os.path.splitext(os.path.basename(f))[1]
+            for f in self.module_files
+        ]
+        languages = list()
+        for s in suffixes:
+            if s not in mapping.keys():
+                raise ValueError('Not a valid file extension: %s', s)
+            languages.append(mapping[s])
+        return languages
 
     def _get_corresponding_handles_file(self, module_name):
         handles_dir = os.path.join(self.repo_dir, 'handles')
@@ -508,7 +540,7 @@ class JtAvailableModules(object):
         # TODO: some checks of handles content
         available_modules = [h['name'] for h in self.handles]
         self._pipe_registration = list()
-        for i, f in enumerate(self.module_files):
+        for i, name in enumerate(self.module_names):
             name = self.module_names[i]
             if name in available_modules:
                 repo_handles_path = self._get_corresponding_handles_file(name)
@@ -520,8 +552,9 @@ class JtAvailableModules(object):
                     'name': name,
                     'description': {
                         'handles': new_handles_path,
-                        'module': f,
-                        'active': True
+                        'module': name,
+                        'active': True,
+                        'language': self.module_languages[i],
                     }
                 }
                 self._pipe_registration.append(element)
@@ -530,11 +563,3 @@ class JtAvailableModules(object):
     def __iter__(self):
         yield('modules', self.handles)
         yield('registration', self.pipe_registration)
-
-    @staticmethod
-    def get_modules(lib_dir):
-        '''
-        Return a `Jtmodule` object for all available `.handles` files in the
-        repository.
-        '''
-        return JtAvailableModules(lib_dir)

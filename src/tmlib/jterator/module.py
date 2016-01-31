@@ -1,8 +1,9 @@
 import os
-import imp
+# import imp
 import sys
 import re
 import logging
+import importlib
 import traceback
 import collections
 import numpy as np
@@ -167,21 +168,22 @@ class ImageProcessingModule(object):
         str
             language of the module (e.g. "python")
         '''
-        self._language = path_utils.determine_language(self.module_file)
-        return self._language
+        return path_utils.determine_language(self.module_file)
 
     def _exec_m_module(self, inputs, output_names, engine):
         logger.debug('adding module to Matlab path: "%s"' % self.module_file)
-        engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.module_file)))
+        # engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.module_file)))
+        module_name = os.path.splitext(os.path.basename(self.module_file))[0]
+        engine.eval('import \'jtlib.modules.{0}\''.format(module_name))
         logger.debug('evaluating Matlab function with INPUTS: "%s"',
                      '", "'.join(inputs.keys()))
         for name, value in inputs.iteritems():
             engine.put('%s' % name, value)
         function_name = os.path.splitext(os.path.basename(self.module_file))[0]
-        func_call = '[{output_args}] = {function_name}({inputs_args});'.format(
-                                    output_args=', '.join(output_names),
-                                    function_name=function_name,
-                                    inputs_args=', '.join(inputs.keys()))
+        func_call = '[{args_out}] = jtlib.modules.{name}({args_in});'.format(
+                                    args_out=', '.join(output_names),
+                                    name=function_name,
+                                    args_in=', '.join(inputs.keys()))
         # Capture standard output and error
         engine.eval("out = evalc('{0}')".format(func_call))
         out = engine.get('out')
@@ -205,12 +207,11 @@ class ImageProcessingModule(object):
 
     def _exec_py_module(self, inputs, output_names):
         logger.debug('importing module: "%s"' % self.module_file)
-        # The name of the module can differ from the name of the module source
-        # code file!
         module_name = os.path.splitext(os.path.basename(self.module_file))[0]
-        imp.load_source(module_name, self.module_file)
-        module_instance = __import__(module_name, fromlist=[module_name])
-        func = getattr(module_instance, module_name)
+        module = importlib.import_module('jtlib.modules.%s' % module_name)
+        # imp.load_source(module_name, self.module_file)
+        # module_instance = __import__(module_name, fromlist=[module_name])
+        func = getattr(module, module_name)
         logger.debug('evaluating Python function with INPUTS: "%s"',
                      '", "'.join(inputs.keys()))
         py_out = func(**inputs)

@@ -1,5 +1,6 @@
 import yaml
 import re
+import os
 import logging
 from os.path import splitext, basename, exists, dirname
 from collections import Counter
@@ -118,19 +119,27 @@ class PipelineChecker(object):
         '''
         Check handles structure.
         '''
-        self.libpath = self.pipe_description['project']['lib']
-        self.libpath = path_utils.complete_path(self.libpath, self.project_dir)
+        if self.pipe_description['project']['lib']:
+            self.libpath = self.pipe_description['project']['lib']
+            self.libpath = path_utils.complete_path(
+                            self.libpath, self.project_dir)
+        else:
+            if 'JTLIB' in os.environ:
+                self.libpath = os.environ['JTLIB']
+            else:
+                raise ValueError('JTLIB environment variable not set.')
+
         for i, module in enumerate(self.pipe_description['pipeline']):
             # Check whether executable files exist
-            module_path = path_utils.complete_module_path(
-                            module['module'], self.libpath, self.project_dir)
+            module_path = path_utils.get_module_path(
+                            module['module'], self.libpath)
             if not exists(module_path):
                 raise PipelineDescriptionError(
-                        'Module file "%s" does not exist.' % module_path)
+                            'Module file "%s" does not exist.' % module_path)
 
             # Check whether descriptor files exist
-            handles_path = path_utils.complete_module_path(
-                            module['handles'], self.libpath, self.project_dir)
+            handles_path = path_utils.complete_path(
+                            module['handles'], self.project_dir)
 
             if not self.handles_descriptions:
                 # A description could also be provided from the user interface.
@@ -241,9 +250,8 @@ class PipelineChecker(object):
         outputs = list()
         with YamlReader() as reader:
             for i, module in enumerate(self.pipe_description['pipeline']):
-                handles_path = path_utils.complete_module_path(
-                                module['handles'], self.libpath,
-                                self.project_dir)
+                handles_path = path_utils.complete_path(
+                                module['handles'], self.project_dir)
                 if self.handles_descriptions is None:
                     handles = reader.read(handles_path)
                 else:

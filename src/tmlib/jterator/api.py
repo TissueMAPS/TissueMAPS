@@ -8,7 +8,6 @@ import numpy as np
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from . import path_utils
-from . import data_fusion
 from .project import JtProject
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
@@ -201,23 +200,29 @@ class ImageAnalysisPipeline(ClusterRoutines):
         tmlib.errors.PipelineDescriptionError
             when information in *pipe* description is missing or incorrect
         '''
-        libpath = self.project.pipe['description']['project']['lib']
+        if self.project.pipe['description']['project']['lib']:
+            libpath = self.project.pipe['description']['project']['lib']
+            libpath = path_utils.complete_path(
+                            self.libpath, self.project_dir)
+        else:
+            if 'JTLIB' in os.environ:
+                libpath = os.environ['JTLIB']
+            else:
+                raise ValueError('JTLIB environment variable not set.')
         self._pipeline = list()
         for i, element in enumerate(self.project.pipe['description']['pipeline']):
             if not element['active']:
                 continue
-            module_path = element['module']
-            module_path = path_utils.complete_module_path(
-                            module_path, libpath, self.project_dir)
-            if not os.path.isabs(module_path):
-                module_path = os.path.join(self.project_dir, module_path)
+            module_filename = element['module']
+            module_path = path_utils.get_module_path(module_filename, libpath)
             if not os.path.exists(module_path):
                 raise PipelineDescriptionError(
-                        'Missing module file: %s' % module_path)
+                        'Module file does not exist: %s' % module_path)
             module_name = self.project.handles[i]['name']
             handles_description = self.project.handles[i]['description']
             module = ImageProcessingModule(
-                        name=module_name, module_file=module_path,
+                        name=module_name,
+                        module_file=module_path,
                         handles_description=handles_description)
             self._pipeline.append(module)
         if not self._pipeline:
