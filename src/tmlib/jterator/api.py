@@ -584,30 +584,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         batch: dict
             job description
         '''
-        # logger.info('fuse datasets of different jobs into a single file')
-        # tmp_file = '%s.tmp' % output_file
-        # data_fusion.combine_datasets(
-        #                 input_files=batch['inputs']['data_files'],
-        #                 output_file=tmp_file,
-        #                 delete_input_files=False)  # TODO: delete them
-
-        # There could be several pipelines, and each pipeline may only provide
-        # some of the data, e.g. one pipeline may provide segmentations, while
-        # another may add measurements for the segmented objects.
-        # Since it's not possible to delete datasets in an HDF5 file and free
-        # the allocated memory, a new temporary file is created, which is
-        # complemented with the datasets of the already existing file.
-        # The updated file will then subsequently replace the previous file.
-
-        # if os.path.exists(output_file) and batch['merge']:
-        #     # Update the temporary file with the content of the already
-        #     # existing file
-        #     data_fusion.update_datasets(output_file, tmp_file)
-        #     # Remove the old file, which will be replaced by the new one
-        #     os.remove(output_file)
-
-        # # Replace the old file with the new, updated file
-        # os.rename(tmp_file, output_file)
+        # TODO: structure of HDF5 file:
+        # PerformanceWarning: group ``/objects/nuclei/map_data/coordinates``
+        # is exceeding the recommended maximum number of children (16384);
+        # be ready to see PyTables asking for *lots* of memory and possibly slow I/O.
 
         example_file = batch['inputs']['data_files'][0]
         with DatasetReader(example_file) as f:

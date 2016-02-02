@@ -209,8 +209,6 @@ class ImageProcessingModule(object):
         logger.debug('importing module: "%s"' % self.module_file)
         module_name = os.path.splitext(os.path.basename(self.module_file))[0]
         module = importlib.import_module('jtlib.modules.%s' % module_name)
-        # imp.load_source(module_name, self.module_file)
-        # module_instance = __import__(module_name, fromlist=[module_name])
         func = getattr(module, module_name)
         logger.debug('evaluating Python function with INPUTS: "%s"',
                      '", "'.join(inputs.keys()))
