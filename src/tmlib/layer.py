@@ -2,6 +2,7 @@ import os
 import re
 import numpy as np
 import pandas as pd
+import tables
 import logging
 import lxml
 import itertools
@@ -12,9 +13,7 @@ from collections import OrderedDict
 from skimage.measure import block_reduce
 from skimage.measure import approximate_polygon
 from .readers import DatasetReader
-from .writers import DatasetWriter
 from .errors import PyramidCreationError
-from .errors import DataError
 from .errors import RegexError
 from .writers import ImageWriter
 from .writers import XmlWriter
@@ -976,10 +975,6 @@ class ObjectLayer(Layer):
         '''
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
         store = pd.HDFStore(filename)
-        p = 'objects/%s' % self.name
-        # TODO: how to set attribute for "visual_type"?
-        # store.get_storer(p).attrs.visual_type = 'polygon'
-
         segm_path = 'objects/%s/segmentation' % self.name
         feat_path = 'objects/%s/features' % self.name
         coord_path = 'objects/%s/map_data/coordinates' % self.name
@@ -1043,6 +1038,8 @@ class ObjectLayer(Layer):
                 n_objects = len(coords_y)
                 for i in xrange(n_objects):
                     # Remove border objects, they should not be displayed
+                    # TODO: the final object count is wrong, i.e. the count
+                    # is not the same for children and parent objects
                     if is_border[i]:
                         continue
                     # Reduce the number of outlines points
@@ -1060,7 +1057,6 @@ class ObjectLayer(Layer):
                     global_obj_id += 1
 
                 # Fuse feature datasets and discard border objects
-                # TODO: use pandas and pytables for features
                 feat_data = OrderedDict()
                 features = data.list_datasets(feat_path)
                 for feat in features:
@@ -1069,10 +1065,10 @@ class ObjectLayer(Layer):
                     feat_data[feat] = data.read(p)[~is_border]
                 df = pd.DataFrame(feat_data)
                 # Append features without index for better performance
-                store.append(feat_path, df, index=False)
+                store.append(feat_path, df, data_columns=True, index=False)
 
         # Create index for features
-        store.create_table_index(feat_path, optlevel=9, kind='full')
+        store.create_table_index(feat_path, kind='full')
 
         # Store objects separately as a sorted array of integers
         global_obj_ids = pd.Series(range(global_obj_id))
