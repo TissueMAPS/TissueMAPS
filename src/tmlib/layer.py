@@ -1056,19 +1056,28 @@ class ObjectLayer(Layer):
                     store.put(p, global_coordinates)
                     global_obj_id += 1
 
-                # Fuse feature datasets and discard border objects
-                feat_data = OrderedDict()
+                # # Fuse feature datasets and discard border objects
+                # feat_data = OrderedDict()
+                # features = data.list_datasets(feat_path)
+                # for feat in features:
+                #     p = '%s/%s' % (feat_path, feat)
+                #     # Remove border objects
+                #     feat_data[feat] = data.read(p)[~is_border]
+                # df = pd.DataFrame(feat_data)
+                # # Append features without index for better performance
+                # store.append(feat_path, df, index=False)
                 features = data.list_datasets(feat_path)
                 for feat in features:
                     p = '%s/%s' % (feat_path, feat)
                     # Remove border objects
-                    feat_data[feat] = data.read(p)[~is_border]
-                df = pd.DataFrame(feat_data)
-                # Append features without index for better performance
-                store.append(feat_path, df, data_columns=True, index=False)
+                    feat_data = pd.Series(data.read(p)[~is_border])
+                    store.append(p, feat_data, index=False)
 
         # Create index for features
-        store.create_table_index(feat_path, kind='full')
+        # store.create_table_index(feat_path, kind='full')
+        for feat in features:
+            p = '%s/%s' % (feat_path, feat)
+            store.create_table_index(p, kind='full')
 
         # Store objects separately as a sorted array of integers
         global_obj_ids = pd.Series(range(global_obj_id))
