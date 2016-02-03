@@ -507,26 +507,33 @@ class DatasetWriter(object):
 
         Raises
         ------
-        IOError
-            when `path` doesn't exist
         ValueError
             when the dataset is one-dimensional or when vertical dimensions of
             `data` and the dataset don't match
         TypeError
             when data types of `data` and the dataset don't match
+
+        Note
+        ----
+        Creates the dataset in case it doesn't yet exist. 
         '''
         if not self.exists(path):
-            raise IOError('Dataset doesn\'t exist: %s', path)
+            logger.debug('create dataset "%s"', path)
+            # preallocate an empty dataset that can be extended
+            self.create(
+                    path, dims=(0, ), dtype=data.dtype,
+                    max_dims=(None, ))
         dset = self._stream[path]
         if len(dset.shape) > 1:
-            raise ValueError('Dataset is multi-dimensional: %s', path)
+            raise ValueError('Data must be one-dimensional: %s', path)
         data = np.array(data)
         if len(data.shape) > 1:
             raise ValueError('Data dimensions do not match.')
         if dset.dtype != data.dtype:
             raise TypeError('Data types don\'t  match.')
+        start_index = len(dset)
         dset.resize((len(dset) + len(data), ))
-        dset[len(dset):] = data
+        dset[start_index:] = data
 
     def vstack(self, path, data):
         '''
@@ -545,30 +552,47 @@ class DatasetWriter(object):
 
         Raises
         ------
-        IOError
-            when `path` doesn't exist
         ValueError
             when the dataset is one-dimensional or when vertical dimensions of
             `data` and the dataset don't match
         TypeError
             when data types of `data` and the dataset don't match
+
+        Note
+        ----
+        Creates the dataset in case it doesn't yet exist.
+        If `data` is one-dimensional a dataset with dimensions
+        ``(0, len(data))`` will be created.
         '''
         if not self.exists(path):
-            raise IOError('Dataset doesn\'t exist: %s', path)
+            logger.debug('create dataset "%s"', path)
+            # preallocate an empty dataset that can be extended along the 
+            # vertical axis
+            if len(data.shape) > 1:
+                self.create(
+                        path, dims=(0, data.shape[1]), dtype=data.dtype,
+                        max_dims=(None, data.shape[1]))
+            else:
+                self.create(
+                        path, dims=(0, len(data)), dtype=data.dtype,
+                        max_dims=(None, len(data)))
         dset = self._stream[path]
         if not len(dset.shape) > 1:
-            raise ValueError('Dataset is one-dimensional: %s', path)
+            raise ValueError('Data must be multi-dimensional: %s', path)
         data = np.array(data)
         if len(data.shape) > 1:
             if data.shape[1] != dset.shape[1]:
                 raise ValueError('Dataset dimensions do not match.')
+            add = data.shape[0]
         else:
-            if data.shape[1] != len(dset):
+            if len(data) != dset.shape[1]:
                 raise ValueError('Dataset dimensions do not match.')
+            add = 1
         if dset.dtype != data.dtype:
             raise TypeError('Data types don\'t  match.')
-        dset.resize((dset.shape[0] + data.shape[0], dset.shape[1]))
-        dset[:, dset.shape[1]:] = data
+        start_index = dset.shape[0]
+        dset.resize((dset.shape[0] + add, dset.shape[1]))
+        dset[start_index:, :] = data
 
     def hstack(self, path, data):
         '''
@@ -594,23 +618,43 @@ class DatasetWriter(object):
             of `data` and the dataset don't match
         TypeError
             when data types of `data` and the dataset don't match
+
+        Note
+        ----
+        Creates the dataset in case it doesn't yet exist.
+        If `data` is one-dimensional a dataset with dimensions
+        ``(len(data), 0)`` will be created.
         '''
+        data = np.array(data)
         if not self.exists(path):
-            raise IOError('Dataset doesn\'t exist: %s', path)
+            logger.debug('create dataset "%s"', path)
+            # preallocate an empty dataset that can be extended along the 
+            # horizontal axis
+            if len(data.shape) > 1:
+                self.create(
+                        path, dims=(data.shape[0], 0), dtype=data.dtype,
+                        max_dims=(data.shape[0], None))
+            else:
+                self.create(
+                        path, dims=(len(data), 0), dtype=data.dtype,
+                        max_dims=(len(data), None))
         dset = self._stream[path]
         if not len(dset.shape) > 1:
-            raise ValueError('Dataset is one-dimensional: %s', path)
+            raise ValueError('Data must be multi-dimensional: %s', path)
         data = np.array(data)
         if len(data.shape) > 1:
             if data.shape[0] != dset.shape[0]:
                 raise ValueError('Dataset dimensions don\'t match.')
+            add = data.shape[1]
         else:
-            if data.shape[0] != len(dset):
+            if len(data) != dset.shape[0]:
                 raise ValueError('Dataset dimensions don\'t match.')
+            add = 1
         if dset.dtype != data.dtype:
             raise TypeError('Data types don\'t match.')
-        dset.resize((dset.shape[0], dset.shape[1] + data.shape[1]))
-        dset[dset.shape[0]:, :] = data
+        start_index = dset.shape[1]
+        dset.resize((dset.shape[0], dset.shape[1] + add))
+        dset[:, start_index:] = data
 
     def set_attribute(self, path, name, data):
         '''
