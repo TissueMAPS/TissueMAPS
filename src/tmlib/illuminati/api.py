@@ -164,7 +164,7 @@ class PyramidBuilder(ClusterRoutines):
                     'channel': layer.channel_ix,
                     'zplane': layer.zplane_ix,
                     'level': self.level,
-                    'clip_level': None,
+                    'clip_value': None,
                     'subset_indices': None
                 })
         return job_descriptions
@@ -209,6 +209,7 @@ class PyramidBuilder(ClusterRoutines):
                 clip_value = batch['clip_value']
 
             if batch['inputs']:
+                # TODO: illumination correction, alignment or clipping takes too long
                 layer.create_base_tiles(
                             clip_value=clip_value,
                             illumcorr=batch['illumcorr'],
