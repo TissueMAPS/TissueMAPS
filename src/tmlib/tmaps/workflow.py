@@ -242,7 +242,7 @@ class WorkflowStep(SequentialTaskCollection):
     Fixed means that the number of jobs and the arguments are known in advance. 
     '''
 
-    def __init__(self, name, run_jobs, collect_job=None):
+    def __init__(self, name, run_jobs=None, collect_job=None):
         '''
         Initialize an instance of class WorkflowStep.
 
@@ -250,19 +250,22 @@ class WorkflowStep(SequentialTaskCollection):
         ----------
         name: str
             name of the step
-        run_jobs: tmlib.tmaps.workflow.RunJobCollection
+        run_jobs: tmlib.tmaps.workflow.RunJobCollection, optional
             collection of run jobs that should be processed in parallel
+            (default: ``None``)
         collect_job: tmlib.tmaps.workflow.CollectJob, optional
             optional job to collect output of run jobs
             (default: ``None``)
         '''
         self.name = name
         self.run_jobs = run_jobs
-        if not isinstance(run_jobs, RunJobCollection):
-            raise TypeError(
-                        'Argument "run_jobs" must have type '
-                        'tmlib.tmaps.workflow.RunJobCollection')
-        self.tasks = [self.run_jobs]
+        self.tasks = list()
+        if self.run_jobs is not None:
+            if not isinstance(run_jobs, RunJobCollection):
+                raise TypeError(
+                            'Argument "run_jobs" must have type '
+                            'tmlib.tmaps.workflow.RunJobCollection')
+            self.tasks.append(self.run_jobs)
         self.collect_job = collect_job
         if self.collect_job is not None:
             if not isinstance(self.collect_job, CollectJob):

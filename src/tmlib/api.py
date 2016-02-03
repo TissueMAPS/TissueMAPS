@@ -807,29 +807,33 @@ class ClusterRoutines(BasicClusterRoutines):
             collection of jobs
         '''
         logger.info('create workflow step')
-        run_jobs = RunJobCollection(self.prog_name)
 
-        logger.info('create run jobs')
-        for i, batch in enumerate(job_descriptions['run']):
+        if 'run' in job_descriptions.keys():
+            logger.info('create run jobs')
+            run_jobs = RunJobCollection(self.prog_name)
+            for i, batch in enumerate(job_descriptions['run']):
 
-            job = RunJob(
-                    step_name=self.prog_name,
-                    arguments=self._build_run_command(batch),
-                    output_dir=self.log_dir,
-                    job_id=batch['id']
-            )
-            if duration:
-                job.requested_walltime = Duration(duration)
-            if memory:
-                job.requested_memory = Memory(memory, Memory.GB)
-            if cores:
-                if not isinstance(cores, int):
-                    raise TypeError('Argument "cores" must have type int.')
-                if not cores > 0:
-                    raise ValueError('The value of "cores" must be positive.')
-                job.requested_cores = cores
+                job = RunJob(
+                        step_name=self.prog_name,
+                        arguments=self._build_run_command(batch),
+                        output_dir=self.log_dir,
+                        job_id=batch['id']
+                )
+                if duration:
+                    job.requested_walltime = Duration(duration)
+                if memory:
+                    job.requested_memory = Memory(memory, Memory.GB)
+                if cores:
+                    if not isinstance(cores, int):
+                        raise TypeError('Argument "cores" must have type int.')
+                    if not cores > 0:
+                        raise ValueError('The value of "cores" must be positive.')
+                    job.requested_cores = cores
 
-            run_jobs.add(job)
+                run_jobs.add(job)
+
+        else:
+            collect_job = None
 
         if 'collect' in job_descriptions.keys():
             logger.info('create collect job')

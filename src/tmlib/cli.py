@@ -378,7 +378,7 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from job descriptions')
         return api.list_input_files(self.job_descriptions)
 
-    def build_jobs(self, duration, memory, cores, ids=None):
+    def build_jobs(self, duration, memory, cores, phase=None, ids=None):
         '''
         Build *jobs* based on prior created job descriptions.
 
@@ -390,6 +390,10 @@ class CommandLineInterface(object):
             amount of memory allocated for a job in GB
         cores: int
             number of cores allocated for a job
+        phase: str, optional
+            phase for which jobs should be build; if not set jobs of *run* and
+            *collect* phase will be submitted
+            (options: ``"run"`` or ``"collect"``; default: ``None``)
         ids: List[int], optional
             ids of jobs that should be submitted (default: ``None``)
 
@@ -403,12 +407,23 @@ class CommandLineInterface(object):
         logger.debug('allocated time: %s', duration)
         logger.debug('allocated memory: %d GB', memory)
         logger.debug('allocated cores: %d', cores)
-        if ids is not None:
-            logger.info('build jobs %s', ', '.join(map(str, ids)))
+        if phase == 'run':
+            if ids is not None:
+                logger.info('build jobs %s', ', '.join(map(str, ids)))
+                job_descriptions = dict()
+                job_descriptions['run'] = [
+                    j for j in self.job_descriptions['run'] if j['id'] in ids
+                ]
+            else:
+                job_descriptions = dict()
+                job_descriptions['run'] = self.job_descriptions['run']
+        elif phase == 'collect':
+            if 'collect' not in self.job_descriptions.keys():
+                raise ValueError(
+                            'Step "%s" doesn\'t have a "collect" phase.'
+                            % self.name)
             job_descriptions = dict()
-            job_descriptions['run'] = [
-                j for j in self.job_descriptions['run'] if j['id'] in ids
-            ]
+            job_descriptions['collect'] = self.job_descriptions['collect']
         else:
             logger.info('build all jobs')
             job_descriptions = self.job_descriptions
@@ -436,10 +451,15 @@ class CommandLineInterface(object):
         '''
         self._print_logo()
         api = self._api_instance
+        if args.jobs is not None and args.phase != 'run':
+            raise AttributeError(
+                    'Argument "jobs" can only be set when '
+                    'value of argument "phase" is "run".')
         jobs = self.build_jobs(
                     duration=args.duration,
                     memory=args.memory,
                     cores=args.cores,
+                    phase=args.phase,
                     ids=args.jobs)
         # TODO: check whether jobs were actually created
         # session = api.create_session(jobs)

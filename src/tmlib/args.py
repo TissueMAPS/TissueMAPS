@@ -3,7 +3,6 @@ import json
 from abc import ABCMeta
 from abc import abstractproperty
 import logging
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -344,6 +343,8 @@ class SubmitArgs(GeneralArgs):
         self.duration = self._duration_params['default']
         self.memory = self._memory_params['default']
         self.cores = self._cores_params['default']
+        self.phase = self._phase_params['default']
+        self.jobs = self._jobs_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -352,7 +353,9 @@ class SubmitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'interval', 'jobs', 'depth', 'memory', 'duration', 'cores'}
+        return {
+            'interval', 'phase', 'jobs', 'depth', 'memory', 'duration', 'cores',
+        }
 
     @property
     def jobs(self):
@@ -360,11 +363,11 @@ class SubmitArgs(GeneralArgs):
         Returns
         -------
         List[int]
-            ids of jobs that should be submitted (default: ``None``)
+            ids of *run* jobs that should be submitted (default: ``None``)
 
         Note
         ----
-        If not set, all jobs will be submitted by default.
+        Can only be set if value of attribute `phase` is ``"run"``.
         '''
         return self._jobs
 
@@ -376,8 +379,9 @@ class SubmitArgs(GeneralArgs):
             self._jobs = value
             return
         if any([not isinstance(e, self._jobs_params['type']) for e in value]):
-            raise TypeError('Elements of attribute "jobs" must have type %s.'
-                            % self._jobs_params['type'])
+            raise TypeError(
+                    'Elements of attribute "jobs" must have type %s.'
+                    % self._jobs_params['type'])
         self._jobs = value
 
     @property
@@ -388,6 +392,36 @@ class SubmitArgs(GeneralArgs):
             'default': None,
             'help': '''
                 ids of jobs that should be submitted
+                (requires argument "phase" to be set to "run")
+            '''
+        }
+
+    @property
+    def phase(self):
+        '''
+        Returns
+        -------
+        List[int]
+            phase for which jobs should be submitted
+            (options: ``"run"`` or ``"collect"``; default: ``None``)
+        '''
+        return self._phase
+
+    @phase.setter
+    def phase(self, value):
+        if not(isinstance(value, self._phase_params['type']) or value is None):
+            raise TypeError('Attribute "phase" must have type %s'
+                            % self._phase_params['type'])
+        self._phase = value
+
+    @property
+    def _phase_params(self):
+        return {
+            'type': str,
+            'default': None,
+            'choices': {'run', 'collect'},
+            'help': '''
+                phase for which jobs should be submitted
             '''
         }
 
