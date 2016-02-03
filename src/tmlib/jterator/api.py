@@ -16,7 +16,8 @@ from ..api import ClusterRoutines
 from ..errors import PipelineDescriptionError
 from ..writers import DatasetWriter
 from ..readers import DatasetReader
-from ..layer import ObjectLayer
+from ..layer import SegmentedObjectLayer
+from ..layer import WellObjectLayer
 
 logger = logging.getLogger(__name__)
 
@@ -594,8 +595,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
             objects = f.list_groups('/objects')
 
         for obj in objects:
-            layer = ObjectLayer(self.experiment, obj)
+            logger.info('create layer for segmented objects "%s"', obj)
+            layer = SegmentedObjectLayer(self.experiment, obj)
             layer.create(batch['inputs']['data_files'])
+
+        logger.info('create layer for objects "wells"')
+        well_layer = WellObjectLayer(self.experiment)
+        well_layer.create()
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
