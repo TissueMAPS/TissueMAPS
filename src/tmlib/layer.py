@@ -465,6 +465,7 @@ class ChannelLayer(Layer):
         # background pixels. The pixel offset for the corresponding
         # images will be negative. The missing pixels will be padded
         # with zeros.
+        # TODO: Vips version.
         y_end = y_offset + self.tile_size
         x_end = x_offset + self.tile_size
         y_pad_top = None
@@ -614,14 +615,17 @@ class ChannelLayer(Layer):
                 if indices is None or indices != new_indices:
                     indices = new_indices
                     images = cycle.get_image_subset(indices)
+                    for img in images:
+                        if illumcorr:
+                            # Correct image for illumination artifacts
+                            # NOTE: This is the bottleneck. Can we make this
+                            # faster? Cython: static types? Vips?
+                            img = img.correct(stats)
+                        if align:
+                            # Align image between cycles
+                            img = img.align(crop=False)
                 tiles = list()
                 for i, img in enumerate(images):
-                    if illumcorr:
-                        # Correct image for illumination artifacts
-                        img = img.correct(stats)
-                    if align:
-                        # Align image between cycles
-                        img = img.align(crop=False)
                     y_offset = image_info[t][i]['y_offset']
                     x_offset = image_info[t][i]['x_offset']
                     # We use the same approach for overlapping and
@@ -954,7 +958,7 @@ class SegmentedObjectLayer(Layer):
         self.image_displacement = image_displacement
         self.well_spacer_size = well_spacer_size
 
-    def create(self, data_files, align=False):
+    def create(self, data_files, align=False, tolerance=1):
         '''
         Determine the coordinates of simplified object contours (polygons with
         reduced number of points) and write them to the HDF5 data file:
@@ -978,8 +982,6 @@ class SegmentedObjectLayer(Layer):
         Within the file the datasets are located in the subgroup "features":
         ``/objects/<object_name>/features/<feature_name>``.
 
-
-
         Parameters
         ----------
         data_files: List[str]
@@ -987,6 +989,11 @@ class SegmentedObjectLayer(Layer):
         align: bool, optional
             whether images should be aligned between cycles
             (default: ``False``)
+        tolerance: float, optional
+            accuracy of polygon approximation; the larger the value the less
+            accurate the polygon will be approximated, i.e. the less coordinate
+            values will be used to describe its contour; if ``0`` the original
+            contour is used (default: ``1``)
         '''
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
         with DatasetWriter(filename) as store:
@@ -999,6 +1006,9 @@ class SegmentedObjectLayer(Layer):
             global_obj_id = 0
             for j, f in enumerate(data_files):
                 with DatasetReader(f) as data:
+
+                    logger.debug('process data in file "%s"', f)
+                    logger.debug('calculate object outline coordinates')
 
                     # Get the indices of objects at the border of images
                     # (using the parent objects as references)
@@ -1031,9 +1041,11 @@ class SegmentedObjectLayer(Layer):
                         data.read('/metadata/well_position/x')
                     )
                     logger.debug('plate name: %s', plate_name)
-                    logger.debug('plate coordinates: {0}'.format(plate_coords))
-                    logger.debug('well name: %s', plate_name)
-                    logger.debug('well coordinates: {0}'.format(well_coords))
+                    logger.debug('well position within plate: {0}'.format(
+                                    plate_coords))
+                    logger.debug('well name: %s', well_name)
+                    logger.debug('image position within well: {0}'.format(
+                                    well_coords))
 
                     n_prior_well_rows = plate.nonempty_row_indices.index(
                                                 plate_coords[0])
@@ -1051,7 +1063,8 @@ class SegmentedObjectLayer(Layer):
                         y_offset += shift_offset_y
                         x_offset += shift_offset_x
 
-                    logger.debug('offset: y %d - x %d', y_offset, x_offset)
+                    logger.debug('offset for site %d: y %d - x %d',
+                                 j, y_offset, x_offset)
 
                     n_objects = len(coords_y)
                     for i in xrange(n_objects):
@@ -1060,7 +1073,7 @@ class SegmentedObjectLayer(Layer):
                             continue
                         # Reduce the number of outlines points
                         contour = np.array([coords_y[i], coords_x[i]]).T
-                        poly = approximate_polygon(contour, 0.95).astype(int)
+                        poly = approximate_polygon(contour, tolerance).astype(int)
                         # Add offset to coordinates
                         coordinates = pd.DataFrame({
                             'y': -1 * (poly[:, 0] + y_offset),
@@ -1073,6 +1086,7 @@ class SegmentedObjectLayer(Layer):
                         store.set_attribute(c_path, 'columns', ['x', 'y'])
                         global_obj_id += 1
 
+                    logger.debug('add extracted features to final datasets')
                     features = data.list_datasets(feat_path)
                     for feat in features:
                         f_path = '%s/%s' % (feat_path, feat)
@@ -1087,8 +1101,7 @@ class SegmentedObjectLayer(Layer):
                     store.append('%s/metadata/well_ref' % obj_path, well_names)
 
             # Store objects separately as a sorted array of integers
-            global_obj_ids = range(global_obj_id)
-            store.write('%s/ids' % obj_path, global_obj_ids)
+            store.write('%s/ids' % obj_path, range(global_obj_id))
 
 
 class WellObjectLayer(Layer):
@@ -1177,10 +1190,14 @@ class WellObjectLayer(Layer):
                 store.create_group(obj_path)
                 store.set_attribute(obj_path, 'visual_type', 'polygon')
                 coord_path = '%s/map_data/coordinates' % obj_path
+                global_obj_id = 0
                 for p, plate in enumerate(self.experiment.plates):
+                    logger.debug('process wells of plate "%s"', plate.name)
                     image_metadata = plate.cycles[0].image_metadata
                     wells = np.unique(image_metadata.well_name)
                     for well_name in wells:
+                        logger.debug('process well "%s"', well_name)
+                        logger.debug('calculate object outline coordinates')
                         plate_coords = plate.map_well_id_to_coordinate(well_name)
                         n_prior_well_rows = plate.nonempty_row_indices.index(
                                                     plate_coords[0])
@@ -1224,26 +1241,24 @@ class WellObjectLayer(Layer):
                             lower_left_coordinate,
                             lower_right_coordinate
                         ]
-                        c_path = '%s/%s/%s' % (coord_path, plate.name, well_name)
+                        c_path = '%s/%s' % (coord_path, global_obj_id)
                         store.write(c_path, coordinates)
                         store.set_attribute(c_path, 'columns', ['x', 'y'])
 
                         # Pre-calculate per-well statistics for features of
                         # children objects (e.g. "cells")
+                        logger.debug('calculate statistics for object features')
                         for obj in objects:
                             index = (
                                 (well_ref[obj] == well_name) &
                                 (plate_ref[obj] == plate.name)
                             )
                             # Store features in hierarchical order
-                            p_path = '%s/features/%s' % (obj_path, plate.name)
-                            store.create_group(p_path)
-                            store.set_attribute(
-                                    p_path, name='type', data='plate_name')
-                            w_path = '%s/%s' % (p_path, well_name)
+                            w_path = '%s/%d' % (obj_path, global_obj_id)
                             store.create_group(w_path)
                             store.set_attribute(
-                                    w_path, name='type', data='well_name')
+                                    w_path, name='type', data='well_id')
+                            # TODO: encode everything else in feature name???
                             o_path = '%s/%s' % (w_path, obj)
                             store.create_group(o_path)
                             store.set_attribute(
@@ -1266,3 +1281,5 @@ class WellObjectLayer(Layer):
                                 store.write(
                                     '%s/%s/max' % (o_path, f),
                                     np.nanmax(feat_data))
+
+                store.write('%s/ids' % obj_path, range(global_obj_id))
