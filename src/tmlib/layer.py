@@ -580,7 +580,8 @@ class ChannelLayer(Layer):
 
         # Process tiles that map to one or more images.
         cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
-        stats = cycle.illumstats_images[self.channel_ix]
+        if illumcorr:
+            stats = cycle.illumstats_images[self.channel_ix]
         md = cycle.image_metadata
         if subset_indices is None:
             logger.info('process all image files')
@@ -607,15 +608,15 @@ class ChannelLayer(Layer):
                 if indices is None or indices != new_indices:
                     indices = new_indices
                     images = cycle.get_image_subset(indices)
-                    for img in images:
+                    for i, img in enumerate(images):
                         if illumcorr:
                             # Correct image for illumination artifacts
                             # NOTE: This is the bottleneck. Can we make this
                             # faster? Cython: static types? Vips?
-                            img = img.correct(stats)
+                            images[i] = img.correct(stats)
                         if align:
                             # Align image between cycles
-                            img = img.align(crop=False)
+                            images[i] = img.align(crop=False)
                 tiles = list()
                 for i, img in enumerate(images):
                     y_offset = image_info[t][i]['y_offset']
@@ -663,14 +664,14 @@ class ChannelLayer(Layer):
                         tile = tile.merge(right, 'horizontal', offset)
                     else:
                         logger.debug('4 images: vertical & horizontal overlap')
-                        offset = abs(y_offsets[v][0])
+                        h_offset = abs(x_offsets[h][0])
                         right_upper = tiles[~v & h][0]
-                        upper = tile.merge(right_upper, 'horizontal', offset)
+                        upper = tile.merge(right_upper, 'horizontal', h_offset)
                         left_lower = tiles[v & ~h][0]
                         right_lower = tiles[v & h][0]
-                        lower = left_lower.merge(right_lower, 'horizontal', offset)
-                        offset = abs(x_offsets[h][0])
-                        tile = upper.merge(lower, 'vertical', offset)
+                        lower = left_lower.merge(right_lower, 'horizontal', h_offset)
+                        v_offset = abs(y_offsets[v][0])
+                        tile = upper.merge(lower, 'vertical', v_offset)
                 else:
                     tile = tiles[0]
 
@@ -1054,8 +1055,8 @@ class SegmentedObjectLayer(Layer):
 
                     if align:
                         # Images may need to be aligned between cycles
-                        shift_offset_y = data.read('/metadata/shift_offset/y')
-                        shift_offset_x = data.read('/metadata/shift_offset/x')
+                        shift_offset_y = data.read('/metadata/shift_offsets/y')
+                        shift_offset_x = data.read('/metadata/shift_offsets/x')
                         y_offset += shift_offset_y
                         x_offset += shift_offset_x
 
