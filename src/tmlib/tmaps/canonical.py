@@ -29,6 +29,13 @@ STAGES = [
     'pyramid_creation', 'image_analysis'
 ]
 
+STAGE_MODES = {
+    'image_conversion': 'sequential',
+    'image_preprocessing': 'parallel',
+    'pyramid_creation': 'sequential',
+    'image_analysis': 'sequential'
+}
+
 STEPS_PER_STAGE = OrderedDict({
     'image_conversion':
         ['metaextract', 'metaconfig', 'imextract'],
@@ -39,7 +46,6 @@ STEPS_PER_STAGE = OrderedDict({
     'image_analysis':
         ['jterator']
 })
-# Note: there could be more than one image analysis pipeline!
 
 #: Dependencies between individual workflow stages.
 INTER_STAGE_DEPENDENCIES = OrderedDict({
@@ -213,7 +219,7 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
     Description of a TissueMAPS workflow stage.
     '''
 
-    def __init__(self, name, steps=None, **kwargs):
+    def __init__(self, name, mode, steps=None):
         '''
         Initialize an instance of class CanonicalWorkflowStageDescription.
 
@@ -221,6 +227,8 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
         ----------
         name: str
             name of the stage
+        mode: str
+            mode of workflow stage submission
         steps: list, optional
             description of individual steps as a mapping of key-value pairs
         **kwargs: dict, optional
@@ -228,7 +236,7 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
         '''
         check_stage_name(name)
         super(CanonicalWorkflowStageDescription, self).__init__(
-                name, steps, **kwargs
+                name, mode, steps
         )
         if steps is not None:
             for s in steps:

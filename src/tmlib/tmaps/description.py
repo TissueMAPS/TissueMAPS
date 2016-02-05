@@ -127,18 +127,18 @@ class WorkflowDescription(object):
 
     __metaclass__ = ABCMeta
 
-    _PERSISTENT_ATTRS = {
-        'stages', 'type'
-    }
+    _PERSISTENT_ATTRS = {'stages', 'type'}
 
-    def __init__(self, **kwargs):
+    def __init__(self, stages=None, type=None):
         '''
         Initialize an instance of class WorkflowDescription.
 
         Parameters
         ----------
-        **kwargs: dict, optional
-            workflow descriptors as key-value pairs
+        stages: List[tmlib.tmaps.description.WorkflowStageDescription]
+            description of each stage of the workflow
+        str
+            workflow type
 
         Raises
         ------
@@ -148,11 +148,6 @@ class WorkflowDescription(object):
         # Set defaults
         self._type = None
         # self.virtualenv = None
-        # Check stage description
-        for k in kwargs.keys():
-            if k not in self._PERSISTENT_ATTRS:
-                raise WorkflowDescriptionError(
-                        'Unknown workflow descriptor: "%s"' % k)
         self.stages = list()
 
     @property
@@ -161,7 +156,7 @@ class WorkflowDescription(object):
         Returns
         -------
         List[tmlib.tmaps.description.WorkflowStageDescription]
-            description of each in the workflow
+            description of each stage of the workflow
         '''
         return self._stages
 
@@ -275,7 +270,7 @@ class WorkflowDescription(object):
             JSON string encoding the description of the workflow as a
             mapping of key-value pairs
         '''
-        d = defaultdict()
+        d = dict()
         d['type'] = getattr(self, 'type')
         d['stages'] = [json.loads(s.jsonify()) for s in getattr(self, 'stages')]
         return json.dumps(d)
@@ -289,7 +284,9 @@ class WorkflowStageDescription(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, steps=None, **kwargs):
+    _PERSISTENT_ATTRS = {'mode'}
+
+    def __init__(self, name, mode, steps=None):
         '''
         Initialize an instance of class WorkflowStageDescription.
 
@@ -297,6 +294,8 @@ class WorkflowStageDescription(object):
         ----------
         name: str
             name of the stage
+        str
+            mode of workflow stage submission
         steps: list, optional
             description of individual steps as a mapping of key-value pairs
         **kwargs: dict, optional
@@ -316,6 +315,27 @@ class WorkflowStageDescription(object):
             if not steps:
                 raise ValueError('Argument "steps" cannot be empty.')
         self.steps = list()
+        self.mode = mode
+
+    @property
+    def mode(self):
+        '''
+        Returns
+        -------
+        str
+            mode of workflow stage submission,
+            either ``"parallel"`` or ``"sequential"``
+        '''
+        return self._mode
+
+    @mode.setter
+    def mode(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "mode" must have type basestring.')
+        if value not in {'parallel', 'sequential'}:
+            raise ValueError('Attribute "mode" must be either '
+                             '"parallel" or "sequential"')
+        self._mode = str(value)
 
     @property
     def steps(self):
@@ -355,6 +375,7 @@ class WorkflowStageDescription(object):
 
     def __iter__(self):
         yield ('name', getattr(self, 'name'))
+        yield ('mode', getattr(self, 'mode'))
         yield ('steps', [dict(s) for s in getattr(self, 'steps')])
 
     def jsonify(self):
@@ -367,6 +388,7 @@ class WorkflowStageDescription(object):
         '''
         d = defaultdict()
         d['name'] = getattr(self, 'name')
+        d['mode'] = getattr(self, 'mode')
         d['steps'] = [json.loads(s.jsonify()) for s in getattr(self, 'steps')]
         return json.dumps(d)
 
@@ -388,7 +410,8 @@ class WorkflowStepDescription(object):
         args: dict, optional
             arguments of the step as key-value pairs
         **kwargs: dict, optional
-            description of the step as key-value pairs
+            additional arguments for the description of the step as
+            a mapping of key-value pairs
 
         Raises
         ------
