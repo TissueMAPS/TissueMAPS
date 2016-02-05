@@ -403,8 +403,9 @@ class WorkflowStage(object):
             raise ValueError(
                         'Description was not provided and could not be '
                         'determined from user configuration file.')
+        self.expected_outputs = None
 
-    def create_jobs_for_step(self, step_description):
+    def create_jobs_for_next_step(self, step_description):
         '''
         Create the jobs for a given workflow step.
 
@@ -440,6 +441,7 @@ class WorkflowStage(object):
         # # Store the expected outputs to be later able to check whether they
         # # were actually generated
         # self.expected_outputs.append(prog_instance.expected_outputs)
+        self.expected_outputs = prog_instance.expected_outputs
 
         logger.info('allocated time: %s', step_description.duration)
         logger.info('allocated memory: %d GB', step_description.memory)
@@ -450,39 +452,47 @@ class WorkflowStage(object):
                         cores=step_description.cores)
         return jobs
 
-    def _handle_failed_job(self, job):
-        # check log file to figure out what went wrong
-        err_file = os.path.join(job.output_dir, job.stderr)
-        with open(err_file, 'r') as err:
-            if re.search(r'FAILED', err):
-                reason = 'Error'
-            elif re.search(r'TIMEOUT', err):
-                reason = 'Timeout'
+    # def _determine_reason_for_job_failure(self, job):
+    #     # check log file to figure out what went wrong
+    #     err_file = os.path.join(job.output_dir, job.stderr)
+    #     with open(err_file, 'r') as err:
+    #         if re.search(r'^FAILED', err, re.MULTILINE):
+    #             reason = 'Error'
+    #         elif re.search(r'^TIMEOUT', err, re.MULTILINE):
+    #             reason = 'Timeout'
+    #         elif re.search(r'^[0-9]*\s*\bKilled\b', err, re.MULTILINE):
+    #             reason = 'Memory'
+    #         else:
+    #             reason = 'Unknown'
+    #     return reason
 
-    def can_transit_to_next_step(self, step):
-        '''
-        Check whether a step completed successfully.
+    # def can_transit_to_next_step(self, step):
+    #     '''
+    #     Check whether a step completed successfully.
 
-        Parameters
-        ----------
-        step: tmlib.tmaps.workflow.WorkflowStep
-            completed step
+    #     Parameters
+    #     ----------
+    #     step: tmlib.tmaps.workflow.WorkflowStep
+    #         completed step
 
-        Returns
-        -------
-        bool
-            whether step completed successfully or failed
-        '''
-        for phase in step.tasks:
-            if (isinstance(phase, RunJobCollection) or
-                    isinstance(phase, MultiRunJobCollection)):
-                for job in phase.tasks:
-                    if job.execution.exitcode != 0:
-                        self._handle_failed_job(job)
-            else:
-                job = phase
-                if job.execution.exitcode != 0:
-                    self._handle_failed_job(job)
+    #     Returns
+    #     -------
+    #     bool
+    #         whether step completed successfully or failed
+    #     '''
+    #     # TODO: "correct" exitcode of jobs that have a non-zero exitcode
+    #     # (e.g. ``None``) despite successful termination
+    #     for phase in step.tasks:
+    #         if (isinstance(phase, RunJobCollection) or
+    #                 isinstance(phase, MultiRunJobCollection)):
+    #             for job in phase.tasks:
+    #                 if job.execution.exitcode != 0:
+    #                     reason = self._determine_reason_for_job_failure(job)
+    #         else:
+    #             job = phase
+    #             if job.execution.exitcode != 0:
+    #                 reason = self._determine_reason_for_job_failure(job)
+    #     return step.execution.exitcode != 0
 
 
 class SequentialWorkflowStage(WorkflowStage, SequentialTaskCollection, StopOnError):
@@ -558,12 +568,15 @@ class SequentialWorkflowStage(WorkflowStage, SequentialTaskCollection, StopOnErr
 
     def _add_step(self, index):
         if index > 0:
-            if not all([os.path.exists(f) for f in self.expected_outputs[-1]]):
+            # NOTE: Checking the existence of files can be problematic,
+            # because NFS may lie. We try to circumvent this by waiting upon
+            # transition to the next step, but this not be sufficient.
+            if not all([os.path.exists(f) for f in self.expected_outputs]):
                 logger.error('expected outputs were not generated')
                 raise WorkflowTransitionError(
                              'outputs of previous step do not exist')
             logger.debug('create job descriptions for next step')
-        task = self.create_jobs_for_step(self._steps_to_process[index])
+        task = self.create_jobs_for_next_step(self._steps_to_process[index])
         logger.debug('add jobs to the task list')
         self.tasks.append(task)
 
@@ -595,7 +608,8 @@ class SequentialWorkflowStage(WorkflowStage, SequentialTaskCollection, StopOnErr
             except Exception as error:
                 logger.error('adding next step failed: %s', error)
                 self.execution.exitcode = 1
-                logger.debug('set exitcode to one')
+                self.execution.returncode = 1
+                logger.debug('set exitcode and returncode to one')
                 logger.debug('set state to TERMINATED')
                 return Run.State.TERMINATED
 
@@ -653,7 +667,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
 
     def _build_tasks(self):
         for step in self.description.steps:
-            step_jobs = self.create_jobs_for_step(step)
+            step_jobs = self.create_jobs_for_next_step(step)
             self.add(step_jobs)
 
 
@@ -802,14 +816,14 @@ class Workflow(SequentialTaskCollection, StopOnError):
                 stage_names = [s.name for s in self.description.stages]
                 next_stage_name = self._stages_to_process[done+1].name
                 next_stage_index = stage_names.index(next_stage_name) + 1
-                import ipdb; ipdb.set_trace()
                 logger.info('transit to next stage ({0} of {1}): "{2}"'.format(
                             next_stage_index, self.n_stages, next_stage_name))
                 self._add_stage(done+1)
             except Exception as error:
                 logger.error('adding next stage failed: %s', error)
                 self.execution.exitcode = 1
-                logger.debug('set exitcode to 1')
+                self.execution.returncode = 1
+                logger.debug('set exitcode and returncode to 1')
                 logger.debug('set state to TERMINATED')
                 return Run.State.TERMINATED
 
