@@ -3,6 +3,7 @@ import sys
 import traceback
 import logging
 import shutil
+import json
 import argparse
 import socket
 from cached_property import cached_property
@@ -15,6 +16,7 @@ from .args import RunArgs
 from .args import CollectArgs
 from .args import CleanupArgs
 from .args import LogArgs
+from .args import InfoArgs
 from .tmaps.description import load_method_args
 from .tmaps.description import load_var_method_args
 from .logging_utils import configure_logging
@@ -323,10 +325,36 @@ class CommandLineInterface(object):
         logger.info('run job #%d' % batch['id'])
         api.run_job(batch)
 
+    def info(self, args):
+        '''
+        Initialize an instance of the API class corresponding to the program
+        and process arguments provided by the "info" subparser, which prints
+        the description of an individual job to the console.
+
+        Parameters
+        ----------
+        args: tmlib.args.LogArgs
+            method-specific arguments
+        '''
+        if args.job is not None and args.phase != 'run':
+            raise AttributeError(
+                    'Argument "job" can only be set when '
+                    'value of argument "phase" is "run".')
+        if args.job is None and args.phase == 'run':
+            raise AttributeError(
+                    'When "phase" is set to "run", '
+                    'argument "job" has to be set as well.')
+        api = self._api_instance
+        job_file = api.build_run_job_filename(args.job)
+        batch = api.read_job_file(job_file)
+        print('\nDESCRIPTION\n===========\n\n%s'
+              % json.dumps(
+                    batch, sort_keys=True, indent=4, separators=(',', ': ')))
+
     def log(self, args):
         '''
         Initialize an instance of the API class corresponding to the program
-        and process arguments provided by the "lob" subparser, which prints the
+        and process arguments provided by the "log" subparser, which prints the
         log output of an individual job to the console.
 
         Parameters
@@ -334,6 +362,14 @@ class CommandLineInterface(object):
         args: tmlib.args.LogArgs
             method-specific arguments
         '''
+        if args.job is not None and args.phase != 'run':
+            raise AttributeError(
+                    'Argument "job" can only be set when '
+                    'value of argument "phase" is "run".')
+        if args.job is None and args.phase == 'run':
+            raise AttributeError(
+                    'When "phase" is set to "run", '
+                    'argument "job" has to be set as well.')
         api = self._api_instance
         log = api.get_log_output_from_files(args.job)
         print('\nOUTPUT\n======\n\n%s\n\nERROR\n=====\n\n%s'
@@ -456,6 +492,10 @@ class CommandLineInterface(object):
             raise AttributeError(
                     'Argument "jobs" can only be set when '
                     'value of argument "phase" is "run".')
+        if args.jobs is None and args.phase == 'run':
+            raise AttributeError(
+                    'When "phase" is set to "run", '
+                    'argument "jobs" has to be set as well.')
         jobs = self.build_jobs(
                     duration=args.duration,
                     memory=args.memory,
@@ -503,7 +543,7 @@ class CommandLineInterface(object):
     @staticmethod
     def get_parser_and_subparsers(
             required_subparsers=[
-                'init', 'run', 'submit', 'collect', 'cleanup', 'log']):
+                'init', 'run', 'submit', 'collect', 'cleanup', 'log', 'info']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -589,11 +629,19 @@ class CommandLineInterface(object):
 
         if 'log' in required_subparsers:
             log_parser = subparsers.add_parser(
-                'log', help='show log output of a job')
+                'log', help='print standard output and error of a job')
             log_parser.description = '''
-                Print the log output (standard output and error) of a job
-                to the console.
+                Print the log output of a job to the console.
             '''
             LogArgs().add_to_argparser(log_parser)
+
+        if 'info' in required_subparsers:
+            info_parser = subparsers.add_parser(
+                'info', help='print description of a job')
+            info_parser.description = '''
+                Print the description (parameter settings, input, output)
+                of a job to the console.
+            '''
+            InfoArgs().add_to_argparser(info_parser)
 
         return (parser, subparsers)

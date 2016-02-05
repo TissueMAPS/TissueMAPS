@@ -8,7 +8,7 @@ from .args import MetaextractInitArgs
 
 
 parser, subparsers = Metaextract.get_parser_and_subparsers(
-    required_subparsers=['init', 'submit', 'collect', 'cleanup', 'log'])
+    required_subparsers=['init', 'submit', 'collect', 'cleanup', 'log', 'info'])
 
 parser.description = '''
         Extract OMEXML metadata from heterogeneous microscopic image file

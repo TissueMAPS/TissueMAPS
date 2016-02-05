@@ -85,7 +85,7 @@ class BasicClusterRoutines(object):
         Returns
         -------
         str
-            datetimestamp in the form "year-month-day_hour:minute:second"
+            datetime stamp in the form "year-month-day_hour:minute:second"
         '''
         return utils.create_datetimestamp()
 
@@ -95,7 +95,7 @@ class BasicClusterRoutines(object):
         Returns
         -------
         str
-            timestamp in the form "hour:minute:second"
+            time stamp in the form "hour:minute:second"
         '''
         return utils.create_timestamp()
 
@@ -113,10 +113,11 @@ class BasicClusterRoutines(object):
     def log_task_failure(task_data):
         return log_task_failure(task_data, logger)
 
-    def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=1):
+    def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=1,
+                    n_submit=2000):
         '''
         Create a GC3Pie engine that submits jobs to a cluster
-        for parallel and/or sequential processing and monitors their progress.
+        and continuously monitor the progress of jobs.
 
         Parameters
         ----------
@@ -127,15 +128,18 @@ class BasicClusterRoutines(object):
         monitoring_depth: int, optional
             recursion depth for job monitoring, i.e. in which detail subtasks
             in the task tree should be monitored (default: ``1``)
+        n_submit: int, optional
+            number of jobs that will be submitted at once (default: ``2000``)
 
         Returns
         -------
         dict
-            detailed information about each job
+            information about each job
 
-        See also
-        --------
-        :py:meth:`
+        Note
+        ----
+        Jobs are not persistent. Once you cancel the program, all information
+        about jobs is lost and you cannot resume the submission.
         '''
         logger.debug('monitoring interval: %d seconds' % monitoring_interval)
 
@@ -150,8 +154,8 @@ class BasicClusterRoutines(object):
         logger.debug('store stdout/stderr in common output directory')
         e.retrieve_overwrites = True
         # Limit the total number of jobs that can be submitted simultaneously
-        e.max_submitted = 2000
-        e.max_in_flight = 2000
+        e.max_submitted = n_submit
+        e.max_in_flight = n_submit
         logger.debug('set maximum number of submitted jobs to %d',
                      e.max_submitted)
 

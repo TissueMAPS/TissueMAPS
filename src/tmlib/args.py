@@ -391,7 +391,7 @@ class SubmitArgs(GeneralArgs):
             'nargs': '+',
             'default': None,
             'help': '''
-                ids of jobs that should be submitted
+                one-based indices of jobs that should be submitted
                 (requires argument "phase" to be set to "run")
             '''
         }
@@ -672,15 +672,45 @@ class LogArgs(GeneralArgs):
         **kwargs: dict, optional
             arguments as key-value pairs
         '''
+        self.job = self._job_params['default']
         super(LogArgs, self).__init__(**kwargs)
 
     @property
     def _required_args(self):
-        return {'job'}
+        return {'phase'}
 
     @property
     def _persistent_attrs(self):
-        return {'job'}
+        return {'phase', 'job'}
+
+    @property
+    def phase(self):
+        '''
+        Returns
+        -------
+        List[int]
+            phase for which job log should be displayed
+            (options: ``"run"`` or ``"collect"``)
+        '''
+        return self._phase
+
+    @phase.setter
+    def phase(self, value):
+        if not(isinstance(value, self._phase_params['type']) or value is None):
+            raise TypeError('Attribute "phase" must have type %s'
+                            % self._phase_params['type'])
+        self._phase = value
+
+    @property
+    def _phase_params(self):
+        return {
+            'type': str,
+            'required': True,
+            'choices': {'run', 'collect'},
+            'help': '''
+                phase for which job log should be displayed
+            '''
+        }
 
     @property
     def job(self):
@@ -694,7 +724,7 @@ class LogArgs(GeneralArgs):
 
     @job.setter
     def job(self, value):
-        if not isinstance(value, self._job_params['type']):
+        if not(isinstance(value, self._job_params['type']) or value is None):
             raise TypeError('Attribute "job" must have type %s'
                             % self._job_params['type'])
         self._job = value
@@ -703,9 +733,90 @@ class LogArgs(GeneralArgs):
     def _job_params(self):
         return {
             'type': int,
-            'required': True,
+            'default': None,
             'help': '''
-                one-based job index
+                one-based index of *run* job
+                (requires argument "phase" to be set to "run")
+            '''
+        }
+
+
+class InfoArgs(GeneralArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class InfoArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict, optional
+            arguments as key-value pairs
+        '''
+        self.job = self._job_params['default']
+        super(InfoArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return {'phase'}
+
+    @property
+    def _persistent_attrs(self):
+        return {'phase', 'job'}
+
+    @property
+    def phase(self):
+        '''
+        Returns
+        -------
+        List[int]
+            phase for which job description should be displayed
+            (options: ``"run"`` or ``"collect"``)
+        '''
+        return self._phase
+
+    @phase.setter
+    def phase(self, value):
+        if not(isinstance(value, self._phase_params['type']) or value is None):
+            raise TypeError('Attribute "phase" must have type %s'
+                            % self._phase_params['type'])
+        self._phase = value
+
+    @property
+    def _phase_params(self):
+        return {
+            'type': str,
+            'required': True,
+            'choices': {'run', 'collect'},
+            'help': '''
+                phase for which job description should be displayed
+            '''
+        }
+
+    @property
+    def job(self):
+        '''
+        Returns
+        -------
+        int
+            one-based job index
+        '''
+        return self._job
+
+    @job.setter
+    def job(self, value):
+        if not(isinstance(value, self._job_params['type']) or value is None):
+            raise TypeError('Attribute "job" must have type %s'
+                            % self._job_params['type'])
+        self._job = value
+
+    @property
+    def _job_params(self):
+        return {
+            'type': int,
+            'default': None,
+            'help': '''
+                one-based index of *run* job
+                (requires argument "phase" to be set to "run")
             '''
         }
 

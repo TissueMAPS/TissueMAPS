@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class Tmaps(object):
 
     '''
-    Command line interface for handling of workflows.
+    Command line interface for the TissueMAPS workflow manager.
     '''
 
     def __init__(self, experiment, verbosity):
@@ -61,6 +61,7 @@ class Tmaps(object):
         args: tmlib.args.SubmitArgs
             method-specific arguments
         '''
+        self._print_logo()
         logger.info('submit workflow')
         api = self._api_instance
         jobs = api.create_jobs(
@@ -81,6 +82,7 @@ class Tmaps(object):
         args: tmlib.args.ResumeArgs
             method-specific arguments
         '''
+        self._print_logo()
         logger.info('resume workflow')
         api = self._api_instance
         logger.debug('load jobs from session')

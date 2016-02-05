@@ -8,7 +8,7 @@ from .args import IlluminatiInitArgs
 
 
 parser, subparsers = Illuminati.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log'])
+    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log', 'info'])
 
 parser.description = '''
         Create image pyramids for visualization in TissueMAPS.

@@ -380,7 +380,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
             'removals': [
                 'data_files'
             ],
-            'merge': args.merge
+            'merge': args.merge,
+            'align': True  # TODO: should become an argument
         }
 
         if job_ids:
@@ -418,9 +419,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
             /metadata/well_posistion                                # Group
             /metadata/well_posistion/x                              # Dataset {SCALAR}
             /metadata/well_posistion/y                              # Dataset {SCALAR}
-            /metadata/shift_offsets                                 # Group
-            /metadata/shift_offsets/x                               # Dataset {SCALAR}
-            /metadata/shift_offsets/y                               # Dataset {SCALAR}
+            /metadata/shift_offset                                  # Group
+            /metadata/shift_offset/x                                # Dataset {SCALAR}
+            /metadata/shift_offset/y                                # Dataset {SCALAR}
             /metadata/image_dimensions                              # Group
             /metadata/image_dimensions/x                            # Dataset {SCALAR}
             /metadata/image_dimensions/y                            # Dataset {SCALAR}
@@ -519,9 +520,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                data=orig_dims[0])
                     data.write('/metadata/image_dimensions/x',
                                data=orig_dims[1])
-                    data.write('/metadata/shift_offsets/y',
+                    data.write('/metadata/shift_offset/y',
                                data=offset_y)
-                    data.write('/metadata/shift_offsets/x',
+                    data.write('/metadata/shift_offset/x',
                                data=offset_x)
 
         outputs = collections.defaultdict(dict)
@@ -597,7 +598,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         for obj in objects:
             logger.info('create layer for segmented objects "%s"', obj)
             layer = SegmentedObjectLayer(self.experiment, obj)
-            layer.create(batch['inputs']['data_files'])
+            layer.create(batch['inputs']['data_files'], align=batch['align'])
 
         logger.info('create layer for objects "wells"')
         well_layer = WellObjectLayer(self.experiment)

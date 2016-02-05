@@ -282,7 +282,7 @@ class PyramidBuilder(ClusterRoutines):
         layer = ChannelLayer(
                     self.experiment,
                     tpoint_ix=batch['cycle'],
-                    channel_ix=batch['cycle'],
+                    channel_ix=batch['channel'],
                     zplane_ix=batch['zplane'])
 
         if batch['level'] == layer.base_level_index:

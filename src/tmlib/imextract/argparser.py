@@ -8,7 +8,7 @@ from .args import ImextractInitArgs
 
 
 parser, subparsers = Imextract.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log'])
+    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log', 'info'])
 
 parser.description = '''
     Extract images from heterogeneous microscopic image file formats
