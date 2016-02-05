@@ -17,7 +17,6 @@ from .writers import ImageWriter
 from .writers import DatasetWriter
 from .writers import XmlWriter
 from .readers import NumpyImageReader
-from .image_utils import convert_to_uint8
 
 logger = logging.getLogger(__name__)
 
@@ -465,54 +464,47 @@ class ChannelLayer(Layer):
         # background pixels. The pixel offset for the corresponding
         # images will be negative. The missing pixels will be padded
         # with zeros.
-        # TODO: Vips version.
         y_end = y_offset + self.tile_size
         x_end = x_offset + self.tile_size
-        y_pad_top = None
-        y_pad_bottom = None
-        x_pad_left = None
-        x_pad_right = None
+
+        n_top = None
+        n_bottom = None
+        n_left = None
+        n_right = None
         if y_offset < 0:
-            height = abs(y_offset)
-            if x_offset < 0:
-                width = self.tile_size - abs(x_offset)
-            elif x_end > image.pixels.dimensions[1]:
-                width = self.tile_size - (x_end - image.pixels.dimensions[1])
-            else:
-                width = self.tile_size
-            y_pad_top = np.zeros((height, width), dtype=image.pixels.dtype)
+            n_top = abs(y_offset)
             y_offset = 0
         elif (image.pixels.dimensions[0] - y_offset) < self.tile_size:
-            height = self.tile_size - (image.pixels.dimensions[0] - y_offset)
-            if x_offset < 0:
-                width = self.tile_size - abs(x_offset)
-            elif x_end > image.pixels.dimensions[1]:
-                width = self.tile_size - (x_end - image.pixels.dimensions[1])
-            else:
-                width = self.tile_size
-            y_pad_bottom = np.zeros((height, width), dtype=image.pixels.dtype)
+            n_bottom = self.tile_size - (image.pixels.dimensions[0] - y_offset)
         if x_offset < 0:
-            height = self.tile_size
-            width = abs(x_offset)
-            x_pad_left = np.zeros((height, width), dtype=image.pixels.dtype)
+            n_left = abs(x_offset)
             x_offset = 0
         elif (image.pixels.dimensions[1] - x_offset) < self.tile_size:
-            height = self.tile_size
-            width = self.tile_size - (image.pixels.dimensions[1] - x_offset)
-            x_pad_right = np.zeros((height, width), dtype=image.pixels.dtype)
+            n_right = self.tile_size - (image.pixels.dimensions[1] - x_offset)
 
-        tile = image.pixels.array[y_offset:y_end, x_offset:x_end]
+        tile = image.pixels.extract(
+                    y_offset, x_offset, y_end-y_offset, x_end-x_offset)
 
-        if y_pad_top is not None:
-            tile = np.vstack([y_pad_top, tile])
-        if y_pad_bottom is not None:
-            tile = np.vstack([tile, y_pad_bottom])
-        if x_pad_left is not None:
-            tile = np.hstack([x_pad_left, tile])
-        if x_pad_right is not None:
-            tile = np.hstack([tile, x_pad_right])
+        if n_top is not None:
+            tile = tile.add_background(n_top, 'top')
+        if n_bottom is not None:
+            tile = tile.add_background(n_bottom, 'bottom')
+        if n_left is not None:
+            tile = tile.add_background(n_left, 'left')
+        if n_right is not None:
+            tile = tile.add_background(n_right, 'right')
 
         return tile
+
+    @property
+    def n_zoom_levels(self):
+        '''
+        Returns
+        -------
+        int
+            number of zoom levels
+        '''
+        return len(self.zoom_level_info)
 
     @property
     def base_level_index(self):
@@ -636,6 +628,7 @@ class ChannelLayer(Layer):
                         self._extract_tile_from_image(
                                 img, y_offset, x_offset)
                     )
+                    # NOTE: a tile of type tmlib.pixels.Pixels
                 tiles = np.array(tiles)
 
                 if len(tiles) > 1:
@@ -650,8 +643,8 @@ class ChannelLayer(Layer):
                     ])
                     v = y_offsets < 0
                     h = x_offsets < 0
-                    # Take the top left tile and then insert the relevant
-                    # pixels of the other tiles
+                    # Take the top left tile and then merge the relevant
+                    # pixels of the other tiles into it
                     y_pos = [md.ix[i, 'well_position_y'] for i in indices]
                     x_pos = [md.ix[i, 'well_position_x'] for i in indices]
                     ix_top = np.where(np.array(y_pos) == np.min(y_pos))[0]
@@ -660,33 +653,36 @@ class ChannelLayer(Layer):
                     tile = tiles[ix_top_left]
                     if len(ix_top) == 1:
                         logger.debug('2 images: vertical overlap')
-                        y = abs(y_offsets[v][0]) - self.tile_size
-                        tile[y:, :] = tiles[v][0][y:, :]
+                        offset = abs(y_offsets[v][0])
+                        lower = tiles[v][0]
+                        tile = tile.merge(lower, 'vertical', offset)
                     elif len(ix_left) == 1:
                         logger.debug('2 images: horizontal overlap')
-                        x = abs(x_offsets[h][0])
-                        tile[:, x:] = tiles[h][0][:, x:]
+                        offset = abs(x_offsets[h][0])
+                        right = tiles[h][0]
+                        tile = tile.merge(right, 'horizontal', offset)
                     else:
                         logger.debug('4 images: vertical & horizontal overlap')
-                        y = abs(y_offsets[v][0]) - self.tile_size
-                        x = abs(x_offsets[h][0])
-                        tile[y:, x:] = tiles[v & h][0][y:, x:]
-                        tile[y:, :x] = tiles[v & ~h][0][y:, :x]
-                        tile[:y, x:] = tiles[~v & h][0][:y, x:]
-                        tile[:y, :x] = tiles[~v & ~h][0][:y, :x]
+                        offset = abs(y_offsets[v][0])
+                        right_upper = tiles[~v & h][0]
+                        upper = tile.merge(right_upper, 'horizontal', offset)
+                        left_lower = tiles[v & ~h][0]
+                        right_lower = tiles[v & h][0]
+                        lower = left_lower.merge(right_lower, 'horizontal', offset)
+                        offset = abs(x_offsets[h][0])
+                        tile = upper.merge(lower, 'vertical', offset)
                 else:
                     tile = tiles[0]
 
-                # Clip intensity values
+                # Clip intensity values and rescale to 8-bit
                 logger.debug('clip intensity values')
-                tile = np.clip(tile, 0, clip_value)
-                # Rescale intensity values to 8-bit
+                tile = tile.clip(clip_value)
                 logger.debug('rescale intensity values to 8-bit')
-                tile = convert_to_uint8(tile, 0, clip_value)
+                tile = tile.scale(clip_value)
                 # Write tile to file on disk
-                tile_file = self.tile_files[-1][t]
-                with ImageWriter(self.dir) as writer:
-                    writer.write(tile_file, tile)
+                tile_file = os.path.join(self.dir, self.tile_files[-1][t])
+                logger.debug('write tile to file: "%s"', tile_file)
+                tile.write_to_file(tile_file)
 
     def create_downsampled_tiles(self, level, subset_indices=None):
         '''
@@ -1281,5 +1277,6 @@ class WellObjectLayer(Layer):
                                 store.write(
                                     '%s/%s/max' % (o_path, f),
                                     np.nanmax(feat_data))
+                        global_obj_id += 1
 
                 store.write('%s/ids' % obj_path, range(global_obj_id))

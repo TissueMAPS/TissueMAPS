@@ -67,6 +67,7 @@ def command_line_call(parser):
             arguments.handler(arguments)
         else:
             parser.print_help()
+        logger.info('DONE')
     except Exception as error:
         sys.stderr.write('\nFAILED:\n%s\n' % str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):

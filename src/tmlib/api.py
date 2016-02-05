@@ -333,9 +333,9 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         directory = self.log_dir
         stdout_files = glob.glob(os.path.join(
-                                 directory, '*_run_%.6d_*.out' % job_id))
+                                 directory, '*_run*_%.6d_*.out' % job_id))
         stderr_files = glob.glob(os.path.join(
-                                 directory, '*_run_%.6d_*.err' % job_id))
+                                 directory, '*_run*_%.6d_*.err' % job_id))
         if not stdout_files or not stderr_files:
             raise IOError('No log files found for job # %d' % job_id)
         # Take the most recent log files
@@ -693,14 +693,14 @@ class ClusterRoutines(BasicClusterRoutines):
         args: tmlib.args.Args
             an instance of an implemented subclass of the `Args` base class
 
-        There are two kinds of jobs:
-            * *run* jobs: collection of tasks that are processed in parallel
-            * *collect* job: a single task that is processed once all
-              *run* jobs are terminated successfully
+        There are two phases:
+            * *run* phase: collection of tasks that are processed in parallel
+            * *collect* phase: a single task that is processed once the
+              *run* phase is terminated successfully
 
         Each batch (element of the *run* job_descriptions) must provide the
         following key-value pairs:
-            * "id": one-based job indentifier number (*int*)
+            * "id": one-based job identifier number (*int*)
             * "inputs": absolute paths to input files required to run the job
               (Dict[*str*, List[*str*]])
             * "outputs": absolute paths to output files produced the job
@@ -709,13 +709,13 @@ class ClusterRoutines(BasicClusterRoutines):
         In case a *collect* job is required, the corresponding batch must
         provide the following key-value pairs:
             * "inputs": absolute paths to input files required to collect job
-              output of the *run* step (Dict[*str*, List[*str*]])
+              output of the *run* phase (Dict[*str*, List[*str*]])
             * "outputs": absolute paths to output files produced by the job
               (Dict[*str*, List[*str*]])
 
         A *collect* job description can have the optional key "removals", which
         provides a list of strings indicating which of the inputs are removed
-        during the *collect* step.
+        during the *collect* phase.
 
         A complete job_descriptions has the following structure::
 
@@ -809,7 +809,7 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.info('create workflow step')
 
         if 'run' in job_descriptions.keys():
-            logger.info('create run jobs')
+            logger.info('create jobs for "run" phase')
             run_jobs = RunJobCollection(self.prog_name)
             for i, batch in enumerate(job_descriptions['run']):
 
@@ -833,10 +833,10 @@ class ClusterRoutines(BasicClusterRoutines):
                 run_jobs.add(job)
 
         else:
-            collect_job = None
+            run_jobs = None
 
         if 'collect' in job_descriptions.keys():
-            logger.info('create collect job')
+            logger.info('create job for "collect" phase')
             batch = job_descriptions['collect']
 
             collect_job = CollectJob(
