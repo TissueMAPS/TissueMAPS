@@ -189,7 +189,7 @@ class IllumstatsGenerator(ClusterRoutines):
                             filename)
                         output_filename = os.path.join(
                             output_dir, output_filename)
-                        corrected_image.save_as_png(output_filename)
+                        corrected_image.save(output_filename)
 
     def collect_job_output(self, batch):
         raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'

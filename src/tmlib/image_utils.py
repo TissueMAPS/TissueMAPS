@@ -4,74 +4,10 @@ import random as rand
 from gi.repository import Vips
 from scipy.misc import imread, bytescale
 import numpy as np
-import cv2
 import logging
 from skimage.exposure import rescale_intensity
 
 logger = logging.getLogger(__name__)
-
-
-def save_vips_image_jpg(im, filename, quality=75):
-    '''
-    Save a `Vips` image object to a file as JPEG image.
-
-    Parameters
-    ----------
-    im: gi.overrides.Vips.Image
-        image
-    filename: str
-        name of the output file
-    quality: int, optional
-        quality of the JPEG image (defaults to 75)
-    '''
-    im.write_to_file(filename, Q=quality, optimize_coding=True)
-
-
-def save_image_png_vips(im, filename, bitdepth=16):
-    '''
-    Save the `Vips` image object to file as PNG image.
-
-    Parameters
-    ----------
-    im: gi.overrides.Vips.Image
-        image
-    filename: str
-        name of the output file
-    bitdepth: int, optional
-        bit depth of the PNG image (defaults to 16)
-    '''
-    im.cast('ushort').write_to_file(filename)
-
-
-def save_image_png_numpy(im, filename):
-    '''
-    Save the `numpy` array to file as PNG image.
-
-    Parameters
-    ----------
-    im: numpy.ndarray
-        image
-    filename: str
-        name of the output file
-    '''
-    cv2.imwrite(filename, im)
-
-
-def save_image_png(im, filename):
-    '''
-    Save image to file in 16-bit PNG format.
-
-    Parameters
-    ----------
-    im: numpy.ndarray or gi.overrides.Vips.Image
-        image that should be saved
-    filename: str
-        path to the image file
-    '''
-    if isinstance(im, np.ndarray):
-        save_image_png_numpy(im, filename)
-    else:
-        save_image_png_vips(im, filename)
 
 
 def np_dtype_to_vips_format(np_dtype):

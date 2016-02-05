@@ -318,4 +318,4 @@ class ImageRegistration(ClusterRoutines):
                             filename)
                         output_filename = os.path.join(
                             output_dir, output_filename)
-                        aligned_image.save_as_png(output_filename)
+                        aligned_image.save(output_filename)

@@ -1,5 +1,7 @@
 import numpy as np
+import cv2
 from gi.repository import Vips
+from skimage.exposure import rescale_intensity
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
@@ -77,7 +79,31 @@ class Pixels(object):
         pass
 
     @abstractmethod
-    def save_as_png(self, filename):
+    def write_to_file(self, filename):
+        pass
+
+    @abstractmethod
+    def extract(self, y_offset, x_offset, height, width):
+        pass
+
+    @abstractmethod
+    def clip(self, threshold):
+        pass
+
+    @abstractmethod
+    def scale(self, threshold):
+        pass
+
+    @abstractmethod
+    def join(self, pixels, direction):
+        pass
+
+    @abstractmethod
+    def merge(self, pixels, direction, offset):
+        pass
+
+    @abstractmethod
+    def add_background(self, n, side):
         pass
 
 
@@ -321,16 +347,187 @@ class VipsPixels(Pixels):
         '''
         return VipsPixels(image_utils.np_array_to_vips_image(array))
 
-    def save_as_png(self, filename):
+    def write_to_file(self, filename):
         '''
-        Write image to disk as PNG file.
+        Write pixels array to file on disk.
 
         Parameters
         ----------
         filename: str
             absolute path to output file
         '''
-        image_utils.save_image_png_vips(self.array, filename)
+        self.array.write_to_file(filename)
+
+    def extract(self, y_offset, x_offset, height, width):
+        '''
+        Extract a continuous, rectangular area of pixels from the array.
+
+        Parameters
+        ----------
+        y_offset: int
+            index of the top, left point of the rectangle on the *y* axis
+        x_offset: int
+            index of the top, left point of the rectangle on the *x* axis
+        height: int
+            height of the rectangle, i.e. length of the rectangle along the
+            *y* axis
+        width: int
+            width of the rectangle, i.e. length of the rectangle along the
+            *x* axis
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixel
+            extracted pixels with dimensions `height` x `width`
+        '''
+        a = self.array.extract_area(x_offset, y_offset, width, height)
+        return VipsPixels(a)
+
+    def clip(self, threshold):
+        '''
+        Clip intensity values above `threshold`, i.e. set all pixel values
+        above `threshold` to `threshold`.
+
+        Parameters
+        ----------
+        threshold: int
+            value above which pixel values should be clipped
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixels
+            clipped pixels
+        '''
+        if self.dtype == Vips.BandFormat.USHORT:
+            lut = Vips.Image.identity(ushort=True)
+        elif self.dtype == Vips.BandFormat.UCHAR:
+            lut = Vips.Image.identity()
+        else:
+            TypeError(
+                    'Only pixels with dtype "ushort" and "uchar" '
+                    'can be clipped.')
+        condition_image = (lut >= threshold)
+        lut = condition_image.ifthenelse(threshold, lut)
+        a = self.array.maplut(lut)
+        return VipsPixels(a)
+
+    def scale(self, threshold):
+        '''
+        Scale the pixel values to 8-bit such that `threshold` is 255.
+
+        Parameters
+        ----------
+        threshold: int
+            value above which pixel values will be set to 255, i.e.
+            the range [0, `threshold`] will be mapped to range [0, 255]
+        '''
+        if self.dtype == Vips.BandFormat.USHORT:
+            lut = Vips.Image.identity(ushort=True)
+        elif self.dtype == Vips.BandFormat.UCHAR:
+            # Is already 8-bit
+            return self
+        else:
+            TypeError(
+                    'Only pixels with dtype "ushort" or "uchar" '
+                    'can be scaled to 8-bit.')
+        for i in range(256):
+            lower = threshold / 256 * i
+            upper = threshold / 256 * (i+1)
+            condition_image = (lower < lut < upper)
+            lut = condition_image.ifthenelse(i, lut)
+        a = self.array.maplut(lut)
+        return VipsPixels(a)
+
+    def join(self, pixels, direction):
+        '''
+        Join a pixels object to the existing.
+
+        Parameters
+        ----------
+        pixels: tmlib.pixels.NumpyPixels
+            pixels object that should be joined with the existing object
+        direction: str
+            direction along which the two pixels arrays should be joined,
+            either ``"horizontal"`` or ``"vertical"``
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixel
+            joined pixels
+        '''
+        if direction == 'vertical':
+            a = self.array.join(pixels.array, 'vertical')
+        elif direction == 'horizontal':
+            a = self.array.join(pixels.array, 'horizontal')
+        else:
+            raise ValueError(
+                        'Argument "direction" must be either '
+                        '"horizontal" or "vertical"')
+        return VipsPixels(a)
+
+    def merge(self, pixels, direction, offset):
+        '''
+        Merge two pixels arrays into one.
+
+        Parameters
+        ----------
+        pixels: tmlib.pixels.NumpyPixels
+            pixels object that should be merged with the existing object
+        direction: str
+            direction along which the two pixels arrays should be merged,
+            either ``"horizontal"`` or ``"vertical"``
+        offset: int
+            offset for `pixels` in the existing object
+
+        Parameters
+        ----------
+        tmlib.pixels.VipsPixels
+            merged pixels
+        '''
+        if direction == 'vertical':
+            height = self.array.dimensions[0] - offset
+            width = self.array.dimensions[1]
+            a = self.array.embed(pixels.array, 0, offset, width, height)
+        elif direction == 'horizontal':
+            height = self.array.dimensions[0]
+            width = self.array.dimensions[1] - offset
+            a = self.array.embed(pixels.array, offset, 0, width, height)
+        else:
+            raise ValueError(
+                        'Argument "direction" must be either '
+                        '"horizontal" or "vertical"')
+        return VipsPixels(a)
+
+    def add_background(self, n, side):
+        '''
+        Add zero value pixels to one `side` of the pixels array.
+
+        Parameters
+        ----------
+        n: int
+            number of pixels that should be added along the given axis
+        side: str
+            side of the array that should be padded;
+            either ``"top"``, ``"bottom"``, ``"left"``, or ``"right"``
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixels
+            pixels with added background
+        '''
+        if side == 'top':
+            a = Vips.Image.black(self.dimensions[1], n, bands=1)
+            a = a.join(self.array, 'vertical')
+        elif side == 'bottom':
+            a = Vips.Image.black(self.dimensions[1], n, bands=1)
+            a = self.array.join(a, 'vertical')
+        elif side == 'left':
+            a = Vips.Image.black(n, self.dimensions[0], bands=1)
+            a = a.join(self.array, 'horizontal')
+        elif side == 'right':
+            a = Vips.Image.black(n, self.dimensions[0], bands=1)
+            a = self.array.join(a, 'horizontal')
+        return VipsPixels(a)
 
 
 class NumpyPixels(Pixels):
@@ -565,13 +762,177 @@ class NumpyPixels(Pixels):
         '''
         return NumpyPixels(image_utils.vips_image_to_np_array(array))
 
-    def save_as_png(self, filename):
+    def write_to_file(self, filename):
         '''
-        Write image to disk as PNG file.
+        Write pixels array to file on disk.
 
         Parameters
         ----------
         filename: str
             absolute path to output file
         '''
-        image_utils.save_image_png_numpy(self.array, filename)
+        cv2.imwrite(filename, self.array)
+
+    def extract(self, y_offset, x_offset, height, width):
+        '''
+        Extract a continuous, rectangular area of pixels from the array.
+
+        Parameters
+        ----------
+        y_offset: int
+            index of the top, left point of the rectangle on the *y* axis
+        x_offset: int
+            index of the top, left point of the rectangle on the *x* axis
+        height: int
+            height of the rectangle, i.e. length of the rectangle along the
+            *y* axis
+        width: int
+            width of the rectangle, i.e. length of the rectangle along the
+            *x* axis
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixel
+            extracted pixels with dimensions `height` x `width`
+        '''
+        a = self.array[y_offset:(y_offset+height), x_offset:(x_offset+width)]
+        return NumpyPixels(a)
+
+    def scale(self, threshold):
+        '''
+        Scale the pixel values to 8-bit such that `threshold` is 255.
+
+        Parameters
+        ----------
+        threshold: int
+            value above which pixel values will be set to 255, i.e.
+            the range [0, `threshold`] will be mapped to range [0, 255]
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+            rescaled pixels
+        '''
+        if self.dtype == 'uint16':
+            a = rescale_intensity(
+                        self.array,
+                        out_range='uint8',
+                        in_range=(0, threshold)
+            ).astype(np.uint8)
+            return NumpyPixels(a)
+        elif self.dtype == 'uint8':
+            return self
+        else:
+            TypeError(
+                    'Only pixels with dtype "uint16" or "uint8" '
+                    'can be scaled to 8-bit.')
+
+    def join(self, pixels, direction):
+        '''
+        Join two pixels arrays.
+
+        Parameters
+        ----------
+        pixels: numpy.ndarray
+            pixels object that should be joined to the existing
+        direction: str
+            direction along which the two pixels arrays should be joined,
+            either ``"horizontal"`` or ``"vertical"``
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+            joined pixels
+        '''
+        if direction == 'vertical':
+            a = np.vstack([self.array, pixels.array])
+        elif direction == 'horizontal':
+            a = np.hstack([self.array, pixels.array])
+        else:
+            raise ValueError(
+                        'Argument "direction" must be either '
+                        '"horizontal" or "vertical"')
+        return NumpyPixels(a)
+
+    def merge(self, pixels, direction, offset):
+        '''
+        Merge two pixels arrays into one.
+
+        Parameters
+        ----------
+        pixels: tmlib.pixels.NumpyPixels
+            pixels object that should be merged with the existing object
+        direction: str
+            direction along which the two pixels arrays should be merged,
+            either ``"horizontal"`` or ``"vertical"``
+        offset: int
+            offset for `pixels` in the existing object
+
+        Parameters
+        ----------
+        tmlib.pixels.NumpyPixels
+            merged pixels
+        '''
+        a = self.array.copy()
+        if direction == 'vertical':
+            a[offset:, :] = pixels.array[offset:, :]
+        elif direction == 'horizontal':
+            a[:, offset:] = pixels.array[:, offset:]
+        else:
+            raise ValueError(
+                        'Argument "direction" must be either '
+                        '"horizontal" or "vertical"')
+        return NumpyPixels(a)
+
+    def clip(self, threshold):
+        '''
+        Clip intensity values above `threshold`, i.e. set all pixel values
+        above `threshold` to `threshold`.
+
+        Parameters
+        ----------
+        threshold: int
+            value above which pixel values should be clipped
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+            clipped pixels
+        '''
+        a = np.clip(self.array, 0, threshold)
+        return NumpyPixels(a)
+
+    def add_background(self, n, side):
+        '''
+        Add zero value pixels to one `side` of the pixels array.
+
+        Parameters
+        ----------
+        n: int
+            number of pixels that should be added along the given axis
+        side: str
+            side of the array that should be padded;
+            either ``"top"``, ``"bottom"``, ``"left"``, or ``"right"``
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+            pixels with added background
+        '''
+        if side == 'top':
+            a = np.zeros((n, self.dimensions[1]), dtype=self.dtype)
+            a = np.vstack([a, self.array])
+        elif side == 'bottom':
+            a = np.zeros((n, self.dimensions[1]), dtype=self.dtype)
+            a = np.vstack([self.array, a])
+        elif side == 'left':
+            a = np.zeros((self.dimensions[0], n), dtype=self.dtype)
+            a = np.hstack([a, self.array])
+        elif side == 'right':
+            a = np.zeros((self.dimensions[0], n), dtype=self.dtype)
+            a = np.hstack([self.array, a])
+        else:
+            raise ValueError(
+                        'Argument "side" must be one of the following: '
+                        '"top", "bottom", "left", "right"')
+        return NumpyPixels(a)

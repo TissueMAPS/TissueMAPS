@@ -117,6 +117,8 @@ class MetadataExtractor(ClusterRoutines):
         batch: dict
             description of the *collect* job
         '''
+        # TODO: redirect standard output of GC3Pie Application to final file
+        # and skip copying in "collect" phase
         for i, f in enumerate(batch['outputs']['omexml_files']):
             output_files = glob(os.path.join(
                                 self.log_dir, '*_%.6d*.out' % (i+1)))

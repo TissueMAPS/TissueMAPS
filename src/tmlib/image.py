@@ -1,7 +1,6 @@
 import os
 from abc import ABCMeta
 from abc import abstractproperty
-from abc import abstractmethod
 import logging
 from cached_property import cached_property
 from .pixels import VipsPixels
@@ -110,16 +109,16 @@ class Image(object):
         '''
         pass
 
-    def save_as_png(self, filename):
+    def save(self, filename):
         '''
-        Write image to disk as PNG file.
+        Write image to file on disk.
 
         Parameters
         ----------
         filename: str
             absolute path to output file
         '''
-        self.pixels.save_as_png(filename)
+        self.pixels.write_to_file(filename)
 
 
 class ChannelImage(Image):
