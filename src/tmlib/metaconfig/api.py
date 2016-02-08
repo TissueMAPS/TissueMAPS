@@ -256,8 +256,8 @@ class MetadataConfigurator(ClusterRoutines):
 
         # Create consistent zero-based ids
         # (some microscopes use one-based indexing)
-        handler.update_channel_ixs()
-        handler.update_zplane_ixs()
+        handler.update_channel_index()
+        handler.update_zplane_index()
         handler.build_image_filenames(self.image_file_format_string)
         handler.assign_acquisition_site_indices()
         md = handler.remove_redundant_columns()

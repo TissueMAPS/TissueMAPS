@@ -216,11 +216,11 @@ class MetadataHandler(object):
 
         self.metadata = pd.DataFrame(metadata)
         length = self.metadata.shape[0]
-        self.metadata['date'] = np.empty((length, ), dtype='str')
-        self.metadata['well_name'] = np.empty((length, ), dtype='str')
-        self.metadata['well_position_y'] = np.empty((length, ), dtype='int')
-        self.metadata['well_position_x'] = np.empty((length, ), dtype='int')
-        self.metadata['site_ix'] = np.empty((length, ), dtype='int')
+        self.metadata['date'] = np.empty((length, ), dtype=str)
+        self.metadata['well_name'] = np.empty((length, ), dtype=str)
+        self.metadata['well_position_y'] = np.empty((length, ), dtype=int)
+        self.metadata['well_position_x'] = np.empty((length, ), dtype=int)
+        self.metadata['site_ix'] = np.empty((length, ), dtype=int)
         self.metadata['plate_name'] = np.repeat(str(self.plate_name), length)
 
         return self.metadata
@@ -484,7 +484,7 @@ class MetadataHandler(object):
         logger.info('retrieve metadata from filenames via regular expression')
         logger.debug('expression: %s', regex)
 
-        logger.info('update image metadata')
+        logger.info('update image metadata with filename information')
 
         r = re.compile(regex)
         for i, f in enumerate(filenames):
@@ -494,11 +494,11 @@ class MetadataHandler(object):
                         'Metadata could not be retrieved from filename "%s" '
                         'using regular expression "%s"' % (f, regex))
             capture = match.groupdict()
-            md.at[i, 'channel_name'] = capture['c']
-            md.at[i, 'zplane_ix'] = capture['z']
-            md.at[i, 'tpoint_ix'] = capture['t']
-            md.at[i, 'well_name'] = capture['w']
-            md.at[i, 'site_ix'] = capture['s']
+            md.at[i, 'channel_name'] = str(capture['c'])
+            md.at[i, 'zplane_ix'] = int(capture['z'])
+            md.at[i, 'tpoint_ix'] = int(capture['t'])
+            md.at[i, 'well_name'] = str(capture['w'])
+            md.at[i, 'site_ix'] = int(capture['s'])
 
         return self.metadata
 
@@ -642,11 +642,12 @@ class MetadataHandler(object):
         projected_md = md.drop_duplicates([
             'well_name', 'well_position_x', 'well_position_y',
             'channel_name', 'tpoint_ix'
-        ]).reindex()
+        ])
+        projected_md.index = range(projected_md.shape[0])
         # Update z-plane index for the projected image entries
-        projected_md.zplane_ix = 0
+        projected_md.loc[:, 'zplane_ix'] = 0
         # Names may no longer be accurate and will be updated separately
-        projected_md.name = None
+        projected_md.loc[:, 'name'] = None
 
         # Group metadata by focal planes (z-stacks)
         zstacks = md.groupby([
@@ -663,11 +664,11 @@ class MetadataHandler(object):
             fm.files = list()
             fm.series = list()
             fm.planes = list()
-            for ref_ix in indices:
-                fm.ref_index = ref_ix
-                fm.files.extend(self.file_mapper_list[ref_ix].files)
-                fm.series.extend(self.file_mapper_list[ref_ix].series)
-                fm.planes.extend(self.file_mapper_list[ref_ix].planes)
+            for index in indices:
+                fm.ref_index = i  # new index
+                fm.files.extend(self.file_mapper_list[index].files)
+                fm.series.extend(self.file_mapper_list[index].series)
+                fm.planes.extend(self.file_mapper_list[index].planes)
             projected_file_mapper_list.append(fm)
 
         # Replace metadata and file mapper objects
@@ -676,7 +677,7 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def update_channel_ixs(self):
+    def update_channel_index(self):
         '''
         Create for each channel a zero-based unique identifier number.
 
@@ -694,7 +695,7 @@ class MetadataHandler(object):
         -------
         Apply this method only at the end of the configuration process.
         '''
-        logger.info('update channel ids')
+        logger.info('update channel index')
         md = self.metadata
         channels = np.unique(md.channel_name)
         for i, c in enumerate(channels):
@@ -704,7 +705,7 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def update_zplane_ixs(self):
+    def update_zplane_index(self):
         '''
         Create for each focal plane a zero-based unique identifier number.
 
@@ -722,7 +723,7 @@ class MetadataHandler(object):
         -------
         Apply this method only at the end of the configuration process.
         '''
-        logger.info('update plane ids')
+        logger.info('update z-plane index')
         md = self.metadata
         zplanes = np.unique(md.zplane_ix)
         for i, z in enumerate(zplanes):
@@ -750,7 +751,7 @@ class MetadataHandler(object):
         '''
         logger.info('build names for final image files')
         md = self.metadata
-        for i in xrange(md.shape[0]):
+        for i in md.index:
             fieldnames = {
                 'plate_name': self.plate_name,
                 'w': md.at[i, 'well_name'],
@@ -762,8 +763,9 @@ class MetadataHandler(object):
             }
             md.at[i, 'name'] = image_file_format_string.format(**fieldnames)
 
-        # Sort metadata according to image name
-        self.metadata = md.sort_values(by='name').reindex()
+        # # Sort metadata according to image name and assign continuous index
+        # self.metadata = md.sort_values(by='name')
+        # self.metadata.index = range(md.shape[0])
 
         return self.metadata
 
