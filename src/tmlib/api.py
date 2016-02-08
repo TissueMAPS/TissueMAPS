@@ -335,13 +335,22 @@ class ClusterRoutines(BasicClusterRoutines):
         In case there are several log files present for the given the most
         recent one will be used (sorted by submission date and time point).
         '''
+
         directory = self.log_dir
-        stdout_files = glob.glob(os.path.join(
-                                 directory, '*_run*_%.6d_*.out' % job_id))
-        stderr_files = glob.glob(os.path.join(
-                                 directory, '*_run*_%.6d_*.err' % job_id))
-        if not stdout_files or not stderr_files:
-            raise IOError('No log files found for job # %d' % job_id)
+        if job_id is not None:
+            stdout_files = glob.glob(os.path.join(
+                                     directory, '*_run*_%.6d_*.out' % job_id))
+            stderr_files = glob.glob(os.path.join(
+                                     directory, '*_run*_%.6d_*.err' % job_id))
+            if not stdout_files or not stderr_files:
+                raise IOError('No log files found for run job # %d' % job_id)
+        else:
+            stdout_files = glob.glob(os.path.join(
+                                     directory, '*_collect_*.out'))
+            stderr_files = glob.glob(os.path.join(
+                                     directory, '*_collect_*.err'))
+            if not stdout_files or not stderr_files:
+                raise IOError('No log files found for collect job')
         # Take the most recent log files
         log = dict()
         with open(natsorted(stdout_files)[-1], 'r') as f:

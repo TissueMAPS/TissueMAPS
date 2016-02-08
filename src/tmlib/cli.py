@@ -41,7 +41,7 @@ def command_line_call(parser):
     Raises
     ------
     SystemExit
-        when the call raises an :py:class:`Exception`
+        exitcode ``1`` when the call raises an :py:class:`Exception`
 
     Warning
     -------
@@ -69,7 +69,7 @@ def command_line_call(parser):
             arguments.handler(arguments)
         else:
             parser.print_help()
-        logger.info('DONE')
+        logger.info('SUCCESSFULLY COMPLETED')
     except Exception as error:
         sys.stderr.write('\nFAILED:\n%s\n' % str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):
