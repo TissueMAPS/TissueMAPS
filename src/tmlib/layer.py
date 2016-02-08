@@ -1055,8 +1055,8 @@ class SegmentedObjectLayer(Layer):
 
                     if align:
                         # Images may need to be aligned between cycles
-                        shift_offset_y = data.read('/metadata/shift_offsets/y')
-                        shift_offset_x = data.read('/metadata/shift_offsets/x')
+                        shift_offset_y = data.read('/metadata/shift_offset/y')
+                        shift_offset_x = data.read('/metadata/shift_offset/x')
                         y_offset += shift_offset_y
                         x_offset += shift_offset_x
 
