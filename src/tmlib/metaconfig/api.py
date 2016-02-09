@@ -119,12 +119,12 @@ class MetadataConfigurator(ClusterRoutines):
                         ]
                     },
                     'file_format': args.file_format,
-                    'z_stacks': args.z_stacks,
+                    'keep_z_stacks': args.keep_z_stacks,
                     'plate': source.name,
                     'regex': args.regex,
                     'stitch_major_axis': args.stitch_major_axis,
-                    'stitch_vertical': args.stitch_vertical,
-                    'stitch_horizontal': args.stitch_horizontal,
+                    'n_vertical': args.n_vertical,
+                    'n_horizontal': args.n_horizontal,
                     'stitch_layout': args.stitch_layout
                 }
                 job_descriptions['run'].append(description)
@@ -245,10 +245,10 @@ class MetadataConfigurator(ClusterRoutines):
             handler.determine_grid_coordinates_from_layout(
                     stitch_layout=batch['stitch_layout'],
                     stitch_major_axis=batch['stitch_major_axis'],
-                    stitch_dimensions=(batch['stitch_vertical'],
-                                       batch['stitch_horizontal']))
+                    stitch_dimensions=(batch['n_vertical'],
+                                       batch['n_horizontal']))
 
-        if not batch['z_stacks']:
+        if not batch['keep_z_stacks']:
             logger.info('project focal planes to 2D')
             handler.reconfigure_ome_metadata_for_projection()
         else:

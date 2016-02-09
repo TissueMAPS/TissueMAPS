@@ -14,12 +14,12 @@ class MetaconfigInitArgs(VariableArgs):
             arguments as key-value pairs
         '''
         self.file_format = self._file_format_params['default']
-        self.z_stacks = self._z_stacks_params['default']
+        self.keep_z_stacks = self._keep_z_stacks_params['default']
         self.regex = self._regex_params['default']
         self.stitch_layout = self._stitch_layout_params['default']
         self.stitch_major_axis = self._stitch_major_axis_params['default']
-        self.stitch_horizontal = self._stitch_horizontal_params['default']
-        self.stitch_vertical = self._stitch_vertical_params['default']
+        self.n_horizontal = self._n_horizontal_params['default']
+        self.n_vertical = self._n_vertical_params['default']
         super(MetaconfigInitArgs, self).__init__(**kwargs)
 
     @property
@@ -29,8 +29,8 @@ class MetaconfigInitArgs(VariableArgs):
     @property
     def _persistent_attrs(self):
         return {
-            'file_format', 'z_stacks', 'regex', 'stitch_layout',
-            'stitch_major_axis', 'stitch_vertical', 'stitch_horizontal'
+            'file_format', 'keep_z_stacks', 'regex', 'stitch_layout',
+            'stitch_major_axis', 'n_vertical', 'n_horizontal'
         }
 
     @property
@@ -69,7 +69,7 @@ class MetaconfigInitArgs(VariableArgs):
         }
 
     @property
-    def z_stacks(self):
+    def keep_z_stacks(self):
         '''
         Returns
         -------
@@ -77,23 +77,23 @@ class MetaconfigInitArgs(VariableArgs):
             if individual focal planes should be kept,
             i.e. no intensity projection performed (default: ``False``)
         '''
-        return self._z_stacks
+        return self._keep_z_stacks
 
-    @z_stacks.setter
-    def z_stacks(self, value):
-        if not isinstance(value, self._z_stacks_params['type']):
-            raise TypeError('Attribute "z_stacks" must have type %s.'
-                            % self._z_stacks_params['type'])
-        self._z_stacks = value
+    @keep_z_stacks.setter
+    def keep_z_stacks(self, value):
+        if not isinstance(value, self._keep_z_stacks_params['type']):
+            raise TypeError('Attribute "keep_z_stacks" must have type %s.'
+                            % self._keep_z_stacks_params['type'])
+        self._keep_z_stacks = value
 
     @property
-    def _z_stacks_params(self):
+    def _keep_z_stacks_params(self):
         return {
             'type': bool,
             'default': False,
             'help': '''
-                if individual focal planes should be kept,
-                i.e. no intensity projection performed
+                keep individual focal planes,
+                i.e. don't perform maximum intensity projection
             '''
         }
 
@@ -200,7 +200,7 @@ class MetaconfigInitArgs(VariableArgs):
         }
 
     @property
-    def stitch_vertical(self):
+    def n_vertical(self):
         '''
         Returns
         -------
@@ -208,18 +208,18 @@ class MetaconfigInitArgs(VariableArgs):
             number of images along the vertical axis of each stitched mosaic
             (default: ``None``)
         '''
-        return self._stitch_vertical
+        return self._n_vertical
 
-    @stitch_vertical.setter
-    def stitch_vertical(self, value):
-        if not(isinstance(value, self._stitch_vertical_params['type'])
+    @n_vertical.setter
+    def n_vertical(self, value):
+        if not(isinstance(value, self._n_vertical_params['type'])
                or value is None):
-            raise TypeError('Attribute "stitch_vertical" must have type %s'
-                            % self._stitch_vertical_params['type'])
-        self._stitch_vertical = value
+            raise TypeError('Attribute "n_vertical" must have type %s'
+                            % self._n_vertical_params['type'])
+        self._n_vertical = value
 
     @property
-    def _stitch_vertical_params(self):
+    def _n_vertical_params(self):
         return {
             'type': int,
             'default': None,
@@ -231,7 +231,7 @@ class MetaconfigInitArgs(VariableArgs):
         }
 
     @property
-    def stitch_horizontal(self):
+    def n_horizontal(self):
         '''
         Returns
         -------
@@ -239,18 +239,18 @@ class MetaconfigInitArgs(VariableArgs):
             number of images along the horizontal axis of each stitched mosaic
             (default: ``None``)
         '''
-        return self._stitch_horizontal
+        return self._n_horizontal
 
-    @stitch_horizontal.setter
-    def stitch_horizontal(self, value):
-        if not(isinstance(value, self._stitch_horizontal_params['type'])
+    @n_horizontal.setter
+    def n_horizontal(self, value):
+        if not(isinstance(value, self._n_horizontal_params['type'])
                or value is None):
-            raise TypeError('Attribute "stitch_horizontal" must have type %s'
-                            % self._stitch_horizontal_params['type'])
-        self._stitch_horizontal = value
+            raise TypeError('Attribute "n_horizontal" must have type %s'
+                            % self._n_horizontal_params['type'])
+        self._n_horizontal = value
 
     @property
-    def _stitch_horizontal_params(self):
+    def _n_horizontal_params(self):
         return {
             'type': int,
             'default': None,
