@@ -6,6 +6,7 @@ import logging
 import collections
 import numpy as np
 import matlab_wrapper as matlab
+from collections import defaultdict
 from cached_property import cached_property
 from . import path_utils
 from .project import JtProject
@@ -14,6 +15,7 @@ from .checkers import PipelineChecker
 from .. import utils
 from ..api import ClusterRoutines
 from ..errors import PipelineDescriptionError
+from ..errors import NotSupportedError
 from ..writers import DatasetWriter
 from ..readers import DatasetReader
 from ..layer import SegmentedObjectLayer
@@ -248,6 +250,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.engines['R'] = None
         if 'Matlab' in languages:
             logger.info('start Matlab engine')
+            # TODO: Add a random delay before starting MATLAB session to
+            # avoid to many concomitant license calls
+            # time.sleep(random.randint(10))
             self.engines['Matlab'] = matlab.MatlabSession()
             # We have to make sure that code which may be called by a module,
             # are actually on the MATLAB path.
@@ -300,49 +305,126 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
+        # TODO: make this more general for 3D time series datasets
+
         if 'planes' in self.project.pipe['description']['images']:
+
+            # Generate a 2D array
 
             planes = self.project.pipe['description']['images']['planes']
             plane_names = [item['name'] for item in planes]
+
+            valid_names = self.experiment.layer_names.values()
 
             images = dict()
             for name in plane_names:
                 if name is None:
                     continue
-                images[name] = self.experiment.layer_metadata[name]
+                if name not in valid_names:
+                    raise PipelineDescriptionError(
+                            '"%s" is not a valid image name' % name)
+                # Warp into a list of length 1 to be compatible with the
+                # other image loading modes, where several planes are
+                # loaded into a 3-dimensional "stack" or "series".
+                images[name] = [self.experiment.layer_metadata[name].filenames]
 
-            if not images:
-                # This is useful for testing purposes, where a pipeline should
-                # be run that doesn't require any input
-                logger.warning('no planes provided')
-                logger.info('create one empty job description')
-                job_descriptions['run'] = [{
-                    'id': 1,
-                    'inputs': dict(),
-                    'outputs': dict()
-                }]
-                return job_descriptions
-
-            batches = [
-                {k: v.filenames[i] for k, v in images.iteritems()}
-                for i in xrange(len(images.values()[0].filenames))
-            ]
+            # if not images:
+            #     # This is useful for testing purposes, where a pipeline should
+            #     # be run that doesn't require any input
+            #     logger.warning('no planes provided')
+            #     logger.info('create one empty job description')
+            #     job_descriptions['run'] = [{
+            #         'id': 1,
+            #         'inputs': dict(),
+            #         'outputs': dict()
+            #     }]
+            #     return job_descriptions
 
         elif 'stacks' in self.project.pipe['description']['images']:
-            # stack: group of planes acquired at different z-resolutions
+
+            # Generate a 3D array:
+            # A "stack" is a group of planes acquired at the same site, but at
+            # different z-resolutions
+
+            example_cycle = self.experiment.plates[0].cycles[0]
+            n_zplanes = len(np.unique(example_cycle.image_metadata.zplane_ix))
+            if n_zplanes == 1:
+                raise PipelineDescriptionError(
+                        'A "stack" can only be generated for 3D datasets.')
+            n_tpoints = len(np.unique(example_cycle.image_metadata.tpoint_ix))
+            mode = self.experiment.user_cfg.acquisition_mode
+            # Works fine in "multiplexing", because each time point maps to
+            # a different visual. This is not the case for "series" data.
+            if n_tpoints > 0 and mode == 'series':
+                raise NotSupportedError(
+                        'Generation of "stacks" is not supported for '
+                        '3D time series datasets.')
 
             stacks = self.project.pipe['description']['images']['stacks']
             stack_names = [item['name'] for item in stacks]
 
+            valid_names = self.experiment.visual_names
+
+            images = defaultdict(list)
+            for name in stack_names:
+                if name is None:
+                    continue
+                if name not in valid_names:
+                    raise PipelineDescriptionError(
+                            '"%s" is not a valid image name' % name)
+                layer_names = self.experiment.visual_layers_map[name]
+                for l_name in layer_names:
+                    # List of length n, where n is number of z-planes
+                    images[name].append(
+                        self.experiment.layer_metadata[l_name].filenames
+                    )
+
         elif 'series' in self.project.pipe['description']['images']:
-            # series: group of planes acquired at different time points
+
+            # Generate a 3D array:
+            # A "series" is a group of planes acquired at the same site,
+            # but at different time points.
+
+            example_cycle = self.experiment.plates[0].cycles[0]
+            n_tpoints = len(np.unique(example_cycle.image_metadata.tpoint_ix))
+            if n_tpoints == 1:
+                raise PipelineDescriptionError(
+                        'A "series" can only be generated for datasets '
+                        'with multiple time points')
+            n_zplanes = len(np.unique(example_cycle.image_metadata.zplane_ix))
+            if n_zplanes > 0:
+                raise NotSupportedError(
+                        'Generation of "series" is not supported for '
+                        '3D datasets.')
 
             series = self.project.pipe['description']['images']['stacks']
             series_names = [item['name'] for item in series]
 
+            valid_names = self.experiment.visual_names
+
+            images = defaultdict(list)
+            for name in series_names:
+                if name is None:
+                    continue
+                if name not in valid_names:
+                    raise PipelineDescriptionError(
+                            '"%s" is not a valid image name' % name)
+                layer_names = self.experiment.visual_layers_map[name]
+                for l_name in layer_names:
+                    # List of length n, where n is number of time points
+                    images[name].append(
+                        self.experiment.layer_metadata[l_name].filenames
+                    )
+
         else:
             raise ValueError(
                     'Images can be loaded as "planes", "stacks", or "series"')
+
+        batches = [defaultdict(list) for i in xrange(len(images.values()[0][0]))]
+        for k, v in images.iteritems():
+            for i in xrange(len(v[0])):
+                for j in xrange(len(v)):
+                    batches[i][k].append(v[j][i])
 
         job_descriptions['run'] = [{
             'id': i+1,
@@ -464,35 +546,62 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.debug('create data file: %s', data_file)
         h5py.File(data_file, 'w').close()
 
-        # Load the image and correct/align it if required (requested)
-        plane_images = dict()
-        planes = self.project.pipe['description']['images']['planes']
-        for i, plane in enumerate(planes):
-            logger.info('load images of plane "%s"', plane['name'])
-            filename = batch['inputs']['image_files'][plane['name']]
-            name = os.path.basename(filename)
-            image = self.experiment.get_image_by_name(name)
-            if plane['correct']:
-                logger.info('correct images for illumination artifacts')
-                for plate in self.experiment.plates:
-                    if plate.name != image.metadata.plate_name:
-                        continue
-                    cycle = plate.cycles[image.metadata.tpoint_ix]
-                    stats = cycle.illumstats_images[image.metadata.channel_ix]
-                    image = image.correct(stats)
-            logger.info('align images between cycles')
-            orig_dims = image.pixels.dimensions
-            image = image.align()
-            if not isinstance(image.pixels.array, np.ndarray):
-                # image_array = vips_image_to_np_array(image.pixels.array)
-                raise TypeError('Jterator requires images as "numpy" arrays.')
-            else:
-                image_array = image.pixels.array
-            plane_images[plane['name']] = image_array
+        # Load the images,correct them if requested and align them if required.
+        # NOTE: When the experiment was acquired in "multiplexing" mode,
+        # images will be aligned automatically. I assume that this is the
+        # desired behavior, but one should consider making the alignment
+        # optional and give the user the possibility to decide similar to
+        # illumination correction.
+        images = dict()
+        if 'planes' in self.project.pipe['description']['images']:
+            collection = self.project.pipe['description']['images']['planes']
+            item_type = 'plane'
+        elif 'stacks' in self.project.pipe['description']['images']:
+            collection = self.project.pipe['description']['images']['stacks']
+            item_type = 'stack'
+        elif 'series' in self.project.pipe['description']['images']:
+            collection = self.project.pipe['description']['images']['series']
+            item_type = 'series'
+        for i, item in enumerate(collection):
+            logger.info('load images of %s "%s"', item_type, item['name'])
+            filenames = batch['inputs']['image_files'][item['name']]
+            n = len(filenames)
+            for j in xrange(n):
+                name = os.path.basename(filenames[j])
+                img = self.experiment.get_image_by_name(name)
+                if item['correct']:
+                    logger.info('correct images for illumination artifacts')
+                    for plate in self.experiment.plates:
+                        if plate.name != img.metadata.plate_name:
+                            continue
+                        cycle = plate.cycles[img.metadata.tpoint_ix]
+                        stats = cycle.illumstats_images[img.metadata.channel_ix]
+                        img = img.correct(stats)
+                logger.info('align images between cycles')
+                orig_dims = img.pixels.dimensions
+                img = img.align()
+                if not isinstance(img.pixels.array, np.ndarray):
+                    # pixels_array = vips_image_to_np_array(image.pixels.array)
+                    raise TypeError(
+                            'Jterator requires images as "numpy" arrays. '
+                            'Set "library" to "numpy".')
+                else:
+                    pixels_array = img.pixels.array
+
+                # Combine images into 3D "stack" or "series" array
+                if j == 0 and n > 1:
+                    dims = img.pixels.dimensions
+                    images[item['name']] = np.empty((n, dims[0], dims[1]),
+                                                    dtype=img.pixels.dtype)
+                if n > 1:
+                    images[item['name']][j, :, :] = pixels_array
+                else:
+                    images[item['name']] = pixels_array
+
             # Add some metadata to the HDF5 file, which may be required later
             if i == 0:
                 logger.info('add metadata to data file')
-                md = image.metadata
+                md = img.metadata
                 shift_y = md.upper_overhang - md.y_shift
                 if shift_y < 0:
                     offset_y = abs(shift_y)
@@ -533,7 +642,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             figure_file = module.build_figure_filename(
                                 self.figures_dir, job_id)
             inputs = module.prepare_inputs(
-                                planes=plane_images,
+                                images=images,
                                 upstream_output=outputs['data'],
                                 data_file=data_file, figure_file=figure_file,
                                 job_id=job_id,
