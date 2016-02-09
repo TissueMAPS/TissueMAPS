@@ -1089,7 +1089,8 @@ class SegmentedObjectLayer(Layer):
                         f_path = '%s/%s' % (feat_path, feat)
                         # Remove border objects
                         feat_data = data.read(f_path)[~is_border]
-                        store.append(f_path, feat_data)
+                        if len(feat_data) > 0:
+                            store.append(f_path, feat_data)
 
                     # Store the name of the corresponding plate and well
                     plate_names = np.repeat(plate_name, len(feat_data))
