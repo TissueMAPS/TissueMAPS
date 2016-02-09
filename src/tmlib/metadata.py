@@ -627,11 +627,10 @@ class IllumstatsImageMetadata(object):
         self._filename = str(value)
 
 
-class MosaicMetadata(object):
+class ChannelLayerMetadata(object):
 
     '''
-    Class for mosaic image metadata, such as the name of the channel or
-    the relative position of the mosaic within a well plate.
+    Class for metadata of :py:class:`tmlib.layer.ChannelLayer`.
     '''
 
     @property

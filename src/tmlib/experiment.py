@@ -3,13 +3,13 @@ import os
 import logging
 import numpy as np
 from natsort import natsorted
-from contextlib import contextmanager
 from cached_property import cached_property
+from collections import defaultdict
 from . import cfg
 from . import utils
 from .plate import Plate
 from .source import PlateSource
-from .metadata import MosaicMetadata
+from .metadata import ChannelLayerMetadata
 from .errors import NotSupportedError
 from .errors import MetadataError
 from .readers import YamlReader
@@ -203,18 +203,6 @@ class Experiment(object):
             Plate(d, self.user_cfg.plate_format, self.library)
             for d in plate_dirs
         ]
-        # plate_dirs = [
-        #     os.path.join(self.plates_dir, d)
-        #     for d in os.listdir(self.plates_dir)
-        #     if os.path.isdir(os.path.join(self.plates_dir, d)) and
-        #     self._is_plate_dir(d)
-        # ]
-        # plate_dirs = natsorted(plate_dirs)
-        # plates = dict()
-        # for d in plate_dirs:
-        #     p = Plate(d, self.user_cfg.plate_format, self.library)
-        #     plates[p.name] = p
-        # return plates
 
     def add_plate(self, plate_name):
         '''
@@ -354,21 +342,19 @@ class Experiment(object):
         '''
         Returns
         -------
-        Dict[str, tmlib.metadata.MosaicMetadata]
+        Dict[str, tmlib.metadata.ChannelLayerMetadata]
             metadata for each layer
         '''
-        if hasattr(self.user_cfg, 'LAYER_NAMES'):
-            raise NotSupportedError('TODO')
         layer_metadata = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
                 md = cycle.image_metadata
-                for index, name in self.layer_names.items():
-                    if index[0] != cycle.index:
+                for indentifier, name in self.layer_names.items():
+                    if indentifier[0] != cycle.index:
                         continue
-                    c = index[1]
-                    z = index[2]
-                    metadata = MosaicMetadata()
+                    c = indentifier[1]
+                    z = indentifier[2]
+                    metadata = ChannelLayerMetadata()
                     metadata.name = name
                     metadata.channel_ix = c
                     metadata.zplane_ix = z
@@ -382,6 +368,56 @@ class Experiment(object):
                     metadata.site_ixs = sites
                     layer_metadata[name] = metadata
         return layer_metadata
+
+    @cached_property
+    def visual_layers_map(self):
+        '''
+        Returns
+        -------
+        Dict[str, List[str]]
+            layer names for each visual
+
+        Note
+        ----
+        A `visual` is an abstract group of `layers`, which are visualized
+        together. In the simplest case of a 2D dataset, each `visual` maps to
+        only one `layer`, but there are other scenarios:
+            * 3D dataset with multiple focal planes:
+              1 `visual` -> *n* `layers`
+            * Time series dataset with multiple time points:
+              1 `visual` -> *n*x*m* `layers`
+            * Multiplexing dataset with multiple time points:
+              1 `visual` -> *n* `layer`
+        where *n* is the number of focal planes and *m* is the number of
+        time points.
+        '''
+        if hasattr(self.user_cfg, 'visuals'):
+            # TODO: allow user to give visuals more meaningful names,
+            # such as "DAPI" instead of "t000_c000"
+            raise NotSupportedError('Functionality not yet supported.')
+        mode = self.user_cfg.acquisition_mode
+        names = defaultdict(list)
+        for plate in self.plates:
+            for cycle in plate.cycles:
+                t = cycle.index
+                md = cycle.image_metadata
+                channels = np.unique(md['channel_ix'])
+                zplanes = np.unique(md['zplane_ix'])
+                for c in channels:
+                    for z in zplanes:
+                        v_name = cfg.VISUAL_NAME_FORMAT[mode].format(t=t, c=c)
+                        names[v_name].append(self.layer_names[(t, c, z)])
+        return names
+
+    @property
+    def visual_names(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names of the visuals
+        '''
+        return self.visual_layers_map.keys()
 
     @property
     def data_file(self):
@@ -398,22 +434,6 @@ class Experiment(object):
         :py:class:`tmlib.layer.ObjectLayer`
         '''
         return 'data.h5'
-
-    @property
-    @contextmanager
-    def data(self):
-        '''
-        Returns
-        -------
-        pandas.HDFStore
-            tables can be queried using :py:func:`select` method;
-            use `start` and `stop` arguments to select only a subset of the
-            data
-        '''
-        filename = os.path.join(self.dir, self.features_file)
-        store = pd.HDFStore(filename)
-        yield store
-        store.close()
 
     def get_image_by_name(self, name):
         '''
