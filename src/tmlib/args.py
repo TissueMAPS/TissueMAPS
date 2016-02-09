@@ -345,6 +345,7 @@ class SubmitArgs(GeneralArgs):
         self.cores = self._cores_params['default']
         self.phase = self._phase_params['default']
         self.jobs = self._jobs_params['default']
+        self.backup = self._backup_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -354,7 +355,9 @@ class SubmitArgs(GeneralArgs):
     @property
     def _persistent_attrs(self):
         return {
-            'interval', 'phase', 'jobs', 'depth', 'memory', 'duration', 'cores',
+            'interval', 'phase', 'jobs', 'depth',
+            'memory', 'duration', 'cores',
+            'backup',
         }
 
     @property
@@ -564,6 +567,33 @@ class SubmitArgs(GeneralArgs):
             'default': 1,
             'help': '''
                 number of CPUs that should be allocated for each job
+            '''
+        }
+
+    @property
+    def backup(self):
+        '''
+        Returns
+        -------
+        bool
+            indicator that the session of a previous submission should be
+            backed up (default: ``False``)
+        '''
+        return self._backup
+
+    @backup.setter
+    def backup(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "backup" must have type bool.')
+        self._backup = value
+
+    @property
+    def _backup_params(self):
+        return {
+            'default': False,
+            'type': bool,
+            'help': '''
+                backup session of a previous submission
             '''
         }
 

@@ -1,7 +1,5 @@
 import os
 import logging
-import shutil
-from gc3libs.session import Session
 from .workflow import Workflow
 from ..api import BasicClusterRoutines
 
@@ -42,18 +40,6 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
             os.mkdir(self._project_dir)
         return self._project_dir
 
-    @property
-    def session_dir(self):
-        '''
-        Returns
-        -------
-        str
-            absolute path the
-            `GC3Pie session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
-            directory
-        '''
-        return os.path.join(self.project_dir, 'cli_session')
-
     def create_jobs(self, job_descriptions=None,
                     start_stage=None, start_step=None):
         '''
@@ -83,40 +69,3 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
                     start_stage=start_stage,
                     start_step=start_step)
         return jobs
-
-    def create_session(self, jobs, overwrite=True, backup=False):
-        '''
-        Create a `GC3Pie session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_for job persistence.
-
-        Parameters
-        ----------
-        jobs: tmlib.tmaps.workflow.Workflow
-            jobs that should be added to the session
-        overwrite: bool, optional
-            overwrite an existing session (default: ``True``)
-        backup: bool, optional
-            backup an existing session (default: ``False``)
-
-        Note
-        ----
-        If `backup` or `overwrite` are set to ``True`` a new session will be
-        created, otherwise a session existing from a previous submission
-        will be re-used.
-        '''
-        logger.info('create session')
-        if overwrite:
-            if os.path.exists(self.session_dir):
-                logger.debug('remove session directory: %s', self.session_dir)
-                shutil.rmtree(self.session_dir)
-        elif backup:
-            current_time = self.create_datetimestamp()
-            backup_dir = '%s_%s' % (self.session_dir, current_time)
-            logger.debug('create backup of session directory: %s', backup_dir)
-            shutil.move(self.session_dir, backup_dir)
-        session = Session(self.session_dir)
-        if overwrite:
-            logger.debug('add jobs to session')
-            session.add(jobs)
-            logger.debug('save session to disk')
-            session.save_all()
-        return session

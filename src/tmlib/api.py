@@ -3,6 +3,7 @@ import yaml
 import glob
 import time
 import logging
+import shutil
 from natsort import natsorted
 from abc import ABCMeta
 from abc import abstractmethod
@@ -77,7 +78,7 @@ class BasicClusterRoutines(object):
             directory for a
             `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
         '''
-        return os.path.join(self.project_dir, 'session')
+        return os.path.join(self.project_dir, 'cli_session')
 
     @property
     def datetimestamp(self):
@@ -113,7 +114,37 @@ class BasicClusterRoutines(object):
     def log_task_failure(task_data):
         return log_task_failure(task_data, logger)
 
-    def submit_jobs(self, jobs, monitoring_interval=5, monitoring_depth=1,
+    def create_session(self, overwrite=True, backup=False):
+        '''
+        Create a `GC3Pie session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
+        for job persistence.
+
+        Parameters
+        ----------
+        overwrite: bool, optional
+            overwrite an existing session (default: ``True``)
+        backup: bool, optional
+            backup an existing session (default: ``False``)
+
+        Note
+        ----
+        If `backup` or `overwrite` are set to ``True`` a new session will be
+        created, otherwise a session existing from a previous submission
+        will be re-used.
+        '''
+        logger.info('create session')
+        if overwrite:
+            if os.path.exists(self.session_dir):
+                logger.debug('remove session directory: %s', self.session_dir)
+                shutil.rmtree(self.session_dir)
+        if backup:
+            current_time = self.create_datetimestamp()
+            backup_dir = '%s_%s' % (self.session_dir, current_time)
+            logger.debug('create backup of session directory: %s', backup_dir)
+            shutil.move(self.session_dir, backup_dir)
+        return Session(self.session_dir)
+
+    def submit_jobs(self, session, monitoring_interval=5, monitoring_depth=1,
                     n_submit=2000):
         '''
         Create a GC3Pie engine that submits jobs to a cluster
@@ -121,8 +152,8 @@ class BasicClusterRoutines(object):
 
         Parameters
         ----------
-        jobs: gc3libs.workflow.TaskCollection or gc3libs.session.Session
-            jobs that should be submitted
+        session: gc3libs.session.Session
+            session with jobs that should be submitted
         monitoring_interval: int, optional
             monitoring interval in seconds (default: ``5``)
         monitoring_depth: int, optional
@@ -159,25 +190,22 @@ class BasicClusterRoutines(object):
         logger.debug('set maximum number of submitted jobs to %d',
                      e.max_submitted)
 
-        # Add tasks to engine instance
+        # Add jobs in session to engine instance
         logger.debug('add jobs to engine')
-        if isinstance(jobs, Session):
-            e._store = jobs.store
-            task_ids = jobs.list_ids()
-            if len(task_ids) != 1:
-                raise ValueError('Session should only contain a single task.')
-            logger.debug('add task "%s" to engine', task_ids[-1])
-            task = jobs.load(task_ids[-1])
-            if not isinstance(task, TaskCollection):
-                raise TypeError(
-                        'The session should contain a '
-                        'gc3libs.workflow.TaskCollection')
-        elif isinstance(jobs, TaskCollection):
-            task = jobs
-        else:
+        if not isinstance(session, Session):
             raise TypeError(
-                    'Argument "jobs" must either be a GC3Pie task collection '
-                    'or a GC3Pie session.')
+                    'Argument "session" must be a GC3Pie session object.')
+        e._store = session.store
+        task_ids = session.list_ids()
+        if len(task_ids) != 1:
+            raise ValueError('Session should only contain a single task.')
+        logger.debug('add task "%s" to engine', task_ids[-1])
+        task = session.load(task_ids[-1])
+        # NOTE: This changes the id of the object!
+        if not isinstance(task, TaskCollection):
+            raise TypeError(
+                    'The session should contain a '
+                    'gc3libs.workflow.TaskCollection')
         logger.debug('add task %s to engine', task)
         e.add(task)
 
@@ -198,7 +226,8 @@ class BasicClusterRoutines(object):
                 task_data = get_task_data(task)
 
                 self.log_task_data(task_data, monitoring_depth)
-                logger.info('------------------------------------------')
+                # TODO: format this into a nice table and simply print it
+                print
 
                 # break out of the loop when all jobs are done
                 stats = format_stats_data(e.stats())
@@ -213,6 +242,7 @@ class BasicClusterRoutines(object):
             e.kill(task)
             e.progress()
 
+        task_data = get_task_data(task)
         self.log_task_failure(task_data)
 
         return task_data

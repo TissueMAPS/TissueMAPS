@@ -1,10 +1,4 @@
 import gc3libs
-from .tmaps.workflow import Workflow
-from .tmaps.workflow import WorkflowStage
-from .tmaps.workflow import WorkflowStep
-from .tmaps.description import WorkflowDescription
-from .tmaps.description import WorkflowStageDescription
-from .tmaps.description import WorkflowStepDescription
 
 
 def format_stats_data(stats):
@@ -52,63 +46,19 @@ def get_task_info(task):
     }
 
 
-# def get_workflow_status(task, description):
-#     if not isinstance(task, Workflow):
-#         raise TypeError()
-#     if not isinstance(description, WorkflowDescription):
-#         raise TypeError()
-
-
-# def get_stage_status(task, description):
-#     if not isinstance(task, WorkflowStage):
-#         raise TypeError()
-#     if not isinstance(description, WorkflowStageDescription):
-#         raise TypeError()
-#     if task.jobname not in description.name:
-#         info = {
-#             'id': None,
-#             'name': description.name,
-#             'state': 'WAITING',
-#             'is_live': False,
-#             'is_done': False,
-#             'failed': False,
-#             'percent_done': 0.0
-#         }
-#     else:
-#         info = get_task_info(task)
-
-
-# def get_step_status(task, description):
-#     if not isinstance(task, WorkflowStep):
-#         raise TypeError()
-#     if not isinstance(description, WorkflowStepDescription):
-#         raise TypeError()
-#     if task.jobname not in description.name:
-#         info = {
-#             'id': None,
-#             'name': description.name,
-#             'state': 'WAITING',
-#             'is_live': False,
-#             'is_done': False,
-#             'failed': False,
-#             'percent_done': 0.0
-#         }
-#     else:
-#         info = get_task_info(task)
-
-
 def get_task_data(task, description=None):
     '''
     Provide the following data for each task and recursively for each
     subtask in form of a mapping:
 
-        * "name" (*str*): name of task
-        * "state" (*g3clibs.Run.State*): state of the task
-        * "is_live" (*bool*): whether the task is currently processed
-        * "is_done" (*bool*): whether the task is done
-        * "failed" (*bool*): whether the task failed, i.e. terminated
+        * ``"name"`` (*str*): name of task
+        * ``"state"`` (*g3clibs.Run.State*): state of the task
+        * ``"is_live"`` (*bool*): whether the task is currently processed
+        * ``"is_done"`` (*bool*): whether the task is done
+        * ``"failed"`` (*bool*): whether the task failed, i.e. terminated
           with non-zero exitcode
-        * "percent_done" (*float*): percent of subtasks that are done
+        * ``"status_code"`` (*int*): status code returned by the program
+        * ``"percent_done"`` (*float*): percent of subtasks that are *done*
 
     Parameters
     ----------
@@ -136,6 +86,7 @@ def get_task_data(task, description=None):
             'is_live': task_.execution.state in is_live_states,
             'is_done': is_done,
             'failed': is_done and failed,
+            'status_code': task_.execution.exitcode,
             'percent_done': 0.0  # fix later, if possible
         }
 
@@ -160,6 +111,7 @@ def get_task_data(task, description=None):
                 "Unhandled task class %r" % (task_.__class__))
 
         if isinstance(task_, gc3libs.workflow.TaskCollection):
+            # loop recursively over subtasks
             data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
 
         return data
@@ -203,7 +155,8 @@ def log_task_failure(task_data, logger):
     '''
     def log_recursive(data, i):
         if data['failed']:
-            logger.error('%s: failed', data['name'])
+            logger.error('%s (id: %s) failed with exitcode %s',
+                         data['name'], data['id'], data['status_code'])
         for subtd in data.get('subtasks', list()):
             log_recursive(subtd, i+1)
     log_recursive(task_data, 0)

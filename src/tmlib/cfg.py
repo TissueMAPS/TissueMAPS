@@ -15,14 +15,20 @@ from .tmaps.description import WorkflowDescription
 
 logger = logging.getLogger(__name__)
 
-#: Format string for the generation of a full path to the user configuration settings file.
+#: Format string for building the full path to the user configuration
+#: settings file.
 USER_CFG_FILE_FORMAT = '{experiment_dir}{sep}user.cfg.yml'
 
-#: Format string for building default layer names based on time point, channel, and z-plane index.
+#: Format string for building default layer names.
 LAYER_NAME_FORMAT = 't{t:0>3}_c{c:0>3}_z{z:0>3}'
 
-#: Format string for building image filenames based on plate name, time point index, well name,
-#: y and x coordinates of the image within the well, channel index and z-plane index.
+#: Format string for each acquisition mode for building visual names.
+VISUAL_NAME_FORMAT = {
+    'multiplexing': 't{t:0>3}_c{c:0>3}',
+    'series': 'c{c:0>3}',
+}
+
+#: Format string for building image filenames.
 IMAGE_NAME_FORMAT = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.tif'
 
 
@@ -37,6 +43,7 @@ class UserConfiguration(object):
     }
 
     def __init__(self, experiment_dir, plate_format,
+                 acquisition_mode='multiplexing',
                  sources_dir=None, plates_dir=None, layers_dir=None, **kwargs):
         '''
         Initialize an instance of class UserConfiguration.
@@ -45,6 +52,12 @@ class UserConfiguration(object):
         ----------
         experiment_dir: str
             absolute path to experiment directory
+        plate_format: int
+            number of wells per plate
+        acquisition_mode: str
+            either ``"series"`` or ``"multiplexing"`` to indicate whether
+            images acquired at different time points relate to the same marker
+            or a different one (default: ``"multiplexing"``) 
         sources_dir: str, optional
             absolute path to the directory, where source files are located
         plates_dir: str, optional
@@ -65,6 +78,7 @@ class UserConfiguration(object):
         if not os.path.exists(self.experiment_dir):
             raise OSError('Experiment directory does not exist')
         self.plate_format = plate_format
+        self.acquisition_mode = acquisition_mode
         self._sources_dir = sources_dir
         self._plates_dir = plates_dir
         self._layers_dir = layers_dir
@@ -201,7 +215,7 @@ class UserConfiguration(object):
         Returns
         -------
         int
-            plate format, i.e. total number of wells per plate
+            total number of wells per plate
         '''
         return self._plate_format
 
@@ -214,6 +228,32 @@ class UserConfiguration(object):
                     'Attribute "plate_format" can be set to "%s"'
                     % '"or "'.join(Plate.SUPPORTED_PLATE_FORMATS))
         self._plate_format = value
+
+    @property
+    def acquisition_mode(self):
+        '''
+        Returns
+        -------
+        str
+            acquisition mode, i.e. whether separate acquisitions relate to the
+            same marker as part of a time series experiment or another marker
+            as part of a multiplexing experiment
+            (options: ``{"series", "multiplexing"}``,
+             default: ``"multiplexing"``)
+        '''
+        return self._acquisition_mode
+
+    @acquisition_mode.setter
+    def acquisition_mode(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError(
+                'Attribute "dimensionality" must have type basestring.')
+        if value not in {'series', 'multiplexing'}:
+            # TODO: ignore case
+            raise ValueError(
+                'Attribute "dimensionality" must be either "series" '
+                'or "multiplexing"')
+        self._acquisition_mode = str(value)
 
     @property
     def workflow(self):

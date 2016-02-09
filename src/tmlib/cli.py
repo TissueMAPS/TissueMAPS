@@ -70,6 +70,7 @@ def command_line_call(parser):
         else:
             parser.print_help()
         logger.info('SUCCESSFULLY COMPLETED')
+        sys.exit(0)
     except Exception as error:
         sys.stderr.write('\nFAILED:\n%s\n' % str(error))
         for tb in traceback.format_tb(sys.exc_info()[2]):
@@ -415,9 +416,9 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from job descriptions')
         return api.list_input_files(self.job_descriptions)
 
-    def build_jobs(self, duration, memory, cores, phase=None, ids=None):
+    def create_jobs(self, duration, memory, cores, phase=None, ids=None):
         '''
-        Build *jobs* based on prior created job descriptions.
+        Create *jobs* based on job descriptions.
 
         Parameters
         ----------
@@ -440,13 +441,12 @@ class CommandLineInterface(object):
             jobs
         '''
         api = self._api_instance
-        logger.info('create jobs')
         logger.debug('allocated time: %s', duration)
         logger.debug('allocated memory: %d GB', memory)
         logger.debug('allocated cores: %d', cores)
         if phase == 'run':
             if ids is not None:
-                logger.info('build jobs %s', ', '.join(map(str, ids)))
+                logger.info('create run jobs %s', ', '.join(map(str, ids)))
                 job_descriptions = dict()
                 job_descriptions['run'] = [
                     j for j in self.job_descriptions['run'] if j['id'] in ids
@@ -455,6 +455,7 @@ class CommandLineInterface(object):
                 job_descriptions = dict()
                 job_descriptions['run'] = self.job_descriptions['run']
         elif phase == 'collect':
+            logger.info('create collect job')
             if 'collect' not in self.job_descriptions.keys():
                 raise ValueError(
                             'Step "%s" doesn\'t have a "collect" phase.'
@@ -462,7 +463,7 @@ class CommandLineInterface(object):
             job_descriptions = dict()
             job_descriptions['collect'] = self.job_descriptions['collect']
         else:
-            logger.info('build all jobs')
+            logger.info('create all jobs')
             job_descriptions = self.job_descriptions
         jobs = api.create_jobs(
                 job_descriptions=job_descriptions,
@@ -496,16 +497,22 @@ class CommandLineInterface(object):
             raise AttributeError(
                     'When "phase" is set to "run", '
                     'argument "jobs" has to be set as well.')
-        jobs = self.build_jobs(
+        jobs = self.create_jobs(
                     duration=args.duration,
                     memory=args.memory,
                     cores=args.cores,
                     phase=args.phase,
                     ids=args.jobs)
         # TODO: check whether jobs were actually created
-        # session = api.create_session(jobs)
+        if args.backup:
+            session = api.create_session(backup=True)
+        else:
+            session = api.create_session()
+        logger.debug('add jobs to session "%s"', api.session_dir)
+        session.add(jobs)
+        session.save_all()
         logger.info('submit and monitor jobs')
-        api.submit_jobs(jobs,
+        api.submit_jobs(session,
                         monitoring_interval=args.interval,
                         monitoring_depth=args.depth)
 
