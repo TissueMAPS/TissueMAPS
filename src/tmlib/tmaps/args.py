@@ -14,7 +14,6 @@ class TmapsSubmitArgs(Args):
         '''
         self.stage = self._stage_params['default']
         self.step = self._step_params['default']
-        self.backup = self._backup_params['default']
         super(TmapsSubmitArgs, self).__init__(**kwargs)
 
     @property

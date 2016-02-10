@@ -234,42 +234,7 @@ class InitArgs(GeneralArgs):
 
     @property
     def _persistent_attrs(self):
-        return {
-            'display', 'backup', 'keep_output'
-        }
-
-    @property
-    def display(self):
-        '''
-        Returns
-        -------
-        bool
-            indicator that job descriptions should only be displayed
-            and not written to files
-
-        Warning
-        -------
-        This argument must not be set within workflows, since it will cause
-        the program to exit without creating persistent job descriptions. 
-        '''
-        return self._display
-
-    @display.setter
-    def display(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "display" must have type bool.')
-        self._display = value
-
-    @property
-    def _display_params(self):
-        return {
-            'default': False,
-            'type': bool,
-            'help': '''
-                display job descriptions, i.e. pretty print descriptions
-                to standard output without writing them to files
-            '''
-        }
+        return {'backup', 'keep_output'}
 
     @property
     def backup(self):
@@ -284,8 +249,9 @@ class InitArgs(GeneralArgs):
 
     @backup.setter
     def backup(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "backup" must have type bool.')
+        if not isinstance(value, self._backup_params['type']):
+            raise TypeError('Attribute "backup" must have type %s.'
+                            % self._backup_params['type'])
         self._backup = value
 
     @property
@@ -312,8 +278,9 @@ class InitArgs(GeneralArgs):
 
     @keep_output.setter
     def keep_output(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "keep_output" must have type bool.')
+        if not isinstance(value, self._keep_output_params['type']):
+            raise TypeError('Attribute "keep_output" must have type %s.'
+                            % self._keep_output_params['type'])
         self._keep_output = value
 
     @property
@@ -345,7 +312,8 @@ class SubmitArgs(GeneralArgs):
         self.cores = self._cores_params['default']
         self.phase = self._phase_params['default']
         self.jobs = self._jobs_params['default']
-        self.backup = self._backup_params['default']
+        self.use_session = self._use_session_params['default']
+        self.backup_session = self._backup_session_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -357,7 +325,7 @@ class SubmitArgs(GeneralArgs):
         return {
             'interval', 'phase', 'jobs', 'depth',
             'memory', 'duration', 'cores',
-            'backup',
+            'use_session', 'backup_session',
         }
 
     @property
@@ -571,7 +539,33 @@ class SubmitArgs(GeneralArgs):
         }
 
     @property
-    def backup(self):
+    def use_session(self):
+        '''
+        Returns
+        -------
+        bool
+            use a session to have persistence jobs on disk (default: ``False``)
+        '''
+        return self._use_session
+
+    @use_session.setter
+    def use_session(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "use_session" must have type bool.')
+        self._use_session = value
+
+    @property
+    def _use_session_params(self):
+        return {
+            'default': False,
+            'type': bool,
+            'help': '''
+                use a session to have persistence jobs on disk
+            '''
+        }
+
+    @property
+    def backup_session(self):
         '''
         Returns
         -------
@@ -579,21 +573,22 @@ class SubmitArgs(GeneralArgs):
             indicator that the session of a previous submission should be
             backed up (default: ``False``)
         '''
-        return self._backup
+        return self._backup_session
 
-    @backup.setter
-    def backup(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "backup" must have type bool.')
-        self._backup = value
+    @backup_session.setter
+    def backup_session(self, value):
+        if not isinstance(value, self._backup_session_params['type']):
+            raise TypeError('Attribute "backup" must have type %s.'
+                            % self._backup_session_params['type'])
+        self._backup_session = value
 
     @property
-    def _backup_params(self):
+    def _backup_session_params(self):
         return {
             'default': False,
             'type': bool,
             'help': '''
-                backup session of a previous submission
+                backup the session of a previous submission
             '''
         }
 

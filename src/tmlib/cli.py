@@ -104,8 +104,8 @@ def build_cli_method_args_from_mapping(prog_name, method_name, **kwargs):
 
     See also
     --------
-    :py:func:`tmlib.tmaps.workflow.load_method_args`
-    :py:func:`tmlib.tmaps.workflow.load_var_method_args`
+    :py:func:`tmlib.tmaps.description.load_method_args`
+    :py:func:`tmlib.tmaps.description.load_var_method_args`
     :py:class:`tmlib.args.Args`
     '''
     args_handler = load_method_args(method_name)
@@ -296,11 +296,8 @@ class CommandLineInterface(object):
         job_descriptions = api.create_job_descriptions(args.variable_args)
         if not job_descriptions['run']:
             raise ValueError('No job descriptions were created.')
-        if args.display:
-            api.print_job_descriptions(job_descriptions)
-        else:
-            logger.info('write job descriptions to files')
-            api.write_job_files(job_descriptions)
+        logger.info('write job descriptions to files')
+        api.write_job_files(job_descriptions)
         return job_descriptions
 
     def run(self, args):
@@ -418,7 +415,9 @@ class CommandLineInterface(object):
 
     def create_jobs(self, duration, memory, cores, phase=None, ids=None):
         '''
-        Create *jobs* based on job descriptions.
+        Create *jobs* based on previously created job descriptions.
+        Job descriptions are loaded from files on disk and used to
+        instantiate *job* objects. 
 
         Parameters
         ----------
@@ -439,6 +438,10 @@ class CommandLineInterface(object):
         -------
         gc3libs.workflow.SequentialTaskCollection
             jobs
+
+        See also
+        --------
+        :py:mod:`tmlib.jobs`
         '''
         api = self._api_instance
         logger.debug('allocated time: %s', duration)

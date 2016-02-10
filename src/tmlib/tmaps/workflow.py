@@ -1,307 +1,50 @@
 import time
 import os
-import re
 import logging
 import importlib
 from cached_property import cached_property
-from abc import ABCMeta
-from abc import abstractproperty
-# from abc import abstractmethod
 from gc3libs import Run
-from gc3libs import Application
-# from gc3libs.workflow import RetryableTask
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import StopOnError
 from .description import WorkflowDescription
 from .description import WorkflowStageDescription
 from ..errors import WorkflowTransitionError
-from ..utils import create_datetimestamp
+from ..jobs import CollectJob
+from ..jobs import RunJobCollection
+from ..jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
 
 
-def load_program(prog_name):
+def load_step_interface(step_name):
     '''
-    Load a `TissueMAPS` command line program.
+    Load the command line interface for a `TissueMAPS` workflow step.
 
     Parameters
     ----------
-    prog_name: str
-        name of the program, i.e. the name of corresponding subpackage in the
-        "tmlib" package
+    step_name: str
+        name of the step, i.e. the corresponding subpackage in the "tmlib"
+        package
 
     Returns
     -------
     tmlib.cli.CommandLineInterface
-        command line program
+        command line interface
 
     Raises
     ------
     ImportError
-        when subpackage with name `prog_name` doesn't have a module named "cli"
+        when subpackage with name `step_name` doesn't have a module named "cli"
     AttributeError
         when the "cli" module doesn't contain a program-specific
         implementation of the `CommandLineInterface` base class
     '''
-    module_name = 'tmlib.%s.cli' % prog_name
+    module_name = 'tmlib.%s.cli' % step_name
     logger.debug('load cli module "%s"' % module_name)
     module = importlib.import_module(module_name)
-    class_name = prog_name.capitalize()
+    class_name = step_name.capitalize()
     return getattr(module, class_name)
-
-
-class Job(Application):
-
-    '''
-    Abstract base class for a TissueMAPS job.
-
-    Note
-    ----
-    Jobs can be constructed based on job descriptions, which persist on disk
-    in form of JSON files.
-    '''
-
-    # TODO: inherit from RetryableTask(max_retries=1) and implement
-    # re-submission logic by overwriting retry() method:
-    # if exitcode != 0: don't resubmit
-    # if any([re.search(r"FAILED", f) for f in stderr_files]): don't resubmit
-    # if exitcode is None: resubmit
-
-    __metaclass__ = ABCMeta
-
-    def __init__(self, step_name, arguments, output_dir):
-        '''
-        Initialize an instance of class Job.
-
-        Parameters
-        ----------
-        step_name: str
-            name of the corresponding TissueMAPS workflow step
-        arguments: List[str]
-            command line arguments
-        output_dir: str
-            absolute path to the output directory, where log reports will
-            be stored
-        '''
-        t = create_datetimestamp()
-        self.step_name = step_name
-        super(Job, self).__init__(
-            jobname=self.name,
-            arguments=arguments,
-            output_dir=output_dir,
-            inputs=[],
-            outputs=[],
-            stdout='%s_%s.out' % (self.name, t),
-            stderr='%s_%s.err' % (self.name, t)
-        )
-
-    @abstractproperty
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the job
-        '''
-        pass
-
-    def retry(self):
-        '''
-        Decide whether the job should be retried.
-
-        Returns
-        -------
-        bool
-            whether job should be resubmitted
-        '''
-        # TODO
-        return super(Job, self).retry()
-
-
-class RunJob(Job):
-
-    '''
-    Class for TissueMAPS run jobs, which can be processed in parallel.
-    '''
-
-    def __init__(self, step_name, arguments, output_dir, job_id, index=None):
-        '''
-        Initialize an instance of class RunJob.
-
-        Parameters
-        ----------
-        step_name: str
-            name of the corresponding TissueMAPS workflow step
-        arguments: List[str]
-            command line arguments
-        output_dir: str
-            absolute path to the output directory, where log reports will
-            be stored
-        job_id: int
-            one-based job identifier number
-        index: int, optional
-            index of the *run* job collection in case the step has multiple
-            *run* phases
-        '''
-        self.job_id = job_id
-        if not isinstance(index, int) and index is not None:
-            raise TypeError('Argument "index" must have type int.')
-        self.index = index
-        super(RunJob, self).__init__(
-            step_name=step_name,
-            arguments=arguments,
-            output_dir=output_dir)
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the job
-        '''
-        if self.index is None:
-            return '%s_run_%.6d' % (self.step_name, self.job_id)
-        else:
-            return '%s_run-%.2d_%.6d' % (self.step_name, self.index, self.job_id)
-
-
-class RunJobCollection(ParallelTaskCollection):
-
-    '''
-    Class for TissueMAPS run jobs based on a
-    `gc3libs.workflow.ParallelTaskCollection`.
-    '''
-
-    def __init__(self, step_name, jobs=None, index=None):
-        '''
-        Initialize an instance of class RunJobCollection.
-
-        Parameters
-        ----------
-        step_name: str
-            name of the corresponding TissueMAPS workflow step
-        jobs: List[tmlibs.tmaps.workflow.RunJob], optional
-            list of jobs that should be processed (default: ``None``)
-        index: int, optional
-            index of the *run* job collection in case the step has multiple
-            *run* phases
-        '''
-        self.step_name = step_name
-        if jobs is not None:
-            if not isinstance(jobs, list):
-                raise TypeError('Argument "jobs" must have type list.')
-            if not all([isinstance(j, RunJob) for j in jobs]):
-                raise TypeError(
-                        'Elements of argument "jobs" must have type '
-                        'tmlib.tmaps.workflow.RunJob')
-        if index is None:
-            name = '%s_run' % self.step_name
-        else:
-            if not isinstance(index, int):
-                raise TypeError('Argument "index" must have type int.')
-            name = '%s_run-%.2d' % (self.step_name, index)
-        super(RunJobCollection, self).__init__(jobname=name, tasks=jobs)
-
-    def add(self, job):
-        '''
-        Add a job.
-
-        Parameters
-        ----------
-        job: tmlibs.tmaps.workflow.RunJob
-            job that should be added
-
-        Raises
-        ------
-        TypeError
-            when `job` has wrong type
-        '''
-        if not isinstance(job, RunJob):
-            raise TypeError(
-                        'Argument "job" must have type '
-                        'tmlib.tmaps.workflow.RunJob')
-        super(RunJobCollection, self).add(job)
-
-
-class MultiRunJobCollection(SequentialTaskCollection):
-
-    def __init__(self, step_name, run_job_collections=None):
-        '''
-        Initialize an instance of class WorkflowStep.
-
-        Parameters
-        ----------
-        step_name: str
-            name of the corresponding TissueMAPS workflow step
-        run_job_collections: List[tmlib.tmaps.workflow.RunJobCollection], optional
-            collections of run jobs that should be processed one after another
-        '''
-        self.step_name = step_name
-        super(MultiRunJobCollection, self).__init__(
-                    tasks=run_job_collections,
-                    jobname='%s_multirun' % step_name)
-
-    def add(self, run_job_collection):
-        '''
-        Add a collection of run jobs.
-
-        Parameters
-        ----------
-        run_job_collection: tmlib.tmaps.workflow.RunJobCollection
-            collection of run jobs that should be added
-
-        Raises
-        ------
-        TypeError
-            when `RunJobCollection` has wrong type
-        '''
-        if not isinstance(run_job_collection, RunJobCollection):
-            raise TypeError(
-                        'Argument "run_job_collection" must have type '
-                        'tmlib.tmaps.workflow.RunJobCollection')
-        super(MultiRunJobCollection, self).add(run_job_collection)
-
-    # TODO: consider overwriting "next" method to implement custom transition
-    # criteria (e.g. grep log error files for "FAILED")
-
-
-class CollectJob(Job):
-
-    '''
-    Class for TissueMAPS collect jobs, which can be processed once all
-    parallel jobs are successfully completed.
-    '''
-
-    def __init__(self, step_name, arguments, output_dir):
-        '''
-        Initialize an instance of class CollectJob.
-
-        Parameters
-        ----------
-        step_name: str
-            name of the corresponding TissueMAPS workflow step
-        arguments: List[str]
-            command line arguments
-        output_dir: str
-            absolute path to the output directory, where log reports will
-            be stored
-        '''
-        super(CollectJob, self).__init__(
-            step_name=step_name,
-            arguments=arguments,
-            output_dir=output_dir)
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the job
-        '''
-        return '%s_collect' % self.step_name
 
 
 class WorkflowStep(SequentialTaskCollection):
@@ -320,10 +63,10 @@ class WorkflowStep(SequentialTaskCollection):
         ----------
         name: str
             name of the step
-        run_jobs: tmlib.tmaps.workflow.RunJobCollection, optional
+        run_jobs: tmlib.jobs.RunJobCollection, optional
             jobs for the *run* phase that should be processed in parallel
             (default: ``None``)
-        collect_job: tmlib.tmaps.workflow.CollectJob, optional
+        collect_job: tmlib.jobs.CollectJob, optional
             job for the *collect* phase that should be processed after
             `run_jobs` have terminated successfully (default: ``None``)
         '''
@@ -334,14 +77,14 @@ class WorkflowStep(SequentialTaskCollection):
                     isinstance(run_jobs, MultiRunJobCollection)):
                 raise TypeError(
                             'Argument "run_jobs" must have type '
-                            'tmlib.tmaps.workflow.RunJobCollection or '
-                            'tmlib.tmaps.workflow.MultiRunJobCollection')
+                            'tmlib.jobs.RunJobCollection or '
+                            'tmlib.jobs.MultiRunJobCollection')
             tasks.append(run_jobs)
         if collect_job is not None:
             if not isinstance(collect_job, CollectJob):
                 raise TypeError(
                             'Argument "collect_job" must have type '
-                            'tmlib.tmaps.workflow.CollectJob')
+                            'tmlib.jobs.CollectJob')
             tasks.append(collect_job)
         super(WorkflowStep, self).__init__(tasks=tasks, jobname=name)
 
@@ -422,7 +165,7 @@ class WorkflowStage(object):
         logger.info('create jobs for step "%s"', step_description.name)
         prog_name = step_description.name
         logger.debug('load program "%s"', prog_name)
-        prog = load_program(prog_name)
+        prog = load_step_interface(prog_name)
         logger.debug('create a program instance')
         prog_instance = prog(self.experiment, self.verbosity)
 
@@ -446,7 +189,7 @@ class WorkflowStage(object):
         logger.info('allocated time: %s', step_description.duration)
         logger.info('allocated memory: %d GB', step_description.memory)
         logger.info('allocated cores: %d', step_description.cores)
-        jobs = prog_instance.build_jobs(
+        jobs = prog_instance.create_jobs(
                         duration=step_description.duration,
                         memory=step_description.memory,
                         cores=step_description.cores)
