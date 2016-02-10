@@ -23,9 +23,9 @@ from .cluster_utils import format_stats_data
 from .cluster_utils import get_task_data
 from .cluster_utils import log_task_status
 from .cluster_utils import log_task_failure
-from .tmaps.workflow import RunJob
-from .tmaps.workflow import RunJobCollection
-from .tmaps.workflow import CollectJob
+from .jobs import RunJob
+from .jobs import RunJobCollection
+from .jobs import CollectJob
 from .tmaps.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)

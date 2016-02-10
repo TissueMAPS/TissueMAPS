@@ -224,7 +224,6 @@ class InitArgs(GeneralArgs):
             arguments as key-value pairs
         '''
         self.backup = self._backup_params['default']
-        self.display = self._display_params['default']
         self.keep_output = self._keep_output_params['default']
         super(InitArgs, self).__init__(**kwargs)
 
@@ -312,8 +311,7 @@ class SubmitArgs(GeneralArgs):
         self.cores = self._cores_params['default']
         self.phase = self._phase_params['default']
         self.jobs = self._jobs_params['default']
-        self.use_session = self._use_session_params['default']
-        self.backup_session = self._backup_session_params['default']
+        self.backup = self._backup_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -325,7 +323,7 @@ class SubmitArgs(GeneralArgs):
         return {
             'interval', 'phase', 'jobs', 'depth',
             'memory', 'duration', 'cores',
-            'use_session', 'backup_session',
+            'backup',
         }
 
     @property
@@ -539,33 +537,7 @@ class SubmitArgs(GeneralArgs):
         }
 
     @property
-    def use_session(self):
-        '''
-        Returns
-        -------
-        bool
-            use a session to have persistence jobs on disk (default: ``False``)
-        '''
-        return self._use_session
-
-    @use_session.setter
-    def use_session(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "use_session" must have type bool.')
-        self._use_session = value
-
-    @property
-    def _use_session_params(self):
-        return {
-            'default': False,
-            'type': bool,
-            'help': '''
-                use a session to have persistence jobs on disk
-            '''
-        }
-
-    @property
-    def backup_session(self):
+    def backup(self):
         '''
         Returns
         -------
@@ -573,17 +545,17 @@ class SubmitArgs(GeneralArgs):
             indicator that the session of a previous submission should be
             backed up (default: ``False``)
         '''
-        return self._backup_session
+        return self._backup
 
-    @backup_session.setter
-    def backup_session(self, value):
-        if not isinstance(value, self._backup_session_params['type']):
+    @backup.setter
+    def backup(self, value):
+        if not isinstance(value, self._backup_params['type']):
             raise TypeError('Attribute "backup" must have type %s.'
-                            % self._backup_session_params['type'])
-        self._backup_session = value
+                            % self._backup_params['type'])
+        self._backup = value
 
     @property
-    def _backup_session_params(self):
+    def _backup_params(self):
         return {
             'default': False,
             'type': bool,

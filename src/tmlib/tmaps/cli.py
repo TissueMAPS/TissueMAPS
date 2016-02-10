@@ -69,7 +69,7 @@ class Tmaps(object):
                             start_step=args.variable_args.step)
         session = api.create_session(
                             jobs=jobs,
-                            backup=args.variable_args.backup)
+                            backup=args.backup)
         api.submit_jobs(session, args.interval, args.depth)
 
     def resume(self, args):
