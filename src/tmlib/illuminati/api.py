@@ -8,10 +8,10 @@ from gc3libs.quantity import Memory
 from ..layer import ChannelLayer
 from ..readers import DatasetReader
 from ..api import ClusterRoutines
-from ..tmaps.workflow import RunJob
-from ..tmaps.workflow import RunJobCollection
-from ..tmaps.workflow import MultiRunJobCollection
-from ..tmaps.workflow import CollectJob
+from ..jobs import RunJob
+from ..jobs import RunJobCollection
+from ..jobs import MultiRunJobCollection
+from ..jobs import CollectJob
 from ..tmaps.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)
