@@ -80,31 +80,3 @@ class TmapsSubmitArgs(Args):
                 name of the step from where workflow should be started
             '''
         }
-
-    @property
-    def backup(self):
-        '''
-        Returns
-        -------
-        bool
-            indicator that an existing session should be overwritten
-            (default: ``False``)
-        '''
-        return self._backup
-
-    @backup.setter
-    def backup(self, value):
-        if not isinstance(value, self._backup_params['type']):
-            raise TypeError('Attribute "backup" must have type %s.'
-                            % self._backup_params['type'])
-        self._backup = value
-
-    @property
-    def _backup_params(self):
-        return {
-            'type': bool,
-            'default': False,
-            'help': '''
-                backup an existing session
-            '''
-        }
