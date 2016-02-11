@@ -232,6 +232,7 @@ class BasicClusterRoutines(object):
                 if stats['count_total'] > 0:
                     if stats['count_terminated'] == stats['count_total']:
                         break_next = True
+                        e.progress()
 
         except KeyboardInterrupt:
             # User interrupted process, which should kill all running jobs

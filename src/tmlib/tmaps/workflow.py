@@ -336,8 +336,8 @@ class SequentialWorkflowStage(WorkflowStage, SequentialTaskCollection, StopOnErr
         -------
         gc3libs.Run.State
         '''
+        logger.info('step "%s" is done', self._steps_to_process[done].name)
         if done+1 < len(self._steps_to_process):
-            logger.info('step "%s" is done', self._steps_to_process[done].name)
             wait = 120
             logger.debug('wait %d seconds', wait)
             time.sleep(wait)
@@ -550,8 +550,8 @@ class Workflow(SequentialTaskCollection, StopOnError):
         -------
         gc3libs.Run.State
         '''
+        logger.info('stage "%s" is done', self._stages_to_process[done].name)
         if done+1 < len(self._stages_to_process):
-            logger.info('stage "%s" is done', self._stages_to_process[done].name)
             wait = 120
             logger.debug('wait %d seconds', wait)
             time.sleep(wait)

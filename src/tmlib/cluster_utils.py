@@ -136,7 +136,7 @@ def print_task_status(task_data, monitoring_depth):
         table.add_row([
             data['name'],
             data['state'],
-            round(data['percent_done'], 1),
+            '%.2f' % data['percent_done'],
             data['exitcode'],
             data['id']
         ])
@@ -190,7 +190,7 @@ def log_task_failure(task_data, logger):
     def log_recursive(data, i):
         if data['failed']:
             logger.error('%s (id: %s) failed with exitcode %s',
-                         data['name'], data['id'], data['status_code'])
+                         data['name'], data['id'], data['exitcode'])
         for subtd in data.get('subtasks', list()):
             log_recursive(subtd, i+1)
     log_recursive(task_data, 0)
