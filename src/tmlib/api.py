@@ -230,8 +230,7 @@ class BasicClusterRoutines(object):
                 # break out of the loop when all jobs are done
                 stats = format_stats_data(e.stats())
                 if stats['count_total'] > 0:
-                    if (stats['count_terminated'] == stats['count_total'] and
-                            stats['exitcode'] is not None):
+                    if stats['count_terminated'] == stats['count_total']:
                         break_next = True
                         e.progress()
 
