@@ -9,14 +9,14 @@ OUTPUT=""
 usage()
 {
 cat << EOF
-usage: extract_omexml -i [INPUT] -o [OUTPUT]
+usage: extract_omexml -i [INPUT,...] -o [OUTPUT,...]
 
 Extract OMEXML metadata from an image file and write it to an xml file.
 
 Arguments:
-   -h      show this message
-   -i      input image file
-   -o      output xml file
+   -h      Show this message
+   -i      Comma separated list of input image files
+   -o      Comma separated list of output xml files
 EOF
 }
 
