@@ -121,7 +121,18 @@ def get_task_data(task, description=None):
 
 
 def print_task_status(task_data, monitoring_depth):
-    def add_row_recursive(data, table, i):
+    '''
+    Pretty print the status of a submitted GC3Pie tasks to the console in
+    table format.
+
+    Parameters
+    ----------
+    task_data: dict
+        information about each task and its subtasks
+    monitoring_depth: int
+        recursion depth for subtask querying
+    '''
+    def add_row_recursively(data, table, i):
         table.add_row([
             data['name'],
             data['state'],
@@ -131,14 +142,14 @@ def print_task_status(task_data, monitoring_depth):
         ])
         if i < monitoring_depth:
             for subtd in data.get('subtasks', list()):
-                add_row_recursive(subtd, table, i+1)
-    x = PrettyTable(['Name', 'State', '% Done', 'Exitcode', 'ID'])
+                add_row_recursively(subtd, table, i+1)
+    x = PrettyTable(['Name', 'State', '% Done', 'ExitCode', 'ID'])
     x.align['Name'] = 'l'
     x.align['State'] = 'l'
     x.align['% Done'] = 'r'
     x.align['ID'] = 'r'
     x.padding_width = 1
-    add_row_recursive(task_data, x, 0)
+    add_row_recursively(task_data, x, 0)
     print x
 
 
