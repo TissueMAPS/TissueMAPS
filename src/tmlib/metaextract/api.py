@@ -1,17 +1,12 @@
 import os
 import re
-import shutil
-from glob import glob
-from natsort import natsorted
 from ..api import ClusterRoutines
 
 
 class MetadataExtractor(ClusterRoutines):
 
     '''
-    Class for extraction of metadata from microscopic image files using the
-    Bio-Formats command line tool
-    `showinf <http://www.openmicroscopy.org/site/support/bio-formats5.1/users/comlinetools/display.html>`_.
+    Class for extraction of metadata from microscopic image files.
 
     Upon extraction, the metadata is formatted according to the
     `Open Microscopy Environment (OME) schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_
@@ -58,79 +53,71 @@ class MetadataExtractor(ClusterRoutines):
         '''
         job_descriptions = dict()
         job_descriptions['run'] = list()
-        output_files = list()
         count = 0
         for source in self.experiment.sources:
             for acquisition in source.acquisitions:
-                output_files.extend([
-                    os.path.join(acquisition.omexml_dir,
-                                 self._get_ome_xml_filename(f))
-                    for f in acquisition.image_files
-                ])
 
-                for j in xrange(len(acquisition.image_files)):
+                batches = self._create_batches(acquisition.image_files,
+                                               args.batch_size)
+
+                for j, files in enumerate(batches):
                     count += 1
                     job_descriptions['run'].append({
                         'id': count,
                         'inputs': {
                             'image_files': [
-                                os.path.join(acquisition.image_dir,
-                                             acquisition.image_files[j])
+                                os.path.join(acquisition.image_dir, f)
+                                for f in files
                             ]
                         },
                         'outputs': {
+                            'omexml_files': [
+                                os.path.join(acquisition.omexml_dir,
+                                             self._get_ome_xml_filename(f))
+                                for f in files
+                            ]
                         }
                     })
 
-            job_descriptions['collect'] = {
-                'inputs': {},
-                'outputs': {
-                    'omexml_files': output_files
-                }
-            }
         return job_descriptions
 
     def _build_run_command(self, batch):
-        input_filename = batch['inputs']['image_files'][0]
+        # TODO: This approach could become problematic when the batch_size is
+        # too big because the number of characters that can be parsed via
+        # the command line is limited.
+        input_filenames = ','.join(batch['inputs']['image_files'])
+        output_filenames = ','.join(batch['outputs']['omexml_files'])
         command = [
-            'showinf', '-omexml-only', '-nopix', '-novalid', '-no-upgrade',
-            input_filename
+            'extract_omexml',
+            '-i', input_filenames, '-o', output_filenames
         ]
         return command
 
     def run_job(self, batch):
         '''
-        Not implemented.
+        The class doesn't implement a :py:meth:`run_job` method because the
+        actual processing is done in Java. Specifically, we use the
+       `showinf <http://www.openmicroscopy.org/site/support/bio-formats5.1/users/comlinetools/display.html>`_
+        Bioformats command line tool to extract metadata from image files
+        in `OMEXML` format.
         '''
-        raise AttributeError('"%s" step has no "run" routine'
-                             % self.prog_name)
+        raise NotImplementedError(
+                '"%s" object has no "run_job" method'
+                % self.prog_name)
 
     def collect_job_output(self, batch):
         '''
-        The *showinf* command prints the OMEXML string to standard output.
-        GC3Pie redirects the standard output to a log file. Here we copy the
-        content of the log file to the files specified by the `omexml_files`
-        attribute.
-
-        Parameters
-        ----------
-        batch: dict
-            description of the *collect* job
+        Not implemented.
         '''
-        # TODO: redirect standard output of GC3Pie Application to final file
-        # and skip copying in "collect" phase
-        for i, f in enumerate(batch['outputs']['omexml_files']):
-            output_files = glob(os.path.join(
-                                self.log_dir, '*_%.6d*.out' % (i+1)))
-            # Take the most recent one, in case there are outputs of previous
-            # submissions
-            output_files = natsorted(output_files)
-            shutil.copyfile(output_files[-1], f)
+        raise NotImplementedError(
+                '"%s" object has no "collect_job_output" method'
+                % self.prog_name)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
         '''
         Not implemented.
         '''
-        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
-                             ' method' % self.__class__.__name__)
+        raise NotImplementedError(
+                    '"%s" object has no "apply_statistics" method'
+                    % self.prog_name)
