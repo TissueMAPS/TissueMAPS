@@ -1,8 +1,10 @@
-__version__ = '0.4.0'
+from .. import __version__
+
+version = __version__
 
 logo = u'''
    .
-   I        illuminati (%(version)s)
+   I        illuminati (tmlib %(version)s)
   LLU       Create pyramid images.
  MINATI     https://github.com/TissueMAPS/TmLibrary
 '''
