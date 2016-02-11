@@ -21,7 +21,7 @@ from .writers import JsonWriter
 from .errors import JobDescriptionError
 from .cluster_utils import format_stats_data
 from .cluster_utils import get_task_data
-from .cluster_utils import log_task_status
+from .cluster_utils import print_task_status
 from .cluster_utils import log_task_failure
 from .jobs import RunJob
 from .jobs import RunJobCollection
@@ -108,7 +108,7 @@ class BasicClusterRoutines(object):
 
     @staticmethod
     def log_task_data(task_data, monitoring_depth):
-        return log_task_status(task_data, logger, monitoring_depth)
+        return print_task_status(task_data, monitoring_depth)
 
     @staticmethod
     def log_task_failure(task_data):
@@ -220,14 +220,12 @@ class BasicClusterRoutines(object):
                 logger.info('progress ...')
                 e.progress()
 
-                if break_next:
-                    break
-
                 task_data = get_task_data(task)
 
                 self.log_task_data(task_data, monitoring_depth)
-                # TODO: format this into a nice table and simply print it
-                print
+
+                if break_next:
+                    break
 
                 # break out of the loop when all jobs are done
                 stats = format_stats_data(e.stats())
@@ -237,6 +235,7 @@ class BasicClusterRoutines(object):
 
         except KeyboardInterrupt:
             # User interrupted process, which should kill all running jobs
+            # TODO: stop them so that we can resume later
             logger.info('killing jobs')
             logger.debug('killing task %s', task)
             e.kill(task)

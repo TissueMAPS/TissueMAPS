@@ -1,4 +1,5 @@
 import gc3libs
+from prettytable import PrettyTable
 
 
 def format_stats_data(stats):
@@ -86,7 +87,7 @@ def get_task_data(task, description=None):
             'is_live': task_.execution.state in is_live_states,
             'is_done': is_done,
             'failed': is_done and failed,
-            'status_code': task_.execution.exitcode,
+            'exitcode': task_.execution.exitcode,
             'percent_done': 0.0  # fix later, if possible
         }
 
@@ -117,6 +118,28 @@ def get_task_data(task, description=None):
         return data
 
     return get_info(task, 0)
+
+
+def print_task_status(task_data, monitoring_depth):
+    def add_row_recursive(data, table, i):
+        table.add_row([
+            data['name'],
+            data['state'],
+            round(data['percent_done'], 1),
+            data['exitcode'],
+            data['id']
+        ])
+        if i < monitoring_depth:
+            for subtd in data.get('subtasks', list()):
+                add_row_recursive(subtd, table, i+1)
+    x = PrettyTable(['Name', 'State', '% Done', 'Exitcode', 'ID'])
+    x.align['Name'] = 'l'
+    x.align['State'] = 'l'
+    x.align['% Done'] = 'r'
+    x.align['ID'] = 'r'
+    x.padding_width = 1
+    add_row_recursive(task_data, x, 0)
+    print x
 
 
 def log_task_status(task_data, logger, monitoring_depth):
