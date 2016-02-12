@@ -2,3 +2,4 @@
  mahotas>=1.4.0
  mpld3>=0.2
  bokeh>=0.10.0
+ centrosome>=1.0.3
