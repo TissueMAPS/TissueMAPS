@@ -64,9 +64,9 @@ def save_objects(image, name, **kwargs):
     regions = measure.regionprops(image)
     centroids = np.array([r.centroid for r in regions]).astype(np.int64)
 
-    if len(objects_ids) > 0:
+    group_name = '/objects/%s/segmentation' % name
 
-        group_name = '/objects/%s/segmentation' % name
+    if len(objects_ids) > 0:
 
         with DatasetWriter(kwargs['data_file']) as f:
             f.write('%s/object_ids' % group_name,
@@ -87,6 +87,28 @@ def save_objects(image, name, **kwargs):
                     data=centroids[:, 0])
             f.write('%s/centroids/x' % group_name,
                     data=centroids[:, 1])
+
+    else:
+
+        with DatasetWriter(kwargs['data_file']) as f:
+            f.write('%s/object_ids' % group_name,
+                    data=list())
+            f.write('%s/is_border' % group_name,
+                    data=list())
+            f.write('%s/job_ids' % group_name,
+                    data=list())
+            f.write('%s/image_dimensions/y' % group_name,
+                    data=list())
+            f.write('%s/image_dimensions/x' % group_name,
+                    data=list())
+            f.write('%s/outlines/y' % group_name,
+                    data=list())
+            f.write('%s/outlines/x' % group_name,
+                    data=list())
+            f.write('%s/centroids/y' % group_name,
+                    data=list())
+            f.write('%s/centroids/x' % group_name,
+                    data=list())
 
     if kwargs['plot']:
 

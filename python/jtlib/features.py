@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 import mahotas as mh
-import itertools
-import h5py
 import logging
 from abc import ABCMeta
 from abc import abstractproperty
@@ -13,8 +11,10 @@ from skimage import filters
 from mahotas.features import surf
 from scipy import ndimage as ndi
 from scipy.spatial import distance
-from skimage.filters import gabor_kernel
+from centrosome.filter import gabor
+# from skimage.filters import gabor_kernel
 from jtlib import utils
+from tmlib.writers import DatasetWriter
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ class Features(object):
         Returns
         -------
         numpy.ndarray[bool]
-            mask image for given object; the size of the image depends on
+            mask image for given object; the size of the image is determined by
             the bounding box of the object
         '''
         obj = self.object_properties[object_id]
@@ -145,8 +145,8 @@ class Features(object):
         Returns
         -------
         numpy.ndarray[numpy.uint16 or numpy.uint8]
-            intensity image for given object; the size of the image depends on
-            the bounding box of the object
+            intensity image for given object; the size of the image is
+            determined by the bounding box of the object
         '''
         obj = self.object_properties[object_id]
         img = utils.crop_image(self.intensity_image, bbox=obj.bbox, pad=True)
@@ -184,11 +184,11 @@ class Features(object):
         Dataset is written using `h5py`.
         '''
         logger.debug('save features to HDF5 file')
-        with h5py.File(filename) as f:
+        with DatasetWriter(filename) as f:
             for name, values in features.iteritems():
                 p = 'objects/%s/features/%s' % (self.object_name, name)
                 logger.debug('save dataset "%s"', p)
-                f[p] = values
+                f.write(p, values)
 
     def plot(self):
         # TODO
@@ -405,11 +405,17 @@ class Haralick(Features):
             features[name] = list()
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
-            img = self.get_object_intensity_image(obj)
+            img = self.get_object_intensity_image(obj)  # TODO: normalize
             # Set all non-object pixels to zero
             img[~mask] = 0
             feats = mh.features.haralick(
-                        img, ignore_zeros=True, return_mean=True)
+                        img, ignore_zeros=False, return_mean=True)
+            # TODO: the output changed in the latest version of Mahotas
+            if not isinstance(feats, np.ndarray):
+                # NOTE: setting `ignore_zeros` to True creates problems for some
+                # objects, when all values of the adjacency matrices are zeros
+                feats = np.empty((13, ), dtype=float)
+                feats[:] = np.NAN
             if len(feats) != len(self.names):
                 raise IndexError(
                         'Number of features for object %d is incorrect.', obj)
@@ -503,7 +509,7 @@ class Gabor(Features):
 
     def __init__(self, object_name, label_image,
                  channel_name, intensity_image,
-                 theta_range=4, sigmas={1, 3}, frequencies={0.05, 0.25}):
+                 theta_range=4, frequencies={1, 5, 10}):
         '''
         Initialize an instance of class Gabor.
 
@@ -518,17 +524,15 @@ class Gabor(Features):
             name of the channel that corresponds to `intensity_image`
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
-        theta_range: int
-            number of `theta` values for Garbor kernels
-        sigmas: Set[int]
-            values for `sigma_x` and `sigma_y` for Garbor kernels
-        frequencies: Set[float]
-            values for `frequency` for Garbor kernels
+        theta_range: int, optional
+            number of angles to define the orientations of the Gabor
+            filters (default: 4)
+        frequencies: Set[float], optional
+            frequencies of the Gabor filters
         '''
         super(Gabor, self).__init__(
                 object_name, label_image, channel_name, intensity_image)
-        self.thetas = [t / 4. * np.pi for t in range(theta_range)]
-        self.sigmas = sigmas
+        self.theta_range = theta_range
         self.frequencies = frequencies
 
     @property
@@ -537,18 +541,14 @@ class Gabor(Features):
 
     @property
     def _features(self):
-        feats = list()
-        for f, t, s in itertools.product(self.frequencies, self.thetas, self.sigmas):
-            feats.append('mean-frequency%.2f-theta%.2f-sigma%d' % (f, t, s))
-            feats.append('var-frequency%.2f-theta%.2f-sigma%d' % (f, t, s))
+        feats = ['frequency-%.2f' % f for f in self.frequencies]
         return ['%s_%s' % (f, self.channel_name) for f in feats]
 
     def extract(self):
         '''
         Extract Gabor texture features by filtering the intensity image with
         Gabor kernels for a defined range of `frequency`, `sigma` and `theta`
-        values and calculating the mean and variance of pixel values within
-        each object region in the filtered images.
+        values and calculating a score for each object.
 
         Returns
         -------
@@ -557,36 +557,38 @@ class Gabor(Features):
 
         See also
         --------
-        :py:func:`skimage.filters.gabor_kernel`
+        :py:class:`cellprofiler.modules.measuretexture.MeasureTexture`
+        :py:func:`centrosome.filter.gabor`
         '''
         # Create an empty dataset in case no objects were detected
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
-        kernels = self._get_kernels()
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
+            label = mask.astype(np.int32)
             img = self.get_object_intensity_image(obj)
             feats = list()
-            for k in kernels:
-                # see also: skimage.filters.gabor()
-                img_filtered = ndi.convolve(img.astype(float), k, mode='wrap')
-                feats.append(img_filtered[mask].mean())
-                feats.append(img_filtered[mask].var())
+            for freq in self.frequencies:
+                best_score = 0
+                for angle in range(self.theta_range):
+                    theta = np.pi * angle / self.theta_range
+                    g = gabor(img, label, freq, theta)
+                    score_r = ndi.measurements.sum(
+                                    g.real, label,
+                                    np.arange(1, dtype=np.int32) + 1)
+                    score_i = ndi.measurements.sum(
+                                    g.imag, label,
+                                    np.arange(1, dtype=np.int32) + 1)
+                    score = np.sqrt(score_r**2 + score_i**2)
+                    best_score = np.max([best_score, score])
+                feats.append(best_score)
             if len(feats) != len(self.names):
                 raise IndexError(
                         'Number of features for object %d is incorrect.', obj)
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
         return pd.DataFrame(features)
-
-    def _get_kernels(self):
-        kernels = list()
-        for f, t, s in itertools.product(self.frequencies, self.thetas, self.sigmas):
-            # Use the real parts of the Gabor filter kernel
-            k = np.real(gabor_kernel(f, theta=t, sigma_x=s, sigma_y=s))
-            kernels.append(k)
-        return kernels
 
 
 class Hu(Features):
