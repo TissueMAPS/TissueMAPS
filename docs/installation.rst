@@ -4,10 +4,13 @@
 Installation
 ************
 
+`TissueMAPS` is designed to run on a server within a `SLURM <http://slurm.schedmd.com/>`_ cluster environment. There are `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ for automatic installation and deployment on the `ubuntu <http://www.ubuntu.com/>`_ operating system. We have also tested the software on `OSX`.
 
-First, create a virtual environment:
+All Python dependencies are installed via `pip <https://pip.pypa.io/en/stable/>`_. Non-python dependencies are installed via `apt-get <http://manpages.ubuntu.com/manpages/hardy/man8/apt-get.8.html>`_ on `ubuntu` and via `homebrew <http://brew.sh/>`_ on `OSX`. See `OSXEssentials <https://github.com/HackerMD/OSXEssentials>`_ on recommendations for setting up your mac.
 
-To this end, install `virtualenv` and `virtualenvwrapper` and set up your environment::
+If you want to install the library locally, we recommend using a virtual environment:
+
+To this end, install `virtualenv <https://virtualenv.readthedocs.org/en/latest/>`_ and `virtualenvwrapper <https://virtualenvwrapper.readthedocs.org/en/latest/>`_ and set up your environment::
 
     $ pip install virtualenv
     $ pip install virtualenvwrapper
@@ -18,27 +21,32 @@ Add the following lines to your ``.bash_profile`` file::
     export PROJECT_HOME=$HOME/Devel
     source /usr/local/bin/virtualenvwrapper.sh
 
-Create a virtual environment for the application::
+Create a virtual environment for all `TissueMAPS` dependencies::
 
     $ mkvirtualenv tmaps
 
 
 .. warning::
 
-    Anticipate some problems when you have `anaconda <http://docs.continuum.io/anaconda/pkg-docs>`_ installed: see `potential solution <https://gist.github.com/mangecoeur/5161488>`_ and please also consider Sir Mix-a-Lot's opinion about anaconda in general: `conference talk <https://www.youtube.com/watch?v=FlItMpGYQTo>`_
+    Anticipate some problems when you have `anaconda <http://docs.continuum.io/anaconda/pkg-docs>`_ installed; see `potential solution <https://gist.github.com/mangecoeur/5161488>`_.
 
-Activate the virtual environment and run the installation of required packages::
-    $ workon tmaps
-    $ pip install -r ~/tmlib/requirements-1.txt
-    $ pip install -r ~/tmlib/requirements-2.txt
 
-Clone the repository from Github into the virtual environment::
+Clone the repository from Github::
 
     $ git clone https://github.com/TissueMAPS/TmLibrary.git $HOME/tmlibrary
 
-and create a link for the `tmlib` package that's contained in the repository in order to be able to call it from the virtual environment::
+Activate the virtual environment and install the required Python packages::
 
-    $ ln -s $HOME/tmlibrary/tmlib $WORKON_HOME/tmaps/lib/python2.7/site-packages/tmlib
+    $ workon tmaps
+    $ pip install -r $HOME/tmlibrary/requirements-1.txt
+    $ pip install -r $HOME/tmlibrary/requirements-2.txt
+    $ pip install -r $HOME/tmlibrary/requirements-3.txt
+    $ pip install -r $HOME/tmlibrary/requirements-Darwin.txt
+    $ pip install -r $HOME/tmlibrary/requirements-git.txt
+
+Now install the library itself in developer mode (this will allow you to edit code without having to reinstall the library)::
+
+    $ pip install -e $HOME/tmlibrary
 
 
 .. _dependencies:
@@ -46,16 +54,12 @@ and create a link for the `tmlib` package that's contained in the repository in 
 Dependencies
 ============
 
-On *OSX* use `homebrew <http://brew.sh/>`_ for the installation of non-Python dependencies listed below. See `OSXEssentials <https://github.com/HackerMD/OSXEssentials>`_ on recommendations for setting up your mac.
-
 .. _vips:
 
 Vips
 ----
 
- `VIPS <http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS>`_ is a fast and memory efficient image processing library (`Libvips API <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html>`_). `VIPS` also supports `OpenSlide <http://openslide.org/>`_ and with it many `virtual slide formats <http://openslide.org/formats/>`_. The library can be installed via homebrew (or other package managers). 
-
-On Mac OSX:
+ `VIPS <http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS>`_ is a fast and memory efficient image processing library (`Libvips API <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html>`_). `VIPS` also supports `OpenSlide <http://openslide.org/>`_ and with it many `virtual slide formats <http://openslide.org/formats/>`_.
 
 .. code:: bash
     
@@ -68,40 +72,19 @@ To use `VIPS` from python, you also need to install the python package `pygobjec
   
 .. .. code:: bash
 
-..     $ brew install pygobject3
+    $ brew install pygobject3
+    $ brew install gobject-introspection
 
 
 In order to be able to use it within the virtual environment, you need to create a soft link::
 
-    $ cd $VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages/gi
+    $ cd $VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages
     $ ln -s /usr/local/lib/python2.7/site-packages/gi gi
 
 
-The type definitions are therefore automatically loaded and can be used from within Python, but there are also some convenience functions that are added to the `Image` class and some other shortcuts (like the automatic conversions of Python strings like ``'horizontal'`` to the respective C constants).
-In IPython these convenience functions won't show up when TAB completing on the image object. For example:
-
-The C function
-
-.. code:: python
-
-    int
-    vips_add (VipsImage *left,
-              VipsImage *right,
-              VipsImage **out,
-              ...);
-
-is added to the Python image objects, but won't show up. The docs can still be displayed with ``?img.add``, however.
+The type definitions are therefore automatically loaded and can be used from within Python, but there are also some convenience functions that are added to the `Image` class and some other shortcuts (like the automatic conversions of Python strings like ``'horizontal'`` to the respective C constants). Note, however, that these convenience functions won't show up in the IPython console when TAB completing on the image object. The docs can still be displayed with ``?``, though.
 
 For more information see `VIPS from Python <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/using-from-python.html>`_.
-
-It may also be helpful to look into the `VIPS function list <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/func-list.html>`_.
-
-
-    NOTE: The `illuminati` package depends on `VIPS`, but the other routines also work without `VIPS` and use `numpy` instead if you set ``USE_VIPS_LIBRARY`` to "No".
-
-.. warning::
-    
-    The `libvips` Python code contains a bug that breaks logging, see `issue on Github <https://github.com/jcupitt/libvips/issues/330#issuecomment-143421649>`_. Therefore, either change the code manually as described in the issue on install from Github.
 
 .. _opencv:
 
@@ -109,8 +92,6 @@ OpenCV
 ------
 
 `OpenCV <http://opencv.org/>`_ is an extensive image processing and computer vision library that provides a Python interface.
-
-On Mac OSX:
 
 .. code:: bash
     
@@ -125,11 +106,6 @@ In order to be able to use it within the virtual environment, you need to create
     $ ln -s /usr/local/lib/python2.7/site-packages/opencv3.pth opencv3.pth
 
 
-On Linux (Ubuntu):
-
-See http://rodrigoberriel.com/2014/10/installing-opencv-3-0-0-on-ubuntu-14-04/
-
-
 .. _bio-formats:
 
 Bio-Formats
@@ -137,17 +113,15 @@ Bio-Formats
 
 `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_ is a tool for reading and writing microscopic image data in a standardized way. It `supports many formats <http://www.openmicroscopy.org/site/support/bio-formats5.1/supported-formats.html>`_ and can thus be used to read images together with their corresponding metadata from different sources.
 
-The library can be installed via homebrew (or other package managers). 
-
-On Mac OSX:
+The library can be installed via homebrew (or other package managers).
 
 .. code:: bash
     
     $ brew install bioformats
 
-In *TissueMAPS*, we use the Python implementation `python-bioformats <https://github.com/CellProfiler/python-bioformats>`_.
+*TissueMAPS* also uses the Python implementation `python-bioformats <https://github.com/CellProfiler/python-bioformats>`_.
 
-The file ``$$VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages/bioformats/jars/loci_tools.jar``file can be replaced by a more recent one, e.g. `version 5.1.3 <http://downloads.openmicroscopy.org/bio-formats/5.1.3/artifacts/loci_tools.jar>`_.
+The file ``$VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages/bioformats/jars/loci_tools.jar`` file can be replaced by a more recent one, e.g. `version 5.1.3 <http://downloads.openmicroscopy.org/bio-formats/5.1.3/artifacts/loci_tools.jar>`_.
 
 
 .. _simpleitk:
@@ -157,6 +131,10 @@ SimpleITK
 
 `SimpleITK <http://www.simpleitk.org/>`_ is based on the `insight segmentation and registration toolkit (ITK) <http://www.itk.org/>`_, an extensive suite of image analysis tools, which also provides Python wrappers.
 
+.. code:: bash
+
+    $ brew install simpleitk
+
 
 .. _hdf5:
 
@@ -164,8 +142,6 @@ HDF5
 ----
 
 `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files are suited for storing large datasets. The library can be installed via homebrew (or other package managers). 
-
-On Mac OSX:
 
 .. code:: bash
     
@@ -182,20 +158,4 @@ Other
 
 .. code:: bash
 
-    $ brew install libmagic     # required by python-magic
-    $ brew install time         # required by gc3pie
-
-
-Configuration
-=============
-
-GC3Pie
-------
-
-With *GC3Pie* you can run computational tasks "jobs" on your local machine as well as in diverse cluster and cloud environments. To process jobs in parallel, you need to configure some settings regarding your computational environment.
-
-You can create an example configuration file by simply calling any gc3pie command, e.g.::
-
-    $ gserver
-
-This will create the file ``$HOME/.gc3/gc3pie.conf``. Modify it according to your needs. For more information please refer to the `GC3Pie online documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_
+    $ brew install time         # required by GC3Pie

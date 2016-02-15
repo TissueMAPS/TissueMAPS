@@ -13,6 +13,7 @@ Contents:
 
    introduction
    installation
+   configuration
    testing
    .. user_guide
    .. developer_guide
