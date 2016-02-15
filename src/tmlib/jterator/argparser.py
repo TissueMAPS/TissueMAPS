@@ -7,6 +7,9 @@ from .cli import Jterator
 from .args import JteratorInitArgs
 from .args import JteratorRunArgs
 from .args import JteratorCreateArgs
+from .args import JteratorSubmitArgs
+from .args import JteratorLogArgs
+from .args import JteratorInfoArgs
 from ..args import CheckArgs
 from ..args import CreateArgs
 from ..args import RemoveArgs
@@ -19,19 +22,33 @@ parser.description = '''
     to a set of images, for example for segmentation and feature extraction.
 '''
 parser.version = __version__
-parser.add_argument(
-    '-p', '--pipeline', type=str, required=True,
-    help='name of a pipeline that should be processed')
+
+# All subparsers require the extra argument "pipeline"
 
 init_parser = subparsers.choices['init']
 init_extra_group = init_parser.add_argument_group(
-    'additional program-specific arguments')
+    'additional step-specific arguments')
 JteratorInitArgs().add_to_argparser(init_extra_group)
 
 run_parser = subparsers.choices['run']
 run_extra_group = run_parser.add_argument_group(
-    'additional program-specific arguments')
+    'additional step-specific arguments')
 JteratorRunArgs().add_to_argparser(run_extra_group)
+
+submit_parser = subparsers.choices['submit']
+submit_extra_group = submit_parser.add_argument_group(
+    'additional step-specific arguments')
+JteratorSubmitArgs().add_to_argparser(submit_extra_group)
+
+log_parser = subparsers.choices['log']
+log_extra_group = log_parser.add_argument_group(
+    'additional step-specific arguments')
+JteratorLogArgs().add_to_argparser(log_extra_group)
+
+info_parser = subparsers.choices['info']
+info_extra_group = info_parser.add_argument_group(
+    'additional step-specific arguments')
+JteratorInfoArgs().add_to_argparser(info_extra_group)
 
 create_parser = subparsers.add_parser(
     'create', help='create a new project')

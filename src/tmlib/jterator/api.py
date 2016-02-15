@@ -271,6 +271,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         #     print 'jt - Starting Julia engine'
         #     self.engines['Julia'] = julia.Julia()
 
+    def configure_loggers(self):
+        # TODO: configure loggers for Python, Matlab, and R modules
+        pass
+
     def build_data_filename(self, job_id):
         '''
         Build name of the HDF5 file where pipeline data will be stored.
@@ -291,7 +295,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Parameters
         ----------
         args: tmlib.metaconfig.args.JteratorInitArgs
-            program-specific arguments
+            step-specific arguments
         job_ids: List[int], optional
             subset of jobs for which descriptions should be generated
             (default: ``None``)
@@ -374,7 +378,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             '"%s" is not a valid image name' % name)
                 layer_names = self.experiment.visual_layers_map[name]
                 for l_name in layer_names:
-                    # List of length n, where n is number of z-planes
+                    # List of length n, where n is number of z--pipelinelanes
                     images[name].append(
                         self.experiment.layer_metadata[l_name].filenames
                     )
@@ -478,14 +482,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
             return job_descriptions
 
     def _build_run_command(self, batch):
-        # Overwrite method to account for additional "--pipeline" argument
+        # Overwrite method to account for additional "---pipelineipeline" argument
         command = [self.prog_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        command.extend(['-p', self.pipe_name])
         command.append(self.experiment.dir)
         command.extend(['run', '--job', str(batch['id'])])
+        command.extend(['--pipeline', self.pipe_name])
         if not self.headless:
-            command.append('--plot')
+            command.append('---pipelinelot')
         return command
 
     def run_job(self, batch):
@@ -668,9 +672,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def _build_collect_command(self):
         command = [self.prog_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        command.extend(['-p', self.pipe_name])
         command.append(self.experiment.dir)
-        command.extend(['collect'])
+        command.append('collect')
+        command.extend(['--pipeline', self.pipe_name])
         return command
 
     def collect_job_output(self, batch):

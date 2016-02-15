@@ -54,7 +54,7 @@ class IllumstatsGenerator(ClusterRoutines):
         Parameters
         ----------
         args: tmlib.corilla.args.CorillaInitArgs
-            program-specific arguments
+            step-specific arguments
 
         Returns
         -------

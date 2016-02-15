@@ -73,7 +73,7 @@ class MetadataConfigurator(ClusterRoutines):
         Parameters
         ----------
         args: tmlib.metaconfig.args.MetaconfigInitArgs
-            program-specific arguments
+            step-specific arguments
 
         Returns
         -------

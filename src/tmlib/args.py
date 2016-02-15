@@ -136,7 +136,8 @@ class Args(object):
 class GeneralArgs(Args):
 
     '''
-    Class for arguments that are shared between different programs.
+    Class for arguments that are shared between different steps
+    (command line programs).
     '''
 
     def __init__(self, **kwargs):
@@ -164,13 +165,14 @@ class GeneralArgs(Args):
         '''
         Returns
         -------
-        tmlib.args.Args
-            additional program-specific arguments
+        tmlib.args.VariableArgs
+            additional step-specific arguments
 
         Note
         ----
-        Each program (`tmlib` subpackage) must contain a module named "args",
-        which must implement a program-specific subclass of `Args`.
+        Each step (`tmlib` subpackage) must contain a module named "args",
+        which must implement a step-specific subclass of
+        :py:class:`tmlib.args.VariableArgs`.
 
         See also
         --------
@@ -180,16 +182,17 @@ class GeneralArgs(Args):
 
     @variable_args.setter
     def variable_args(self, value):
-        if not(isinstance(value, Args) or value is None):
+        if not(isinstance(value, VariableArgs) or value is None):
             raise TypeError(
-                    'Attribute "variable_args" must have type tmlib.args.Args')
+                    'Attribute "variable_args" must have type '
+                    'tmlib.args.VariableArgs')
         self._variable_args = value
 
 
 class VariableArgs(Args):
 
     '''
-    Class for variable, program-specific arguments.
+    Class for variable, step-specific arguments.
     '''
 
     def __init__(self, **kwargs):

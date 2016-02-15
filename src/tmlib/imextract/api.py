@@ -49,7 +49,7 @@ class ImageExtractor(ClusterRoutines):
         Parameters
         ----------
         args: tmlib.imextract.args.ImextractInitArgs
-            program-specific arguments
+            step-specific arguments
 
         Returns
         -------

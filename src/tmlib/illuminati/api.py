@@ -64,7 +64,7 @@ class PyramidBuilder(ClusterRoutines):
         Parameters
         ----------
         args: tmlib.illuminati.args.IlluminatiInitArgs
-            program-specific arguments
+            step-specific arguments
 
         Returns
         -------

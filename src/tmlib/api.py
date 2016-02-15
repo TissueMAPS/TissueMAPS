@@ -230,6 +230,8 @@ class BasicClusterRoutines(object):
                 # break out of the loop when all jobs are done
                 stats = format_stats_data(e.stats())
                 if stats['count_total'] > 0:
+                    # TODO: in case of a workflow this statement is not
+                    # True for steps with exception of the last one!!
                     if stats['count_terminated'] == stats['count_total']:
                         break_next = True
                         e.progress()

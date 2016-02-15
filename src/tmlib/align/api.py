@@ -68,7 +68,7 @@ class ImageRegistration(ClusterRoutines):
         Parameters
         ----------
         args: tmlib.align.args.AlignInitArgs
-            program-specific arguments
+            step-specific arguments
 
         Returns
         -------

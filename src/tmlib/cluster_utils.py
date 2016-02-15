@@ -1,5 +1,12 @@
 import gc3libs
 from prettytable import PrettyTable
+from .tmaps.workflow import Workflow
+from .tmaps.workflow import ParallelWorkflowStage
+from .tmaps.workflow import SequentialWorkflowStage
+from .tmaps.workflow import WorkflowStep
+from .jobs import RunJobCollection
+from .jobs import MultiRunJobCollection
+from .jobs import CollectJob
 
 
 def format_stats_data(stats):
@@ -26,25 +33,6 @@ def format_stats_data(stats):
         data['count_' + state.lower()] = count
         data['percent_' + state.lower()] = 100.0 * count / max(tot, 1)
     return data
-
-
-def get_task_info(task):
-    is_live_states = {
-        gc3libs.Run.State.SUBMITTED,
-        gc3libs.Run.State.RUNNING,
-        gc3libs.Run.State.STOPPED
-    }
-    is_done = task.execution.state == gc3libs.Run.State.TERMINATED
-    failed = task.execution.exitcode != 0
-    return {
-        'id': str(task),
-        'name': task.jobname,
-        'state': task.execution.state,
-        'is_live': task.execution.state in is_live_states,
-        'is_done': is_done,
-        'failed': is_done and failed,
-        'percent_done': 0.0  # TODO
-    }
 
 
 def get_task_data(task, description=None):
@@ -88,8 +76,24 @@ def get_task_data(task, description=None):
             'is_done': is_done,
             'failed': is_done and failed,
             'exitcode': task_.execution.exitcode,
-            'percent_done': 0.0  # fix later, if possible
+            'percent_done': 0.0  # fix later, if possible, 
         }
+
+        if isinstance(task_, WorkflowStep):
+            job_type = 'step'
+        elif (isinstance(task_, ParallelWorkflowStage) or
+                isinstance(task_, SequentialWorkflowStage)):
+            job_type = 'stage'
+        elif isinstance(task_, Workflow):
+            job_type = 'workflow'
+        elif (isinstance(task_, RunJobCollection) or
+                isinstance(task_, MultiRunJobCollection) or
+                isinstance(task, CollectJob)):
+            job_type = 'phase'
+        else:
+            job_type = 'job'
+
+        data['type'] = job_type
 
         done = 0.0
         if isinstance(task_, gc3libs.workflow.TaskCollection):
@@ -135,6 +139,7 @@ def print_task_status(task_data, monitoring_depth):
     def add_row_recursively(data, table, i):
         table.add_row([
             data['name'],
+            data['type'],
             data['state'],
             '%.2f' % data['percent_done'],
             data['exitcode'],
@@ -143,8 +148,9 @@ def print_task_status(task_data, monitoring_depth):
         if i < monitoring_depth:
             for subtd in data.get('subtasks', list()):
                 add_row_recursively(subtd, table, i+1)
-    x = PrettyTable(['Name', 'State', '% Done', 'ExitCode', 'ID'])
+    x = PrettyTable(['Name', 'Type', 'State', '% Done', 'ExitCode', 'ID'])
     x.align['Name'] = 'l'
+    x.align['Type'] = 'l'
     x.align['State'] = 'l'
     x.align['% Done'] = 'r'
     x.align['ID'] = 'r'

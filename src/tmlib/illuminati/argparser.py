@@ -17,7 +17,7 @@ parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_extra_group = init_parser.add_argument_group(
-    'additional program-specific arguments')
+    'additional step-specific arguments')
 IlluminatiInitArgs().add_to_argparser(init_extra_group)
 
 for name in subparsers.choices:

@@ -37,7 +37,7 @@ def load_step_interface(step_name):
     ImportError
         when subpackage with name `step_name` doesn't have a module named "cli"
     AttributeError
-        when the "cli" module doesn't contain a program-specific
+        when the "cli" module doesn't contain a step-specific
         implementation of the `CommandLineInterface` base class
     '''
     module_name = 'tmlib.%s.cli' % step_name

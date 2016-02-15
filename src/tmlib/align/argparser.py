@@ -18,7 +18,7 @@ parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_extra_group = init_parser.add_argument_group(
-    'additional program-specific arguments')
+    'additional step-specific arguments')
 AlignInitArgs().add_to_argparser(init_extra_group)
 
 apply_parser = subparsers.add_parser(
@@ -30,7 +30,7 @@ apply_parser.description = '''
 ApplyArgs().add_to_argparser(apply_parser)
 
 apply_extra_group = apply_parser.add_argument_group(
-    'additional program-specific arguments')
+    'additional step-specific arguments')
 AlignApplyArgs().add_to_argparser(apply_extra_group)
 
 for name in subparsers.choices:

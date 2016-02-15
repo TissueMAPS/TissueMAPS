@@ -39,7 +39,7 @@ def load_method_args(method_name):
 
 def load_var_method_args(prog_name, method_name):
     '''
-    Load variable program-specific arguments that can be parsed to
+    Load variable step-specific arguments that can be parsed to
     a method of an implemented subclass of a
     :py:class:`tmlib.cli.CommandLineInterface` base class.
 
@@ -81,43 +81,11 @@ def load_var_method_args(prog_name, method_name):
 class WorkflowDescription(object):
 
     '''
-    Abstract base class for the description of a TissueMAPS workflow.
+    Abstract base class for the description of a `TissueMAPS` workflow.
 
-    A workflow consists of *stages*, which themselves are made up of *steps*.
-
-    Each *step* represents a collection of individual tasks, which can be
-    processed in parallel on a computer cluster.
-
-    The workflow is described by a mapping of key-value pairs::
-
-        mapping = {
-            "workflow":
-                "type": ""
-                "stages": [
-                    {
-                        "name": "",
-                        "steps": [
-                            {
-                                "name": "",
-                                "args": {}
-                            },
-                            ...
-                        ]
-                    },
-                    ...
-                ]
-        }
-
-    A WorkflowDescription can be constructed from a mapping and converted
-    back to a mapping::
-
-        >>>obj = WorkflowDescription(**mapping)
-        >>>dict(obj)
-
-    Warning
-    -------
-    The input mapping will not be identical to the output mapping, because
-    default values will be added for optional arguments that are not provided.
+    A workflow consists of a sequence of *stages*, which are themselves
+    composed of *steps*. Each *step* represents a collection of computational
+    jobs, which can be submitted for parallel processing on a cluster.
 
     See also
     --------
@@ -137,7 +105,7 @@ class WorkflowDescription(object):
         ----------
         stages: List[tmlib.tmaps.description.WorkflowStageDescription]
             description of each stage of the workflow
-        str
+        type: str
             workflow type
 
         Raises
@@ -145,9 +113,7 @@ class WorkflowDescription(object):
         tmlib.errors.WorkflowDescriptionError
             when an unknown workflow descriptor is provided
         '''
-        # Set defaults
         self._type = None
-        # self.virtualenv = None
         self.stages = list()
 
     @property
@@ -168,38 +134,6 @@ class WorkflowDescription(object):
             raise TypeError(
                 'Elements of "steps" must have type WorkflowStageDescription')
         self._stages = value
-
-    # @property
-    # def virtualenv(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     str
-    #         name of a Python virtual environment that needs to be activated
-    #         (default: ``None``)
-
-    #     Note
-    #     ----
-    #     Requires the environment variable "$WORKON_HOME" to point to the
-    #     virtual environment home directory, i.e. the directory where
-    #     `virtualenv` is located.
-
-    #     See also
-    #     --------
-    #     `virtualenvwrapper <http://virtualenvwrapper.readthedocs.org/en/latest/>`_
-    #     '''
-    #     return self._virtualenv
-
-    # @virtualenv.setter
-    # def virtualenv(self, value):
-    #     if value is not None:
-    #         if 'WORKON_HOME' not in os.environ:
-    #             raise KeyError('No environment variable "WORKON_HOME".')
-    #         virtualenv_dir = os.path.join(os.environ['WORKON_HOME'], value)
-    #         if not os.path.exists(virtualenv_dir):
-    #             raise OSError('Virtual environment does not exist: %s'
-    #                           % virtualenv_dir)
-    #     self._virtualenv = value
 
     @abstractmethod
     def add_stage(self, stage_description):
@@ -294,12 +228,12 @@ class WorkflowStageDescription(object):
         ----------
         name: str
             name of the stage
-        str
-            mode of workflow stage submission
+        mode: str
+            mode of workflow stage submission, i.e. whether steps are submitted
+            simultaneously or one after another
+            (options: ``{"sequential", "parallel"}``) 
         steps: list, optional
-            description of individual steps as a mapping of key-value pairs
-        **kwargs: dict, optional
-            description of a workflow stage in form of key-value pairs
+            description of individual steps as a mappings of key-value pairs
 
         Raises
         ------
@@ -323,8 +257,8 @@ class WorkflowStageDescription(object):
         Returns
         -------
         str
-            mode of workflow stage submission,
-            either ``"parallel"`` or ``"sequential"``
+            mode of workflow stage submission
+            (options: ``{"sequential", "parallel"}``)
         '''
         return self._mode
 
@@ -411,14 +345,14 @@ class WorkflowStepDescription(object):
             arguments of the step as key-value pairs
         **kwargs: dict, optional
             additional arguments for the description of the step as
-            a mapping of key-value pairs
+            key-value pairs
 
         Raises
         ------
         TypeError
             when `name` or `args` have the wrong type
         WorkflowDescriptionError
-            when a provided argument is not valid for the given step
+            when a provided argument is not a valid argument for the given step
         '''
         if not isinstance(name, basestring):
             raise TypeError('Argument "name" must have type basestring.')
@@ -454,12 +388,12 @@ class WorkflowStepDescription(object):
         -------
         tmlib.args.GeneralArgs
             all arguments required by the step (i.e. the arguments that can be
-            parsed to the `init` method of the program-specific implementation
+            parsed to the `init` method of the step-specific implementation
             of the :py:class:`tmlib.cli.CommandLineInterface` base class)
 
         Note
         ----
-        Default values defined by the program-specific implementation of the
+        Default values defined by the step-specific implementation of the
         `Args` class will be used in case an optional argument is not
         provided.
         '''

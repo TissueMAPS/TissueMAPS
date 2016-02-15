@@ -44,7 +44,7 @@ class MetadataExtractor(ClusterRoutines):
         Parameters
         ----------
         args: tmlib.metaextract.args.MetaextractArgs
-            program-specific arguments
+            step-specific arguments
 
         Returns
         -------
