@@ -14,7 +14,7 @@ function OutputImage = removeSmallObjects(LabelImage, AreaThreshold)
     %   Markus Herrmann
 
     % Ensure that the image is labeled properly
-    LabelImage = bwlabel(logical(LabelImage));
+    % LabelImage = bwlabel(logical(LabelImage));
 
     props = regionprops(logical(LabelImage), 'Area');
     objArea2 = cat(1, props.Area);
