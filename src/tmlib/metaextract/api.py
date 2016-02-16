@@ -8,7 +8,7 @@ class MetadataExtractor(ClusterRoutines):
     '''
     Class for extraction of metadata from microscopic image files.
 
-    Upon extraction, the metadata is formatted according to the
+    Extracted metadata is formatted according to the
     `Open Microscopy Environment (OME) schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_
     and written to XML files.
     '''
@@ -95,6 +95,8 @@ class MetadataExtractor(ClusterRoutines):
 
     def run_job(self, batch):
         '''
+        Not implemented.
+
         The class doesn't implement a :py:meth:`run_job` method because the
         actual processing is done in Java. Specifically, we use the
        `showinf <http://www.openmicroscopy.org/site/support/bio-formats5.1/users/comlinetools/display.html>`_

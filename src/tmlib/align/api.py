@@ -245,7 +245,7 @@ class ImageRegistration(ClusterRoutines):
                         batch['outputs']['align_descriptor_files'][i][j],
                         dict(a))
 
-            logger.info('remove registration files')
+            logger.info('remove intermediate registration files')
             reg_dir = os.path.dirname(reg_files[0])
             logger.debug('remove directory: %s', reg_dir)
             shutil.rmtree(reg_dir)
