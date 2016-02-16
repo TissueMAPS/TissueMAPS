@@ -83,8 +83,7 @@ def determine_language(filename):
     -------
     str
     '''
-    filename = os.path.abspath(filename)  # removes trailing '/'
-    suffix = os.path.splitext(os.path.basename(filename))[1]
+    suffix = os.path.splitext(filename)[1]
     if suffix == '.m':
         return 'Matlab'
     elif suffix == '.R' or suffix == '.r':

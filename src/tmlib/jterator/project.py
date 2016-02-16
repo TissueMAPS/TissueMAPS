@@ -429,7 +429,7 @@ class JtAvailableModules(object):
         '''
         dirs = path_utils.get_module_directories(self.repo_dir)
         search_strings = {
-            'Python': '\.py$',
+            'Python': '^[^_]+.*\.py$',  # exclude _ files
             'Matlab': '\.m$',
             'R': '\.(%s)$' % '|'.join(['r', 'R']),
         }

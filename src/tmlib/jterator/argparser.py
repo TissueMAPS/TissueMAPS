@@ -35,6 +35,11 @@ run_extra_group = run_parser.add_argument_group(
     'additional step-specific arguments')
 JteratorRunArgs().add_to_argparser(run_extra_group)
 
+collect_parser = subparsers.choices['collect']
+collect_extra_group = collect_parser.add_argument_group(
+    'additional step-specific arguments')
+JteratorSubmitArgs().add_to_argparser(collect_extra_group)
+
 submit_parser = subparsers.choices['submit']
 submit_extra_group = submit_parser.add_argument_group(
     'additional step-specific arguments')

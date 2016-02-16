@@ -113,13 +113,14 @@ class PipelineChecker(object):
         if repeated:
             raise PipelineDescriptionError('Handles files need to be unique.')
 
-        logger.info('Pipe description check successful!')
+        logger.info('Pipe description check successful')
 
     def check_handles(self):
         '''
         Check handles structure.
         '''
-        if self.pipe_description['project']['lib']:
+        lib_path = self.pipe_description['project'].get('lib', None)
+        if lib_path:
             self.libpath = self.pipe_description['project']['lib']
             self.libpath = path_utils.complete_path(
                             self.libpath, self.project_dir)
@@ -241,7 +242,7 @@ class PipelineChecker(object):
                 raise PipelineDescriptionError(
                         'Output names need to be unique.')
 
-        logger.info('Handles descriptions check successful!')
+        logger.info('Handles descriptions check successful')
 
     def check_pipeline_io(self):
         '''
@@ -306,7 +307,7 @@ class PipelineChecker(object):
                 for output_arg in handles['output']:
                     output = output_arg['value']
                     outputs.append(output)
-        logger.info('Module input/output check successful!')
+        logger.info('Module input/output check successful')
 
     def check_all(self):
         '''
