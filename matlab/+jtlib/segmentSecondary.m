@@ -148,6 +148,7 @@ function [secondaryLabelMatrixImage, editedPrimaryBinaryImage, thresholdArray] =
     dbstop if error
 
     import jtlib.calculateThresholdLevel;
+    import jtlib.removeSmallObjects;
 
     UseAsLabelInCaseNoBackgroundPresent = prelimPrimaryLabelMatrixImage;
     if any(prelimPrimaryLabelMatrixImage(:) == 0)
@@ -165,7 +166,7 @@ function [secondaryLabelMatrixImage, editedPrimaryBinaryImage, thresholdArray] =
     pObject = 10;
     % [PLab] force to use minimal treshold value of 0 and maximum of 1, to ensure
     % equal thresholding for all tested tresholds
-    % [MH] make independent of handles!
+    % [MDH] make independent of handles!
     thresholdArray{1} = calculateThresholdLevel(ThresholdMethod, ...
                                        pObject, 0, 1, ...
                                        thresholdCorrection(1), ...

@@ -11,20 +11,20 @@ function PerimeterTrace = analysePerimeter(LabelImage,WindowSize)
 %   derivatives. A sufficient size (eg 10) is necessary to smooth the
 %   coordinate quantisation of pixel images. 
 %
-%   PERIMETERPROPS is a cell array containing entries for each object in
+%   PERIMETERTRACE is a cell array containing entries for each object in
 %   LABELIMAGE. Each entry consists of a matrix with the number of rows
 %   equaling the number of pixels at the perimeter of the object. The rows
 %   therefore represent a continuous path around the object, starting at
 %   the most left, top pixel of the object into direction right, bottom.
-%   The collums of the entries represent the following quantities:
+%   The columns of the entries represent the following quantities:
 %       1,2: Pixel coordinates (row, column)
 %       3,4: Normed inside normal vectors (row, column)
 %       5,6: Curvature (row, column), not normed
 %       7,8: Integer Curvature (row, column):
-%            Componnets may only be -1, 0, 1, may therefore be used to
+%            Components may only be -1, 0, 1, may therefore be used to
 %            determine at which adjacent pixel the Curvature points.
 %       9:   Norm of the Curvature
-%       10:  Covex(+1), straight(0) or concave(-1)
+%       10:  Convex(+1), straight(0) or concave(-1)
 %       11:  Convex, straight or concave region
 %            (via weighted sliding WINDOW)
 %       12,13: Tangential vector (row, column), not normed*
