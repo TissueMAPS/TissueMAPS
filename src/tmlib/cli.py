@@ -343,7 +343,10 @@ class CommandLineInterface(object):
                     'When "phase" is set to "run", '
                     'argument "job" has to be set as well.')
         api = self._api_instance
-        job_file = api.build_run_job_filename(args.job)
+        if args.phase == 'run':
+            job_file = api.build_run_job_filename(args.job)
+        else:
+            job_file = api.build_collect_job_filename()
         batch = api.read_job_file(job_file)
         print('\nDESCRIPTION\n===========\n\n%s'
               % json.dumps(
