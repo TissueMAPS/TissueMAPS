@@ -6,10 +6,12 @@ import logging
 import lxml
 import itertools
 from abc import ABCMeta
+from abc import abstractmethod
 from cached_property import cached_property
 from collections import defaultdict
 from skimage.measure import block_reduce
 from skimage.measure import approximate_polygon
+from skimage.measure import find_contours
 from .readers import DatasetReader
 from .errors import PyramidCreationError
 from .errors import RegexError
@@ -915,6 +917,48 @@ class ChannelLayer(Layer):
         return tiles
 
 
+class ObjectLayer(Layer):
+
+    __metaclass__ = ABCMeta
+
+    '''
+    Abstract base class for object layers, which provide map coordinates for
+    objects for vector-graphic based visualization in `TissueMAPS`.
+    '''
+
+    def __init__(self, experiment, name,
+                 image_displacement=0, well_spacer_size=500):
+        '''
+        Initialize an object of class ObjectLayer.
+
+        Parameters
+        ----------
+        experiment: tmlib.experiment.Experiment
+            configured experiment object
+        name: str
+            name of the layer (objects)
+        image_displacement: int, optional
+            displacement in x, y direction in pixels between individual images;
+            useful to account for an overlap between images (default: ``0``)
+        well_spacer_size: int, optional
+            number of pixels that should be introduced between wells
+            (default: ``500``)
+
+        Warning
+        -------
+        The values for `well_spacer_size` and `image_displacement`
+        must be the same as for the other layers,
+        otherwise objects and images will not align.
+        '''
+        super(ObjectLayer, self).__init__(
+                experiment, image_displacement, well_spacer_size)
+        self.name = name
+
+    @abstractmethod
+    def create(self):
+        pass
+
+
 class SegmentedObjectLayer(Layer):
 
     '''
@@ -950,10 +994,7 @@ class SegmentedObjectLayer(Layer):
         '''
         super(SegmentedObjectLayer, self).__init__(
                 experiment, image_displacement, well_spacer_size)
-        self.experiment = experiment
         self.name = name
-        self.image_displacement = image_displacement
-        self.well_spacer_size = well_spacer_size
 
     def create(self, data_files, align=False, tolerance=1):
         '''
@@ -998,9 +1039,10 @@ class SegmentedObjectLayer(Layer):
             store.create_group(obj_path)
             store.set_attribute(obj_path, 'visual_type', 'polygon')
             segm_path = '%s/segmentation' % obj_path
-            feat_path = '%s/features' % obj_path
-            coord_path = '%s/map_data/coordinates' % obj_path
+            outline_coord_path = '%s/map_data/outlines/coordinates' % obj_path
+            centroid_coord_path = '%s/map_data/centroids/coordinates' % obj_path
             global_obj_id = 0
+            ids = list()
             for j, f in enumerate(data_files):
                 with DatasetReader(f) as data:
 
@@ -1013,13 +1055,12 @@ class SegmentedObjectLayer(Layer):
                         parent = data.read('%s/parent_name' % segm_path)
                         p_segm_path = '/objects/%s/segmentation' % parent
                         is_border = data.read('%s/is_border' % p_segm_path).astype(bool)
+                        if j == 0:
+                            # Store the relation between objects
+                            store.write('%s/parent_name' % segm_path, parent)
+                            # TODO: how to relate global "parent_object_ids"???
                     else:
                         is_border = data.read('%s/is_border' % segm_path).astype(bool)
-
-                    # Get the coordinates of object outlines relative to individual
-                    # images
-                    coords_y = data.read('%s/outlines/y' % segm_path)
-                    coords_x = data.read('%s/outlines/x' % segm_path)
 
                     # A jterator job represents a unique image acquisition site.
                     # We have to identify the position of each site within the
@@ -1063,43 +1104,68 @@ class SegmentedObjectLayer(Layer):
                     logger.debug('offset for site %d: y %d - x %d',
                                  j, y_offset, x_offset)
 
-                    n_objects = len(coords_y)
-                    for i in xrange(n_objects):
-                        # Remove border objects, they should not be displayed
+                    segm_img = data.read('%s/image' % segm_path)
+                    centroids = data.read('%s/centroids' % segm_path)
+                    object_ids = np.unique(segm_img[segm_img > 0])
+                    for i, obj_id in enumerate(object_ids):
+                        # Remove border objects, because we don't want to 
+                        # display them. TODO: Make this optional.
                         if is_border[i]:
+                            # We still account for the border objects,
+                            # such that the object id can be used as an index
+                            # for the features datasets. 
+                            global_obj_id += 1
                             continue
-                        # Reduce the number of outlines points
-                        contour = np.array([coords_y[i], coords_x[i]]).T
+                        # Reduce the number of outlines points to reduce the
+                        # data that we have to send to the client
+                        mask = segm_img == obj_id
+
+                        contours = find_contours(mask, 0.5, fully_connected='high')
+                        if len(contours) > 1:
+                            # TODO: "find_contours" may sometimes identify
+                            # contours for more than one object.
+                            logger.warn('more than one contour identified for '
+                                        'object # %d', global_obj_id)
+                        contour = contours[0]
                         poly = approximate_polygon(contour, tolerance).astype(int)
-                        # Add offset to coordinates
-                        coordinates = pd.DataFrame({
+
+                        # Add offset to coordinates to account for position of
+                        # the object within the total well plate overview
+                        # NOTE: Openlayers wants the x coordinate in the first
+                        # column and the inverted y coordinate in the second.
+                        outline_coordinates = pd.DataFrame({
                             'y': -1 * (poly[:, 0] + y_offset),
                             'x': poly[:, 1] + x_offset
                         })
-                        # Openlayers wants the x coordinate in the first column
-                        # and the inverted y coordinate in the second.
-                        c_path = '%s/%d' % (coord_path, global_obj_id)
-                        store.write(c_path, coordinates)
+                        o_path = '%s/%d' % (outline_coord_path, global_obj_id)
+                        store.write(o_path, outline_coordinates)
+                        store.set_attribute(o_path, 'columns', ['x', 'y'])
+                        centroid_coordinates = pd.Series({
+                            'y': -1 * (centroids[i, 0] + y_offset),
+                            'x': centroids[i, 1] + x_offset
+                        })
+                        c_path = '%s/%d' % (centroid_coord_path, global_obj_id)
+                        store.write(c_path, centroid_coordinates)
                         store.set_attribute(c_path, 'columns', ['x', 'y'])
+                        ids.append(global_obj_id)
                         global_obj_id += 1
 
-                    logger.debug('add extracted features to final datasets')
-                    features = data.list_datasets(feat_path)
-                    for feat in features:
-                        f_path = '%s/%s' % (feat_path, feat)
-                        # Remove border objects
-                        feat_data = data.read(f_path)[~is_border]
-                        if len(feat_data) > 0:
-                            store.append(f_path, feat_data)
+                    logger.debug('add segmentations to datasets')
+                    job_id = data.read('/metadata/job_id')
+                    job_path = '%s/%d' % (segm_path, job_id)
+                    store.write('%s/image' % job_path, segm_img)
+                    # The "is_border" vector indicates whether the parent (!)
+                    # object lies at the border of the image.
+                    store.append('%s/is_border' % segm_path, is_border)
 
                     # Store the name of the corresponding plate and well
-                    plate_names = np.repeat(plate_name, len(feat_data))
+                    plate_names = np.repeat(plate_name, len(object_ids))
                     store.append('%s/metadata/plate_ref' % obj_path, plate_names)
-                    well_names = np.repeat(well_name, len(feat_data))
+                    well_names = np.repeat(well_name, len(object_ids))
                     store.append('%s/metadata/well_ref' % obj_path, well_names)
 
             # Store objects separately as a sorted array of integers
-            store.write('%s/ids' % obj_path, range(global_obj_id))
+            store.write('%s/ids' % obj_path, ids)
 
 
 class WellObjectLayer(Layer):
@@ -1110,7 +1176,8 @@ class WellObjectLayer(Layer):
     from the image metadata. They are stored in a HDF5 file.
     '''
 
-    def __init__(self, experiment, image_displacement=0, well_spacer_size=500):
+    def __init__(self, experiment, name='wells',
+                 image_displacement=0, well_spacer_size=500):
         '''
         Initialize an object of class WellObjectLayer.
 
@@ -1118,6 +1185,8 @@ class WellObjectLayer(Layer):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
+        name: str, optional
+            name of the layer (default: ``"wells"``)
         image_displacement: int, optional
             displacement in x, y direction in pixels between individual images;
             useful to account for an overlap between images (default: ``0``)
@@ -1133,19 +1202,7 @@ class WellObjectLayer(Layer):
         '''
         super(WellObjectLayer, self).__init__(
                 experiment, image_displacement, well_spacer_size)
-        self.experiment = experiment
-        self.image_displacement = image_displacement
-        self.well_spacer_size = well_spacer_size
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the layer
-        '''
-        return 'wells'
+        self.name = name
 
     def create(self):
         '''
@@ -1174,6 +1231,8 @@ class WellObjectLayer(Layer):
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
         with DatasetReader(filename) as data:
             objects = data.list_groups('/objects')
+            if 'wells' in objects:
+                objects.remove('wells')
             feat_path = dict()
             plate_ref = dict()
             well_ref = dict()
@@ -1187,8 +1246,9 @@ class WellObjectLayer(Layer):
                 obj_path = '/objects/%s' % self.name
                 store.create_group(obj_path)
                 store.set_attribute(obj_path, 'visual_type', 'polygon')
-                coord_path = '%s/map_data/coordinates' % obj_path
-                global_obj_id = 0
+                outline_coord_path = '%s/map_data/coordinates' % obj_path
+                global_obj_id = 0  # global: across different plates
+                ids = list()
                 for p, plate in enumerate(self.experiment.plates):
                     logger.debug('process wells of plate "%s"', plate.name)
                     image_metadata = plate.cycles[0].image_metadata
@@ -1204,6 +1264,8 @@ class WellObjectLayer(Layer):
                         n_prior_wells = (n_prior_well_rows, n_prior_well_cols)
 
                         # Calculate coordinates of extrema points
+                        # NOTE: Openlayers wants the x coordinate in the first
+                        # column and the inverted y coordinate in the second.
                         y_max = np.max(image_metadata.well_position_y)
                         x_max = np.max(image_metadata.well_position_x)
                         y_add = self.image_dimensions[0] - self.image_displacement
@@ -1233,52 +1295,54 @@ class WellObjectLayer(Layer):
                         lower_right_coordinate = (x_offset, -y_offset)
 
                         # sort them counter-clockwise
-                        coordinates = [
+                        outline_coordinates = np.array([
                             top_right_coordinate,
                             top_left_coordinate,
                             lower_left_coordinate,
                             lower_right_coordinate
-                        ]
-                        c_path = '%s/%s' % (coord_path, global_obj_id)
-                        store.write(c_path, coordinates)
-                        store.set_attribute(c_path, 'columns', ['x', 'y'])
+                        ])
+                        o_path = '%s/%s' % (outline_coord_path, global_obj_id)
+                        if not store.exists(o_path):
+                            # TODO: do this smarter by avoiding the whole
+                            # processing in the first place
+                            store.write(o_path, outline_coordinates)
+                            store.set_attribute(o_path, 'columns', ['x', 'y'])
 
                         # Pre-calculate per-well statistics for features of
                         # children objects (e.g. "cells")
-                        logger.debug('calculate statistics for object features')
+                        logger.debug('calculate statistics for children '
+                                     'object features')
                         for obj in objects:
                             index = (
                                 (well_ref[obj] == well_name) &
                                 (plate_ref[obj] == plate.name)
                             )
-                            # Store features in hierarchical order
-                            w_path = '%s/%d' % (obj_path, global_obj_id)
+                            # Adhere to structure of SegmentedObjectLayer, i.e.
+                            # object id can be used as index for feature
+                            # datasets
+                            w_path = '%s/features' % obj_path
                             store.create_group(w_path)
-                            store.set_attribute(
-                                    w_path, name='type', data='well_id')
-                            # TODO: encode everything else in feature name???
-                            o_path = '%s/%s' % (w_path, obj)
-                            store.create_group(o_path)
-                            store.set_attribute(
-                                    o_path, name='type', data='child_object')
-                            store.write('%s/count' % o_path, np.sum(index))
-                            features = data.list_datasets(feat_path[obj])
-                            for f in features:
-                                f_path = '%s/%s' % (feat_path[obj], f)
-                                # Only load relevant objects
-                                feat_data = data.read(f_path, index=index)
-                                store.write(
-                                    '%s/%s/mean' % (o_path, f),
-                                    np.nanmean(feat_data))
-                                store.write(
-                                    '%s/%s/std' % (o_path, f),
-                                    np.nanstd(feat_data))
-                                store.write(
-                                    '%s/%s/min' % (o_path, f),
-                                    np.nanmin(feat_data))
-                                store.write(
-                                    '%s/%s/max' % (o_path, f),
-                                    np.nanmax(feat_data))
+                            o_path = '%s/%s_Count' % (w_path, obj)
+                            store.append(o_path, [np.sum(index)])
+                            if data.exists(feat_path[obj]):
+                                features = data.list_datasets(feat_path[obj])
+                                for f in features:
+                                    f_path = '%s/%s' % (feat_path[obj], f)
+                                    # Only load relevant objects
+                                    feat_data = data.read(f_path, index=index)
+                                    store.append(
+                                        '%s/%s_Mean' % (w_path, f),
+                                        [np.nanmean(feat_data)])
+                                    store.append(
+                                        '%s/%s_Std' % (w_path, f),
+                                        [np.nanstd(feat_data)])
+                                    store.append(
+                                        '%s/%s_Min' % (w_path, f),
+                                        [np.nanmin(feat_data)])
+                                    store.append(
+                                        '%s/%s_Max' % (w_path, f),
+                                        [np.nanmax(feat_data)])
+                        ids.append(global_obj_id)
                         global_obj_id += 1
 
                 store.write('%s/ids' % obj_path, range(global_obj_id))
