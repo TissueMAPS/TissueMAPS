@@ -10,6 +10,7 @@ from collections import defaultdict
 from cached_property import cached_property
 from . import path_utils
 from .project import JtProject
+from .join import merge_datasets
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
 from .. import utils
@@ -20,6 +21,7 @@ from ..writers import DatasetWriter
 from ..readers import DatasetReader
 from ..layer import SegmentedObjectLayer
 from ..layer import WellObjectLayer
+from ..logging_utils import map_logging_verbosity
 
 logger = logging.getLogger(__name__)
 
@@ -203,15 +205,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
         tmlib.errors.PipelineDescriptionError
             when information in *pipe* description is missing or incorrect
         '''
-        if self.project.pipe['description']['project']['lib']:
-            libpath = self.project.pipe['description']['project']['lib']
-            libpath = path_utils.complete_path(
-                            self.libpath, self.project_dir)
-        else:
+        libpath = self.project.pipe['description']['project'].get('lib', None)
+        if not libpath:
             if 'JTLIB' in os.environ:
                 libpath = os.environ['JTLIB']
             else:
                 raise ValueError('JTLIB environment variable not set.')
+        libpath = path_utils.complete_path(libpath, self.project_dir)
         self._pipeline = list()
         for i, element in enumerate(self.project.pipe['description']['pipeline']):
             if not element['active']:
@@ -250,10 +250,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.engines['R'] = None
         if 'Matlab' in languages:
             logger.info('start Matlab engine')
-            # TODO: Add a random delay before starting MATLAB session to
-            # avoid to many concomitant license calls
-            # time.sleep(random.randint(10))
-            self.engines['Matlab'] = matlab.MatlabSession()
+            startup_options = '-nosplash -singleCompThread'
+            if self.headless:
+                # option minimizes memory usage and improves initial startup
+                # speed, but disable plotting functionality
+                startup_options += ' -nojvm'
+            logger.debug('Matlab startup options: %s', startup_options)
+            self.engines['Matlab'] = matlab.MatlabSession(
+                                        options=startup_options)
             # We have to make sure that code which may be called by a module,
             # are actually on the MATLAB path.
             # To this end, the MATLABPATH environment variable can be used.
@@ -271,9 +275,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
         #     print 'jt - Starting Julia engine'
         #     self.engines['Julia'] = julia.Julia()
 
-    def configure_loggers(self):
+    def _configure_loggers(self):
         # TODO: configure loggers for Python, Matlab, and R modules
-        pass
+        jtlogger = logging.getLogger('jtlib')
+        level = map_logging_verbosity(self.verbosity)
+        jtlogger.setLevel(level)
 
     def build_data_filename(self, job_id):
         '''
@@ -331,18 +337,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # other image loading modes, where several planes are
                 # loaded into a 3-dimensional "stack" or "series".
                 images[name] = [self.experiment.layer_metadata[name].filenames]
-
-            # if not images:
-            #     # This is useful for testing purposes, where a pipeline should
-            #     # be run that doesn't require any input
-            #     logger.warning('no planes provided')
-            #     logger.info('create one empty job description')
-            #     job_descriptions['run'] = [{
-            #         'id': 1,
-            #         'inputs': dict(),
-            #         'outputs': dict()
-            #     }]
-            #     return job_descriptions
 
         elif 'stacks' in self.project.pipe['description']['images']:
 
@@ -421,64 +415,78 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     )
 
         else:
-            raise ValueError(
-                    'Images can be loaded as "planes", "stacks", or "series"')
+            # There might be use cases, where a pipeline doesn't require any
+            # input (e.g. for unit tests)
+            logger.warning('pipeline doesn\'t describe any input images')
+            logger.info('create a single empty job description')
+            images = defaultdict(list)
 
-        batches = [defaultdict(list) for i in xrange(len(images.values()[0][0]))]
-        for k, v in images.iteritems():
-            for i in xrange(len(v[0])):
-                for j in xrange(len(v)):
-                    batches[i][k].append(v[j][i])
+        if images:
+            batches = [
+                defaultdict(list) for i in xrange(len(images.values()[0][0]))
+            ]
+            for k, v in images.iteritems():
+                for i in xrange(len(v[0])):
+                    for j in xrange(len(v)):
+                        batches[i][k].append(v[j][i])
 
-        job_descriptions['run'] = [{
-            'id': i+1,
-            'inputs': {
-                'image_files': batch
-            },
-            'outputs': {
-                'data_files': [self.build_data_filename(i+1)],
-                'figure_files': [
-                    module.build_figure_filename(
-                        self.figures_dir, i+1)
-                    for module in self.pipeline
+            job_descriptions['run'] = [{
+                'id': i+1,
+                'inputs': {
+                    'image_files': batch
+                },
+                'outputs': {
+                    'data_files': [self.build_data_filename(i+1)],
+                    'figure_files': [
+                        module.build_figure_filename(
+                            self.figures_dir, i+1)
+                        for module in self.pipeline
+                    ],
+                    'log_files': utils.flatten([
+                        module.build_log_filenames(
+                            self.module_log_dir, i+1).values()
+                        for module in self.pipeline
+                    ])
+                }
+            } for i, batch in enumerate(batches)]
+
+            job_descriptions['collect'] = {
+                'inputs': {
+                    'data_files': [
+                        self.build_data_filename(i+1)
+                        for i in xrange(len(batches))
+                    ]
+                },
+                'outputs': {
+                    'data_files': [
+                        os.path.join(self.experiment.dir,
+                                     self.experiment.data_file)
+                    ]
+                },
+                'removals': [
+                    'data_files'
                 ],
-                'log_files': utils.flatten([
-                    module.build_log_filenames(
-                        self.module_log_dir, i+1).values()
-                    for module in self.pipeline
-                ])
+                'merge': args.merge,
+                'align': True  # TODO: should become an argument
             }
-        } for i, batch in enumerate(batches)]
 
-        job_descriptions['collect'] = {
-            'inputs': {
-                'data_files': [
-                    self.build_data_filename(i+1)
-                    for i in xrange(len(batches))
-                ]
-            },
-            'outputs': {
-                'data_files': [
-                    os.path.join(self.experiment.dir,
-                                 self.experiment.data_file)
-                ]
-            },
-            'removals': [
-                'data_files'
-            ],
-            'merge': args.merge,
-            'align': True  # TODO: should become an argument
-        }
+            if job_ids:
+                job_description_subset = dict()
+                job_description_subset['run'] = list()
+                for j in job_ids:
+                    job_description_subset['run'].append(
+                        job_descriptions['run'][j-1]  # job IDs are one-based
+                    )
+                return job_description_subset
+            else:
+                return job_descriptions
 
-        if job_ids:
-            job_description_subset = dict()
-            job_description_subset['run'] = list()
-            for j in job_ids:
-                job_description_subset['run'].append(
-                    job_descriptions['run'][j-1]  # job IDs are one-based
-                )
-            return job_description_subset
         else:
+            job_descriptions['run'] = [{
+                'id': 1,
+                'inputs': dict(),
+                'outputs': dict()
+            }]
             return job_descriptions
 
     def _build_run_command(self, batch):
@@ -489,7 +497,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         command.extend(['run', '--job', str(batch['id'])])
         command.extend(['--pipeline', self.pipe_name])
         if not self.headless:
-            command.append('---pipelinelot')
+            command.append('--plot')
         return command
 
     def run_job(self, batch):
@@ -543,6 +551,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 ]
         )
         checker.check_all()
+        self._configure_loggers()
         self.start_engines()
         job_id = batch['id']
         data_file = self.build_data_filename(job_id)
@@ -679,8 +688,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def collect_job_output(self, batch):
         '''
-        Collect the data stored across individual HDF5 files, fuse, and store
-        them in a single HDF5 file.
+        Collect the data stored across individual HDF5 files, and join them
+        in a single HDF5 file.
 
         The final file has the following hierarchical structure::
 
@@ -698,15 +707,41 @@ class ImageAnalysisPipeline(ClusterRoutines):
         ----------
         batch: dict
             job description
-        '''
-        # TODO: structure of HDF5 file:
-        # PerformanceWarning: group ``/objects/nuclei/map_data/coordinates``
-        # is exceeding the recommended maximum number of children (16384);
-        # be ready to see PyTables asking for *lots* of memory and possibly slow I/O.
 
+        Warning
+        -------
+        When you indent to combine the output of multiple `jterator` pipelines,
+        make sure to set the `merge` argument to ``True`` for subsequent
+        pipelines. Otherwise the output of previous pipelines will be
+        overwritten.
+
+        See also
+        --------
+        :py:attr:`tmlib.experiment.Experiment.data_file`
+        :py:class:`tmlib.layer.ObjectLayer`
+        '''
         example_file = batch['inputs']['data_files'][0]
+        objects = list()
         with DatasetReader(example_file) as f:
-            objects = f.list_groups('/objects')
+            names = f.list_groups('/objects')
+            # TODO: sort objects according to parent-child relationship
+            # (which has to be in the form an acyclic graph)
+            for name in names:
+                if f.exists('/objects/%s/segmentation' % name):
+                    objects.append(name)
+
+        data_file = os.path.join(self.experiment.dir, self.experiment.data_file)
+        if not batch['merge']:
+            # No merge only makes sense if any objects were identified in the
+            # pipeline. We raise an Exception to prevent users from
+            # accidentally deleting data generated in previous pipelines.
+            if len(objects) == 0:
+                raise ValueError('No objects were identified in pipeline.')
+            if os.path.exists(data_file):
+                os.remove(data_file)
+
+        logger.info('join feature datasets')
+        merge_datasets(batch['inputs']['data_files'], data_file)
 
         for obj in objects:
             logger.info('create layer for segmented objects "%s"', obj)
@@ -716,6 +751,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.info('create layer for objects "wells"')
         well_layer = WellObjectLayer(self.experiment)
         well_layer.create()
+
+        logger.info('remove intermediate data files')
+        logger.debug('remove directory: %s', self.data_dir)
+        # shutil.rmtree(self.data_dir)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
