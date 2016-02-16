@@ -358,7 +358,7 @@ class DatasetWriter(object):
                 data = np.array(data)
         if index is None and row_index is None and column_index is None:
             if self.exists(path):
-                raise IOError('Dataset already exists: %s', path)
+                raise IOError('Dataset already exists: %s' % path)
             if isinstance(data, np.ndarray) and data.dtype == 'O':
                 logger.debug('write dataset "%s" as variable length', path)
                 dset = self._write_vlen(path, data)
@@ -486,7 +486,7 @@ class DatasetWriter(object):
         if max_dims is None:
             max_dims = dims
         if self.exists(path):
-            raise IOError('Dataset already exists: %s', path)
+            raise IOError('Dataset already exists: %s' % path)
         return self._stream.create_dataset(
                         path, shape=dims, dtype=dtype, maxshape=max_dims)
 
@@ -517,6 +517,7 @@ class DatasetWriter(object):
         ----
         Creates the dataset in case it doesn't yet exist. 
         '''
+        data = np.array(data)
         if not self.exists(path):
             logger.debug('create dataset "%s"', path)
             # preallocate an empty dataset that can be extended
@@ -526,7 +527,6 @@ class DatasetWriter(object):
         dset = self._stream[path]
         if len(dset.shape) > 1:
             raise ValueError('Data must be one-dimensional: %s', path)
-        data = np.array(data)
         if len(data.shape) > 1:
             raise ValueError('Data dimensions do not match.')
         if dset.dtype != data.dtype:
@@ -564,6 +564,7 @@ class DatasetWriter(object):
         If `data` is one-dimensional a dataset with dimensions
         ``(0, len(data))`` will be created.
         '''
+        data = np.array(data)
         if not self.exists(path):
             logger.debug('create dataset "%s"', path)
             # preallocate an empty dataset that can be extended along the 
@@ -579,7 +580,6 @@ class DatasetWriter(object):
         dset = self._stream[path]
         if not len(dset.shape) > 1:
             raise ValueError('Data must be multi-dimensional: %s', path)
-        data = np.array(data)
         if len(data.shape) > 1:
             if data.shape[1] != dset.shape[1]:
                 raise ValueError('Dataset dimensions do not match.')
@@ -641,7 +641,6 @@ class DatasetWriter(object):
         dset = self._stream[path]
         if not len(dset.shape) > 1:
             raise ValueError('Data must be multi-dimensional: %s', path)
-        data = np.array(data)
         if len(data.shape) > 1:
             if data.shape[0] != dset.shape[0]:
                 raise ValueError('Dataset dimensions don\'t match.')
