@@ -1,8 +1,11 @@
+import logging
 import matplotlib.pyplot as plt
 import collections
 import numpy as np
 from jtlib import plotting
 from jtlib import utils
+
+logger = logging.getLogger(__name__)
 
 
 def label_mask(mask, **kwargs):
@@ -31,6 +34,8 @@ def label_mask(mask, **kwargs):
 
     mask = mask > 0
     labeled_image = utils.label_image(mask)
+
+    logger.info('identified %d objects', len(np.unique(labeled_image))-1)
 
     if kwargs['plot']:
 

@@ -1,11 +1,15 @@
+import logging
 import mahotas as mh
 # from bokeh.plotting import figure
 # from bokeh.palettes import Reds3
 import matplotlib.pyplot as plt
 import collections
 import numpy as np
+from skimage.measure import block_reduce
 from jtlib import plotting
 from tmlib import image_utils
+
+logger = logging.getLogger(__name__)
 
 
 def threshold_image(image, correction_factor=1, min_threshold=None,
@@ -42,16 +46,22 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
     '''
     if max_threshold is None:
         max_threshold = np.max(image)
+    logger.info('set maximal threshold: %d', max_threshold)
+
     if min_threshold is None:
         min_threshold = np.min(image)
+    logger.info('set minimal threshold: %d', min_threshold)
 
     # threshold function requires unsigned integer type
     if not str(image.dtype).startswith('uint'):
         raise TypeError('Image must have unsigned integer type')
 
     thresh = mh.otsu(image)
+    logger.info('calculated threshold level: %d', thresh)
 
+    logger.info('threshold correction factor: %d', correction_factor)
     thresh = thresh * correction_factor
+    logger.info('final threshold level: %d', thresh)
 
     if thresh > max_threshold:
         thresh = max_threshold
@@ -65,13 +75,12 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
         # Get the contours of the mask
         img_border = mh.labeled.borders(thresh_image)
 
-        # Downsample image for display
-        # block_reduce()
-
         # Convert the image to 8-bit for display
-        rescaled_image = image_utils.convert_to_uint8(image)
+        rescaled_img = image_utils.convert_to_uint8(image)
+        # Downsample image to reduce number of pixels that need to be plotted
+        downsampled_img = block_reduce(rescaled_img, (4, 4), func=np.mean)
 
-        img_overlay = mh.overlay(rescaled_image, img_border)
+        img_overlay = mh.overlay(rescaled_img, img_border)
 
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 2, 1)
@@ -89,6 +98,8 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
         plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
+        # dims = thresh_image.shape
+
         # fig = figure(x_range=(0, dims[1]), y_range=(0, dims[0]),
         #              tools=["reset, resize, save, pan, box_zoom, wheel_zoom"],
         #              webgl=True,
@@ -96,8 +107,8 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
         # # Bokeh cannot deal with RGB images in form of 3D numpy arrays.
         # # Therefore, we have to work around it by adapting the color palette.
-        # img_rgb = rescaled_image.copy()
-        # img_rgb[rescaled_image == 255] = 254
+        # img_rgb = downsampled_img.copy()
+        # img_rgb[downsampled_img == 255] = 254
         # img_rgb[img_border] = 255
         # # border pixels will be colored red, all others get gray colors
         # palette = plotting.create_bk_palette('greys')
