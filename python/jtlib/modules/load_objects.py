@@ -1,21 +1,23 @@
 import os
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import cv2
+# import cv2
 import mpld3
 import collections
 from jtlib import plotting
 from tmlib.readers import DatasetReader
 from tmlib.experiment import Experiment
 
+logger = logging.getLogger(__name__)
+
 
 def load_objects(objects_name, **kwargs):
     '''
-    Jterator module for loading outline coordinates of segmented objects from
-    a HDF5 file on disk. A mask image is then reconstructed from the outlines
-    and labeled so that all pixels of an object (connected components) have a
-    unique identifier number.
+    Jterator module for segmented objects as a labeled image from a HDF5 file
+    on disk. Background is encoded with zeros and each object has a
+    unique non-zero label.
 
     Parameters
     ----------
@@ -29,25 +31,36 @@ def load_objects(objects_name, **kwargs):
     -------
     collections.namedtuple[numpy.ndarray[uint]]
         label image that encodes the objects: "loaded_objects"
+
+    Warning
+    -------
+    You cannot load objects that were saved within the same pipeline, because
+    objects will be retrieved from a joined data file that first needs to be
+    created in the `collect` phase of the `jterator` step.
+
+    See also
+    --------
+    :py:attr:`tmlib.experiment.Experiment.data_file`
+    :py:class:`tmlib.layer.SegmentedObjectLayer`
     '''
     experiment = Experiment(kwargs['experiment_dir'])
     filename = os.path.join(experiment.dir, experiment.data_file)
 
-    group_name = '/objects/%s/segmentation' % objects_name
+    group_name = '/objects/%s/segmentation/%d' % (objects_name, kwargs['job_id'])
 
     with DatasetReader(filename) as f:
-        jobs = f.read('%s/job_ids' % group_name)
-        job_ix = jobs == kwargs['job_id']
-        y_coordinates = f.read('%s/outlines/y' % group_name, index=job_ix)
-        x_coordinates = f.read('%s/outlines/x' % group_name, index=job_ix)
-        image_dim_y = f.read('%s/image_dimensions/y' % group_name, index=job_ix)
-        image_dim_x = f.read('%s/image_dimensions/x' % group_name, index=job_ix)
+        labeled_image = f.read('%s/image' % group_name)
 
-    labeled_image = np.zeros((image_dim_y[0], image_dim_x[0]), dtype=np.int32)
-    for i in range(len(y_coordinates)):
-        # NOTE: OpenCV wants (x, y) coordinates rather than (y, x) coordinates
-        c = np.array(zip(x_coordinates[i], y_coordinates[i]), dtype=np.int32)
-        cv2.fillPoly(labeled_image, [c], i)
+    logger.info('loaded %d "%s" objects',
+                len(np.unique(labeled_image))-1, objects_name)
+
+    # labeled_image = np.zeros((image_dim_y[0], image_dim_x[0]), dtype=np.int32)
+    # for i in xrange(len(y_coordinates)):
+    #     # NOTE: OpenCV wants (x, y) coordinates rather than (y, x) coordinates
+    #     c = np.array(zip(x_coordinates[i], y_coordinates[i]), dtype=np.int32)
+    #     print c
+    #     # Labels are one-based (zero encodes for background pixels)
+    #     cv2.fillConvexPoly(labeled_image, c, i+1)
 
     if kwargs['plot']:
 
