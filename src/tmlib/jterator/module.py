@@ -107,7 +107,7 @@ class ImageProcessingModule(object):
         str
             absolute path to the figure file
         '''
-        figure_file = os.path.join(figures_dir, '%s_%.5d.figure'
+        figure_file = os.path.join(figures_dir, '%s_%.5d.html'
                                    % (self.name, job_id))
         return figure_file
 
