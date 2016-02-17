@@ -138,7 +138,8 @@ Shown here are minimalistic examples of modules implemented in different languag
 **Python example**:     
 
 .. code:: python
-
+    
+    import jtlib
     import collections
 
     def myInitialPythonModule(InputImage, **kwargs):
@@ -154,7 +155,9 @@ Shown here are minimalistic examples of modules implemented in different languag
 **Matlab example**:     
 
 .. code-block:: matlab
-
+    
+    import jtlib.*
+    
     function [OutputImage] = myMatlabModule(InputImage, varargin)
 
         OutputImage = InputImage;
@@ -168,13 +171,13 @@ Shown here are minimalistic examples of modules implemented in different languag
 
 .. Warning::
 
-    Matlab functions cannot handle input or output of class `structure array`!
+    Matlab functions cannot handle input of class `struct`!
 
 **R example**:
 
 .. code-block:: R
 
-    library(jtapi)
+    library(jtlib)
 
     myRModule <- function(InputImage, ...){
 
