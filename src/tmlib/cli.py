@@ -177,16 +177,6 @@ class CommandLineInterface(object):
             return 1
 
     @abstractproperty
-    def _parser(self):
-        '''
-        Returns
-        -------
-        argparse.ArgumentParser
-            argument parser with step-specific subparsers and options
-        '''
-        pass
-
-    @abstractproperty
     def name(self):
         '''
         Returns

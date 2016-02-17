@@ -536,6 +536,7 @@ class SubmitArgs(GeneralArgs):
             'default': 1,
             'help': '''
                 number of CPUs that should be allocated for each job
+                (default: 1)
             '''
         }
 
