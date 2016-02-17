@@ -47,7 +47,7 @@ def load_step_interface(step_name):
     return getattr(module, class_name)
 
 
-class WorkflowStep(SequentialTaskCollection):
+class WorkflowStep(SequentialTaskCollection, StopOnError):
 
     '''
     Class for a TissueMAPS workflow step, which is composed of a fixed

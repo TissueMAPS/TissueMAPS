@@ -52,7 +52,7 @@ class Corilla(CommandLineInterface):
 
     def apply(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments of the "apply" subparser.
 
         Parameters

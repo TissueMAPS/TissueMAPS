@@ -1,19 +1,17 @@
 '''
-Arguments of the command line program.
+Parse arguments from the command line.
 '''
 
-from . import __version__
 from .cli import Illuminati
 from .args import IlluminatiInitArgs
 
 
 parser, subparsers = Illuminati.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log', 'info'])
+    methods={'init', 'run', 'submit', 'cleanup', 'log', 'info'})
 
 parser.description = '''
         Create image pyramids for visualization in TissueMAPS.
     '''
-parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_extra_group = init_parser.add_argument_group(

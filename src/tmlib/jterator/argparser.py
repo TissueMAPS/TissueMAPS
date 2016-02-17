@@ -1,8 +1,7 @@
 '''
-Arguments of the command line program.
+Parse arguments from the command line.
 '''
 
-from . import __version__
 from .cli import Jterator
 from .args import JteratorInitArgs
 from .args import JteratorRunArgs
@@ -21,7 +20,6 @@ parser.description = '''
     Image analysis pipeline engine for applying a sequence of algorithms
     to a set of images, for example for segmentation and feature extraction.
 '''
-parser.version = __version__
 
 # All subparsers require the extra argument "pipeline"
 

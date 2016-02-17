@@ -1,8 +1,7 @@
 '''
-Arguments of the command line program.
+Parse arguments from the command line.
 '''
 
-from . import __version__
 from .cli import Tmaps
 from .args import TmapsSubmitArgs
 
@@ -13,7 +12,6 @@ parser.description = '''
     Build a TissueMAPS workflow, submit it to the cluster, and
     monitor its processing.
 '''
-parser.version = __version__
 
 submit_parser = subparsers.choices['submit']
 submit_extra_group = submit_parser.add_argument_group(

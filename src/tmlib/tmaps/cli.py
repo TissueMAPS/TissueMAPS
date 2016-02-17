@@ -53,7 +53,7 @@ class Tmaps(object):
 
     def submit(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "submit" subparser.
 
         Parameters
@@ -74,7 +74,7 @@ class Tmaps(object):
 
     def resume(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "resume" subparser.
 
         Parameters
@@ -90,7 +90,7 @@ class Tmaps(object):
         api.submit_jobs(session, args.interval, args.depth)
 
     def _call(self, args):
-        method_args = cli.build_cli_method_args_from_mapping(
+        method_args = cli.create_cli_method_args(
                             prog_name=self.name, **vars(args))
         cli.call_cli_method(self, args.method_name, method_args)
 
@@ -114,7 +114,7 @@ class Tmaps(object):
         inst._call(args)
 
     @staticmethod
-    def get_parser_and_subparsers(required_subparsers=['submit', 'resume']):
+    def get_parser_and_subparsers(methods=['submit', 'resume']):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -133,7 +133,7 @@ class Tmaps(object):
             parser and subparsers objects
         '''
         parser, subparsers = cli.CommandLineInterface.get_parser_and_subparsers(
-                                required_subparsers=[])
+                                methods=[])
 
         submit_parser = subparsers.add_parser(
             'submit', help='submit and monitor a TissueMAPS workflow')

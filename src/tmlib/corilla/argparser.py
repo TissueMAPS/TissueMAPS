@@ -1,21 +1,19 @@
 '''
-Arguments of the command line program.
+Parse arguments from the command line.
 '''
 
-from . import __version__
 from .cli import Corilla
 from .args import CorillaInitArgs
 from ..args import ApplyArgs
 
 parser, subparsers = Corilla.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log', 'info'])
+    methods={'init', 'run', 'submit', 'cleanup', 'log', 'info'})
 
 parser.description = '''
     Calculate illumination statistics over a set of images of the same
     channel, which can then subsequently be applied to individual images for
     CORrection of ILLumination Artifacts.
 '''
-parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_extra_group = init_parser.add_argument_group(

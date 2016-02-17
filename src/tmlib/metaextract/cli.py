@@ -2,6 +2,7 @@ import logging
 from . import logo
 from . import __version__
 from .api import MetadataExtractor
+from .args import MetaextractInitArgs
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 

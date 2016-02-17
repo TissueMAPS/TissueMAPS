@@ -10,6 +10,7 @@ from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
+from . import __version__
 from .args import InitArgs
 from .args import SubmitArgs
 from .args import RunArgs
@@ -26,61 +27,9 @@ from .errors import JobDescriptionError
 logger = logging.getLogger(__name__)
 
 
-def command_line_call(parser):
+def create_cli_method_args(prog_name, method_name, **kwargs):
     '''
-    Main entry point for command line interfaces.
-
-    Parsers the command line arguments to the corresponding handler
-    and configures logging.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        argument parser object
-
-    Raises
-    ------
-    SystemExit
-        exitcode ``1`` when the call raises an :py:class:`Exception`
-
-    Warning
-    -------
-    Don't do any other logging configuration anywhere else!
-    '''
-    arguments = parser.parse_args()
-
-    configure_logging(logging.CRITICAL)
-    logger = logging.getLogger('tmlib')
-    level = map_logging_verbosity(arguments.verbosity)
-    logger.setLevel(level)
-    logger.debug('processing on node: %s', socket.gethostname())
-    logger.debug('running program: %s' % parser.prog)
-
-    # Fine tune the output of some loggers
-    gc3libs_logger = logging.getLogger('gc3.gc3libs')
-    gc3libs_logger.setLevel(logging.CRITICAL)
-    apscheduler_logger = logging.getLogger('apscheduler')
-    apscheduler_logger.setLevel(logging.CRITICAL)
-    vips_logger = logging.getLogger('gi.overrides.Vips')
-    vips_logger.setLevel(logging.CRITICAL)
-
-    try:
-        if arguments.handler:
-            arguments.handler(arguments)
-        else:
-            parser.print_help()
-        logger.info('SUCCESSFULLY COMPLETED')
-        sys.exit(0)
-    except Exception as error:
-        sys.stderr.write('\nFAILED:\n%s\n' % str(error))
-        for tb in traceback.format_tb(sys.exc_info()[2]):
-            sys.stderr.write(tb)
-        sys.exit(1)
-
-
-def build_cli_method_args_from_mapping(prog_name, method_name, **kwargs):
-    '''
-    Build the argument object required for a method of the
+    Create the argument object required as an input argument for methods of the
     :py:class:`tmlib.cli.CommandLineInterface` class.
 
     Parameters
@@ -168,6 +117,75 @@ class CommandLineInterface(object):
         self.experiment = experiment
         self.verbosity = verbosity
 
+    @staticmethod
+    def main(parser):
+        '''
+        Main entry point for command line interface.
+
+        Parsers the command line arguments to the corresponding handler
+        and configures logging.
+
+        Parameters
+        ----------
+        parser: argparse.ArgumentParser
+            argument parser object
+
+        Returns
+        -------
+        int
+            ``0`` when program completes successfully and ``1`` otherwise
+
+        Raises
+        ------
+        SystemExit
+            exitcode ``1`` when the call raises an :py:class:`Exception`
+
+        Warning
+        -------
+        Don't do any other logging configuration anywhere else!
+        '''
+        arguments = parser.parse_args()
+
+        configure_logging(logging.CRITICAL)
+        logger = logging.getLogger('tmlib')
+        level = map_logging_verbosity(arguments.verbosity)
+        logger.setLevel(level)
+        logger.debug('processing on node: %s', socket.gethostname())
+        logger.debug('running program: %s' % parser.prog)
+
+        # Fine tune the output of some loggers
+        gc3libs_logger = logging.getLogger('gc3.gc3libs')
+        gc3libs_logger.setLevel(logging.CRITICAL)
+        apscheduler_logger = logging.getLogger('apscheduler')
+        apscheduler_logger.setLevel(logging.CRITICAL)
+        vips_logger = logging.getLogger('gi.overrides.Vips')
+        vips_logger.setLevel(logging.CRITICAL)
+
+        try:
+            if arguments.handler:
+                arguments.handler(arguments)
+            else:
+                parser.print_help()
+            logger.info('SUCCESSFULLY COMPLETED')
+            sys.exit(0)
+            return 0
+        except Exception as error:
+            sys.stderr.write('\nFAILED:\n%s\n' % str(error))
+            for tb in traceback.format_tb(sys.exc_info()[2]):
+                sys.stderr.write(tb)
+            sys.exit(1)
+            return 1
+
+    @abstractproperty
+    def _parser(self):
+        '''
+        Returns
+        -------
+        argparse.ArgumentParser
+            argument parser with step-specific subparsers and options
+        '''
+        pass
+
     @abstractproperty
     def name(self):
         '''
@@ -180,6 +198,12 @@ class CommandLineInterface(object):
 
     @abstractproperty
     def _api_instance(self):
+        '''
+        Returns
+        -------
+        tmlib.api.ClusterRoutines
+            an instance of a step-specific *api* class
+        '''
         pass
 
     @abstractmethod
@@ -204,6 +228,9 @@ class CommandLineInterface(object):
 
     @abstractmethod
     def _print_logo():
+        '''
+        Prints the step-specific logo to standard output (console).
+        '''
         pass
 
     def _cleanup(self):
@@ -238,7 +265,7 @@ class CommandLineInterface(object):
 
     def cleanup(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "cleanup" subparser, which
         removes all output files or directories from a previous submission.
 
@@ -252,7 +279,7 @@ class CommandLineInterface(object):
 
     def init(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "init" subparser, which creates
         the job descriptor files required for submission.
 
@@ -302,7 +329,7 @@ class CommandLineInterface(object):
 
     def run(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "run" subparser, which runs
         an individual job on the local computer.
 
@@ -325,7 +352,7 @@ class CommandLineInterface(object):
 
     def info(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "info" subparser, which prints
         the description of an individual job to the console.
 
@@ -354,7 +381,7 @@ class CommandLineInterface(object):
 
     def log(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "log" subparser, which prints the
         log output of an individual job to the console.
 
@@ -480,7 +507,7 @@ class CommandLineInterface(object):
 
     def submit(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments provided by the "submit" subparser, which submits
         all jobs and monitors their status.
 
@@ -524,7 +551,7 @@ class CommandLineInterface(object):
 
     def collect(self, args):
         '''
-        Initialize an instance of the API class corresponding to the program
+        Initialize an instance of the step-specific API class
         and process arguments of the "collect" subparser, which collects the
         output of previously run jobs.
 
@@ -549,38 +576,36 @@ class CommandLineInterface(object):
     def _call(self, args):
         logger.debug('call "%s" method of class "%s"',
                      args.method_name, self.__class__.__name__)
-        method_args = build_cli_method_args_from_mapping(
-                            prog_name=self.name, **vars(args))
+        method_args = create_cli_method_args(prog_name=self.name, **vars(args))
         call_cli_method(self, args.method_name, method_args)
 
     @staticmethod
     def get_parser_and_subparsers(
-            required_subparsers=[
-                'init', 'run', 'submit', 'collect', 'cleanup', 'log', 'info']):
+            methods={'init', 'run', 'submit', 'collect', 'cleanup', 'log', 'info'}):
         '''
-        Get an argument parser object and subparser objects with default
-        arguments for use in command line interfaces.
-        The subparsers objects can be extended with additional subparsers and
-        additional arguments can be added to each individual subparser.
+        Get an argument parser object for a subclass of
+        :py:class:`tmlib.cli.CommandLineInterface` and a subparser object
+        for each implemented method of the class.
+        Subparsers may already have default arguments, but additional
+        implementation specific arguments can be added.
 
         Parameters
         ----------
-        required_subparsers: List[str]
-            subparsers that should be returned (default: 
-            ``["init", "run", "submit", "collect", cleanup", "log"]``)
+        methods: Set[str]
+            methods for which a subparser should be returned (default: 
+            ``{"init", "run", "submit", "collect", cleanup", "log", "info"}``)
 
         Returns
         -------
         Tuple[argparse.Argumentparser and argparse._SubParsersAction]
             parser and subparsers objects
 
-        Note
-        ----
-        In case an implementation of the base class doesn't use a particular
-        subparser, the corresponding method must be overwritten such that it
-        raises an AttributeError.
+        See also
+        --------
         '''
+        # TODO: do this smarter, e.g. via pyCli, cement, or click package
         parser = argparse.ArgumentParser()
+        parser.version == __version__
         parser.add_argument(
             'experiment_dir', type=str, help='path to experiment directory')
         parser.add_argument(
@@ -592,7 +617,7 @@ class CommandLineInterface(object):
         subparsers = parser.add_subparsers(
             dest='method_name', help='sub-commands')
 
-        if 'init' in required_subparsers:
+        if 'init' in methods:
             init_parser = subparsers.add_parser(
                 'init', help='initialize the program with required arguments')
             init_parser.description = '''
@@ -601,56 +626,64 @@ class CommandLineInterface(object):
                 The descriptions are stored on disk in form of JSON files.
                 Note that in case of the existence of a previous submission,
                 job descriptions and log outputs will be overwritten
-                unless the "--backup" or "--display" argument is specified.
-                All outputs created by a previous submission will also be
-                removed!
+                unless the "--backup" option is used.
+                Also note that all outputs created by a previous submission
+                will also be removed unless the "--keep_output" option is
+                used.
             '''
             InitArgs().add_to_argparser(init_parser)
+            # TODO: add step-specific args
 
-        if 'run' in required_subparsers:
+        if 'run' in methods:
             run_parser = subparsers.add_parser(
-                'run', help='run an individual job')
+                'run',
+                help='run an individual job')
             run_parser.description = '''
                 Run an individual job.
             '''
             RunArgs().add_to_argparser(run_parser)
 
-        if 'submit' in required_subparsers:
+        if 'submit' in methods:
             submit_parser = subparsers.add_parser(
-                'submit', help='submit and monitor jobs')
+                'submit',
+                help='submit and monitor jobs')
             submit_parser.description = '''
                 Create jobs, submit them to the cluster, monitor their
                 processing and collect their outputs.
             '''
             SubmitArgs().add_to_argparser(submit_parser)
 
-        if 'collect' in required_subparsers:
+        if 'collect' in methods:
             collect_parser = subparsers.add_parser(
-                'collect', help='collect job output after submission')
+                'collect',
+                help='collect job output after submission')
             collect_parser.description = '''
                 Collect outputs of processed jobs and fuse them.
             '''
             CollectArgs().add_to_argparser(collect_parser)
 
-        if 'cleanup' in required_subparsers:
+        if 'cleanup' in methods:
             cleanup_parser = subparsers.add_parser(
-                'cleanup', help='clean-up output of previous runs')
+                'cleanup',
+                help='clean-up output of previous runs')
             cleanup_parser.description = '''
                 Remove files and folders generated upon previous submissions.
             '''
             CleanupArgs().add_to_argparser(cleanup_parser)
 
-        if 'log' in required_subparsers:
+        if 'log' in methods:
             log_parser = subparsers.add_parser(
-                'log', help='print standard output and error of a job')
+                'log',
+                help='show log message (standard output and error) of a job')
             log_parser.description = '''
                 Print the log output of a job to the console.
             '''
             LogArgs().add_to_argparser(log_parser)
 
-        if 'info' in required_subparsers:
+        if 'info' in methods:
             info_parser = subparsers.add_parser(
-                'info', help='print description of a job')
+                'info',
+                help='show description of a job')
             info_parser.description = '''
                 Print the description (parameter settings, input, output)
                 of a job to the console.

@@ -1,20 +1,18 @@
 '''
-Arguments of the command line program.
+Parse arguments from the command line.
 '''
 
-from . import __version__
 from .cli import Imextract
 from .args import ImextractInitArgs
 
 
 parser, subparsers = Imextract.get_parser_and_subparsers(
-    required_subparsers=['init', 'run', 'submit', 'cleanup', 'log', 'info'])
+    methods={'init', 'run', 'submit', 'cleanup', 'log', 'info'})
 
 parser.description = '''
     Extract images from heterogeneous microscopic image file formats
     and store each 2D plane in a separate PNG file.
 '''
-parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_extra_group = init_parser.add_argument_group(

@@ -1,8 +1,7 @@
 '''
-Arguments of the command line program.
+Parse arguments from the command line.
 '''
 
-from . import __version__
 from .cli import Align
 from .args import AlignInitArgs
 from .args import AlignApplyArgs
@@ -14,7 +13,6 @@ parser.description = '''
     Calculate shift in y, x direction between images, which were
     acquired in different "cycles", i.e. at different time points.
 '''
-parser.version = __version__
 
 init_parser = subparsers.choices['init']
 init_extra_group = init_parser.add_argument_group(

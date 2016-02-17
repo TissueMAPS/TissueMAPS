@@ -74,7 +74,7 @@ def configure_logging(level):
 
     Warning
     -------
-    Logging should only be configured only once at the main entry point of the
+    Logging should only be configured once at the main entry point of the
     application!
     '''
 
