@@ -12,7 +12,8 @@ Python was chosen as programming language because it represents a good trade-off
 - `scikit-image <http://scikit-image.org/docs/dev/auto_examples/>`_   
 - `simpleITK <http://www.simpleitk.org/>`_
 - `openCV <http://opencv.org/>`_
-- `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_  
+- `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
+- `vigra <http://ukoethe.github.io/vigra/doc/vigra/PythonBindingsTutorial.html>`_
 
 Jterator pipes data as `numpy <http://www.numpy.org/>`_ arrays and allows integration of code written in other high-level programming languages frequently used for image processing and statistical data analysis, such as   
 
@@ -69,12 +70,12 @@ Example of a *.pipe.yml* YAML descriptor file:
 
     project:
 
-        name: myJteratorProject
-        lib: path/to/myRepository
+        description: An example project that does nothing.
+        lib: ''
 
     images:
 
-        layers:
+        planes:
           - name: myExampleLayer1
             correct: true
           - name: myExampleLayer2
@@ -82,25 +83,25 @@ Example of a *.pipe.yml* YAML descriptor file:
 
     pipeline:
 
-        -   module: '{lib}/modules/myModule1.py'
+        -   module: myModule1.py
             handles: handles/myModule1.handles
             active: true
 
-        -   module: modules/myModule2.r
+        -   module: myModule2.r
             handles: handles/myModule2.handles
             active: true
 
-        -   module: '{lib}/modules/myModule3.m'
+        -   module: myModule3.m
             handles: handles/myModule3.handles
             active: true
 
-        -   module: modules/myModule4.jl
+        -   module: myModule4.jl
             handles: handles/myModule4.handles
             active: false
 
 
-Note that the working directory is by default the project folder. You can provide either a full path to modules and handles files or a path relative to the project folder. You can also make use of the ``lib`` variable within the pipeline descriptor file to specify the location where you keep your module files (python format string, note that in this case you need parenthesis for strings containing ``{}`` brackets!). Best practice is to have the ``handles`` folder in you project directory, because the specifications in the handles descriptor files are usually project specific (this is even required for the user interface).   
-The **images** section will create a list of jobs with filenames and id for each job that will be stored in a *.jobs.json* job descriptor file in JSON format.    
+Note that the working directory is by default the project folder. You can make use of the ``lib`` variable within the pipeline descriptor file to specify the path to the local copy of this repository, where the module files are located. Best practice is to have the ``handles`` folder in you project directory, because the specifications in the handles descriptor files are usually project specific (this is even required for the user interface).   
+The **images** section will create a list of jobs with filenames and id for each job that will be stored in a *.jobs.json* job descriptor file.    
 
 .. _modules:
 
@@ -143,8 +144,8 @@ Module examples
 
     def myInitialPythonModule(InputImage, **kwargs):
 
-        output = collections.namedtuple('Output', ['OutputImage'])
-        return output(InputImage)
+        Output = collections.namedtuple('Output', ['OutputImage'])
+        return Output(InputImage)
 
 
 .. Note::
