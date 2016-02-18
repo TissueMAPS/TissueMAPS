@@ -213,14 +213,6 @@ module.exports = function(grunt) {
             }
         },
 
-        uglify: {             
-            options: {
-                mangle: false,
-                compress: false
-            },
-        },
-
-
         /**
          * Compute a hash for each of the listed files and append it to the file's name.
          * Usemin will then replace the standard filename with the new one.
