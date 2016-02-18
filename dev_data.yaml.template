@@ -1,0 +1,24 @@
+records:
+    - class: User
+      args:
+          name: testuser
+          email: testuser@something.com
+          location: /some/location/on/disk
+          password: '123'
+    - class: User
+      args:
+          name: testuser2
+          email: testuser2@something.com
+          location: /some/location/on/disk
+          password: '123'
+    - class: Experiment
+      args:
+          name: 150316-30min-PBS
+          description: Very nice exp
+          owner:
+              class: User
+              lookup_props:
+                  name: testuser
+          location: /Users/robin/Dev/TissueMAPS/expdata/150316-30min-PBS
+          microscope_type: visiview
+          plate_format: 96
