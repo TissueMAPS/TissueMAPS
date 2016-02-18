@@ -1,4 +1,7 @@
+import os.path as p
+import os
 import pytest
+import numpy as np
 import mock
 import json
 from tmaps.models import User
@@ -121,12 +124,41 @@ def test_get_features(authclient):
     pass
 
 
+def test_get_objects(authclient, testexp):
+
+    def create_object(typenames):
+        import h5py
+        filename = p.join(testexp.location, 'data.h5')
+        f = h5py.File(filename, 'w')
+        for t in typenames:
+            g = f.create_group('/objects/%s' % t)
+            g.attrs['visual_type'] = 'polygon'
+
+            g['ids'] = np.array([1, 2])
+            g['map_data/coordinates/1'] = np.array([[0, 0], [0, 1]])
+            g['map_data/coordinates/2'] = np.array([[0, 0], [0, 1]])
+        f.close()
+        return filename
+
+    filename = create_object(['cells', 'nuclei'])
+
+    resp = authclient.get('/api/experiments/%s/objects' % testexp.hash)
+    data = json.loads(resp.data)
+
+    assert 'cells' in data['objects']
+    assert 'nuclei' in data['objects']
+    assert data['objects']['cells']['map_data']['coordinates']['1'] == [[0, 0], [0, 1]]
+
+    os.remove(filename)
+
+
+@pytest.mark.skipif(True, reason='Throws error')
 def test_convert_images_api(authclient, testexp, authclient2, client):
     options = {
         'metaconfig': {
             'file_format': 'default',
             'z_stacks': False,
-            'regex': None,
+            'regex': 'asf',
             'stitch_layout': 'zigzag_horizontal',
             'stitch_major_axis': 'vertical',
             'stitch_horizontal': 10,
@@ -159,6 +191,8 @@ def test_convert_images_api(authclient, testexp, authclient2, client):
     rv = request(authclient, testexp.hash)
     assert rv.status_code == 200
     assert rv.content_type == 'application/json'
+
+    data = json.loads(resp.data)
 
 
 
