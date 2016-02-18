@@ -28,7 +28,6 @@ class Experiment implements Serializable<Experiment> {
     description: string;
     // TODO: Move this property into a new extending class.
     channels: Channel[];
-    features: ng.IPromise<any>;
 
     constructor(opt: ExperimentArgs) {
 
@@ -40,13 +39,6 @@ class Experiment implements Serializable<Experiment> {
         this.description = opt.description;
 
         this.channels = opt.channels;
-
-        var featuresDef = $q.defer();
-        expService.getFeaturesForExperiment(this.id)
-        .then(function(feats) {
-            featuresDef.resolve(feats);
-        });
-        this.features = featuresDef.promise;
     }
 
     serialize(): ng.IPromise<SerializedExperiment> {

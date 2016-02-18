@@ -12,7 +12,7 @@ describe('In class Experiment', function() {
         $rootScope = _$rootScope_;
     }));
 
-    var expArgs, exp, cellsResponse;
+    var expArgs, exp;
 
     beforeEach(function() {
         expArgs = {
@@ -21,53 +21,7 @@ describe('In class Experiment', function() {
             description: 'bla',
             channels: []
         };
-
-        cellsResponse = {
-            1: [[0, 0], [0, 0], [0, 0], [0, 0]],
-            2: [[0, 0], [0, 0], [0, 0], [0, 0]],
-            3: [[0, 0], [0, 0], [0, 0], [0, 0]],
-        };
     });
-
-    beforeEach(function() {
-        $httpBackend.whenGET('/api/experiments/' + expArgs.id + '/cells')
-        .respond(200, cellsResponse);
-        $httpBackend.whenGET('/api/experiments/' + expArgs.id +
-            '/features?include=min,max')
-        .respond(200, {});
-    });
-
-    // describe('when creating the object', function() {
-    //     it('should fetch the cells from the server', function() {
-    //         $httpBackend.expectPOST('/api/experiments/' + expArgs.id + '/cells')
-    //         .respond(200, cellsResponse);
-
-    //         exp = new Experiment(expArgs);
-    //     });
-
-    //     it('should fetch the features', function() {
-    //         $httpBackend.expectGET('/api/experiments/' + expArgs.id +
-    //             '/features')
-    //         .respond(200, {});
-
-    //         exp = new Experiment(expArgs);
-    //     });
-
-    //     it('should create a map from cell ids to cells', function(done) {
-    //         exp = new Experiment(expArgs);
-    //         $httpBackend.flush();
-
-    //         expect(exp.cellMap).toBeDefined();
-    //         exp.cellMap.then(function(cellMap) {
-    //             expect(cellsResponse[1]).toBeDefined();
-    //             expect(cellsResponse[2]).toBeDefined();
-    //             expect(cellsResponse[3]).toBeDefined();
-    //             done();
-    //         });
-
-    //         $rootScope.$apply();
-    //     });
-    // });
 
     describe('the function serialize', function() {
         it('should save the experiment', function() {
