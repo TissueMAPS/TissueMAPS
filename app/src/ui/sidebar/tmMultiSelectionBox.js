@@ -70,7 +70,8 @@ angular.module('tmaps.ui')
         transclude: true,
         scope: {
             items: '=',
-            byName: '='
+            byName: '=?byName',
+            filterProperties: '=?filterProperties'
         },
         link: function(scope, elem, attrs, ctrl, transclude) {
 
@@ -116,7 +117,7 @@ angular.module('tmaps.ui')
         '<div class="tm-selectable-tabs" perfect-scrollbar>' +
             '<ul ui-sortable="{axis: \'y\'}"' +
                ' ng-model="selectionBox.items" >' +
-                '<li ng-repeat="item in selectionBox.items" ' +
+                '<li ng-repeat="item in selectionBox.items | filter:selectionBox.filterProperties"' +
                      'class="tm-selectable-tab-li" inject tm-rename-item>' +
                 '</li>' +
             '</ul>' +

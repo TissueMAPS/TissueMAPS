@@ -6,7 +6,6 @@ interface MapState {
 }
 
 interface SerializedViewport extends Serialized<Viewport> {
-    selectionHandler: SerializedSelectionHandler;
     // TODO: Create separate interface for serialized layer options.
     // The color object on channelLayerOptions isn't a full Color object
     // when restored.
@@ -28,9 +27,7 @@ class Viewport implements Serializable<Viewport> {
     map: ng.IPromise<ol.Map>;
 
     channelLayers: ChannelLayer[] = [];
-    objectLayers: ObjectLayer[] = [];
-
-    selectionHandler: CellSelectionHandler;
+    visualLayers: VisualLayer[] = [];
 
     private _mapDef: ng.IDeferred<ol.Map>;
     private _elementDef: ng.IDeferred<JQuery>;
@@ -40,92 +37,55 @@ class Viewport implements Serializable<Viewport> {
     private _$rootScope: ng.IRootScopeService;
 
     constructor() {
-
         this._$q = $injector.get<ng.IQService>('$q');
         this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
 
         this._mapDef = this._$q.defer();
         this.map = this._mapDef.promise;
 
+        // DEBUG
+        this.map.then((map) => {
+            window['map'] = map;
+        });
+
         this._elementDef = this._$q.defer();
         this.element = this._elementDef.promise;
 
         this._elementScopeDef = this._$q.defer();
         this.elementScope = this._elementScopeDef.promise;
-
-        // Helper class to manage the differently marker selections
-        this.selectionHandler = new CellSelectionHandler(this);
-
-        // var createDemoRectangles = function(startx, starty) {
-        //     var side = 100;
-        //     var nRect = 100;
-        //     var cells = [];
-        //     for (var i = startx; i <  side * nRect + startx; i += side) {
-        //         for (var j = starty; j < side * nRect + starty; j += side) {
-        //             var coords = [[
-        //                 [i, -j],
-        //                 [i + side, -j],
-        //                 [i + side, -j - side],
-        //                 [i, -j - side],
-        //                 [i, -j]
-        //             ]];
-        //             var c = new this.Cell('bla', {x: i, y: -j}, coords);
-        //             cells.push(c);
-        //         }
-        //     }
-        //     return cells;
-        // }
-
-        // var cellsA = createDemoRectangles(0, 0);
-        // var cellsB = createDemoRectangles(10000, 0);
-
-        // var objLayerA = this.objectLayerFactory.create('Cells A', {
-        //     objects: cellsA,
-        //     fillColor: 'rgba(0, 0, 255, 0.5)',
-        //     strokeColor: 'rgba(0, 0, 255, 1)'
-        // });
-        // var objLayerB = this.objectLayerFactory.create('Cells B', {
-        //     objects: cellsB,
-        //     fillColor: 'rgba(255, 0, 0, 0.5)',
-        //     strokeColor: 'rgba(255, 0, 0, 1)'
-        // });
-
-        // this.addObjectLayer(objLayerA);
-        // this.addObjectLayer(objLayerB);
-
     }
 
-    setSelectionHandler(csh: CellSelectionHandler) {
-        this.selectionHandler = csh;
-    }
+    addVisualLayer(visLayer: VisualLayer): ng.IPromise<VisualLayer> {
+        this.visualLayers.push(visLayer);
 
-    addObjectLayer(objLayer: ObjectLayer) {
-        this.objectLayers.push(objLayer);
-        this.map.then((map) => {
-            objLayer.addToMap(map);
+        // Workaround: Check where this visuallayer should be added.
+        // When a new outline selection is added, it shouldn't be added on top of
+        // already existing marker layers.
+        // TODO: This should be done through a more general mechanism.
+        insertAtPos;
+        if (visLayer.contentType === ContentType.mapObject) {
+            var firstMarkerLayer = _(this.visualLayers).find((l) => {
+                return l.contentType === ContentType.marker;
+            });
+            if (firstMarkerLayer !== undefined) {
+                var insertAtPos = this.visualLayers.indexOf(firstMarkerLayer);
+            }
+        }
+        return this.map.then((map) => {
+            visLayer.addToMap(map, insertAtPos);
+            return visLayer;
         });
     }
 
-    removeObjectLayer(objLayer: ObjectLayer) {
-        var idx = this.objectLayers.indexOf(objLayer)
+    removeVisualLayer(visLayer: VisualLayer) {
+        var idx = this.visualLayers.indexOf(visLayer)
         if (idx !== -1) {
             this.map.then((map) => {
-                objLayer.removeFromMap(map);
-                this.objectLayers.splice(idx, 1);
+                visLayer.removeFromMap(map);
+                this.visualLayers.splice(idx, 1);
             });
         }
     }
-
-    // TODO: Handle this via mapobjects.
-    // getCellAtPos(pos: MapPosition) {
-    //     return this.$http.get(
-    //         '/experiments/' + this.experiment.id +
-    //         '/cells?x=' + pos.x + '&y=' + pos.y
-    //     ).then((resp) => {
-    //         console.log(resp);
-    //         return resp.data['cell_id'];
-    //     });
-    // }
 
     addChannelLayer(channelLayer: ChannelLayer) {
         var alreadyHasLayers = this.channelLayers.length !== 0;
@@ -207,7 +167,7 @@ class Viewport implements Serializable<Viewport> {
 
     goToMapObject(obj: MapObject) {
         this.map.then((map) => {
-            var feat = obj.getOLFeature();
+            var feat = obj.getVisual().olFeature;
             map.getView().fit(<ol.geom.SimpleGeometry> feat.getGeometry(), map.getSize(), {
                 padding: [100, 100, 100, 100]
             });
@@ -228,16 +188,13 @@ class Viewport implements Serializable<Viewport> {
             var channelOptsPr = this._$q.all(_(this.channelLayers).map((l) => {
                 return l.serialize();
             }));
-            var selectionHandlerPr = this.selectionHandler.serialize();
             var bundledPromises: any = {
                 channels: channelOptsPr,
-                selHandler: selectionHandlerPr
             };
             return this._$q.all(bundledPromises).then((res: any) => {
                 return {
                     channelLayerOptions: res.channels,
-                    mapState: mapState,
-                    selectionHandler: res.selHandler
+                    mapState: mapState
                 };
             });
         });

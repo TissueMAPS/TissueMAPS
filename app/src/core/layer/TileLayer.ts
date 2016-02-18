@@ -48,14 +48,14 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
         this.imageSize = opt.imageSize;
 
         // Some default properties
-        var olLayerColor: number[];
+        var _olLayerColor: number[];
         if (opt.color !== undefined) {
-            olLayerColor = opt.color.toNormalizedRGBArray();
+            _olLayerColor = opt.color.toNormalizedRGBArray();
         } else {
-            olLayerColor = [1, 1, 1];
+            _olLayerColor = [1, 1, 1];
         }
 
-        var olLayerArgs: ModifiedOlTileLayerArgs = _.defaults(opt, {
+        var _olLayerArgs: ModifiedOlTileLayerArgs = _.defaults(opt, {
             brightness: 0,
             opacity: 1,
             min: 0,
@@ -65,20 +65,20 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
             drawWhitePixels: true,
             visible: true
         });
-        olLayerArgs.color = olLayerColor;
+        _olLayerArgs.color = _olLayerColor;
 
-        olLayerArgs.source = new ol.source.Zoomify({
+        _olLayerArgs.source = new ol.source.Zoomify({
             size: <ol.Size> this.imageSize,
             url: '/api' + pyramidPath,
             crossOrigin: 'anonymous'
         });
 
         // Create the underlying openlayers layer object
-        this.olLayer = <ModifiedOlTileLayer> new ol.layer.Tile(olLayerArgs);
+        this._olLayer = <ModifiedOlTileLayer> new ol.layer.Tile(_olLayerArgs);
     }
 
     get color(): Color {
-        var arrayCol: number[] = this.olLayer.getColor();
+        var arrayCol: number[] = this._olLayer.getColor();
         var col: Color = Color.fromNormalizedRGBArray(arrayCol);
         return col;
     }
@@ -86,66 +86,66 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
     set color(val: Color) {
         if (val !== null) {
             var newCol = val.toNormalizedRGBArray();
-            this.olLayer.setColor(newCol);
+            this._olLayer.setColor(newCol);
         } else {
-            this.olLayer.setColor(null);
+            this._olLayer.setColor(null);
         }
     }
 
     get opacity(): number {
-        return this.olLayer.getOpacity();
+        return this._olLayer.getOpacity();
     }
 
     set opacity(val: number) {
-        this.olLayer.setOpacity(val);
+        this._olLayer.setOpacity(val);
     }
 
     get min(): number {
-        return this.olLayer.getMin();
+        return this._olLayer.getMin();
     }
 
     set min(val: number) {
-        this.olLayer.setMin(val);
+        this._olLayer.setMin(val);
     }
 
     get max(): number {
-        return this.olLayer.getMax();
+        return this._olLayer.getMax();
     }
 
     set max(val: number) {
-        this.olLayer.setMax(val);
+        this._olLayer.setMax(val);
     }
 
     get brightness(): number {
-        return this.olLayer.getBrightness();
+        return this._olLayer.getBrightness();
     }
 
     set brightness(val: number) {
-        this.olLayer.setBrightness(val);
+        this._olLayer.setBrightness(val);
     }
 
     get additiveBlend(): boolean {
-        return this.olLayer.getAdditiveBlend();
+        return this._olLayer.getAdditiveBlend();
     }
 
     set additiveBlend(val: boolean) {
-        this.olLayer.setAdditiveBlend(val);
+        this._olLayer.setAdditiveBlend(val);
     }
 
     get drawBlackPixels(): boolean {
-        return this.olLayer.getDrawBlackPixels();
+        return this._olLayer.getDrawBlackPixels();
     }
 
     set drawBlackPixels(val: boolean) {
-        this.olLayer.setDrawBlackPixels(val);
+        this._olLayer.setDrawBlackPixels(val);
     }
 
     get drawWhitePixels(): boolean {
-        return this.olLayer.getDrawWhitePixels();
+        return this._olLayer.getDrawWhitePixels();
     }
 
     set drawWhitePixels(val: boolean) {
-        this.olLayer.setDrawWhitePixels(val);
+        this._olLayer.setDrawWhitePixels(val);
     }
 
     serialize() {

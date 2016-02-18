@@ -205,6 +205,13 @@ module.exports = function(grunt) {
                 ]
             }
         },
+        uglify: {
+            options: {
+                sourceMap: true,
+                compress: true,
+                mangle: false,
+            }
+        },
 
         uglify: {             
             options: {
@@ -413,6 +420,7 @@ module.exports = function(grunt) {
         karma: {
             options: {
                 frameworks: ['jasmine'],
+                logLevel: 'INFO',
                 browsers: [
                     'PhantomJS'
                     // 'Chrome'
@@ -427,7 +435,7 @@ module.exports = function(grunt) {
                     'app/assets/libs/bower_components/underscore/underscore.js',
 
                     // 'app/assets/libs/ol3/build/ol.js',
-                    'app/assets/libs/ol.js',
+                    'app/assets/libs/ol-debug.js',
 
                     'app/assets/libs/bower_components/angular/angular.js',
                     'app/assets/libs/bower_components/angular-mocks/angular-mocks.js',
@@ -460,7 +468,9 @@ module.exports = function(grunt) {
             },
             unit: {
                 singleRun: false,
+                captureConsole: true,
                 reporters: 'mocha',
+                logLevel: 'INFO',
                 files: [
                     { src: ['test/unit/**/*.js'] }
                 ]

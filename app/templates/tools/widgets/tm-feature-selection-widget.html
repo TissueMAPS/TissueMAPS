@@ -3,47 +3,27 @@
   <div class="panel-body">
     <div class="input-group">
       <div class="input-group-addon"><i class="fa fa-search"></i></div>
-      <input type="text" class="form-control" placeholder="Feature name" ng-model="featureQuery.name">
+      <input type="text" class="form-control" placeholder="Feature name" ng-model="featureWidget.featureQuery.name">
     </div>
 
     <div class="list-container" perfect-scrollbar>
       <form>
         <ul class="list-group">
           <li
-            ng-controller="FeatureTabCtrl"
-            ng-repeat="feat in ctrl.features | filter:featureQuery"
-            class="list-group-item" ng-class="{selected: feat.selected}"
-            ng-click="ctrl.toggleSelection(feat)">
+            ng-repeat="tab in featureWidget.featureTabsForChosenType | filter:featureWidget.featureQuery"
+            class="list-group-item" ng-class="{selected: tab.selected}"
+            ng-click="featureWidget.toggleFeatureSelection(tab)">
 
-            {{ feat.name }}
-
-            <div class="slider-container" ng-show="ctrl.showRange && feat.selected" tm-stop-click>
-              <span class="range-indicator range-indicator-left"
-                ng-bind="(feat.normRange[0] / feat.fac).toExponential(2)">
-              </span>
-
-              <div ui-slider="{range: true}"
-                min="{{normRangeMin}}" max="{{normRangeMax}}"
-                use-decimals
-                ng-model="feat.normRange">
-              </div>
-
-              <span
-                class="range-indicator range-indicator-right"
-                ng-bind="(feat.normRange[1] / feat.fac).toExponential(2)">
-              </span>
-
-            </div>
+            {{ tab.name }}
 
           </li>
         </ul>
       </form>
     </div>
 
-    <div class="input-group"
-      ng-show="ctrl.isMultiSelection">
-      <button ng-click="ctrl.setAll(true)" class="btn btn-default">Select all</button>
-      <button ng-click="ctrl.setAll(false)" class="btn btn-default">Clear</button>
+    <div class="input-group">
+      <button ng-click="featureWidget.setAll(true)" class="btn btn-default">Select all</button>
+      <button ng-click="featureWidget.setAll(false)" class="btn btn-default">Clear</button>
     </div>
 
   </div>

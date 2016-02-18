@@ -15,7 +15,7 @@
     outline: 0;
 }
 
-.channel-section, .selection-section, .object-section {
+.channel-section, .selection-section, .object-section, .result-section {
     .tm-selectable-tab-content {
         white-space: nowrap;
         input[type=text] {
@@ -91,11 +91,11 @@
     }
 }
 
-
 /******************************************************************************
  *                             SELECTION SETTINGS                             *
  ******************************************************************************/
 @activate-button-height: @selection-settings-li-height - 4px;
+@selection-controls-height: 50px;
 
 .selection-section {
     height: @selection-section-height;
@@ -103,6 +103,33 @@
     // The inner div
     .selection-settings {
         height: 100%;
+    }
+
+    select {
+        background-color: darken(@panel-bg-color, 10%);
+        border: 1px solid @panel-fg;
+    }
+
+    // The div holding the selection controls for the active map object etc.
+    .selection-controls {
+        height: @selection-controls-height;
+    }
+
+    button.marker-mode-switch {
+        // TODO: Use standard tmaps style
+        border: 1px solid black;
+        width: 30px;
+        &.active {
+            background: orange;
+            i {
+                color: black;
+            }
+        }
+    }
+
+    // Wrapper div around the selection tabs
+    .selection-container {
+        height: calc(~'100% - @{selection-controls-height}');
     }
 
     .tm-selectable-tabs {
@@ -160,16 +187,10 @@
 
 
 /******************************************************************************
- *                              OBJECT SETTNGS                               *
+ *                         VISUAL LAYER SETTNGS                               *
  ******************************************************************************/
-.object-section {
-
-    height: @object-section-height;
-
-    .object-settings {
-        height: 100%;
-    }
-
+.visuallayer-settings {
+    height: 100%;
     .tm-selectable-tabs {
         li {
             height: @object-settings-li-height;
@@ -177,3 +198,5 @@
         }
     }
 }
+.object-section { height: @object-section-height; }
+.result-section { height: @result-section-height; }

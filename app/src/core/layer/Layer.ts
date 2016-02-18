@@ -2,34 +2,49 @@ interface Layer {
     name: string;
     addToMap(map: ol.Map);
     removeFromMap(map: ol.Map);
+
+    // Change to this:
+    // addToViewport(vp: Viewport);
+    // removeFromViewport(vp: Viewport);
+
     visible: boolean;
 }
 
 class BaseLayer<LayerT extends ol.layer.Layer> implements Layer {
-    protected olLayer: LayerT;
+    protected _olLayer: LayerT;
 
     constructor(public name: string) {}
 
     get visible(): boolean {
-        return this.olLayer.getVisible();
+        return this._olLayer.getVisible();
     }
 
     set visible(val: boolean) {
-        this.olLayer.setVisible(val);
+        this._olLayer.setVisible(val);
     }
 
     /*
      * Draw the layer on the given openlayers map object
+     *
+     * Adding layer on top of all other layers is achieved by leaving the position
+     * argument undefined. If the requested position is 0, the layer will
+     * be added at the bottom.
      */
-    addToMap(olMap: ol.Map) {
-        olMap.addLayer(this.olLayer);
+    addToMap(olMap: ol.Map, position?: number) {
+        // olMap.addLayer(this._olLayer);
+        var coll = olMap.getLayerGroup().getLayers();
+        if (position !== undefined) {
+            coll.insertAt(position, this._olLayer)
+        } else {
+            coll.push(this._olLayer);
+        }
     }
 
     /*
      * Remove the layer from the given openlayers map object
      */
     removeFromMap(olMap: ol.Map) {
-        olMap.removeLayer(this.olLayer);
+        olMap.removeLayer(this._olLayer);
     }
 }
 

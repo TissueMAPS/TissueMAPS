@@ -7,14 +7,34 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     name: string;
     experiment: Experiment;
     viewport: Viewport;
+
+    mapObjectManager: MapObjectManager;
+    featureManager: FeatureManager;
+
+    mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
 
     constructor(experiment: Experiment) {
+        console.log('Creating AppInstance for Experiment with ID: ', experiment.id);
+        console.log('This Experiment can be added automatically by visiting:\n',
+                    'http://localhost:8002/#/viewport?loadex=' + experiment.id);
         this.experiment = experiment;
         this.name = experiment.name;
         this.viewport = new Viewport();
         this.viewport.injectIntoDocumentAndAttach(this);
         this.tools = $injector.get<ToolLoader>('toolLoader').loadTools(this);
+
+        this.featureManager = new FeatureManager(experiment);
+        this.mapObjectManager = new MapObjectManager(experiment);
+
+        this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this.viewport, this.mapObjectManager);
+        this.mapObjectManager.mapObjectTypes.then((types) => {
+            _(types).each((t) => {
+                this.mapObjectSelectionHandler.addMapObjectType(t);
+                // Add an initial selection for the newly added type
+                this.mapObjectSelectionHandler.addNewSelection(t);
+            });
+        });
     }
 
     setActive() {
@@ -44,11 +64,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             var layer = new ChannelLayer(opt);
             this.viewport.addChannelLayer(layer);
         });
-
-        this.experiment.cells.then((cells) => {
-            this.viewport.selectionHandler.addCellOutlines(cells);
-        });
-
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {

@@ -1,6 +1,8 @@
 {
     "loadClasses": [
         "FeatureStatsTool",
-        "SVMTool"
+        "SVMTool",
+        "ClusterTool",
+        "ScatterPlotTool"
     ]
 }

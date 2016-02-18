@@ -1,43 +1,60 @@
 <div class="selection-settings">
 
-  <tm-multi-selection-box items="selCtrl.selections" by-name="'sel'">
-    <tm-selectable-tabs>
-      <tm-selectable-tab>
-        <tm-selectable-tab-content>
+  <div class="selection-controls">
+    <button ng-click="selCtrl.toggleMarkerSelectionMode()"
+            ng-class="{'active': selCtrl.selHandler.isMarkerSelectionModeActive()}"
+            class="marker-mode-switch">
+      <i class="fa fa-map-marker"></i>
+    </button>
+    <label>Object type: </label>
+    <select ng-model="selCtrl.selHandler.activeMapObjectType">
+      <option value="{{::t}}"
+      ng-repeat="t in selCtrl.selHandler.supportedMapObjectTypes">
+      {{::t}}
+      </option>
+    </select>
+  </div>
 
-          <span class="selection-flag inline-layer-control">
-            <i class="fa fa-flag" ng-style="{'color': sel.color.toRGBString()}"></i>
-          </span>
+  <div class="selection-container">
+    <tm-multi-selection-box items="selCtrl.selHandler.selectionsForActiveType" by-name="'sel'">
+      <tm-selectable-tabs>
+        <tm-selectable-tab>
+          <tm-selectable-tab-content>
 
-          <div class="activate-button inline-layer-control"
-                ng-click="selCtrl.toggleActiveSelection(sel.id)"
-                ng-class="{'currently-active': selCtrl.isActiveSelection(sel.id)}"
-                tm-stop-click>
-                <span>ACTIVATE</span>
-          </div>
+            <span class="selection-flag inline-layer-control">
+              <i class="fa fa-flag" ng-style="{'color': sel.color.toRGBString()}"></i>
+            </span>
 
-          <input type="text" ng-model="sel.name" tm-stop-click>
+            <div class="activate-button inline-layer-control"
+              ng-click="selCtrl.toggleActiveSelection(sel)"
+              ng-class="{'currently-active': selCtrl.isActiveSelection(sel)}"
+              tm-stop-click>
+              <span>ACTIVATE</span>
+            </div>
 
-        </tm-selectable-tab-content>
-      </tm-selectable-tab>
-    </tm-selectable-tabs>
+            <input type="text" ng-model="sel.name" tm-stop-click>
 
-    <tm-multi-selection-controls ng-controller="SelectionControlsCtrl as controls">
-      <button ng-click="selCtrl.addSelection()">
-        <i class="fa fa-plus"></i>
-      </button>
+          </tm-selectable-tab-content>
+        </tm-selectable-tab>
+      </tm-selectable-tabs>
 
-      <button ng-click="controls.deleteSelectedSelections()"
-              ng-show="selectionBox.hasSelectedItems()">
-        <i class="fa fa-trash"></i>
-      </button>
+      <tm-multi-selection-controls ng-controller="SelectionControlsCtrl as controls">
+        <button ng-click="selCtrl.addSelection()">
+          <i class="fa fa-plus"></i>
+        </button>
 
-      <button ng-click="controls.clearSelectedSelections()"
-              ng-show="selectionBox.hasSelectedItems()">
-        <i class="fa fa-circle-thin"></i>
-      </button>
-    </tm-multi-selection-controls>
+        <button ng-click="controls.deleteSelectedSelections()"
+          ng-show="selectionBox.hasSelectedItems()">
+          <i class="fa fa-trash"></i>
+        </button>
 
-  </tm-multi-selection-box>
+        <button ng-click="controls.clearSelectedSelections()"
+          ng-show="selectionBox.hasSelectedItems()">
+          <i class="fa fa-circle-thin"></i>
+        </button>
+      </tm-multi-selection-controls>
+
+    </tm-multi-selection-box>
+  </div>
 
 </div>
