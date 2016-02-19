@@ -98,7 +98,8 @@ def get_feature_data(experiment_id, object_type, feature_name):
 
     {
         "name": str,
-        "data": List[number]
+        "values": List[number],
+        "ids": List[number]
     }
 
     """
@@ -116,13 +117,16 @@ def get_feature_data(experiment_id, object_type, feature_name):
             return RESOURCE_NOT_FOUND_RESPONSE
         else:
             feature_data = data['/objects/%s/features' % object_type]
+            nonborder_ids = data['/objects/%s/ids' % object_type][()]
             feature_names = feature_data.keys()
             if not feature_name in set(feature_names):
                 return RESOURCE_NOT_FOUND_RESPONSE
             else:
-                values = feature_data[feature_name][()].tolist()
+                values_mat = feature_data[feature_name][()]
+                values_mat = values_mat[nonborder_ids, ]
                 response['name'] = feature_name
-                response['data'] = values
+                response['values'] = values_mat.tolist()
+                response['ids'] = nonborder_ids.tolist()
 
     return jsonify(response)
 
