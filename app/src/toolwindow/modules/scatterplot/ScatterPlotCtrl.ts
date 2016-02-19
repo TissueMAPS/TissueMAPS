@@ -9,7 +9,7 @@ class ScatterPlotCtrl {
 
     constructor($scope, tmapsProxy) {
         this._tool = tmapsProxy.tool;
-        var mapObjectManager = tmapsProxy.appInstance.mapObjectManager;
+        var mapObjectRegistry = tmapsProxy.appInstance.mapObjectRegistry;
         var viewport = tmapsProxy.appInstance.viewport;
         // CHART OPTIONS
         this.highchartConfig = {
@@ -27,7 +27,7 @@ class ScatterPlotCtrl {
                                 click: (e) => {
                                     var type = $scope.toolOptions.chosenMapObjectType;
                                     var id = e.point.index;
-                                    mapObjectManager.getMapObjectsById(type, [id]).then((objs) => {
+                                    mapObjectRegistry.getMapObjectsById(type, [id]).then((objs) => {
                                         viewport.goToMapObject(objs[0]);
                                     });
                                 }
