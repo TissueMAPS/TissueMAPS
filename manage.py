@@ -31,7 +31,16 @@ manager.add_command('runserver', Server(port=5002))
 @manager.command
 def shell():
     """Start a REPL that can be used to interact with the models
-    of the application."""
+    of the application.
+
+    Available in the namespace:
+
+    - Model classes: models.User, models.Experiment, etc.
+    - Application: app
+    - Request context: ctx
+    - SQLAlchemy database: db
+
+    """
     app = create_app(cfg)
     from werkzeug import script
     def make_shell():
@@ -89,6 +98,8 @@ def insert_data(yaml_file):
                 constr_args = rec['args']
                 model_constr = globals()[class_name]
 
+                # Check if there are objects that have to be looked up in the 
+                # database before creating new database records.
                 for k, v in constr_args.items():
                     if type(v) is dict:
                         obj_class = v['class']
@@ -99,10 +110,9 @@ def insert_data(yaml_file):
 
                 obj = model_constr(**constr_args)
 
-                print 'Inserting new object of class "%s" with properties:' % class_name
+                print '* Inserting new object of class "%s" with properties:' % class_name
                 for k, v in constr_args.items():
                     print '\t%s: %s' % (k , str(v))
-                print
 
                 db.session.add(obj)
                 db.session.commit()
