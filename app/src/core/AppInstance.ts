@@ -8,6 +8,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     experiment: Experiment;
     viewport: Viewport;
 
+    // TODO: These properties might be better located on the Experiment class itself
     mapObjectRegistry: MapObjectRegistry;
     featureManager: FeatureManager;
 
