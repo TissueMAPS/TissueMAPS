@@ -4,7 +4,7 @@ import yaml
 from subprocess import call
 
 import flask
-from flask.ext.script import Manager
+from flask.ext.script import Manager, Server
 from flask.ext.migrate import Migrate, MigrateCommand
 
 from tmaps.appfactory import create_app
@@ -25,10 +25,11 @@ db_manager = Manager(lambda: create_app(cfg))
 migrate = Migrate(lambda: create_app(cfg), db)
 # Add a new command to expose options provided by Alembic
 db_manager.add_command('migrate', MigrateCommand)
+manager.add_command('runserver', Server(port=5002))
 
 
 @manager.command
-def repl():
+def shell():
     """Start a REPL that can be used to interact with the models
     of the application."""
     app = create_app(cfg)
