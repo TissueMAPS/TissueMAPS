@@ -1042,7 +1042,6 @@ class SegmentedObjectLayer(Layer):
             outline_coord_path = '%s/map_data/outlines/coordinates' % obj_path
             centroid_coord_path = '%s/map_data/centroids/coordinates' % obj_path
             global_obj_id = 0
-            ids = list()
             for j, f in enumerate(data_files):
                 with DatasetReader(f) as data:
 
@@ -1105,17 +1104,13 @@ class SegmentedObjectLayer(Layer):
                                  j, y_offset, x_offset)
 
                     segm_img = data.read('%s/image' % segm_path)
+                    segm_img[:, 0] = 0
+                    segm_img[:, -1] = 0
+                    segm_img[0, :] = 0
+                    segm_img[-1, :] = 0
                     centroids = data.read('%s/centroids' % segm_path)
                     object_ids = np.unique(segm_img[segm_img > 0])
                     for i, obj_id in enumerate(object_ids):
-                        # Remove border objects, because we don't want to 
-                        # display them. TODO: Make this optional.
-                        if is_border[i]:
-                            # We still account for the border objects,
-                            # such that the object id can be used as an index
-                            # for the features datasets. 
-                            global_obj_id += 1
-                            continue
                         # Reduce the number of outlines points to reduce the
                         # data that we have to send to the client
                         mask = segm_img == obj_id
@@ -1124,14 +1119,20 @@ class SegmentedObjectLayer(Layer):
                         if len(contours) > 1:
                             # TODO: "find_contours" may sometimes identify
                             # contours for more than one object.
-                            logger.warn('more than one contour identified for '
-                                        'object # %d', global_obj_id)
+                            logger.warn('%d contours identified for object #%d',
+                                        len(contours), global_obj_id)
+                        if len(contours) == 0:
+                            # TODO: To find closed contours of border objects
+                            # we set the values of outer pixel rows/columns
+                            # to zero (see above). Small objects may get lost!
+                            logger.error('no contour identified for object #%d',
+                                         global_obj_id)
                         contour = contours[0]
                         poly = approximate_polygon(contour, tolerance).astype(int)
 
                         # Add offset to coordinates to account for position of
                         # the object within the total well plate overview
-                        # NOTE: Openlayers wants the x coordinate in the first
+                        # Openlayers wants the x coordinate in the first
                         # column and the inverted y coordinate in the second.
                         outline_coordinates = pd.DataFrame({
                             'y': -1 * (poly[:, 0] + y_offset),
@@ -1147,7 +1148,6 @@ class SegmentedObjectLayer(Layer):
                         c_path = '%s/%d' % (centroid_coord_path, global_obj_id)
                         store.write(c_path, centroid_coordinates)
                         store.set_attribute(c_path, 'columns', ['x', 'y'])
-                        ids.append(global_obj_id)
 
                         # Store the position of the corresponding image
                         # within the well
@@ -1163,7 +1163,7 @@ class SegmentedObjectLayer(Layer):
                     store.write('%s/image' % job_path, segm_img)
                     # The "is_border" vector indicates whether the parent (!)
                     # object lies at the border of the image.
-                    store.append('%s/is_border' % segm_path, is_border)
+                    store.append('%s/is_border' % obj_path, is_border)
 
                     # Store the name of the corresponding plate and well
                     plate_names = np.repeat(plate_name, len(object_ids))
@@ -1172,7 +1172,7 @@ class SegmentedObjectLayer(Layer):
                     store.append('%s/metadata/well_name' % obj_path, well_names)
 
             # Store objects separately as a sorted array of integers
-            store.write('%s/ids' % obj_path, ids)
+            store.write('%s/ids' % obj_path, range(global_obj_id))
 
 
 class WellObjectLayer(Layer):
