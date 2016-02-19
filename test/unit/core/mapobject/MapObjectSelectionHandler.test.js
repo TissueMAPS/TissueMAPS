@@ -13,20 +13,20 @@ describe('In MapObjectSelectionHandler', function() {
     var sh, vp;
     var sel1, sel2;
     var cell;
-    var mapObjectManager;
+    var mapObjectRegistry;
 
     beforeEach(function() {
         vp = {
             map: jasmine.createSpyObj('map', ['then', 'on']),
             addVisualLayer: jasmine.createSpy('addVisualLayer')
         };
-        mapObjectManager = {
+        mapObjectRegistry = {
             getMapObjectsForType: jasmine.createSpy('getMapObjectsForType').and.returnValue(
                 $q.when()
             )
         };
 
-        sh = new MapObjectSelectionHandler(vp, mapObjectManager);
+        sh = new MapObjectSelectionHandler(vp, mapObjectRegistry);
 
         sh.addMapObjectType('cell');
         sh.addMapObjectType('nucleus');
@@ -47,7 +47,7 @@ describe('In MapObjectSelectionHandler', function() {
         });
 
         it('should initially be null and lead to 0 selections', function() {
-            var sh2 = new MapObjectSelectionHandler(vp, mapObjectManager);
+            var sh2 = new MapObjectSelectionHandler(vp, mapObjectRegistry);
             expect(sh2.selectionsForActiveType).toEqual([]);
         });
     });
@@ -238,7 +238,7 @@ describe('In MapObjectSelectionHandler', function() {
         var sh3;
 
         beforeEach(function() {
-            sh3 = new MapObjectSelectionHandler(vp, mapObjectManager);
+            sh3 = new MapObjectSelectionHandler(vp, mapObjectRegistry);
             sh3.addMapObjectType('cell');
         });
         
