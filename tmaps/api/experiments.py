@@ -479,32 +479,36 @@ def get_objects(experiment_id):
 
     objects = {}
 
-    with ex.dataset as data:
-        types = data['/objects'].keys()
+    if ex.has_dataset:
+        with ex.dataset as data:
+            types = data['/objects'].keys()
 
-        for t in types:
-            objects[t] = {}
+            for t in types:
+                objects[t] = {}
 
-            object_data = data['/objects/%s' % t]
+                object_data = data['/objects/%s' % t]
 
-            # TODO: Fix this
-            # objects[t]['visual_type'] = object_data.attrs['visual_type']
-            objects[t]['visual_type'] = 'polygon'
-            objects[t]['ids'] = object_data['ids'][()].tolist()
-            objects[t]['map_data'] = {}
+                # TODO: Fix this
+                # objects[t]['visual_type'] = object_data.attrs['visual_type']
+                objects[t]['visual_type'] = 'polygon'
+                objects[t]['ids'] = object_data['ids'][()].tolist()
+                objects[t]['map_data'] = {}
+                objects[t]['map_data']['coordinates'] = {}
 
-            # TODO: This should be done in a generic fashion.
-            # The whole content of map_data should be added to objects[t]['map_data'],
-            # regardless of its actual structure. The content should be converted
-            # to dicts and lists, s.t. they can be jsonified.
-            objects[t]['map_data']['coordinates'] = {}
-            for id in object_data['map_data/coordinates']:
-                objects[t]['map_data']['coordinates'][int(id)] = \
-                    object_data['map_data/coordinates/%s' % id][()].tolist()
+                if 'outlines' in object_data['map_data']:
+                    # TODO: This should be done in a generic fashion.
+                    # The whole content of map_data should be added to objects[t]['map_data'],
+                    # regardless of its actual structure. The content should be converted
+                    # to dicts and lists, s.t. they can be jsonified.
+                    for id in object_data['map_data/outlines/coordinates']:
+                        objects[t]['map_data']['coordinates'][int(id)] = \
+                            object_data['map_data/outlines/coordinates/%s' % id][()].tolist()
 
-    return jsonify({
-        'objects': objects
-    })
+        return jsonify({
+            'objects': objects
+        })
+    else:
+        return RESOURCE_NOT_FOUND_RESPONSE
 
 
 @api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])
