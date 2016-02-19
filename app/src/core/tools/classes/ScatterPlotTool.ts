@@ -1,3 +1,9 @@
+interface FeatureData {
+    name: string;
+    values: number[];
+    ids: number[];
+}
+
 class ScatterPlotTool extends Tool {
     constructor(appInstance: AppInstance) {
         super(
@@ -16,12 +22,12 @@ class ScatterPlotTool extends Tool {
         console.log(res);
     }
 
-    fetchFeatureData(objectType: MapObjectType, featureName: string) {
+    fetchFeatureData(objectType: MapObjectType, featureName: string): ng.IPromise<FeatureData> {
         var $http = $injector.get<ng.IHttpService>('$http');
         return $http.get('/api/experiments/' + this.appInstance.experiment.id +
                   '/features/' + objectType + '/' + featureName)
         .then((resp: any) => {
-            return resp.data.data;
+            return resp.data;
         });
     }
 }

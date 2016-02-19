@@ -21,12 +21,13 @@ class ScatterPlotCtrl {
                 },
                 plotOptions: {
                     series:  {
+                        turboThreshold: 10000,
                         cursor: 'pointer',
                         point: {
                             events: {
                                 click: (e) => {
                                     var type = $scope.toolOptions.chosenMapObjectType;
-                                    var id = e.point.index;
+                                    var id = e.point.id;
                                     mapObjectRegistry.getMapObjectsById(type, [id]).then((objs) => {
                                         viewport.goToMapObject(objs[0]);
                                     });
@@ -64,12 +65,7 @@ class ScatterPlotCtrl {
 
         $scope.$on('featureSelected', (evt, feat, widget) => {
             this._tool.fetchFeatureData(feat.mapObjectType, feat.name)
-            .then((data) => {
-                var newData = {
-                    name: feat.name,
-                    data: data
-                };
-
+            .then((newData: FeatureData) => {
                 if (widget.name === 'featureWidgetX') {
                     this._xData = newData;
                 }
@@ -77,13 +73,16 @@ class ScatterPlotCtrl {
                     this._yData = newData;
                 }
                 if (this._xData !== undefined && this._yData !== undefined) {
-                    var nDataPoints = data.length;
+                    var nDataPoints = newData.values.length;
                     var i;
                     var seriesData = [];
                     for (i = 0; i < nDataPoints; i++) {
-                        seriesData.push(
-                            [this._xData.data[i], this._yData.data[i]]
-                        );
+                        seriesData.push({
+                            id: newData.ids[i],
+                            name: newData.ids[i],
+                            x: this._xData.values[i],
+                            y: this._yData.values[i]
+                        });
                     }
                     this.highchartConfig.series = [
                         {
