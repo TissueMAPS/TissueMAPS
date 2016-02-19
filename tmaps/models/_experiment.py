@@ -141,6 +141,10 @@ class Experiment(HashIdModel, CRUDMixin):
         return p.join(self.location, 'data.h5')
 
     @property
+    def has_dataset(self):
+        return p.exists(self.dataset_path)
+
+    @property
     def plates_location(self):
         return _plates_location(self)
 
