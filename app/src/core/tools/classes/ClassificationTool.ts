@@ -15,7 +15,7 @@ interface ClassificationResult extends ToolResult {
 abstract class ClassificationTool extends Tool {
     handleResult(res: ClassificationResult) {
         console.log(res);
-        this.appInstance.mapObjectManager
+        this.appInstance.mapObjectRegistry
         .getMapObjectsById(res.object_type, res.object_ids)
         .then((objs) => {
             var visuals = objs.map((o) => {

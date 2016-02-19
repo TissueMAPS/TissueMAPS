@@ -9,7 +9,7 @@ interface MapObjectsServerResponse {
     objects: { [type: string]: MapObjectTypeResponse };
 }
 
-class MapObjectManager {
+class MapObjectRegistry {
 
     mapObjectsByType: ng.IPromise<MapObjectMap>;
     experiment: Experiment;

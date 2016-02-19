@@ -8,7 +8,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     experiment: Experiment;
     viewport: Viewport;
 
-    mapObjectManager: MapObjectManager;
+    mapObjectRegistry: MapObjectRegistry;
     featureManager: FeatureManager;
 
     mapObjectSelectionHandler: MapObjectSelectionHandler;
@@ -25,10 +25,10 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.tools = $injector.get<ToolLoader>('toolLoader').loadTools(this);
 
         this.featureManager = new FeatureManager(experiment);
-        this.mapObjectManager = new MapObjectManager(experiment);
+        this.mapObjectRegistry = new MapObjectRegistry(experiment);
 
-        this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this.viewport, this.mapObjectManager);
-        this.mapObjectManager.mapObjectTypes.then((types) => {
+        this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this.viewport, this.mapObjectRegistry);
+        this.mapObjectRegistry.mapObjectTypes.then((types) => {
             _(types).each((t) => {
                 this.mapObjectSelectionHandler.addMapObjectType(t);
                 // Add an initial selection for the newly added type

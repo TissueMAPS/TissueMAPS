@@ -1,6 +1,6 @@
 var $injector;
 
-describe('In MapObjectManager', function() {
+describe('In MapObjectRegistry', function() {
     beforeEach(module('tmaps.core'));
 
     var $httpBackend, $rootScope, $q;
@@ -38,7 +38,7 @@ describe('In MapObjectManager', function() {
     
     beforeEach(function() {
         fakeExp = {id: 'somehash'};
-        m = new MapObjectManager(fakeExp);
+        m = new MapObjectRegistry(fakeExp);
         $rootScope.$apply();
         $httpBackend.flush();
     });

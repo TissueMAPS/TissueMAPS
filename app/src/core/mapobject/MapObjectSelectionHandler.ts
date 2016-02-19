@@ -7,7 +7,7 @@ interface SerializedSelectionHandler extends Serialized<MapObjectSelectionHandle
 
 class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandler> {
 
-    mapObjectManager: MapObjectManager;
+    mapObjectRegistry: MapObjectRegistry;
     viewport: Viewport;
 
     /**
@@ -26,9 +26,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _activeSelection: MapObjectSelection = null;
     private _outlineLayers: {[objectType: string]: VisualLayer;} = {};
 
-    constructor(viewport: Viewport, mapObjectManager: MapObjectManager) {
+    constructor(viewport: Viewport, mapObjectRegistry: MapObjectRegistry) {
 
-        this.mapObjectManager = mapObjectManager;
+        this.mapObjectRegistry = mapObjectRegistry;
         this.viewport = viewport;
 
         // Register click listeners on the map.
@@ -122,7 +122,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             this.activeMapObjectType = t;
         }
         // Get all objects for this type and add an outline layer to the viewport.
-        this.mapObjectManager.getMapObjectsForType(t)
+        this.mapObjectRegistry.getMapObjectsForType(t)
         .then((objs) => {
             var visuals = _(objs).map((o) => {
                 return o.getVisual({

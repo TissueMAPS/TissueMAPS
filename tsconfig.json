@@ -45,7 +45,7 @@
         "app/src/core/mapobject/MapObjectSelection.ts",
         "app/src/core/mapobject/MapObjectSelectionHandler.ts",
         "app/src/core/mapobject/MapObjectResponseInterpreter.ts",
-        "app/src/core/mapobject/MapObjectManager.ts",
+        "app/src/core/mapobject/MapObjectRegistry.ts",
         "app/src/core/mapobject/SelectionLayer.ts",
 
         "app/src/core/serialize/typedefs.ts",
