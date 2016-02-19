@@ -98,3 +98,14 @@ def test_experiment_deletion(testuser):
     loc = e.location
     e.delete()
     assert not p.exists(loc)
+
+
+def test_dataset_property(exp):
+    import h5py
+    f = h5py.File(p.join(exp.location, 'data.h5'), 'w')
+    f.create_group('/objects/cells')
+    f.create_group('/objects/nuclei')
+    f.close()
+
+    with exp.dataset as d:
+        assert set(d['/objects'].keys()) == {'cells', 'nuclei'}

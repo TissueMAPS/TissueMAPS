@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
+import yaml
+from subprocess import call
 
 import flask
-from flask.ext.script import Manager
+from flask.ext.script import Manager, Server
 from flask.ext.migrate import Migrate, MigrateCommand
 
 from tmaps.appfactory import create_app
@@ -15,17 +17,31 @@ from tmaps.models import *
 cfg = flask.Config(p.realpath(p.dirname(__file__)))
 cfg.from_envvar('TMAPS_SETTINGS')
 
-app = create_app(cfg)
+manager = Manager(lambda: create_app(cfg))  # main manager
 
-migrate = Migrate(app, db)
-manager = Manager(app)
+# Create sub manager for database commands
+db_manager = Manager(lambda: create_app(cfg))
 
+migrate = Migrate(lambda: create_app(cfg), db)
 # Add a new command to expose options provided by Alembic
-manager.add_command('migrate', MigrateCommand)
+db_manager.add_command('migrate', MigrateCommand)
+manager.add_command('runserver', Server(port=5002))
 
 
 @manager.command
-def repl():
+def shell():
+    """Start a REPL that can be used to interact with the models
+    of the application.
+
+    Available in the namespace:
+
+    - Model classes: models.User, models.Experiment, etc.
+    - Application: app
+    - Request context: ctx
+    - SQLAlchemy database: db
+
+    """
+    app = create_app(cfg)
     from werkzeug import script
     def make_shell():
         ctx = app.test_request_context()
@@ -35,7 +51,7 @@ def repl():
     script.make_shell(make_shell, use_ipython=True)()
 
 
-@manager.command
+@db_manager.command
 def create_tables():
     """A command to initialize the tables in the database specified by the
     config key 'SQLALCHEMY_DATABASE_URI'.
@@ -48,53 +64,63 @@ def create_tables():
     db.create_all()
 
 
-@manager.command
-def populate_db():
-    """Insert some default values into the database. Run this command
-    after `create_tables`."""
+@db_manager.command
+def insert_data(yaml_file):
+    """Insert some records values into the database.
 
-    with app.app_context():
-        # Add admin user
-        u1 = User(name='testuser',
-                 email='testuser@something.com',
-                 location='/Users/robin/Dev/TissueMAPS/expdata',
-                 password='123')
-        u2 = User(name='testuser2',
-                  email='testuser2@something.com',
-                 location='/Users/robin/Dev/TissueMAPS/expdata/somethingelse',
-                  password='123')
-        db.session.add(u1)
-        db.session.add(u2)
-        db.session.commit()
+    This command has to be run after after `create_tables`.
 
-        a = AppState(name='Nice findings',
-                     blueprint='{"bla": 123}',
-                     owner_id=u1.id,
-                     description='Look at this, how nice!')
-        a2 = AppState(name='Some other findings by testuser2',
-                      blueprint='{"bla": 123}',
-                      owner_id=u2.id,
-                      description='blablabla very nice')
-        db.session.add(a)
-        db.session.add(a2)
-        db.session.commit()
+    Arguments
+    ---------
+    yaml_file : str
+        The path to a yaml file with the following structure:
 
-        state = AppStateShare(recipient_user_id=u1.id,
-                              donor_user_id=u2.id,
-                              appstate_id = a2.id)
+        records:
+            - ClassName:
+                arg1: value1
+                arg2: value2
+                ...
+            ...
 
-        db.session.add(state)
-        db.session.commit()
+    """
+    app = create_app(cfg)
+
+    if yaml_file is None or yaml_file == '':
+        print 'No yaml_file supplied, will not insert any data. '
+        return
+
+    with open(yaml_file, 'r') as f:
+        sample_data = yaml.load(f)
+
+        with app.app_context():
+            for rec in sample_data['records']:
+                class_name = rec['class']
+                constr_args = rec['args']
+                model_constr = globals()[class_name]
+
+                # Check if there are objects that have to be looked up in the 
+                # database before creating new database records.
+                for k, v in constr_args.items():
+                    if type(v) is dict:
+                        obj_class = v['class']
+                        obj_model = globals()[obj_class]
+                        lookup_properties = v['lookup_props']
+                        arg_obj = db.session.query(obj_model).filter_by(**lookup_properties).first()
+                        constr_args[k] = arg_obj
+
+                obj = model_constr(**constr_args)
+
+                print '* Inserting new object of class "%s" with properties:' % class_name
+                for k, v in constr_args.items():
+                    print '\t%s: %s' % (k , str(v))
+
+                db.session.add(obj)
+                db.session.commit()
 
 
-        e1 = Experiment(name='150316-30min-PBS',
-                        description='Very nice exp',
-                        owner=u1,
-                        location='/Users/robin/Dev/TissueMAPS/expdata/150316-30min-PBS',
-                        microscope_type='visiview',
-                        plate_format=96)
-        db.session.add(e1)
-        db.session.commit()
+# Add submanager to manage database commands under the prefix db
+manager.add_command('db', db_manager)
+
 
 if __name__ == '__main__':
     manager.run()

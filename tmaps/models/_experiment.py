@@ -1,5 +1,6 @@
 import os
 import os.path as p
+from contextlib import contextmanager
 from xml.dom import minidom
 from werkzeug import secure_filename
 from ..extensions.database import db
@@ -140,6 +141,10 @@ class Experiment(HashIdModel, CRUDMixin):
         return p.join(self.location, 'data.h5')
 
     @property
+    def has_dataset(self):
+        return p.exists(self.dataset_path)
+
+    @property
     def plates_location(self):
         return _plates_location(self)
 
@@ -150,16 +155,14 @@ class Experiment(HashIdModel, CRUDMixin):
     def belongs_to(self, user):
         return self.owner == user
 
-    # @property
-    # def dataset(self):
-    #     import h5py
-    #     fpath = self.dataset_path
-    #     if os.path.exists(fpath):
-    #         print 'LOADING DATA SET'
-    #         print fpath
-    #         return h5py.File(fpath, 'r')
-    #     else:
-    #         return None
+    @property
+    @contextmanager
+    def dataset(self):
+        import h5py
+        fpath = self.dataset_path
+        f = h5py.File(fpath, 'r')
+        yield f
+        f.close()
 
     def __repr__(self):
         return '<Experiment %r>' % self.name

@@ -7,7 +7,6 @@ from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 import numpy as np
-import pandas as pd
 
 import tmlib.experiment
 import tmlib.tmaps.workflow
@@ -49,64 +48,87 @@ def expdata_file(experiment_id, layer_name, filename):
 
 
 # TODO: Make auth required. tools subapp should receive token
-@api.route('/experiments/<experiment_id>/<object_name>/features', methods=['GET'])
-# @jwt_required()
-def get_features(experiment_id, object_name):
+@api.route('/experiments/<experiment_id>/features', methods=['GET'])
+@jwt_required()
+def get_features(experiment_id):
     """
-    Send a list of feature objects. In addition to the name and the channel
-    to which each feature belongs, the caller may request additional properties
-    by listing those as query parameters:
-
-    /experiments/<expid>/features?include=prop1,prop2,...
-
-    where available properties are:
-
-        min, max, mean, median,
-        percXX (e.g. perc25 for the 25% percentile),
-        var, std
+    Send a list of feature objects.
 
     Response:
 
     {
         "features": [
             {
-                "name": string (the feature's name),
-                // additional properties:
-                "min": float,
-                ....
-            }
+                "name": string 
+            },
+            ...
         ]
     }
+
     """
 
-    exp = Experiment.get(experiment_id)
-    features = []
+    ex = Experiment.get(experiment_id)
+    if not ex:
+        return RESOURCE_NOT_FOUND_RESPONSE
 
-    props = []
-    if 'include' in request.args:
-        props = request.args.get('include').split(',')
-        print props
+    if not ex.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
 
-    features = []
-    dset = pd.DataFrame()
+    features = {}
 
-    with DatasetReader(exp.dataset_path) as data:
-        group = '/objects/%s/features' % object_name
-        datasets = data.list_datasets(group)
-        for d in datasets:
-            dset[d] = data.read('%s/%s' % (group, d))
+    with ex.dataset as data:
+        types = data['/objects'].keys()
+        for t in types:
+            feature_names = data['/objects/%s/features' % t].keys()
+            features[t] = [{'name': f} for f in feature_names]
 
-    feat_objs = [{'name': f} for f in dset.columns.tolist()]
+    return jsonify({
+        'features': features
+    })
 
-    for prop in props:
-        f = _get_feat_property_extractor(prop)
-        prop_values = f(dset)
-        for feat, val in zip(feat_objs, prop_values):
-            feat[prop] = val
 
-        features += feat_objs
+# TODO: Make auth required. tools subapp should receive token
+@api.route('/experiments/<experiment_id>/features/<object_type>/<feature_name>', methods=['GET'])
+@jwt_required()
+def get_feature_data(experiment_id, object_type, feature_name):
+    """
+    Send a list of feature objects.
 
-    return jsonify(features=features)
+    Response:
+
+    {
+        "name": str,
+        "values": List[number],
+        "ids": List[number]
+    }
+
+    """
+
+    ex = Experiment.get(experiment_id)
+    if not ex:
+        return RESOURCE_NOT_FOUND_RESPONSE
+    if not ex.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
+
+    response = {}
+    with ex.dataset as data:
+        types = data['/objects'].keys()
+        if not object_type in set(types):
+            return RESOURCE_NOT_FOUND_RESPONSE
+        else:
+            feature_data = data['/objects/%s/features' % object_type]
+            nonborder_ids = data['/objects/%s/ids' % object_type][()]
+            feature_names = feature_data.keys()
+            if not feature_name in set(feature_names):
+                return RESOURCE_NOT_FOUND_RESPONSE
+            else:
+                values_mat = feature_data[feature_name][()]
+                values_mat = values_mat[nonborder_ids, ]
+                response['name'] = feature_name
+                response['values'] = values_mat.tolist()
+                response['ids'] = nonborder_ids.tolist()
+
+    return jsonify(response)
 
 
 @api.route('/experiments', methods=['GET'])
@@ -425,25 +447,72 @@ def create_pyramids(exp_id):
     return 'Creation ok', 200
 
 
-@api.route('/experiments/<experiment_id>/<object_name>', methods=['GET'])
+@api.route('/experiments/<experiment_id>/objects', methods=['GET'])
 @jwt_required()
-def get_objects(experiment_id, object_name):
+def get_objects(experiment_id):
+    """
+
+    Response:
+
+    {
+        objects: {
+            -- Each supported type will get an entry
+            cells: {
+                ids: [1, 2, ..., n],
+                visual_type: 'polygon',
+                -- map_data can store information that is
+                -- specific to the chosen visual_type.
+                map_data: {
+                    coordinates: {
+                        1: [[x1, y1], [x2, y2], ....],
+                        2: [[x1, y1], [x2, y2], ....],
+                        ...
+                    }
+                }
+            }
+        }
+    }
+
+    """
     ex = Experiment.get(experiment_id)
     if not ex:
         return RESOURCE_NOT_FOUND_RESPONSE
 
-    # Load outlines for each object from the HDF5 file
-    experiment = tmlib.experiment.Experiment(ex.location)
-    filename = os.path.join(experiment.dir, experiment.data_file)
-    outlines = dict()
-    with DatasetReader(filename) as data:
-        print 'object name: ', object_name
-        group_name = '/objects/%s/coordinates' % object_name
-        ids = data.list_datasets(group_name)
-        for i in ids:
-            outlines[i] = data.read('%s/%s' % (group_name, i)).tolist()
+    if not ex.belongs_to(current_identity):
+        return NOT_AUTHORIZED_RESPONSE
 
-    return jsonify(outlines)
+    objects = {}
+
+    if ex.has_dataset:
+        with ex.dataset as data:
+            types = data['/objects'].keys()
+
+            for t in types:
+                objects[t] = {}
+
+                object_data = data['/objects/%s' % t]
+
+                # TODO: Fix this
+                # objects[t]['visual_type'] = object_data.attrs['visual_type']
+                objects[t]['visual_type'] = 'polygon'
+                objects[t]['ids'] = object_data['ids'][()].tolist()
+                objects[t]['map_data'] = {}
+                objects[t]['map_data']['coordinates'] = {}
+
+                if 'outlines' in object_data['map_data']:
+                    # TODO: This should be done in a generic fashion.
+                    # The whole content of map_data should be added to objects[t]['map_data'],
+                    # regardless of its actual structure. The content should be converted
+                    # to dicts and lists, s.t. they can be jsonified.
+                    for id in object_data['map_data/outlines/coordinates']:
+                        objects[t]['map_data']['coordinates'][int(id)] = \
+                            object_data['map_data/outlines/coordinates/%s' % id][()].tolist()
+
+        return jsonify({
+            'objects': objects
+        })
+    else:
+        return RESOURCE_NOT_FOUND_RESPONSE
 
 
 @api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])
