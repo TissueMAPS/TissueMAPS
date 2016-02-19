@@ -17,23 +17,21 @@ from tmaps.models import *
 cfg = flask.Config(p.realpath(p.dirname(__file__)))
 cfg.from_envvar('TMAPS_SETTINGS')
 
-app = create_app(cfg)
-
-manager = Manager(app)  # main manager
-
-migrate = Migrate(app, db)
-# Add a new command to expose options provided by Alembic
-manager.add_command('migrate', MigrateCommand)
+manager = Manager(lambda: create_app(cfg))  # main manager
 
 # Create sub manager for database commands
-db_manager = Manager(app)
+db_manager = Manager(lambda: create_app(cfg))
+
+migrate = Migrate(lambda: create_app(cfg), db)
+# Add a new command to expose options provided by Alembic
+db_manager.add_command('migrate', MigrateCommand)
 
 
 @manager.command
 def repl():
     """Start a REPL that can be used to interact with the models
     of the application."""
-
+    app = create_app(cfg)
     from werkzeug import script
     def make_shell():
         ctx = app.test_request_context()
@@ -75,6 +73,8 @@ def insert_data(yaml_file):
             ...
 
     """
+    app = create_app(cfg)
+
     if yaml_file is None or yaml_file == '':
         print 'No yaml_file supplied, will not insert any data. '
         return
