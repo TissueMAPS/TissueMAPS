@@ -76,11 +76,15 @@ def get_features(experiment_id):
 
     features = {}
 
-    with ex.dataset as data:
-        types = data['/objects'].keys()
-        for t in types:
-            feature_names = data['/objects/%s/features' % t].keys()
-            features[t] = [{'name': f} for f in feature_names]
+    if ex.has_dataset:
+        with ex.dataset as data:
+            types = data['/objects'].keys()
+            for t in types:
+                if 'features' in data['/objects/%s' % t]:
+                    feature_names = data['/objects/%s/features' % t].keys()
+                    features[t] = [{'name': f} for f in feature_names]
+                else:
+                    features[t] = []
 
     return jsonify({
         'features': features
