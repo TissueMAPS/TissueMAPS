@@ -1148,6 +1148,13 @@ class SegmentedObjectLayer(Layer):
                         store.write(c_path, centroid_coordinates)
                         store.set_attribute(c_path, 'columns', ['x', 'y'])
                         ids.append(global_obj_id)
+
+                        # Store the position of the corresponding image
+                        # within the well
+                        store.append('%s/metadata/well_position_y' % obj_path,
+                                     [well_coords[0]])
+                        store.append('%s/metadata/well_position_x' % obj_path,
+                                     [well_coords[1]])
                         global_obj_id += 1
 
                     logger.debug('add segmentations to datasets')
@@ -1160,9 +1167,9 @@ class SegmentedObjectLayer(Layer):
 
                     # Store the name of the corresponding plate and well
                     plate_names = np.repeat(plate_name, len(object_ids))
-                    store.append('%s/metadata/plate_ref' % obj_path, plate_names)
+                    store.append('%s/metadata/plate_name' % obj_path, plate_names)
                     well_names = np.repeat(well_name, len(object_ids))
-                    store.append('%s/metadata/well_ref' % obj_path, well_names)
+                    store.append('%s/metadata/well_name' % obj_path, well_names)
 
             # Store objects separately as a sorted array of integers
             store.write('%s/ids' % obj_path, ids)
@@ -1239,14 +1246,17 @@ class WellObjectLayer(Layer):
             for obj in objects:
                 obj_path = '/objects/%s' % obj
                 feat_path[obj] = '%s/features' % obj_path
-                plate_ref[obj] = data.read('%s/metadata/plate_ref' % obj_path)
-                well_ref[obj] = data.read('%s/metadata/well_ref' % obj_path)
+                # NOTE: This assumes that the layers for segmented objects
+                # have already been created
+                plate_ref[obj] = data.read('%s/metadata/plate_name' % obj_path)
+                well_ref[obj] = data.read('%s/metadata/well_name' % obj_path)
 
             with DatasetWriter(filename) as store:
                 obj_path = '/objects/%s' % self.name
                 store.create_group(obj_path)
                 store.set_attribute(obj_path, 'visual_type', 'polygon')
-                outline_coord_path = '%s/map_data/coordinates' % obj_path
+                outline_coord_path = '%s/map_data/outlines/coordinates' % obj_path
+                centroid_coord_path = '%s/map_data/centroids/coordinates' % obj_path
                 global_obj_id = 0  # global: across different plates
                 ids = list()
                 for p, plate in enumerate(self.experiment.plates):
@@ -1288,9 +1298,11 @@ class WellObjectLayer(Layer):
                         lower_left_coordinate = (x_offset, -y_offset)
 
                         # lower right
-                        y_offset, x_offset = self._calc_global_offset(
+                        y_offset, unused = self._calc_global_offset(
                                                 p, (y_max, 0), n_prior_wells)
                         y_offset += y_add
+                        unused, x_offset = self._calc_global_offset(
+                                                p, (0, x_max), n_prior_wells)
                         x_offset += x_add
                         lower_right_coordinate = (x_offset, -y_offset)
 
@@ -1301,11 +1313,19 @@ class WellObjectLayer(Layer):
                             lower_left_coordinate,
                             lower_right_coordinate
                         ])
+                        centroid_coordinates = (
+                            int(np.mean(outline_coordinates[:, 0])),
+                            int(np.mean(outline_coordinates[:, 1]))
+                        )
                         o_path = '%s/%s' % (outline_coord_path, global_obj_id)
-                        if not store.exists(o_path):
-                            # TODO: do this smarter by avoiding the whole
+                        c_path = '%s/%s' % (centroid_coord_path, global_obj_id)
+                        # TODO: do this smarter by avoiding the whole
                             # processing in the first place
+                        if not store.exists(o_path):
                             store.write(o_path, outline_coordinates)
+                            store.set_attribute(o_path, 'columns', ['x', 'y'])
+                        if not store.exists(c_path):
+                            store.write(c_path, centroid_coordinates)
                             store.set_attribute(o_path, 'columns', ['x', 'y'])
 
                         # Pre-calculate per-well statistics for features of
