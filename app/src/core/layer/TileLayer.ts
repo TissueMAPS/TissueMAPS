@@ -7,8 +7,6 @@ interface SerializedTileLayer extends Serialized<TileLayer> {
       imageSize: ImageSize;
       color: SerializedColor;
       additiveBlend: boolean;
-      drawBlackPixels: boolean;
-      drawWhitePixels: boolean;
       visible: boolean;
       brightness: number;
       min: number;
@@ -22,8 +20,6 @@ interface TileLayerArgs {
     pyramidPath: string;
 
     additiveBlend?: string;
-    drawBlackPixels?: boolean;
-    drawWhitePixels?: boolean;
     visible?: boolean;
     color?: Color;
     brightness?: number;
@@ -61,8 +57,6 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
             min: 0,
             max: 1,
             additiveBlend: true,
-            drawBlackPixels: true,
-            drawWhitePixels: true,
             visible: true
         });
         _olLayerArgs.color = _olLayerColor;
@@ -132,22 +126,6 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
         this._olLayer.setAdditiveBlend(val);
     }
 
-    get drawBlackPixels(): boolean {
-        return this._olLayer.getDrawBlackPixels();
-    }
-
-    set drawBlackPixels(val: boolean) {
-        this._olLayer.setDrawBlackPixels(val);
-    }
-
-    get drawWhitePixels(): boolean {
-        return this._olLayer.getDrawWhitePixels();
-    }
-
-    set drawWhitePixels(val: boolean) {
-        this._olLayer.setDrawWhitePixels(val);
-    }
-
     serialize() {
         return this.color.serialize().then((c) => {
             var $q = $injector.get<ng.IQService>('$q');
@@ -157,8 +135,6 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
                 imageSize: this.imageSize,
                 color: c,
                 additiveBlend: this.additiveBlend,
-                drawBlackPixels: this.drawBlackPixels,
-                drawWhitePixels: this.drawWhitePixels,
                 visible: this.visible,
                 brightness: this.brightness,
                 min: this.min,
