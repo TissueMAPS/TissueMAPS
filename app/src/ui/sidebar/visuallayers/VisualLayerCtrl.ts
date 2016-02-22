@@ -65,9 +65,11 @@ class VisualLayerCtrl {
 
         // Initialize the selected color of each property based on the color
         // that is already assigned to this property.
-        var sampleVisual = <ColorizableVisual> layer.visuals[0];
-        this.selectedColor.fillColor = sampleVisual.fillColor.toHex();
-        this.selectedColor.strokeColor = sampleVisual.strokeColor.toHex();
+        // FIXME
+        // var sampleVisual = <ColorizableVisual> layer.visuals[0];
+        // this.selectedColor.fillColor = sampleVisual.fillColor.toHex();
+        // this.selectedColor.strokeColor = sampleVisual.strokeColor.toHex();
+        
         // this.supportedColorProperties.forEach((color) => {
         //     var layerSupportsProperty = layer[color.property] !== undefined;
         //     if (layerSupportsProperty) {

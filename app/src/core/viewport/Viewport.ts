@@ -100,7 +100,7 @@ class Viewport implements Serializable<Viewport> {
             var view = new ol.View({
                 // We create a custom (dummy) projection that is based on pixels
                 projection: new ol.proj.Projection({
-                    code: 'ZOOMIFY',
+                    code: 'tm',
                     units: 'pixels',
                     extent: [0, 0, width, height]
                 }),

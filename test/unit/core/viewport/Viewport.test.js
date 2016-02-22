@@ -191,13 +191,13 @@ describe('In Viewport', function() {
 
         it('should create a view if this is the first layer added', function(done) {
             vp.map.then(function(map) {
-                expect(map.getView().getProjection().getCode()).not.toEqual('ZOOMIFY');
+                expect(map.getView().getProjection().getCode()).not.toEqual('tm');
             });
 
             vp.addChannelLayer(l);
 
             vp.map.then(function(map) {
-                expect(map.getView().getProjection().getCode()).toEqual('ZOOMIFY');
+                expect(map.getView().getProjection().getCode()).toEqual('tm');
                 done();
             });
 
