@@ -9,5 +9,6 @@ import users
 import tools
 import sources
 import upload
+import mapobjects
 
 import responses
