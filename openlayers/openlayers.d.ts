@@ -653,7 +653,13 @@ declare module olx {
             /**
              * Source.
              */
-            source?: ol.source.Vector;
+            // source?: ol.source.Vector;
+            // FIXME: this should not be any. The problem currently is that
+            // ol.layer.VectorTile can not extend ol.layer.Vector (even though
+            // it is a subclass in OL) since ol.layer.VectorTile has a
+            // ol.source.VectorTile that is not a subclass of ol.source.Vector.
+            // TypeScript forbids inheritance in this case.
+            source?: any;
 
             /**
              * Layer style. See ol.style for default style which will be used if this is not defined.
@@ -746,6 +752,13 @@ declare module olx {
              * resulting geometry coordinates will then exceed the world bounds.
              */
             wrapX?: boolean;
+        }
+
+        interface VectorTileOptions {
+            attributions?: ol.Attribution[];
+            url?: string;
+            format?: ol.format.Feature;
+            tileGrid?: ol.tilegrid.TileGrid;
         }
     }
 
@@ -2631,6 +2644,9 @@ declare module ol {
         class Feature {
         }
 
+        class MVT {
+        }
+
         /**
          * Feature format for reading and writing data in the GeoJSON format.
          */
@@ -3823,6 +3839,9 @@ declare module ol {
              */
             setStyle(style: ol.style.StyleFunction): void;
         }
+
+        class VectorTile extends ol.layer.Vector {
+        }
     }
 
     module loadingstrategy {
@@ -4048,6 +4067,10 @@ declare module ol {
            * Remove a single feature from the source.
            */
           removeFeature(feature: ol.Feature);
+        }
+
+        class VectorTile {
+          constructor(opt_options?: olx.source.VectorTileOptions);
         }
 
         class VectorEvent {
