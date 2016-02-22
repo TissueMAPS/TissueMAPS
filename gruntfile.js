@@ -123,6 +123,8 @@ module.exports = function(grunt) {
         copy: {
             dist: {
                 files: [
+                    {cwd: 'app', expand: true, src: ['src/**/*.html'], dest: '<%= productionDir %>/'},
+                    {cwd: 'app', expand: true, src: ['src/**/*.json'], dest: '<%= productionDir %>/'},
                     {cwd: 'app', expand: true, src: ['templates/**/*.html'], dest: '<%= productionDir %>/'},
                     {dest: '<%= productionDir %>/index.html', src: 'app/index.html'},
                     {dest: '<%= productionDir %>/src/toolwindow/index.html', src: 'app/src/toolwindow/index.html'},
@@ -144,8 +146,8 @@ module.exports = function(grunt) {
                 files: {
                     src: [
                         '<%= productionDir %>/script-main.min.js',
-                        '<%= productionDir %>/script-tools.min.js',
-                        '<%= productionDir %>/style-tools.min.css',
+                        '<%= productionDir %>/src/toolwindow/script-tools.min.js',
+                        '<%= productionDir %>/src/toolwindow/style-tools.min.css',
                         '<%= productionDir %>/style-main.min.css'
                     ]
                 }
@@ -184,8 +186,10 @@ module.exports = function(grunt) {
          * The usemin part will remove the code block(s) and replace that area with the single file path in the html file.
          */
         useminPrepare: {
-            html: [
+            main: [
                 'app/index.html',
+            ],
+            tools: [
                 'app/src/toolwindow/index.html'
             ],
             options: {
@@ -193,8 +197,10 @@ module.exports = function(grunt) {
             }
         },
         usemin: {
-            html: [
+            main: [
                 '<%= productionDir %>/index.html',
+            ],
+            tools: [
                 '<%= productionDir %>/src/toolwindow/index.html'
             ],
             options: {
@@ -208,7 +214,7 @@ module.exports = function(grunt) {
         uglify: {
             options: {
                 sourceMap: true,
-                compress: true,
+                compress: false,
                 mangle: false,
             }
         },
@@ -221,7 +227,7 @@ module.exports = function(grunt) {
         filerev: {
             dist: {
                 src: [
-                    '<%= productionDir %>/resources/img/**/*.{jpg,png,gif,ico}',
+                    // '<%= productionDir %>/resources/img/**/*.{jpg,png,gif,ico}',
                     '<%= productionDir %>/**/*.{js,css}'
                 ]
             },
@@ -285,12 +291,52 @@ module.exports = function(grunt) {
         },
 
         connect: {
-            server: {
+            dev: {
                 options: {
                     port: 8002,
                     base: 'app', // from where to serve files
                     livereload: 35761, // port
                     // open: 'http://localhost:8000/index.html',
+                    middleware: function(connect, options) {
+                        if (!Array.isArray(options.base)) {
+                            options.base = [options.base];
+                        }
+                        // Setup the proxy
+                        var middlewares = [require('grunt-connect-proxy/lib/utils').proxyRequest];
+                        // Serve static files.
+                        options.base.forEach(function(base) {
+                            middlewares.push(connect.static(base));
+                        });
+                        // Make directory browse-able.
+                        var directory = options.directory || options.base[options.base.length - 1];
+                        middlewares.push(connect.directory(directory));
+                        return middlewares;
+                    }
+                },
+                proxies: [
+                    {
+                        context: '/api',
+                        host: 'localhost',
+                        port: 5002,
+                        https: false,
+                        xforward: false,
+                        ws: true // proxy websockets
+                    },
+                    {
+                        context: '/auth',
+                        host: 'localhost',
+                        port: 5002,
+                        https: false,
+                        xforward: false,
+                        ws: true // proxy websockets
+                    }
+                ]
+            },
+            dist: {
+                options: {
+                    port: 8002,
+                    keepalive: true,
+                    base: '_dist', // from where to serve files
                     middleware: function(connect, options) {
                         if (!Array.isArray(options.base)) {
                             options.base = [options.base];
@@ -391,11 +437,11 @@ module.exports = function(grunt) {
             dist: {
                 options: {
                     removeComments: true,
-                    collapseWhitespace: false
+                    collapseWhitespace: true
                 },
                 files: {
                     '<%= productionDir %>/index.html': '<%= productionDir %>/index.html',
-                    '<%= productionDir %>/templates/tools/index.html': '<%= productionDir %>/templates/tools/index.html'
+                    '<%= productionDir %>/src/toolwindow/index.html': '<%= productionDir %>/src/toolwindow/index.html'
                 }
             }
         },
@@ -535,8 +581,8 @@ module.exports = function(grunt) {
         'less',
         'exec:buildTypeScript',
         'includeSource',
-        'configureProxies:server',
-        'connect',
+        'configureProxies:dev',
+        'connect:dev',
         'watch'
     ]);
     // The dev task is also executed when no task is specified (i.e. just running 'grunt').
@@ -555,14 +601,32 @@ module.exports = function(grunt) {
         'less',
         'exec:buildTypeScript',
         'includeSource',  // call before useminPrepare
-        'useminPrepare',
+
+        // // Main part
+        // 'useminPrepare:main',
+        // 'concat:generated',
+        // 'cssmin:generated',        
+        // 'uglify', 
+        // 'usebanner', // needs to be before filerev
+        // // 'filerev',
+        // 'usemin:main',
+
+        // Tools part
+        'useminPrepare:tools',
         'concat:generated',
         'cssmin:generated',        
-        'uglify:generated', 
+        'uglify', 
         'usebanner', // needs to be before filerev
-        'filerev',
-        'usemin',
+        // 'filerev',
+        'usemin:tools',
+
         'htmlmin'    // needs to be after usemin
+    ]);
+
+    // A task to test the built project using a test server
+    grunt.registerTask('dist-server', [
+        'configureProxies:dist',
+        'connect:dist'
     ]);
 
     grunt.registerTask('init', [
