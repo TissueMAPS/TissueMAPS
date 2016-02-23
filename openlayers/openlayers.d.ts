@@ -695,6 +695,11 @@ declare module olx {
             tierSizeCalculation?: string;
         }
 
+        interface XYZOptions {
+            tileGrid: ol.tilegrid.TileGrid;
+            url?: string;
+        }
+
         interface VectorOptions {
             /**
              * Attributions.
@@ -922,6 +927,11 @@ declare module olx {
              * Tile size in pixels. Default is [256, 256].
              */
             tileSize?: number | ol.Size;
+
+            /**
+             * Tile size in pixels. Default is [256, 256].
+             */
+            origin?: ol.Coordinate;
         }
 
         interface ZoomifyOptions {
@@ -4080,6 +4090,7 @@ declare module ol {
         }
 
         class XYZ {
+            constructor(options: olx.source.XYZOptions);
         }
 
         class Zoomify {
