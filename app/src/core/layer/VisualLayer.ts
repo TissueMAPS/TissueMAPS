@@ -65,7 +65,19 @@ class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
             source: vectorSource,
             // style: styleFunction,
             // visible: opt.visible === undefined ? true : false
-            visible: true
+            visible: true,
+            style: function(feature, style) {
+                return [
+                    new ol.style.Style({
+                        fill: new ol.style.Fill({
+                            color: Color.RED.toOlColor()
+                        }),
+                        stroke: new ol.style.Stroke({
+                            color: Color.WHITE.toOlColor()
+                        })
+                    })
+                ];
+            }
         });
 
         if (opt.visuals !== undefined) {

@@ -81800,10 +81800,13 @@ ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
     this.vertices_.push(vertices[2 * i]);
     this.vertices_.push(vertices[2 * i + 1]);
 
-    // FIXME: Find a way to provide different vertex color info for each feature, not a gillColor for the whole layer
-    this.vertices_.push(fillColor[0] / 255);
-    this.vertices_.push(fillColor[1] / 255);
-    this.vertices_.push(fillColor[2] / 255);
+    // FIXME: Find a way to provide different vertex color info for each feature, not a fillColor for the whole layer
+    // this.vertices_.push(fillColor[0] / 255);
+    // this.vertices_.push(fillColor[1] / 255);
+    // this.vertices_.push(fillColor[2] / 255);
+    this.vertices_.push(fillColor[0]);
+    this.vertices_.push(fillColor[1]);
+    this.vertices_.push(fillColor[2]);
     this.vertices_.push(fillColor[3]);
 
     // console.log(fillColor);
@@ -81875,9 +81878,10 @@ ol.render.webgl.PolygonReplay.prototype.finish = function(context) {
 
   var indices = this.indices_;
   var bits = context.hasOESElementIndexUint ? 32 : 16;
-  goog.asserts.assert(indices[indices.length - 1] < Math.pow(2, bits),
-      'Too large element index detected [%s] (OES_element_index_uint "%s")',
-      indices[indices.length - 1], context.hasOESElementIndexUint);
+  // FIXME
+  // goog.asserts.assert(indices[indices.length - 1] < Math.pow(2, bits),
+  //     'Too large element index detected [%s] (OES_element_index_uint "%s")',
+  //     indices[indices.length - 1], context.hasOESElementIndexUint);
 
   // create, bind, and populate the indices buffer
   this.indicesBuffer_ = new ol.webgl.Buffer(indices);
@@ -84426,6 +84430,9 @@ goog.require('ol.TileRange');
 goog.require('ol.renderer.webgl.Layer');
 goog.require('ol.layer.VectorTile');
 goog.require('ol.render.webgl.ReplayGroup');
+goog.require('ol.style.Style');
+goog.require('ol.style.Stroke');
+goog.require('ol.style.Fill');
 
 
 /**
@@ -84443,6 +84450,12 @@ ol.renderer.webgl.VectorTileLayer = function(mapRenderer, vectorLayer) {
    * @type {boolean}
    */
   this.dirty_ = false;
+
+  /**
+   * @private
+   * @type {Array.<ol.VectorTile>}
+   */
+  this.renderedTiles_ = [];
 
   /**
    * @private
@@ -84465,22 +84478,6 @@ ol.renderer.webgl.VectorTileLayer = function(mapRenderer, vectorLayer) {
 };
 goog.inherits(ol.renderer.webgl.VectorTileLayer, ol.renderer.webgl.Layer);
 
-
-/**
- * @inheritDoc
- */
-ol.renderer.webgl.VectorTileLayer.prototype.composeFrame =
-    function(frameState, layerState, context) {
-  this.layerState_ = layerState;
-  var viewState = frameState.viewState;
-  var replayGroup = this.replayGroup_;
-  if (replayGroup && !replayGroup.isEmpty()) {
-    replayGroup.replay(context,
-        viewState.center, viewState.resolution, viewState.rotation,
-        frameState.size, frameState.pixelRatio, layerState.opacity,
-        layerState.managed ? frameState.skippedFeatureUids : {});
-  }
-}
 
 /**
  * @inheritDoc
@@ -84593,56 +84590,12 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
       tile = tilesToDraw[tileCoordKey];
       if (tile.getState() == ol.TileState.LOADED) {
         replayables.push(tile);
-
-        // this.createReplayGroup_(tile, layer, resolution, extent, pixelRatio);
-
-        var tol = ol.renderer.vector.getTolerance(resolution, pixelRatio);
-        var replayGroup = new ol.render.webgl.ReplayGroup(
-          tol, extent, layer.getRenderBuffer()
-        );
-
-        var renderFeature = function(feature) {
-          var styles;
-          var styleFunction = feature.getStyleFunction();
-          if (styleFunction) {
-            styles = styleFunction.call(feature, resolution);
-          } else {
-            styleFunction = layer.getStyleFunction();
-            if (styleFunction) {
-              styles = styleFunction(feature, resolution);
-            }
-          }
-          if (styles) {
-            var dirty = this.renderFeature(
-                feature, resolution, pixelRatio, styles, replayGroup);
-            this.dirty_ = this.dirty_ || dirty;
-          }
-        };
-
-        var features = [];
-        source.forEachFeatureInExtent(extent,
-            /**
-             * @param {ol.Feature} feature Feature.
-             */
-            function(feature) {
-              features.push(feature);
-            }, this);
-        // features.sort(vectorLayerRenderOrder);
-        features.forEach(renderFeature, this);
-        replayGroup.finish(context);
-
-        this.replayGroup_ = replayGroup;
-
-
-        // var replayGroup = new ol.render.webgl.ReplayGroup(
-        //     ol.renderer.vector.getTolerance(resolution, pixelRatio),
-        //     extent, layer.getRenderBuffer());
-
+        this.createReplayGroup_(tile, layer, resolution, extent, pixelRatio, context);
       }
     }
   }
 
-//   this.renderedTiles_ = replayables;
+  this.renderedTiles_ = replayables;
 
   return true;
 }
@@ -84654,18 +84607,97 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
  * @param {number} resolution Resolution.
  * @param {ol.Extent} extent Extent.
  * @param {number} pixelRatio Pixel ratio.
+ * @param {ol.webgl.Context} context WebGL context.
  * @private
  */
 ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
-    function(tile, layer, resolution, extent, pixelRatio) {
+    function(tile, layer, resolution, extent, pixelRatio, context) {
+
+  var revision = layer.getRevision();
+  var renderOrder = layer.getRenderOrder() || null;
+
+  var replayState = tile.getReplayState();
+  // if (!replayState.dirty && replayState.renderedRevision == revision &&
+  //     replayState.renderedRenderOrder == renderOrder) {
+  //   return;
+  // }
 
   var tol = ol.renderer.vector.getTolerance(resolution, pixelRatio);
   var replayGroup = new ol.render.webgl.ReplayGroup(
     tol, extent, layer.getRenderBuffer()
   );
-  return replayGroup;
+
+  var self = this;
+  var renderFeature = function(feature) {
+    var styles;
+    var styleFunction = feature.getStyleFunction();
+    if (styleFunction) {
+      styles = styleFunction.call(feature, resolution);
+    } else {
+      styleFunction = layer.getStyleFunction();
+      if (styleFunction) {
+        styles = styleFunction(feature, resolution);
+      }
+    }
+    styles = [
+      new ol.style.Style({
+          fill: new ol.style.Fill({
+              color: [255, 0, 0, 1]
+          }),
+          stroke: new ol.style.Stroke({
+              color: [255, 255, 255, 1]
+          })
+      })
+    ];
+    if (styles) {
+      var dirty = self.renderFeature(
+          feature, resolution, pixelRatio, styles, replayGroup);
+      this.dirty_ = this.dirty_ || dirty;
+    }
+  };
+
+  var features = tile.getFeatures();
+  features.forEach(renderFeature, this);
+
+  replayGroup.finish(context);
+
+  replayState.renderedRevision = revision;
+  replayState.renderedRenderOrder = renderOrder;
+  replayState.resolution = NaN;
+  replayState.replayGroup = replayGroup;
 }
 
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.VectorTileLayer.prototype.composeFrame = function(frameState, layerState, context) {
+
+  var tilesToDraw = this.renderedTiles_;
+
+  var viewState = frameState.viewState;
+
+  var i, nTiles, replayState;
+  for (i = 0, nTiles = tilesToDraw.length; i < nTiles; ++i) {
+    var tile = tilesToDraw[i];
+    replayState = tile.getReplayState();
+    replayState.replayGroup.replay(
+      context,
+      viewState.center, viewState.resolution, viewState.rotation,
+      frameState.size, frameState.pixelRatio, layerState.opacity,
+      layerState.managed ? frameState.skippedFeatureUids : {});
+  }
+
+  // this.layerState_ = layerState;
+  // var viewState = frameState.viewState;
+  // var replayGroup = this.replayGroup_;
+  // if (replayGroup && !replayGroup.isEmpty()) {
+  //   replayGroup.replay(context,
+  //       viewState.center, viewState.resolution, viewState.rotation,
+  //       frameState.size, frameState.pixelRatio, layerState.opacity,
+  //       layerState.managed ? frameState.skippedFeatureUids : {});
+  // }
+
+};
 
 // /**
 //  * @param {ol.Coordinate} coordinate Coordinate.
