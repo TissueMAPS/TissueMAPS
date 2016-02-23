@@ -1,6 +1,6 @@
 function [objects2Cut, objectsNot2Cut] = selectObjectsForCutting(objects, maxSolidity, minFormFactor, maxArea, minArea)
 
-    import jtlib.rplabel;
+    import jtlib.plotting.rplabel;
     import jtlib.calculateObjectSelectionFeatures;
 
     [area, solidity, formFactor] = calculateObjectSelectionFeatures(objects);

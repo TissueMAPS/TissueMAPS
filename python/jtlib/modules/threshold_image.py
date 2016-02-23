@@ -1,13 +1,11 @@
 import logging
 import mahotas as mh
-# from bokeh.plotting import figure
-# from bokeh.palettes import Reds3
-import matplotlib.pyplot as plt
+import plotly
+import colorlover as cl
 import collections
 import numpy as np
-from skimage.measure import block_reduce
+import skimage.measure
 from jtlib import plotting
-from tmlib import image_utils
 
 logger = logging.getLogger(__name__)
 
@@ -72,55 +70,77 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
     if kwargs['plot']:
 
-        # Get the contours of the mask
-        img_border = mh.labeled.borders(thresh_image)
+        rf = 4
+        ds_img = skimage.measure.block_reduce(
+                            image, (rf, rf), func=np.mean).astype(int)
+        ds_tresh_img = skimage.measure.block_reduce(
+                            thresh_image, (rf, rf), func=np.mean).astype(int)
 
-        # Convert the image to 8-bit for display
-        rescaled_img = image_utils.convert_to_uint8(image)
-        # Downsample image to reduce number of pixels that need to be plotted
-        downsampled_img = block_reduce(rescaled_img, (4, 4), func=np.mean)
+        # - keep image values at 16bit and adapt colorscale
+        # - inverse y axis
+        # - remove ticks and tick labels from axis (old issue with the
+        #   assumption that 0, 0 is in the left lower corner)
+        # - show only pixel values in case of hover event
+        colors = cl.scales['3']['div']['RdGy']
+        data = [
+            plotly.graph_objs.Heatmap(
+                z=ds_img,
+                hoverinfo='z',
+                colorscale='Greys',
+                zmax=np.percentile(ds_img, 99.99),
+                zmin=0,
+                zauto=False,
+                colorbar=dict(yanchor='bottom', y=0.55, len=0.45),
+                y=np.linspace(image.shape[0], 0, ds_img.shape[0]),
+                x=np.linspace(0, image.shape[1], ds_img.shape[1])
+            ),
+            plotly.graph_objs.Heatmap(
+                z=ds_tresh_img,
+                hoverinfo='z',
+                # colorscale='Hot',
+                colorscale=colors,
+                colorbar=dict(
+                    yanchor='top', y=0.45, len=0.45, tickvals=[0, 1]
+                ),
+                showscale=False,
+                y=np.linspace(image.shape[0], 0, ds_img.shape[0]),
+                x=np.linspace(0, image.shape[1], ds_img.shape[1]),
+                xaxis='x2',
+                yaxis='y2'
+            )
+        ]
 
-        img_overlay = mh.overlay(rescaled_img, img_border)
+        layout = plotly.graph_objs.Layout(
+            title='Threshold: %d' % thresh,
+            scene1=plotly.graph_objs.Scene(
+                domain={'y': [0.55, 1.0]}
+            ),
+            scene2=plotly.graph_objs.Scene(
+                domain={'y': [0.0, 0.45]}
+            ),
+            xaxis1=plotly.graph_objs.XAxis(
+                ticks='',
+                showticklabels=False
+            ),
+            yaxis1=plotly.graph_objs.YAxis(
+                ticks='',
+                showticklabels=False,
+                domain=[0.55, 1.0]
+            ),
+            xaxis2=plotly.graph_objs.XAxis(
+                ticks='',
+                showticklabels=False,
+                anchor='y2'
+            ),
+            yaxis2=plotly.graph_objs.YAxis(
+                ticks='',
+                showticklabels=False,
+                domain=[0.0, 0.45],
+            )
+        )
 
-        fig = plt.figure()
-        ax1 = fig.add_subplot(1, 2, 1)
-        ax2 = fig.add_subplot(1, 2, 2)
-
-        ax1.imshow(img_overlay, interpolation='none')
-        ax1.set_title('overlay of outlines', size=20)
-
-        img_obj = np.zeros(thresh_image.shape)
-        img_obj[thresh_image] = 1
-        img_obj[~thresh_image] = np.nan
-
-        ax2.imshow(img_obj, cmap=plt.cm.Set1, interpolation='none')
-        ax2.set_title('thresholded image', size=20)
-
-        plotting.save_mpl_figure(fig, kwargs['figure_file'])
-
-        # dims = thresh_image.shape
-
-        # fig = figure(x_range=(0, dims[1]), y_range=(0, dims[0]),
-        #              tools=["reset, resize, save, pan, box_zoom, wheel_zoom"],
-        #              webgl=True,
-        #              plot_width=400, plot_height=400)
-
-        # # Bokeh cannot deal with RGB images in form of 3D numpy arrays.
-        # # Therefore, we have to work around it by adapting the color palette.
-        # img_rgb = downsampled_img.copy()
-        # img_rgb[downsampled_img == 255] = 254
-        # img_rgb[img_border] = 255
-        # # border pixels will be colored red, all others get gray colors
-        # palette = plotting.create_bk_palette('greys')
-        # palette_rgb = np.array(palette)
-        # palette_rgb[-1] = Reds3[0]
-        # fig.image(image=[img_rgb[::-1]],
-        #           x=[0], y=[0], dw=[dims[1]], dh=[dims[0]],
-        #           palette=palette_rgb)
-        # fig.grid.grid_line_color = None
-        # fig.axis.visible = None
-
-        # plotting.save_bk_figure(fig, kwargs['figure_file'])
+        fig = plotly.graph_objs.Figure(data=data, layout=layout)
+        plotting.save_plotly_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'thresholded_image')
     return Output(thresh_image)

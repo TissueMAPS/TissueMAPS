@@ -2,18 +2,14 @@ import os
 import mpld3
 import numpy as np
 import mahotas as mh
-# from bokeh.plotting import save
+import plotly
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 from bokeh.palettes import Reds5, Greens5, Blues5, Oranges5, BuPu5
 import matplotlib as mpl
-from copy import deepcopy
 from matplotlib import cm
 import logging
 from tmlib import image_utils
-# import os
-# import re
-# from lxml import etree
 # from bokeh.embed import components
 
 logger = logging.getLogger(__name__)
@@ -21,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 def save_mpl_figure(fig, figure_file):
     '''
-    Writing figure instance to file as HTML string with embedded javascript
-    code using the `mpld3 <http://mpld3.github.io/>`_ library.
+    Write `mpld3 <http://mpld3.github.io/>`_ instance to file as HTML string
+    with embedded javascript code.
 
     Parameters
     ----------
@@ -33,7 +29,12 @@ def save_mpl_figure(fig, figure_file):
 
     Note
     ----
-    Display of the figure in the browser requires internet connection.
+    Also saves a thumbnail of the figure as PNG image.
+
+    Warning
+    -------
+    Display of the figure in the browser requires internet connection, because
+    the javascript library code is loaded via the web.
     See `troubleshooting <http://mpld3.github.io/faq.html#troubleshooting>`_.
     '''
     fig.figsize = (100, 100)
@@ -46,10 +47,10 @@ def save_mpl_figure(fig, figure_file):
     fig.savefig(img_file)
 
 
-def save_bk_figure(fig, figure_file):
+def save_bokeh_figure(fig, figure_file):
     '''
-    Writing figure instance to file as HTML string with embedded javascript
-    code using the `bokeh <http://bokeh.pydata.org/en/latest/>`_ library.
+    Write `bokeh <http://bokeh.pydata.org/en/latest/>`_ figure instance to
+    file as HTML string with embedded javascript code.
 
     Parameters
     ----------
@@ -58,29 +59,49 @@ def save_bk_figure(fig, figure_file):
     figure_file: str
         name of the figure file
     '''
-    # save(obj=fig, resources='inline', filename=figure_file)
-    html = file_html(plot_object=fig, resources=CDN, title='jterator figure')
+    html = file_html(fig, resources=CDN, title='jterator figure')
     with open(figure_file, 'w') as f:
         f.write(html)
-    # # One could modify the div element dynamically
-    # script, div = components(fig)
-    # html = etree.HTML(div)
-    # html = etree.HTML(div)
-    # for element in html.xpath('*/div'):
-    #     element.attrib['ng-mouseover'] = ''
-    # mod_div = etree.tostring(html, pretty_print=True, method='html')
-    # with open(figure_file, 'w') as f:
-    #     f.write(mod_div)
-    # script_file = re.sub(r'(%s)$' % os.path.splitext(figure_file)[1],
-    #                      '.script', figure_file)
-    # with open(script_file, 'w') as f:
-    #     f.write(script)
 
 
-def create_bk_palette(mpl_cmap):
+def save_plotly_figure(fig, figure_file):
     '''
-    Convert a `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_
-    to a HEX color palette as required by bokeh.
+    Write `plotly <https://plot.ly/python/>`_ figure instance to
+    file as HTML string with embedded javascript code.
+
+    Parameters
+    ----------
+    fig: plotly.graph_objs.Figure or plotly.graph_objs.Data
+        figure instance
+    figure_file: str
+        name of the figure file
+    '''
+    fig['layout']['width'] = 800
+    fig['layout']['height'] = 800
+    # TODO: We have to include the library in order to be able to embed the
+    # figure using <iframe>. The file would be way more light weight without,
+    # but when we simply include the <div> on the client side, the dimensions
+    # of the figure get completely screwed up. Maybe we can inject the library
+    # code on the client side to reduce the amount of data we have to send.
+    html = plotly.offline.plot(
+            fig,
+            output_type='div',
+            include_plotlyjs=True,
+            show_link=False
+    )
+    with open(figure_file, 'w') as f:
+        f.write(html)
+    # NOTE: Creation of static images requires "log-in".
+    # img_file = '%s.png' % os.path.splitext(figure_file)[0]
+    # plotly.plotly.image.save_as(fig, img_file)
+
+
+def create_bokeh_palette(mpl_cmap):
+    '''
+    Convert a
+    `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_
+    to a HEX color palette as required by
+    `bokeh <http://bokeh.pydata.org/en/latest/>`_.
 
     Parameters
     ----------
@@ -94,10 +115,10 @@ def create_bk_palette(mpl_cmap):
 
     Note
     ----
-    Bokeh's palettes have only a few hues. If one wants to display values
-    of a larger range one has to create a custom palette.
+    Bokeh's build in palettes have only a few hues. If one wants to display
+    values of a larger range one has to create a custom palette.
     '''
-    colormap = cm.get_cmap('gray')
+    colormap = cm.get_cmap(mpl_cmap)
     palette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
     return palette
 
@@ -162,7 +183,7 @@ def create_bk_image_overlay(image, mask, outlines=True,
     img_rgb[img_rescaled == 255] = 254
     img_rgb[mask] = 255
     # border pixels will be colorized, all others get different shades of gray
-    palette_grey = create_bk_palette('greys')
+    palette_grey = create_bokeh_palette('greys')
     palette_rgb = np.array(palette_grey)
     palette_rgb[-1] = color_palette[transparency]
 

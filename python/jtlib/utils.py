@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+import math
 import mahotas as mh
 from skimage import measure, morphology
 
@@ -132,3 +134,62 @@ def downsample_image(im, bins):
                             dtype=np.uint8)
         else:
             return np.array(im.astype(float), dtype=np.uint8)
+
+
+def find_border_objects(im):
+    '''
+    Find the objects at the border of a labeled image.
+
+    Parameters
+    ----------
+    im: numpy.ndarray
+        label image
+
+    Returns
+    -------
+    List[int]
+        1 if an object represents a border object and 0 otherwise
+    '''
+    edges = [np.unique(im[0, :]),   # first row
+             np.unique(im[-1, :]),  # last row
+             np.unique(im[:, 0]),   # first col
+             np.unique(im[:, -1])]  # last col
+
+    # Count only unique ids and remove 0 since it signals 'empty space'
+    border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
+    object_ids = np.unique(im[im != 0])
+    return [1 if o in border_ids else 0 for o in object_ids]
+
+
+def sort_coordinates_counter_clockwise(coordinates):
+    '''
+    Sort *y*, *x* coordinates values in counter clockwise order.
+
+    Parameters
+    ----------
+    coordinates: numpy.ndarray[int]
+        nx2 array of coordinate values, where each row represents a point
+        and the 1. column are the *y* values and the 2. column the *x* values
+
+    Returns
+    -------
+    numpy.ndarray[np.int64]
+        sorted array
+    '''
+    mean_y = np.sum(coordinates[:, 0]) / coordinates.shape[0]
+    mean_x = np.sum(coordinates[:, 1]) / coordinates.shape[0]
+
+    def calc_angle(c):
+        # Adapted form stackoverflow question #1709283
+        return (
+            (math.atan2(c[0] - mean_y, c[1] - mean_x) + 2 * math.pi)
+            % (2*math.pi)
+        )
+
+    angles = np.apply_along_axis(calc_angle, axis=1, arr=coordinates)
+    sorted_coordinates = pd.DataFrame({
+                'y': coordinates[:, 0].astype(np.int64),
+                'x': coordinates[:, 1].astype(np.int64),
+                'order': angles
+    }).sort_values(by='order')
+    return sorted_coordinates[['y', 'x']].values

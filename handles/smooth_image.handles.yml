@@ -6,7 +6,7 @@ input:
       value: 
       help: Image that should be smoothed.
 
-    - name: filter
+    - name: filter_name
       class: parameter
       value: 
       options:
@@ -15,7 +15,8 @@ input:
         - median
         - gaussian-bilateral
         - median-bilateral
-      help: Filter kernel that should be applied.
+      help: >
+          Name of the filter kernel that should be applied to the image.
 
     - name: filter_size
       class: parameter

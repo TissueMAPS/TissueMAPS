@@ -11,8 +11,8 @@ function CutMask = separateClumps(LabelImage, IntensityImage, ...
 %   are carried out on small 'mini' images the size of each object's bounding box. 
 %   This approach dramatically reduces computation time!
 %   
-%   Parameters:
-%   -----------
+%   Parameters
+%   ----------
 %
 %   LABELIMAGE is a labeled image (output of bwlabel.m) containing the objects
 %   that should be separated.
@@ -37,11 +37,10 @@ function CutMask = separateClumps(LabelImage, IntensityImage, ...
 %   on the intensity image of each object.
 %
 %
-%   Returns:
-%   --------
-%   
-%   CUTMASK is a logical array of the size of LABELIMAGE with 1 at the
-%   positions where cuts should be made and 0 otherwise.
+%   Returns
+%   -------
+%   logical array
+%       1 at the positions where cuts should be made and 0 otherwise.
 %
 %
 %   Authors:
@@ -51,7 +50,7 @@ function CutMask = separateClumps(LabelImage, IntensityImage, ...
 %       Nicolas Battich
 
 import jtlib.dijkstra;
-import jtlib.freezeColors;
+import jtlib.plotting.freezeColors;
 
 % Obtain pixels at inner periphery of objects
 props = regionprops(LabelImage,'BoundingBox');

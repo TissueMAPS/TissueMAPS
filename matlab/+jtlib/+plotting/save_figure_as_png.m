@@ -1,5 +1,5 @@
-function save_figure(fig, figure_file)
-    % Writing figure instance to file
+function save_figure_as_png(fig, figure_file)
+    % Write Matlab figure instance to file
     % (using the `export_fig <https://github.com/altmany/export_fig>`_ package).
     % 
     % Parameters

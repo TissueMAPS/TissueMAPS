@@ -187,7 +187,7 @@ class Features(object):
         with DatasetWriter(filename) as f:
             for name, values in features.iteritems():
                 p = 'objects/%s/features/%s' % (self.object_name, name)
-                logger.debug('save dataset "%s"', p)
+                logger.debug('save feature "%s"', p)
                 f.write(p, values)
 
     def plot(self):
