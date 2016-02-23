@@ -11,12 +11,23 @@ from tmaps.api.responses import (
 @api.route('/experiments/<experiment_id>/mapobjects/<object_type>', methods=['GET'])
 def get_mapobjects_tile(experiment_id, object_type):
 
-    x = request.args.get('x')
-    y = request.args.get('y')
-    z = request.args.get('z')
+    x = int(request.args.get('x'))
+    y = int(request.args.get('y'))
+    z = int(request.args.get('z'))
+
+    print "x: %s, y: %s, z: %s" % (str(x), str(y), str(z))
 
     if x is None or y is None or z is None:
         return MALFORMED_REQUEST_RESPONSE
+
+    width = 15860
+    height = -9140
+    size = 256 * 2 ** (6 - z)
+    # 256 * 2 ** (6 - z)
+    # x0 = x * width / 2 ** z
+    # y0 = y * height / 2 ** z
+    x0 = x * size
+    y0 = y * size
 
     return jsonify(
         {
@@ -26,24 +37,28 @@ def get_mapobjects_tile(experiment_id, object_type):
                     "type": "Feature",
                     "geometry": {
                     "type": "Polygon",
-                        "coordinates": [
-                          [ [1000.0, 0], [0, 0], [0, -1000],
-                            [1000, -1000], [1000, 0] ]
-                          ]
+                        "coordinates": [[
+                            [x0 + size, -y0],
+                            [x0, -y0],
+                            [x0, -y0 - size],
+                            [x0 + size, -y0 - size],
+                            [x0 + size, -y0]
+                     ]]
                    },
                    "properties": { "id": "0" }
-               },
-               {
-                   "type": "Feature",
-                   "geometry": {
-                   "type": "Polygon",
-                       "coordinates": [
-                         [ [2000.0, 0], [0, 0], [0, -2000],
-                           [2000, -2000], [2000, 0] ]
-                         ]
-                  },
-                  "properties": { "id": "1" }
                }
+                # ,
+               # {
+                #    "type": "Feature",
+                #    "geometry": {
+                #    "type": "Polygon",
+                #        "coordinates": [
+                #          [ [2000.0, 0], [0, 0], [0, -2000],
+                #            [2000, -2000], [2000, 0] ]
+                #          ]
+                #   },
+                #   "properties": { "id": "1" }
+               # }
             ]
         }
     )
