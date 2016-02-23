@@ -232,8 +232,6 @@ class ImageProcessingModule(object):
                 if o['name'] == name
             ][0]
             self.outputs[output_value] = py_out[i]
-        if 'Figure' in py_out._fields:
-            self.figure = py_out.Figure
 
     def _exec_r_module(self, inputs, output_names):
         logger.debug('sourcing module: "%s"' % self.module_file)
@@ -384,37 +382,24 @@ class ImageProcessingModule(object):
         else:
             output_names = []
 
-        try:
-            self._execute_module(inputs, output_names, engine)
-            success = True
-            error = ''
-        except Exception as e:
-            error = str(e)
-            for tb in traceback.format_tb(sys.exc_info()[2]):
-                error += '\n' + tb
-            success = False
-        # TODO
-        stderr = ''
-        stdout = ''
+        with CaptureOutput() as output:
+            # TODO: the StringIO approach prevents debugging of modules
+            try:
+                self._execute_module(inputs, output_names, engine)
+                success = True
+                error = ''
+            except Exception as e:
+                error = str(e)
+                for tb in traceback.format_tb(sys.exc_info()[2]):
+                    error += '\n' + tb
+                success = False
 
-        # with CaptureOutput() as output:
-        #     # TODO: the StringIO approach prevents debugging of modules
-        #     try:
-        #         self._execute_module(inputs, output_names, engine)
-        #         success = True
-        #         error = ''
-        #     except Exception as e:
-        #         error = str(e)
-        #         for tb in traceback.format_tb(sys.exc_info()[2]):
-        #             error += '\n' + tb
-        #         success = False
+        stdout = output['stdout']
+        sys.stdout.write(stdout)
 
-        # stdout = output['stdout']
-        # sys.stdout.write(stdout)
-
-        # stderr = output['stderr']
-        # stderr += error
-        # sys.stderr.write(stderr)
+        stderr = output['stderr']
+        stderr += error
+        sys.stderr.write(stderr)
 
         if success:
             output = {
