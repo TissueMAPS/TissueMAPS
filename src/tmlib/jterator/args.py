@@ -458,3 +458,97 @@ class JteratorCreateArgs(VariableArgs):
         }
 
 
+class JteratorCheckArgs(VariableArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class JteratorCheckArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict
+            arguments as key-value pairs
+        '''
+        super(JteratorCheckArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return {'pipeline'}
+
+    @property
+    def _persistent_attrs(self):
+        return {'pipeline'}
+
+    @property
+    def pipeline(self):
+        '''
+        Returns
+        -------
+        str
+            name of the pipeline that should be processed
+        '''
+        return self._pipelines
+
+    @pipeline.setter
+    def pipeline(self, value):
+        if not isinstance(value, self._pipeline_params['type']):
+            raise TypeError('Argument "pipeline" must have type %s'
+                            % self._pipeline_params['type'])
+        self._pipeline = value
+
+    @property
+    def _pipeline_params(self):
+        return {
+            'type': str,
+            'help': '''
+                name of the pipeline that should be processed
+            '''
+        }
+
+
+class JteratorRemoveArgs(VariableArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class JteratorRemoveArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict
+            arguments as key-value pairs
+        '''
+        super(JteratorRemoveArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return {'pipeline'}
+
+    @property
+    def _persistent_attrs(self):
+        return {'pipeline'}
+
+    @property
+    def pipeline(self):
+        '''
+        Returns
+        -------
+        str
+            name of the pipeline that should be processed
+        '''
+        return self._pipelines
+
+    @pipeline.setter
+    def pipeline(self, value):
+        if not isinstance(value, self._pipeline_params['type']):
+            raise TypeError('Argument "pipeline" must have type %s'
+                            % self._pipeline_params['type'])
+        self._pipeline = value
+
+    @property
+    def _pipeline_params(self):
+        return {
+            'type': str,
+            'help': '''
+                name of the pipeline that should be processed
+            '''
+        }

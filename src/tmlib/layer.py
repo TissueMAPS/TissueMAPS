@@ -5,13 +5,11 @@ import pandas as pd
 import logging
 import lxml
 import itertools
+import skimage.measure
 from abc import ABCMeta
 from abc import abstractmethod
 from cached_property import cached_property
 from collections import defaultdict
-from skimage.measure import block_reduce
-from skimage.measure import approximate_polygon
-from skimage.measure import find_contours
 from .readers import DatasetReader
 from .errors import PyramidCreationError
 from .errors import RegexError
@@ -1103,35 +1101,20 @@ class SegmentedObjectLayer(Layer):
                     logger.debug('offset for site %d: y %d - x %d',
                                  j, y_offset, x_offset)
 
-                    segm_img = data.read('%s/image' % segm_path)
-                    segm_img[:, 0] = 0
-                    segm_img[:, -1] = 0
-                    segm_img[0, :] = 0
-                    segm_img[-1, :] = 0
-                    centroids = data.read('%s/centroids' % segm_path)
-                    object_ids = np.unique(segm_img[segm_img > 0])
+                    coords_y = data.read('%s/coordinates/y' % segm_path)
+                    coords_x = data.read('%s/coordinates/x' % segm_path)
+                    centroids_y = data.read('%s/centroids/y' % segm_path)
+                    centroids_x = data.read('%s/centroids/x' % segm_path)
+                    object_ids = data.read('%s/ids' % segm_path)
                     for i, obj_id in enumerate(object_ids):
-                        # Reduce the number of outlines points to reduce the
-                        # data that we have to send to the client
-                        mask = segm_img == obj_id
-
-                        contours = find_contours(mask, 0.5, fully_connected='high')
-                        if len(contours) > 1:
-                            # TODO: "find_contours" may sometimes identify
-                            # contours for more than one object.
-                            logger.warn('%d contours identified for object #%d',
-                                        len(contours), global_obj_id)
-                        if len(contours) == 0:
-                            # TODO: To find closed contours of border objects
-                            # we set the values of outer pixel rows/columns
-                            # to zero (see above). Small objects may get lost!
-                            logger.error('no contour identified for object #%d',
-                                         global_obj_id)
-                        contour = contours[0]
-                        poly = approximate_polygon(contour, tolerance).astype(int)
+                        # Reduce the number of outline points to reduce the
+                        # data that we have to send to the client and render
+                        contour = np.array([coords_y[i], coords_x[i]]).T
+                        poly = skimage.measure.approximate_polygon(
+                                        contour, tolerance).astype(int)
 
                         # Add offset to coordinates to account for position of
-                        # the object within the total well plate overview
+                        # the object within the total well plate overview.
                         # Openlayers wants the x coordinate in the first
                         # column and the inverted y coordinate in the second.
                         outline_coordinates = pd.DataFrame({
@@ -1142,8 +1125,8 @@ class SegmentedObjectLayer(Layer):
                         store.write(o_path, outline_coordinates)
                         store.set_attribute(o_path, 'columns', ['x', 'y'])
                         centroid_coordinates = pd.Series({
-                            'y': -1 * (centroids[i, 0] + y_offset),
-                            'x': centroids[i, 1] + x_offset
+                            'y': -1 * (centroids_y[i] + y_offset),
+                            'x': centroids_x[i] + x_offset
                         })
                         c_path = '%s/%d' % (centroid_coord_path, global_obj_id)
                         store.write(c_path, centroid_coordinates)
@@ -1160,18 +1143,19 @@ class SegmentedObjectLayer(Layer):
                     logger.debug('add segmentations to datasets')
                     job_id = data.read('/metadata/job_id')
                     job_path = '%s/%d' % (segm_path, job_id)
-                    store.write('%s/image' % job_path, segm_img)
+                    store.append('%s/coordinates/y' % job_path, coords_y)
+                    store.append('%s/coordinates/x' % job_path, coords_x)
                     # The "is_border" vector indicates whether the parent (!)
                     # object lies at the border of the image.
                     store.append('%s/is_border' % obj_path, is_border)
 
                     # Store the name of the corresponding plate and well
-                    plate_names = np.repeat(plate_name, len(object_ids))
-                    store.append('%s/metadata/plate_name' % obj_path, plate_names)
-                    well_names = np.repeat(well_name, len(object_ids))
-                    store.append('%s/metadata/well_name' % obj_path, well_names)
+                    plates = np.repeat(plate_name, len(object_ids))
+                    store.append('%s/metadata/plate_name' % obj_path, plates)
+                    wells = np.repeat(well_name, len(object_ids))
+                    store.append('%s/metadata/well_name' % obj_path, wells)
 
-            # Store objects separately as a sorted array of integers
+            # Store objects ids separately as a sorted array of integers
             store.write('%s/ids' % obj_path, range(global_obj_id))
 
 
@@ -1311,7 +1295,8 @@ class WellObjectLayer(Layer):
                             top_right_coordinate,
                             top_left_coordinate,
                             lower_left_coordinate,
-                            lower_right_coordinate
+                            lower_right_coordinate,
+                            top_right_coordinate
                         ])
                         centroid_coordinates = (
                             int(np.mean(outline_coordinates[:, 0])),

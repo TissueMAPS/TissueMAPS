@@ -532,8 +532,10 @@ class DatasetWriter(object):
         if dset.dtype != data.dtype:
             raise TypeError('Data types don\'t  match.')
         start_index = len(dset)
+        end_index = start_index + len(data)
         dset.resize((len(dset) + len(data), ))
-        dset[start_index:] = data
+        self.write(path, data, index=range(start_index, end_index))
+        # dset[start_index:] = data
 
     def vstack(self, path, data):
         '''

@@ -161,31 +161,6 @@ def hist_sample_from_sites(filenames, nr_to_sample=5):
     return hist
 
 
-def find_border_objects(im):
-    '''
-    Given a label image, find the objects at the border of the image.
-
-    Parameters
-    ----------
-    im: numpy.ndarray
-        label image
-
-    Returns
-    -------
-    List[int]
-        1 if an object represent a border object and 0 otherwise
-    '''
-    edges = [np.unique(im[0, :]),   # first row
-             np.unique(im[-1, :]),  # last row
-             np.unique(im[:, 0]),   # first col
-             np.unique(im[:, -1])]  # last col
-
-    # Count only unique ids and remove 0 since it signals 'empty space'
-    border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
-    object_ids = np.unique(im[im != 0])
-    return [1 if o in border_ids else 0 for o in object_ids]
-
-
 def save_hist_to_txt_file(hist, filename):
     np.savetxt(filename, hist, fmt='%d')
 

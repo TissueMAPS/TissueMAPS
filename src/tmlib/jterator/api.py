@@ -250,10 +250,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.engines['R'] = None
         if 'Matlab' in languages:
             logger.info('start Matlab engine')
+            # NOTE: It is absolutely necessary to specify these startup options
+            # for use parallel processing on the cluster. Otherwise some jobs
+            # hang up and get killed due to timeout.
             startup_options = '-nosplash -singleCompThread'
             if self.headless:
-                # option minimizes memory usage and improves initial startup
-                # speed, but disable plotting functionality
+                # Option minimizes memory usage and improves initial startup
+                # speed, but disables plotting functionality, so we can only
+                # use it in headless mode.
                 startup_options += ' -nojvm'
             logger.debug('Matlab startup options: %s', startup_options)
             self.engines['Matlab'] = matlab.MatlabSession(
@@ -270,7 +274,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
             for p in matlab_path:
                 if not p:
                     continue
-                self.engines['Matlab'].eval('addpath(genpath(\'{0}\'));'.format(p))
+                self.engines['Matlab'].eval(
+                    'addpath(genpath(\'{0}\'));'.format(p)
+                )
         # if 'Julia' in languages:
         #     print 'jt - Starting Julia engine'
         #     self.engines['Julia'] = julia.Julia()
@@ -720,12 +726,15 @@ class ImageAnalysisPipeline(ClusterRoutines):
         :py:attr:`tmlib.experiment.Experiment.data_file`
         :py:class:`tmlib.layer.ObjectLayer`
         '''
+        # TODO: consider calculating global coordinates in a jterator module
+        # and storing them across several files to skip the collect phase
+        # which may take forever
         example_file = batch['inputs']['data_files'][0]
         objects = list()
         with DatasetReader(example_file) as f:
             names = f.list_groups('/objects')
             # TODO: sort objects according to parent-child relationship
-            # (which has to be in the form an acyclic graph)
+            # (as an acyclic graph)
             for name in names:
                 if f.exists('/objects/%s/segmentation' % name):
                     objects.append(name)

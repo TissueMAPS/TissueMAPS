@@ -542,6 +542,7 @@ class JtAvailableModules(object):
         self._pipe_registration = list()
         for i, name in enumerate(self.module_names):
             name = self.module_names[i]
+            filename = os.path.basename(self.module_files[i])
             if name in available_modules:
                 repo_handles_path = self._get_corresponding_handles_file(name)
                 # We have to provide the path to handles files for the
@@ -552,9 +553,8 @@ class JtAvailableModules(object):
                     'name': name,
                     'description': {
                         'handles': new_handles_path,
-                        'module': name,
-                        'active': True,
-                        'language': self.module_languages[i],
+                        'module': filename,
+                        'active': True
                     }
                 }
                 self._pipe_registration.append(element)

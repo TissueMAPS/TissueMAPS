@@ -9,6 +9,8 @@ from .args import JteratorCreateArgs
 from .args import JteratorSubmitArgs
 from .args import JteratorLogArgs
 from .args import JteratorInfoArgs
+from .args import JteratorCheckArgs
+from .args import JteratorRemoveArgs
 from ..args import CheckArgs
 from ..args import CreateArgs
 from ..args import RemoveArgs
@@ -68,6 +70,7 @@ remove_parser.description = '''
     WARNING: This will also remove any project related data!
 '''
 RemoveArgs().add_to_argparser(remove_parser)
+JteratorRemoveArgs().add_to_argparser(remove_parser)
 
 check_parser = subparsers.add_parser(
     'check', help='check descriptor files')
@@ -75,6 +78,7 @@ check_parser.description = '''
     Check content of the .pipe and .handles files descriptor files.
 '''
 CheckArgs().add_to_argparser(check_parser)
+JteratorCheckArgs().add_to_argparser(check_parser)
 
 for name in subparsers.choices:
     subparsers.choices[name].set_defaults(handler=Jterator.call)

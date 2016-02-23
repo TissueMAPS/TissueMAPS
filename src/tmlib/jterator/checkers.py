@@ -295,6 +295,8 @@ class PipelineChecker(object):
                             # Don't check inactive modules
                             continue
                         if input_arg['value'] not in outputs:
+                            # TODO: why does this sometimes happen with the
+                            # user interface???
                             print input_arg['name']
                             print module['handles']
                             print handles

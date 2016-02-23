@@ -1,13 +1,13 @@
 import os
-# import imp
 import sys
 import re
 import logging
+# import imp
 import importlib
 import traceback
 import collections
 import numpy as np
-import rpy2.robjects as robjects
+import rpy2.robjects
 import rpy2.robjects.numpy2ri
 from rpy2.robjects.packages import importr
 from cStringIO import StringIO
@@ -237,10 +237,10 @@ class ImageProcessingModule(object):
 
     def _exec_r_module(self, inputs, output_names):
         logger.debug('sourcing module: "%s"' % self.module_file)
-        robjects.r('source("{0}")'.format(self.module_file))
-        robjects.numpy2ri.activate()  # enables use of numpy arrays
+        rpy2.robjects.r('source("{0}")'.format(self.module_file))
+        rpy2.robjects.numpy2ri.activate()  # enables use of numpy arrays
         function_name = os.path.splitext(os.path.basename(self.module_file))[0]
-        func = robjects.globalenv['{0}'.format(function_name)]
+        func = rpy2.robjects.globalenv['{0}'.format(function_name)]
         logger.debug('evaluating R function with INPUTS: "%s"'
                      % '", "'.join(inputs.keys()))
         # R doesn't have unsigned integer types
@@ -252,7 +252,7 @@ class ImageProcessingModule(object):
                         'convert unsigned integer data type to integer',
                         self.name, k)
                     inputs[k] = v.astype(int)
-        args = robjects.ListVector({k: v for k, v in inputs.iteritems()})
+        args = rpy2.robjects.ListVector({k: v for k, v in inputs.iteritems()})
         base = importr('base')
         r_var = base.do_call(func, args)
         for i, name in enumerate(output_names):
@@ -384,30 +384,44 @@ class ImageProcessingModule(object):
         else:
             output_names = []
 
-        with CaptureOutput() as output:
-            try:
-                self._execute_module(inputs, output_names, engine)
-                success = True
-                error = ''
-            except Exception as e:
-                error = str(e)
-                for tb in traceback.format_tb(sys.exc_info()[2]):
-                    error += '\n' + tb
-                success = False
+        try:
+            self._execute_module(inputs, output_names, engine)
+            success = True
+            error = ''
+        except Exception as e:
+            error = str(e)
+            for tb in traceback.format_tb(sys.exc_info()[2]):
+                error += '\n' + tb
+            success = False
+        # TODO
+        stderr = ''
+        stdout = ''
 
-        stdout = output['stdout']
-        sys.stdout.write(stdout)
+        # with CaptureOutput() as output:
+        #     # TODO: the StringIO approach prevents debugging of modules
+        #     try:
+        #         self._execute_module(inputs, output_names, engine)
+        #         success = True
+        #         error = ''
+        #     except Exception as e:
+        #         error = str(e)
+        #         for tb in traceback.format_tb(sys.exc_info()[2]):
+        #             error += '\n' + tb
+        #         success = False
 
-        stderr = output['stderr']
-        stderr += error
-        sys.stderr.write(stderr)
+        # stdout = output['stdout']
+        # sys.stdout.write(stdout)
+
+        # stderr = output['stderr']
+        # stderr += error
+        # sys.stderr.write(stderr)
 
         if success:
             output = {
                 'data': self.outputs,
                 'stdout': stdout,
                 'stderr': stderr,
-                'success': True,
+                'success': success,
                 'error_message': None
             }
         else:
@@ -415,9 +429,9 @@ class ImageProcessingModule(object):
                 'data': None,
                 'stdout': stdout,
                 'stderr': stderr,
-                'success': False,
-                'error_message': self.build_error_message(inputs,
-                                                          stdout, stderr)
+                'success': success,
+                'error_message': self.build_error_message(
+                                        inputs, stdout, stderr)
             }
         return output
 

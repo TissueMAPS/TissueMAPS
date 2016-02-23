@@ -30,10 +30,11 @@ def merge_datasets(input_files, output_file):
                 for obj in object_names:
                     obj_path = '/objects/%s' % obj
                     feat_path = '%s/features' % obj_path
-                    features = data.list_datasets(feat_path)
-                    if len(features) == 0:
+                    if not data.exists(feat_path):
                         logger.warn('no features for "%s" objects in file %s',
                                     obj, filename)
+                        continue
+                    features = data.list_datasets(feat_path)
                     for feat in features:
                         f_path = '%s/%s' % (feat_path, feat)
                         # Remove border objects
