@@ -13,6 +13,7 @@ from abc import abstractmethod
 from . import __version__
 from .args import InitArgs
 from .args import SubmitArgs
+from .args import ResubmitArgs
 from .args import RunArgs
 from .args import CollectArgs
 from .args import CleanupArgs
@@ -499,7 +500,7 @@ class CommandLineInterface(object):
         '''
         Initialize an instance of the step-specific API class
         and process arguments provided by the "submit" subparser, which submits
-        all jobs and monitors their status.
+        jobs and monitors their status.
 
         Parameters
         ----------
@@ -516,10 +517,6 @@ class CommandLineInterface(object):
             raise AttributeError(
                     'Argument "jobs" can only be set when '
                     'value of argument "phase" is "run".')
-        if args.jobs is None and args.phase == 'run':
-            raise AttributeError(
-                    'When "phase" is set to "run", '
-                    'argument "jobs" has to be set as well.')
         jobs = self.create_jobs(
                     duration=args.duration,
                     memory=args.memory,
@@ -531,6 +528,46 @@ class CommandLineInterface(object):
             session = api.create_session(backup=True)
         else:
             session = api.create_session()
+        logger.debug('add jobs to session "%s"', api.session_dir)
+        session.add(jobs)
+        session.save_all()
+        logger.info('submit and monitor jobs')
+        api.submit_jobs(session,
+                        monitoring_interval=args.interval,
+                        monitoring_depth=args.depth)
+
+    def resubmit(self, args):
+        '''
+        Initialize an instance of the step-specific API class
+        and process arguments provided by the "resubmit" subparser,
+        which resubmits jobs and monitors their status
+        without creating a new session.
+
+        Parameters
+        ----------
+        args: tmlib.args.ResubmitArgs
+            method-specific arguments
+
+        Note
+        ----
+        Requires calling :py:method:`tmlib.cli.init` first.
+        '''
+        # TODO: session has some delay, immediate resubmission may cause trouble
+        if not os.path.exists(self.session_dir):
+            raise OSError('There are no jobs that can be resubmitted.')
+        self._print_logo()
+        api = self._api_instance
+        if args.jobs is not None and args.phase != 'run':
+            raise AttributeError(
+                    'Argument "jobs" can only be set when '
+                    'value of argument "phase" is "run".')
+        jobs = self.create_jobs(
+                    duration=args.duration,
+                    memory=args.memory,
+                    cores=args.cores,
+                    phase=args.phase,
+                    ids=args.jobs)
+        session = api.create_session(overwrite=False)
         logger.debug('add jobs to session "%s"', api.session_dir)
         session.add(jobs)
         session.save_all()
@@ -571,7 +608,7 @@ class CommandLineInterface(object):
 
     @staticmethod
     def get_parser_and_subparsers(
-            methods={'init', 'run', 'submit', 'collect', 'cleanup', 'log', 'info'}):
+            methods={'init', 'run', 'submit', 'resubmit', 'collect', 'cleanup', 'log', 'info'}):
         '''
         Get an argument parser object for a subclass of
         :py:class:`tmlib.cli.CommandLineInterface` and a subparser object
@@ -639,9 +676,19 @@ class CommandLineInterface(object):
                 help='submit and monitor jobs')
             submit_parser.description = '''
                 Create jobs, submit them to the cluster, monitor their
-                processing and collect their outputs.
+                processing and collect their outputs
             '''
             SubmitArgs().add_to_argparser(submit_parser)
+
+        if 'resubmit' in methods:
+            submit_parser = subparsers.add_parser(
+                'resubmit',
+                help='resubmit and monitor jobs')
+            submit_parser.description = '''
+                Create jobs, submit them to the cluster, monitor their
+                processing and collect their outputs using an existing session.
+            '''
+            ResubmitArgs().add_to_argparser(submit_parser)
 
         if 'collect' in methods:
             collect_parser = subparsers.add_parser(

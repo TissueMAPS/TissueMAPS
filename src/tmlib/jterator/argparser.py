@@ -7,6 +7,8 @@ from .args import JteratorInitArgs
 from .args import JteratorRunArgs
 from .args import JteratorCreateArgs
 from .args import JteratorSubmitArgs
+from .args import JteratorCollectArgs
+from .args import JteratorResubmitArgs
 from .args import JteratorLogArgs
 from .args import JteratorInfoArgs
 from .args import JteratorCheckArgs
@@ -38,7 +40,12 @@ JteratorRunArgs().add_to_argparser(run_extra_group)
 collect_parser = subparsers.choices['collect']
 collect_extra_group = collect_parser.add_argument_group(
     'additional step-specific arguments')
-JteratorSubmitArgs().add_to_argparser(collect_extra_group)
+JteratorCollectArgs().add_to_argparser(collect_extra_group)
+
+resubmit_parser = subparsers.choices['resubmit']
+resubmit_extra_group = resubmit_parser.add_argument_group(
+    'additional step-specific arguments')
+JteratorResubmitArgs().add_to_argparser(resubmit_extra_group)
 
 submit_parser = subparsers.choices['submit']
 submit_extra_group = submit_parser.add_argument_group(

@@ -569,6 +569,250 @@ class SubmitArgs(GeneralArgs):
         }
 
 
+class ResubmitArgs(GeneralArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Initialize an instance of class SubmitArgs.
+
+        Parameters
+        ----------
+        **kwargs: dict, optional
+            arguments as key-value pairs
+        '''
+        self.interval = self._interval_params['default']
+        self.depth = self._depth_params['default']
+        self.duration = self._duration_params['default']
+        self.memory = self._memory_params['default']
+        self.cores = self._cores_params['default']
+        self.phase = self._phase_params['default']
+        self.jobs = self._jobs_params['default']
+        super(ResubmitArgs, self).__init__(**kwargs)
+
+    @property
+    def _required_args(self):
+        return {'phase'}
+
+    @property
+    def _persistent_attrs(self):
+        return {
+            'interval', 'phase', 'jobs', 'depth',
+            'memory', 'duration', 'cores',
+            'backup',
+        }
+
+    @property
+    def jobs(self):
+        '''
+        Returns
+        -------
+        List[int]
+            ids of *run* jobs that should be resubmitted (default: ``None``)
+
+        Note
+        ----
+        Can only be set if value of attribute `phase` is ``"run"``.
+        '''
+        return self._jobs
+
+    @jobs.setter
+    def jobs(self, value):
+        if not(isinstance(value, list) or value is None):
+            raise TypeError('Attribute "jobs" must have type list')
+        if value is None:
+            self._jobs = value
+            return
+        if any([not isinstance(e, self._jobs_params['type']) for e in value]):
+            raise TypeError(
+                    'Elements of attribute "jobs" must have type %s.'
+                    % self._jobs_params['type'])
+        self._jobs = value
+
+    @property
+    def _jobs_params(self):
+        return {
+            'type': int,
+            'nargs': '+',
+            'default': None,
+            'help': '''
+                one-based indices of jobs that should be resubmitted
+                (requires argument "phase" to be set to "run")
+            '''
+        }
+
+    @property
+    def phase(self):
+        '''
+        Returns
+        -------
+        List[int]
+            phase for which jobs should be resubmitted
+            (options: ``"run"`` or ``"collect"``; default: ``None``)
+        '''
+        return self._phase
+
+    @phase.setter
+    def phase(self, value):
+        if not(isinstance(value, self._phase_params['type']) or value is None):
+            raise TypeError('Attribute "phase" must have type %s'
+                            % self._phase_params['type'])
+        self._phase = value
+
+    @property
+    def _phase_params(self):
+        return {
+            'type': str,
+            'default': None,
+            'choices': {'run', 'collect'},
+            'help': '''
+                phase for which jobs should be resubmitted
+            '''
+        }
+
+    @property
+    def interval(self):
+        '''
+        Returns
+        -------
+        int
+            monitoring interval in seconds (default: ``1``)
+        '''
+        return self._interval
+
+    @interval.setter
+    def interval(self, value):
+        if not(isinstance(value, self._interval_params['type']) or
+               value is None):
+            raise TypeError('Attribute "interval" must have type %s'
+                            % self._interval_params['type'])
+        self._interval = value
+
+    @property
+    def _interval_params(self):
+        return {
+            'type': int,
+            'default': 1,
+            'help': '''
+                monitoring interval in seconds (default: 1)
+            '''
+        }
+
+    @property
+    def depth(self):
+        '''
+        Returns
+        -------
+        int
+            monitoring recursion depth, i.e. how detailed status information of
+            subtasks should be monitored during the processing of the jobs
+            (default: ``1``)
+        '''
+        return self._depth
+
+    @depth.setter
+    def depth(self, value):
+        if not isinstance(value, self._depth_params['type']):
+            raise TypeError('Attribute "depth" must have type %s'
+                            % self._depth_params['type'])
+        self._depth = value
+
+    @property
+    def _depth_params(self):
+        return {
+            'type': int,
+            'default': 1,
+            'help': '''
+                recursion depth for subtask monitoring (default: 1)
+            '''
+        }
+
+    @property
+    def duration(self):
+        '''
+        Returns
+        -------
+        str
+            time that should be allocated for each job in HH:MM:SS
+            (default: ``"02:00:00"``)
+        '''
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        if not isinstance(value, self._duration_params['type']):
+            raise TypeError('Attribute "duration" must have type %s'
+                            % self._duration_params['type'])
+        self._duration = value
+
+    @property
+    def _duration_params(self):
+        return {
+            'type': str,
+            'default': '02:00:00',
+            'help': '''
+                time that should be allocated for each job in HH:MM:SS
+                (default: 02:00:00)
+            '''
+        }
+
+    @property
+    def memory(self):
+        '''
+        Returns
+        -------
+        int
+            amount of memory that should be allocated for each job in GB
+            (default: ``4``)
+        '''
+        return self._memory
+
+    @memory.setter
+    def memory(self, value):
+        if not isinstance(value, self._memory_params['type']):
+            raise TypeError('Attribute "memory" must have type %s'
+                            % self._memory_params['type'])
+        self._memory = value
+
+    @property
+    def _memory_params(self):
+        return {
+            'type': int,
+            'default': 4,
+            'help': '''
+                amount of memory that should be allocated for each job in GB
+            '''
+        }
+
+    @property
+    def cores(self):
+        '''
+        Returns
+        -------
+        int
+            number of CPUs that should be allocated for each job
+            (default: ``1``)
+        '''
+        return self._cores
+
+    @cores.setter
+    def cores(self, value):
+        if not isinstance(value, self._cores_params['type']):
+            raise TypeError('Attribute "cores" must have type %s'
+                            % self._cores_params['type'])
+        self._cores = value
+
+    @property
+    def _cores_params(self):
+        return {
+            'type': int,
+            'default': 1,
+            'help': '''
+                number of CPUs that should be allocated for each job
+                (default: 1)
+            '''
+        }
+
+
 class CollectArgs(GeneralArgs):
 
     def __init__(self, **kwargs):

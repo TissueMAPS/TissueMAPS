@@ -2,6 +2,7 @@ import os
 import yaml
 import glob
 import time
+import datetime
 import logging
 import shutil
 from natsort import natsorted
@@ -19,6 +20,7 @@ from . import utils
 from .readers import JsonReader
 from .writers import JsonWriter
 from .errors import JobDescriptionError
+from .errors import WorkflowError
 from .cluster_utils import format_stats_data
 from .cluster_utils import get_task_data
 from .cluster_utils import print_task_status
@@ -126,6 +128,11 @@ class BasicClusterRoutines(object):
         backup: bool, optional
             backup an existing session (default: ``False``)
 
+        Returns
+        -------
+        gc3libs.session.Session
+            session object
+
         Note
         ----
         If `backup` or `overwrite` are set to ``True`` a new session will be
@@ -197,8 +204,8 @@ class BasicClusterRoutines(object):
                     'Argument "session" must be a GC3Pie session object.')
         e._store = session.store
         task_ids = session.list_ids()
-        if len(task_ids) != 1:
-            raise ValueError('Session should only contain a single task.')
+        # if len(task_ids) != 1:
+        #     raise ValueError('Session should only contain a single task.')
         logger.debug('add task "%s" to engine', task_ids[-1])
         task = session.load(task_ids[-1])
         # NOTE: This changes the id of the object!
@@ -210,12 +217,19 @@ class BasicClusterRoutines(object):
         e.add(task)
 
         # periodically check the status of submitted jobs
+        t_submitted = time.time()
         try:
             break_next = False
             while True:
 
                 time.sleep(monitoring_interval)
                 logger.debug('wait %d seconds', monitoring_interval)
+
+                t_elapsed = time.time() - t_submitted
+                t_string = '{:d}:{:02d}:{:02d}'.format(
+                            *reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
+                                    [(int(t_elapsed),), 60, 60]))
+                logger.info('duration: %s', t_string)
 
                 logger.info('progress ...')
                 e.progress()
@@ -561,13 +575,18 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Raises
         ------
-        OSError
+        tmlib.errors.WorkflowError
             when `filename` does not exist
 
         Note
         ----
         The relative paths for "inputs" and "outputs" are made absolute.
         '''
+        if not os.path.exists(filename):
+            raise WorkflowError(
+                    'Job description file does not exist: %s.\n'
+                    'Initialize the step first by calling the "init" method.',
+                    filename)
         with JsonReader() as reader:
             batch = reader.read(filename)
             return self._make_paths_absolute(batch)
