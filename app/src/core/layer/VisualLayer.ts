@@ -45,6 +45,10 @@ class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
         // var vectorSource = new ol.source.Vector({
         //     features: []
         // });
+        // var extent = [0, 0, 15860, 9140];
+        // var extent = [0, 0, 15860, 9140];
+        var extent = [0, -9140, 15860, 0];
+
         var vectorSource = new ol.source.VectorTile({
             // features: []
             url: 'api/experiments/adsf/mapobjects/cells?x={x}&y={y}&z={z}',
@@ -54,10 +58,20 @@ class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
                 // view of the map!
                 defaultDataProjection: new ol.proj.Projection({
                     code: 'tm',
-                    units: 'pixels'
+                    units: 'pixels',
+                    extent: extent
                 })
             }),
-            tileGrid: ol.tilegrid.createXYZ({maxZoom: 22})
+            tileGrid: ol.tilegrid.createXYZ({
+                extent: extent,
+                maxZoom: 6,
+                origin: [0, 0]
+            })
+            // tileGrid: new ol.tilegrid.TileGrid({
+            //     extent: extent,
+            //     // maxZoom: 7,
+            //     origin: [0, 0]
+            // })
         });
 
         this._olLayer = new ol.layer.VectorTile({

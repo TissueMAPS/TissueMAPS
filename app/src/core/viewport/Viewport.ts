@@ -97,12 +97,14 @@ class Viewport implements Serializable<Viewport> {
             var width = channelLayer.imageSize[0];
             var height = channelLayer.imageSize[1];
             var center = [width / 2, - height / 2];
+            var extent = [0, 0, width, height];
+            console.log(extent);
             var view = new ol.View({
                 // We create a custom (dummy) projection that is based on pixels
                 projection: new ol.proj.Projection({
                     code: 'tm',
                     units: 'pixels',
-                    extent: [0, 0, width, height]
+                    extent: extent
                 }),
                 center: center,
                 zoom: 0, // 0 is zoomed out all the way

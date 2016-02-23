@@ -37803,7 +37803,9 @@ ol.tilegrid.createXYZ = function(opt_options) {
       options.extent, options.maxZoom, options.tileSize);
   delete options.maxZoom;
 
-  return new ol.tilegrid.TileGrid(options);
+  var tilegrid = new ol.tilegrid.TileGrid(options);
+  console.log(tilegrid);
+  return tilegrid;
 };
 
 
@@ -81777,7 +81779,7 @@ goog.inherits(ol.render.webgl.PolygonReplay, ol.render.VectorContext);
 /**
  * Draw one polygon.
  * @param {Array.<Array.<ol.Coordinate>>} coordinates
- * @param {ol.Color} fillColor
+ * @param {Array.<number>} fillColor Array of size 4. Each value ahs to be between 0 and one.
  * @private
  */
 ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
@@ -81804,10 +81806,14 @@ ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
     // this.vertices_.push(fillColor[0] / 255);
     // this.vertices_.push(fillColor[1] / 255);
     // this.vertices_.push(fillColor[2] / 255);
-    this.vertices_.push(fillColor[0]);
-    this.vertices_.push(fillColor[1]);
-    this.vertices_.push(fillColor[2]);
-    this.vertices_.push(fillColor[3]);
+    // this.vertices_.push(fillColor[0]);
+    // this.vertices_.push(fillColor[1]);
+    // this.vertices_.push(fillColor[2]);
+    // this.vertices_.push(fillColor[3]);
+    this.vertices_.push(1);
+    this.vertices_.push(0);
+    this.vertices_.push(0);
+    this.vertices_.push(0.5);
 
     // console.log(fillColor);
   }
@@ -81850,6 +81856,9 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   } else {
     return;
   }
+
+  fillColor = [1, 0, 0, 0.5];
+
 
   var coordinates = polygonGeometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);
@@ -84469,12 +84478,6 @@ ol.renderer.webgl.VectorTileLayer = function(mapRenderer, vectorLayer) {
    * @type {?ol.layer.LayerState}
    */
   this.layerState_ = null;
-
-  /**
-   * @private
-   * @type {ol.render.webgl.ReplayGroup}
-   */
-  this.replayGroup_ = null;
 };
 goog.inherits(ol.renderer.webgl.VectorTileLayer, ol.renderer.webgl.Layer);
 
@@ -84485,9 +84488,6 @@ goog.inherits(ol.renderer.webgl.VectorTileLayer, ol.renderer.webgl.Layer);
 ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
     function(frameState, layerState, context) {
 
-  // var layer = /** @type {ol.layer.Vector} */ (this.getLayer());
-  // goog.asserts.assertInstanceof(layer, ol.layer.VectorTile,
-  //     'layer is an instance of ol.layer.VectorTile');
   var layer = this.getLayer();
   goog.asserts.assertInstanceof(layer, ol.layer.VectorTile,
       'layer is an instance of ol.layer.VectorTile');
@@ -84510,13 +84510,18 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   }
 
   var extent = frameState.extent;
+  if (layerState.extent) {
+    extent = ol.extent.getIntersection(extent, layerState.extent);
+  }
+  if (ol.extent.isEmpty(extent)) {
+    // Return false to prevent the rendering of the layer.
+    return false;
+  }
+
   var viewState = frameState.viewState;
   var projection = viewState.projection;
   var resolution = viewState.resolution;
   var pixelRatio = frameState.pixelRatio;
-  // var vectorLayerRevision = layer.getRevision();
-  // var vectorLayerRenderBuffer = layer.getRenderBuffer();
-  // var vectorLayerRenderOrder = layer.getRenderOrder();
 
   var tileGrid = source.getTileGrid();
 
@@ -84528,7 +84533,6 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   }
 
   var tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
-  // console.log(tileRange);
 
   this.updateUsedTiles(frameState.usedTiles, source, z, tileRange);
   this.manageTilePyramid(frameState, source, tileGrid, pixelRatio,
@@ -84612,15 +84616,19 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
  */
 ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
     function(tile, layer, resolution, extent, pixelRatio, context) {
-
   var revision = layer.getRevision();
   var renderOrder = layer.getRenderOrder() || null;
-
   var replayState = tile.getReplayState();
-  // if (!replayState.dirty && replayState.renderedRevision == revision &&
-  //     replayState.renderedRenderOrder == renderOrder) {
-  //   return;
-  // }
+
+  if (!replayState.dirty && replayState.renderedRevision == revision &&
+      replayState.renderedRenderOrder == renderOrder) {
+    return;
+  }
+
+  // FIXME dispose of old replayGroup in post render
+  goog.dispose(replayState.replayGroup);
+  replayState.replayGroup = null;
+  replayState.dirty = false;
 
   var tol = ol.renderer.vector.getTolerance(resolution, pixelRatio);
   var replayGroup = new ol.render.webgl.ReplayGroup(
@@ -84639,10 +84647,11 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
         styles = styleFunction(feature, resolution);
       }
     }
+    // FIXME, the style function is not returned properly
     styles = [
       new ol.style.Style({
           fill: new ol.style.Fill({
-              color: [255, 0, 0, 1]
+              color: [255, 0, 0, 0.5]
           }),
           stroke: new ol.style.Stroke({
               color: [255, 255, 255, 1]
@@ -84663,7 +84672,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
 
   replayState.renderedRevision = revision;
   replayState.renderedRenderOrder = renderOrder;
-  replayState.resolution = NaN;
+  replayState.resolution = resolution;
   replayState.replayGroup = replayGroup;
 }
 
@@ -84673,30 +84682,33 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
 ol.renderer.webgl.VectorTileLayer.prototype.composeFrame = function(frameState, layerState, context) {
 
   var tilesToDraw = this.renderedTiles_;
-
   var viewState = frameState.viewState;
 
-  var i, nTiles, replayState;
+  var i, nTiles, replayState, replayGroup;
+  var layer = /** @type {ol.layer.VectorTile} */ (layerState.layer);
+  var layerRevision = layer.getRevision();
+  var renderOrder = layer.getRenderOrder() || null;
+
   for (i = 0, nTiles = tilesToDraw.length; i < nTiles; ++i) {
     var tile = tilesToDraw[i];
+    
     replayState = tile.getReplayState();
-    replayState.replayGroup.replay(
-      context,
-      viewState.center, viewState.resolution, viewState.rotation,
-      frameState.size, frameState.pixelRatio, layerState.opacity,
-      layerState.managed ? frameState.skippedFeatureUids : {});
+    replayGroup = replayState.replayGroup;
+
+    if (replayGroup && !replayGroup.isEmpty()
+        // && !replayState.dirty
+        // && replayState.renderedRevision !== layerRevision
+        // && replayState.renderedRenderOrder !== renderOrder
+    ) {
+
+      replayState.replayGroup.replay(
+        context,
+        viewState.center, viewState.resolution, viewState.rotation,
+        frameState.size, frameState.pixelRatio, layerState.opacity,
+        layerState.managed ? frameState.skippedFeatureUids : {});
+
+    }
   }
-
-  // this.layerState_ = layerState;
-  // var viewState = frameState.viewState;
-  // var replayGroup = this.replayGroup_;
-  // if (replayGroup && !replayGroup.isEmpty()) {
-  //   replayGroup.replay(context,
-  //       viewState.center, viewState.resolution, viewState.rotation,
-  //       frameState.size, frameState.pixelRatio, layerState.opacity,
-  //       layerState.managed ? frameState.skippedFeatureUids : {});
-  // }
-
 };
 
 // /**
@@ -122538,12 +122550,14 @@ ol.source.Zoomify = function(opt_options) {
   }
   resolutions.reverse();
 
+  // var extent = [0, 0, size[0], size[1]];
   var extent = [0, -size[1], size[0], 0];
   var tileGrid = new ol.tilegrid.TileGrid({
     extent: extent,
     origin: ol.extent.getTopLeft(extent),
     resolutions: resolutions
   });
+  console.log(tileGrid);
 
   var url = options.url;
 
