@@ -27,8 +27,8 @@ def get_mapobjects_tile(experiment_id, object_type):
                     "geometry": {
                     "type": "Polygon",
                         "coordinates": [
-                          [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0],
-                            [100.0, 1.0], [100.0, 0.0] ]
+                          [ [1000.0, 0], [0, 0], [0, -1000],
+                            [1000, -1000], [1000, 0] ]
                           ]
                    },
                    "properties": { "id": "0" }
@@ -38,8 +38,8 @@ def get_mapobjects_tile(experiment_id, object_type):
                    "geometry": {
                    "type": "Polygon",
                        "coordinates": [
-                         [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0],
-                           [100.0, 1.0], [100.0, 0.0] ]
+                         [ [2000.0, 0], [0, 0], [0, -2000],
+                           [2000, -2000], [2000, 0] ]
                          ]
                   },
                   "properties": { "id": "1" }
