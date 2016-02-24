@@ -496,21 +496,24 @@ def get_objects(experiment_id):
 
                 object_data = data['/objects/%s' % t]
 
-                # TODO: Fix this
+                # FIXME: No objects are currently sent to avoid long loading times while trying out the
+                # vector tiling strategy. The whole process of object handling will be moved to the server side in the future.
+                # This is therefore most likely deprecated code.
                 # objects[t]['visual_type'] = object_data.attrs['visual_type']
                 objects[t]['visual_type'] = 'polygon'
-                objects[t]['ids'] = object_data['ids'][()].tolist()
+                # objects[t]['ids'] = object_data['ids'][()].tolist()
+                objects[t]['ids'] = []
                 objects[t]['map_data'] = {}
                 objects[t]['map_data']['coordinates'] = {}
 
-                if 'outlines' in object_data['map_data']:
-                    # TODO: This should be done in a generic fashion.
-                    # The whole content of map_data should be added to objects[t]['map_data'],
-                    # regardless of its actual structure. The content should be converted
-                    # to dicts and lists, s.t. they can be jsonified.
-                    for id in object_data['map_data/outlines/coordinates']:
-                        objects[t]['map_data']['coordinates'][int(id)] = \
-                            object_data['map_data/outlines/coordinates/%s' % id][()].tolist()
+                # if 'outlines' in object_data['map_data']:
+                #     # TODO: This should be done in a generic fashion.
+                #     # The whole content of map_data should be added to objects[t]['map_data'],
+                #     # regardless of its actual structure. The content should be converted
+                #     # to dicts and lists, s.t. they can be jsonified.
+                #     for id in object_data['map_data/outlines/coordinates']:
+                #         objects[t]['map_data']['coordinates'][int(id)] = \
+                #             object_data['map_data/outlines/coordinates/%s' % id][()].tolist()
 
         return jsonify({
             'objects': objects

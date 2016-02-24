@@ -12,3 +12,5 @@ import upload
 import mapobjects
 
 import responses
+
+import tmaps.mapobjects.api
