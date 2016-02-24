@@ -1,11 +1,8 @@
 import logging
 import mahotas as mh
-import plotly
-import colorlover as cl
 import collections
 import numpy as np
 import skimage.measure
-from jtlib import plotting
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +54,7 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
     thresh = mh.otsu(image)
     logger.info('calculated threshold level: %d', thresh)
 
-    logger.info('threshold correction factor: %d', correction_factor)
+    logger.info('threshold correction factor: %.2f', correction_factor)
     thresh = thresh * correction_factor
     logger.info('final threshold level: %d', thresh)
 
@@ -69,6 +66,9 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
     thresh_image = image > thresh
 
     if kwargs['plot']:
+        import plotly
+        import colorlover as cl
+        import jtlib.plotting
 
         rf = 4
         ds_img = skimage.measure.block_reduce(
@@ -140,7 +140,7 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
         )
 
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        plotting.save_plotly_figure(fig, kwargs['figure_file'])
+        jtlib.plotting.save_plotly_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'thresholded_image')
     return Output(thresh_image)

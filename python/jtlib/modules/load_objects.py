@@ -1,12 +1,9 @@
 import os
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 # import cv2
 import mpld3
 import collections
-from jtlib import plotting
 from tmlib.readers import DatasetReader
 from tmlib.experiment import Experiment
 
@@ -63,6 +60,9 @@ def load_objects(objects_name, **kwargs):
     #     cv2.fillConvexPoly(labeled_image, c, i+1)
 
     if kwargs['plot']:
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        import jtlib.plotting
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -81,7 +81,7 @@ def load_objects(objects_name, **kwargs):
         mpld3.plugins.connect(fig, mousepos)
         mpld3.fig_to_html(fig, template_type='simple')
 
-        plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        jtlib.plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'loaded_objects')
     return Output(labeled_image)

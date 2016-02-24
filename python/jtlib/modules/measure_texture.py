@@ -1,7 +1,4 @@
-from jtlib.features import Hu
-from jtlib.features import TAS
-from jtlib.features import Gabor
-from jtlib.features import Haralick
+import jtlib.features
 
 
 def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
@@ -43,7 +40,7 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
     '''
     # Weighted hu moments
     if hu:
-        f_hu = Hu(
+        f_hu = jtlib.features.Hu(
                 object_name=objects_name,
                 label_image=labeled_image,
                 channel_name=layer_name,
@@ -54,7 +51,7 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
 
     # Haralick texture features
     if haralick:
-        f_haralick = Haralick(
+        f_haralick = jtlib.features.Haralick(
                 object_name=objects_name,
                 label_image=labeled_image,
                 channel_name=layer_name,
@@ -65,7 +62,7 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
 
     # Threshold Adjacency Statistics
     if tas:
-        f_tas = TAS(
+        f_tas = jtlib.features.TAS(
                 object_name=objects_name,
                 label_image=labeled_image,
                 channel_name=layer_name,
@@ -76,7 +73,7 @@ def measure_texture(labeled_image, objects_name, intensity_image, layer_name,
 
     # Gabour filters
     if gabor:
-        f_gabor = Gabor(
+        f_gabor = jtlib.features.Gabor(
                 object_name=objects_name,
                 label_image=labeled_image,
                 channel_name=layer_name,

@@ -1,9 +1,7 @@
-from skimage import measure
+import skimage.measure
 import collections
-import matplotlib.pyplot as plt
 import numpy as np
-from jtlib import plotting
-from jtlib import utils
+import jtlib.utils
 
 
 def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
@@ -38,7 +36,7 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
     ValueError
         when value of `keep` is incorrect
     '''
-    regions = measure.regionprops(labeled_image)
+    regions = skimage.measure.regionprops(labeled_image)
     if keep == 'above':
         ids_to_keep = [r['label'] for r in regions if r[feature] > threshold]
     elif keep == 'below':
@@ -52,9 +50,11 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
         filtered_image[labeled_image == ix] = ix
 
     if relabel:
-        filtered_image = utils.label_image(filtered_image > 0)
+        filtered_image = jtlib.utils.label_image(filtered_image > 0)
 
     if kwargs['plot']:
+        import matplotlib.pyplot as plt
+        import jtlib.plotting
 
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 2, 1)
@@ -74,7 +74,7 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
 
         fig.tight_layout()
 
-        plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        jtlib.plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'filtered_objects')
     return Output(filtered_image)

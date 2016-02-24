@@ -1,8 +1,6 @@
 from scipy import ndimage as ndi
 import collections
-import matplotlib.pyplot as plt
 import numpy as np
-from jtlib import plotting
 
 
 def fill_mask(mask, **kwargs):
@@ -26,6 +24,8 @@ def fill_mask(mask, **kwargs):
     img = ndi.binary_fill_holes(mask)
 
     if kwargs['plot']:
+        import matplotlib.pyplot as plt
+        import jtlib.plotting
 
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
@@ -39,7 +39,7 @@ def fill_mask(mask, **kwargs):
 
         fig.tight_layout()
 
-        plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        jtlib.plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'filled_mask')
     return Output(img)

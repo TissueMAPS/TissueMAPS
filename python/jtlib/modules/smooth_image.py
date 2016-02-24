@@ -1,12 +1,9 @@
 import cv2
-from skimage.morphology import disk
-from skimage.filters.rank import median
-from skimage.filters.rank import mean_bilateral
-from skimage.measure import block_reduce
+import skimage.morphology
+import skimage.filters.rank
+import skimage.measure
 import collections
 import numpy as np
-import plotly
-from jtlib import plotting
 
 
 def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
@@ -73,21 +70,26 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
         # smoothed_image = cv2.medianBlur(image, filter_size)
         # TODO: the cv2 filter_name has some problems related to filter_size
         # consider mahotas (http://mahotas.readthedocs.org/en/latest/api.html?highlight=median#mahotas.median_filter)
-        smoothed_image = median(image, disk(filter_size))
+        smoothed_image = skimage.filters.rank.median(
+                                image, skimage.morphology.disk(filter_size))
     elif filter_name == 'median-bilateral':
-        smoothed_image = mean_bilateral(
-                                image, disk(filter_size),
+        smoothed_image = skimage.filters.rank.mean_bilateral(
+                                image, skimage.morphology.disk(filter_size),
                                 s0=sigma_space, s1=sigma_space)
     else:
         raise ValueError('Unknown filter_name. Implemented filters are:\n'
                          '"average", "gaussian", "median", and "bilateral"')
 
     if kwargs['plot']:
+        import plotly
+        import jtlib.plotting
 
         rf = 4
 
-        ds_img = block_reduce(image, (rf, rf), func=np.mean).astype(int)
-        ds_smooth_img = block_reduce(smoothed_image, (rf, rf), func=np.mean).astype(int)
+        ds_img = skimage.measure.block_reduce(
+                            image, (rf, rf), func=np.mean).astype(int)
+        ds_smooth_img = skimage.measure.block_reduce(
+                            smoothed_image, (rf, rf), func=np.mean).astype(int)
 
         # - keep image values at 16bit and adapt colorscale
         # - rescale both images the same for better comparison
@@ -155,7 +157,7 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
 
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
 
-        plotting.save_plotly_figure(fig, kwargs['figure_file'])
+        jtlib.plotting.save_plotly_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'smoothed_image')
     return Output(smoothed_image.astype(input_dtype))

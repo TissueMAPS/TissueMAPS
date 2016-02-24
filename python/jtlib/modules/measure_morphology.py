@@ -1,5 +1,4 @@
-from jtlib.features import Morphology
-from jtlib.features import Zernike
+import jtlib.features
 
 
 def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
@@ -26,7 +25,7 @@ def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
     :py:class:`jtlib.features.Morphology`
     :py:class:`jtlib.features.Zernike`
     '''
-    m = Morphology(
+    m = jtlib.features.Morphology(
                 object_name=objects_name,
                 label_image=labeled_image,
     )
@@ -34,7 +33,7 @@ def measure_morphology(labeled_image, objects_name, zernike=False, **kwargs):
     m.save(morphology_features, kwargs['data_file'])
 
     if zernike:
-        z = Zernike(
+        z = jtlib.features.Zernike(
                 object_name=objects_name,
                 label_image=labeled_image,
         )

@@ -1,4 +1,4 @@
-from jtlib.features import Intensity
+import jtlib.features
 
 
 def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
@@ -25,7 +25,7 @@ def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
     --------
     :py:class:`jtlib.features.Intensity`
     '''
-    f = Intensity(
+    f = jtlib.features.Intensity(
                 object_name=objects_name,
                 label_image=labeled_image,
                 channel_name=layer_name,

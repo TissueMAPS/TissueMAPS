@@ -1,9 +1,7 @@
 import logging
-import matplotlib.pyplot as plt
 import collections
 import numpy as np
-from jtlib import plotting
-from jtlib import utils
+import jtlib.utils
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +26,18 @@ def label_mask(mask, **kwargs):
 
     Note
     ----
-    If `mask` is not binary, it will be binarized, i.e. all pixel values above
-    zero will be set to ``True`` and ``False`` otherwise.
+    If `mask` is not binary, it will be binarized, i.e. pixels will be set to
+    ``True`` if values are greater than zero and ``False`` otherwise.
     '''
 
     mask = mask > 0
-    labeled_image = utils.label_image(mask)
+    labeled_image = jtlib.utils.label_image(mask)
 
     logger.info('identified %d objects', len(np.unique(labeled_image))-1)
 
     if kwargs['plot']:
+        import matplotlib.pyplot as plt
+        import jtlib.plotting
 
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
@@ -50,7 +50,7 @@ def label_mask(mask, **kwargs):
 
         fig.tight_layout()
 
-        plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        jtlib.plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'objects')
     return Output(labeled_image)

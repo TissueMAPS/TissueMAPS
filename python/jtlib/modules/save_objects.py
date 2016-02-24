@@ -1,13 +1,9 @@
 import numpy as np
 import logging
-import cv2
-import plotly
-import colorlover as cl
 # import SimpleITK as sitk
 import skimage.measure
 from tmlib.writers import DatasetWriter
 import jtlib.utils
-import jtlib.plotting
 
 logger = logging.getLogger(__name__)
 
@@ -48,24 +44,10 @@ def save_objects(image, name, **kwargs):
         obj_im = image == obj_id
         contours = skimage.measure.find_contours(
                         obj_im, 0.5, fully_connected='high')
-        # contours = sitk.BinaryContourImageFilter(obj_im)
-        # contours = cv2.findContours(
-        #                 obj_im.astype(np.uint8),
-        #                 mode=cv2.RETR_EXTERNAL,
-        #                 method=cv2.CHAIN_APPROX_SIMPLE
-        # )[1]
         if len(contours) > 1:
             logger.warn('%d contours identified for object #%d',
                         len(contours), obj_id)
         contour = contours[0]
-        # # We want the y coordinate in the first and the x coordinate in the
-        # # second column, since this is what most scipy functions expect
-        # contour = np.fliplr(np.vstack(contours[0]))
-        # # Points need to be in counter-clockwise order
-        # contour = jtlib.utils.sort_coordinates_counter_clockwise(contour)
-        # # The contour has to be closed, i.e. the first and last entry have to
-        # # the same (duplicated)
-        # contour = np.vstack([contour, contour[0, :]])
         y = contour[:, 0].astype(np.int64)
         x = contour[:, 1].astype(np.int64)
         y_coordinates.append(y)
@@ -87,6 +69,10 @@ def save_objects(image, name, **kwargs):
         f.write('%s/coordinates/x' % group_name, data=x_coordinates)
 
     if kwargs['plot']:
+        import plotly
+        # import colorlover as cl
+        import jtlib.plotting
+
         outline_image = np.zeros(image.shape, dtype=np.int64)
         for i, obj in enumerate(objects_ids):
             outline_image[y_coordinates[i], x_coordinates[i]] = obj
