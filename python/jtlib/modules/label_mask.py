@@ -1,7 +1,7 @@
 import logging
 import collections
 import numpy as np
-import jtlib.utils
+from .. import utils
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +31,13 @@ def label_mask(mask, **kwargs):
     '''
 
     mask = mask > 0
-    labeled_image = jtlib.utils.label_image(mask)
+    labeled_image = utils.label_image(mask)
 
     logger.info('identified %d objects', len(np.unique(labeled_image))-1)
 
     if kwargs['plot']:
         import matplotlib.pyplot as plt
-        import jtlib.plotting
+        from .. import plotting
 
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
@@ -50,7 +50,7 @@ def label_mask(mask, **kwargs):
 
         fig.tight_layout()
 
-        jtlib.plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'objects')
     return Output(labeled_image)

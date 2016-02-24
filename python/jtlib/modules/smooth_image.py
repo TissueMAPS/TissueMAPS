@@ -82,7 +82,7 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
 
     if kwargs['plot']:
         import plotly
-        import jtlib.plotting
+        from .. import plotting
 
         rf = 4
 
@@ -157,7 +157,7 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
 
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
 
-        jtlib.plotting.save_plotly_figure(fig, kwargs['figure_file'])
+        plotting.save_plotly_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'smoothed_image')
     return Output(smoothed_image.astype(input_dtype))

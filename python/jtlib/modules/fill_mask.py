@@ -25,7 +25,7 @@ def fill_mask(mask, **kwargs):
 
     if kwargs['plot']:
         import matplotlib.pyplot as plt
-        import jtlib.plotting
+        from .. import plotting
 
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 1, 1)
@@ -39,7 +39,7 @@ def fill_mask(mask, **kwargs):
 
         fig.tight_layout()
 
-        jtlib.plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'filled_mask')
     return Output(img)

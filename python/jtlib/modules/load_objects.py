@@ -62,7 +62,7 @@ def load_objects(objects_name, **kwargs):
     if kwargs['plot']:
         import matplotlib.pyplot as plt
         from mpl_toolkits.axes_grid1 import make_axes_locatable
-        import jtlib.plotting
+        from .. import plotting
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -81,7 +81,7 @@ def load_objects(objects_name, **kwargs):
         mpld3.plugins.connect(fig, mousepos)
         mpld3.fig_to_html(fig, template_type='simple')
 
-        jtlib.plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        plotting.save_mpl_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'loaded_objects')
     return Output(labeled_image)

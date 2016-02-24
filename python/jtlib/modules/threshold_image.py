@@ -68,7 +68,7 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
     if kwargs['plot']:
         import plotly
         import colorlover as cl
-        import jtlib.plotting
+        from .. import plotting
 
         rf = 4
         ds_img = skimage.measure.block_reduce(
@@ -140,7 +140,7 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
         )
 
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        jtlib.plotting.save_plotly_figure(fig, kwargs['figure_file'])
+        plotting.save_plotly_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'thresholded_image')
     return Output(thresh_image)
