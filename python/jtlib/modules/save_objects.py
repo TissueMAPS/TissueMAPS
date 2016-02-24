@@ -3,7 +3,7 @@ import logging
 # import SimpleITK as sitk
 import skimage.measure
 from tmlib.writers import DatasetWriter
-import jtlib.utils
+from .. import utils
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def save_objects(image, name, **kwargs):
         "data_file", "figure_file", "experiment_dir", "plot", "job_id"
     '''
     objects_ids = np.unique(image[image > 0])
-    border_indices = jtlib.utils.find_border_objects(image)
+    border_indices = utils.find_border_objects(image)
 
     y_coordinates = list()
     x_coordinates = list()
@@ -71,7 +71,7 @@ def save_objects(image, name, **kwargs):
     if kwargs['plot']:
         import plotly
         # import colorlover as cl
-        import jtlib.plotting
+        from .. import plotting
 
         outline_image = np.zeros(image.shape, dtype=np.int64)
         for i, obj in enumerate(objects_ids):
@@ -108,4 +108,4 @@ def save_objects(image, name, **kwargs):
         )
 
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        jtlib.plotting.save_plotly_figure(fig, kwargs['figure_file'])
+        plotting.save_plotly_figure(fig, kwargs['figure_file'])
