@@ -39,19 +39,18 @@ class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
 
     private _visuals: Visual[] = [];
 
-    constructor(name: string, projection: any, opt: VisualLayerOpts = {}) {
+    constructor(name: string, 
+                imageWidth: number,
+                imageHeight: number,
+                opt: VisualLayerOpts = {}) {
         super(name);
-
-        // var vectorSource = new ol.source.Vector({
-        //     features: []
-        // });
-        // var extent = [0, 0, 15860, 9140];
-        // var extent = [0, 0, 15860, 9140];
-        var extent = [0, -9140, 15860, 0];
+        
+        // Same extent as zoomify
+        var extent = [0, -imageHeight, imageWidth, 0];
 
         var vectorSource = new ol.source.VectorTile({
             // features: []
-            url: 'api/experiments/adsf/mapobjects/cells?x={x}&y={y}&z={z}',
+            url: 'api/experiments/Bvk6bkYO/mapobjects/cells?x={x}&y={y}&z={z}',
             // format: new ol.format.MVT(),
             format: new ol.format.GeoJSON({
                 // NOTE: The projection has to equal the projection set on the 

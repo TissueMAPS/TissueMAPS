@@ -130,7 +130,8 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
                     strokeColor: Color.WHITE
                 });
             });
-            var visualLayer = new VisualLayer(t, {
+
+            var visualLayer = new VisualLayer(t, 15860, 9140, {
                 visuals: visuals,
                 visible: false,
                 contentType: ContentType.mapObject

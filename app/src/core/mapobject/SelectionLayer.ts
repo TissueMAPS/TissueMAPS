@@ -51,7 +51,7 @@ class SelectionLayer extends VisualLayer {
     color: Color;
 
     constructor(name: string, color: Color) {
-        super(name, {
+        super(name, null, null, {
             contentType: ContentType.marker
         })
         this.color = color;
