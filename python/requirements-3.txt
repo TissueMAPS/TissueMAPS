@@ -5,3 +5,5 @@
  centrosome>=1.0.3
  colorlover>=0.2.1
  plotly>=1.9.5
+ pyasn1>=0.1.9
+ ndg-httpsclient>=0.4.0
