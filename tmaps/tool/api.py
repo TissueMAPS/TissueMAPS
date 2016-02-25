@@ -7,13 +7,13 @@ from flask.ext.jwt import current_identity
 from tmaps.extensions.database import db
 from tmaps.extensions.encrypt import decode
 from tmaps.api import api
-from tmaps.models import Experiment
-from tmaps.api.responses import (
+from tmaps.experiment import Experiment
+from tmaps.response import (
     MALFORMED_REQUEST_RESPONSE,
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE
 )
-from tmaps.tools import get_tool
+from tmaps.tool import get_tool
 
 
 @api.route('/tools/<tool_id>/request', methods=['POST'])

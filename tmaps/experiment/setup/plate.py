@@ -1,9 +1,12 @@
 import os.path as p
+
 from werkzeug import secure_filename
-from ..extensions.database import db
-from utils import auto_remove_directory, auto_create_directory
-from tmaps.models import Experiment
+
 from tmlib import plate as tmlib_plate
+
+from tmaps.extensions.database import db
+from tmaps.model.decorators import auto_remove_directory, auto_create_directory
+from tmaps.experiment import Experiment
 
 
 def _plate_loc(name, experiment_id):

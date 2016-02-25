@@ -2,7 +2,7 @@ import json
 
 from flask import request, jsonify
 
-from tmaps.models import User
+from tmaps.user import User
 from tmaps.api import api
 from tmaps.extensions.database import db
 

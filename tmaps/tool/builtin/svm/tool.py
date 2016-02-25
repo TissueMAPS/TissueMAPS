@@ -1,5 +1,5 @@
 from collections import defaultdict
-from tmaps.tools import register_tool, Tool
+from tmaps.tool import register_tool, Tool
 
 from sklearn import svm
 import numpy as np

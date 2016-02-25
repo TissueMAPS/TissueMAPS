@@ -5,11 +5,11 @@ import logging
 from flask import Flask
 import gc3libs
 
-from extensions.database import db
-from extensions.auth import jwt
-from extensions.redis import redis_store
-from extensions.gc3pie import gc3pie_engine
-from config import default as default_config
+from tmaps.extensions.database import db
+from tmaps.extensions.auth import jwt
+from tmaps.extensions.redis import redis_store
+from tmaps.extensions.gc3pie import gc3pie_engine
+from tmaps.config import default as default_config
 
 
 MAIN_DIR_LOCATION = abspath(join(dirname(__file__), os.pardir, os.pardir))
@@ -79,9 +79,7 @@ def create_app(config):
 
     # Import and register blueprints
     from api import api
-    from res import res
     app.register_blueprint(api, url_prefix='/api')
-    app.register_blueprint(res)
 
     # @app.after_request
     # def after_request(response):

@@ -1,4 +1,4 @@
-from tmaps.tools import register_tool, Tool
+from tmaps.tool import register_tool, Tool
 import numpy as np
 
 

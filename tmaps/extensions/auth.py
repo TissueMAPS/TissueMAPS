@@ -4,7 +4,7 @@ from flask import current_app, request
 from passlib.hash import sha256_crypt
 from flask_jwt import JWT
 
-from tmaps.models import User
+from tmaps.user import User
 
 
 jwt = JWT()

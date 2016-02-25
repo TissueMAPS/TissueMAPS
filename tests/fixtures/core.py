@@ -5,7 +5,7 @@ import flask
 import pytest
 
 import tmaps
-from tmaps.models import User
+from tmaps.user import User
 from tmaps.appfactory import create_app
 from tmaps.extensions.database import db as _db
 

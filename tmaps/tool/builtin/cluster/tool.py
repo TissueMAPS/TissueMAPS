@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import cm
 import numpy as np
 
-from tmaps.tools import register_tool, Tool
+from tmaps.tool import register_tool, Tool
 
 
 @register_tool('Cluster')

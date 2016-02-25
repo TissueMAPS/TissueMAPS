@@ -1,14 +1,14 @@
 import os
 import os.path as p
 
-from ..extensions.database import db
+from tmaps.extensions.database import db
 from passlib.hash import sha256_crypt
 
 from werkzeug import secure_filename
-from _appstate import AppStateShare
-from _experiment import ExperimentShare
-from .utils import auto_generate_hash, auto_create_directory
-from . import CRUDMixin, Model
+from tmaps.appstate import AppStateShare
+from tmaps.experiment import ExperimentShare
+from tmaps.model import CRUDMixin, Model
+from tmaps.model.decorators import auto_generate_hash, auto_create_directory
 
 
 def _experiments_dir(user_location):

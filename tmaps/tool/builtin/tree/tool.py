@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn import tree
 
-from tmaps.tools import register_tool, Tool
+from tmaps.tool import register_tool, Tool
 
 
 @register_tool('DecisionTree')

@@ -1,7 +1,6 @@
-from ..extensions.database import db
+from tmaps.extensions.database import db
 from sqlalchemy.dialects.postgresql import JSON
-from _tool import ToolInstance, LayerMod
-from .utils import auto_generate_hash
+from tmaps.model.decorators import auto_generate_hash
 
 
 class AppStateShare(db.Model):
@@ -103,27 +102,27 @@ class AppState(AppStateBase):
         db.session.add(st)
         db.session.commit()
 
-        for t in self.tool_instances:
-            clone = ToolInstance(
-                data=t.data,
-                tool_id=t.tool_id,
-                appstate_id=st.id,
-                experiment_id=t.experiment_id,
-                user_id=self.owner_id
-            )
-            st.tool_instances.append(clone)
+        # for t in self.tool_instances:
+        #     clone = ToolInstance(
+        #         data=t.data,
+        #         tool_id=t.tool_id,
+        #         appstate_id=st.id,
+        #         experiment_id=t.experiment_id,
+        #         user_id=self.owner_id
+        #     )
+        #     st.tool_instances.append(clone)
 
-        for l in self.layermods:
-            clone = LayerMod(
-                layer_name = l.layer_name,
-                tool_method_name = l.tool_method_name,
-                tool_id = l.tool_id,
-                experiment_id = l.experiment_id,
-                appstate_id = st.id,
-                render_args = l.render_args,
-                modfunc_arg = l.modfunc_arg
-            )
-            st.layermods.append(clone)
+        # for l in self.layermods:
+        #     clone = LayerMod(
+        #         layer_name = l.layer_name,
+        #         tool_method_name = l.tool_method_name,
+        #         tool_id = l.tool_id,
+        #         experiment_id = l.experiment_id,
+        #         appstate_id = st.id,
+        #         render_args = l.render_args,
+        #         modfunc_arg = l.modfunc_arg
+        #     )
+        #     st.layermods.append(clone)
 
         db.session.commit()
 

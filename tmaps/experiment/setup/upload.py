@@ -8,11 +8,11 @@ from flask.ext.jwt import current_identity
 from werkzeug import secure_filename
 
 from tmaps.extensions.redis import redis_store
-from . import api
+from tmaps.api import api
 
-from tmaps.models import PlateAcquisition
+from tmaps.experiment.setup import PlateAcquisition
 from tmaps.extensions.database import db
-from tmaps.api.responses import *
+from tmaps.response import *
 
 
 @api.route('/acquisitions/<int:aq_id>/register-upload',

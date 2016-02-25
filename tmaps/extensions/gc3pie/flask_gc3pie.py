@@ -42,7 +42,7 @@ import gc3libs
 import logging
 
 from tmlib import engine as tmlib_engine
-from tmaps.models import Model
+from tmaps.model import Model
 from tmaps.extensions.database import db
 
 

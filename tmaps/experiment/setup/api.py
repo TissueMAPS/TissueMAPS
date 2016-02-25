@@ -1,13 +1,24 @@
 import json
-from . import api
+
+from tmaps.api import api
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 from flask import jsonify, request
 from werkzeug import secure_filename
 
-from tmaps.models import Experiment, Plate, PlateSource, PlateAcquisition
+from tmaps.extensions.gc3pie import gc3pie_engine
+from tmaps.experiment import Experiment
+from tmaps.experiment.setup import Plate, PlateSource, PlateAcquisition
+# from tmaps.experiment.setup import Task
 from tmaps.extensions.database import db
-from tmaps.api.responses import *
+from tmaps.response import *
+
+
+# @api.route('/tasks/<int:task_id>', methods=['GET'])
+# @jwt_required()
+# def get_task_info(task_id):
+#     task = Task.get(task_id)
+#     return jsonify(gc3pie_engine.get_task_data(task))
 
 
 @api.route('/experiments/<experiment_id>/plate-sources', methods=['GET'])

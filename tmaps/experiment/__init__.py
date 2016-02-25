@@ -1,1 +1,2 @@
-from _experiment import * 
+from experiment import Experiment
+from experiment_share import ExperimentShare

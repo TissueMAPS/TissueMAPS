@@ -1,13 +1,16 @@
 import os
 import os.path as p
+import shutil
+
 from sqlalchemy import event
 from werkzeug import secure_filename
-from ..extensions.database import db
-from utils import auto_remove_directory, auto_create_directory
-from tmaps.models import Experiment
-import shutil
+
 import tmlib.source
-from . import Model, CRUDMixin
+
+from tmaps.extensions.database import db
+from tmaps.model.decorators import auto_remove_directory, auto_create_directory
+from tmaps.experiment import Experiment
+from tmaps.model import Model, CRUDMixin
 
 
 ACQUISITION_UPLOAD_STATUS = (

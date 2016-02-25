@@ -1,5 +1,5 @@
 import pytest
-from tmaps.models import TaskSubmission
+from tmaps.experiment.setup import TaskSubmission
 
 
 @pytest.fixture(scope='function')

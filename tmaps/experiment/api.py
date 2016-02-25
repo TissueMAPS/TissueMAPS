@@ -14,10 +14,11 @@ import tmlib.logging_utils
 import tmlib.tmaps.canonical
 from tmlib.readers import DatasetReader
 
-from tmaps.models import Experiment, TaskSubmission
+from tmaps.experiment import Experiment
+from tmaps.experiment.setup import TaskSubmission
 from tmaps.extensions.encrypt import decode
 from tmaps.api import api
-from tmaps.api.responses import (
+from tmaps.response import (
     MALFORMED_REQUEST_RESPONSE,
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE

@@ -1,5 +1,5 @@
 import pytest
-from tmaps.models import User
+from tmaps.user import User
 
 
 @pytest.fixture(scope='session')

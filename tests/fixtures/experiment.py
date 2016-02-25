@@ -1,5 +1,5 @@
 import pytest
-from tmaps.models import Experiment
+from tmaps.experiment import Experiment
 
 
 @pytest.fixture(scope='function')

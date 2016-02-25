@@ -4,11 +4,11 @@ from contextlib import contextmanager
 from xml.dom import minidom
 from werkzeug import secure_filename
 from ..extensions.database import db
-from utils import (
+from tmaps.model.decorators import (
     auto_create_directory, exec_func_after_insert,
     auto_remove_directory
 )
-from . import CRUDMixin, Model, HashIdModel
+from tmaps.model import CRUDMixin, HashIdModel
 import tmlib.plate
 import tmlib.experiment
 import tmlib.cfg
@@ -18,15 +18,6 @@ import tmlib.cfg
 #     'delete'
 # )
 
-
-class ExperimentShare(Model, CRUDMixin):
-    recipient_user_id = db.Column(db.Integer, db.ForeignKey('user.id'),
-                                  primary_key=True)
-    donor_user_id = db.Column(db.Integer, db.ForeignKey('user.id'),
-                              primary_key=True)
-    experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'),
-                              primary_key=True)
-    experiment = db.relationship('Experiment', uselist=False)
 
     # access_level = db.Column(db.Enum(*EXPERIMENT_ACCESS_LEVELS,
     #                                  name='access_level'))

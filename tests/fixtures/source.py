@@ -1,5 +1,5 @@
 import pytest
-from tmaps.models import PlateSource, PlateAcquisition
+from tmaps.experiment.setup import PlateSource, PlateAcquisition
 
 
 @pytest.fixture
