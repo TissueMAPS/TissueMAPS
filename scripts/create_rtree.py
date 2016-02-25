@@ -41,10 +41,17 @@ for id in coords_by_id:
     coords = coords_by_id[id][()]
     minx, miny = np.min(coords, axis=0)
     maxx, maxy = np.max(coords, axis=0)
-    bbox = (minx, miny, maxx, maxy)
-    left, bottom, right, top = (0.0, 0.0, 1.0, 1.0)
+    rectangle = np.array([
+        [maxx, maxy],
+        [maxx, miny],
+        [minx, miny],
+        [minx, maxy],
+        [maxx, maxy]
+    ])
     centroid = coords.mean(axis=0).astype('int64')
-    mapobj = MapObject(id=int(id), outline=coords, centroid=centroid)
+    bbox = (minx, miny, maxx, maxy)
+    mapobj = MapObject(
+        id=int(id), outline=coords, centroid=centroid, rect=rectangle)
     idx.insert(int(id), bbox, obj=mapobj)
 
 print 'Done!'

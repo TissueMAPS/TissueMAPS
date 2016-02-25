@@ -57,23 +57,20 @@ def get_mapobjects_tile(experiment_id, object_type):
 
     mapobjects = [node.object for node in idx.intersection(bbox, objects=True)]
 
-    if z >= 3:
-        feature_type = 'Polygon'
-    else:
-        feature_type = 'Point'
+    use_simple_geom = z < 3
 
-    def mapobject_to_geojson_feature(mapobject, feature_type):
-        if feature_type == 'Polygon':
+    def mapobject_to_geojson_feature(mapobject, use_simple_geom):
+        if use_simple_geom:
             # 2d array is nested in an additional list
-            coordinates = [ mapobject.outline.tolist() ]
-        elif feature_type == 'Point':
             coordinates = mapobject.centroid.tolist()
         else:
-            pass
+            # 2d array is nested in an additional list
+            coordinates = [ mapobject.outline.tolist() ]
+        geometry_type = 'Point' if use_simple_geom else 'Polygon'
         return {
             "type": "Feature",
             "geometry": {
-                "type": feature_type,
+                "type": geometry_type,
                 "coordinates": coordinates
             },
             "properties": {
@@ -81,7 +78,7 @@ def get_mapobjects_tile(experiment_id, object_type):
             }
         }
 
-    features = [mapobject_to_geojson_feature(o, feature_type) for o in mapobjects]
+    features = [mapobject_to_geojson_feature(o, use_simple_geom) for o in mapobjects]
 
     return jsonify(
         {

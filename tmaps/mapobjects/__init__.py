@@ -6,7 +6,8 @@ class FastRtree(rtree.Rtree):
         return cPickle.dumps(obj, -1)
 
 class MapObject:
-    def __init__(self, id, outline, centroid):
+    def __init__(self, id, outline, centroid, rect):
         self.id = id
         self.outline = outline
         self.centroid = centroid
+        self.rect = rect
