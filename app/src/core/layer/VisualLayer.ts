@@ -80,16 +80,32 @@ class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
             // visible: opt.visible === undefined ? true : false
             visible: true,
             style: function(feature, style) {
-                return [
-                    new ol.style.Style({
-                        fill: new ol.style.Fill({
-                            color: Color.RED.toOlColor()
-                        }),
-                        stroke: new ol.style.Stroke({
-                            color: Color.WHITE.toOlColor()
+                var geomType = feature.getGeometry().getType();
+                if (geomType === 'Polygon') {
+                    return [
+                        new ol.style.Style({
+                            fill: new ol.style.Fill({
+                                color: Color.GREEN.toOlColor()
+                            }),
+                            stroke: new ol.style.Stroke({
+                                color: Color.WHITE.toOlColor()
+                            })
                         })
-                    })
-                ];
+                    ];
+                } else if (geomType === 'Point') {
+                    return [
+                        new ol.style.Style({
+                            image: new ol.style.Circle({
+                                fill: new ol.style.Fill({
+                                    color: [0, 255, 0, 1]
+                                }),
+                                radius: 2
+                            })
+                        })
+                    ];
+                } else {
+                    throw new Error('Unknown geometry type for feature');
+                }
             }
         });
 
