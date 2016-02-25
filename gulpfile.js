@@ -6,27 +6,18 @@ var gulp = require('gulp'),
     taskPath = './tasks/',
     taskList = require('fs').readdirSync(taskPath);
 
-var argv = require('yargs').argv
-
-var debugConfig = {
-    destFolder: 'build'
-};
-
-var productionConfig = {
-    destFolder: 'build'
-};
-
-// Choose depending on argv
-var cfg = debugConfig;
-
 var $ = {
     pkg: JSON.parse(fs.readFileSync('./package.json')),
-    rootDir: path.resolve('.'),
-    cfg: cfg
+    rootDir: path.resolve('.')
 };
 
 taskList.forEach(function(taskFile) {
-    // or .call(gulp,...) to run this.task('foobar')...
     require(taskPath + taskFile)(gulp, $);
 });
 
+
+var runSequence = require('run-sequence');
+
+gulp.task('default', function() {
+    return runSequence('build', 'server');
+});
