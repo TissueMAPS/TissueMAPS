@@ -1147,7 +1147,7 @@ class SegmentedObjectLayer(Layer):
                     store.append('%s/coordinates/x' % job_path, coords_x)
                     # The "is_border" vector indicates whether the parent (!)
                     # object lies at the border of the image.
-                    store.append('%s/is_border' % obj_path, is_border)
+                    store.append('%s/is_border' % obj_path, [is_border])
 
                     # Store the name of the corresponding plate and well
                     plates = np.repeat(plate_name, len(object_ids))
