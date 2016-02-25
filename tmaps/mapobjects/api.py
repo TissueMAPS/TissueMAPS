@@ -1,5 +1,9 @@
 import os.path as p
+
+import json
+
 from tmaps.api import api
+from tmaps.extensions.database import db
 
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
@@ -15,6 +19,18 @@ from tmaps.api.responses import (
     NOT_AUTHORIZED_RESPONSE
 )
 
+
+def create_mapobject_feature(obj_id, geometry_obj):
+    """Create a GeoJSON feature object given a object id of type int
+    and a object that represents a GeoJSON geometry definition."""
+    return {
+        "type": "Feature",
+        "geometry": geometry_obj,
+        "properties": {
+            "id": str(obj_id)
+        }
+    }
+
 @api.route('/experiments/<experiment_id>/mapobjects/<object_type>', methods=['GET'])
 def get_mapobjects_tile(experiment_id, object_type):
 
@@ -25,6 +41,7 @@ def get_mapobjects_tile(experiment_id, object_type):
     # if not ex.belongs_to(current_identity):
     #     return NOT_AUTHORIZED_RESPONSE
 
+    # The coordinates of the requested tile
     x = int(request.args.get('x'))
     y = int(request.args.get('y'))
     z = int(request.args.get('z'))
@@ -32,53 +49,45 @@ def get_mapobjects_tile(experiment_id, object_type):
     if x is None or y is None or z is None:
         return MALFORMED_REQUEST_RESPONSE
 
-    print "x: %s, y: %s, z: %s" % (str(x), str(y), str(z))
-
-    # width = 15860
-    # height = -9140
-
-    # the tile width/height expressed in coordinates on the highest zoom level
+    # The tile width/height expressed in coordinates on the highest zoom level
     size = 256 * 2 ** (6 - z)
-
-    # topleft corner
+    # Topleft corner
     x0 = x * size
     y0 = y * size
-
-    # bounding box
+    # Bounding box
     minx = x0
     maxx = x0 + size
     miny = -y0 - size
     maxy = -y0
-    bbox = (minx, miny, maxx, maxy)
 
-    rtree_filename = p.join(ex.location, 'cells_rtree')
-
-    idx = FastRtree(rtree_filename)
-
-    mapobjects = [node.object for node in idx.intersection(bbox, objects=True)]
+    # A SQL PostGIS statement to produce a polygon that is later used
+    # to query the database to return all objects contained within this polygon.
+    bounding_polygon_str = '''(SELECT ST_MakePolygon(ST_GeomFromText('LINESTRING(%d %d, %d %d, %d %d, %d %d, %d %d)')))''' % (
+        maxx, maxy,
+        minx, maxy,
+        minx, miny,
+        maxx, miny,
+        maxx, maxy
+    )
 
     use_simple_geom = z < 3
 
-    def mapobject_to_geojson_feature(mapobject, use_simple_geom):
-        if use_simple_geom:
-            # 2d array is nested in an additional list
-            coordinates = mapobject.centroid.tolist()
-        else:
-            # 2d array is nested in an additional list
-            coordinates = [ mapobject.outline.tolist() ]
-        geometry_type = 'Point' if use_simple_geom else 'Polygon'
-        return {
-            "type": "Feature",
-            "geometry": {
-                "type": geometry_type,
-                "coordinates": coordinates
-            },
-            "properties": {
-                "id": str(mapobject.id)
-            }
-        }
+    if not use_simple_geom:
+        mapobject_query_str = '''
+SELECT obj_id, ST_AsGeoJSON(geom) FROM mapobject
+WHERE ST_Contains(%s, mapobject.geom)
+''' % bounding_polygon_str
+    else:
+        mapobject_query_str = '''
+SELECT obj_id, ST_AsGeoJSON(ST_Centroid(geom)) FROM mapobject
+WHERE ST_Contains(%s, mapobject.geom)
+''' % bounding_polygon_str
 
-    features = [mapobject_to_geojson_feature(o, use_simple_geom) for o in mapobjects]
+    res = db.engine.execute(mapobject_query_str)
+
+    # Tuples of the form (object_id, GeoJSON_geometry_object)
+    tuples = [(int(r[0]), json.loads(r[1])) for r in res.fetchall()]
+    features = [create_mapobject_feature(obj_id=t[0], geometry_obj=t[1]) for t in tuples]
 
     return jsonify(
         {
