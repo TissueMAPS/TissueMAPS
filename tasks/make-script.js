@@ -9,7 +9,10 @@ module.exports = function(gulp, $) {
     var uglify = require('gulp-uglify');
     var gulpif = require('gulp-if');
 
-    gulp.task('make-script', function () {
+    var argv = require('yargs').argv;
+    var prod = argv.prod == true;
+
+    gulp.task('make-script', function() {
         var sourceTsFiles = [
             // Source files
             'app/src/**/*.ts',
@@ -34,8 +37,6 @@ module.exports = function(gulp, $) {
             'app/assets/libs/ol-debug.js'
             // 'app/assets/libs/unmanaged/ng-color-picker/color-picker.js',
         ]);
-
-        var prod = true;
 
         var src = tsResult.js
             .pipe(gulpif(!prod, sourcemaps.write('.')))
