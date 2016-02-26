@@ -78,7 +78,7 @@ class Cycle(object):
         '''
         A *cycle* represents a time point in a time series. The `index`
         is the zero-based index of the *cycle* in this sequence.
-        It is encoded in the name of the *cycle* folder and is retrieved from
+        It is encoded in the name of the folder and is retrieved from
         it using a regular expression.
 
         Returns
@@ -96,9 +96,8 @@ class Cycle(object):
         match = re.search(regexp, folder_name)
         if not match:
             raise RegexError(
-                    'Can\'t determine cycle id number from folder "%s" '
-                    'using format "%s" provided by the configuration settings.'
-                    % (folder_name, self.CYCLE_DIR_FORMAT))
+                    'Can\'t determine cycle index from folder "%s".'
+                    % folder_name)
         return int(match.group('index'))
 
     @property

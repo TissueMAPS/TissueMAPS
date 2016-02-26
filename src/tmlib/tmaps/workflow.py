@@ -238,7 +238,7 @@ class WorkflowStage(object):
     #     return step.execution.exitcode != 0
 
 
-class SequentialWorkflowStage(WorkflowStage, SequentialTaskCollection, StopOnError):
+class SequentialWorkflowStage(StopOnError, WorkflowStage, SequentialTaskCollection):
 
     '''
     Class for a sequential TissueMAPS workflow stage, which is composed of one
@@ -414,7 +414,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
             self.add(step_jobs)
 
 
-class Workflow(SequentialTaskCollection, StopOnError):
+class Workflow(StopOnError, SequentialTaskCollection):
 
     def __init__(self, experiment, verbosity, description=None,
                  start_stage=None, start_step=None):

@@ -26,7 +26,7 @@ class PlateSource(object):
 
     PLATE_SOURCE_DIR_FORMAT = 'plate_{name}'
 
-    def __init__(self, plate_source_dir):
+    def __init__(self, plate_source_dir, acquisition_mode):
         '''
         Initialize an instance of class PlateSource.
 
@@ -35,6 +35,11 @@ class PlateSource(object):
         plate_source_dir: str
             absolute path to the directory that contains the source files
             for a particular plate
+        acquisition_mode: str
+            acquisition mode, i.e. whether separate acquisitions relate to the
+            same marker as part of a time series experiment or another marker
+            as part of a multiplexing experiment
+            (options: ``{"series", "multiplexing"}``)
 
         Returns
         -------
@@ -102,8 +107,8 @@ class PlateSource(object):
         acquisition_dirs = [
             os.path.join(self.dir, d)
             for d in os.listdir(self.dir)
-            if os.path.isdir(os.path.join(self.dir, d))
-            and self._is_acquistion_dir(d)
+            if os.path.isdir(os.path.join(self.dir, d)) and
+            self._is_acquistion_dir(d)
         ]
         acquisition_dirs = natsorted(acquisition_dirs)
         return [PlateAcquisition(d) for d in acquisition_dirs]

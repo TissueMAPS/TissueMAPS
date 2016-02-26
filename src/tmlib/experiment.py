@@ -101,8 +101,19 @@ class Experiment(object):
         -------
         str
             name of the experiment
+
+        Note
+        ----
+        Defaults to the folder name when not provided by the user.
+
+        See also
+        --------
+        :py:attr:`tmlib.cfg.UserConfiguration.experiment_name`
         '''
-        return os.path.basename(self.experiment_dir)
+        if self.user_cfg.name is None:
+            return os.path.basename(self.dir)
+        else:
+            return self.user_cfg.experiment_name
 
     @property
     def user_cfg_file(self):
@@ -204,15 +215,10 @@ class Experiment(object):
             for d in plate_dirs
         ]
 
-    def add_plate(self, plate_name):
+    def add_plate(self):
         '''
         Add a plate to the experiment, i.e. create a subdirectory in
         `plates_dir`.
-
-        Parameters
-        ----------
-        plate_name: str
-            name of the new plate
 
         Returns
         -------
@@ -224,13 +230,12 @@ class Experiment(object):
         OSError
             when the plate already exists
         '''
-        new_plate_name = Plate.PLATE_DIR_FORMAT.format(name=plate_name)
-        new_plate_dir = os.path.join(self.plates_dir, new_plate_name)
+        new_plate_index = len(self.plates) - 1
+        new_plate_folder = Plate.PLATE_DIR_FORMAT.format(index=new_plate_index)
+        new_plate_dir = os.path.join(self.plates_dir, new_plate_folder)
         if os.path.exists(new_plate_dir):
-            raise OSError('Plate "%s" already exists.' % plate_name)
-        logger.debug('add plate: %s', plate_name)
-        logger.debug('create directory for plate "%s": %s',
-                     plate_name, new_plate_dir)
+            raise OSError('Plate directory already exists: %s' % new_plate_dir)
+        logger.info('add plate #%d', new_plate_index)
         os.mkdir(new_plate_dir)
         new_plate = Plate(new_plate_dir,
                           self.user_cfg.plate_format, self.library)
@@ -290,7 +295,10 @@ class Experiment(object):
             if os.path.isdir(os.path.join(self.sources_dir, d)) and
             self._is_plate_source_dir(d)
         ])
-        return [PlateSource(d)for d in plate_source_dirs]
+        return [
+            PlateSource(d, self.user_cfg.acquisition_mode)
+            for d in plate_source_dirs
+        ]
 
     @cached_property
     def layers_dir(self):

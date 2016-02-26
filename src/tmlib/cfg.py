@@ -29,7 +29,7 @@ VISUAL_NAME_FORMAT = {
 }
 
 #: Format string for building image filenames.
-IMAGE_NAME_FORMAT = '{plate_name}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.tif'
+IMAGE_NAME_FORMAT = 'p{p:0>2}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.tif'
 
 
 class UserConfiguration(object):
@@ -42,7 +42,8 @@ class UserConfiguration(object):
         'sources_dir', 'plates_dir', 'layers_dir', 'plate_format', 'workflow'
     }
 
-    def __init__(self, experiment_dir, plate_format,
+    def __init__(self, experiment_dir, plate_format, experiment_name=None,
+                 plate_names=None,
                  acquisition_mode='multiplexing',
                  sources_dir=None, plates_dir=None, layers_dir=None, **kwargs):
         '''
@@ -54,7 +55,11 @@ class UserConfiguration(object):
             absolute path to experiment directory
         plate_format: int
             number of wells per plate
-        acquisition_mode: str
+        experiment_name: str, optional
+            name of the experiment (default: ``None``)
+        plate_names: List[str]
+            names of plates belonging to the experiment (default: ``None``)
+        acquisition_mode: str, optional
             either ``"series"`` or ``"multiplexing"`` to indicate whether
             images acquired at different time points relate to the same marker
             or a different one (default: ``"multiplexing"``) 
@@ -77,6 +82,8 @@ class UserConfiguration(object):
         self.experiment_dir = experiment_dir
         if not os.path.exists(self.experiment_dir):
             raise OSError('Experiment directory does not exist')
+        self.experiment_name = experiment_name
+        self.plate_names = plate_names
         self.plate_format = plate_format
         self.acquisition_mode = acquisition_mode
         self._sources_dir = sources_dir
@@ -210,6 +217,23 @@ class UserConfiguration(object):
             self._layers_dir = str(value)
 
     @property
+    def experiment_name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the experiment
+        '''
+        return self._experiment_name
+
+    @experiment_name.setter
+    def experiment_name(self, value):
+        if not isinstance(value, basestring) or value is None:
+            raise TypeError(
+                    'Attribute "experiment_name" must have type basestring.')
+        self._experiment_name = value
+
+    @property
     def plate_format(self):
         '''
         Returns
@@ -222,12 +246,33 @@ class UserConfiguration(object):
     @plate_format.setter
     def plate_format(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "plate_format" must have type int')
+            raise TypeError('Attribute "plate_format" must have type int.')
         if value not in Plate.SUPPORTED_PLATE_FORMATS:
             raise ValueError(
                     'Attribute "plate_format" can be set to "%s"'
                     % '"or "'.join(Plate.SUPPORTED_PLATE_FORMATS))
         self._plate_format = value
+
+    @property
+    def plate_names(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names of the plates belonging to the experiment
+        '''
+        return self._plate_names
+    
+    @plate_names.setter
+    def plate_names(self, value):
+        if value is not None:
+            if not isinstance(value, list):
+                raise TypeError('Attribute "plate_names" must have type list.')
+            if not all([isinstance(v, basestring) for v in value]):
+                raise TypeError(
+                        'Elements of attribute "plate_names" must have '
+                        'type basestring.')
+        self._plate_names = value
 
     @property
     def acquisition_mode(self):

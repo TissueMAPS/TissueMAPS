@@ -1064,18 +1064,16 @@ class SegmentedObjectLayer(Layer):
                     # overall acquisition grid and update the outline coordinates
                     # accordingly, i.e. translate site-specific coordinates into
                     # global ones.
-                    plate_names = [p.name for p in self.experiment.plates]
 
-                    plate_name = data.read('/metadata/plate_name')
-                    p = plate_names.index(plate_name)
-                    plate = self.experiment.plates[p]
+                    plate_index = data.read('/metadata/plate_index')
+                    plate = self.experiment.plates[plate_index]
                     well_name = data.read('/metadata/well_name')
                     plate_coords = plate.map_well_id_to_coordinate(well_name)
                     well_coords = (
                         data.read('/metadata/well_position/y'),
                         data.read('/metadata/well_position/x')
                     )
-                    logger.debug('plate name: %s', plate_name)
+                    logger.debug('plate # %d', plate_index)
                     logger.debug('well position within plate: {0}'.format(
                                     plate_coords))
                     logger.debug('well name: %s', well_name)
@@ -1150,8 +1148,8 @@ class SegmentedObjectLayer(Layer):
                     store.append('%s/is_border' % obj_path, is_border)
 
                     # Store the name of the corresponding plate and well
-                    plates = np.repeat(plate_name, len(object_ids))
-                    store.append('%s/metadata/plate_name' % obj_path, plates)
+                    plates = np.repeat(plate_index, len(object_ids))
+                    store.append('%s/metadata/plate_index' % obj_path, plates)
                     wells = np.repeat(well_name, len(object_ids))
                     store.append('%s/metadata/well_name' % obj_path, wells)
 
@@ -1232,7 +1230,7 @@ class WellObjectLayer(Layer):
                 feat_path[obj] = '%s/features' % obj_path
                 # NOTE: This assumes that the layers for segmented objects
                 # have already been created
-                plate_ref[obj] = data.read('%s/metadata/plate_name' % obj_path)
+                plate_ref[obj] = data.read('%s/metadata/plate_index' % obj_path)
                 well_ref[obj] = data.read('%s/metadata/well_name' % obj_path)
 
             with DatasetWriter(filename) as store:
@@ -1320,7 +1318,7 @@ class WellObjectLayer(Layer):
                         for obj in objects:
                             index = (
                                 (well_ref[obj] == well_name) &
-                                (plate_ref[obj] == plate.name)
+                                (plate_ref[obj] == plate.index)
                             )
                             # Adhere to structure of SegmentedObjectLayer, i.e.
                             # object id can be used as index for feature

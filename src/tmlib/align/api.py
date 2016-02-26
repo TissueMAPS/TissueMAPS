@@ -152,7 +152,7 @@ class ImageRegistration(ClusterRoutines):
                 })
 
             jdc = job_descriptions['collect']
-            jdc['plates'].append(plate.name)
+            jdc['plates'].append(plate.index)
             jdc['inputs']['registration_files'].append(registration_files)
             jdc['outputs']['align_descriptor_files'].append([
                 os.path.join(c.dir, c.align_descriptor_file)
@@ -200,10 +200,8 @@ class ImageRegistration(ClusterRoutines):
         --------
         :py:func:`tmlib.align.registration.fuse_registration`
         '''
-        for i, plate_name in enumerate(batch['plates']):
-            plate = [
-                p for p in self.experiment.plates if p.name == plate_name
-            ][0]
+        for i, plate_index in enumerate(batch['plates']):
+            plate = self.experiment.plates[plate_index]
 
             reg_files = batch['inputs']['registration_files'][i]
             cycle_folders = [os.path.basename(c.dir) for c in plate.cycles]
@@ -261,8 +259,8 @@ class ImageRegistration(ClusterRoutines):
         output_dir: str
             absolute path to directory where the processed images should be
             stored
-        plates: List[str]
-            plate names
+        plates: List[int]
+            plate indices
         wells: List[str]
             well identifiers
         sites: List[int]
@@ -280,7 +278,7 @@ class ImageRegistration(ClusterRoutines):
         logger.info('align images between cycles')
         for plate in self.experiment.plates:
             if plates:
-                if plate.name not in plates:
+                if plate.index not in plates:
                     continue
             for cycle in plate.cycles:
                 if tpoints:

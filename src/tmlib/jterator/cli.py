@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Jterator(CommandLineInterface):
 
-    def __init__(self, experiment, verbosity, pipeline_name, headless):
+    def __init__(self, experiment, verbosity, pipeline_name, headless=True):
         '''
         Initialize an instance of class Jterator.
 
@@ -22,9 +22,9 @@ class Jterator(CommandLineInterface):
             logging level
         pipeline_name: str
             name of the processed pipeline
-        headless: bool
+        headless: bool, optional
             indicator that program should run in headless mode,
-            i.e. that modules should not generate any plots
+            i.e. that modules should not generate any plots (default: ``True``)
 
         Raises
         ------

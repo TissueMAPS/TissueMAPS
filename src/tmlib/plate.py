@@ -53,7 +53,7 @@ class Plate(object):
 
     SUPPORTED_PLATE_FORMATS = {1, 96, 384}
 
-    PLATE_DIR_FORMAT = 'plate_{name}'
+    PLATE_DIR_FORMAT = 'plate_{index:0>2}'
 
     def __init__(self, plate_dir, plate_format, library):
         '''
@@ -92,19 +92,31 @@ class Plate(object):
         return self.plate_dir
 
     @property
-    def name(self):
+    def index(self):
         '''
+        Each `plate` has a zero-based index, depending on the order in which
+        plates were added to the experiment.
+        It is encoded in the name of the folder and is retrieved from
+        it using a regular expression.
+
         Returns
         -------
-        str
-            name of the plate
+        int
+            zero-based plate index
+
+        Raises
+        ------
+        RegexError
+            when `index` cannot not be determined from folder name
         '''
-        regex = utils.regex_from_format_string(self.PLATE_DIR_FORMAT)
-        match = re.search(regex, self.dir)
+        folder_name = os.path.basename(self.dir)
+        regexp = utils.regex_from_format_string(self.PLATE_DIR_FORMAT)
+        match = re.search(regexp, folder_name)
         if not match:
             raise RegexError(
-                    'Plate name could not be determined from folder name')
-        return match.group('name')
+                    'Can\'t determine plate index from folder "%s".'
+                    % folder_name)
+        return int(match.group('index'))
 
     def _is_cycle_dir(self, folder):
         format_string = Cycle.CYCLE_DIR_FORMAT

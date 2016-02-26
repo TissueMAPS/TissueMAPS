@@ -180,12 +180,12 @@ class ImageProcessingModule(object):
         for name, value in inputs.iteritems():
             engine.put('%s' % name, value)
         function_name = os.path.splitext(os.path.basename(self.module_file))[0]
-        func_call = '[{args_out}] = jtlib.modules.{name}({args_in});'.format(
+        func_call = '[{args_out}] = jtlib.modules.{name}({args_in})'.format(
                                     args_out=', '.join(output_names),
                                     name=function_name,
                                     args_in=', '.join(inputs.keys()))
         # Capture standard output and error
-        engine.eval("out = evalc('{0}')".format(func_call))
+        engine.eval("out = evalc('{0};')".format(func_call))
         out = engine.get('out')
         out = re.sub(r'\n$', '', out)  # naicify string
         if out:

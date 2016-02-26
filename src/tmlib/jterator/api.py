@@ -514,7 +514,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             /metadata                                               # Group
             /metadata/job_id                                        # Dataset {SCALAR}
-            /metadata/plate_name                                    # Dataset {SCALAR}
+            /metadata/plate_index                                    # Dataset {SCALAR}
             /metadata/well_name                                     # Dataset {SCALAR}
             /metadata/well_posistion                                # Group
             /metadata/well_posistion/x                              # Dataset {SCALAR}
@@ -591,7 +591,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 if item['correct']:
                     logger.info('correct images for illumination artifacts')
                     for plate in self.experiment.plates:
-                        if plate.name != img.metadata.plate_name:
+                        if plate.name != img.metadata.plate_ix:
                             continue
                         cycle = plate.cycles[img.metadata.tpoint_ix]
                         stats = cycle.illumstats_images[img.metadata.channel_ix]
@@ -636,8 +636,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 with DatasetWriter(data_file) as data:
                     data.write('/metadata/job_id',
                                data=batch['id'])
-                    data.write('/metadata/plate_name',
-                               data=md.plate_name)
+                    data.write('/metadata/plate_index',
+                               data=md.plate_ix)
                     data.write('/metadata/well_name',
                                data=md.well_name)
                     data.write('/metadata/well_position/y',
