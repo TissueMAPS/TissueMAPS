@@ -73,12 +73,12 @@ def get_mapobjects_tile(experiment_id, object_type):
     if not use_simple_geom:
         mapobject_query_str = '''
 SELECT obj_id, ST_AsGeoJSON(geom) FROM mapobject
-WHERE ST_Contains(%s, mapobject.geom)
+WHERE ST_Intersects(%s, mapobject.geom)
 ''' % bounding_polygon_str
     else:
         mapobject_query_str = '''
 SELECT obj_id, ST_AsGeoJSON(ST_Centroid(geom)) FROM mapobject
-WHERE ST_Contains(%s, mapobject.geom)
+WHERE ST_Intersects(%s, mapobject.geom)
 ''' % bounding_polygon_str
 
     res = db.engine.execute(mapobject_query_str)
