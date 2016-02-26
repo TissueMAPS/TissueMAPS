@@ -24,8 +24,8 @@ angular.module('tmaps.ui')
     .state('viewport', {
         url: '/viewport?loadex=expids&state=stateid&snapshot=snapshotid',
         reloadOnSearch: false,
-        onEnter: ['application', '$stateParams', 'experimentService', 'appstateService',
-                  function(app, $stateParams, experimentService, appstateService) {
+        onEnter: ['application', '$stateParams', 'appstateService',
+                  function(app, $stateParams, appstateService) {
 
             app.showViewports();
 
@@ -45,7 +45,7 @@ angular.module('tmaps.ui')
             var experimentIDs = $stateParams.loadex;
             if (angular.isDefined(experimentIDs)) {
                 _(experimentIDs.split(',')).each(function(experimentID) {
-                    experimentService.getExperiment(experimentID).success(function(exp) {
+                    Experiment.get(experimentID).then(function(exp) {
                         app.addExperiment(exp);
                     });
                 });

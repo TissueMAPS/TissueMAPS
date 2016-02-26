@@ -94,19 +94,16 @@ class Application {
         return this.appInstances[this._activeAppInstanceNumber];
     }
 
-    addExperiment(experiment: ExperimentAPIObject) {
+    addExperiment(experiment: Experiment) {
         // TODO: Depending on the experiment's type, create a different type of appInstance.
         // TODO: Class viewport and experiment should be abstract.
-        var exp = Experiment.fromServerResponse(experiment);
-        var inst = new AppInstance(exp);
+        var inst = new AppInstance(experiment);
         inst.addExperimentToViewport();
 
         this.appInstances.push(inst);
         if (this.appInstances.length === 1) {
             this.setActiveAppInstance(inst);
         }
-
-        window['inst'] = inst;
 
         return inst;
     }

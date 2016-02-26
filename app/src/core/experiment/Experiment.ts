@@ -1,5 +1,3 @@
-interface Feature {}
-
 type ExperimentId = string;
 
 interface ExperimentArgs {
@@ -32,7 +30,6 @@ class Experiment implements Serializable<Experiment> {
     constructor(opt: ExperimentArgs) {
 
         var $q = $injector.get<ng.IQService>('$q');
-        var expService = $injector.get<ExperimentService>('experimentService');
 
         this.id = opt.id;
         this.name = opt.name;
@@ -51,7 +48,25 @@ class Experiment implements Serializable<Experiment> {
         return $injector.get<ng.IQService>('$q').when(ser);
     }
 
-    static fromServerResponse(e: ExperimentAPIObject) {
+    static getAll(): ng.IPromise<Experiment[]> {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        return $http.get('/api/experiments')
+        .then((resp: any) => {
+            var exps = resp.data.experiments;
+            return _.map(exps, Experiment._fromServerResponse);
+        });
+    }
+
+    // TODO: error handling
+    static get(id: ExperimentId): ng.IPromise<Experiment> {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        return $http.get('/api/experiments/' + id)
+        .then((resp: {data: ExperimentAPIObject}) => {
+            return Experiment._fromServerResponse(resp.data);
+        });
+    }
+
+    static _fromServerResponse(e: ExperimentAPIObject) {
         var channels = _.map(e.layers, (l) => {
             return {
                 name: l.name,

@@ -14,7 +14,6 @@
       <div class="panel panel-default">
 
         <div class="panel-heading">
-          <b>Owned by you</b>
           <span class="search form-inline pull-right">
             <div class="input-group">
               <div class="input-group-addon"><i class="fa fa-search"></i></div>
@@ -25,7 +24,7 @@
 
         <div class="panel-body">
           <ul class="list-group">
-            <li class="list-group-item" ng-repeat="e in userpanel.experiments.owned | filter:experimentQuery">
+            <li class="list-group-item" ng-repeat="e in userpanel.experiments | filter:experimentQuery">
               {{ e.name }}
               <button class="btn btn-primary" ng-click="userpanel.addExperiment(e)">
                 Add to session
@@ -34,21 +33,6 @@
           </ul>
         </div>
       </div>
-
-      <div class="panel panel-default">
-        <div class="panel-heading"><b>Shared with you</b></div>
-        <div class="panel-body">
-          <ul>
-            <li class="list-group-item" ng-repeat="e in userpanel.experiments.shared | filter:experimentQuery">
-              {{ e.name }}
-              <button class="btn btn-primary" ng-click="userpanel.addExperiment(e)">
-                Add to session
-              </button>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </tab>
 
     <tab heading="Saved sessions">
 

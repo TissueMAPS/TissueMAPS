@@ -1,7 +1,7 @@
 angular.module('tmaps.ui')
 .controller('UserpanelCtrl',
-            ['experimentService', 'appstateService', 'session', '$scope', '$state', 'application', '$location',
-             function(experimentService, appstateService, session, $scope, $state, app, $location) {
+            ['appstateService', 'session', '$scope', '$state', 'application', '$location',
+             function(appstateService, session, $scope, $state, app, $location) {
 
     var self = this;
 
@@ -20,14 +20,10 @@ angular.module('tmaps.ui')
         shared: []
     };
 
-    this.experiments = {
-        owned: [],
-        shared: []
-    };
+    this.experiments = [];
 
-    experimentService.getAvailableExperiments().then(function(exps) {
-        self.experiments.owned = exps.owned;
-        self.experiments.shared = exps.shared;
+    Experiment.getAll().then(function(exps) {
+        self.experiments = exps;
     });
 
     appstateService.getStates().then(function(states) {
