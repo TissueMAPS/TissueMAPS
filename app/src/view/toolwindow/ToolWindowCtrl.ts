@@ -2,7 +2,7 @@ interface ToolOptions {
     chosenMapObjectType: MapObjectType;
 }
 
-interface ToolContentScope extends ng.IScope {
+interface ToolWindowScope extends ng.IScope {
     tool: Tool;
     isRunning: boolean;
     toolOptions: ToolOptions;
@@ -11,9 +11,9 @@ interface ToolContentScope extends ng.IScope {
 
 angular.module('tmaps.toolwindow')
 .controller(
-    'ToolContentCtrl',
+    'ToolWindowCtrl',
     ['tmapsProxy', '$scope', '$rootScope',
-    function(tmapsProxy: TmapsProxy, $scope: ToolContentScope, $rootScope: ng.IScope) {
+    function(tmapsProxy: TmapsProxy, $scope: ToolWindowScope, $rootScope: ng.IScope) {
 
     $scope.tool = tmapsProxy.tool;
 

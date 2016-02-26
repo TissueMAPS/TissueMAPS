@@ -56,24 +56,24 @@
         "app/src/core/tool/classes/SVMTool.ts",
 
         "app/src/core/tool/classes/ClusterTool.ts",
-        "app/src/toolwindow/modules/cluster/ClusterCtrl.ts",
+        "app/src/view/toolwindow/modules/cluster/ClusterCtrl.ts",
 
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/MapPosition.ts",
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
 
-        "app/src/toolwindow/TmapsProxy.ts",
-        "app/src/toolwindow/FeatureService.ts",
-        "app/src/toolwindow/ToolContentCtrl.ts",
+        "app/src/view/toolwindow/TmapsProxy.ts",
+        "app/src/view/toolwindow/FeatureService.ts",
+        "app/src/view/toolwindow/ToolWindowCtrl.ts",
 
-        "app/src/toolwindow/widgets/objecttypeselection/tmObjectTypeSelectionWidget.ts",
-        "app/src/toolwindow/widgets/classselection/ClassSelectionWidgetCtrl.ts",
-        "app/src/toolwindow/widgets/featureselection/FeatureSelectionWidgetCtrl.ts",
+        "app/src/view/toolwindow/widgets/objecttypeselection/tmObjectTypeSelectionWidget.ts",
+        "app/src/view/toolwindow/widgets/classselection/ClassSelectionWidgetCtrl.ts",
+        "app/src/view/toolwindow/widgets/featureselection/FeatureSelectionWidgetCtrl.ts",
 
-        "app/src/toolwindow/modules/SVM/SVMCtrl.ts",
+        "app/src/view/toolwindow/modules/SVM/SVMCtrl.ts",
 
-        "app/src/core/tools/classes/ScatterPlotTool.ts",
-        "app/src/toolwindow/modules/scatterplot/ScatterPlotCtrl.ts",
+        "app/src/core/tool/classes/ScatterPlotTool.ts",
+        "app/src/view/toolwindow/modules/scatterplot/ScatterPlotCtrl.ts",
 
         "app/src/view/toolbar/tmToolbar.ts",
         "app/src/view/toolbar/ToolbarCtrl.ts",

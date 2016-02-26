@@ -1,3 +1,10 @@
+interface ToolWindowOptions {
+    templateUrl: string;
+    icon: string;
+    defaultWindowHeight: number;
+    defaultWindowWidth: number;
+}
+
 interface ServerToolResponse {
     tool_id: string;
     result: any;
@@ -11,33 +18,18 @@ abstract class Tool {
                 public id: string,
                 public name: string,
                 public description: string,
-                public templateUrl: string,
-                public icon: string,
-                public defaultWindowHeight: number,
-                public defaultWindowWidth: number) {
+                public windowOptions: ToolWindowOptions) {
         this.sessions = [];
         this.results = [];
     }
 
     abstract handleResult(res: ToolResult);
 
-    createSession() {
-
+    createSession(): ToolSession {
+        var sess = new ToolSession(this);
+        this.sessions.push(sess);
+        return sess;
     }
-    // createNewWindow() {
-    //     var windowObj = this._openWindow();
-    //     var toolWindow = {
-    //         windowObject: windowObj
-    //     };
-    //     this.windows.push(toolWindow);
-
-    //     $injector.get<JQueryStatic>('$')(windowObj).bind('beforeunload', (event) => {
-    //         var idx = this.windows.indexOf(toolWindow);
-    //         this.windows.splice(idx, 1);
-    //     });
-
-    //     return toolWindow;
-    // }
 
     sendRequest(payload: any): ng.IPromise<ToolResult> {
         var url = '/api/tools/' + this.id + '/request';
