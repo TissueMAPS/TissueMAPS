@@ -144,20 +144,18 @@ def get_experiments():
 
     Response:
     {
-        "owned": list of experiment objects,
-        "shared": list of experiment objects
+        "experiments": list of experiment objects,
     }
 
     where an experiment object is a dict as returned by
     Experiment.as_dict().
 
     """
-    experiments_owned = [e.as_dict() for e in current_identity.experiments]
-    experiments_shared = [e.as_dict()
-                          for e in current_identity.received_experiments]
+    experiments = [e.as_dict() for e in current_identity.experiments]
+    # experiments_shared = [e.as_dict()
+    #                       for e in current_identity.received_experiments]
     return jsonify({
-        'owned': experiments_owned,
-        'shared': experiments_shared
+        'experiments': experiments
     })
 
 
