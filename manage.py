@@ -11,7 +11,7 @@ from tmaps.appfactory import create_app
 from tmaps.extensions.database import db
 
 # Execute all model definitions
-from tmaps.models import *
+# from tmaps.models import *
 
 
 cfg = flask.Config(p.realpath(p.dirname(__file__)))
@@ -35,7 +35,6 @@ def shell():
 
     Available in the namespace:
 
-    - Model classes: models.User, models.Experiment, etc.
     - Application: app
     - Request context: ctx
     - SQLAlchemy database: db
@@ -46,8 +45,7 @@ def shell():
     def make_shell():
         ctx = app.test_request_context()
         ctx.push()
-        from tmaps import models
-        return dict(app=app, ctx=ctx, models=models, db=db)
+        return dict(app=app, ctx=ctx, db=db)
     script.make_shell(make_shell, use_ipython=True)()
 
 

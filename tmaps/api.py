@@ -6,3 +6,4 @@ import appstate.api
 import experiment.api
 import tool.api
 import user.api
+import mapobject.api
