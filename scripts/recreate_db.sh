@@ -44,5 +44,6 @@
 
 dropdb tissuemaps
 createdb tissuemaps
+echo 'CREATE EXTENSION postgis;' | psql -d tissuemaps
 python manage.py db create_tables
 python manage.py db insert_data "$1"

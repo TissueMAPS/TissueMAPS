@@ -93,5 +93,3 @@ WHERE ST_Intersects(%s, mapobject.geom)
             "features": features
         }
     )
-    
-

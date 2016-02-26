@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 import yaml
+import os.path as p
 from subprocess import call
 
 import flask
@@ -11,7 +12,8 @@ from tmaps.appfactory import create_app
 from tmaps.extensions.database import db
 
 # Execute all model definitions
-# from tmaps.models import *
+from tmaps.user import User
+from tmaps.experiment import Experiment
 
 
 cfg = flask.Config(p.realpath(p.dirname(__file__)))
