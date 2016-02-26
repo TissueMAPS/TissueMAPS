@@ -1,1 +1,1 @@
-from mapobject import Mapobject, MapobjectCoords
+from mapobject import MapObject, MapObjectCoords

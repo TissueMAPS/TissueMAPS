@@ -4,7 +4,7 @@ from tmaps.extensions.database import db
 from tmaps.model import Model
 
 
-class Mapobject(Model):
+class MapObject(Model):
     __tablename__ = 'mapobject'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -16,7 +16,7 @@ class Mapobject(Model):
         'Experiment', backref='mapobjects')
 
 
-class MapobjectCoords(Model):
+class MapObjectCoords(Model):
     __tablename__ = 'mapobject_coords'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -27,4 +27,4 @@ class MapobjectCoords(Model):
     geom = db.Column(Geometry('POLYGON'))
 
     mapobject_row_id = db.Column(db.Integer, db.ForeignKey('mapobject.id'))
-    mapobject = db.relationship('Mapobject', backref='coordinates')
+    mapobject = db.relationship('MapObject', backref='coordinates')
