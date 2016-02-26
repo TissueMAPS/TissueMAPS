@@ -32,7 +32,7 @@ class ToolbarCtrl {
      * This function is called when the Tool's button is pressed.
      */
     openTool(tool: Tool) {
-        tool.createNewWindow();
+        // tool.createNewWindow();
     }
 }
 angular.module('tmaps.ui').controller('ToolbarCtrl', ToolbarCtrl);

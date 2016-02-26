@@ -49,8 +49,8 @@
         "app/src/core/serialize/typedefs.ts",
 
         "app/src/core/tools/Tool.ts",
-        "app/src/core/tools/result/ToolResult.ts",
-        "app/src/core/tools/result/ResultLayer.ts",
+        "app/src/core/tools/ToolSession.ts",
+        "app/src/core/tools/ToolResult.ts",
         "app/src/core/tools/classes/ClassificationTool.ts",
         "app/src/core/tools/classes/FeatureStatsTool.ts",
         "app/src/core/tools/classes/SVMTool.ts",

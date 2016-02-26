@@ -27,10 +27,10 @@ abstract class ClassificationTool extends Tool {
                 });
                 return visual;
             });
-            var layer = new ResultLayer(this.name, {
-                visuals: visuals
-            });
-            this.appInstance.viewport.addVisualLayer(layer);
+            // var layer = new ResultLayer(this.name, {
+            //     visuals: visuals
+            // });
+            // this.appInstance.viewport.addVisualLayer(layer);
         });
     }
 }

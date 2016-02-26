@@ -3,7 +3,7 @@ interface ToolWindowInitObject {
     viewportScope: ng.IPromise<ViewportElementScope>;
     applicationScope: ng.IScope;
     tool: Tool;
-    toolWindow: ToolWindow;
+    // toolWindow: ToolWindow;
 }
 
 interface ToolWindowObject extends ng.IWindowService {
@@ -17,7 +17,7 @@ class TmapsProxy {
     viewportScope: ng.IPromise<ViewportElementScope>;
     applicationScope: ng.IScope;
     tool: Tool;
-    toolWindow: ToolWindow;
+    // toolWindow: ToolWindow;
 
     constructor(private $window: ToolWindowObject) {
         if (angular.isDefined($window.init)) {
@@ -25,7 +25,7 @@ class TmapsProxy {
             this.viewportScope = $window.init.viewportScope;
             this.applicationScope = $window.init.applicationScope;
             this.tool = $window.init.tool;
-            this.toolWindow = $window.init.toolWindow;
+            // this.toolWindow = $window.init.toolWindow;
         } else {
             console.log('No init object on the global scope!');
         }
