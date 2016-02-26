@@ -15,6 +15,7 @@ development server.
 """
 
 import os.path as p
+from werkzeug.contrib.profiler import ProfilerMiddleware
 import flask
 from tmaps.appfactory import create_app
 import logging
@@ -36,6 +37,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--threaded', action='store_true', default=False,
         help='if the dev server should run in multi-threaded mode')
+    parser.add_argument(
+        '--profile', action='store_true', default=False,
+        help='if application should be profiled')
     args = parser.parse_args()
+
+    if args.profile:
+        app.config['PROFILE'] = True
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     app.run(port=args.port, debug=True, threaded=args.threaded)
