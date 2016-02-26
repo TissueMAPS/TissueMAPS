@@ -454,7 +454,7 @@ module.exports = function(grunt) {
 
                     // Source
                     'app/build/compiled-ts.js',
-                    'app/src/ui/**/*.js',
+                    'app/src/view/**/*.js',
                     'app/src/toolwindow/**/*.js'
                 ]
             },

@@ -23,7 +23,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.name = experiment.name;
         this.viewport = new Viewport();
         this.viewport.injectIntoDocumentAndAttach(this);
-        this.tools = $injector.get<ToolLoader>('toolLoader').loadTools(this);
+        this.tools = this._loadTools();
 
         this.featureManager = new FeatureManager(experiment);
         this.mapObjectRegistry = new MapObjectRegistry(experiment);
@@ -65,6 +65,29 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             var layer = new ChannelLayer(opt);
             this.viewport.addChannelLayer(layer);
         });
+    }
+
+    private _loadTools() {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var toolsDef = $q.defer();
+        $http.get('/src/core/tools/tools.json').then((resp) => {
+            var toolsConfig = <any> resp.data;
+            var classNames: string[] = toolsConfig.loadClasses;
+            var tools = _.map(classNames, (clsName: string) => {
+                var constr = window[clsName];
+                if (constr === undefined) {
+                    throw Error('No such tool constructor: ' + clsName);
+                } else {
+                    var t = new constr(this);
+                    return t;
+                }
+                return t;
+            });
+            toolsDef.resolve(tools);
+        });
+
+        return toolsDef.promise;
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {

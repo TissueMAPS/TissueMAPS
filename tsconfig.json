@@ -49,7 +49,6 @@
         "app/src/core/serialize/typedefs.ts",
 
         "app/src/core/tools/Tool.ts",
-        "app/src/core/tools/ToolLoader.ts",
         "app/src/core/tools/result/ToolResult.ts",
         "app/src/core/tools/result/ResultLayer.ts",
         "app/src/core/tools/classes/ClassificationTool.ts",
@@ -76,12 +75,12 @@
         "app/src/core/tools/classes/ScatterPlotTool.ts",
         "app/src/toolwindow/modules/scatterplot/ScatterPlotCtrl.ts",
 
-        "app/src/ui/toolbar/tmToolbar.ts",
-        "app/src/ui/toolbar/ToolbarCtrl.ts",
-        "app/src/ui/sidebar/selections/SelectionSettingsCtrl.ts",
-        "app/src/ui/sidebar/selections/SelectionControlsCtrl.ts",
-        "app/src/ui/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
-        "app/src/ui/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
-        "app/src/ui/sidebar/visuallayers/VisualLayerCtrl.ts"
+        "app/src/view/toolbar/tmToolbar.ts",
+        "app/src/view/toolbar/ToolbarCtrl.ts",
+        "app/src/view/sidebar/selections/SelectionSettingsCtrl.ts",
+        "app/src/view/sidebar/selections/SelectionControlsCtrl.ts",
+        "app/src/view/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
+        "app/src/view/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
+        "app/src/view/sidebar/visuallayers/VisualLayerCtrl.ts"
     ]
 }
