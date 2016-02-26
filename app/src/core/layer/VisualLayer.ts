@@ -50,7 +50,7 @@ class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
 
         var vectorSource = new ol.source.VectorTile({
             // features: []
-            url: 'api/experiments/Bvk6bkYO/mapobjects/cells?x={x}&y={y}&z={z}',
+            url: 'api/experiments/Bvk6bkYO/mapobjects/cells?x={x}&y={y}&z={z}&t=0&zlevel=0',
             // format: new ol.format.MVT(),
             format: new ol.format.GeoJSON({
                 // NOTE: The projection has to equal the projection set on the 
