@@ -731,7 +731,7 @@ class ChannelLayer(Layer):
                     else:
                         mosaic = np.vstack([mosaic, row_image])
             # Create the tile at the current level by downsampling the mosaic
-            tile = block_reduce(mosaic, block_size, func=np.mean)
+            tile = skimage.measure.block_reduce(mosaic, block_size, func=np.mean)
             # Write the tile to file on disk
             with ImageWriter(self.dir) as writer:
                 writer.write(f, tile)
@@ -1147,7 +1147,7 @@ class SegmentedObjectLayer(Layer):
                     store.append('%s/coordinates/x' % job_path, coords_x)
                     # The "is_border" vector indicates whether the parent (!)
                     # object lies at the border of the image.
-                    store.append('%s/is_border' % obj_path, [is_border])
+                    store.append('%s/is_border' % obj_path, is_border)
 
                     # Store the name of the corresponding plate and well
                     plates = np.repeat(plate_name, len(object_ids))

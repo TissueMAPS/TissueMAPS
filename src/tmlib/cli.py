@@ -553,14 +553,14 @@ class CommandLineInterface(object):
         Requires calling :py:method:`tmlib.cli.init` first.
         '''
         # TODO: session has some delay, immediate resubmission may cause trouble
-        if not os.path.exists(self.session_dir):
-            raise OSError('There are no jobs that can be resubmitted.')
         self._print_logo()
         api = self._api_instance
         if args.jobs is not None and args.phase != 'run':
             raise AttributeError(
                     'Argument "jobs" can only be set when '
                     'value of argument "phase" is "run".')
+        if not os.path.exists(api.session_dir):
+            raise OSError('There are no jobs that can be resubmitted.')
         jobs = self.create_jobs(
                     duration=args.duration,
                     memory=args.memory,

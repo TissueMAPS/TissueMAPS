@@ -114,6 +114,35 @@ class Tmaps(object):
         inst._call(args)
 
     @staticmethod
+    def main(parser):
+        '''
+        Main entry point for command line interface.
+
+        Parsers the command line arguments to the corresponding handler
+        and configures logging.
+
+        Parameters
+        ----------
+        parser: argparse.ArgumentParser
+            argument parser object
+
+        Returns
+        -------
+        int
+            ``0`` when program completes successfully and ``1`` otherwise
+
+        Raises
+        ------
+        SystemExit
+            exitcode ``1`` when the call raises an :py:class:`Exception`
+
+        Warning
+        -------
+        Don't do any other logging configuration anywhere else!
+        '''
+        cli.CommandLineInterface.main(parser)
+
+    @staticmethod
     def get_parser_and_subparsers(methods=['submit', 'resume']):
         '''
         Get an argument parser object and subparser objects with default
