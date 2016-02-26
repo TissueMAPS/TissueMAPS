@@ -64,7 +64,7 @@ class JteratorInitArgs(VariableArgs):
         str
             name of the pipeline that should be processed
         '''
-        return self._pipelines
+        return self._pipeline
 
     @pipeline.setter
     def pipeline(self, value):
