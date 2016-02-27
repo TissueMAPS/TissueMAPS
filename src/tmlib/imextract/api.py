@@ -17,7 +17,7 @@ class ImageExtractor(ClusterRoutines):
     The extracted arrays are written to PNG files.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity):
+    def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ImageExtractor.
 
@@ -29,12 +29,11 @@ class ImageExtractor(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
         '''
         super(ImageExtractor, self).__init__(
                 experiment, prog_name, verbosity)
-        self.experiment = experiment
-        self.prog_name = prog_name
-        self.verbosity = verbosity
 
     def _create_output_dirs(self):
         for cycle in self.cycles:

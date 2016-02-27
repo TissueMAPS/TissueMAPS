@@ -3,19 +3,18 @@
 plates_dir:
 sources_dir:
 layers_dir:
+experiment_name: ExampleExperiment
 plate_format: 384
 workflow:
-  type: 'canonical'
+  type: canonical
   stages:
     - name: image_conversion
       steps:
         - name: metaextract
-          args:
         - name: metaconfig
           args:
             format: cellvoyager
         - name: imextract
-          args:
     - name: image_preprocessing
       steps:
         - name: align
@@ -23,7 +22,6 @@ workflow:
             ref_channel: 0
             ref_cycle: 1
         - name: corilla
-          args:
     - name: pyramid_creation
       steps:
         - name: illuminati
@@ -33,8 +31,10 @@ workflow:
             clip: Yes
     - name: image_analysis
       steps:
-        - name: jterator_segment
+        - name: jterator
           args:
-        - name: jterator_measure
+            pipeline: segment
+        - name: jterator
           args:
+            pipeline: measure
 

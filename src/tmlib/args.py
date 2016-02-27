@@ -30,9 +30,9 @@ class Args(object):
         unknown arguments are ignored.
         '''
         if kwargs:
-            for a in self._required_args:
-                if a not in kwargs.keys():
-                    raise ValueError('Argument "%s" is required.' % a)
+            # for a in self._required_args:
+            #     if a not in kwargs.keys():
+            #         raise ValueError('Argument "%s" is required.' % a)
             for key, value in kwargs.iteritems():
                 if not isinstance(key, basestring):
                     raise TypeError('"kwargs" keys must have type basestring')
@@ -43,11 +43,6 @@ class Args(object):
                     setattr(self, key, value)
                 else:
                     logger.debug('argument "%s" is ignored', key)
-
-    @abstractproperty
-    def _required_args(self):
-        # should return a set of strings
-        pass
 
     @abstractproperty
     def _persistent_attrs(self):
@@ -79,22 +74,37 @@ class Args(object):
             if attr in self._persistent_attrs and attr not in ignore:
                 if attr == 'variable_args':
                     continue
-                flag = '--%s' % attr
                 params = '_%s_params' % attr
                 if not hasattr(self, params):
                     raise AttributeError(
                             '"%s" object must have an "%s" attribute'
                             % (self.__class__.__name__, params))
                 kwargs = dict(getattr(self, params))  # make a copy
+                # There is no logic for dealing with a boolean "type" argument.
+                # This is handled via the "action" argument.
                 if kwargs['type'] == bool:
                     if kwargs['default']:
                         kwargs['action'] = 'store_false'
                     else:
                         kwargs['action'] = 'store_true'
                     del kwargs['type']
-                if attr in self._required_args:
-                    kwargs['required'] = True
-                parser.add_argument(*[flag], **kwargs)
+                # Arguments "experiment_dir" and "verbosity" get special
+                # treatment because they are arguments of the main parser and
+                # shared across all command line interfaces.
+                if attr == 'experiment_dir':
+                    # Positional arguments cannot have "required" argument
+                    del kwargs['required']
+                    parser.add_argument(attr, **kwargs)
+                elif attr == 'verbosity':
+                    flags = ['--%s' % attr]
+                    flags.append('-v')
+                    kwargs['action'] = 'count'
+                    # "type" argument is conflicting with "action" argument
+                    del kwargs['type']
+                    parser.add_argument(*flags, **kwargs)
+                else:
+                    flags = ['--%s' % attr]
+                    parser.add_argument(*flags, **kwargs)
 
     def jsonify(self):
         '''
@@ -136,8 +146,8 @@ class Args(object):
 class GeneralArgs(Args):
 
     '''
-    Class for arguments that are shared between different steps
-    (command line programs).
+    Class for general arguments that are shared between different steps;
+    they correspond the main parser of command line interfaces.
     '''
 
     def __init__(self, **kwargs):
@@ -150,15 +160,66 @@ class GeneralArgs(Args):
             arguments as key-value pairs
         '''
         self.variable_args = VariableArgs()
+        self.verbosity = self._verbosity_params['default']
         super(GeneralArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return set()
+    def _persistent_attrs(self):
+        return {'experiment_dir', 'verbosity'}
 
     @property
-    def _persistent_attrs(self):
-        return set()
+    def experiment_dir(self):
+        '''
+        Returns
+        -------
+        str
+            path to the experiment directory
+        '''
+        return self._experiment_dir
+
+    @experiment_dir.setter
+    def experiment_dir(self, value):
+        if not isinstance(value, self._experiment_dir_params['type']):
+            raise TypeError('Attribute "backup" must have type %s.'
+                            % self._experiment_dir_params['type'])
+        self._experiment_dir = value
+
+    @property
+    def _experiment_dir_params(self):
+        return {
+            'type': str,
+            'required': True,
+            'help': 'path to experiment directory'
+        }
+
+    @property
+    def verbosity(self):
+        '''
+        Returns
+        -------
+        int
+            logging verbosity level
+
+        See also
+        --------
+        :py:func:`tmlib.logging_utils.map_logging_verbosity`
+        '''
+        return self._verbosity
+
+    @verbosity.setter
+    def verbosity(self, value):
+        if not isinstance(value, self._verbosity_params['type']):
+            raise TypeError('Attribute "backup" must have type %s.'
+                            % self._verbosity_params['type'])
+        self._experiment_dir = value
+
+    @property
+    def _verbosity_params(self):
+        return {
+            'default': 0,
+            'type': int,
+            'help': 'increase logging verbosity'
+        }
 
     @property
     def variable_args(self):
@@ -192,7 +253,8 @@ class GeneralArgs(Args):
 class VariableArgs(Args):
 
     '''
-    Class for variable, step-specific arguments.
+    Class for variable, step-specific arguments;
+    they correspond to the subparsers of command line interfaces.
     '''
 
     def __init__(self, **kwargs):
@@ -205,10 +267,6 @@ class VariableArgs(Args):
             arguments as key-value pairs
         '''
         super(VariableArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return set()
 
     @property
     def _persistent_attrs(self):
@@ -229,10 +287,6 @@ class InitArgs(GeneralArgs):
         self.backup = self._backup_params['default']
         self.keep_output = self._keep_output_params['default']
         super(InitArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return set()
 
     @property
     def _persistent_attrs(self):
@@ -316,10 +370,6 @@ class SubmitArgs(GeneralArgs):
         self.jobs = self._jobs_params['default']
         self.backup = self._backup_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return set()
 
     @property
     def _persistent_attrs(self):
@@ -470,6 +520,11 @@ class SubmitArgs(GeneralArgs):
         if not isinstance(value, self._duration_params['type']):
             raise TypeError('Attribute "duration" must have type %s'
                             % self._duration_params['type'])
+        match = re.search(r'(?P<h>\d{2}):(?P<m>\d{2}):(?P<s>\d{2})', value)
+        results = match.groupdict()
+        if any([r is None for r in results.values()]):
+            raise ValueError(
+                    'Attribute "duration" must have the format "HH:MM:SS"')
         self._duration = value
 
     @property
@@ -590,10 +645,6 @@ class ResubmitArgs(GeneralArgs):
         super(ResubmitArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'phase'}
-
-    @property
     def _persistent_attrs(self):
         return {
             'interval', 'phase', 'jobs', 'depth',
@@ -663,6 +714,7 @@ class ResubmitArgs(GeneralArgs):
         return {
             'type': str,
             'default': None,
+            'required': True,
             'choices': {'run', 'collect'},
             'help': '''
                 phase for which jobs should be resubmitted
@@ -827,10 +879,6 @@ class CollectArgs(GeneralArgs):
         super(CollectArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return set()
-
-    @property
     def _persistent_attrs(self):
         return set()
 
@@ -849,10 +897,6 @@ class CleanupArgs(GeneralArgs):
         super(CleanupArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return set()
-
-    @property
     def _persistent_attrs(self):
         return set()
 
@@ -869,10 +913,6 @@ class RunArgs(GeneralArgs):
             arguments as key-value pairs
         '''
         super(RunArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return {'job'}
 
     @property
     def _persistent_attrs(self):
@@ -919,10 +959,6 @@ class LogArgs(GeneralArgs):
         '''
         self.job = self._job_params['default']
         super(LogArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return {'phase'}
 
     @property
     def _persistent_attrs(self):
@@ -999,10 +1035,6 @@ class InfoArgs(GeneralArgs):
         '''
         self.job = self._job_params['default']
         super(InfoArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return {'phase'}
 
     @property
     def _persistent_attrs(self):
@@ -1086,10 +1118,6 @@ class ApplyArgs(GeneralArgs):
         super(ApplyArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'output_dir'}
-
-    @property
     def _persistent_attrs(self):
         return {
             'plates', 'wells', 'channels', 'tpoints', 'zplanes', 'sites',
@@ -1117,6 +1145,7 @@ class ApplyArgs(GeneralArgs):
     def _output_dir_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 path to the output directory
             '''
@@ -1128,7 +1157,7 @@ class ApplyArgs(GeneralArgs):
         Returns
         -------
         str
-            plate names
+            plate indices
         '''
         return self._plates
 
@@ -1149,12 +1178,12 @@ class ApplyArgs(GeneralArgs):
     @property
     def _plates_params(self):
         return {
-            'type': str,
+            'type': int,
             'default': None,
             'nargs': '+',
             'metavar': 'P',
             'help': '''
-                plate names
+                plate indices
             '''
         }
 
@@ -1342,6 +1371,7 @@ class ApplyArgs(GeneralArgs):
 # However, they have to be defined here, since they get dynamically loaded
 # from this module.
 
+
 class CreateArgs(GeneralArgs):
 
     def __init__(self, **kwargs):
@@ -1354,10 +1384,6 @@ class CreateArgs(GeneralArgs):
             arguments as key-value pairs
         '''
         super(CreateArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return set()
 
     @property
     def _persistent_attrs(self):
@@ -1378,10 +1404,6 @@ class RemoveArgs(GeneralArgs):
         super(RemoveArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return set()
-
-    @property
     def _persistent_attrs(self):
         return set()
 
@@ -1398,10 +1420,6 @@ class CheckArgs(GeneralArgs):
             arguments as key-value pairs
         '''
         super(CheckArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return set()
 
     @property
     def _persistent_attrs(self):

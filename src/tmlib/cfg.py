@@ -228,9 +228,9 @@ class UserConfiguration(object):
 
     @experiment_name.setter
     def experiment_name(self, value):
-        if not isinstance(value, basestring) or value is None:
+        if not(isinstance(value, basestring) or value is None):
             raise TypeError(
-                    'Attribute "experiment_name" must have type basestring.')
+                    'Attribute "experiment_name" must have type basestring')
         self._experiment_name = value
 
     @property
@@ -246,7 +246,7 @@ class UserConfiguration(object):
     @plate_format.setter
     def plate_format(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "plate_format" must have type int.')
+            raise TypeError('Attribute "plate_format" must have type int')
         if value not in Plate.SUPPORTED_PLATE_FORMATS:
             raise ValueError(
                     'Attribute "plate_format" can be set to "%s"'
@@ -262,16 +262,16 @@ class UserConfiguration(object):
             names of the plates belonging to the experiment
         '''
         return self._plate_names
-    
+
     @plate_names.setter
     def plate_names(self, value):
         if value is not None:
             if not isinstance(value, list):
-                raise TypeError('Attribute "plate_names" must have type list.')
+                raise TypeError('Attribute "plate_names" must have type list')
             if not all([isinstance(v, basestring) for v in value]):
                 raise TypeError(
                         'Elements of attribute "plate_names" must have '
-                        'type basestring.')
+                        'type basestring')
         self._plate_names = value
 
     @property
@@ -292,7 +292,7 @@ class UserConfiguration(object):
     def acquisition_mode(self, value):
         if not isinstance(value, basestring):
             raise TypeError(
-                'Attribute "dimensionality" must have type basestring.')
+                'Attribute "dimensionality" must have type basestring')
         if value not in {'series', 'multiplexing'}:
             # TODO: ignore case
             raise ValueError(

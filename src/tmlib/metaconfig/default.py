@@ -39,7 +39,7 @@ class MetadataHandler(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, image_files, additional_files, omexml_files, plate_name):
+    def __init__(self, image_files, additional_files, omexml_files, plate_index):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -51,13 +51,15 @@ class MetadataHandler(object):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate_name: str
-            name of the corresponding plate
+        plate_index: int
+            index of the corresponding plate within the experiment
         '''
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        self.plate_name = plate_name
+        if not isinstance(plate_index, int):
+            raise TypeError('Argument "plate_index" must have type int')
+        self.plate_index = plate_index
         self.file_mapper_list = list()
         self.file_mapper_lookup = defaultdict(list)
         self.wells = dict()
@@ -221,7 +223,7 @@ class MetadataHandler(object):
         self.metadata['well_position_y'] = np.empty((length, ), dtype=int)
         self.metadata['well_position_x'] = np.empty((length, ), dtype=int)
         self.metadata['site_ix'] = np.empty((length, ), dtype=int)
-        self.metadata['plate_name'] = np.repeat(str(self.plate_name), length)
+        self.metadata['plate_ix'] = np.repeat(self.plate_index, length)
 
         return self.metadata
 
@@ -741,8 +743,8 @@ class MetadataHandler(object):
         Parameters
         ----------
         image_file_format_string: str
-            Python format string with the following fieldnames: "plate_name",
-            "w", x", "y", "c", "z", "t"
+            Python format string with the following fieldnames:
+            "p", "w", x", "y", "c", "z", "t"
 
         Returns
         -------
@@ -753,7 +755,7 @@ class MetadataHandler(object):
         md = self.metadata
         for i in md.index:
             fieldnames = {
-                'plate_name': self.plate_name,
+                'p': self.plate_index,
                 'w': md.at[i, 'well_name'],
                 'y': md.at[i, 'well_position_y'],
                 'x': md.at[i, 'well_position_x'],
@@ -858,7 +860,7 @@ class DefaultMetadataHandler(MetadataHandler):
 
     REGEX = ''
 
-    def __init__(self, image_files, additional_files, omexml_files, plate_name):
+    def __init__(self, image_files, additional_files, omexml_files, plate_index):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -870,19 +872,19 @@ class DefaultMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate_name: str
-            name of the corresponding plate
+        plate_index: int
+            index of the corresponding plate within the experiment
 
         Returns
         -------
         tmlib.metaconfig.default.DefaultMetadataHandler
         '''
         super(DefaultMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate_name)
+                image_files, additional_files, omexml_files, plate_index)
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        self.plate_name = plate_name
+        self.plate_index = plate_index
 
     @property
     def ome_additional_metadata(self):

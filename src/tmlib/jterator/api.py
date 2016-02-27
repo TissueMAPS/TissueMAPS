@@ -32,8 +32,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
     Class for running an image processing pipeline.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, pipe_name,
-                 pipe=None, handles=None, headless=True):
+    def __init__(self, experiment, prog_name, verbosity, pipeline,
+                 pipe=None, handles=None, plot=False, **kwargs):
         '''
         Initialize an instance of class ImageAnalysisPipeline.
 
@@ -45,7 +45,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        pipe_name: str
+        pipeline: str
             name of the pipeline that should be processed
         pipe: dict, optional
             name of the pipeline and the description of module order and
@@ -53,8 +53,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         handles: List[dict], optional
             name of each module and the description of its input/output
             (default: ``None``)
-        headless: bool, optional
-            whether plotting should be disabled (default: ``True``)
+        plot: bool, optional
+            whether plotting should be enabled (default: ``False``)
+        kwargs: dict, optional
+            additional key-value pairs that are ignored
 
         Note
         ----
@@ -72,10 +74,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         super(ImageAnalysisPipeline, self).__init__(
                 experiment, prog_name, verbosity)
         self.experiment = experiment
-        self.pipe_name = pipe_name
+        self.pipe_name = pipeline
         self.prog_name = prog_name
         self.verbosity = verbosity
-        self.headless = headless
+        self.plot = plot
         self.project = JtProject(
                     project_dir=self.project_dir, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
@@ -185,8 +187,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         Note
         ----
-        These files are only produced in the first place when `headless` is set
-        to ``False``.
+        These files are only produced in the first place when `plot` is set
+        to ``True``.
         '''
         shutil.rmtree(self.module_log_dir)
         shutil.rmtree(self.figures_dir)
@@ -254,7 +256,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # for use parallel processing on the cluster. Otherwise some jobs
             # hang up and get killed due to timeout.
             startup_options = '-nosplash -singleCompThread'
-            if self.headless:
+            if not self.plot:
                 # Option minimizes memory usage and improves initial startup
                 # speed, but disables plotting functionality, so we can only
                 # use it in headless mode.
@@ -502,7 +504,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         command.append(self.experiment.dir)
         command.extend(['run', '--job', str(batch['id'])])
         command.extend(['--pipeline', self.pipe_name])
-        if not self.headless:
+        if self.plot:
             command.append('--plot')
         return command
 
@@ -591,7 +593,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 if item['correct']:
                     logger.info('correct images for illumination artifacts')
                     for plate in self.experiment.plates:
-                        if plate.name != img.metadata.plate_ix:
+                        if plate.index != img.metadata.plate_ix:
                             continue
                         cycle = plate.cycles[img.metadata.tpoint_ix]
                         stats = cycle.illumstats_images[img.metadata.channel_ix]
@@ -600,14 +602,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 orig_dims = img.pixels.dimensions
                 img = img.align()
                 if not isinstance(img.pixels.array, np.ndarray):
-                    # pixels_array = vips_image_to_np_array(image.pixels.array)
                     raise TypeError(
                             'Jterator requires images as "numpy" arrays. '
-                            'Set "library" to "numpy".')
+                            'Set argument "library" to "numpy".')
                 else:
                     pixels_array = img.pixels.array
 
-                # Combine images into 3D "stack" or "series" array
+                # Combine images into "stack" or "series" array
                 if j == 0 and n > 1:
                     dims = img.pixels.dimensions
                     images[item['name']] = np.empty((n, dims[0], dims[1]),
@@ -666,11 +667,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 data_file=data_file, figure_file=figure_file,
                                 job_id=job_id,
                                 experiment_dir=self.experiment.dir,
-                                headless=self.headless)
+                                plot=self.plot)
             logger.info('run module "%s"', module.name)
             logger.debug('module file: %s', module.module_file)
             out = module.run(inputs, self.engines[module.language])
-            if not self.headless:
+            if self.plot:
                 # The output is also included in log report of the job.
                 # It is mainly used for setting up a pipeline in the GUI.
                 module.write_output_and_errors(

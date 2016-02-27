@@ -2,7 +2,6 @@ import logging
 from . import logo
 from . import __version__
 from .api import MetadataExtractor
-from .args import MetaextractInitArgs
 from ..cli import CommandLineInterface
 from ..experiment import Experiment
 
@@ -15,7 +14,7 @@ class Metaextract(CommandLineInterface):
     Command line interface for extraction of metadata from image files.
     '''
 
-    def __init__(self, experiment, verbosity):
+    def __init__(self, experiment, verbosity, **kwargs):
         '''
         Initialize an instance of class Metaextract.
 
@@ -25,10 +24,10 @@ class Metaextract(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
+        kwargs: dict
+            additional key-value pairs that are ignored
         '''
         super(Metaextract, self).__init__(experiment, verbosity)
-        self.experiment = experiment
-        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -47,9 +46,7 @@ class Metaextract(CommandLineInterface):
     @property
     def _api_instance(self):
         return MetadataExtractor(
-                    experiment=self.experiment,
-                    prog_name=self.name,
-                    verbosity=self.verbosity)
+                    self.experiment, self.name, self.verbosity)
 
     def run(self, args):
         raise AttributeError('"%s" object doesn\'t have a "run" method'
@@ -71,5 +68,4 @@ class Metaextract(CommandLineInterface):
         :py:mod:`tmlib.metaextract.argparser`
         '''
         experiment = Experiment(args.experiment_dir)
-        cli = Metaextract(experiment, args.verbosity)
-        cli._call(args)
+        Metaextract(experiment, args.verbosity)._call(args)

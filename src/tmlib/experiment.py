@@ -110,7 +110,7 @@ class Experiment(object):
         --------
         :py:attr:`tmlib.cfg.UserConfiguration.experiment_name`
         '''
-        if self.user_cfg.name is None:
+        if self.user_cfg.experiment_name is None:
             return os.path.basename(self.dir)
         else:
             return self.user_cfg.experiment_name
@@ -353,6 +353,7 @@ class Experiment(object):
         Dict[str, tmlib.metadata.ChannelLayerMetadata]
             metadata for each layer
         '''
+        # TODO: make more efficient (e.g. pandas.DataFrame)
         layer_metadata = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
@@ -377,55 +378,55 @@ class Experiment(object):
                     layer_metadata[name] = metadata
         return layer_metadata
 
-    @cached_property
-    def visual_layers_map(self):
-        '''
-        Returns
-        -------
-        Dict[str, List[str]]
-            layer names for each visual
+    # @cached_property
+    # def visual_layers_map(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     Dict[str, List[str]]
+    #         layer names for each visual
 
-        Note
-        ----
-        A `visual` is an abstract group of `layers`, which are visualized
-        together. In the simplest case of a 2D dataset, each `visual` maps to
-        only one `layer`, but there are other scenarios:
-            * 3D dataset with multiple focal planes:
-              1 `visual` -> *n* `layers`
-            * Time series dataset with multiple time points:
-              1 `visual` -> *n*x*m* `layers`
-            * Multiplexing dataset with multiple time points:
-              1 `visual` -> *n* `layer`
-        where *n* is the number of focal planes and *m* is the number of
-        time points.
-        '''
-        if hasattr(self.user_cfg, 'visuals'):
-            # TODO: allow user to give visuals more meaningful names,
-            # such as "DAPI" instead of "t000_c000"
-            raise NotSupportedError('Functionality not yet supported.')
-        mode = self.user_cfg.acquisition_mode
-        names = defaultdict(list)
-        for plate in self.plates:
-            for cycle in plate.cycles:
-                t = cycle.index
-                md = cycle.image_metadata
-                channels = np.unique(md['channel_ix'])
-                zplanes = np.unique(md['zplane_ix'])
-                for c in channels:
-                    for z in zplanes:
-                        v_name = cfg.VISUAL_NAME_FORMAT[mode].format(t=t, c=c)
-                        names[v_name].append(self.layer_names[(t, c, z)])
-        return names
+    #     Note
+    #     ----
+    #     A `visual` is an abstract group of `layers`, which are visualized
+    #     together. In the simplest case of a 2D dataset, each `visual` maps to
+    #     only one `layer`, but there are other scenarios:
+    #         * 3D dataset with multiple focal planes:
+    #           1 `visual` -> *n* `layers`
+    #         * Time series dataset with multiple time points:
+    #           1 `visual` -> *n*x*m* `layers`
+    #         * Multiplexing dataset with multiple time points:
+    #           1 `visual` -> *n* `layer`
+    #     where *n* is the number of focal planes and *m* is the number of
+    #     time points.
+    #     '''
+    #     if hasattr(self.user_cfg, 'visuals'):
+    #         # TODO: allow user to give visuals more meaningful names,
+    #         # such as "DAPI" instead of "t000_c000"
+    #         raise NotSupportedError('Functionality not yet supported.')
+    #     mode = self.user_cfg.acquisition_mode
+    #     names = defaultdict(list)
+    #     for plate in self.plates:
+    #         for cycle in plate.cycles:
+    #             t = cycle.index
+    #             md = cycle.image_metadata
+    #             channels = np.unique(md['channel_ix'])
+    #             zplanes = np.unique(md['zplane_ix'])
+    #             for c in channels:
+    #                 for z in zplanes:
+    #                     v_name = cfg.VISUAL_NAME_FORMAT[mode].format(t=t, c=c)
+    #                     names[v_name].append(self.layer_names[(t, c, z)])
+    #     return names
 
-    @property
-    def visual_names(self):
-        '''
-        Returns
-        -------
-        List[str]
-            names of the visuals
-        '''
-        return self.visual_layers_map.keys()
+    # @property
+    # def visual_names(self):
+    #     '''
+    #     Returns
+    #     -------
+    #     List[str]
+    #         names of the visuals
+    #     '''
+    #     return self.visual_layers_map.keys()
 
     @property
     def data_file(self):

@@ -20,7 +20,6 @@ from .readers import NumpyImageReader
 
 logger = logging.getLogger(__name__)
 
-
 class Layer(object):
 
     '''
@@ -62,9 +61,9 @@ class Layer(object):
             # the outer rim of wells can be left out during image acquisition)
             nonempty_wells = np.where(plate_grid)
             r = tuple(np.unique(nonempty_wells[0]))
-            nonempty_rows[r].append(plate.name)
+            nonempty_rows[r].append(plate.index)
             c = tuple(np.unique(nonempty_wells[1]))
-            nonempty_cols[c].append(plate.name)
+            nonempty_cols[c].append(plate.index)
 
         if len(set([plate.n_wells for plate in self.experiment.plates])) > 1:
             raise PyramidCreationError('Layout of plates must be identical.')
@@ -228,8 +227,8 @@ class ChannelLayer(Layer):
         '''
         Returns
         -------
-        tmlib.metadata.MosaicMetadata
-            metadata of the pyramid
+        tmlib.metadata.ChannelLayerMetadata
+            layer metadata
         '''
         return self.experiment.layer_metadata[self.name]
 
@@ -311,8 +310,7 @@ class ChannelLayer(Layer):
         image_mapper = defaultdict(list)
         for p, plate in enumerate(self.experiment.plates):
 
-            logger.debug('map base tiles to images of plate "%s"',
-                         plate.name)
+            logger.debug('map base tiles to images of plate #%d', plate.index)
 
             h = range(plate.grid.shape[0])
             w = range(plate.grid.shape[1])
@@ -591,13 +589,14 @@ class ChannelLayer(Layer):
             filenames = list(np.array(self.metadata.filenames)[subset_indices])
         for f in filenames:
             name = os.path.basename(f)
-            logger.debug('create tiles mapping to image "%s"', name)
+            logger.info('create tiles that map to image "%s"', name)
             # Retrieve the coordinates of the corresponding tiles
             tile_coords = self.base_tile_mappings['image_to_tiles'][name]
             # Determine location of the tile within the image
             image_info = self.base_tile_mappings['tile_to_images']
             # Create individual tiles
             indices = None
+            images = list()
             for t in tile_coords:
                 logger.debug('create tile for column %d, row %d', t[1], t[0])
                 # A tile may be composed of pixels of multiple images:
@@ -681,8 +680,9 @@ class ChannelLayer(Layer):
                 logger.debug('rescale intensity values to 8-bit')
                 tile = tile.scale(clip_value)
                 # Write tile to file on disk
-                tile_file = os.path.join(self.dir, self.tile_files[-1][t])
-                logger.debug('write tile to file: "%s"', tile_file)
+                tile_name = self.tile_files[-1][t]
+                logger.info('write tile to file: "%s"', tile_name)
+                tile_file = os.path.join(self.dir, tile_name)
                 tile.write_to_file(tile_file)
 
     def create_downsampled_tiles(self, level, subset_indices=None):
@@ -733,6 +733,7 @@ class ChannelLayer(Layer):
             # Create the tile at the current level by downsampling the mosaic
             tile = skimage.measure.block_reduce(mosaic, block_size, func=np.mean)
             # Write the tile to file on disk
+            logger.info('write tile to file: "%s"', f)
             with ImageWriter(self.dir) as writer:
                 writer.write(f, tile)
 
@@ -1009,7 +1010,7 @@ class SegmentedObjectLayer(Layer):
         dataset.
 
         Within the file the datasets are located in the subgroup "coordinates":
-        ``/objects/<object_name>/map_data/coordinates/<object_id>``.
+        ``/objects/<object_name>/map_data/outlines/coordinates/<object_id>``.
 
         Also join features datasets across individual `data_files` and write
         each feature dataset containing values for all objects into a separate

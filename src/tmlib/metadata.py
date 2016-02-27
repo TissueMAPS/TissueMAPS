@@ -15,7 +15,7 @@ class ImageMetadata(object):
 
     _PERSISTENT_ATTRS = {
         'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix',
-        'plate_name', 'well_name', 'well_position_x', 'well_position_y',
+        'plate_ix', 'well_name', 'well_position_x', 'well_position_y',
         'x_shift', 'y_shift',
         'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
         'is_aligned', 'is_omitted'
@@ -80,20 +80,20 @@ class ImageMetadata(object):
         self._name = str(value)
 
     @property
-    def plate_name(self):
+    def plate_index(self):
         '''
         Returns
         -------
         str
             name of the plate to which the image belongs
         '''
-        return self._plate_name
+        return self._plate_index
 
-    @plate_name.setter
-    def plate_name(self, value):
-        if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "name" must have type str')
-        self._plate_name = str(value)
+    @plate_index.setter
+    def plate_index(self, value):
+        if not(isinstance(value, int)):
+            raise TypeError('Attribute "plate_index" must have type int')
+        self._plate_index = value
 
     @property
     def site_ix(self):

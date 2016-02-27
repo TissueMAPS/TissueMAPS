@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class PyramidBuilder(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name, verbosity, level=None):
+    def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class PyramidBuilder.
 
@@ -31,16 +31,11 @@ class PyramidBuilder(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        level: int
-            zero-based pyramid level index, where 0 represents the top pyramid
-            level, i.e. the most zoomed out level with the lowest resolution
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
         '''
         super(PyramidBuilder, self).__init__(
                 experiment, prog_name, verbosity)
-        self.experiment = experiment
-        self.prog_name = prog_name
-        self.verbosity = verbosity
-        level = level
 
     @cached_property
     def project_dir(self):

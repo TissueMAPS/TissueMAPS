@@ -243,7 +243,7 @@ class VisiviewMetadataHandler(MetadataHandler):
     REGEX = '.+_?(?P<w>[A-Z]\d{2})?_(?P<c>\w+)_s(?P<s>\d+)_?t?(?P<t>\d+)?\.'
 
     def __init__(self, image_files, additional_files, omexml_files,
-                 plate_name):
+                 plate_index):
         '''
         Initialize an instance of class VisiviewMetadataHandler.
 
@@ -255,15 +255,15 @@ class VisiviewMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        experiment_name: str
-            name of the corresponding plate
+        plate_name: int
+            index of the corresponding plate within the experiment
         '''
         super(VisiviewMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate_name)
+                image_files, additional_files, omexml_files, plate_index)
         self.image_files = image_files
         self.omexml_files = omexml_files
         self.additional_files = additional_files
-        self.plate_name = plate_name
+        self.plate_index = plate_index
 
     @cached_property
     def ome_additional_metadata(self):

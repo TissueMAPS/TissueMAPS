@@ -13,7 +13,7 @@ class MetadataExtractor(ClusterRoutines):
     and written to XML files.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity):
+    def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class MetadataExtractor.
 
@@ -25,12 +25,11 @@ class MetadataExtractor(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
         '''
         super(MetadataExtractor, self).__init__(
                 experiment, prog_name, verbosity)
-        self.experiment = experiment
-        self.prog_name = prog_name
-        self.verbosity = verbosity
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):

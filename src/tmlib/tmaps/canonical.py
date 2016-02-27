@@ -282,7 +282,7 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
 class CanonicalWorkflowStepDescription(WorkflowStepDescription):
 
     '''
-    Description of a step as part of a TissueMAPS workflow stage.
+    Description of a step as part of a `TissueMAPS` workflow stage.
     '''
 
     def __init__(self, name, args=None, **kwargs):
@@ -295,8 +295,8 @@ class CanonicalWorkflowStepDescription(WorkflowStepDescription):
             name of the step
         args: dict, optional
             arguments of the step as key-value pairs
-        **kwargs: dict, optional
-            description of the step as key-value pairs
+        kwargs: dict, optional
+            additional arguments as key-value pairs
 
         Raises
         ------
@@ -305,5 +305,4 @@ class CanonicalWorkflowStepDescription(WorkflowStepDescription):
         '''
         check_step_name(name)
         super(CanonicalWorkflowStepDescription, self).__init__(
-                name, args, **kwargs
-        )
+                    name, args, **kwargs)

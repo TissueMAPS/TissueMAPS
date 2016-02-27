@@ -24,7 +24,7 @@ class PlateSource(object):
     `tmlib.plate.Plate`_
     '''
 
-    PLATE_SOURCE_DIR_FORMAT = 'plate_{name}'
+    PLATE_SOURCE_DIR_FORMAT = 'plate_{index:0>2}'
 
     def __init__(self, plate_source_dir, acquisition_mode):
         '''
@@ -66,27 +66,31 @@ class PlateSource(object):
         return self.plate_source_dir
 
     @property
-    def name(self):
+    def index(self):
         '''
+        Each `plate` has a zero-based index, depending on the order in which
+        plates were added to the experiment.
+        It is encoded in the name of the folder and is retrieved from
+        it using a regular expression.
+
         Returns
         -------
-        str
-            name of the acquired plate
+        int
+            zero-based plate index
 
-        Note
-        ----
-        The name is encoded in the folder name and retrieved via regular
-        expressions.
+        Raises
+        ------
+        RegexError
+            when `index` cannot not be determined from folder name
         '''
         folder_name = os.path.basename(self.dir)
         regexp = utils.regex_from_format_string(self.PLATE_SOURCE_DIR_FORMAT)
         match = re.search(regexp, folder_name)
         if not match:
             raise RegexError(
-                'Can\'t determine acquisition name from folder "%s" '
-                'using format "%s".'
-                % (folder_name, self.PLATE_SOURCE_DIR_FORMAT))
-        return match.group('name')
+                    'Can\'t determine plate index from folder "%s".'
+                    % folder_name)
+        return int(match.group('index'))
 
     def _is_acquistion_dir(self, folder):
         format_string = PlateAcquisition.ACQUISITION_DIR_FORMAT

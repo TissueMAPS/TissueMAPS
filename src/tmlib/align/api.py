@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ImageRegistration(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name, verbosity):
+    def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ImageRegistration.
 
@@ -28,6 +28,8 @@ class ImageRegistration(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
         '''
         super(ImageRegistration, self).__init__(
                 experiment, prog_name, verbosity)

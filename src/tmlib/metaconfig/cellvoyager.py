@@ -138,7 +138,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
              'F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.')
 
     def __init__(self, image_files, additional_files, omexml_files,
-                 plate_name):
+                 plate_index):
         '''
         Initialize an instance of class CellvoyagerMetadataHandler.
 
@@ -150,15 +150,15 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate_name: str
-            name of the corresponding plate
+        plate_index: int
+            index of the corresponding plate within the experiment
         '''
         super(CellvoyagerMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate_name)
+                image_files, additional_files, omexml_files, plate_index)
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        self.plate_name = plate_name
+        self.plate_index = plate_index
 
     @cached_property
     def ome_additional_metadata(self):

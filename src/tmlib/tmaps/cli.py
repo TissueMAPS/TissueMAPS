@@ -16,7 +16,7 @@ class Tmaps(object):
     Command line interface for the TissueMAPS workflow manager.
     '''
 
-    def __init__(self, experiment, verbosity):
+    def __init__(self, experiment, verbosity, **kwargs):
         '''
         Initialize an instance of class Tmaps.
 
@@ -26,6 +26,8 @@ class Tmaps(object):
             configured experiment object
         verbosity: int
             logging level
+        kwargs: dict
+            additional key-value pairs that are ignored
         '''
         self.experiment = experiment
         self.verbosity = verbosity
@@ -47,9 +49,7 @@ class Tmaps(object):
     @property
     def _api_instance(self):
         return WorkflowClusterRoutines(
-                    experiment=self.experiment,
-                    prog_name=self.name,
-                    verbosity=self.verbosity)
+                    self.experiment, self.name, self.verbosity)
 
     def submit(self, args):
         '''
@@ -143,7 +143,7 @@ class Tmaps(object):
         cli.CommandLineInterface.main(parser)
 
     @staticmethod
-    def get_parser_and_subparsers(methods=['submit', 'resume']):
+    def get_parser_and_subparsers(methods={'submit', 'resume'}):
         '''
         Get an argument parser object and subparser objects with default
         arguments for use in command line interfaces.
@@ -162,7 +162,7 @@ class Tmaps(object):
             parser and subparsers objects
         '''
         parser, subparsers = cli.CommandLineInterface.get_parser_and_subparsers(
-                                methods=[])
+                                methods={})
 
         submit_parser = subparsers.add_parser(
             'submit', help='submit and monitor a TissueMAPS workflow')

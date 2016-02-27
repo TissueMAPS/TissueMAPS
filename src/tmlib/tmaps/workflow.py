@@ -2,11 +2,12 @@ import time
 import os
 import logging
 import importlib
+import sys
+import traceback
 from cached_property import cached_property
-from gc3libs import Run
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
-from gc3libs.workflow import StopOnError
+from gc3libs.workflow import AbortOnError
 from .description import WorkflowDescription
 from .description import WorkflowStageDescription
 from ..errors import WorkflowTransitionError
@@ -15,6 +16,8 @@ from ..jobs import RunJobCollection
 from ..jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
+
+WAIT = 0
 
 
 def load_step_interface(step_name):
@@ -47,7 +50,7 @@ def load_step_interface(step_name):
     return getattr(module, class_name)
 
 
-class WorkflowStep(SequentialTaskCollection, StopOnError):
+class WorkflowStep(AbortOnError, SequentialTaskCollection):
 
     '''
     Class for a TissueMAPS workflow step, which is composed of a fixed
@@ -167,7 +170,11 @@ class WorkflowStage(object):
         logger.debug('load program "%s"', prog_name)
         prog = load_step_interface(prog_name)
         logger.debug('create a program instance')
-        prog_instance = prog(self.experiment, self.verbosity)
+        # TODO: The only exception is the "jterator" step, where we need to
+        # parse the "pipeline" argument. This should be implemented more
+        # elegantly at some point.
+        prog_instance = prog(self.experiment, self.verbosity,
+                             **dict(step_description.args.variable_args))
 
         logger.debug('call "init" method with configured arguments')
         prog_instance.init(step_description.args)
@@ -209,36 +216,8 @@ class WorkflowStage(object):
     #             reason = 'Unknown'
     #     return reason
 
-    # def can_transit_to_next_step(self, step):
-    #     '''
-    #     Check whether a step completed successfully.
 
-    #     Parameters
-    #     ----------
-    #     step: tmlib.tmaps.workflow.WorkflowStep
-    #         completed step
-
-    #     Returns
-    #     -------
-    #     bool
-    #         whether step completed successfully or failed
-    #     '''
-    #     # TODO: "correct" exitcode of jobs that have a non-zero exitcode
-    #     # (e.g. ``None``) despite successful termination
-    #     for phase in step.tasks:
-    #         if (isinstance(phase, RunJobCollection) or
-    #                 isinstance(phase, MultiRunJobCollection)):
-    #             for job in phase.tasks:
-    #                 if job.execution.exitcode != 0:
-    #                     reason = self._determine_reason_for_job_failure(job)
-    #         else:
-    #             job = phase
-    #             if job.execution.exitcode != 0:
-    #                 reason = self._determine_reason_for_job_failure(job)
-    #     return step.execution.exitcode != 0
-
-
-class SequentialWorkflowStage(StopOnError, WorkflowStage, SequentialTaskCollection):
+class SequentialWorkflowStage(AbortOnError, SequentialTaskCollection, WorkflowStage):
 
     '''
     Class for a sequential TissueMAPS workflow stage, which is composed of one
@@ -315,7 +294,6 @@ class SequentialWorkflowStage(StopOnError, WorkflowStage, SequentialTaskCollecti
             # because NFS may lie. We try to circumvent this by waiting upon
             # transition to the next step, but this not be sufficient.
             if not all([os.path.exists(f) for f in self.expected_outputs]):
-                logger.error('expected outputs were not generated')
                 raise WorkflowTransitionError(
                              'outputs of previous step do not exist')
             logger.debug('create job descriptions for next step')
@@ -336,26 +314,37 @@ class SequentialWorkflowStage(StopOnError, WorkflowStage, SequentialTaskCollecti
         -------
         gc3libs.Run.State
         '''
+        if self.tasks[done].execution.returncode != 0:  # see AbortOnError
+            return super(SequentialWorkflowStage, self).next(done)
         logger.info('step "%s" is done', self._steps_to_process[done].name)
         if done+1 < len(self._steps_to_process):
-            wait = 120
-            logger.debug('wait %d seconds', wait)
-            time.sleep(wait)
+            logger.info('waiting ...')
+            logger.debug('wait %d seconds', WAIT)
+            time.sleep(WAIT)
             try:
                 step_names = [s.name for s in self.description.steps]
                 next_step_name = self._steps_to_process[done+1].name
-                next_step_index = step_names.index(next_step_name)
+                next_step_index = step_names.index(next_step_name) + 1
                 logger.info('transit to next step ({0} of {1}): "{2}"'.format(
-                                next_step_index, self.n_steps, next_step_name))
+                            next_step_index, self.n_steps, next_step_name))
                 self._add_step(done+1)
+            except KeyboardInterrupt:
+                logger.info('processing interrupted by used')
+                logger.info('aborting stage "%s"', self.name)
+                self.kill()
             except Exception as error:
-                logger.error('adding next step failed: %s', error)
-                self.execution.exitcode = 1
-                self.execution.returncode = 1
-                logger.debug('set exitcode and returncode to one')
-                logger.debug('set state to TERMINATED')
-                return Run.State.TERMINATED
-
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                logger.error('transition to next stage failed: %s', error)
+                tb = traceback.extract_tb(exc_traceback)[-1]
+                logger.error('error in "%s" line %d', tb[0], tb[1])
+                tb_string = ''
+                for tb in traceback.format_tb(exc_traceback):
+                    tb_string += '\n'
+                    tb_string += tb
+                tb_string += '\n'
+                logger.debug('error traceback: %s', tb_string)
+                logger.info('aborting stage "%s"', self.name)
+                self.kill()
         return super(SequentialWorkflowStage, self).next(done)
 
 
@@ -414,7 +403,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
             self.add(step_jobs)
 
 
-class Workflow(StopOnError, SequentialTaskCollection):
+class Workflow(AbortOnError, SequentialTaskCollection):
 
     def __init__(self, experiment, verbosity, description=None,
                  start_stage=None, start_step=None):
@@ -550,11 +539,13 @@ class Workflow(StopOnError, SequentialTaskCollection):
         -------
         gc3libs.Run.State
         '''
+        if self.tasks[done].execution.returncode != 0:  # see AbortOnError
+            return super(Workflow, self).next(done)
         logger.info('stage "%s" is done', self._stages_to_process[done].name)
         if done+1 < len(self._stages_to_process):
-            wait = 120
-            logger.debug('wait %d seconds', wait)
-            time.sleep(wait)
+            logger.info('waiting ...')
+            logger.debug('wait %d seconds', WAIT)
+            time.sleep(WAIT)
             try:
                 stage_names = [s.name for s in self.description.stages]
                 next_stage_name = self._stages_to_process[done+1].name
@@ -562,12 +553,20 @@ class Workflow(StopOnError, SequentialTaskCollection):
                 logger.info('transit to next stage ({0} of {1}): "{2}"'.format(
                             next_stage_index, self.n_stages, next_stage_name))
                 self._add_stage(done+1)
+            except KeyboardInterrupt:
+                logger.info('processing interrupted by used')
+                logger.info('aborting workflow "%s"', self.name)
+                self.kill()
             except Exception as error:
-                logger.error('adding next stage failed: %s', error)
-                self.execution.exitcode = 1
-                self.execution.returncode = 1
-                logger.debug('set exitcode and returncode to 1')
-                logger.debug('set state to TERMINATED')
-                return Run.State.TERMINATED
-
+                logger.error('transition to next stage failed: %s', error)
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                tb = traceback.extract_tb(exc_traceback)[-1]
+                logger.error('error in "%s" line %d', tb[0], tb[1])
+                tb_string = ''
+                for tb in traceback.format_tb(exc_traceback):
+                    tb_string += '\n'
+                    tb_string += tb
+                tb_string += '\n'
+                logger.debug('error traceback: %s', tb_string)
+                self.kill()
         return super(Workflow, self).next(done)

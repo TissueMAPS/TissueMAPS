@@ -14,7 +14,7 @@ class Imextract(CommandLineInterface):
     Command line interface for extraction of images from image files.
     '''
 
-    def __init__(self, experiment, verbosity):
+    def __init__(self, experiment, verbosity, **kwargs):
         '''
         Initialize an instance of class Imextract.
 
@@ -24,10 +24,10 @@ class Imextract(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
+        kwargs: dict
+            additional key-value pairs that are ignored
         '''
         super(Imextract, self).__init__(experiment, verbosity)
-        self.experiment = experiment
-        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -45,10 +45,7 @@ class Imextract(CommandLineInterface):
 
     @property
     def _api_instance(self):
-        return ImageExtractor(
-                experiment=self.experiment,
-                prog_name=self.name,
-                verbosity=self.verbosity)
+        return ImageExtractor(self.experiment, self.name, self.verbosity)
 
     def collect(self, args):
         raise AttributeError('"%s" object doesn\'t have a "collect" method'

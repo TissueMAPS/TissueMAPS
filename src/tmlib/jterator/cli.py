@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Jterator(CommandLineInterface):
 
-    def __init__(self, experiment, verbosity, pipeline_name, headless=True):
+    def __init__(self, experiment, verbosity, pipeline, **kwargs):
         '''
         Initialize an instance of class Jterator.
 
@@ -20,27 +20,13 @@ class Jterator(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
-        pipeline_name: str
-            name of the processed pipeline
-        headless: bool, optional
-            indicator that program should run in headless mode,
-            i.e. that modules should not generate any plots (default: ``True``)
-
-        Raises
-        ------
-        TypeError
-            when `pipeline_name` doesn't have type str and/or when
-            `headless` doesn't have type bool
+        pipeline: str
+            name of the pipeline that should be processed
+        kwargs: dict
+            additional key-value pairs that are ignored
         '''
         super(Jterator, self).__init__(experiment, verbosity)
-        self.experiment = experiment
-        self.verbosity = verbosity
-        if not isinstance(pipeline_name, basestring):
-            raise TypeError('Argument "pipeline_name" must have type str.')
-        self.pipeline_name = str(pipeline_name)
-        if not isinstance(headless, bool):
-            raise TypeError('Argument "headless" must have type bool.')
-        self.headless = headless
+        self.pipeline = pipeline
 
     @staticmethod
     def _print_logo():
@@ -59,11 +45,8 @@ class Jterator(CommandLineInterface):
     @property
     def _api_instance(self):
         return ImageAnalysisPipeline(
-                    experiment=self.experiment,
-                    prog_name=self.name,
-                    verbosity=self.verbosity,
-                    pipe_name=self.pipeline_name,
-                    headless=self.headless)
+                    self.experiment, self.name, self.verbosity,
+                    self.pipeline)
 
     def create(self, args):
         '''
@@ -127,10 +110,6 @@ class Jterator(CommandLineInterface):
         :py:mod:`tmlib.jterator.argparser`
         '''
         experiment = Experiment(args.experiment_dir, library='numpy')
-        if args.method_name == 'run':
-            cli = Jterator(experiment, args.verbosity, args.pipeline,
-                           not args.plot)
-        else:
-            cli = Jterator(experiment, args.verbosity, args.pipeline,
-                           True)
-        cli._call(args)
+        # We reverse the logic for "headless" mode, because the default for
+        # command line use is not to plot.
+        Jterator(experiment, args.verbosity, args.pipeline)._call(args)

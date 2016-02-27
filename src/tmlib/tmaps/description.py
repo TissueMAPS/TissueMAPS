@@ -1,81 +1,12 @@
 import re
 import json
-import importlib
 from collections import defaultdict
 from abc import ABCMeta
 from abc import abstractmethod
-from abc import abstractproperty
 from ..args import VariableArgs
 from ..errors import WorkflowDescriptionError
-
-
-def load_method_args(method_name):
-    '''
-    Load general arguments that can be parsed to a method of
-    an implemented subclass of a :py:class:`tmlib.cli.CommandLineInterface`
-    base class
-
-    Parameters
-    ----------
-    method_name: str
-        name of the method
-
-    Returns
-    -------
-    tmlib.args.Args
-        argument container
-
-    Raises
-    ------
-    AttrbuteError
-        when the "args" module doesn't contain a method-specific
-        implementation of the `Args` base class
-    '''
-    module_name = 'tmlib.args'
-    module = importlib.import_module(module_name)
-    class_name = '%sArgs' % method_name.capitalize()
-    return getattr(module, class_name)
-
-
-def load_var_method_args(prog_name, method_name):
-    '''
-    Load variable step-specific arguments that can be parsed to
-    a method of an implemented subclass of a
-    :py:class:`tmlib.cli.CommandLineInterface` base class.
-
-    Parameters
-    ----------
-    prog_name: str
-        name of the program
-    method_name: str
-        name of the method
-
-    Returns
-    -------
-    tmlib.args.Args
-        argument container
-
-    Note
-    ----
-    Returns ``None`` when the "args" module in the subpackage with name
-    `prog_name` doesn't contain a program- and method-specific implementation
-    of the `Args` base class.
-
-    Raises
-    ------
-    ImportError
-        when subpackage with name `prog_name` doesn't have a module named "args"
-    '''
-    package_name = 'tmlib.%s' % prog_name
-    module_name = 'tmlib.%s.args' % prog_name
-    importlib.import_module(package_name)
-    module = importlib.import_module(module_name)
-    class_name = '%s%sArgs' % (prog_name.capitalize(),
-                               method_name.capitalize())
-    try:
-        return getattr(module, class_name)
-    except AttributeError:
-        return None
+from ..import_utils import load_method_args
+from ..import_utils import load_var_method_args
 
 
 class WorkflowDescription(object):
@@ -336,7 +267,6 @@ class WorkflowStepDescription(object):
     def __init__(self, name, args=None, **kwargs):
         '''
         Initialize an instance of class WorkflowStep.
-
         Parameters
         ----------
         name: str
@@ -346,7 +276,6 @@ class WorkflowStepDescription(object):
         **kwargs: dict, optional
             additional arguments for the description of the step as
             key-value pairs
-
         Raises
         ------
         TypeError
@@ -390,7 +319,6 @@ class WorkflowStepDescription(object):
             all arguments required by the step (i.e. the arguments that can be
             parsed to the `init` method of the step-specific implementation
             of the :py:class:`tmlib.cli.CommandLineInterface` base class)
-
         Note
         ----
         Default values defined by the step-specific implementation of the

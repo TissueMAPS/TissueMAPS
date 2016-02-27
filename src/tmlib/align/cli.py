@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Align(CommandLineInterface):
 
-    def __init__(self, experiment, verbosity):
+    def __init__(self, experiment, verbosity, **kwargs):
         '''
         Initialize an instance of class Align.
 
@@ -20,10 +20,10 @@ class Align(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
+        kwargs: dict
+            additional key-value pairs that are ignored
         '''
         super(Align, self).__init__(experiment, verbosity)
-        self.experiment = experiment
-        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -42,9 +42,7 @@ class Align(CommandLineInterface):
     @property
     def _api_instance(self):
         return ImageRegistration(
-                experiment=self.experiment,
-                prog_name=self.name,
-                verbosity=self.verbosity)
+                    self.experiment, self.name, self.verbosity)
 
     def apply(self, args):
         '''

@@ -278,7 +278,7 @@ class ImageProcessingModule(object):
             raise PipelineRunError('Language not supported.')
 
     def prepare_inputs(self, images, upstream_output, data_file, figure_file,
-                       job_id, experiment_dir, headless):
+                       job_id, experiment_dir, plot):
         '''
         Prepare input data that will be parsed to the module.
 
@@ -296,8 +296,8 @@ class ImageProcessingModule(object):
             one-based job identifier number
         experiment_dir: str
             path to experiment directory
-        headless: bool
-            whether plotting should be disabled
+        plot: bool
+            whether plotting should be enabled
 
         Note
         ----
@@ -344,7 +344,7 @@ class ImageProcessingModule(object):
         inputs['data_file'] = data_file
         inputs['figure_file'] = figure_file
         inputs['experiment_dir'] = experiment_dir
-        inputs['plot'] = not headless
+        inputs['plot'] = plot
         inputs['job_id'] = job_id
         return inputs
 

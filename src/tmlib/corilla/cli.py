@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Corilla(CommandLineInterface):
 
-    def __init__(self, experiment, verbosity):
+    def __init__(self, experiment, verbosity, **kwargs):
         '''
         Initialize an instance of class Corilla.
 
@@ -20,10 +20,10 @@ class Corilla(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
+        kwargs: dict
+            additional key-value pairs that are ignored
         '''
         super(Corilla, self).__init__(experiment, verbosity)
-        self.experiment = experiment
-        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -46,9 +46,7 @@ class Corilla(CommandLineInterface):
     @property
     def _api_instance(self):
         return IllumstatsGenerator(
-                    experiment=self.experiment,
-                    prog_name=self.name,
-                    verbosity=self.verbosity)
+                    self.experiment, self.name, self.verbosity)
 
     def apply(self, args):
         '''

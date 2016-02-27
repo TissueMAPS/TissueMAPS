@@ -17,7 +17,7 @@ class IllumstatsGenerator(ClusterRoutines):
     Class for calculating illumination statistics.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity):
+    def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class IllumstatsGenerator.
 
@@ -29,12 +29,11 @@ class IllumstatsGenerator(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
         '''
         super(IllumstatsGenerator, self).__init__(
                 experiment, prog_name, verbosity)
-        self.experiment = experiment
-        self.prog_name = prog_name
-        self.verbosity = verbosity
 
     @property
     def stats_file_format_string(self):

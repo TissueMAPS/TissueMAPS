@@ -1,8 +1,8 @@
 import os
+import sys
 import yaml
 import glob
 import time
-import datetime
 import logging
 import shutil
 from natsort import natsorted
@@ -241,14 +241,22 @@ class BasicClusterRoutines(object):
                 if break_next:
                     break
 
-                # break out of the loop when all jobs are done
-                stats = format_stats_data(e.stats())
-                if stats['count_total'] > 0:
-                    # TODO: in case of a workflow this statement is not
-                    # True for steps with exception of the last one!!
-                    if stats['count_terminated'] == stats['count_total']:
-                        break_next = True
-                        e.progress()
+                # Break out of the loop when the last job in the list of
+                # subtasks is done.
+                # NOTE: We assume that we are dealing with a sequential
+                # collection of tasks.
+                last_task_status = task.tasks[-1].execution.state
+                if (last_task_status == gc3libs.Run.State.TERMINATED or
+                        last_task_status == gc3libs.Run.State.STOPPED):
+                    break_next = True
+                    e.progress()
+                # stats = format_stats_data(e.stats())
+                # if stats['count_total'] > 0:
+                #     # TODO: in case of a workflow this statement is not
+                #     # True for steps with exception of the last one!!
+                #     if stats['count_terminated'] == stats['count_total']:
+                #         break_next = True
+                #         e.progress()
 
         except KeyboardInterrupt:
             # User interrupted process, which should kill all running jobs
@@ -267,15 +275,13 @@ class BasicClusterRoutines(object):
 class ClusterRoutines(BasicClusterRoutines):
 
     '''
-    Abstract base class for API classes.
-
-    It provides methods for standard cluster routines,
-    such as creation and submission of jobs.
+    Abstract base class for API classes, which provide methods for 
+    cluster routines, such as creation, submission, and monitoring of jobs.
     '''
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment, prog_name, verbosity):
+    def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ClusterRoutines.
 
@@ -287,13 +293,14 @@ class ClusterRoutines(BasicClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
 
         Returns
         -------
         tmlib.api.ClusterRoutines
         '''
         super(ClusterRoutines, self).__init__(experiment)
-        self.experiment = experiment
         self.prog_name = prog_name
         self.verbosity = verbosity
 

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Illuminati(CommandLineInterface):
 
-    def __init__(self, experiment, verbosity):
+    def __init__(self, experiment, verbosity, **kwargs):
         '''
         Initialize an instance of class Illuminati.
 
@@ -20,10 +20,10 @@ class Illuminati(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
+        kwargs: dict
+            additional key-value pairs that are ignored
         '''
         super(Illuminati, self).__init__(experiment, verbosity)
-        self.experiment = experiment
-        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -40,12 +40,9 @@ class Illuminati(CommandLineInterface):
         return self.__class__.__name__.lower()
 
     @property
-    def _api_instance(self):
+    def _api_instance(self, **kwargs):
         return PyramidBuilder(
-                    experiment=self.experiment,
-                    prog_name=self.name,
-                    verbosity=self.verbosity
-        )
+                    self.experiment, self.name, self.verbosity)
 
     def collect(self, args):
         raise AttributeError('"%s" object doesn\'t have a "collect" method'

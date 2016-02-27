@@ -36,7 +36,7 @@ class MetadataConfigurator(ClusterRoutines):
     separate JSON file.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity):
+    def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class MetadataConfigurator.
 
@@ -48,12 +48,11 @@ class MetadataConfigurator(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
         '''
         super(MetadataConfigurator, self).__init__(
                 experiment, prog_name, verbosity)
-        self.experiment = experiment
-        self.prog_name = prog_name
-        self.verbosity = verbosity
 
     @property
     def image_file_format_string(self):
@@ -120,7 +119,7 @@ class MetadataConfigurator(ClusterRoutines):
                     },
                     'file_format': args.file_format,
                     'keep_z_stacks': args.keep_z_stacks,
-                    'plate': source.name,
+                    'plate': source.index,
                     'regex': args.regex,
                     'stitch_major_axis': args.stitch_major_axis,
                     'n_vertical': args.n_vertical,
@@ -298,7 +297,7 @@ class MetadataConfigurator(ClusterRoutines):
         file_mapper = list()
         for i, source in enumerate(self.experiment.sources):
             # Create new plate
-            self.experiment.add_plate(source.name)
+            self.experiment.add_plate()
             cycle_count = 0
             for acquisition in source.acquisitions:
 
@@ -325,9 +324,13 @@ class MetadataConfigurator(ClusterRoutines):
                     md = metadata[metadata.tpoint_ix == t]
                     for ix in md.index:
                         # Update name according to new time point index
+                        # TODO: In case of a acquistion_mode "series" increment
+                        # time and "multiplexing" increment channel index.
+                        # Time point and cycle index may then no longer be
+                        # identical!!!
                         md.at[ix, 'tpoint_ix'] = cycle_count
                         fieldnames = {
-                            'plate_name': md.at[ix, 'plate_name'],
+                            'p': md.at[ix, 'plate_ix'],
                             'w': md.at[ix, 'well_name'],
                             'y': md.at[ix, 'well_position_y'],
                             'x': md.at[ix, 'well_position_x'],
@@ -335,12 +338,12 @@ class MetadataConfigurator(ClusterRoutines):
                             'z': md.at[ix, 'zplane_ix'],
                             't': md.at[ix, 'tpoint_ix'],
                         }
-                        md.at[ix, 'name'] = \
-                            cfg.IMAGE_NAME_FORMAT.format(**fieldnames)
+                        md.at[ix, 'name'] = cfg.IMAGE_NAME_FORMAT.format(
+                                                        **fieldnames)
 
                     # Add the corresponding plate name
-                    md.plate_name = pd.Series(
-                        np.repeat(source.name, md.shape[0])
+                    md.plate_ix = pd.Series(
+                        np.repeat(source.index, md.shape[0])
                     )
 
                     # Update "ref_index" and "name" in the file mapper with the

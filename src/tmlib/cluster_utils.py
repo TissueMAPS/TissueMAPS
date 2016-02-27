@@ -86,9 +86,10 @@ def get_task_data(task, description=None):
             job_type = 'stage'
         elif isinstance(task_, Workflow):
             job_type = 'workflow'
+        elif isinstance(task, CollectJob):
+            job_type = 'phase/job'
         elif (isinstance(task_, RunJobCollection) or
-                isinstance(task_, MultiRunJobCollection) or
-                isinstance(task, CollectJob)):
+                isinstance(task_, MultiRunJobCollection)):
             job_type = 'phase'
         else:
             job_type = 'job'

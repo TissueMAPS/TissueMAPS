@@ -19,13 +19,18 @@ from .args import CollectArgs
 from .args import CleanupArgs
 from .args import LogArgs
 from .args import InfoArgs
-from .tmaps.description import load_method_args
-from .tmaps.description import load_var_method_args
+from .args import GeneralArgs
+from .import_utils import load_method_args
+from .import_utils import load_var_method_args
 from .logging_utils import configure_logging
 from .logging_utils import map_logging_verbosity
 from .errors import JobDescriptionError
 
 logger = logging.getLogger(__name__)
+
+AVAILABLE_METHODS = {
+    'init', 'run', 'submit', 'resubmit', 'collect', 'cleanup', 'log', 'info'
+}
 
 
 def create_cli_method_args(prog_name, method_name, **kwargs):
@@ -52,12 +57,19 @@ def create_cli_method_args(prog_name, method_name, **kwargs):
     ----
     The function knows which arguments to strip from `kwargs`.
 
+    Raises
+    ------
+    ValueError
+        when `method_name` is not a valid method name
+
     See also
     --------
     :py:func:`tmlib.tmaps.description.load_method_args`
     :py:func:`tmlib.tmaps.description.load_var_method_args`
     :py:class:`tmlib.args.Args`
     '''
+    if method_name not in AVAILABLE_METHODS:
+        raise ValueError('Method "%s" does not exist.' % method_name)
     args_handler = load_method_args(method_name)
     method_args = args_handler(**kwargs)
     variable_args_handler = load_var_method_args(prog_name, method_name)
@@ -80,10 +92,17 @@ def call_cli_method(cli_instance, method_name, method_args):
     method_args: tmlib.args.GeneralArgs
         arguments required for the method
 
+    Raises
+    ------
+    ValueError
+        when `method_name` is not a valid method name
+
     See also
     --------
     :py:func:`tmlib.cli.build_cli_method_args`
     '''
+    if method_name not in AVAILABLE_METHODS:
+        raise ValueError('Method "%s" does not exist.' % method_name)
     getattr(cli_instance, method_name)(method_args)
 
 
@@ -172,7 +191,8 @@ class CommandLineInterface(object):
             return 0
         except Exception as error:
             sys.stderr.write('\nFAILED:\n%s\n' % str(error))
-            for tb in traceback.format_tb(sys.exc_info()[2]):
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            for tb in traceback.format_tb(exc_traceback):
                 sys.stderr.write(tb)
             sys.exit(1)
             return 1
@@ -193,7 +213,7 @@ class CommandLineInterface(object):
         Returns
         -------
         tmlib.api.ClusterRoutines
-            an instance of a step-specific *api* class
+            an instance of a the *api* class
         '''
         pass
 
@@ -607,8 +627,7 @@ class CommandLineInterface(object):
         call_cli_method(self, args.method_name, method_args)
 
     @staticmethod
-    def get_parser_and_subparsers(
-            methods={'init', 'run', 'submit', 'resubmit', 'collect', 'cleanup', 'log', 'info'}):
+    def get_parser_and_subparsers(methods=None):
         '''
         Get an argument parser object for a subclass of
         :py:class:`tmlib.cli.CommandLineInterface` and a subparser object
@@ -630,16 +649,12 @@ class CommandLineInterface(object):
         See also
         --------
         '''
+        if methods is None:
+            methods = AVAILABLE_METHODS
         # TODO: do this smarter, e.g. via pyCli, cement, or click package
         parser = argparse.ArgumentParser()
         parser.version == __version__
-        parser.add_argument(
-            'experiment_dir', type=str, help='path to experiment directory')
-        parser.add_argument(
-            '-v', '--verbosity', dest='verbosity', action='count', default=0,
-            help='increase logging verbosity to DEBUG (default: WARN)')
-        parser.add_argument(
-            '--version', action='version')
+        GeneralArgs().add_to_argparser(parser)
 
         subparsers = parser.add_subparsers(
             dest='method_name', help='sub-commands')

@@ -14,7 +14,7 @@ class Metaconfig(CommandLineInterface):
     Command line interface for metadata conversion.
     '''
 
-    def __init__(self, experiment, verbosity):
+    def __init__(self, experiment, verbosity, **kwargs):
         '''
         Initialize an instance of class Metaconfig.
 
@@ -24,10 +24,10 @@ class Metaconfig(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
+        kwargs: dict
+            mapping of additional key-value pairs that are ignored
         '''
         super(Metaconfig, self).__init__(experiment, verbosity)
-        self.experiment = experiment
-        self.verbosity = verbosity
 
     @staticmethod
     def _print_logo():
@@ -44,11 +44,9 @@ class Metaconfig(CommandLineInterface):
         return self.__class__.__name__.lower()
 
     @property
-    def _api_instance(self):
+    def _api_instance(self, **kwargs):
         return MetadataConfigurator(
-                    experiment=self.experiment,
-                    prog_name=self.name,
-                    verbosity=self.verbosity)
+                    self.experiment, self.name, self.verbosity)
 
     @staticmethod
     def call(args):
