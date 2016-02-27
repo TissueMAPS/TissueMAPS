@@ -17,7 +17,7 @@ from ..jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
 
-WAIT = 0
+WAIT = 60  # make an argument for submission of workflows?
 
 
 def load_step_interface(step_name):

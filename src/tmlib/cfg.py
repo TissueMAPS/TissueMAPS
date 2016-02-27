@@ -29,7 +29,7 @@ VISUAL_NAME_FORMAT = {
 }
 
 #: Format string for building image filenames.
-IMAGE_NAME_FORMAT = 'p{p:0>2}_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.tif'
+IMAGE_NAME_FORMAT = 'p{p:0>2}_{w}_y{y:0>3}_x{x:0>3}_t{t:0>3}_c{c:0>3}_z{z:0>3}.tif'
 
 
 class UserConfiguration(object):

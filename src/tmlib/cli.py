@@ -186,7 +186,7 @@ class CommandLineInterface(object):
                 arguments.handler(arguments)
             else:
                 parser.print_help()
-            logger.info('SUCCESSFULLY COMPLETED')
+            logger.info('COMPLETED')
             sys.exit(0)
             return 0
         except Exception as error:
@@ -378,8 +378,8 @@ class CommandLineInterface(object):
                     'value of argument "phase" is "run".')
         if args.job is None and args.phase == 'run':
             raise AttributeError(
-                    'When "phase" is set to "run", '
-                    'argument "job" has to be set as well.')
+                    'Argument "job" is required '
+                    'when "phase" is set to "run".')
         api = self._api_instance
         if args.phase == 'run':
             job_file = api.build_run_job_filename(args.job)
@@ -407,8 +407,8 @@ class CommandLineInterface(object):
                     'value of argument "phase" is "run".')
         if args.job is None and args.phase == 'run':
             raise AttributeError(
-                    'When "phase" is set to "run", '
-                    'argument "job" has to be set as well.')
+                    'Argument "job" is required '
+                    'when "phase" is set to "run".')
         api = self._api_instance
         log = api.get_log_output_from_files(args.job)
         print('\nOUTPUT\n======\n\n%s\n\nERROR\n=====\n\n%s'
@@ -535,8 +535,8 @@ class CommandLineInterface(object):
         api = self._api_instance
         if args.jobs is not None and args.phase != 'run':
             raise AttributeError(
-                    'Argument "jobs" can only be set when '
-                    'value of argument "phase" is "run".')
+                    'Argument "job" is required '
+                    'when "phase" is set to "run".')
         jobs = self.create_jobs(
                     duration=args.duration,
                     memory=args.memory,

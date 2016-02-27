@@ -1,5 +1,5 @@
-import re
 import logging
+from gc3libs.workflow import AbortOnError
 from abc import ABCMeta
 from abc import abstractproperty
 # from abc import abstractmethod
@@ -186,7 +186,7 @@ class RunJobCollection(ParallelTaskCollection):
         super(RunJobCollection, self).add(job)
 
 
-class MultiRunJobCollection(SequentialTaskCollection):
+class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
 
     def __init__(self, step_name, run_job_collections=None):
         '''
@@ -224,9 +224,6 @@ class MultiRunJobCollection(SequentialTaskCollection):
                         'tmlib.jobs.RunJobCollection')
         super(MultiRunJobCollection, self).add(run_job_collection)
 
-    # TODO: consider overwriting "next" method to implement custom transition
-    # criteria (e.g. grep log error files for "FAILED")
-
 
 class CollectJob(Job):
 
@@ -250,9 +247,9 @@ class CollectJob(Job):
             be stored
         '''
         super(CollectJob, self).__init__(
-            step_name=step_name,
-            arguments=arguments,
-            output_dir=output_dir)
+                    step_name=step_name,
+                    arguments=arguments,
+                    output_dir=output_dir)
 
     @property
     def name(self):

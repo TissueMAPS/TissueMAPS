@@ -27,8 +27,8 @@ def determine_plate_dimensions(n_wells):
         number of rows and column in the well plate
     '''
     plate_dimensions = {
-        1: (1, 1),
-        96: (8, 12),
+        1:   (1, 1),
+        96:  (8, 12),
         384: (16, 24)
     }
     return plate_dimensions[n_wells]

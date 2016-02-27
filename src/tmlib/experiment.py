@@ -4,13 +4,11 @@ import logging
 import numpy as np
 from natsort import natsorted
 from cached_property import cached_property
-from collections import defaultdict
 from . import cfg
 from . import utils
 from .plate import Plate
 from .source import PlateSource
 from .metadata import ChannelLayerMetadata
-from .errors import NotSupportedError
 from .errors import MetadataError
 from .readers import YamlReader
 
@@ -230,7 +228,7 @@ class Experiment(object):
         OSError
             when the plate already exists
         '''
-        new_plate_index = len(self.plates) - 1
+        new_plate_index = len(self.plates)
         new_plate_folder = Plate.PLATE_DIR_FORMAT.format(index=new_plate_index)
         new_plate_dir = os.path.join(self.plates_dir, new_plate_folder)
         if os.path.exists(new_plate_dir):

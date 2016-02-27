@@ -137,6 +137,7 @@ def print_task_status(task_data, monitoring_depth):
     monitoring_depth: int
         recursion depth for subtask querying
     '''
+    # TODO: add allocated memory and time and actually required memory time
     def add_row_recursively(data, table, i):
         table.add_row([
             data['name'],
