@@ -5,7 +5,7 @@ import pandas as pd
 from cached_property import cached_property
 from natsort import natsorted
 from . import utils
-from .metadata import ImageFileMapper
+from .metadata import ImageFileMapping
 from .formats import Formats
 from .readers import JsonReader
 from .errors import RegexError
@@ -21,7 +21,7 @@ class PlateSource(object):
 
     See also
     --------
-    `tmlib.plate.Plate`_
+    :py:class:`tmlib.plate.Plate`
     '''
 
     PLATE_SOURCE_DIR_FORMAT = 'plate_{index:0>2}'
@@ -136,7 +136,7 @@ class PlateSource(object):
         return PlateAcquisition(acquisition_dir)
 
     @property
-    def image_mapper_file(self):
+    def image_mapping_file(self):
         '''
         Returns
         -------
@@ -148,20 +148,20 @@ class PlateSource(object):
         return os.path.join(self.dir, 'image_file_mapper.json')
 
     @property
-    def image_mapper(self):
+    def image_mapping(self):
         '''
         Returns
         -------
-        List[tmlib.metadata.ImageFileMapper]
+        List[tmlib.metadata.ImageFileMapping]
             key-value pairs that map the location of individual planes within
             the original files to *Image* elements in the OMEXML
         '''
-        image_mapper = list()
+        image_mapping = list()
         with JsonReader(self.dir) as reader:
-            hashmap = reader.read(self.image_mapper_file)
+            hashmap = reader.read(self.image_mapping_file)
         for element in hashmap:
-            image_mapper.append(ImageFileMapper(**element))
-        return image_mapper
+            image_mapping.append(ImageFileMapping(**element))
+        return image_mapping
 
 
 class PlateAcquisition(object):
@@ -235,7 +235,7 @@ class PlateAcquisition(object):
                     % (folder_name, self.CYCLE_DIR_FORMAT))
         return int(match.group('index'))
 
-    @cached_property
+    @utils.autocreate_directory_property
     def image_dir(self):
         '''
         Returns
@@ -245,16 +245,11 @@ class PlateAcquisition(object):
 
         Note
         ----
-        Directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
         '''
-        image_dir = os.path.join(self.dir, self.IMAGE_DIR_NAME)
-        if not os.path.exists(image_dir):
-            logger.debug('create directory for image source files: %s',
-                         image_dir)
-            os.mkdir(image_dir)
-        return image_dir
+        return os.path.join(self.dir, self.IMAGE_DIR_NAME)
 
-    @cached_property
+    @utils.autocreate_directory_property
     def metadata_dir(self):
         '''
         Returns
@@ -264,16 +259,11 @@ class PlateAcquisition(object):
 
         Note
         ----
-        Directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
         '''
-        metadata_dir = os.path.join(self.dir, self.METADATA_DIR_NAME)
-        if not os.path.exists(metadata_dir):
-            logger.debug('create directory for metadata source files: %s',
-                         metadata_dir)
-            os.mkdir(metadata_dir)
-        return metadata_dir
+        return os.path.join(self.dir, self.METADATA_DIR_NAME)
 
-    @cached_property
+    @utils.autocreate_directory_property
     def omexml_dir(self):
         '''
         Returns
@@ -284,14 +274,9 @@ class PlateAcquisition(object):
 
         Note
         ----
-        Directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
         '''
-        omexml_dir = os.path.join(self.dir, self.OMEXML_DIR_NAME)
-        if not os.path.exists(omexml_dir):
-            logger.debug('create directory for OMEXML files: %s',
-                         omexml_dir)
-            os.mkdir(omexml_dir)
-        return omexml_dir
+        return os.path.join(self.dir, self.OMEXML_DIR_NAME)
 
     @cached_property
     def omexml_files(self):
@@ -389,7 +374,7 @@ class PlateAcquisition(object):
         return metadata
 
     @property
-    def image_mapper_file(self):
+    def image_mapping_file(self):
         '''
         Returns
         -------
@@ -398,20 +383,20 @@ class PlateAcquisition(object):
             the images stored in the original image files to the
             the OME *Image* elements in `image_metadata`
         '''
-        return 'image_file_mapper.json'
+        return 'image_file_mapping.json'
 
     @property
-    def image_mapper(self):
+    def image_mapping(self):
         '''
         Returns
         -------
-        List[tmlib.metadata.ImageFileMapper]
+        List[tmlib.metadata.ImageFileMapping]
             key-value pairs to map the location of individual planes within the
             original files to the *Image* elements in the OMEXML
         '''
-        image_mapper = list()
+        image_mapping = list()
         with JsonReader(self.dir) as reader:
-            hashmap = reader.read(self.image_mapper_file)
+            hashmap = reader.read(self.image_mapping_file)
         for element in hashmap:
-            image_mapper.append(ImageFileMapper(**element))
-        return image_mapper
+            image_mapping.append(ImageFileMapping(**element))
+        return image_mapping

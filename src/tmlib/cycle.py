@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from cached_property import cached_property
-from cached_property import threaded_cached_property
 from . import utils
 from .readers import JsonReader
 from .image import is_image_file
@@ -120,7 +119,7 @@ class Cycle(object):
         '''
         return os.path.basename(os.path.dirname(self.dir))
 
-    @cached_property
+    @utils.autocreate_directory_property
     def image_dir(self):
         '''
         Returns
@@ -130,13 +129,9 @@ class Cycle(object):
 
         Note
         ----
-        The directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
         '''
-        image_dir = os.path.join(self.dir, 'images')
-        if not os.path.exists(image_dir):
-            logger.debug('create directory for image files: %s', image_dir)
-            os.mkdir(image_dir)
-        return image_dir
+        return os.path.join(self.dir, 'images')
 
     @cached_property
     def image_files(self):
@@ -303,7 +298,7 @@ class Cycle(object):
             images.append(img)
         return images
 
-    @cached_property
+    @utils.autocreate_directory_property
     def stats_dir(self):
         '''
         Returns
@@ -313,15 +308,9 @@ class Cycle(object):
 
         Note
         ----
-        Directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
         '''
-        stats_dir = os.path.join(self.dir, 'stats')
-        if not os.path.exists(stats_dir):
-            logger.debug(
-                'create directory for illumination statistics files: %s',
-                stats_dir)
-            os.mkdir(stats_dir)
-        return stats_dir
+        return os.path.join(self.dir, 'stats')
 
     @cached_property
     def illumstats_files(self):

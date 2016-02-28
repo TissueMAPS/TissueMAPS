@@ -307,7 +307,7 @@ class ChannelLayer(Layer):
         md = cycle.image_metadata
 
         tile_mapper = defaultdict(list)
-        image_mapper = defaultdict(list)
+        image_mapping = defaultdict(list)
         for p, plate in enumerate(self.experiment.plates):
 
             logger.debug('map base tiles to images of plate #%d', plate.index)
@@ -380,13 +380,13 @@ class ChannelLayer(Layer):
                                 'x_offset': x_offset
                             })
 
-                            image_mapper[image_name].append(
+                            image_mapping[image_name].append(
                                 (row, col)
                             )
 
         return {
             'tile_to_images': tile_mapper,
-            'image_to_tiles': image_mapper
+            'image_to_tiles': image_mapping
         }
 
     def get_level_and_coordinate(self, tile_filename):

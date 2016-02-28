@@ -11,7 +11,7 @@ from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from .ome_xml import XML_DECLARATION
-from ..metadata import ImageFileMapper
+from ..metadata import ImageFileMapping
 from ..illuminati import stitch
 from ..errors import MetadataError
 from ..errors import RegexError
@@ -205,7 +205,7 @@ class MetadataHandler(object):
                     metadata['stage_position_y'].append(plane.PositionY)
                     metadata['stage_position_x'].append(plane.PositionX)
 
-                    fm = ImageFileMapper()
+                    fm = ImageFileMapping()
                     fm.name = image.Name
                     fm.ref_index = i
                     fm.files = [f]
@@ -662,7 +662,7 @@ class MetadataHandler(object):
         # in order to be able to perform the intensity projection later on
         projected_file_mapper_list = list()
         for i, indices in enumerate(sorted(zstacks.groups.values())):
-            fm = ImageFileMapper()
+            fm = ImageFileMapping()
             fm.files = list()
             fm.series = list()
             fm.planes = list()
@@ -833,7 +833,7 @@ class MetadataHandler(object):
             # able to perform the projection.
             for i in xrange(md.shape[0]):
                 ref_ix = self.file_mapper_list[i].ref_index
-                element = ImageFileMapper()
+                element = ImageFileMapping()
                 element.ref_index = ref_ix
                 element.ref_file = md.at[ref_ix, 'name']
                 element.files = self.file_mapper_list[i].files

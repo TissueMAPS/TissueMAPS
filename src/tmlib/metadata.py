@@ -434,7 +434,7 @@ class ChannelImageMetadata(ImageMetadata):
         pass
 
 
-class ImageFileMapper(object):
+class ImageFileMapping(object):
 
     '''
     Container for information about the location of individual images (planes)
@@ -556,7 +556,7 @@ class ImageFileMapper(object):
 
         Examples
         --------
-        >>>obj = ImageFileMapper()
+        >>>obj = ImageFileMapping()
         >>>obj.series = [0, 0]
         >>>obj.planes = [0, 1]
         >>>obj.files = ["a", "b"]

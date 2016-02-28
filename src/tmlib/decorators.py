@@ -1,66 +1,63 @@
+import inspect
+import functools
+import types
+from types import *
 
 
-# class addparams(object):
+def assert_type(**expected_types):
+    '''
+    Function decorator that checks that type of the function arguments.
 
-#     def __init__(self, default):
-#         self.default = default
-#         self._prepare_func(None)
+    Parameters
+    ----------
+    expected_types: Dict[str, type or Set[type]], optional
+        key-value pairs of names and expected types
+        of each argument that should be checked
 
-#     def __call__(self, func):
-#         func.default = self.default
-#         self._prepare_func(func)
-#         return self
+    Raises
+    ------
+    ValueError
+        when a name is provided that is not an argument of the function
+    TypeError
+        when type of the function argument doesn't match the expected type
 
-#     def __get__(self, obj):
-#         value = self.func(obj)
-#         # obj.__dict__[self.__name__] = value
-#         return value
+    Examples
+    --------
+    class Test(object):
 
-#     def __set__(self, obj, value):
-#         if value != self.default:
-#             print 'wrong'
-#         obj.__dict__[self.__name__] = value
+        @assert_type(value1=str, value2={int, float, types.NoneType})
+        def print_args(value1, value2=None):
+            print 'value1: "%s"' % value1
+            if value2:
+                print 'value2: %d' % value2
+    '''
+    def decorator(func):
 
-#     def _prepare_func(self, func):
-#         self.func = func
-#         if func:
-#             self.__doc__ = func.__doc__
-#             self.__name__ = func.__name__
-#             self.__module__ = func.__module__
+        @functools.wraps(func)
+        def wrapper(obj, *args):
 
+            inputs = inspect.getargspec(func)
+            for name, expected_type in expected_types.iteritems():
+                if name not in inputs.args:
+                    raise ValueError('Unknown argument "%s"' % name)
+                index = inputs.args.index(name)
+                if index >= len(args):
+                    continue
+                ets = set()
+                if isinstance(expected_type, type):
+                    ets = {expected_type}
+                elif isinstance(expected_type, set):
+                    ets = expected_type
+                elif isinstance(expected_type, list):
+                    ets = set(expected_type)
+                if not any([isinstance(args[index], et) for et in ets]):
+                    options = ' or '.join([et.__name__ for et in ets])
+                    raise TypeError('Argument "%s" must have type %s.' %
+                                    (name, options))
+            return func(*args)
 
-def addparams(default):
+        wrapper.func_name = func.func_name
+        return wrapper
 
-    def wrap(f):
-        # f.default = default
+    return decorator
 
-        @property
-        def _wrap(default):
-            f.default = default
-            f()
-
-        return _wrap
-
-    return wrap
-
-
-
-class Args(object):
-
-    def __init__(self):
-        pass
-
-    @addparams(default='hello')
-    def argument(self):
-        return self._argument
-
-    @argument.setter
-    def argument(self, value):
-        self._argument = value
-
-    
-class Args(object):
-
-    @addparams(default='hello')
-    def argument(self):
-        return 'bla'

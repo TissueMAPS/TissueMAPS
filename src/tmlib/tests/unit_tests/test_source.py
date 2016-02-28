@@ -7,7 +7,8 @@ import bioformats
 from cached_property import cached_property
 from tmlib.source import PlateSource
 from tmlib.source import PlateAcquisition
-from tmlib.metadata import ImageFileMapper
+from tmlib.metadata import ImageFileMapping
+
 
 
 class TestSourceSetup(fake_filesystem_unittest.TestCase):
@@ -48,9 +49,9 @@ class TestPlateSource(TestSourceSetup):
     def source(self):
         return PlateSource(self.source_dir)
 
-    def _add_image_mapper_file(self):
+    def _add_image_mapping_file(self):
         filename = os.path.join(self.source.dir,
-                                self.source.image_mapper_file)
+                                self.source.image_mapping_file)
         with open(filename, 'w') as f:
             mapping = [{}]
             f.write(json.dumps(mapping))
@@ -69,11 +70,11 @@ class TestPlateSource(TestSourceSetup):
         self.assertEqual(len(self.source.acquisitions), 2)
         self.assertEqual(self.source.acquisitions[1].index, 1)
 
-    def test_image_mapper(self):
-        self._add_image_mapper_file()
-        self.assertIsInstance(self.source.image_mapper, list)
-        self.assertEqual(len(self.source.image_mapper), 1)
-        self.assertIsInstance(self.source.image_mapper[0], ImageFileMapper)
+    def test_image_mapping(self):
+        self._add_image_mapping_file()
+        self.assertIsInstance(self.source.image_mapping, list)
+        self.assertEqual(len(self.source.image_mapping), 1)
+        self.assertIsInstance(self.source.image_mapping[0], ImageFileMapping)
 
 
 class TestPlateAcquisitionDirectories(TestSourceSetup):
@@ -144,9 +145,9 @@ class TestPlateAcquisitionFiles(TestSourceSetup):
                 </OME>
             ''')
 
-    def _add_image_mapper_file(self):
+    def _add_image_mapping_file(self):
         filename = os.path.join(self.acquisition.dir,
-                                self.acquisition.image_mapper_file)
+                                self.acquisition.image_mapping_file)
         with open(filename, 'w') as f:
             mapping = [{}]
             f.write(json.dumps(mapping))
@@ -192,9 +193,9 @@ class TestPlateAcquisitionFiles(TestSourceSetup):
         self.assertIsInstance(self.acquisition.image_metadata,
                               bioformats.OMEXML)
 
-    def test_image_mapper(self):
-        self._add_image_mapper_file()
-        self.assertIsInstance(self.acquisition.image_mapper, list)
-        self.assertEqual(len(self.acquisition.image_mapper), 1)
-        self.assertIsInstance(self.acquisition.image_mapper[0],
-                              ImageFileMapper)
+    def test_image_mapping(self):
+        self._add_image_mapping_file()
+        self.assertIsInstance(self.acquisition.image_mapping, list)
+        self.assertEqual(len(self.acquisition.image_mapping), 1)
+        self.assertIsInstance(self.acquisition.image_mapping[0],
+                              ImageFileMapping)

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from .. import cfg
 from ..plate import determine_plate_dimensions
-from ..metadata import ImageFileMapper
+from ..metadata import ImageFileMapping
 from ..api import ClusterRoutines
 from ..writers import JsonWriter
 from ..errors import NotSupportedError
@@ -114,7 +114,7 @@ class MetadataConfigurator(ClusterRoutines):
                         ],
                         'mapper_files': [
                             os.path.join(acquisition.dir,
-                                         acquisition.image_mapper_file)
+                                         acquisition.image_mapping_file)
                         ]
                     },
                     'file_format': args.file_format,
@@ -138,7 +138,7 @@ class MetadataConfigurator(ClusterRoutines):
                 ],
                 'mapper_files': [
                     os.path.join(acquisition.dir,
-                                 acquisition.image_mapper_file)
+                                 acquisition.image_mapping_file)
                     for source in self.experiment.sources
                     for acquisition in source.acquisitions
                 ]
@@ -149,7 +149,7 @@ class MetadataConfigurator(ClusterRoutines):
                 ],
                 'mapper_files': [
                     os.path.join(source.dir,
-                                 source.image_mapper_file)
+                                 source.image_mapping_file)
                     for source in self.experiment.sources
                 ]
             },
@@ -349,8 +349,9 @@ class MetadataConfigurator(ClusterRoutines):
                     # Update "ref_index" and "name" in the file mapper with the
                     # path to the final image file relative to the experiment
                     # root directory
-                    for element in acquisition.image_mapper:
-                        new_element = ImageFileMapper()
+                    for element in acquisition.image_mapping:
+                        new_element = ImageFileMapping
+                    ()
                         new_element.series = element.series
                         new_element.planes = element.planes
                         # Since we assigned new indices, we have to map the
@@ -396,7 +397,7 @@ class MetadataConfigurator(ClusterRoutines):
 
                     # Remove the intermediate cycle-specific mapper file
                     os.remove(os.path.join(acquisition.dir,
-                              acquisition.image_mapper_file))
+                              acquisition.image_mapping_file))
 
                     cycle_count += 1
 

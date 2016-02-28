@@ -169,7 +169,7 @@ class Experiment(object):
             # value.dump_to_file()
         self._user_cfg = value
 
-    @cached_property
+    @utils.autocreate_directory_property
     def plates_dir(self):
         '''
         Returns
@@ -180,13 +180,9 @@ class Experiment(object):
 
         Note
         ----
-        Directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
         '''
-        plates_dir = self.user_cfg.plates_dir
-        if not os.path.exists(plates_dir):
-            logger.debug('create directory for plates: %s', plates_dir)
-            os.mkdir(plates_dir)
-        return plates_dir
+        return self.user_cfg.plates_dir
 
     def _is_plate_dir(self, folder):
         format_string = Plate.PLATE_DIR_FORMAT
@@ -240,7 +236,7 @@ class Experiment(object):
         self.plates.append(new_plate)
         return new_plate
 
-    @cached_property
+    @utils.autocreate_directory_property
     def sources_dir(self):
         '''
         Returns
@@ -251,13 +247,9 @@ class Experiment(object):
 
         Note
         ----
-        Directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
         '''
-        sources_dir = self.user_cfg.sources_dir
-        if not os.path.exists(sources_dir):
-            logger.debug('create directory for sources: %s', sources_dir)
-            os.mkdir(sources_dir)
-        return sources_dir
+        return self.user_cfg.sources_dir
 
     def _is_plate_source_dir(self, folder):
         format_string = PlateSource.PLATE_SOURCE_DIR_FORMAT
@@ -298,7 +290,7 @@ class Experiment(object):
             for d in plate_source_dirs
         ]
 
-    @cached_property
+    @utils.autocreate_directory_property
     def layers_dir(self):
         '''
         Returns
@@ -309,17 +301,13 @@ class Experiment(object):
 
         Note
         ----
-        Directory is created if it doesn't exist.
+        Directory is autocreated if it doesn't exist.
 
         See also
         --------
         :py:mod:`tmlib.illuminati`
         '''
-        layers_dir = self.user_cfg.layers_dir
-        if not os.path.exists(layers_dir):
-            logger.debug('create directory for layers: %s', layers_dir)
-            os.mkdir(layers_dir)
-        return layers_dir
+        return self.user_cfg.layers_dir
 
     @cached_property
     def layer_names(self):

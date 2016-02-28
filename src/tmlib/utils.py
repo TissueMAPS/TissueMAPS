@@ -1,9 +1,12 @@
-'''Utility functions for standard routines.'''
+'''Decorators and other utility functions.'''
 
 import time
 import datetime
 import re
 import os
+import inspect
+import types  # require for type checks
+from types import *
 import logging
 
 logger = logging.getLogger(__name__)
@@ -253,7 +256,7 @@ def missing_elements(data, start=None, end=None):
     index = start + (end - start) // 2
 
     # is the lower half consecutive?
-    consecutive_low =  data[index] == data[start] + (index - start)
+    consecutive_low = data[index] == data[start] + (index - start)
     if not consecutive_low:
         for s in missing_elements(data, start, index):
             yield s
@@ -263,3 +266,180 @@ def missing_elements(data, start=None, end=None):
     if not consecutive_high:
         for e in missing_elements(data, index, end):
             yield e
+
+
+def assert_type(**expected):
+    '''
+    Function decorator that asserts that the type of function arguments.
+
+    Parameters
+    ----------
+    expected: Dict[str, type or Set[type]], optional
+        key-value pairs of names and expected types
+        of each argument that should be checked
+
+    Raises
+    ------
+    ValueError
+        when a name is provided that is not an argument of the function
+    TypeError
+        when type of the function argument doesn't match the expected type
+
+    Examples
+    --------
+    from tmlib.utils import assert_type
+    import types
+
+    class TypeCheckExample(object):
+
+        @assert_type(value1=str, value2={int, float, types.NoneType})
+        def test(self, value1, value2=None):
+            print 'value1: "%s"' % value1
+            if value2:
+                print 'value2: %d' % value2
+
+    example = TypeCheckExample()
+    example.test('blabla', 2)
+    example.test('blabla', 2.0)
+    example.test('blabla')
+    example.test('blabla', '2')  # raises TypeError
+    '''
+    def decorator(func):
+
+        def wrapper(*args, **kwargs):
+            inputs = inspect.getargspec(func)
+            for expected_name, expected_type in expected.iteritems():
+                if expected_name not in inputs.args:
+                    raise ValueError('Unknown argument "%s"' % expected_name)
+                index = inputs.args.index(expected_name)
+                if index >= len(args):
+                    continue
+                ets = set()
+                if isinstance(expected_type, type):
+                    ets = {expected_type}
+                elif isinstance(expected_type, set):
+                    ets = expected_type
+                elif isinstance(expected_type, list):
+                    ets = set(expected_type)
+                if not any([isinstance(args[index], et) for et in ets]):
+                    options = ' or '.join([et.__name__ for et in ets])
+                    raise TypeError('Argument "%s" must have type %s.' %
+                                    (expected_name, options))
+            return func(*args, **kwargs)
+
+        wrapper.func_name = func.func_name
+        wrapper.__doc__ = func.__doc__
+        return wrapper
+
+    return decorator
+
+
+def assert_path_exists(*expected):
+    '''
+    Function decorator that asserts that a path to a file or directory on disk
+    specified by a function argument exists.
+
+    Parameters
+    ----------
+    expected: List[str], optional
+        names of arguments that should be checked
+
+    Raises
+    ------
+    ValueError
+        when a name is provided that is not an argument of the function
+    OSError
+        when the path specified by the function argument doesn't exists on disk
+
+    Examples
+    --------
+    from tmlib.utils import assert_path_exists
+    import os
+
+    class LocationCheckExample(object):
+
+        @assert_path_exists('value1')
+        def test(self, value1, value2=None):
+            print 'content of directory "%s":\n%s' % (value1, os.listdir(value1))
+
+    example = LocationCheckExample()
+    example.test('/tmp')
+    example.test('/blabla')  # raises OSError
+    '''
+    def decorator(func):
+
+        def wrapper(*args, **kwargs):
+            inputs = inspect.getargspec(func)
+            for expected_name in expected:
+                if expected_name not in inputs.args:
+                    raise ValueError('Unknown argument "%s"' % expected_name)
+                index = inputs.args.index(expected_name)
+                if index >= len(args):
+                    continue
+                location = args[index]
+                if not os.path.exists(location):
+                    raise OSError('Location specified by argument "%s" '
+                                  'does\'t exist: "%s"' %
+                                  (expected_name, location))
+                elif os.access(os.path.dirname(location), os.W_OK):
+                    raise OSError('Location specified by argument "%s" '
+                                  'doesn\'t have write permissions: "%s"' %
+                                  (expected_name, location))
+            return func(*args, **kwargs)
+
+        wrapper.func_name = func.func_name
+        wrapper.__doc__ = func.__doc__
+        return wrapper
+
+    return decorator
+
+
+class autocreate_directory_property(object):
+    '''
+    A property that represents a directory on disk. The directory is
+    automatically created when I doesn't exist and the value of this cached,
+    i.e. the property replaces itself with an ordinary attribute.
+
+    Raises
+    ------
+    TypeError
+        when the value of the property doesn't have type basestring
+    ValueError
+        when the value of the property is empty
+    OSError
+        when the parent directory does not exist
+
+    Examples
+    --------
+    from tmlib.utils import autocreate_directory_property
+    
+    class AutocreateExample(object):
+
+        @autocreate_directory_property
+        def my_new_directory(self):
+            return '/tmp/blabla'
+
+    example = AutocreateExample()
+    example.my_new_directory
+    '''
+    def __init__(self, func):
+        self.__doc__ = getattr(func, '__doc__')
+        self.func = func
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+        value = obj.__dict__[self.func.__name__] = self.func(obj)
+        if not isinstance(value, basestring):
+            raise TypeError('Value of property "%s" must have type basestring.'
+                            % value)
+        if not value:
+            raise ValueError('Value of property "%s" cannot be empty.'
+                             % value)
+        if not os.path.exists(os.path.dirname(value)):
+            raise OSError('Value of property "%s" must be a valid path.'
+                          % value)
+        if not os.path.exists(value):
+            logger.debug('create directory: %s')
+            os.mkdir(value)
+        return value

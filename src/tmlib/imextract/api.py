@@ -58,7 +58,7 @@ class ImageExtractor(ClusterRoutines):
         job_count = 0
         job_descriptions = defaultdict(list)
         for source in self.experiment.sources:
-            mapper = source.image_mapper
+            mapper = source.image_mapping
             ix_batches = self._create_batches(range(len(mapper)),
                                               args.batch_size)
 
