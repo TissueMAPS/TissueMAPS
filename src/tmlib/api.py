@@ -16,13 +16,11 @@ from gc3libs.session import Session
 from gc3libs.workflow import TaskCollection
 
 from . import utils
+from . import cluster_utils
 from .readers import JsonReader
 from .writers import JsonWriter
 from .errors import JobDescriptionError
 from .errors import WorkflowError
-from .cluster_utils import get_task_data
-from .cluster_utils import print_task_status
-from .cluster_utils import log_task_failure
 from .jobs import RunJob
 from .jobs import RunJobCollection
 from .jobs import CollectJob
@@ -105,14 +103,6 @@ class BasicClusterRoutines(object):
         # Create a list of lists from a list, where each sublist has length n
         n = max(1, n)
         return [li[i:i + n] for i in range(0, len(li), n)]
-
-    @staticmethod
-    def log_task_data(task_data, monitoring_depth):
-        return print_task_status(task_data, monitoring_depth)
-
-    @staticmethod
-    def log_task_failure(task_data):
-        return log_task_failure(task_data, logger)
 
     def create_session(self, overwrite=True, backup=False):
         '''
@@ -224,17 +214,15 @@ class BasicClusterRoutines(object):
                 logger.debug('wait %d seconds', monitoring_interval)
 
                 t_elapsed = time.time() - t_submitted
-                t_string = '{:d}:{:02d}:{:02d}'.format(
-                            *reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
-                                    [(int(t_elapsed),), 60, 60]))
+                t_string = cluster_utils.format_timestamp(t_elapsed)
                 logger.info('duration: %s', t_string)
 
                 logger.info('progress ...')
                 e.progress()
 
-                task_data = get_task_data(task)
+                task_data = cluster_utils.get_task_data(task)
 
-                self.log_task_data(task_data, monitoring_depth)
+                cluster_utils.print_task_status(task_data, monitoring_depth)
 
                 if break_next:
                     break
@@ -244,8 +232,9 @@ class BasicClusterRoutines(object):
                 # NOTE: We assume that we are dealing with a sequential
                 # collection of tasks.
                 last_task_state = task.tasks[-1].execution.state
-                if (last_task_state == gc3libs.Run.State.TERMINATED or
-                        last_task_state == gc3libs.Run.State.STOPPED):
+                if ((last_task_state == gc3libs.Run.State.TERMINATED or
+                        last_task_state == gc3libs.Run.State.STOPPED) and
+                        task.tasks[-1].execution.exitcode is not None):
                     break_next = True
                     e.progress()
 
@@ -258,7 +247,7 @@ class BasicClusterRoutines(object):
             e.progress()
 
         task_data = get_task_data(task)
-        self.log_task_failure(task_data)
+        cluster_utils.log_task_failure(task_data, logger)
 
         return task_data
 

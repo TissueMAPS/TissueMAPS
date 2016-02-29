@@ -35,6 +35,25 @@ def format_stats_data(stats):
     return data
 
 
+def format_timestamp(elapsed_time):
+    '''
+    Formats a timestamp in seconds to "HH:MM:SS" string.
+
+    Parameters
+    ----------
+    elapsed_time: float
+        timestamp
+
+    Returns
+    -------
+    str
+        formatted timestamp
+    '''
+    return '{:d}:{:02d}:{:02d}'.format(
+                            *reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
+                                    [(int(elapsed_time),), 60, 60]))
+
+
 def get_task_data(task, description=None):
     '''
     Provide the following data for each task and recursively for each
@@ -76,7 +95,8 @@ def get_task_data(task, description=None):
             'is_done': is_done,
             'failed': is_done and failed,
             'exitcode': task_.execution.exitcode,
-            'percent_done': 0.0  # fix later, if possible
+            'percent_done': 0.0,  # fix later, if possible
+            'time': ''
         }
 
         if isinstance(task_, WorkflowStep):
@@ -103,10 +123,10 @@ def get_task_data(task, description=None):
                     done += 1
             if len(task_.tasks) > 0:
                 if hasattr(task_, '_tasks_to_process'):
-                    # Custom sequential task collection classes build the task list
-                    # dynamically, so we have to use the number of tasks that should
-                    # ultimately be processed to provide an accurate "percent_done"
-                    # value.
+                    # Custom sequential task collection classes build the task
+                    # list dynamically, so we have to use the number of tasks
+                    # that should ultimately be processed to provide an
+                    # accurate "percent_done" value.
                     total = len(getattr(task_, '_tasks_to_process'))
                 else:
                     total = len(task_.tasks)
@@ -123,6 +143,12 @@ def get_task_data(task, description=None):
         else:
             raise NotImplementedError(
                 'Unhandled task class %r' % (task_.__class__))
+
+        if task_.execution.state == gc3libs.Run.State.TERMINATED:
+            data['time'] = format_timestamp(
+                    task_.execution.state_last_changed -
+                    task_.execution.timestamp['SUBMITTED']
+            )
 
         if isinstance(task_, gc3libs.workflow.TaskCollection):
             # loop recursively over subtasks
@@ -152,17 +178,21 @@ def print_task_status(task_data, monitoring_depth):
             data['type'],
             data['state'],
             '%.2f' % data['percent_done'],
-            data['exitcode'],
+            data['time'],
+            data['exitcode'] if data['exitcode'] is not None else '',
             data['id']
         ])
         if i < monitoring_depth:
             for subtd in data.get('subtasks', list()):
                 add_row_recursively(subtd, table, i+1)
-    x = PrettyTable(['Name', 'Type', 'State', '% Done', 'ExitCode', 'ID'])
+    x = PrettyTable([
+            'Name', 'Type', 'State', '% Done', 'Time', 'ExitCode', 'ID'
+    ])
     x.align['Name'] = 'l'
     x.align['Type'] = 'l'
     x.align['State'] = 'l'
     x.align['% Done'] = 'r'
+    x.align['Time'] = 'r'
     x.align['ID'] = 'r'
     x.padding_width = 1
     add_row_recursively(task_data, x, 0)
