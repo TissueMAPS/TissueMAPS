@@ -10,11 +10,12 @@ class ScatterPlotTool extends Tool {
             appInstance,
             'ScatterPlot',
             'Scatter Plot',
-            'Plot one feature against another feature',
-            '/templates/tools/modules/scatterplot/scatterplot.html',
-            'SCA',
-            900,
-            1040
+            'Plot one feature against another feature', {
+                templateUrl: '/templates/tools/modules/scatterplot/scatterplot.html',
+                icon: 'SCA',
+                defaultWindowWidth: 900,
+                defaultWindowHeight: 1040
+            }
           )
     }
 

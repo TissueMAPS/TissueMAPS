@@ -51,36 +51,35 @@
         "app/src/core/tool/Tool.ts",
         "app/src/core/tool/ToolSession.ts",
         "app/src/core/tool/ToolResult.ts",
+
         "app/src/core/tool/classes/ClassificationTool.ts",
         "app/src/core/tool/classes/FeatureStatsTool.ts",
         "app/src/core/tool/classes/SVMTool.ts",
-
         "app/src/core/tool/classes/ClusterTool.ts",
-        "app/src/view/toolwindow/modules/cluster/ClusterCtrl.ts",
+        "app/src/core/tool/classes/ScatterPlotTool.ts",
 
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/MapPosition.ts",
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
 
-        "app/src/view/toolwindow/TmapsProxy.ts",
-        "app/src/view/toolwindow/FeatureService.ts",
-        "app/src/view/toolwindow/ToolWindowCtrl.ts",
+        "app/src/AppCtrl.ts",
+        "app/src/tmAppbar.ts",
 
-        "app/src/view/toolwindow/widgets/objecttypeselection/tmObjectTypeSelectionWidget.ts",
-        "app/src/view/toolwindow/widgets/classselection/ClassSelectionWidgetCtrl.ts",
-        "app/src/view/toolwindow/widgets/featureselection/FeatureSelectionWidgetCtrl.ts",
+        "app/src/workbench/tmWorkbenchWindow.ts",
+        "app/src/workbench/tmWorkbench.ts",
+        "app/src/workbench/tmWorkbenchesContainer.ts",
+        "app/src/workbench/tmWorkbenchesTabbar.ts",
 
-        "app/src/view/toolwindow/modules/SVM/SVMCtrl.ts",
+        "app/src/workbench/toolwindow/ToolWindowCtrl.ts",
+        "app/src/workbench/toolbar/tmToolbar.ts",
+        "app/src/workbench/toolbar/ToolbarCtrl.ts",
+        "app/src/workbench/sidebar/selections/SelectionSettingsCtrl.ts",
+        "app/src/workbench/sidebar/selections/SelectionControlsCtrl.ts",
+        "app/src/workbench/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
+        "app/src/workbench/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
+        "app/src/workbench/sidebar/visuallayers/VisualLayerCtrl.ts",
 
-        "app/src/core/tool/classes/ScatterPlotTool.ts",
-        "app/src/view/toolwindow/modules/scatterplot/ScatterPlotCtrl.ts",
+        "app/src/userpanel/UserpanelCtrl.ts"
 
-        "app/src/view/toolbar/tmToolbar.ts",
-        "app/src/view/toolbar/ToolbarCtrl.ts",
-        "app/src/view/sidebar/selections/SelectionSettingsCtrl.ts",
-        "app/src/view/sidebar/selections/SelectionControlsCtrl.ts",
-        "app/src/view/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
-        "app/src/view/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
-        "app/src/view/sidebar/visuallayers/VisualLayerCtrl.ts"
     ]
 }

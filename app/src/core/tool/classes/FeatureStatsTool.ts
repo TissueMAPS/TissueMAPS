@@ -4,11 +4,12 @@ class FeatureStatsTool extends Tool {
             appInstance,
             'FeatureStats',
             'Feature Statistics',
-            'Compute some basic statistics',
-            '/templates/tools/modules/featurestats/feature-stats.html',
-            '<i class=\"fa fa-bar-chart\"></i>',
-            850,
-            600
+            'Compute some basic statistics', {
+                templateUrl: '/templates/tools/modules/featurestats/feature-stats.html',
+                icon: '<i class=\"fa fa-bar-chart\"></i>',
+                defaultWindowHeight: 850,
+                defaultWindowWidth: 600
+            }
           )
     }
 

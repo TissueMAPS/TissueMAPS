@@ -21,8 +21,8 @@ angular.module('tmaps.ui')
             app.hideViewports();
         }]
     })
-    .state('viewport', {
-        url: '/viewport?loadex=expids&state=stateid&snapshot=snapshotid',
+    .state('workbench', {
+        url: '/workbench?loadex=expids&state=stateid&snapshot=snapshotid',
         reloadOnSearch: false,
         onEnter: ['application', '$stateParams', 'appstateService',
                   function(app, $stateParams, appstateService) {
@@ -55,17 +55,28 @@ angular.module('tmaps.ui')
             app.hideViewports();
         }]
     })
-    .state('viewport.userpanel', {
+    .state('userpanel', {
         url: '/userpanel',
         data: {
             loginRequired: true
         },
-        onEnter: ['userpanelService', function(userpanelService) {
-            userpanelService.showPanel();
-        }],
-        onExit: ['userpanelService', function(userpanelService) {
-            userpanelService.hidePanel();
-        }]
+        views: {
+            'main-window': {
+                templateUrl: '/src/userpanel/userpanel.html'
+            }
+        }
+    })
+    .state('setup', {
+        url: '/setup',
+        data: {
+            loginRequired: true
+        },
+        views: {
+            'main-window': {
+                templateUrl: '/src/setup/setup.html'
+            }
+        }
     });
+
 }]);
 

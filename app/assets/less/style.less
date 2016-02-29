@@ -1,31 +1,26 @@
 //== Libraries
-@import "../bootstrap/custom-bootstrap.less";
+@import "libs/bootstrap/custom-bootstrap.less";
 
-@import "../lesshat/lesshat-prefixed"; // all lesshat includes have a 'lh-' prefix.
+@import "libs/lesshat/lesshat-prefixed"; // all lesshat includes have a 'lh-' prefix.
 // This project also uses "Font Awesome" by Dave Gandy
 // => http://fontawesome.io.
 
-@import "../variables.less";
-@import "../modals.less";
-
-@import "../grid.less";
-
+@import "variables.less";
+@import "modals.less";
+@import "grid.less";
 @import "layout.less";
-@import "ol.less";
 
-@import "topbar/topbar.less";
-@import "topbar/tabbar.less";
-
-@import "toolbar/toolbar.less";
-@import "content.less";
+@import "appbar/appbar.less";
+@import "appbar/tabbar.less";
 
 @import "userpanel/userpanel.less";
 
-@import "sidebar/sidebar.less";
-@import "sidebar/settings-boxes.less";
-
-
-@import "widgets/multi-selection-box.less";
+@import "view/ol.less";
+@import "view/toolbar/toolbar.less";
+@import "view/content.less";
+@import "view/sidebar/sidebar.less";
+@import "view/sidebar/settings-boxes.less";
+@import "view/widgets/multi-selection-box.less";
 
 @middle-container-center-width: 400px;
 @middle-container-center-height: 300px;

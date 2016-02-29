@@ -125,7 +125,6 @@ module.exports = function(grunt) {
                 files: [
                     {cwd: 'app', expand: true, src: ['templates/**/*.html'], dest: '<%= productionDir %>/'},
                     {dest: '<%= productionDir %>/index.html', src: 'app/index.html'},
-                    {dest: '<%= productionDir %>/src/toolwindow/index.html', src: 'app/src/toolwindow/index.html'},
                     {cwd: 'app', expand: true, src: ['resources/**'], dest: '<%= productionDir %>/'}
                 ]
             }
@@ -168,11 +167,6 @@ module.exports = function(grunt) {
                 files: {
                     'app/index.html': 'app/index.pre.html'
                 }
-            },
-            tools: {
-                files: {
-                    'app/src/toolwindow/index.html': 'app/src/toolwindow/index.pre.html'
-                }
             }
         },
 
@@ -185,8 +179,7 @@ module.exports = function(grunt) {
          */
         useminPrepare: {
             html: [
-                'app/index.html',
-                'app/src/toolwindow/index.html'
+                'app/index.html'
             ],
             options: {
                 dest: '<%= productionDir %>'
@@ -194,8 +187,7 @@ module.exports = function(grunt) {
         },
         usemin: {
             html: [
-                '<%= productionDir %>/index.html',
-                '<%= productionDir %>/src/toolwindow/index.html'
+                '<%= productionDir %>/index.html'
             ],
             options: {
                 assetDirs: [
@@ -354,8 +346,7 @@ module.exports = function(grunt) {
             compile: {
                 files: {
                     // The style.less file imports all other less files
-                    '<%= cssDir %>/style-main.css': '<%= lessDir %>/main/style.less',
-                    '<%= cssDir %>/style-tools.css': '<%= lessDir %>/tools/style.less'
+                    '<%= cssDir %>/style.css': '<%= lessDir %>/style.less',
                 }
             }
         },

@@ -3,6 +3,8 @@ interface SerializedAppInstance extends Serialized<AppInstance> {
     viewport: SerializedViewport;
 }
 
+// TODO: Rename to Workbench, AppInstance does not make
+// sense anymore since Application is the whole thing now.
 class AppInstance implements Serializable<SerializedAppInstance> {
     name: string;
     experiment: Experiment;

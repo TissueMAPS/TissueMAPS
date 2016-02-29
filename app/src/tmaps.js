@@ -12,6 +12,7 @@
      * => Make sure to never redeclare a module in another file
      * (i.e. never call an already declared module with an array argument).
      */
+    angular.module('tmaps.toolwindow', []); // TODO: remove this
     angular.module('tmaps.core', [
         'tmaps.thirdpartymodules',
         'ui.bootstrap',
@@ -31,6 +32,7 @@
     var tmaps = angular.module('tmaps', [
         'tmaps.core',
         'tmaps.ui',
+        'tmaps.toolwindow',  // TODO: remove this
 
         'tmauth',
 

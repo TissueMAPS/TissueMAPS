@@ -1,7 +1,5 @@
 <!doctype html>
-<html ng-app="tmaps"
-      ng-controller="AppCtrl as app"
-      ng-keydown="app.keyDown($event)">
+<html ng-app="tmaps">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title>TissueMAPS</title>
@@ -65,10 +63,12 @@
       <!-- Module declaration -->
       <script src="src/tmaps.js" type="text/javascript" charset="utf-8"></script>
       <script src="src/tmaps.routes.js" type="text/javascript" charset="utf-8"></script>
-      <script src="src/tmaps.toolwindow.js" type="text/javascript" charset="utf-8"></script>
+      <script src="src/uiState.js" type="text/javascript" charset="utf-8"></script>
       <script src="build/compiled-ts.js" type="text/javascript" charset="utf-8"></script>
       <!-- Other files -->
-      <!-- include: "type": "js", "files": ["src/view/**/*.js", "!src/view/**/*.test.js"] -->
+      <!-- include: "type": "js", "files": ["src/workbench/**/*.js", "!src/workbench/**/*.test.js"] -->
+      <!-- include: "type": "js", "files": ["src/userpanel/**/*.js", "!src/userpanel/**/*.test.js"] -->
+      <!-- include: "type": "js", "files": ["src/setup/**/*.js", "!src/setup/**/*.test.js"] -->
 
   <!-- endbuild -->
 
@@ -94,7 +94,7 @@
       <link rel="stylesheet" href="/assets/libs/bower_components/fontawesome/css/font-awesome.css">
 
       <!-- Applications style -->
-      <link rel="stylesheet" href="/assets/css/style-main.css">
+      <link rel="stylesheet" href="/assets/css/style.css">
   <!-- endbuild -->
 
 
@@ -112,37 +112,45 @@
 
 <!-- Somehow the keyUp and keyDown events need to be on different elements (html and body in this case) in order for both of them to fire. -->
 <!-- This wasn't a problem up until switching to the newest angular version. -->
-<body ng-keyup="app.keyUp($event)">
+<body >
 
+  <div ng-controller="AppCtrl as appCtrl" ng-keydown="app.keyDown($event)" ng-keyup="app.keyUp($event)" style="display: block;">
+    <div class='appbar' tm-appbar></div>
 
-  <ui-view></ui-view>
-
-  <div class="app">
-    <div class="top-container">
-      <ng-include src="'/templates/main/experiment/topbar.html'"></ng-include>
-      <ng-include src="'/templates/main/experiment/tabbar.html'"></ng-include>
-    </div>
-    <div class="middle-container">
-
-    <div class="middle-container-center" ng-show="app.isViewportEmpty()">
-      <p>
-        To add a new experiment, visit your userpanel by clicking on the <i class="fa fa-user"></i> icon in the top-left corner.
-      </p>
-
-      <p>
-        Saving your work can be done via the <i class="fa fa-floppy-o"></i> icons.
-      </p>
-
-      <p>
-        If you would like to share a snapshot of your work with somebody else, you just need to press the <i class="fa fa-globe"></i> icon.
-      </p>
-    </div>
-
-    <!-- The location where UI-router will insert content html like the user panel -->
-    <!-- Where the instance viewports will be injected -->
-    <div id="viewports"></div>
-    </div>
+    <!-- The main view holding the workbench, the setup window or the userpanel. -->
+    <!-- Since the DOM of the workbenches should not be reinserted by the UI router, its -->
+    <!-- container div is made invisible using a onLeave-event instead of using ui-view. --> 
+    <div class="main-window" id="workbench-container" ng-include="'/src/workbench/workbench.html'"></div>
+    <div class="main-window" ui-view="main-window"></div>
   </div>
+
+
+  <!-- <div class="app"> -->
+  <!--   <div class="top-container"> -->
+  <!--     <ng-include src="'/templates/main/experiment/topbar.html'"></ng-include> -->
+  <!--     <ng-include src="'/templates/main/experiment/tabbar.html'"></ng-include> -->
+  <!--   </div> -->
+  <!--   <div class="middle-container"> -->
+
+  <!--   <div class="middle-container-center" ng-show="app.isViewportEmpty()"> -->
+  <!--     <p> -->
+  <!--       To add a new experiment, visit your userpanel by clicking on the <i class="fa fa-user"></i> icon in the top-left corner. -->
+  <!--     </p> -->
+
+  <!--     <p> -->
+  <!--       Saving your work can be done via the <i class="fa fa-floppy-o"></i> icons. -->
+  <!--     </p> -->
+
+  <!--     <p> -->
+  <!--       If you would like to share a snapshot of your work with somebody else, you just need to press the <i class="fa fa-globe"></i> icon. -->
+  <!--     </p> -->
+  <!--   </div> -->
+
+  <!--   <1!-- The location where UI-router will insert content html like the user panel --1> -->
+  <!--   <1!-- Where the instance viewports will be injected --1> -->
+  <!--   <div id="viewports"></div> -->
+  <!--   </div> -->
+  <!-- </div> -->
 
 </body>
 </html>

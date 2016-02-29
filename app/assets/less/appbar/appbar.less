@@ -1,8 +1,8 @@
-@import "../../variables.less";
-@import "../../ui.less";
+@import "../variables.less";
+@import "../ui.less";
 
-//== TOPBAR
-.topbar:extend(.ui-panel all) {
+//== appbar
+.appbar:extend(.ui-panel all) {
     // .lh-background-image(linear-gradient(
     //     to bottom,
     //     @panel-bg-color 0%,
@@ -11,8 +11,8 @@
     // ));
     // background-image: none;
 
-    height: @topbar-height;
-    line-height: @topbar-height;
+    height: @appbar-height;
+    line-height: @appbar-height;
     margin: 0;
 
 //     // Spacers and button lists
@@ -34,7 +34,7 @@
             width: @toolbar-width + 1px;
             // Make line-height same height as parent, but keep these elements
             // on 100% height
-            line-height: @topbar-height;
+            line-height: @appbar-height;
             text-align: center;
             border-left: none !important;
             @background-color: @topleft-button-color;
@@ -52,7 +52,7 @@
     // .spacer {
     //     // width: @gradient-spacer-width;
     //     width: 10px;
-    //     height: @topbar-height;
+    //     height: @appbar-height;
     //     .gradient-fader(left);
     // }
 
@@ -68,7 +68,7 @@
     .user-indicator {
         float: right;
         height: 100%;
-        line-height: @topbar-height;
+        line-height: @appbar-height;
         margin-right: 10px;
 
         // Override bootstrap hover effect
@@ -77,7 +77,7 @@
         }
     }
 
-    .topbar-info {
+    .appbar-info {
         margin-left: 50px;
     }
 

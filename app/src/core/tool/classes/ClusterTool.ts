@@ -4,11 +4,12 @@ class ClusterTool extends ClassificationTool {
             appInstance,
             'Cluster',
             'Clustering Tool',
-            'Cluster objects using the K-means algorithm',
-            '/templates/tools/modules/cluster/cluster.html',
-            'CLU',
-            1025,
-            450
+            'Cluster objects using the K-means algorithm', {
+                templateUrl: '/templates/tools/modules/cluster/cluster.html',
+                icon: 'CLU',
+                defaultWindowHeight: 1025,
+                defaultWindowWidth: 450
+            }
           )
     }
 }
