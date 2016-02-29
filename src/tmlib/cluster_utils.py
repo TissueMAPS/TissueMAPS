@@ -97,19 +97,19 @@ def get_task_data(task, description=None):
         data['type'] = job_type
 
         done = 0.0
-        if hasattr(task_, '_tasks_to_process'):
-            # Custom sequential task collection classes build the task list
-            # dynamically, so we have to use the number of tasks that should
-            # ultimately be processed to provide an accurate "percent_done"
-            # value.
-            total = len(getattr(task_, '_tasks_to_process'))
-        else:
-            total = len(task_.tasks)
         if isinstance(task_, gc3libs.workflow.TaskCollection):
             for child in task_.tasks:
                 if (child.execution.state == gc3libs.Run.State.TERMINATED):
                     done += 1
             if len(task_.tasks) > 0:
+                if hasattr(task_, '_tasks_to_process'):
+                    # Custom sequential task collection classes build the task list
+                    # dynamically, so we have to use the number of tasks that should
+                    # ultimately be processed to provide an accurate "percent_done"
+                    # value.
+                    total = len(getattr(task_, '_tasks_to_process'))
+                else:
+                    total = len(task_.tasks)
                 data['percent_done'] = done / total * 100
             else:
                 data['percent_done'] = 0
