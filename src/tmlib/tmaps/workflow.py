@@ -5,6 +5,7 @@ import importlib
 import sys
 import traceback
 from cached_property import cached_property
+import gc3libs
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import AbortOnError
@@ -344,8 +345,9 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
                     tb_string += tb
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
-                logger.info('aborting stage "%s"', self.name)
-                self.kill()
+                logger.info('stopping stage "%s"', self.name)
+                self.execution.state = gc3libs.Run.State.STOPPED
+                sys.exit(1)
         return super(SequentialWorkflowStage, self).next(done)
 
 
@@ -558,7 +560,7 @@ class Workflow(StopOnError, SequentialTaskCollection):
                 self._add_stage(done+1)
             except KeyboardInterrupt:
                 logger.info('processing interrupted by used')
-                logger.info('aborting workflow "%s"', self.name)
+                logger.info('killing workflow "%s"', self.name)
                 self.kill()
             except Exception as error:
                 logger.error('transition to next stage failed: %s', error)
@@ -571,6 +573,7 @@ class Workflow(StopOnError, SequentialTaskCollection):
                     tb_string += tb
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
-                # TODO: Somehow this doesn't seem to work
-                self.kill()
+                logger.info('stopping workflow "%s"', self.name)
+                self.execution.state = gc3libs.Run.State.STOPPED
+                sys.exit(1)
         return super(Workflow, self).next(done)
