@@ -8,6 +8,7 @@ from cached_property import cached_property
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import AbortOnError
+from gc3libs.workflow import StopOnError
 from .description import WorkflowDescription
 from .description import WorkflowStageDescription
 from ..errors import WorkflowTransitionError
@@ -217,7 +218,7 @@ class WorkflowStage(object):
     #     return reason
 
 
-class SequentialWorkflowStage(AbortOnError, SequentialTaskCollection, WorkflowStage):
+class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowStage):
 
     '''
     Class for a sequential TissueMAPS workflow stage, which is composed of one
@@ -403,7 +404,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
             self.add(step_jobs)
 
 
-class Workflow(AbortOnError, SequentialTaskCollection):
+class Workflow(StopOnError, SequentialTaskCollection):
 
     def __init__(self, experiment, verbosity, description=None,
                  start_stage=None, start_step=None):

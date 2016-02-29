@@ -29,7 +29,8 @@ from .errors import JobDescriptionError
 logger = logging.getLogger(__name__)
 
 AVAILABLE_METHODS = {
-    'init', 'run', 'submit', 'resubmit', 'collect', 'cleanup', 'log', 'info'
+    'init', 'submit', 'resume', 'resubmit', 'run', 'collect',
+    'cleanup', 'log', 'info'
 }
 
 

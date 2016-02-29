@@ -86,7 +86,7 @@ class Tmaps(object):
         logger.info('resume workflow')
         api = self._api_instance
         logger.debug('load jobs from session')
-        session = api.create_session(jobs=None, overwrite=False)
+        session = api.create_session(overwrite=False)
         api.submit_jobs(session, args.interval, args.depth)
 
     def _call(self, args):
