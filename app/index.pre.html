@@ -120,7 +120,7 @@
     <!-- The main view holding the workbench, the setup window or the userpanel. -->
     <!-- Since the DOM of the workbenches should not be reinserted by the UI router, its -->
     <!-- container div is made invisible using a onLeave-event instead of using ui-view. --> 
-    <div class="main-window" id="workbench-container" ng-include="'/src/workbench/workbench.html'"></div>
+    <div class="main-window" id="workbench-view" ng-include="'/src/workbench/workbench.html'"></div>
     <div class="main-window" ui-view="main-window"></div>
   </div>
 
