@@ -1,7 +1,8 @@
 import os
 import numpy as np
 import logging
-from collections import defaultdict
+import collections
+from .. import utils
 from ..readers import BioformatsImageReader
 from ..api import ClusterRoutines
 from ..writers import ImageWriter
@@ -56,7 +57,7 @@ class ImageExtractor(ClusterRoutines):
             job descriptions
         '''
         job_count = 0
-        job_descriptions = defaultdict(list)
+        job_descriptions = collections.defaultdict(list)
         for source in self.experiment.sources:
             mapper = source.image_mapping
             ix_batches = self._create_batches(range(len(mapper)),
@@ -130,17 +131,11 @@ class ImageExtractor(ClusterRoutines):
                 with ImageWriter() as writer:
                     writer.write(output_filename, img)
 
+    @utils.notimplemented
     def collect_job_output(self, batch):
-        '''
-        Not implemented.
-        '''
-        raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
-                             ' method' % self.__class__.__name__)
+        pass
 
+    @utils.notimplemented
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
-        '''
-        Not implemented.
-        '''
-        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
-                             ' method' % self.__class__.__name__)
+        pass

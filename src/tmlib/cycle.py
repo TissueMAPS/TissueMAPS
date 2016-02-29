@@ -20,15 +20,20 @@ logger = logging.getLogger(__name__)
 
 class Cycle(object):
     '''
-    A *cycle* represents an individual image acquisition time point
-    as part of a time series experiment and corresponds to a folder on disk.
+    A *cycle* represents an individual image acquisition as part of either a
+    time series or a sequential multiplexing experiment.
+    In case of a time series experiment, *cycles* have different time point
+    indices, but the same channel indices, while in case of a multiplexing
+    experiment, all *cycles have the same time point index, but different
+    channel indices.
 
-    The `Cycle` class provides attributes and methods for accessing the
-    contents of this folder.
+    The `Cycle` class corresponds to a folder on disk and provides attributes
+    and methods for accessing and managing the contents of this folder.
 
     See also
     --------
     :py:class:`tmlib.experiment.Experiment`
+    :py:class:`tmlib.plate.Plate`
     '''
 
     CYCLE_DIR_FORMAT = 'cycle_{index:0>2}'
@@ -75,7 +80,7 @@ class Cycle(object):
     @property
     def index(self):
         '''
-        A *cycle* represents a time point in a time series. The `index`
+        A *cycle* represents a time point of image acquisition. The `index`
         is the zero-based index of the *cycle* in this sequence.
         It is encoded in the name of the folder and is retrieved from
         it using a regular expression.
@@ -241,6 +246,36 @@ class Cycle(object):
         return metadata
 
     @property
+    def tpoint_index(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based index of the cycle in a time series
+        '''
+        return np.unique(self.image_metadata['tpoint_ix'])[0]
+
+    @property
+    def channel_indices(self):
+        '''
+        Returns
+        -------
+        List[int]
+            zero-based indices of the channels belonging to the cycle
+        '''
+        return list(np.unique(self.image_metadata['channel_ix']))
+
+    @property
+    def channel_names(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names the channels belonging to the cycle
+        '''
+        return list(np.unique(self.image_metadata['channel_name']))
+
+    @property
     def images(self):
         '''
         Returns
@@ -353,7 +388,8 @@ class Cycle(object):
         for c, f in self.illumstats_files.iteritems():
             md = IllumstatsImageMetadata()
             md.channel_ix = c
-            md.tpoint_ix = self.index
+            md.tpoint_ix = self.tpoint_index
+            md.cycle_ix = self.index
             md.filename = f
             illumstats_metadata[c] = md
         return illumstats_metadata

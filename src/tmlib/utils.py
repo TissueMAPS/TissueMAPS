@@ -270,7 +270,7 @@ def missing_elements(data, start=None, end=None):
 
 def assert_type(**expected):
     '''
-    Function decorator that asserts that the type of function arguments.
+    Decorator function that asserts that the type of function arguments.
 
     Parameters
     ----------
@@ -305,7 +305,7 @@ def assert_type(**expected):
     example.test('blabla', '2')  # raises TypeError
     '''
     def decorator(func):
-
+        # TODO: use importlib for non-buildin types
         def wrapper(*args, **kwargs):
             inputs = inspect.getargspec(func)
             for expected_name, expected_type in expected.iteritems():
@@ -327,7 +327,7 @@ def assert_type(**expected):
                                     (expected_name, options))
             return func(*args, **kwargs)
 
-        wrapper.func_name = func.func_name
+        wrapper.__name__ = func.__name__
         wrapper.__doc__ = func.__doc__
         return wrapper
 
@@ -336,7 +336,7 @@ def assert_type(**expected):
 
 def assert_path_exists(*expected):
     '''
-    Function decorator that asserts that a path to a file or directory on disk
+    Decorator function that asserts that a path to a file or directory on disk
     specified by a function argument exists.
 
     Parameters
@@ -367,9 +367,9 @@ def assert_path_exists(*expected):
     example.test('/blabla')  # raises OSError
     '''
     def decorator(func):
+        inputs = inspect.getargspec(func)
 
         def wrapper(*args, **kwargs):
-            inputs = inspect.getargspec(func)
             for expected_name in expected:
                 if expected_name not in inputs.args:
                     raise ValueError('Unknown argument "%s"' % expected_name)
@@ -387,7 +387,7 @@ def assert_path_exists(*expected):
                                   (expected_name, location))
             return func(*args, **kwargs)
 
-        wrapper.func_name = func.func_name
+        wrapper.__name__ = func.__name__
         wrapper.__doc__ = func.__doc__
         return wrapper
 
@@ -395,10 +395,12 @@ def assert_path_exists(*expected):
 
 
 class autocreate_directory_property(object):
+
     '''
-    A property that represents a directory on disk. The directory is
-    automatically created when I doesn't exist and the value of this cached,
-    i.e. the property replaces itself with an ordinary attribute.
+    Decorator class that acts like a property.
+    The value represents a path to a directory on disk. The directory is
+    automatically created when it doesn't exist. Once created the value
+    is cached, so that there is no reattempt to create the directory.
 
     Raises
     ------
@@ -423,7 +425,7 @@ class autocreate_directory_property(object):
     example.my_new_directory
     '''
     def __init__(self, func):
-        self.__doc__ = getattr(func, '__doc__')
+        self.__doc__ = func.__doc__
         self.func = func
 
     def __get__(self, obj, cls):
@@ -443,3 +445,93 @@ class autocreate_directory_property(object):
             logger.debug('create directory: %s')
             os.mkdir(value)
         return value
+
+
+def same_docstring_as(ref_func):
+    '''
+    Decorator function that sets the docstring of the decorate function
+    to the one of `ref_func`.
+    This is helpful for methods of derived classes that should "inherit"
+    the docstring of the abstract method in the base class.
+
+    Parameters
+    ----------
+    ref_func: function
+        reference function from which the docstring should be copied
+    '''
+
+    def decorator(func):
+        func.__doc__ = ref_func.__doc__
+        return func
+
+    return decorator
+
+
+def notimplemented(func):
+    '''
+    Decorator function for abstract methods that are not implemented in the
+    derived class.
+
+    Raises
+    ------
+    NotImplementedError
+        when decorated function (method) is called
+    '''
+    func.__doc__ = 'Not implemented.'
+
+    def wrapper(obj, *args, **kwargs):
+        raise NotImplementedError(
+            'Abstract method "%s" is not implemented for derived class "%s".'
+            % (func.__name__, obj.__class__.__name__))
+
+    wrapper.__name__ = func.__name__
+    wrapper.__doc__ = func.__doc__
+    return wrapper
+
+
+# class set_default(object):
+
+#     '''
+#     Decorator class for methods of :py:class:`tmlib.args.Args`.
+#     '''
+
+#     def __init__(self, type=None, help=None, default=None):
+#         '''
+#         Parameters
+#         ----------
+#         type: type
+#             the type that the argument should have
+#         help: str
+#             help message that gives specifics about the argument
+#         default:
+#             default value for the argument
+
+#         Raises
+#         ------
+#         TypeError
+#         '''
+#         self.type = type
+#         self.help = help
+#         self.default = default
+#         if self.default is None:
+#             self.required = True
+#         else:
+#             self.required = False
+
+#     def __call__(self, obj):
+#         attr_name = '_%s' % obj.__name__
+
+#         def getter(cls):
+#             if not hasattr(cls, attr_name):
+#                 if self.default is None:
+#                     raise ValueError(
+#                             'Argument "%s" is required.' % obj.__name__)
+#                 setattr(cls, attr_name, self.default)
+#             setattr(cls, '%s_type' % attr_name, self.type)
+#             setattr(cls, '%s_help' % attr_name, self.help)
+#             return obj(cls)
+#         getter.__name__ = obj.__name__
+#         getter.__doc__ = obj.__doc__
+
+#         return property(getter)
+

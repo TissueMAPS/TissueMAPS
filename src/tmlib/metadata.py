@@ -188,7 +188,7 @@ class ImageMetadata(object):
         Returns
         -------
         int
-            one-based time point identifier number
+            zero-based index of the time point in the time series
         '''
         return self._tpoint_ix
 
@@ -197,6 +197,23 @@ class ImageMetadata(object):
         if not isinstance(value, int):
             raise TypeError('Attribute "tpoint_ix" must have type int')
         self._tpoint_ix = value
+
+    @property
+    def cycle_ix(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based index of the corresponding cycle
+        '''
+        return self._cycle_ix
+
+    @cycle_ix.setter
+    def cycle_ix(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Attribute "cycle_ix" must have type int')
+        self._cycle_ix = value
+    
 
     @property
     def upper_overhang(self):

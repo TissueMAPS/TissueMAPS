@@ -1,5 +1,4 @@
 import os
-import sys
 import yaml
 import glob
 import time
@@ -21,7 +20,6 @@ from .readers import JsonReader
 from .writers import JsonWriter
 from .errors import JobDescriptionError
 from .errors import WorkflowError
-from .cluster_utils import format_stats_data
 from .cluster_utils import get_task_data
 from .cluster_utils import print_task_status
 from .cluster_utils import log_task_failure
@@ -245,18 +243,11 @@ class BasicClusterRoutines(object):
                 # subtasks is done.
                 # NOTE: We assume that we are dealing with a sequential
                 # collection of tasks.
-                last_task_status = task.tasks[-1].execution.state
-                if (last_task_status == gc3libs.Run.State.TERMINATED or
-                        last_task_status == gc3libs.Run.State.STOPPED):
+                last_task_state = task.tasks[-1].execution.state
+                if (last_task_state == gc3libs.Run.State.TERMINATED or
+                        last_task_state == gc3libs.Run.State.STOPPED):
                     break_next = True
                     e.progress()
-                # stats = format_stats_data(e.stats())
-                # if stats['count_total'] > 0:
-                #     # TODO: in case of a workflow this statement is not
-                #     # True for steps with exception of the last one!!
-                #     if stats['count_terminated'] == stats['count_total']:
-                #         break_next = True
-                #         e.progress()
 
         except KeyboardInterrupt:
             # User interrupted process, which should kill all running jobs
@@ -319,21 +310,19 @@ class ClusterRoutines(BasicClusterRoutines):
             os.makedirs(project_dir)
         return project_dir
 
-    @cached_property
+    @utils.autocreate_directory_property
     def job_descriptions_dir(self):
         '''
         Returns
         -------
         str
             directory where job description files are stored
+
+        Note
+        ----
+        Directory is autocreated if it doesn't exist.
         '''
-        self._job_descriptions_dir = os.path.join(self.project_dir,
-                                                  'job_descriptions')
-        if not os.path.exists(self._job_descriptions_dir):
-            logger.debug('create directory for job descriptor files: %s'
-                         % self._job_descriptions_dir)
-            os.mkdir(self._job_descriptions_dir)
-        return self._job_descriptions_dir
+        return os.path.join(self.project_dir, 'job_descriptions')
 
     def get_job_descriptions_from_files(self):
         '''

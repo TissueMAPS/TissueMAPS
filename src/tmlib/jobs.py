@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class Job(Application):
 
     '''
-    Abstract base class for a TissueMAPS job.
+    Abstract base class for a `TissueMAPS` job.
 
     Note
     ----

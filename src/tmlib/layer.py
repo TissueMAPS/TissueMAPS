@@ -20,6 +20,7 @@ from .readers import NumpyImageReader
 
 logger = logging.getLogger(__name__)
 
+
 class Layer(object):
 
     '''
@@ -233,6 +234,19 @@ class ChannelLayer(Layer):
         return self.experiment.layer_metadata[self.name]
 
     @property
+    def cycle_index(self):
+        '''
+        Returns
+        -------
+        int
+            zero-based index of the cycle that corresponds to the layer
+        '''
+        return [
+            c.index for c in self.experiment.plates[0].cycles
+            if self.channel_ix in c.channel_indices
+        ][0]
+
+    @property
     def dir(self):
         '''
         Returns
@@ -300,10 +314,10 @@ class ChannelLayer(Layer):
         Dict[str, Dict[Tuple[int] or str, List[Dict[str or int] or Tuple[int]]]
             "tile_to_images" mapping to retrieve information about images
             (name and y,x offsets) for a given tile defined by its row, column
-            coordinate and "image_to_tiles" mapping to retrieve tile coordinates
-            for a given image name
+            coordinate and "image_to_tiles" mapping to retrieve tile
+            coordinates for a given image name
         '''
-        cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
+        cycle = self.experiment.plates[0].cycles[self.cycle_index]
         md = cycle.image_metadata
 
         tile_mapper = defaultdict(list)
@@ -577,7 +591,7 @@ class ChannelLayer(Layer):
         logger.info('clip intensity values above %d', clip_value)
 
         # Process tiles that map to one or more images.
-        cycle = self.experiment.plates[0].cycles[self.tpoint_ix]
+        cycle = self.experiment.plates[0].cycles[self.cycle_index]
         if illumcorr:
             stats = cycle.illumstats_images[self.channel_ix]
         md = cycle.image_metadata

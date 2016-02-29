@@ -111,8 +111,8 @@ class MetadataExtractor(ClusterRoutines):
         Not implemented.
         '''
         raise NotImplementedError(
-                '"%s" object has no "collect_job_output" method'
-                % self.prog_name)
+                    'Abstract method "collect_job_output" is '
+                    'not implemented for class "%s"' % self.__class__.__name__)
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
@@ -120,5 +120,5 @@ class MetadataExtractor(ClusterRoutines):
         Not implemented.
         '''
         raise NotImplementedError(
-                    '"%s" object has no "apply_statistics" method'
-                    % self.prog_name)
+                    'Abstract method "apply_statistics" is '
+                    'not implemented for class "%s"' % self.__class__.__name__)

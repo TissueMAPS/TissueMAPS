@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import numpy as np
+from .. import utils
 from .stats import OnlineStatistics
 from .stats import OnlinePercentile
 from ..writers import DatasetWriter
@@ -93,7 +94,8 @@ class IllumstatsGenerator(ClusterRoutines):
                             ]
                         },
                         'channel': channels[i],
-                        'cycle': cycle.index
+                        'cycle': cycle.index,
+                        'tpoint': cycle.tpoint_index
                     })
         return job_descriptions
 
@@ -124,7 +126,8 @@ class IllumstatsGenerator(ClusterRoutines):
             writer.write('/stats/mean', data=stats.mean)
             writer.write('/stats/std', data=stats.std)
             writer.write('/stats/percentile', data=pctl.percentile)
-            writer.write('/metadata/tpoint_ix', data=batch['cycle'])
+            writer.write('/metadata/cycle', data=batch['cycle'])
+            writer.write('/metadata/tpoint_ix', data=batch['tpoint'])
             writer.write('/metadata/channel_ix', data=batch['channel'])
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
@@ -144,7 +147,7 @@ class IllumstatsGenerator(ClusterRoutines):
             well identifiers
         sites: List[int]
             site indices
-        channels: List[str]
+        channels: List[int]
             channel indices
         tpoints: List[int]
             time point (cycle) indices
@@ -160,7 +163,7 @@ class IllumstatsGenerator(ClusterRoutines):
                     continue
             for cycle in plate.cycles:
                 if tpoints:
-                    if cycle.index not in tpoints:
+                    if cycle.tpoint_index not in tpoints:
                         continue
                 md = cycle.image_metadata
                 sld = md.copy()
@@ -190,6 +193,6 @@ class IllumstatsGenerator(ClusterRoutines):
                             output_dir, output_filename)
                         corrected_image.save(output_filename)
 
+    @utils.notimplemented
     def collect_job_output(self, batch):
-        raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
-                             ' method' % self.__class__.__name__)
+        pass

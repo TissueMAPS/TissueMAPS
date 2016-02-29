@@ -22,9 +22,7 @@ def load_method_args(method_name):
 
     Raises
     ------
-    ValueError
-        when `method_name` is not a valid method name
-    AttrbuteError
+    AttributeError
         when the "args" module doesn't contain a method-specific
         implementation of the `Args` base class
     '''
@@ -32,7 +30,7 @@ def load_method_args(method_name):
     try:
         class_name = '%sArgs' % method_name.capitalize()
     except ImportError:
-        raise ValueError('Method "%s" is not available.')
+        raise AttributeError('Method "%s" is not available.')
     return getattr(module, class_name)
 
 

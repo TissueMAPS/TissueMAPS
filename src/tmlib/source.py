@@ -21,6 +21,7 @@ class PlateSource(object):
 
     See also
     --------
+    :py:class:`tmlib.experiment.Experiment`
     :py:class:`tmlib.plate.Plate`
     '''
 
@@ -51,6 +52,7 @@ class PlateSource(object):
             when `plate_source_dir` does not exist
         '''
         self.plate_source_dir = plate_source_dir
+        self.acquisition_mode = acquisition_mode
         if not os.path.exists(self.plate_source_dir):
             raise OSError(
                     'Directory does not exist: %s' % self.plate_source_dir)

@@ -2,6 +2,7 @@ import re
 import os
 import logging
 import numpy as np
+import collections
 from natsort import natsorted
 from cached_property import cached_property
 from . import cfg
@@ -17,11 +18,11 @@ logger = logging.getLogger(__name__)
 
 class Experiment(object):
     '''
-    An *experiment* is a repository for images and associated data.
+    An *experiment* is a collection of images and associated data.
 
-    An *experiment* consists of one or more *plates*. A *plate* is a container
+    It consists of one or more *plates*. A *plate* is a container
     for the imaged biological samples and can be associated with one or more
-    *cycles*, where a *cycle* represents a particular time point of image
+    *cycles*. A *cycle* represents a particular time point of image
     acquisition. In the simplest case, an *experiment* is composed of a single
     *plate* with only one *cycle*.
     
@@ -321,14 +322,16 @@ class Experiment(object):
         names = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
-                t = cycle.index
+                t = cycle.tpoint_index
                 md = cycle.image_metadata
                 channels = np.unique(md['channel_ix'])
                 zplanes = np.unique(md['zplane_ix'])
                 for c in channels:
                     for z in zplanes:
-                        names[(t, c, z)] = cfg.LAYER_NAME_FORMAT.format(
-                                                    t=t, c=c, z=z)
+                        Indices = collections.namedtuple(
+                                    'Indices', ['time', 'channel', 'zplane'])
+                        ix = Indices(t, c, z)
+                        names[ix] = cfg.LAYER_NAME_FORMAT.format(t=t, c=c, z=z)
         return names
 
     @property
@@ -344,16 +347,17 @@ class Experiment(object):
         for plate in self.plates:
             for cycle in plate.cycles:
                 md = cycle.image_metadata
-                for indentifier, name in self.layer_names.items():
-                    if indentifier[0] != cycle.index:
+                for indices, name in self.layer_names.items():
+                    c = indices.channel
+                    z = indices.zplane
+                    if c not in cycle.channel_indices:
                         continue
-                    c = indentifier[1]
-                    z = indentifier[2]
                     metadata = ChannelLayerMetadata()
                     metadata.name = name
                     metadata.channel_ix = c
                     metadata.zplane_ix = z
-                    metadata.tpoint_ix = cycle.index
+                    metadata.cycle_ix = cycle.index
+                    metadata.tpoint_ix = cycle.tpoint_index
                     ix = ((md['channel_ix'] == c) & (md['zplane_ix'] == z))
                     files = md[ix]['name'].tolist()
                     metadata.filenames = [

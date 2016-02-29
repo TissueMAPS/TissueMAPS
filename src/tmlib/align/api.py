@@ -16,6 +16,14 @@ logger = logging.getLogger(__name__)
 
 class ImageRegistration(ClusterRoutines):
 
+    '''
+    Class for registering and aligning images between cycles.
+
+    Note
+    ----
+    Alignment is so far only supported for 2D image datasets.
+    '''
+
     def __init__(self, experiment, prog_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ImageRegistration.
@@ -29,7 +37,7 @@ class ImageRegistration(ClusterRoutines):
         verbosity: int
             logging level
         kwargs: dict
-            mapping of additional key-value pairs that are ignored
+            additional arguments in form of key-value pairs (ignored)
         '''
         super(ImageRegistration, self).__init__(
                 experiment, prog_name, verbosity)
@@ -76,10 +84,18 @@ class ImageRegistration(ClusterRoutines):
         -------
         Dict[str, List[dict] or dict]
             job descriptions
+
+        Raises
+        ------
+        tmlib.errors.NotSupportedError
+            when a plate contains only one cycle or when the image dataset is
+            3 dimensional, i.e. when there is more than one z-plane
+        ValueError  
+            when `args.ref_channel` does not exist across all cycles
         '''
         def get_targets(cycle):
             md = cycle.image_metadata.sort_values('site_ix')
-            ix = md['channel_ix'] == args.ref_channel
+            ix = md['channel_name'] == args.ref_channel
             return md[ix]['name'].tolist()
 
         job_count = 0
@@ -98,18 +114,33 @@ class ImageRegistration(ClusterRoutines):
             'removals': ['registration_files']
         }
         for plate in self.experiment.plates:
+            if len(plate.cycles) == 1:
+                raise NotSupportedError(
+                            'Alignment requires more than one cycle, but '
+                            'plate #%d contains only one cycle.' % plate.index)
             md = plate.cycles[0].image_metadata.sort_values('site_ix')
             if len(np.unique(md['zplane_ix'])) > 1:
                 raise NotSupportedError(
                     'Alignment is currently only supported for 2D datasets.')
-            # TODO: group images per site
-            # (such that all z-planes end up in the same batch)
+            # TODO: group images per site such that all z-planes will end up
+            # in the same batch.
+            # This might be necessary to align 3D stacks where MIPs should
+            # probably be used for the registration rather than the individual
+            # z-planes, since individual planes could be empty and that will
+            # screw up the registration.
             im_batches = [
                 self._create_batches(get_targets(c), args.batch_size)
                 for c in plate.cycles
             ]
-
-            ix = md['channel_ix'] == args.ref_channel
+            # Ensure that the provided reference channel actually exists
+            # across all cycles
+            for cycle in plate.cycles:
+                cycle_md = cycle.image_metadata
+                if not any(cycle_md.channel_name == args.ref_channel):
+                    raise ValueError(
+                            'Channel "%s" does not exist in cycle #%d.'
+                            % (args.ref_channel, cycle.index))
+            ix = md['channel_name'] == args.ref_channel
             sites = md[ix]['site_ix'].tolist()
             site_batches = self._create_batches(sites, args.batch_size)
 
@@ -197,7 +228,7 @@ class ImageRegistration(ClusterRoutines):
         ----------
         batch: dict
             description of the *collect* job
-        
+
         See also
         --------
         :py:func:`tmlib.align.registration.fuse_registration`
@@ -216,8 +247,9 @@ class ImageRegistration(ClusterRoutines):
 
             with JsonWriter() as writer:
                 for j, cycle in enumerate(plate.cycles):
-                    logger.info('collect registration statistics for cycle %s'
-                                % cycle.index)
+                    logger.info(
+                            'collect registration statistics for cycle %s'
+                            % cycle.index)
 
                     a = AlignmentDescription()
                     a.cycle_ix = cycle.index
@@ -267,10 +299,10 @@ class ImageRegistration(ClusterRoutines):
             well identifiers
         sites: List[int]
             site indices
-        channels: List[str]
-            channel indices
         tpoints: List[int]
-            time point (cycle) indices
+            time point indices
+        channels: List[int]
+            channel indices
         zplanes: List[int]
             z-plane indices
         **kwargs: dict
@@ -284,7 +316,7 @@ class ImageRegistration(ClusterRoutines):
                     continue
             for cycle in plate.cycles:
                 if tpoints:
-                    if cycle.index not in tpoints:
+                    if cycle.tpoint_index not in tpoints:
                         continue
                 md = cycle.image_metadata
                 sld = md.copy()

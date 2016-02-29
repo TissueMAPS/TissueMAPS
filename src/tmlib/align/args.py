@@ -12,15 +12,10 @@ class AlignInitArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
-        self.ref_channel = self._ref_channel_params['default']
         self.ref_cycle = self._ref_cycle_params['default']
         self.batch_size = self._batch_size_params['default']
         self.limit = self._limit_params['default']
         super(AlignInitArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return {'ref_channel', 'ref_cycle'}
 
     @property
     def _persistent_attrs(self):
@@ -43,7 +38,7 @@ class AlignInitArgs(VariableArgs):
     def batch_size(self, value):
         if not isinstance(value, self._batch_size_params['type']):
             raise TypeError('Attribute "batch_size" must have type %s'
-                            % self._batch_size_params['type'])
+                            % self._batch_size_params['type'].__name__)
         self._batch_size = value
 
     @property
@@ -71,7 +66,7 @@ class AlignInitArgs(VariableArgs):
     def ref_cycle(self, value):
         if not isinstance(value, self._ref_cycle_params['type']):
             raise TypeError('Attribute "ref_cycle" must have type %s'
-                            % self._ref_cycle_params['type'])
+                            % self._ref_cycle_params['type'].__name__)
         self._ref_cycle = value
 
     @property
@@ -90,21 +85,28 @@ class AlignInitArgs(VariableArgs):
         Returns
         -------
         int
-            zero-based identifier number of the reference channel
+            name of the reference channel
+
+        Note
+        ----
+        The `ref_channel` name must exist in all cycles.
         '''
         return self._ref_channel
 
     @ref_channel.setter
     def ref_channel(self, value):
+        if not isinstance(value, self._ref_channel_params['type']):
+            raise TypeError('Attribute "ref_channel" must have type %s'
+                            % self._ref_channel_params['type'].__name__)
         self._ref_channel = value
 
     @property
     def _ref_channel_params(self):
         return {
-            'type': int,
-            'default': 0,
+            'type': str,
+            'required': True,
             'help': '''
-                zero-based ID of the reference channel (default: 0)
+                name of the reference channel
             '''
         }
 
@@ -128,7 +130,7 @@ class AlignInitArgs(VariableArgs):
     def limit(self, value):
         if not isinstance(value, self._limit_params['type']):
             raise TypeError('Attribute "limit" must have type %s'
-                            % self._limit_params['type'])
+                            % self._limit_params['type'].__name__)
         self._limit = value
 
     @property
@@ -180,7 +182,7 @@ class AlignApplyArgs(VariableArgs):
     def illumcorr(self, value):
         if not isinstance(value, self._illumcorr_params['type']):
             raise TypeError('Attribute "illumcorr" must have type %s'
-                            % self._illumcorr_params['type'])
+                            % self._illumcorr_params['type'].__name__)
         self._illumcorr = value
 
     @property

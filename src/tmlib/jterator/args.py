@@ -16,10 +16,6 @@ class JteratorInitArgs(VariableArgs):
         super(JteratorInitArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline', 'merge'}
 
@@ -77,6 +73,7 @@ class JteratorInitArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''

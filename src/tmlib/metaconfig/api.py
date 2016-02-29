@@ -4,6 +4,7 @@ import logging
 import importlib
 import numpy as np
 import pandas as pd
+from .. import utils
 from .. import cfg
 from ..plate import determine_plate_dimensions
 from ..metadata import ImageFileMapping
@@ -144,6 +145,7 @@ class MetadataConfigurator(ClusterRoutines):
                 ]
             },
             'outputs': {
+                # Plates should be cleaned up upon reconfiguration.
                 'plates_dir': [
                     self.experiment.plates_dir
                 ],
@@ -296,16 +298,24 @@ class MetadataConfigurator(ClusterRoutines):
         '''
         file_mapper = list()
         for i, source in enumerate(self.experiment.sources):
-            # Create new plate
-            self.experiment.add_plate()
+            try:
+                plate = self.experiment.plates[i]
+            except IndexError:
+                plate = self.experiment.add_plate()
             cycle_count = 0
             for acquisition in source.acquisitions:
 
                 metadata = acquisition.image_metadata
 
                 tpoints = np.unique(metadata.tpoint_ix)
-                logger.info('%d time points found in source directory "%s"',
-                            len(tpoints), os.path.basename(acquisition.dir))
+                if source.acquisition_mode == 'multiplexing':
+                    logger.info(
+                            '%d multiplexing iteration found in source # %d',
+                            len(tpoints), acquisition.index)
+                else:
+                    logger.info(
+                            '%d time points found in source # %d',
+                            len(tpoints), acquisition.index)
 
                 # Create a cycle for each acquired time point
                 for t in tpoints:
@@ -313,22 +323,33 @@ class MetadataConfigurator(ClusterRoutines):
                     logger.info('update metadata information for cycle #%d',
                                 cycle_count)
                     try:
-                        cycle = self.experiment.plates[i].cycles[cycle_count]
+                        cycle = plate.cycles[cycle_count]
                     except IndexError:
-                        # Create cycle if it doesn't exist
-                        cycle = self.experiment.plates[i].add_cycle()
+                        cycle = plate.add_cycle()
 
                     # Create a metadata subset that only contains information
                     # about image elements belonging to the currently processed
                     # cycle (time point)
                     md = metadata[metadata.tpoint_ix == t]
                     for ix in md.index:
-                        # Update name according to new time point index
-                        # TODO: In case of a acquistion_mode "series" increment
-                        # time and "multiplexing" increment channel index.
-                        # Time point and cycle index may then no longer be
-                        # identical!!!
-                        md.at[ix, 'tpoint_ix'] = cycle_count
+                        # In case images were acquired as part of a
+                        # "multiplexing" experiment, don't increment the "time"
+                        # but rather the "channel" index, since cycles
+                        # are not acquisitions of the same stains at different
+                        # time points, but rather acquisitions of different
+                        # markers, which are interpreted as different channels.
+                        # The "channel_name" attribute remains unchanged.
+                        if source.acquisition_mode == 'multiplexing':
+                            md.at[ix, 'tpoint_ix'] = 0
+                            if cycle.index > 0:
+                                pre_cycle = self.experiment.plates[i].cycles[
+                                                cycle.index - 1
+                                ]
+                                pre_md = pre_cycle.image_metadata
+                                max_index = np.max(pre_md['channel_ix'])
+                                md.at[ix, 'channel_ix'] += max_index + 1
+                        else:
+                            md.at[ix, 'tpoint_ix'] = t
                         fieldnames = {
                             'p': md.at[ix, 'plate_ix'],
                             'w': md.at[ix, 'well_name'],
@@ -341,7 +362,7 @@ class MetadataConfigurator(ClusterRoutines):
                         md.at[ix, 'name'] = cfg.IMAGE_NAME_FORMAT.format(
                                                         **fieldnames)
 
-                    # Add the corresponding plate name
+                    # Add the corresponding plate index
                     md.plate_ix = pd.Series(
                         np.repeat(source.index, md.shape[0])
                     )
@@ -350,8 +371,7 @@ class MetadataConfigurator(ClusterRoutines):
                     # path to the final image file relative to the experiment
                     # root directory
                     for element in acquisition.image_mapping:
-                        new_element = ImageFileMapping
-                    ()
+                        new_element = ImageFileMapping()
                         new_element.series = element.series
                         new_element.planes = element.planes
                         # Since we assigned new indices, we have to map the
@@ -361,11 +381,11 @@ class MetadataConfigurator(ClusterRoutines):
                             (md.well_name == ref_md.well_name) &
                             (md.well_position_y == ref_md.well_position_y) &
                             (md.well_position_x == ref_md.well_position_x) &
-                            (md.channel_ix == ref_md.channel_ix) &
+                            (md.channel_name == ref_md.channel_name) &
                             (md.zplane_ix == ref_md.zplane_ix)
                         )[0]
                         if len(ix) > 1:
-                            raise ValueError('One than one reference found.')
+                            raise ValueError('More than one reference found.')
                         new_element.ref_index = ix[0]
                         # Update name in the file mapper and make path relative
                         new_element.ref_file = os.path.relpath(os.path.join(
@@ -383,9 +403,11 @@ class MetadataConfigurator(ClusterRoutines):
                         ]
                         file_mapper.append(dict(new_element))
 
-                    # Sort metadata according to name and reset indices
+                    # Images are sorted by filename. To make indexing easier
+                    # sort metadata according to name and reset indices.
                     md = md.sort_values('name')
                     md.index = range(md.shape[0])
+                    md.cycle_ix = np.repeat(cycle.index, md.shape[0])
 
                     # Store the updated metadata in an HDF5 file
                     filename = os.path.join(cycle.dir,
@@ -396,19 +418,19 @@ class MetadataConfigurator(ClusterRoutines):
                     store.close()
 
                     # Remove the intermediate cycle-specific mapper file
+                    # since it is no no longer needed
                     os.remove(os.path.join(acquisition.dir,
                               acquisition.image_mapping_file))
 
                     cycle_count += 1
 
+                logger.info('write metadata to disk')
+
                 with JsonWriter() as writer:
                     filename = batch['outputs']['mapper_files'][i]
                     writer.write(filename, file_mapper)
 
+    @utils.notimplemented
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
-        '''
-        Not implemented.
-        '''
-        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
-                             ' method' % self.__class__.__name__)
+        pass

@@ -76,7 +76,7 @@ def get_task_data(task, description=None):
             'is_done': is_done,
             'failed': is_done and failed,
             'exitcode': task_.execution.exitcode,
-            'percent_done': 0.0  # fix later, if possible, 
+            'percent_done': 0.0  # fix later, if possible
         }
 
         if isinstance(task_, WorkflowStep):
@@ -97,12 +97,20 @@ def get_task_data(task, description=None):
         data['type'] = job_type
 
         done = 0.0
+        if hasattr(task_, '_tasks_to_process'):
+            # Custom sequential task collection classes build the task list
+            # dynamically, so we have to use the number of tasks that should
+            # ultimately be processed to provide an accurate "percent_done"
+            # value.
+            total = len(getattr(task_, '_tasks_to_process'))
+        else:
+            total = len(task_.tasks)
         if isinstance(task_, gc3libs.workflow.TaskCollection):
             for child in task_.tasks:
                 if (child.execution.state == gc3libs.Run.State.TERMINATED):
                     done += 1
             if len(task_.tasks) > 0:
-                data['percent_done'] = done / len(task_.tasks) * 100
+                data['percent_done'] = done / total * 100
             else:
                 data['percent_done'] = 0
         elif isinstance(task_, gc3libs.Task):
@@ -114,7 +122,7 @@ def get_task_data(task, description=None):
                 data['percent_done'] = 100
         else:
             raise NotImplementedError(
-                "Unhandled task class %r" % (task_.__class__))
+                'Unhandled task class %r' % (task_.__class__))
 
         if isinstance(task_, gc3libs.workflow.TaskCollection):
             # loop recursively over subtasks

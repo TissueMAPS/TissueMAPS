@@ -1,10 +1,10 @@
 import os
 import logging
 import numpy as np
-from cached_property import cached_property
-from collections import defaultdict
+import collections
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
+from .. import utils
 from ..layer import ChannelLayer
 from ..readers import DatasetReader
 from ..api import ClusterRoutines
@@ -37,21 +37,6 @@ class PyramidBuilder(ClusterRoutines):
         super(PyramidBuilder, self).__init__(
                 experiment, prog_name, verbosity)
 
-    @cached_property
-    def project_dir(self):
-        '''
-        Returns
-        -------
-        str
-            directory where *.job* files and log output will be stored
-        '''
-        project_dir = os.path.join(
-                            self.experiment.dir, 'tmaps', self.prog_name)
-        if not os.path.exists(project_dir):
-            logger.debug('create project directory: %s' % project_dir)
-            os.makedirs(project_dir)
-        return project_dir
-
     def create_job_descriptions(self, args):
         '''
         Create job descriptions for parallel computing.
@@ -70,12 +55,12 @@ class PyramidBuilder(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
-        for identifier in self.experiment.layer_names.keys():
+        for indices in self.experiment.layer_names.keys():
             layer = ChannelLayer(
                             self.experiment,
-                            tpoint_ix=identifier[0],
-                            channel_ix=identifier[1],
-                            zplane_ix=identifier[2]
+                            tpoint_ix=indices.time,
+                            channel_ix=indices.channel,
+                            zplane_ix=indices.zplane
             )
             for index, level in enumerate(reversed(range(layer.n_zoom_levels))):
                 # NOTE: The pyramid "level" increases from top to bottom.
@@ -96,10 +81,10 @@ class PyramidBuilder(ClusterRoutines):
 
                 for batch in batches:
                     job_count += 1
-                    # NOTE: For the highest resolution level, the input files are
-                    # the original microscope images. For all other levels,
-                    # the input files are the tiles of the next higher resolution
-                    # level (the ones created in the prior run).
+                    # NOTE: For the highest resolution level, the input files
+                    # are the original microscope images. For all other levels,
+                    # the input files are the tiles of the next higher
+                    # resolution level (the ones created in the prior run).
                     # For consistency, the paths to both types of image files
                     # are provided relative to the root pyramid directory.
                     if level == layer.base_level_index:
@@ -129,7 +114,7 @@ class PyramidBuilder(ClusterRoutines):
                     # NOTE: keeping track of input/output files for each job
                     # becomes problematic because the number of tiles increases
                     # exponentially with the number of image files.
-     
+
                     description = {
                         'id': job_count,
                         'inputs': {
@@ -143,9 +128,10 @@ class PyramidBuilder(ClusterRoutines):
                         #     ]
                         # },
                         'outputs': {},
-                        'cycle': layer.tpoint_ix,
+                        'tpoint': layer.tpoint_ix,
                         'channel': layer.channel_ix,
                         'zplane': layer.zplane_ix,
+                        'cycle': layer.metadata.cycle_ix,
                         'level': level,
                         'index': index,
                         'subset_indices': batch
@@ -169,9 +155,10 @@ class PyramidBuilder(ClusterRoutines):
                         'id': job_count,
                         'inputs': {},
                         'outputs': {},
-                        'cycle': layer.tpoint_ix,
+                        'tpoint': layer.tpoint_ix,
                         'channel': layer.channel_ix,
                         'zplane': layer.zplane_ix,
+                        'cycle': layer.metadata.cycle_ix,
                         'level': level,
                         'index': index,
                         'clip_value': None,
@@ -207,7 +194,7 @@ class PyramidBuilder(ClusterRoutines):
 
         if 'run' in job_descriptions.keys():
             logger.info('create jobs for "run" phase')
-            multi_run_jobs = defaultdict(list)
+            multi_run_jobs = collections.defaultdict(list)
             for i, batch in enumerate(job_descriptions['run']):
 
                 job = RunJob(
@@ -223,9 +210,11 @@ class PyramidBuilder(ClusterRoutines):
                     job.requested_memory = Memory(memory, Memory.GB)
                 if cores:
                     if not isinstance(cores, int):
-                        raise TypeError('Argument "cores" must have type int.')
+                        raise TypeError(
+                                'Argument "cores" must have type int.')
                     if not cores > 0:
-                        raise ValueError('The value of "cores" must be positive.')
+                        raise ValueError(
+                                'The value of "cores" must be positive.')
                     job.requested_cores = cores
 
                 multi_run_jobs[batch['index']].append(job)
@@ -276,16 +265,16 @@ class PyramidBuilder(ClusterRoutines):
         '''
         layer = ChannelLayer(
                     self.experiment,
-                    tpoint_ix=batch['cycle'],
+                    tpoint_ix=batch['tpoint'],
                     channel_ix=batch['channel'],
                     zplane_ix=batch['zplane'])
 
         if batch['level'] == layer.base_level_index:
             logger.info(
                     'create base level pyramid tiles for layer "%s": '
-                    'cycle %d, channel %d, z-plane %d',
+                    'tpoint %d, channel %d, z-plane %d',
                     layer.name,
-                    batch['cycle'], batch['cycle'], batch['zplane'])
+                    batch['tpoint'], batch['channel'], batch['zplane'])
             if batch['clip_value'] is None:
                 logger.info('use default clip value')
                 cycle = self.experiment.plates[0].cycles[batch['cycle']]
@@ -309,23 +298,17 @@ class PyramidBuilder(ClusterRoutines):
         else:
             logger.info(
                     'create level %d pyramid tiles for layer "%s": '
-                    'cycle %d, channel %d, z-plane %d',
+                    'tpoint %d, channel %d, z-plane %d',
                     batch['level'], layer.name,
-                    batch['cycle'], batch['cycle'], batch['zplane'])
+                    batch['tpoint'], batch['channel'], batch['zplane'])
             layer.create_downsampled_tiles(
                     batch['level'], batch['subset_indices'])
 
+    @utils.notimplemented
     def collect_job_output(self, batch):
-        '''
-        Not implemented.
-        '''
-        raise AttributeError('"%s" object doesn\'t have a "collect_job_output"'
-                             ' method' % self.__class__.__name__)
+        pass
 
+    @utils.notimplemented
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
-        '''
-        Not implemented.
-        '''
-        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
-                             ' method' % self.__class__.__name__)
+        pass

@@ -595,7 +595,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     for plate in self.experiment.plates:
                         if plate.index != img.metadata.plate_ix:
                             continue
-                        cycle = plate.cycles[img.metadata.tpoint_ix]
+                        cycle = plate.cycles[img.metadata.cycle_ix]
                         stats = cycle.illumstats_images[img.metadata.channel_ix]
                         img = img.correct(stats)
                 logger.info('align images between cycles')
@@ -766,10 +766,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.debug('remove directory: %s', self.data_dir)
         # shutil.rmtree(self.data_dir)
 
+    @utils.notimplemented
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
-        '''
-        Not implemented.
-        '''
-        raise AttributeError('"%s" object doesn\'t have a "apply_statistics"'
-                             ' method' % self.__class__.__name__)
+        pass

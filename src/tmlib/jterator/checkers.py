@@ -278,8 +278,8 @@ class PipelineChecker(object):
                 # Check whether input arguments for current module were produced
                 # upstream in the pipeline
                 for input_arg in handles['input']:
-                    if (input_arg['class'] != 'pipeline'
-                            or input_arg['value'] is None):
+                    if (input_arg['class'] != 'pipeline' or
+                            input_arg['value'] is None):
                         # We only check for non-empty data passed via the HDF5 file
                         continue
                     name = input_arg['value']
@@ -297,9 +297,6 @@ class PipelineChecker(object):
                         if input_arg['value'] not in outputs:
                             # TODO: why does this sometimes happen with the
                             # user interface???
-                            print input_arg['name']
-                            print module['handles']
-                            print handles
                             raise PipelineDescriptionError(
                                     'Input "%s" of module "%s" is not '
                                     'created upstream in the pipeline.'

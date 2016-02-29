@@ -278,7 +278,7 @@ class SequentialWorkflowStage(AbortOnError, SequentialTaskCollection, WorkflowSt
         return index
 
     @cached_property
-    def _steps_to_process(self):
+    def _tasks_to_process(self):
         steps_to_process = list()
         logger.info('start stage at step "%s"',
                     self.description.steps[self._start_index].name)
@@ -297,7 +297,7 @@ class SequentialWorkflowStage(AbortOnError, SequentialTaskCollection, WorkflowSt
                 raise WorkflowTransitionError(
                              'outputs of previous step do not exist')
             logger.debug('create job descriptions for next step')
-        task = self.create_jobs_for_next_step(self._steps_to_process[index])
+        task = self.create_jobs_for_next_step(self._tasks_to_process[index])
         logger.debug('add jobs to the task list')
         self.tasks.append(task)
 
@@ -316,14 +316,14 @@ class SequentialWorkflowStage(AbortOnError, SequentialTaskCollection, WorkflowSt
         '''
         if self.tasks[done].execution.returncode != 0:  # see AbortOnError
             return super(SequentialWorkflowStage, self).next(done)
-        logger.info('step "%s" is done', self._steps_to_process[done].name)
-        if done+1 < len(self._steps_to_process):
+        logger.info('step "%s" is done', self._tasks_to_process[done].name)
+        if done+1 < len(self._tasks_to_process):
             logger.info('waiting ...')
             logger.debug('wait %d seconds', WAIT)
             time.sleep(WAIT)
             try:
                 step_names = [s.name for s in self.description.steps]
-                next_step_name = self._steps_to_process[done+1].name
+                next_step_name = self._tasks_to_process[done+1].name
                 next_step_index = step_names.index(next_step_name) + 1
                 logger.info('transit to next step ({0} of {1}): "{2}"'.format(
                             next_step_index, self.n_steps, next_step_name))
@@ -491,7 +491,7 @@ class Workflow(AbortOnError, SequentialTaskCollection):
         return index
 
     @cached_property
-    def _stages_to_process(self):
+    def _tasks_to_process(self):
         stages_to_process = list()
         stage_name = self.description.stages[self._start_index].name
         logger.info('start workflow at stage "%s"', stage_name)
@@ -502,7 +502,7 @@ class Workflow(AbortOnError, SequentialTaskCollection):
         return stages_to_process
 
     def _add_stage(self, index):
-        stage = self._stages_to_process[index]
+        stage = self._tasks_to_process[index]
         logger.debug('create next stage "%s"', stage.name)
         if self.description.stages[self._start_index].name == stage.name:
             start_step = self.start_step
@@ -541,14 +541,14 @@ class Workflow(AbortOnError, SequentialTaskCollection):
         '''
         if self.tasks[done].execution.returncode != 0:  # see AbortOnError
             return super(Workflow, self).next(done)
-        logger.info('stage "%s" is done', self._stages_to_process[done].name)
-        if done+1 < len(self._stages_to_process):
+        logger.info('stage "%s" is done', self._tasks_to_process[done].name)
+        if done+1 < len(self._tasks_to_process):
             logger.info('waiting ...')
             logger.debug('wait %d seconds', WAIT)
             time.sleep(WAIT)
             try:
                 stage_names = [s.name for s in self.description.stages]
-                next_stage_name = self._stages_to_process[done+1].name
+                next_stage_name = self._tasks_to_process[done+1].name
                 next_stage_index = stage_names.index(next_stage_name) + 1
                 logger.info('transit to next stage ({0} of {1}): "{2}"'.format(
                             next_stage_index, self.n_stages, next_stage_name))
@@ -568,5 +568,6 @@ class Workflow(AbortOnError, SequentialTaskCollection):
                     tb_string += tb
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
+                # TODO: Somehow this doesn't seem to work
                 self.kill()
         return super(Workflow, self).next(done)
