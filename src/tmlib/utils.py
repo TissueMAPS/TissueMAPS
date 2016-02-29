@@ -1,5 +1,5 @@
 '''Decorators and other utility functions.'''
-
+import importlib
 import time
 import datetime
 import re
@@ -274,7 +274,7 @@ def assert_type(**expected):
 
     Parameters
     ----------
-    expected: Dict[str, type or Set[type]], optional
+    expected: Dict[str, str or List[str]], optional
         key-value pairs of names and expected types
         of each argument that should be checked
 
@@ -283,16 +283,22 @@ def assert_type(**expected):
     ValueError
         when a name is provided that is not an argument of the function
     TypeError
-        when type of the function argument doesn't match the expected type
+        when type of the function argument doesn't match the expected type or
+        when `expected` is not provided in the correct type
+
+    Note
+    ----
+    Custom types will by dynamically imported. To this end, they have to be
+    provided with the full name, i.e. including package and module names.
+    The same is true for special built-in types, such as `types.NoneType`.
 
     Examples
     --------
     from tmlib.utils import assert_type
-    import types
 
     class TypeCheckExample(object):
 
-        @assert_type(value1=str, value2={int, float, types.NoneType})
+        @assert_type(value1='str', value2=['int', 'float', 'types.NoneType'])
         def test(self, value1, value2=None):
             print 'value1: "%s"' % value1
             if value2:
@@ -301,11 +307,12 @@ def assert_type(**expected):
     example = TypeCheckExample()
     example.test('blabla', 2)
     example.test('blabla', 2.0)
+    example.test('blabla', None)
     example.test('blabla')
     example.test('blabla', '2')  # raises TypeError
     '''
     def decorator(func):
-        # TODO: use importlib for non-buildin types
+
         def wrapper(*args, **kwargs):
             inputs = inspect.getargspec(func)
             for expected_name, expected_type in expected.iteritems():
@@ -314,15 +321,46 @@ def assert_type(**expected):
                 index = inputs.args.index(expected_name)
                 if index >= len(args):
                     continue
-                ets = set()
-                if isinstance(expected_type, type):
-                    ets = {expected_type}
-                elif isinstance(expected_type, set):
-                    ets = expected_type
+                if isinstance(expected_type, str):
+                    et_strings = [expected_type]
                 elif isinstance(expected_type, list):
-                    ets = set(expected_type)
-                if not any([isinstance(args[index], et) for et in ets]):
-                    options = ' or '.join([et.__name__ for et in ets])
+                    et_strings = expected_type
+                else:
+                    raise TypeError(
+                                'Expected types have to provided as either '
+                                'a string of a list of strings.')
+
+                # Users provide the types as strings. The advantage is that
+                # the corresponding object doesn't have to be imported by the
+                # user. But we have to convert the strings into types and
+                # import custom type objects in order to be able to check their
+                # type.
+                et_types = list()
+                for ets in et_strings:
+                    try:
+                        # First, let's deal with built-in types
+                        ett = eval(ets)
+                    except NameError:
+                        try:
+                            # It's not a built-in type. So we may deal with a
+                            # custom type.
+                            # Let's import the corresponding module and get
+                            # the object for which we want to check the type.
+                            path_parts = ets.split('.')
+                            fullname = '.'.join(path_parts[:-1])
+                            module = importlib.import_module(fullname)
+                            ett = getattr(module, path_parts[-1])
+                        except ImportError:
+                            raise ImportError(
+                                'Import of custom type "%s" failed.' % ets)
+                    if not isinstance(ett, type):
+                        raise TypeError(
+                                'Type of "%s" could not be determined' % ett)
+                    et_types.append(ett)
+
+                # No we have a type object that we can use for the check
+                if not any([isinstance(args[index], ett) for ett in et_types]):
+                    options = ' or '.join([ets for ets in et_strings])
                     raise TypeError('Argument "%s" must have type %s.' %
                                     (expected_name, options))
             return func(*args, **kwargs)
@@ -489,49 +527,49 @@ def notimplemented(func):
     return wrapper
 
 
-# class set_default(object):
+class set_default(object):
 
-#     '''
-#     Decorator class for methods of :py:class:`tmlib.args.Args`.
-#     '''
+    '''
+    Decorator class for methods of :py:class:`tmlib.args.Args`.
+    '''
 
-#     def __init__(self, type=None, help=None, default=None):
-#         '''
-#         Parameters
-#         ----------
-#         type: type
-#             the type that the argument should have
-#         help: str
-#             help message that gives specifics about the argument
-#         default:
-#             default value for the argument
+    def __init__(self, type=None, help=None, default=None):
+        '''
+        Parameters
+        ----------
+        type: type
+            the type that the argument should have
+        help: str
+            help message that gives specifics about the argument
+        default:
+            default value for the argument
 
-#         Raises
-#         ------
-#         TypeError
-#         '''
-#         self.type = type
-#         self.help = help
-#         self.default = default
-#         if self.default is None:
-#             self.required = True
-#         else:
-#             self.required = False
+        Raises
+        ------
+        TypeError
+        '''
+        self.type = type
+        self.help = help
+        self.default = default
+        if self.default is None:
+            self.required = True
+        else:
+            self.required = False
 
-#     def __call__(self, obj):
-#         attr_name = '_%s' % obj.__name__
+    def __call__(self, obj):
+        attr_name = '_%s' % obj.__name__
 
-#         def getter(cls):
-#             if not hasattr(cls, attr_name):
-#                 if self.default is None:
-#                     raise ValueError(
-#                             'Argument "%s" is required.' % obj.__name__)
-#                 setattr(cls, attr_name, self.default)
-#             setattr(cls, '%s_type' % attr_name, self.type)
-#             setattr(cls, '%s_help' % attr_name, self.help)
-#             return obj(cls)
-#         getter.__name__ = obj.__name__
-#         getter.__doc__ = obj.__doc__
+        def getter(cls):
+            if not hasattr(cls, attr_name):
+                if self.default is None:
+                    raise ValueError(
+                            'Argument "%s" is required.' % obj.__name__)
+                setattr(cls, attr_name, self.default)
+            setattr(cls, '%s_type' % attr_name, self.type)
+            setattr(cls, '%s_help' % attr_name, self.help)
+            return obj(cls)
+        getter.__name__ = obj.__name__
+        getter.__doc__ = obj.__doc__
 
-#         return property(getter)
+        return property(getter)
 

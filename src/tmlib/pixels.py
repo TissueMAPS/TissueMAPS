@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import scipy.ndimage as ndi
 from gi.repository import Vips
 from skimage.exposure import rescale_intensity
 from abc import ABCMeta
@@ -104,6 +105,10 @@ class Pixels(object):
 
     @abstractmethod
     def add_background(self, n, side):
+        pass
+
+    @abstractmethod
+    def smooth(self, sigma):
         pass
 
 
@@ -529,6 +534,23 @@ class VipsPixels(Pixels):
             a = self.array.join(a, 'horizontal')
         return VipsPixels(a)
 
+    def smooth(self, sigma):
+        '''
+        Apply a Gaussian smoothing filter to the pixels array.
+
+        Parameters
+        ----------
+        sigma: int
+            size of the standard deviation of the Gaussian kernel
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixels
+            smoothed pixels
+        '''
+        a = self.array.gaussblur(sigma)
+        return VipsPixels(a)
+
 
 class NumpyPixels(Pixels):
 
@@ -935,4 +957,21 @@ class NumpyPixels(Pixels):
             raise ValueError(
                         'Argument "side" must be one of the following: '
                         '"top", "bottom", "left", "right"')
+        return NumpyPixels(a)
+
+    def smooth(self, sigma):
+        '''
+        Apply a Gaussian smoothing filter to the pixels array.
+
+        Parameters
+        ----------
+        sigma: int
+            size of the standard deviation of the Gaussian kernel
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+            smoothed pixels
+        '''
+        a = ndi.filters.gaussian_filter(self.array.gaussblur, sigma)
         return NumpyPixels(a)

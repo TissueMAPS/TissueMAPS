@@ -232,9 +232,8 @@ class BasicClusterRoutines(object):
                 # NOTE: We assume that we are dealing with a sequential
                 # collection of tasks.
                 last_task_state = task.tasks[-1].execution.state
-                if ((last_task_state == gc3libs.Run.State.TERMINATED or
-                        last_task_state == gc3libs.Run.State.STOPPED) and
-                        task.tasks[-1].execution.exitcode is not None):
+                if (last_task_state == gc3libs.Run.State.TERMINATED or
+                        last_task_state == gc3libs.Run.State.STOPPED):
                     break_next = True
                     e.progress()
 
@@ -246,7 +245,7 @@ class BasicClusterRoutines(object):
             e.kill(task)
             e.progress()
 
-        task_data = get_task_data(task)
+        task_data = cluster_utils.get_task_data(task)
         cluster_utils.log_task_failure(task_data, logger)
 
         return task_data

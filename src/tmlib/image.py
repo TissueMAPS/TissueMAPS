@@ -371,7 +371,8 @@ class IllumstatsImages(object):
            Computer vision for image-based transcriptomics. Methods.
     '''
 
-    def __init__(self, mean=None, std=None):
+    def __init__(self, library, mean=None, std=None):
+        self.library = library
         self._mean = mean
         self._std = std
 
@@ -389,11 +390,11 @@ class IllumstatsImages(object):
     def filename(self, value):
         self._filename = value
 
-    def _get_factory(self, library):
-        if library == 'vips':
+    def _get_factory(self):
+        if self.library == 'vips':
             logger.debug('convert numpy array to vips image')
             return VipsPixels.create_from_numpy_array
-        elif library == 'numpy':
+        elif self.library == 'numpy':
             return NumpyPixels
         else:
             return None
@@ -507,8 +508,30 @@ class IllumstatsImages(object):
         '''
         if library not in {'vips', 'numpy'}:
             raise ValueError('Library must be either "vips" or "numpy".')
-        stats = IllumstatsImages()
+        stats = IllumstatsImages(library=library)
         stats.filename = filename
         stats.metadata = metadata
-        stats._factory = stats._get_factory(library)
+        stats._factory = stats._get_factory()
         return stats
+
+    def smooth_stats(self, sigma=5):
+        '''
+        Smooth `mean` and `std` statistic matrices with a Gaussian filter.
+
+        Parameters
+        ----------
+        sigma: int, optional
+            size of the standard deviation of the Gaussian kernel
+            (default: ``5``)
+
+        Note
+        ----
+        The matrices are modified in place.
+        '''
+        self.metadata.is_smoothed = True
+        mean_pxls = self._stats['mean'].pixels.smooth(sigma)
+        self._stats['mean'] = IllumstatsImage(
+                                    pixels=mean_pxls, metadata=self.metadata)
+        std_pxls = self._stats['std'].pixels.smooth(sigma)
+        self._stats['std'] = IllumstatsImage(
+                                    pixels=std_pxls, metadata=self.metadata)

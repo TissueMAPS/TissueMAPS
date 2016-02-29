@@ -594,6 +594,7 @@ class ChannelLayer(Layer):
         cycle = self.experiment.plates[0].cycles[self.cycle_index]
         if illumcorr:
             stats = cycle.illumstats_images[self.channel_ix]
+            stats.smooth_stats()
         md = cycle.image_metadata
         if subset_indices is None:
             logger.info('process all image files')

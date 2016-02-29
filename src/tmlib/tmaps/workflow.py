@@ -443,7 +443,9 @@ class Workflow(StopOnError, SequentialTaskCollection):
         See also
         --------
         :py:class:`tmlib.cfg.UserConfiguration`
-        '''
+       '''
+        # TODO: consider pre-building tasks and then later adding subtasks
+        # (individual jobs)
         super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
         self.experiment = experiment
         self.verbosity = verbosity

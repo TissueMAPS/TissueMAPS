@@ -594,6 +594,9 @@ class IllumstatsImageMetadata(object):
     Class for metadata specific to illumination statistics images.
     '''
 
+    def __init__(self):
+        self.is_smoothed = False
+
     @property
     def tpoint_ix(self):
         '''
@@ -623,8 +626,18 @@ class IllumstatsImageMetadata(object):
     @channel_ix.setter
     def channel_ix(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "channel_ix" must have type int')
+            raise TypeError('Attribute "channel_ix" must have type int.')
         self._channel_ix = value
+
+    @property
+    def is_smoothed(self):
+        return self._is_smoothed
+    
+    @is_smoothed.setter
+    def is_smoothed(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "is_smoothed" must have type bool.')
+        self._is_smoothed = value
 
     @property
     def filename(self):

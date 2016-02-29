@@ -597,6 +597,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             continue
                         cycle = plate.cycles[img.metadata.cycle_ix]
                         stats = cycle.illumstats_images[img.metadata.channel_ix]
+                        stats.smooth_stats()
                         img = img.correct(stats)
                 logger.info('align images between cycles')
                 orig_dims = img.pixels.dimensions
