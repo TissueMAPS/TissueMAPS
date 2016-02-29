@@ -44,7 +44,7 @@ class IlluminatiInitArgs(VariableArgs):
     def batch_size(self, value):
         if not(isinstance(value, self._batch_size_params['type'])):
             raise TypeError('Attribute "batch_size" must have type %s'
-                            % self._batch_size_params['type'])
+                            % self._batch_size_params['type'].__name__)
         self._batch_size = value
 
     @property
@@ -72,7 +72,7 @@ class IlluminatiInitArgs(VariableArgs):
     def align(self, value):
         if not isinstance(value, self._align_params['type']):
             raise TypeError('Attribute "align" must have type %s.'
-                            % self._align_params['type'])
+                            % self._align_params['type'].__name__)
         self._align = value
 
     @property
@@ -100,7 +100,7 @@ class IlluminatiInitArgs(VariableArgs):
     def illumcorr(self, value):
         if not isinstance(value, self._illumcorr_params['type']):
             raise TypeError('Attribute "illumcorr" must have type %s.'
-                            % self._illumcorr_params['type'])
+                            % self._illumcorr_params['type'].__name__)
         self._illumcorr = value
 
     @property
@@ -128,7 +128,7 @@ class IlluminatiInitArgs(VariableArgs):
     def clip(self, value):
         if not isinstance(value, self._clip_params['type']):
             raise TypeError('Attribute "clip" must have type %s.'
-                            % self._clip_params['type'])
+                            % self._clip_params['type'].__name__)
         self._clip = value
 
     @property
@@ -156,7 +156,7 @@ class IlluminatiInitArgs(VariableArgs):
     def clip_values(self, value):
         if not isinstance(value, self._clip_value_params['type']):
             raise TypeError('Attribute "clip_values" must have type %s.'
-                            % self._clip_value_params['type'])
+                            % self._clip_value_params['type'].__name__)
         self._clip_values = value
 
     @property

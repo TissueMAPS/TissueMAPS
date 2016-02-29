@@ -12,9 +12,9 @@ class TmapsSubmitArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
-        super(TmapsSubmitArgs, self).__init__(**kwargs)
         self.stage = self._stage_params['default']
         self.step = self._step_params['default']
+        super(TmapsSubmitArgs, self).__init__(**kwargs)
 
     @property
     def _required_args(self):
@@ -37,7 +37,8 @@ class TmapsSubmitArgs(VariableArgs):
 
     @stage.setter
     def stage(self, value):
-        if not(isinstance(value, self._stage_params['type']) or value is None):
+        if (not(isinstance(value, self._stage_params['type']) or
+                value is None)):
             raise TypeError('Attribute "stage" must have type %s'
                             % self._stage_params['type'].__name__)
         self._stage = value
@@ -65,7 +66,8 @@ class TmapsSubmitArgs(VariableArgs):
 
     @step.setter
     def step(self, value):
-        if not(isinstance(value, self._step_params['type']) or value is None):
+        if (not(isinstance(value, self._step_params['type']) or
+                value is None)):
             raise TypeError('Attribute "step" must have type %s'
                             % self._step_params['type'].__name__)
         self._step = value

@@ -181,7 +181,7 @@ class GeneralArgs(Args):
     def experiment_dir(self, value):
         if not isinstance(value, self._experiment_dir_params['type']):
             raise TypeError('Attribute "backup" must have type %s.'
-                            % self._experiment_dir_params['type'])
+                            % self._experiment_dir_params['type'].__name__)
         self._experiment_dir = value
 
     @property
@@ -210,7 +210,7 @@ class GeneralArgs(Args):
     def verbosity(self, value):
         if not isinstance(value, self._verbosity_params['type']):
             raise TypeError('Attribute "backup" must have type %s.'
-                            % self._verbosity_params['type'])
+                            % self._verbosity_params['type'].__name__)
         self._experiment_dir = value
 
     @property
@@ -307,7 +307,7 @@ class InitArgs(GeneralArgs):
     def backup(self, value):
         if not isinstance(value, self._backup_params['type']):
             raise TypeError('Attribute "backup" must have type %s.'
-                            % self._backup_params['type'])
+                            % self._backup_params['type'].__name__)
         self._backup = value
 
     @property
@@ -336,7 +336,7 @@ class InitArgs(GeneralArgs):
     def keep_output(self, value):
         if not isinstance(value, self._keep_output_params['type']):
             raise TypeError('Attribute "keep_output" must have type %s.'
-                            % self._keep_output_params['type'])
+                            % self._keep_output_params['type'].__name__)
         self._keep_output = value
 
     @property
@@ -400,10 +400,10 @@ class SubmitArgs(GeneralArgs):
         if value is None:
             self._jobs = value
             return
-        if any([not isinstance(e, self._jobs_params['type']) for e in value]):
+        if any([not isinstance(e, self._jobs_params['type'].__name__) for e in value]):
             raise TypeError(
                     'Elements of attribute "jobs" must have type %s.'
-                    % self._jobs_params['type'])
+                    % self._jobs_params['type'].__name__)
         self._jobs = value
 
     @property
@@ -433,7 +433,7 @@ class SubmitArgs(GeneralArgs):
     def phase(self, value):
         if not(isinstance(value, self._phase_params['type']) or value is None):
             raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'])
+                            % self._phase_params['type'].__name__)
         self._phase = value
 
     @property
@@ -462,7 +462,7 @@ class SubmitArgs(GeneralArgs):
         if not(isinstance(value, self._interval_params['type']) or
                value is None):
             raise TypeError('Attribute "interval" must have type %s'
-                            % self._interval_params['type'])
+                            % self._interval_params['type'].__name__)
         self._interval = value
 
     @property
@@ -491,7 +491,7 @@ class SubmitArgs(GeneralArgs):
     def depth(self, value):
         if not isinstance(value, self._depth_params['type']):
             raise TypeError('Attribute "depth" must have type %s'
-                            % self._depth_params['type'])
+                            % self._depth_params['type'].__name__)
         self._depth = value
 
     @property
@@ -519,7 +519,7 @@ class SubmitArgs(GeneralArgs):
     def duration(self, value):
         if not isinstance(value, self._duration_params['type']):
             raise TypeError('Attribute "duration" must have type %s'
-                            % self._duration_params['type'])
+                            % self._duration_params['type'].__name__)
         match = re.search(r'(?P<h>\d{2}):(?P<m>\d{2}):(?P<s>\d{2})', value)
         results = match.groupdict()
         if any([r is None for r in results.values()]):
@@ -553,7 +553,7 @@ class SubmitArgs(GeneralArgs):
     def memory(self, value):
         if not isinstance(value, self._memory_params['type']):
             raise TypeError('Attribute "memory" must have type %s'
-                            % self._memory_params['type'])
+                            % self._memory_params['type'].__name__)
         self._memory = value
 
     @property
@@ -581,7 +581,7 @@ class SubmitArgs(GeneralArgs):
     def cores(self, value):
         if not isinstance(value, self._cores_params['type']):
             raise TypeError('Attribute "cores" must have type %s'
-                            % self._cores_params['type'])
+                            % self._cores_params['type'].__name__)
         self._cores = value
 
     @property
@@ -610,7 +610,7 @@ class SubmitArgs(GeneralArgs):
     def backup(self, value):
         if not isinstance(value, self._backup_params['type']):
             raise TypeError('Attribute "backup" must have type %s.'
-                            % self._backup_params['type'])
+                            % self._backup_params['type'].__name__)
         self._backup = value
 
     @property
@@ -673,10 +673,10 @@ class ResubmitArgs(GeneralArgs):
         if value is None:
             self._jobs = value
             return
-        if any([not isinstance(e, self._jobs_params['type']) for e in value]):
+        if any([not isinstance(e, self._jobs_params['type'].__name__) for e in value]):
             raise TypeError(
                     'Elements of attribute "jobs" must have type %s.'
-                    % self._jobs_params['type'])
+                    % self._jobs_params['type'].__name__)
         self._jobs = value
 
     @property
@@ -706,7 +706,7 @@ class ResubmitArgs(GeneralArgs):
     def phase(self, value):
         if not(isinstance(value, self._phase_params['type']) or value is None):
             raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'])
+                            % self._phase_params['type'].__name__)
         self._phase = value
 
     @property
@@ -736,7 +736,7 @@ class ResubmitArgs(GeneralArgs):
         if not(isinstance(value, self._interval_params['type']) or
                value is None):
             raise TypeError('Attribute "interval" must have type %s'
-                            % self._interval_params['type'])
+                            % self._interval_params['type'].__name__)
         self._interval = value
 
     @property
@@ -765,7 +765,7 @@ class ResubmitArgs(GeneralArgs):
     def depth(self, value):
         if not isinstance(value, self._depth_params['type']):
             raise TypeError('Attribute "depth" must have type %s'
-                            % self._depth_params['type'])
+                            % self._depth_params['type'].__name__)
         self._depth = value
 
     @property
@@ -793,7 +793,7 @@ class ResubmitArgs(GeneralArgs):
     def duration(self, value):
         if not isinstance(value, self._duration_params['type']):
             raise TypeError('Attribute "duration" must have type %s'
-                            % self._duration_params['type'])
+                            % self._duration_params['type'].__name__)
         self._duration = value
 
     @property
@@ -822,7 +822,7 @@ class ResubmitArgs(GeneralArgs):
     def memory(self, value):
         if not isinstance(value, self._memory_params['type']):
             raise TypeError('Attribute "memory" must have type %s'
-                            % self._memory_params['type'])
+                            % self._memory_params['type'].__name__)
         self._memory = value
 
     @property
@@ -850,7 +850,7 @@ class ResubmitArgs(GeneralArgs):
     def cores(self, value):
         if not isinstance(value, self._cores_params['type']):
             raise TypeError('Attribute "cores" must have type %s'
-                            % self._cores_params['type'])
+                            % self._cores_params['type'].__name__)
         self._cores = value
 
     @property
@@ -932,7 +932,7 @@ class RunArgs(GeneralArgs):
     def job(self, value):
         if not isinstance(value, self._job_params['type']):
             raise TypeError('Attribute "job" must have type %s'
-                            % self._job_params['type'])
+                            % self._job_params['type'].__name__)
         self._job = value
 
     @property
@@ -979,7 +979,7 @@ class LogArgs(GeneralArgs):
     def phase(self, value):
         if not(isinstance(value, self._phase_params['type']) or value is None):
             raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'])
+                            % self._phase_params['type'].__name__)
         self._phase = value
 
     @property
@@ -1007,7 +1007,7 @@ class LogArgs(GeneralArgs):
     def job(self, value):
         if not(isinstance(value, self._job_params['type']) or value is None):
             raise TypeError('Attribute "job" must have type %s'
-                            % self._job_params['type'])
+                            % self._job_params['type'].__name__)
         self._job = value
 
     @property
@@ -1055,7 +1055,7 @@ class InfoArgs(GeneralArgs):
     def phase(self, value):
         if not(isinstance(value, self._phase_params['type']) or value is None):
             raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'])
+                            % self._phase_params['type'].__name__)
         self._phase = value
 
     @property
@@ -1083,7 +1083,7 @@ class InfoArgs(GeneralArgs):
     def job(self, value):
         if not(isinstance(value, self._job_params['type']) or value is None):
             raise TypeError('Attribute "job" must have type %s'
-                            % self._job_params['type'])
+                            % self._job_params['type'].__name__)
         self._job = value
 
     @property
@@ -1138,7 +1138,7 @@ class ApplyArgs(GeneralArgs):
     def output_dir(self, value):
         if not isinstance(value, self._output_dir_params['type']):
             raise TypeError('Attribute "output_dir" must have type %s',
-                            self._output_dir_params['type'])
+                            self._output_dir_params['type'].__name__)
         self._output_dir = str(value)
 
     @property
@@ -1167,12 +1167,12 @@ class ApplyArgs(GeneralArgs):
             if not isinstance(value, list):
                 raise TypeError('Attribute "plates" must have type list')
             if not(all([
-                        isinstance(v, self._plates_params['type'])
+                        isinstance(v, self._plates_params['type'].__name__)
                         for v in value
                     ])):
                 raise TypeError(
                         'Elements of attribute "plates" must have type %s'
-                        % self._plates_params['type'])
+                        % self._plates_params['type'].__name__)
         self._plates = value
 
     @property
@@ -1203,12 +1203,12 @@ class ApplyArgs(GeneralArgs):
             if not isinstance(value, list):
                 raise TypeError('Attribute "wells" must have type list')
             if not(all([
-                        isinstance(v, self._wells_params['type'])
+                        isinstance(v, self._wells_params['type'].__name__)
                         for v in value
                     ])):
                 raise TypeError(
                         'Elements of attribute "wells" must have type %s'
-                        % self._wells_params['type'])
+                        % self._wells_params['type'].__name__)
         self._wells = value
 
     @property
@@ -1239,12 +1239,12 @@ class ApplyArgs(GeneralArgs):
             if not isinstance(value, list):
                 raise TypeError('Attribute "channels" must have type list')
             if not(all([
-                        isinstance(v, self._channels_params['type'])
+                        isinstance(v, self._channels_params['type'].__name__)
                         for v in value
                     ])):
                 raise TypeError(
                         'Elements of attribute "channels" must have type %s'
-                        % self._channels_params['type'])
+                        % self._channels_params['type'].__name__)
         self._channels = value
 
     @property
@@ -1275,12 +1275,12 @@ class ApplyArgs(GeneralArgs):
             if not isinstance(value, list):
                 raise TypeError('Attribute "zplanes" must have type list')
             if not(all([
-                        isinstance(v, self._zplanes_params['type'])
+                        isinstance(v, self._zplanes_params['type'].__name__)
                         for v in value
                     ])):
                 raise TypeError(
                         'Elements of attribute "zplanes" must have type %s'
-                        % self._zplanes_params['type'])
+                        % self._zplanes_params['type'].__name__)
         self._zplanes = value
 
     @property
@@ -1311,12 +1311,12 @@ class ApplyArgs(GeneralArgs):
             if not isinstance(value, list):
                 raise TypeError('Attribute "tpoints" must have type list')
             if not(all([
-                        isinstance(v, self._tpoints_params['type'])
+                        isinstance(v, self._tpoints_params['type'].__name__)
                         for v in value
                     ])):
                 raise TypeError(
                         'Elements of attribute "tpoints" must have type %s'
-                        % self._tpoints_params['type'])
+                        % self._tpoints_params['type'].__name__)
         self._tpoints = value
 
     @property
@@ -1347,12 +1347,12 @@ class ApplyArgs(GeneralArgs):
             if not(isinstance(value, list)):
                 raise TypeError('Attribute "sites" must have type list')
             if not(all([
-                        isinstance(v, self._sites_params['type'])
+                        isinstance(v, self._sites_params['type'].__name__)
                         for v in value
                     ])):
                 raise TypeError(
                         'Elements of attribute "sites" must have type %s'
-                        % self._sites_params['type'])
+                        % self._sites_params['type'].__name__)
         self._sites = value
 
     @property

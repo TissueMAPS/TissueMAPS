@@ -48,7 +48,7 @@ class MetaconfigInitArgs(VariableArgs):
     def file_format(self, value):
         if not isinstance(value, self._file_format_params['type']):
             raise TypeError('Attribute "file_format" must have type %s'
-                            % self._file_format_params['type'])
+                            % self._file_format_params['type'].__name__)
         options = set(self._file_format_params['choices'])
         options.add(self._file_format_params['default'])
         if value not in options:
@@ -83,7 +83,7 @@ class MetaconfigInitArgs(VariableArgs):
     def keep_z_stacks(self, value):
         if not isinstance(value, self._keep_z_stacks_params['type']):
             raise TypeError('Attribute "keep_z_stacks" must have type %s.'
-                            % self._keep_z_stacks_params['type'])
+                            % self._keep_z_stacks_params['type'].__name__)
         self._keep_z_stacks = value
 
     @property
@@ -111,10 +111,10 @@ class MetaconfigInitArgs(VariableArgs):
 
     @regex.setter
     def regex(self, value):
-        if not(isinstance(value, self._regex_params['type'])
-               or value is None):
+        if not(isinstance(value, self._regex_params['type']) or
+               value is None):
             raise TypeError('Attribute "regex" must have type %s'
-                            % self._regex_params['type'])
+                            % self._regex_params['type'].__name__)
         self._regex = value
 
     @property
@@ -144,7 +144,7 @@ class MetaconfigInitArgs(VariableArgs):
     def stitch_layout(self, value):
         if not isinstance(value, self._stitch_layout_params['type']):
             raise TypeError('Attribute "stitch_layout" must have type %s'
-                            % self._stitch_layout_params['type'])
+                            % self._stitch_layout_params['type'].__name__)
         options = self._stitch_layout_params['choices']
         if value not in options:
             raise ValueError('Attribute of "stitch_layout" must be "%s"'
@@ -181,7 +181,7 @@ class MetaconfigInitArgs(VariableArgs):
     def stitch_major_axis(self, value):
         if not isinstance(value, self._stitch_major_axis_params['type']):
             raise TypeError('Attribute "stitch_major_axis" must have type %s'
-                            % self._stitch_major_axis_params['type'])
+                            % self._stitch_major_axis_params['type'].__name__)
         options = self._stitch_major_axis_params['choices']
         if value not in options:
             raise ValueError('Attribute of "stitch_major_axis" must be "%s"'
@@ -212,10 +212,10 @@ class MetaconfigInitArgs(VariableArgs):
 
     @n_vertical.setter
     def n_vertical(self, value):
-        if not(isinstance(value, self._n_vertical_params['type'])
-               or value is None):
+        if not(isinstance(value, self._n_vertical_params['type']) or
+               value is None):
             raise TypeError('Attribute "n_vertical" must have type %s'
-                            % self._n_vertical_params['type'])
+                            % self._n_vertical_params['type'].__name__)
         self._n_vertical = value
 
     @property
@@ -243,10 +243,10 @@ class MetaconfigInitArgs(VariableArgs):
 
     @n_horizontal.setter
     def n_horizontal(self, value):
-        if not(isinstance(value, self._n_horizontal_params['type'])
-               or value is None):
+        if not(isinstance(value, self._n_horizontal_params['type']) or
+               value is None):
             raise TypeError('Attribute "n_horizontal" must have type %s'
-                            % self._n_horizontal_params['type'])
+                            % self._n_horizontal_params['type'].__name__)
         self._n_horizontal = value
 
     @property

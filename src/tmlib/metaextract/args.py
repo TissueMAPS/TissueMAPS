@@ -38,7 +38,7 @@ class MetaextractInitArgs(VariableArgs):
     def batch_size(self, value):
         if not(isinstance(value, self._batch_size_params['type'])):
             raise TypeError('Attribute "batch_size" must have type %s'
-                            % self._batch_size_params['type'])
+                            % self._batch_size_params['type'].__name__)
         self._batch_size = value
 
     @property

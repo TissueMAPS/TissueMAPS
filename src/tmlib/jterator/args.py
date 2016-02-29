@@ -38,7 +38,7 @@ class JteratorInitArgs(VariableArgs):
     def merge(self, value):
         if not isinstance(value, self._merge_params['type']):
             raise TypeError('Argument "merge" must have type %s'
-                            % self._merge_params['type'])
+                            % self._merge_params['type'].__name__)
         self._merge = value
 
     @property
@@ -66,7 +66,7 @@ class JteratorInitArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -116,7 +116,7 @@ class JteratorRunArgs(VariableArgs):
     def plot(self, value):
         if not isinstance(value, self._plot_params['type']):
             raise TypeError('Attribute "plot" must have type %s.'
-                            % self._plot_params['type'])
+                            % self._plot_params['type'].__name__)
         self._plot = value
 
     @property
@@ -144,7 +144,7 @@ class JteratorRunArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -192,7 +192,7 @@ class JteratorSubmitArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -240,7 +240,7 @@ class JteratorResubmitArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -288,7 +288,7 @@ class JteratorCollectArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -336,7 +336,7 @@ class JteratorLogArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -384,7 +384,7 @@ class JteratorInfoArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -435,7 +435,7 @@ class JteratorCreateArgs(VariableArgs):
         if not(isinstance(value, self._repo_dir_params['type']) or
                 value is None):
             raise TypeError('Attribute "repo_dir" must have type %s'
-                            % self._repo_dir_params['type'])
+                            % self._repo_dir_params['type'].__name__)
         self._repo_dir = value
 
     @property
@@ -463,7 +463,7 @@ class JteratorCreateArgs(VariableArgs):
         if not(isinstance(value, self._skel_dir_params['type']) or
                 value is None):
             raise TypeError('Attribute "skel_dir" must have type %s'
-                            % self._skel_dir_params['type'])
+                            % self._skel_dir_params['type'].__name__)
         self._skel_dir = value
 
     @property
@@ -490,7 +490,7 @@ class JteratorCreateArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -538,7 +538,7 @@ class JteratorCheckArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
@@ -586,7 +586,7 @@ class JteratorRemoveArgs(VariableArgs):
     def pipeline(self, value):
         if not isinstance(value, self._pipeline_params['type']):
             raise TypeError('Argument "pipeline" must have type %s'
-                            % self._pipeline_params['type'])
+                            % self._pipeline_params['type'].__name__)
         self._pipeline = value
 
     @property
