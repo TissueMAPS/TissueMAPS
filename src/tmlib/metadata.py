@@ -213,7 +213,6 @@ class ImageMetadata(object):
         if not isinstance(value, int):
             raise TypeError('Attribute "cycle_ix" must have type int')
         self._cycle_ix = value
-    
 
     @property
     def upper_overhang(self):
