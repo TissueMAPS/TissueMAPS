@@ -468,7 +468,6 @@ class Workflow(StopOnError, SequentialTaskCollection):
                         'Argument "start_step" also requires '
                         'argument "start_stage".')
         self.tasks = list()
-        import pdb; pdb.set_trace()
         self._add_stage(0)
 
     @property
