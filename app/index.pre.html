@@ -66,7 +66,8 @@
       <script src="src/uiState.js" type="text/javascript" charset="utf-8"></script>
       <script src="build/compiled-ts.js" type="text/javascript" charset="utf-8"></script>
       <!-- Other files -->
-      <!-- include: "type": "js", "files": ["src/workbench/**/*.js", "!src/workbench/**/*.test.js"] -->
+      <!-- include: "type": "js", "files": ["src/auth/**/*.js", "!src/auth/**/*.test.js"] -->
+      <!-- include: "type": "js", "files": ["src/viewer/**/*.js", "!src/viewer/**/*.test.js"] -->
       <!-- include: "type": "js", "files": ["src/userpanel/**/*.js", "!src/userpanel/**/*.test.js"] -->
       <!-- include: "type": "js", "files": ["src/setup/**/*.js", "!src/setup/**/*.test.js"] -->
 
@@ -112,16 +113,16 @@
 
 <!-- Somehow the keyUp and keyDown events need to be on different elements (html and body in this case) in order for both of them to fire. -->
 <!-- This wasn't a problem up until switching to the newest angular version. -->
-<body >
+<body>
 
   <div ng-controller="AppCtrl as appCtrl" ng-keydown="app.keyDown($event)" ng-keyup="app.keyUp($event)" style="display: block;">
-    <div class='appbar' tm-appbar></div>
 
-    <!-- The main view holding the workbench, the setup window or the userpanel. -->
-    <!-- Since the DOM of the workbenches should not be reinserted by the UI router, its -->
-    <!-- container div is made invisible using a onLeave-event instead of using ui-view. --> 
-    <div class="main-window" id="workbench-view" ng-include="'/src/workbench/workbench.html'"></div>
-    <div class="main-window" ui-view="main-window"></div>
+     <div class='appbar' tm-appbar></div>
+     <!-- The main view holding the viewer, the setup window or the userpanel. -->
+     <!-- Since the DOM of the viewers should not be reinserted by the UI router, its -->
+     <!-- container div is made invisible using a onLeave-event instead of using ui-view. --> 
+     <div class="main-window" id="viewer-window" ng-include="'/src/viewer/viewer.html'"></div>
+     <div class="main-window" ui-view="main-window"></div>
   </div>
 
 

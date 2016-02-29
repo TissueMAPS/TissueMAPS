@@ -3,22 +3,24 @@ angular.module('tmaps.ui')
              function($stateProvider, $urlRouterProvider, $locationProvider) {
 
     // For any unmatched url redirect to root
-    $urlRouterProvider.otherwise('/welcome');
+    $urlRouterProvider.otherwise('/login');
 
     $stateProvider
-    .state('content', {
-        abstract: true,
-        templateUrl: '/templates/main/content.html',
-    })
-    .state('welcome', {
-        parent: 'content',
-        url: '/welcome',
-        templateUrl: '/templates/main/welcome.html',
+    .state('login', {
+        url: '/login',
+        views: {
+            'main-window': {
+                templateUrl: '/src/login.html'
+            }
+        },
         data: {
             loginRequired: false
         },
-        onEnter: ['application', function(app) {
-            app.hideViewports();
+    })
+    .state('user', {
+        url: '/app/:username',
+        onEnter: ['$state', function($state) {
+            $state.go('userpanel')
         }]
     })
     .state('workbench', {

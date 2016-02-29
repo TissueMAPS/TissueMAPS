@@ -1,23 +1,23 @@
 // the ViewCtrl on the tm-view div enables control over everything view related.
 // For example, broadcasting messages to all UI elements in the view can be made using 
 // $scope.viewCtrl.broadcast(msg, data);
-angular.module('tmaps.ui').directive('tmWorkbenchWindowView', [function() {
+angular.module('tmaps.ui').directive('tmViewerWindowView', [function() {
     return {
         restrict: 'EA',
-        controller: 'WorkbenchViewCtrl',
-        controllerAs: 'workbenchViewCtrl',
+        controller: 'ViewerWindowCtrl',
+        controllerAs: 'viewerWindowCrtl',
         bindToController: true
     };
 }]);
 
-interface WorkbenchViewScope extends ng.IScope {
+interface ViewerWindowScope extends ng.IScope {
 
 }
 
-class WorkbenchViewCtrl {
+class ViewerWindowCtrl {
     static $inject = ['$scope'];
 
-    constructor(public $scope: WorkbenchViewScope) {
+    constructor(public $scope: ViewerWindowScope) {
 
     }
 
@@ -26,4 +26,4 @@ class WorkbenchViewCtrl {
     }
 
 }
-angular.module('tmaps.ui').controller('WorkbenchViewCtrl', WorkbenchViewCtrl);
+angular.module('tmaps.ui').controller('ViewerWindowCtrl', ViewerWindowCtrl);

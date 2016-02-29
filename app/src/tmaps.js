@@ -1,4 +1,9 @@
 (function() {
+    // Modules
+    angular.module('tmaps.auth', [
+        'ui.bootstrap'
+    ]);
+
     /**
      * Injectable third-party modules.
      */
@@ -16,7 +21,7 @@
     angular.module('tmaps.core', [
         'tmaps.thirdpartymodules',
         'ui.bootstrap',
-        'tmauth'
+        'tmaps.auth'
     ]);
 
     angular.module('tmaps.ui', [
@@ -25,7 +30,7 @@
         'ui.slider',
         'ui.bootstrap',
         'ui.router',
-        'tmauth'
+        'tmaps.auth'
     ]);
 
     // Declare the main module.
@@ -34,7 +39,7 @@
         'tmaps.ui',
         'tmaps.toolwindow',  // TODO: remove this
 
-        'tmauth',
+        'tmaps.auth',
 
         // Thirdparty code
         'ui.router',

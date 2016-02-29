@@ -1,10 +1,10 @@
-angular.module('tmaps.ui').directive('tmWorkbenchesTabbar', [function() {
+angular.module('tmaps.ui').directive('tmViewersTabbar', [function() {
     return {
         restrict: 'EA',
         controller: [function() {
 
         }],
-        controllerAs: 'workbenchesTabbarCtrl',
+        controllerAs: 'viewersTabbarCtrl',
         bindToController: true
     };
 }]);

@@ -65,22 +65,22 @@
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
 
-        "app/src/workbench/tmWorkbenchView.ts",
-        "app/src/workbench/tmWorkbench.ts",
-        "app/src/workbench/tmWorkbenchesContainer.ts",
-        "app/src/workbench/tmWorkbenchesTabbar.ts",
-        "app/src/workbench/toolwindow/ToolWindowCtrl.ts",
-        "app/src/workbench/toolbar/tmToolbar.ts",
-        "app/src/workbench/toolbar/ToolbarCtrl.ts",
-        "app/src/workbench/sidebar/selections/SelectionSettingsCtrl.ts",
-        "app/src/workbench/sidebar/selections/SelectionControlsCtrl.ts",
-        "app/src/workbench/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
-        "app/src/workbench/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
-        "app/src/workbench/sidebar/visuallayers/VisualLayerCtrl.ts",
+        "app/src/viewer/tmViewerWindow.ts",
+        "app/src/viewer/tmViewer.ts",
+        "app/src/viewer/tmViewersContainer.ts",
+        "app/src/viewer/tmViewersTabbar.ts",
+        "app/src/viewer/toolwindow/ToolWindowCtrl.ts",
+        "app/src/viewer/toolbar/tmToolbar.ts",
+        "app/src/viewer/toolbar/ToolbarCtrl.ts",
+        "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",
+        "app/src/viewer/sidebar/selections/SelectionControlsCtrl.ts",
+        "app/src/viewer/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
+        "app/src/viewer/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
+        "app/src/viewer/sidebar/visuallayers/VisualLayerCtrl.ts",
 
-        "app/src/userpanel/UserpanelViewCtrl.ts",
+        "app/src/userpanel/UserpanelWindowCtrl.ts",
 
-        "app/src/setup/SetupViewCtrl.ts"
+        "app/src/setup/SetupWindowCtrl.ts"
 
     ]
 }
