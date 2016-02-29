@@ -23,8 +23,8 @@ angular.module('tmaps.ui')
             $state.go('userpanel')
         }]
     })
-    .state('workbench', {
-        url: '/workbench?loadex=expids&state=stateid&snapshot=snapshotid',
+    .state('viewer', {
+        url: '/viewer?loadex=expids&state=stateid&snapshot=snapshotid',
         reloadOnSearch: false,
         onEnter: ['application', '$stateParams', 'appstateService',
                   function(app, $stateParams, appstateService) {
