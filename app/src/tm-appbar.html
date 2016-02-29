@@ -19,31 +19,39 @@
       <!-- ng-click="appbarCtrl.appstateService.shareState()" -->
       <!-- ng-hide="appbarCtrl.appstateService.currentState.isSnapshot"> -->
       <!-- <i class="fa fa-globe"></i> -->
+    </li><li ui-sref="workbench">
+      <a>
+        <i class="fa fa-eye"></i>
+      </a>
+    </li><li ui-sref="setup">
+      <a>
+        <i class="fa fa-wrench"></i>
+      </a>
     </li>
   </ul>
 
   <!-- <div class="spacer"></div> -->
 
-  <span class="session-label">
-    <b>
-      {{ appbarCtrl.appstateService.currentState.name || 'unnamed session' }}
-    </b>
-  </span>
+  <!-- <span class="session-label"> -->
+  <!--   <b> -->
+  <!--     {{ appbarCtrl.appstateService.currentState.name || 'unnamed session' }} -->
+  <!--   </b> -->
+  <!-- </span> -->
 
-  <span class="session-info"
-        ng-show="appbarCtrl.appstateService.lastSavedAt">
-    (saved {{ appbarCtrl.appstateService.lastSavedAt | moment: 'fromNow' }})
-  </span>
+  <!-- <span class="session-info" -->
+  <!--       ng-show="appbarCtrl.appstateService.lastSavedAt"> -->
+  <!--   (saved {{ appbarCtrl.appstateService.lastSavedAt | moment: 'fromNow' }}) -->
+  <!-- </span> -->
 
-  <span class="session-info" ng-show="appbarCtrl.appstateService.currentState.isSnapshot">
-    <b>VIEWING SNAPSHOT</b>
-    (session can't be saved)
-  </span>
+  <!-- <span class="session-info" ng-show="appbarCtrl.appstateService.currentState.isSnapshot"> -->
+  <!--   <b>VIEWING SNAPSHOT</b> -->
+  <!--   (session can't be saved) -->
+  <!-- </span> -->
 
   <div class="user-indicator">
 
     <div ng-show="appCtrl.isUserAuthenticated()">
-      <a ui-sref="viewport.userpanel">
+      <a ui-sref="userpanel">
         <b>{{ appCtrl.getUser().name}}</b>
       </a>
       <a ui-sref="welcome" ng-click="appCtrl.logout()">(logout)</a>
