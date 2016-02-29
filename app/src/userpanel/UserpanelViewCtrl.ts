@@ -1,5 +1,5 @@
 angular.module('tmaps.ui')
-.controller('UserpanelWindowCtrl',
+.controller('UserpanelViewCtrl',
             ['appstateService', 'session', '$scope', '$state', 'application', '$location',
              function(appstateService, session, $scope, $state, app, $location) {
 
