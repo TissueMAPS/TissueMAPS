@@ -19,7 +19,7 @@ from ..jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
 
-WAIT = 60  # make an argument for submission of workflows?
+WAIT = 120  # make an argument for submission of workflows?
 
 
 def load_step_interface(step_name):
@@ -316,6 +316,10 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
         -------
         gc3libs.Run.State
         '''
+        if self.execution.state == gc3libs.Run.State.STOPPED:
+            return gc3libs.Run.State.STOPPED
+        elif self.execution.state == gc3libs.Run.State.TERMINATED:
+            return gc3libs.Run.State.TERMINATED
         if self.tasks[done].execution.returncode != 0:  # see AbortOnError
             return super(SequentialWorkflowStage, self).next(done)
         logger.info('step "%s" is done', self._tasks_to_process[done].name)
@@ -347,7 +351,7 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping stage "%s"', self.name)
                 self.execution.state = gc3libs.Run.State.STOPPED
-                sys.exit(1)
+                return gc3libs.Run.State.STOPPED
         return super(SequentialWorkflowStage, self).next(done)
 
 
@@ -544,6 +548,10 @@ class Workflow(StopOnError, SequentialTaskCollection):
         -------
         gc3libs.Run.State
         '''
+        if self.execution.state == gc3libs.Run.State.STOPPED:
+            return gc3libs.Run.State.STOPPED
+        elif self.execution.state == gc3libs.Run.State.TERMINATED:
+            return gc3libs.Run.State.TERMINATED
         if self.tasks[done].execution.returncode != 0:  # see AbortOnError
             return super(Workflow, self).next(done)
         logger.info('stage "%s" is done', self._tasks_to_process[done].name)
@@ -575,5 +583,5 @@ class Workflow(StopOnError, SequentialTaskCollection):
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping workflow "%s"', self.name)
                 self.execution.state = gc3libs.Run.State.STOPPED
-                sys.exit(1)
+                return gc3libs.Run.State.STOPPED
         return super(Workflow, self).next(done)
