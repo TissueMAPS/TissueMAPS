@@ -516,7 +516,9 @@ class IllumstatsImages(object):
 
     def smooth_stats(self, sigma=5):
         '''
-        Smooth `mean` and `std` statistic matrices with a Gaussian filter.
+        Smooth mean and standard deviation statistic matrices with a
+        Gaussian filter. This is useful to prevent outliers pixels with
+        extreme values to introduce artifacts into the image upon correction.
 
         Parameters
         ----------
@@ -531,7 +533,9 @@ class IllumstatsImages(object):
         self.metadata.is_smoothed = True
         mean_pxls = self._stats['mean'].pixels.smooth(sigma)
         self._stats['mean'] = IllumstatsImage(
-                                    pixels=mean_pxls, metadata=self.metadata)
+                                    pixels=mean_pxls,
+                                    metadata=self.metadata)
         std_pxls = self._stats['std'].pixels.smooth(sigma)
         self._stats['std'] = IllumstatsImage(
-                                    pixels=std_pxls, metadata=self.metadata)
+                                    pixels=std_pxls,
+                                    metadata=self.metadata)

@@ -50,8 +50,10 @@ def format_timestamp(elapsed_time):
         formatted timestamp
     '''
     return '{:d}:{:02d}:{:02d}'.format(
-                            *reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
-                                    [(int(elapsed_time),), 60, 60]))
+                *reduce(
+                    lambda ll, b: divmod(ll[0], b) + ll[1:],
+                    [(int(elapsed_time),), 60, 60]
+                ))
 
 
 def get_task_data(task, description=None):
@@ -191,13 +193,12 @@ def print_task_status(task_data, monitoring_depth):
                 add_row_recursively(subtd, table, i+1)
     x = PrettyTable([
             'Name', 'Type', 'State', 'Done (%)',
-            'Time', 'Memory (KB)', 'ExitCode', 'ID'
+            'Time (HH:MM:SS)', 'Memory (KB)', 'ExitCode', 'ID'
     ])
     x.align['Name'] = 'l'
     x.align['Type'] = 'l'
     x.align['State'] = 'l'
     x.align['Done (%)'] = 'r'
-    x.align['Time'] = 'r'
     x.align['Memory (KB)'] = 'r'
     x.align['ID'] = 'r'
     x.padding_width = 1

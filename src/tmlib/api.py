@@ -139,16 +139,34 @@ class BasicClusterRoutines(object):
             shutil.move(self.session_dir, backup_dir)
         return Session(self.session_dir)
 
-    def submit_jobs(self, session, monitoring_interval=5, monitoring_depth=1,
-                    n_submit=2000):
+    def create_engine(self):
         '''
-        Create a GC3Pie engine that submits jobs to a cluster
-        and continuously monitor the progress of jobs.
+        Create an `Engine` instance for submitting jobs for parallel
+        processing.
+
+        Returns
+        -------
+        gc3libs.core.Engine
+            engine
+        '''
+        logger.debug('create engine')
+        engine = gc3libs.create_engine()
+        # Put all output files in the same directory
+        logger.debug('store stdout/stderr in common output directory')
+        engine.retrieve_overwrites = True
+        return engine
+
+    def submit_jobs(self, jobs, engine, monitoring_interval=5,
+                    monitoring_depth=1, n_submit=2000):
+        '''
+        Submit jobs to a cluster and continuously monitor their progress.
 
         Parameters
         ----------
-        session: gc3libs.session.Session
-            session with jobs that should be submitted
+        jobs: tmlib.tmaps.workflow.WorkflowStep
+            jobs that should be submitted
+        engine: gc3libs.core.Engine
+            engine that should submit the jobs
         monitoring_interval: int, optional
             monitoring interval in seconds (default: ``5``)
         monitoring_depth: int, optional
@@ -162,88 +180,53 @@ class BasicClusterRoutines(object):
         dict
             information about each job
 
-        Note
-        ----
-        Jobs are not persistent. Once you cancel the program, all information
-        about jobs is lost and you cannot resume the submission.
+        Warning
+        -------
+        This method is intended for interactive use via the command line only.
         '''
         logger.debug('monitoring interval: %d seconds' % monitoring_interval)
-
+        logger.debug('monitoring depth: %d' % monitoring_depth)
         if monitoring_depth < 0:
             monitoring_depth = 0
-        logger.debug('monitoring depth: %d' % monitoring_depth)
 
-        # Create an `Engine` instance for running jobs in parallel
-        logger.debug('create engine')
-        e = gc3libs.create_engine()
-        # Put all output files in the same directory
-        logger.debug('store stdout/stderr in common output directory')
-        e.retrieve_overwrites = True
         # Limit the total number of jobs that can be submitted simultaneously
-        e.max_submitted = n_submit
-        e.max_in_flight = n_submit
-        logger.debug('set maximum number of submitted jobs to %d',
-                     e.max_submitted)
+        logger.debug('set maximum number of submitted jobs to %d', n_submit)
+        engine.max_submitted = n_submit
+        engine.max_in_flight = n_submit
 
-        # Add jobs in session to engine instance
-        logger.debug('add jobs to engine')
-        if not isinstance(session, Session):
-            raise TypeError(
-                    'Argument "session" must be a GC3Pie session object.')
-        e._store = session.store
-        task_ids = session.list_ids()
-        # if len(task_ids) != 1:
-        #     raise ValueError('Session should only contain a single task.')
-        logger.debug('add task "%s" to engine', task_ids[-1])
-        task = session.load(task_ids[-1])
-        # NOTE: This changes the id of the object!
-        if not isinstance(task, TaskCollection):
-            raise TypeError(
-                    'The session should contain a '
-                    'gc3libs.workflow.TaskCollection')
-        logger.debug('add task %s to engine', task)
-        e.add(task)
+        logger.debug('add jobs %s to engine', jobs)
+        engine.add(jobs)
 
         # periodically check the status of submitted jobs
         t_submitted = time.time()
-        try:
-            break_next = False
-            while True:
+        break_next = False
+        while True:
 
-                time.sleep(monitoring_interval)
-                logger.debug('wait %d seconds', monitoring_interval)
+            time.sleep(monitoring_interval)
+            logger.debug('wait %d seconds', monitoring_interval)
 
-                t_elapsed = time.time() - t_submitted
-                t_string = cluster_utils.format_timestamp(t_elapsed)
-                logger.info('duration: %s', t_string)
+            t_elapsed = time.time() - t_submitted
+            t_string = cluster_utils.format_timestamp(t_elapsed)
+            logger.info('duration: %s', t_string)
 
-                logger.info('progress ...')
-                e.progress()
+            logger.info('progress ...')
+            engine.progress()
 
-                task_data = cluster_utils.get_task_data(task)
+            status_data = cluster_utils.get_task_data(jobs)
+            cluster_utils.print_task_status(status_data, monitoring_depth)
 
-                cluster_utils.print_task_status(task_data, monitoring_depth)
+            if break_next:
+                break
 
-                if break_next:
-                    break
+            if (jobs.execution.state == gc3libs.Run.State.TERMINATED or
+                    jobs.execution.state == gc3libs.Run.State.STOPPED):
+                break_next = True
+                engine.progress()  # one more iteration to update status_data
 
-                if (task.execution.state == gc3libs.Run.State.TERMINATED or
-                        task.execution.state == gc3libs.Run.State.STOPPED):
-                    break_next = True
-                    e.progress()
+        status_data = cluster_utils.get_task_data(jobs)
+        cluster_utils.log_task_failure(status_data, logger)
 
-        except KeyboardInterrupt:
-            # User interrupted process, which should kill all running jobs
-            # TODO: only "stop" them so that we can resume later
-            logger.info('killing jobs')
-            logger.debug('killing task %s', task)
-            e.kill(task)
-            e.progress()
-
-        task_data = cluster_utils.get_task_data(task)
-        cluster_utils.log_task_failure(task_data, logger)
-
-        return task_data
+        return status_data
 
 
 class ClusterRoutines(BasicClusterRoutines):

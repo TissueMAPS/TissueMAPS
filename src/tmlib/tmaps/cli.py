@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 class Tmaps(object):
 
     '''
-    Command line interface for the TissueMAPS workflow manager.
+    Command line interface for building, submitting, and monitoring
+    `TissueMAPS` workflows.
     '''
 
     def __init__(self, experiment, verbosity, **kwargs):
@@ -72,7 +73,20 @@ class Tmaps(object):
         session = api.create_session(backup=args.backup)
         session.add(jobs)
         session.save_all()
-        api.submit_jobs(session, args.interval, args.depth)
+        logger.debug('add session to engine store')
+        engine = api.create_engine()
+        engine._store = session.store
+        logger.info('submit and monitor jobs')
+        try:
+            api.submit_jobs(jobs, engine, args.interval, args.depth)
+        except KeyboardInterrupt:
+            logger.info('processing interrupted')
+            logger.info('killing jobs')
+            while True:
+                engine.kill(jobs)
+                engine.progress()
+                if jobs.is_terminated:
+                    break
 
     def resume(self, args):
         '''
@@ -87,9 +101,24 @@ class Tmaps(object):
         self._print_logo()
         logger.info('resume workflow')
         api = self._api_instance
-        logger.debug('load jobs from session')
         session = api.create_session(overwrite=False)
-        api.submit_jobs(session, args.interval, args.depth)
+        logger.debug('add session to engine store')
+        engine = api.create_engine()
+        engine._store = session.store
+        logger.debug('load jobs from session')
+        task_ids = session.list_ids()
+        jobs = session.load(task_ids[-1])
+        logger.info('submit and monitor jobs')
+        try:
+            api.submit_jobs(jobs, engine, args.interval, args.depth)
+        except KeyboardInterrupt:
+            logger.info('processing interrupted')
+            logger.info('killing jobs')
+            while True:
+                engine.kill(jobs)
+                engine.progress()
+                if jobs.is_terminated:
+                    break
 
     def _call(self, args):
         method_args = cli.create_cli_method_args(

@@ -552,10 +552,20 @@ class CommandLineInterface(object):
         logger.debug('add jobs to session "%s"', api.session_dir)
         session.add(jobs)
         session.save_all()
+        logger.debug('add session to engine store')
+        engine = api.create_engine()
+        engine._store = session.store
         logger.info('submit and monitor jobs')
-        api.submit_jobs(session,
-                        monitoring_interval=args.interval,
-                        monitoring_depth=args.depth)
+        try:
+            api.submit_jobs(jobs, engine, args.interval, args.depth)
+        except KeyboardInterrupt:
+            logger.info('processing interrupted')
+            logger.info('killing jobs')
+            while True:
+                engine.kill(jobs)
+                engine.progress()
+                if jobs.is_terminated:
+                    break
 
     def resubmit(self, args):
         '''
@@ -592,10 +602,20 @@ class CommandLineInterface(object):
         logger.debug('add jobs to session "%s"', api.session_dir)
         session.add(jobs)
         session.save_all()
-        logger.info('submit and monitor jobs')
-        api.submit_jobs(session,
-                        monitoring_interval=args.interval,
-                        monitoring_depth=args.depth)
+        logger.debug('add session to engine store')
+        engine = api.create_engine()
+        engine._store = session.store
+        logger.info('resubmit and monitor jobs')
+        try:
+            api.submit_jobs(jobs, engine, args.interval, args.depth)
+        except KeyboardInterrupt:
+            logger.info('processing interrupted')
+            logger.info('killing jobs')
+            while True:
+                engine.kill(jobs)
+                engine.progress()
+                if jobs.is_terminated:
+                    break
 
     def collect(self, args):
         '''

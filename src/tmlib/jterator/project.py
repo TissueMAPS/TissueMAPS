@@ -115,10 +115,12 @@ class JtProject(object):
             return pipe_files[0]
         elif len(pipe_files) > 1:
             raise PipelineOSError(
-                    'More than more .pipe file found: %s' % directory)
+                    'More than more pipeline descriptor file found: %s'
+                    % directory)
         else:
             raise PipelineOSError(
-                    'No .pipe file found: %s' % directory)
+                    'No pipeline descriptor file found: %s'
+                    % directory)
 
     def _get_handles_files(self, directory=None):
         if not directory:

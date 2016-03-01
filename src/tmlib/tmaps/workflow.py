@@ -107,11 +107,61 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection):
         '''
         return super(WorkflowStep, self).next(done)
 
+    @property
+    def is_terminated(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state TERMINATED
+        '''
+        return self.execution.state == gc3libs.Run.State.TERMINATED
+
+    @property
+    def is_running(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state RUNNING
+        '''
+        return self.execution.state == gc3libs.Run.State.RUNNING
+
+    @property
+    def is_stopped(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state STOPPED
+        '''
+        return self.execution.state == gc3libs.Run.State.STOPPED
+
+    @property
+    def is_submitted(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state SUBMITTED
+        '''
+        return self.execution.state == gc3libs.Run.State.SUBMITTED
+
+    @property
+    def is_new(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is state NEW
+        '''
+        return self.execution.state == gc3libs.Run.State.NEW
+
 
 class WorkflowStage(object):
 
     '''
-    Base class for a TissueMAPS workflow stage.
+    Base class for `TissueMAPS` workflow stages.
     '''
 
     def __init__(self, name, experiment, verbosity, description=None):
@@ -218,12 +268,62 @@ class WorkflowStage(object):
                         cores=step_description.cores)
         return jobs
 
+    @property
+    def is_terminated(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state TERMINATED
+        '''
+        return self.execution.state == gc3libs.Run.State.TERMINATED
+
+    @property
+    def is_running(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state RUNNING
+        '''
+        return self.execution.state == gc3libs.Run.State.RUNNING
+
+    @property
+    def is_stopped(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state STOPPED
+        '''
+        return self.execution.state == gc3libs.Run.State.STOPPED
+
+    @property
+    def is_submitted(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state SUBMITTED
+        '''
+        return self.execution.state == gc3libs.Run.State.SUBMITTED
+
+    @property
+    def is_new(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is state NEW
+        '''
+        return self.execution.state == gc3libs.Run.State.NEW
+
 
 class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
 
     '''
-    Class for a sequential TissueMAPS workflow stage, which is composed of one
-    or more dependent workflow steps that will be processed one after another.
+    Class for a `TissueMAPS` workflow stage, which is composed of
+    one or more dependent workflow steps that will be processed sequentially.
     The number of jobs must be known for the first step of the stage,
     but it is usually unknown for the subsequent steps, since their input
     depends on the output of previous steps. Subsequent steps are thus build
@@ -331,9 +431,9 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
             # We only stop the workflow, so that the workflow could in principle
             # be resumed later.
             return gc3libs.Run.State.STOPPED
-        if self.execution.state == gc3libs.Run.State.STOPPED:
+        if self.is_stopped:
             return gc3libs.Run.State.STOPPED
-        elif self.execution.state == gc3libs.Run.State.TERMINATED:
+        elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
         logger.info('step "%s" is done', self._tasks_to_process[done].name)
         if done+1 < len(self._tasks_to_process):
@@ -348,11 +448,6 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
                             next_step_index, self.n_steps, next_step_name))
                 self._add_step(done+1)
                 return gc3libs.Run.State.RUNNING
-            except KeyboardInterrupt:
-                logger.info('processing interrupted by used')
-                logger.info('aborting stage "%s"', self.name)
-                self.kill()
-                return gc3libs.Run.State.RUNNING
             except Exception as error:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 logger.error('transition to next stage failed: %s', error)
@@ -366,7 +461,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping stage "%s"', self.name)
                 self.execution.state = gc3libs.Run.State.STOPPED
-                return gc3libs.Run.State.STOPPED
+                raise
         else:
             return gc3libs.Run.State.TERMINATED
 
@@ -498,6 +593,56 @@ class Workflow(SequentialTaskCollection):
         self._add_stage(0)
 
     @property
+    def is_terminated(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state TERMINATED
+        '''
+        return self.execution.state == gc3libs.Run.State.TERMINATED
+
+    @property
+    def is_running(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state RUNNING
+        '''
+        return self.execution.state == gc3libs.Run.State.RUNNING
+
+    @property
+    def is_stopped(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state STOPPED
+        '''
+        return self.execution.state == gc3libs.Run.State.STOPPED
+
+    @property
+    def is_submitted(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the step is in state SUBMITTED
+        '''
+        return self.execution.state == gc3libs.Run.State.SUBMITTED
+
+    @property
+    def is_new(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is state NEW
+        '''
+        return self.execution.state == gc3libs.Run.State.NEW
+
+    @property
     def n_stages(self):
         '''
         Returns
@@ -577,9 +722,9 @@ class Workflow(SequentialTaskCollection):
         self.execution.returncode = self.tasks[done].execution.returncode
         if self.execution.returncode != 0:
             return gc3libs.Run.State.STOPPED
-        if self.execution.state == gc3libs.Run.State.STOPPED:
+        if self.is_stopped:
             return gc3libs.Run.State.STOPPED
-        elif self.execution.state == gc3libs.Run.State.TERMINATED:
+        elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
         logger.info('stage "%s" is done', self._tasks_to_process[done].name)
         if done+1 < len(self._tasks_to_process):
@@ -594,11 +739,6 @@ class Workflow(SequentialTaskCollection):
                             next_stage_index, self.n_stages, next_stage_name))
                 self._add_stage(done+1)
                 return gc3libs.Run.State.RUNNING
-            except KeyboardInterrupt:
-                logger.info('processing interrupted by used')
-                logger.info('killing workflow "%s"', self.name)
-                self.kill()
-                return gc3libs.Run.State.TERMINATED
             except Exception as error:
                 logger.error('transition to next stage failed: %s', error)
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -612,6 +752,6 @@ class Workflow(SequentialTaskCollection):
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping workflow "%s"', self.name)
                 self.execution.state = gc3libs.Run.State.STOPPED
-                return gc3libs.Run.State.STOPPED
+                raise
         else:
             return gc3libs.Run.State.TERMINATED

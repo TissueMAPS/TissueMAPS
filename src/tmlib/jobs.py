@@ -2,7 +2,7 @@ import logging
 from gc3libs.workflow import AbortOnError
 from abc import ABCMeta
 from abc import abstractproperty
-from gc3libs import Application
+import gc3libs
 # from abc import abstractmethod
 # from gc3libs.workflow import RetryableTask
 from gc3libs.workflow import SequentialTaskCollection
@@ -12,7 +12,7 @@ from .utils import create_datetimestamp
 logger = logging.getLogger(__name__)
 
 
-class Job(Application):
+class Job(gc3libs.Application):
 
     '''
     Abstract base class for a `TissueMAPS` job.
@@ -85,6 +85,56 @@ class Job(Application):
         '''
         # TODO
         return super(Job, self).retry()
+
+    @property
+    def is_terminated(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is in state TERMINATED
+        '''
+        return self.execution.state == gc3libs.Run.State.TERMINATED
+
+    @property
+    def is_running(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is in state RUNNING
+        '''
+        return self.execution.state == gc3libs.Run.State.RUNNING
+
+    @property
+    def is_stopped(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is in state STOPPED
+        '''
+        return self.execution.state == gc3libs.Run.State.STOPPED
+
+    @property
+    def is_submitted(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is in state SUBMITTED
+        '''
+        return self.execution.state == gc3libs.Run.State.SUBMITTED
+
+    @property
+    def is_new(self):
+        '''
+        Returns
+        -------
+        bool
+            whether the job is state NEW
+        '''
+        return self.execution.state == gc3libs.Run.State.NEW
 
 
 class RunJob(Job):

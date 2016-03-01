@@ -95,10 +95,6 @@ class JteratorRunArgs(VariableArgs):
         super(JteratorRunArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline', 'plot'}
 
@@ -151,6 +147,7 @@ class JteratorRunArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -171,10 +168,6 @@ class JteratorSubmitArgs(VariableArgs):
         super(JteratorSubmitArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline'}
 
@@ -199,6 +192,7 @@ class JteratorSubmitArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -219,10 +213,6 @@ class JteratorResubmitArgs(VariableArgs):
         super(JteratorResubmitArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline'}
 
@@ -247,6 +237,7 @@ class JteratorResubmitArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -267,10 +258,6 @@ class JteratorCollectArgs(VariableArgs):
         super(JteratorCollectArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline'}
 
@@ -295,6 +282,7 @@ class JteratorCollectArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -315,10 +303,6 @@ class JteratorLogArgs(VariableArgs):
         super(JteratorLogArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline'}
 
@@ -343,6 +327,7 @@ class JteratorLogArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -363,10 +348,6 @@ class JteratorInfoArgs(VariableArgs):
         super(JteratorInfoArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline'}
 
@@ -391,6 +372,7 @@ class JteratorInfoArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -411,10 +393,6 @@ class JteratorCreateArgs(VariableArgs):
         self.repo_dir = self._repo_dir_params['default']
         self.skel_dir = self._skel_dir_params['default']
         super(JteratorCreateArgs, self).__init__(**kwargs)
-
-    @property
-    def _required_args(self):
-        return {'pipeline'}
 
     @property
     def _persistent_attrs(self):
@@ -454,7 +432,7 @@ class JteratorCreateArgs(VariableArgs):
         Returns
         -------
         str
-            path to a directory that represents a project skeleton 
+            path to a directory that represents a project skeleton
         '''
         return self._skel_dir
 
@@ -497,6 +475,7 @@ class JteratorCreateArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -517,10 +496,6 @@ class JteratorCheckArgs(VariableArgs):
         super(JteratorCheckArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline'}
 
@@ -545,6 +520,7 @@ class JteratorCheckArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
@@ -565,10 +541,6 @@ class JteratorRemoveArgs(VariableArgs):
         super(JteratorRemoveArgs, self).__init__(**kwargs)
 
     @property
-    def _required_args(self):
-        return {'pipeline'}
-
-    @property
     def _persistent_attrs(self):
         return {'pipeline'}
 
@@ -593,6 +565,7 @@ class JteratorRemoveArgs(VariableArgs):
     def _pipeline_params(self):
         return {
             'type': str,
+            'required': True,
             'help': '''
                 name of the pipeline that should be processed
             '''
