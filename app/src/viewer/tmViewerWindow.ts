@@ -1,28 +1,43 @@
 // the ViewCtrl on the tm-view div enables control over everything view related.
 // For example, broadcasting messages to all UI elements in the view can be made using 
 // $scope.viewCtrl.broadcast(msg, data);
-angular.module('tmaps.ui').directive('tmViewerWindowView', [function() {
+angular.module('tmaps.ui').directive('tmViewerWindow', [function() {
     return {
         restrict: 'EA',
         controller: 'ViewerWindowCtrl',
-        controllerAs: 'viewerWindowCrtl',
+        controllerAs: 'viewerWindowCtrl',
         bindToController: true
     };
 }]);
 
 interface ViewerWindowScope extends ng.IScope {
-
+    viewerWindowCtrl: ViewerWindowCtrl;
 }
 
 class ViewerWindowCtrl {
-    static $inject = ['$scope'];
+    static $inject = ['$scope', 'application', '$document'];
 
-    constructor(public $scope: ViewerWindowScope) {
+    private viewers: AppInstance[];
 
+    constructor(private $scope: ViewerWindowScope,
+                private application: Application,
+                private $document: ng.IDocumentService) {
+        this.viewers = application.appInstances;
     }
 
-    broadcast(message: string, data: any) {
-        this.$scope.$broadcast(message, data);
+    selectViewer(viewer: AppInstance) {
+        if (!viewer.active) {
+            this.viewers.forEach((v) => {
+                if (v.active) {
+                    v.active = false;
+                }
+            });
+            viewer.active = true;
+        }
+    }
+
+    deleteViewer(viewer: AppInstance) {
+        this.application.removeViewer(viewer);
     }
 
 }

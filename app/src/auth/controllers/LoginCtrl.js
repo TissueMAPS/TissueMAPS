@@ -1,6 +1,6 @@
 angular.module('tmaps.auth')
-.controller('LoginCtrl', ['$scope', '$rootScope', 'authService',
-            function($scope, $rootScope, authService) {
+.controller('LoginCtrl', ['$scope', '$rootScope', 'authService', '$state',
+            function($scope, $rootScope, authService, $state) {
 
     var self = this;
 
@@ -14,6 +14,12 @@ angular.module('tmaps.auth')
     };
 
     this.login = function() {
-        authService.login(self.form.username, self.form.password);
+        authService.login(self.form.username, self.form.password)
+        .then(function(user) {
+            $state.go('userpanel');
+        },
+        function(err) {
+            console.log(err);
+        });
     };
 }]);

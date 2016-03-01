@@ -8,44 +8,74 @@
 @import "variables.less";
 @import "modals.less";
 @import "grid.less";
-@import "layout.less";
 
 @import "login.less";
 
 @import "appbar/appbar.less";
-@import "appbar/tabbar.less";
 
 @import "userpanel/userpanel.less";
 
 @import "setup/setup.less";
 
-@import "view/ol.less";
-@import "view/toolbar/toolbar.less";
-@import "view/content.less";
-@import "view/sidebar/sidebar.less";
-@import "view/sidebar/settings-boxes.less";
-@import "view/widgets/multi-selection-box.less";
+@import "viewer/viewer-window.less";
+@import "viewer/viewers-tabbar.less";
+@import "viewer/toolbar/toolbar.less";
+@import "viewer/toolwindow/toolwindow.less";
+@import "viewer/sidebar/sidebar.less";
+@import "viewer/sidebar/settings-boxes.less";
+@import "viewer/widgets/multi-selection-box.less";
 
 @middle-container-center-width: 400px;
 @middle-container-center-height: 300px;
 @middle-container-center-padding: 20px;
 
-.middle-container-center {
-    margin: 0 auto;
-    width: @middle-container-center-width;
-    height: @middle-container-center-height;
-
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    margin: (-1 * @middle-container-center-height / 2 - @middle-container-center-padding/2 - 20px) 0 0 (-1 * @middle-container-center-width / 2);
-
-    padding: @middle-container-center-padding;
-    border-radius: 10px;
-
-    color: @panel-bg-color;
-
-    font-size: 1.5em;
-
-    border: 1px solid @panel-bg-color;
+html, body {
+    width: 100vw;
+    height: 100vh;
 }
+
+body {
+    font-family: Helvetica, 'Trebuchet MS', sans-serif;
+    // background: @viewport-bg;
+    background-image: url("/resources/img/mocha.png");
+    background-repeat: repeat;
+    position: relative;
+}
+
+.app, .main-window {
+    height: 100%;
+}
+
+.app {
+    overflow: hidden;
+}
+
+// .middle-container {
+//     height: calc(~'100% - @{top-container-height}');
+//     position: relative;
+// }
+
+// .middle-container-center {
+//     margin: 0 auto;
+//     width: @middle-container-center-width;
+//     height: @middle-container-center-height;
+
+//     position: absolute;
+//     left: 50%;
+//     top: 50%;
+//     margin: (-1 * @middle-container-center-height / 2 - @middle-container-center-padding/2 - 20px) 0 0 (-1 * @middle-container-center-width / 2);
+
+//     padding: @middle-container-center-padding;
+//     border-radius: 10px;
+
+//     color: @panel-bg-color;
+
+//     font-size: 1.5em;
+
+//     border: 1px solid @panel-bg-color;
+// }
+
+// // This container holds the instance tabs and an "Add Experiment" button.
+// .top-container {
+//     height: @top-container-height + 1; //  because of border
+// }

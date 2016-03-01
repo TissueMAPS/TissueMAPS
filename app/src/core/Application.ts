@@ -1,3 +1,4 @@
+// TODO: Rename to ViewerApp
 class Application {
 
     appInstances: AppInstance[] = [];
@@ -21,6 +22,15 @@ class Application {
         }
     }
 
+    removeViewer(viewer: AppInstance) {
+        var idx = this.appInstances.indexOf(viewer);
+        if (idx > -1) {
+            var viewer = this.appInstances[idx];
+            viewer.destroy();
+            this.appInstances.splice(idx, 1);
+        }
+    }
+
     /**
      * Hide the whole viewport part of TissueMAPS.
      * Note that this will keep the active viewports. After calling
@@ -28,82 +38,28 @@ class Application {
      * This function is called whenever the route sate changes away from the
      * visualization state.
      */
-    hideViewports() {
-        this.$('.app').hide();
+    hide() {
+        this.$('#viewer-window').hide();
     }
 
     /**
      * Show the appInstances after hiding them with `hideViewports`.
      */
-    showViewports() {
-        this.$('.app').show();
+    show() {
+        this.$('#viewer-window').show();
         this.appInstances.forEach((inst) => {
-            inst.viewport.map.then(function(map) {
-                map.updateSize();
-            });
+            inst.viewport.update();
         });
     }
 
-    removeAppInstance(num: number) {
-        this.appInstances[num].destroy();
-        this.appInstances.splice(num, 1);
-        if (num === this._activeAppInstanceNumber) {
-            if (num >= 1) {
-                // There are still insts with lower number
-                this.setActiveAppInstanceByNumber(num - 1);
-            } else if (this.appInstances.length > 0) {
-                // There are still inst(s) with higher number
-                this.setActiveAppInstanceByNumber(0);
-            } else {
-                // this was the last inst
-            }
-        }
-    }
-
-    destroyAllAppInstances() {
-        for (var i in this.appInstances) {
-            this.appInstances[i].destroy();
-            this.appInstances.splice(i, 1);
-        }
-        this._activeAppInstanceNumber = -1;
-    }
-
-    setActiveAppInstanceByNumber(num: number) {
-        var oldActive = this.getActiveAppInstance();
-        this._activeAppInstanceNumber = num;
-        var newActive = this.getActiveAppInstance();
-        if (oldActive) {
-            // If the inst wasn't deleted
-            oldActive.setInactive();
-        }
-        newActive.setActive();
-    }
-
-    setActiveAppInstance(inst: AppInstance) {
-        var nr = this.appInstances.indexOf(inst);
-        this.setActiveAppInstanceByNumber(nr);
-    }
-
-    getActiveAppInstanceNumber(): number {
-        return this._activeAppInstanceNumber;
-    }
-
-    // TODO: Remove as many dependencies on this function as possible!
-    // Widgets etc. should know the appInstance they belong to.
-    getActiveAppInstance(): AppInstance {
-        return this.appInstances[this._activeAppInstanceNumber];
-    }
-
-    addExperiment(experiment: Experiment) {
+    viewExperiment(experiment: Experiment) {
         // TODO: Depending on the experiment's type, create a different type of appInstance.
         // TODO: Class viewport and experiment should be abstract.
-        var inst = new AppInstance(experiment);
-        inst.addExperimentToViewport();
-
+        var isFirstExperiment = this.appInstances.length === 0;
+        var inst = new AppInstance(experiment, {
+            active: isFirstExperiment
+        });
         this.appInstances.push(inst);
-        if (this.appInstances.length === 1) {
-            this.setActiveAppInstance(inst);
-        }
 
         return inst;
     }

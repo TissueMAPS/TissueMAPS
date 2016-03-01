@@ -9,7 +9,7 @@ angular.module('tmaps.ui')
         bindToController: true,
         controllerAs: 'visualLayerCtrl',
         controller: 'VisualLayerSettingsCtrl',
-        templateUrl: '/src/ui/sidebar/visuallayers/tm-visuallayer-settings.html'
+        templateUrl: '/src/viewer/sidebar/visuallayers/tm-visuallayer-settings.html'
     };
 });
 

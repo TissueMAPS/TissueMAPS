@@ -27,7 +27,7 @@ abstract class Tool {
 
     createSession(): ToolSession {
         var sess = new ToolSession(this);
-        this.sessions.push(sess);
+        this.appInstance.addToolSession(sess);
         return sess;
     }
 

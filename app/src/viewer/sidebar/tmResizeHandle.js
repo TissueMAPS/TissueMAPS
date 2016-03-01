@@ -9,7 +9,7 @@ angular.module('tmaps.ui')
             // of the directive. Possibilities: marker directives on the parents
             // or pass the selector via attrs.
             var $section = element.parent();
-            var $container = $('.middle-container');
+            var $container = element.parent().parent();
 
             attrs.$addClass('tm-resize-handle');
 

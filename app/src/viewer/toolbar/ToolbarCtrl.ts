@@ -13,7 +13,7 @@ class ToolbarCtrl {
                 private appstateService,
                 private authService) {
         // Add the tools as soon as they are ready
-        this.$scope.appInstance.tools.then((tools) => {
+        this.$scope.viewer.tools.then((tools) => {
             this.tools = tools;
         });
     }
@@ -31,8 +31,8 @@ class ToolbarCtrl {
     /**
      * This function is called when the Tool's button is pressed.
      */
-    openTool(tool: Tool) {
-        // tool.createNewWindow();
+    clickToolTab(tool: Tool) {
+        tool.createSession();
     }
 }
 angular.module('tmaps.ui').controller('ToolbarCtrl', ToolbarCtrl);

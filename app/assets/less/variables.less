@@ -26,31 +26,32 @@
 @panel-font-color: contrast(@panel-fg, @font-color-light, @font-color-dark);
 
 /******************************************************************************
- *                                   appbar                                   *
+ *                                   APPBAR                                   *
  ******************************************************************************/
 //== appbar
 @appbar-height: 30px;
+@top-container-height: @viewers-tabbar-container-height + @appbar-height;
 //== Tabbar
 
-@tabbar-height: 30px;
-@tabbar-spacer-height: 5px;
-    @tabbar-tabs-height: @tabbar-height - 5px - 1px;
-@tabbar-container-height: @tabbar-height + @tabbar-spacer-height;
 
-@top-container-height: @tabbar-container-height + @appbar-height;
-
+////////////////////////////////////////////////////////////////////////////////
+//                                   VIEWER                                   //
+////////////////////////////////////////////////////////////////////////////////
+/******************************************************************************
+ *                                   TABBAR                                   *
+ ******************************************************************************/
+@viewers-tabbar-height: 30px;
+@viewers-tabbar-spacer-height: 5px;
+@viewers-tabbar-tabs-height: @viewers-tabbar-height - 5px - 1px;
+@viewers-tabbar-container-height: @viewers-tabbar-height + @viewers-tabbar-spacer-height;
 /******************************************************************************
  *                                  TOOLBAR                                   *
  ******************************************************************************/
-
 @toolbar-width: 45px;
 @toolbar-li-height: 45px;
 // the spacer that separates the tabs from the buttons in the topleft
 @gradient-spacer-width: 30px;
-
 @topleft-button-color: @panel-fg2;
-
-
 /******************************************************************************
  *                                  SIDEBAR                                   *
  ******************************************************************************/
@@ -58,7 +59,6 @@
 @sidebar-section-title-height: 30px;
 @sidebar-section-title-color: @panel-fg2;
 @sidebar-section-padding: 5px;
-
 /********************
  *  Settings boxes  *
  ********************/
@@ -78,8 +78,7 @@
 @result-section-height: 20%;
 @result-settings-li-height: 30px;
 
-
-
+@map-container-width: calc(~'100% - @{toolbar-width} - @{sidebar-width}');
 /******************************************************************************
  *                                   MODALS                                   *
  ******************************************************************************/

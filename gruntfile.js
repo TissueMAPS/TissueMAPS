@@ -246,17 +246,17 @@ module.exports = function(grunt) {
             },
 
             js: {
-                files: ['app/src/**/*.js'],
+                files: ['app/src/**/*.js', 'app/build/**/*.js'],
                 tasks: [
                     'includeSource'
                     // , 'test:unit'
                 ]
             },
 
-            ts: {
-                files: ['app/src/**/*.ts'],
-                tasks: ['typescript']
-            },
+            // ts: {
+            //     files: ['app/src/**/*.ts'],
+            //     tasks: ['typescript']
+            // },
 
 
             // jsTest: {

@@ -115,13 +115,16 @@
 <!-- This wasn't a problem up until switching to the newest angular version. -->
 <body>
 
-  <div ng-controller="AppCtrl as appCtrl" ng-keydown="app.keyDown($event)" ng-keyup="app.keyUp($event)" style="display: block;">
+   <div class="app"
+        ng-controller="AppCtrl as appCtrl"
+        ng-keydown="app.keyDown($event)"
+        ng-keyup="app.keyUp($event)">
 
-     <div class='appbar' tm-appbar></div>
+     <tm-appbar></tm-appbar>
      <!-- The main view holding the viewer, the setup window or the userpanel. -->
      <!-- Since the DOM of the viewers should not be reinserted by the UI router, its -->
      <!-- container div is made invisible using a onLeave-event instead of using ui-view. --> 
-     <div class="main-window" id="viewer-window" ng-include="'/src/viewer/viewer.html'"></div>
+     <div class="main-window" id="viewer-window" ng-include="'/src/viewer/viewer-window.html'"></div>
      <div class="main-window" ui-view="main-window"></div>
   </div>
 

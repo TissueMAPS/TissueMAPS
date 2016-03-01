@@ -28,33 +28,10 @@ body {
 }
 
 .app {
-    overflow: hidden;
+    // overflow: hidden;
 }
 
-// This container holds the instance tabs and an "Add Experiment" button.
-.top-container {
-    height: @top-container-height + 1; //  because of border
-}
-
-// == The following three divs float side by side
-
-// 1) The toolbar to the left
-.toolbar {
-    width: @toolbar-width;
-    height: 100%;
-    float: left;
-}
-
-// 2) The map container is in the center
-@map-container-width: calc(~'100% - @{toolbar-width} - @{sidebar-width}');
-.map-container {
-    float: left;
-    height: 100%;
-    width: @map-container-width;
-}
-
-// 3) The panel to the right (does not float, but uses a left-margin)
-.sidebar {
-    margin-left: calc(~'100% - @{sidebar-width}');
-    height: 100%;
-}
+// // This container holds the instance tabs and an "Add Experiment" button.
+// .top-container {
+//     height: @top-container-height + 1; //  because of border
+// }

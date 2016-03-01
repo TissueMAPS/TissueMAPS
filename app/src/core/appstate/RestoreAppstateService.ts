@@ -17,7 +17,6 @@ class RestoreAppstateService {
             this.app.appInstances.push(inst);
             this.restoreAppInstance(inst, ai);
         });
-        this.app.setActiveAppInstanceByNumber(bp.activeAppInstanceNumber);
     }
 
     private restoreAppInstance(inst: AppInstance, ai: SerializedAppInstance) {

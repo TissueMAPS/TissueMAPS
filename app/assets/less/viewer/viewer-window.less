@@ -1,0 +1,40 @@
+@import "../variables.less";
+
+#viewer-window {
+    height: 100%;
+    display: none;
+}
+
+.viewers-container {
+    height: 100%;
+}
+
+.viewer {
+    height: 100%;
+    position: relative;
+}
+
+// == The following three divs float side by side
+// 1) The toolbar to the left
+.toolbar {
+    width: @toolbar-width;
+    height: 100%;
+    z-index: 10; // higher than map
+    float: left;
+}
+
+// 2) The map container is in the center
+.map-container {
+    float: left;
+    height: 100%;
+    width: @map-container-width;
+}
+
+// 3) The panel to the right (does not float, but uses a left-margin)
+.sidebar {
+    position: absolute;
+    width: @sidebar-width;
+    top: 0;
+    right: 0;
+    height: 100%;
+}

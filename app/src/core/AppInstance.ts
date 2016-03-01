@@ -1,14 +1,21 @@
+interface AppInstanceOpts {
+    active: boolean;
+}
+
 interface SerializedAppInstance extends Serialized<AppInstance> {
     experiment: SerializedExperiment;
     viewport: SerializedViewport;
 }
 
-// TODO: Rename to Workbench, AppInstance does not make
-// sense anymore since Application is the whole thing now.
+// TODO: Rename to Viewer
 class AppInstance implements Serializable<SerializedAppInstance> {
+    id: string;
     name: string;
     experiment: Experiment;
     viewport: Viewport;
+    toolSessions: ToolSession[] = [];
+    private _element: JQuery = null;
+    private _active: boolean;
 
     // TODO: These properties might be better located on the Experiment class itself
     mapObjectRegistry: MapObjectRegistry;
@@ -17,15 +24,18 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
 
-    constructor(experiment: Experiment) {
+    constructor(experiment: Experiment, opt?: AppInstanceOpts) {
         console.log('Creating AppInstance for Experiment with ID: ', experiment.id);
         console.log('This Experiment can be added automatically by visiting:\n',
                     'http://localhost:8002/#/viewport?loadex=' + experiment.id);
+        var options: AppInstanceOpts = opt === undefined ? <AppInstanceOpts> {} : opt;
+        this.id = makeUUID();
         this.experiment = experiment;
         this.name = experiment.name;
         this.viewport = new Viewport();
         this.viewport.injectIntoDocumentAndAttach(this);
         this.tools = this._loadTools();
+        this.active = options.active === undefined ? false : options.active;
 
         this.featureManager = new FeatureManager(experiment);
         this.mapObjectRegistry = new MapObjectRegistry(experiment);
@@ -38,21 +48,11 @@ class AppInstance implements Serializable<SerializedAppInstance> {
                 this.mapObjectSelectionHandler.addNewSelection(t);
             });
         });
+
+        this._addExperimentToViewport();
     }
 
-    setActive() {
-        this.viewport.show();
-    }
-
-    setInactive() {
-        this.viewport.hide();
-    }
-
-    destroy() {
-        this.viewport.destroy();
-    }
-
-    addExperimentToViewport() {
+    private _addExperimentToViewport() {
         var layerOpts = _(this.experiment.channels).map((ch) => {
             return {
                 name: ch.name,
@@ -70,26 +70,60 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     }
 
     private _loadTools() {
-        var $http = $injector.get<ng.IHttpService>('$http');
+        // TODO: Get tools from server (specific for user)
         var $q = $injector.get<ng.IQService>('$q');
-        var toolsDef = $q.defer();
-        $http.get('/src/core/tools/tools.json').then((resp) => {
-            var toolsConfig = <any> resp.data;
-            var classNames: string[] = toolsConfig.loadClasses;
-            var tools = _.map(classNames, (clsName: string) => {
-                var constr = window[clsName];
-                if (constr === undefined) {
-                    throw Error('No such tool constructor: ' + clsName);
-                } else {
-                    var t = new constr(this);
-                    return t;
-                }
-                return t;
-            });
-            toolsDef.resolve(tools);
-        });
+        return $q.when([
+            new FeatureStatsTool(this),
+            new ScatterPlotTool(this),
+            new SVMTool(this),
+            new ClusterTool(this)
+        ]);
+    }
 
-        return toolsDef.promise;
+    set active(active: boolean) {
+        if (active) {
+            this._showViewer();
+        } else {
+            this._hideViewer();
+        }
+        this._active = active;
+    }
+
+    get active() {
+        return this._active;
+    }
+
+    destroy() {
+        var elem = this._getDOMElement();
+        elem.remove();
+    }
+
+    addToolSession(s: ToolSession) {
+        this.toolSessions.push(s);
+    }
+
+    removeToolSession(s: ToolSession) {
+        var idx = this.toolSessions.indexOf(s);
+        if (idx > -1) {
+            this.toolSessions.splice(idx, 1);
+        }
+    }
+
+    private _getDOMElement(): JQuery {
+        if (this._element === null || this._element.length == 0) {
+            var $document = $injector.get<ng.IDocumentService>('$document');
+            this._element = $document.find('#viewer-'+ this.id);
+        }
+        return this._element;
+    }
+
+    private _hideViewer() {
+        this._getDOMElement().hide();
+    }
+
+    private _showViewer() {
+        this._getDOMElement().show();
+        this.viewport.update();
     }
 
     serialize(): ng.IPromise<SerializedAppInstance> {

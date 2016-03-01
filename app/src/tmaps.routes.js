@@ -10,26 +10,23 @@ angular.module('tmaps.ui')
         url: '/login',
         views: {
             'main-window': {
-                templateUrl: '/src/login.html'
+                templateUrl: '/src/auth/login.html'
             }
         },
         data: {
             loginRequired: false
         },
     })
-    .state('user', {
-        url: '/app/:username',
-        onEnter: ['$state', function($state) {
-            $state.go('userpanel')
-        }]
-    })
     .state('viewer', {
         url: '/viewer?loadex=expids&state=stateid&snapshot=snapshotid',
         reloadOnSearch: false,
+        views: {
+            'main-window': { template: '' }
+        },
         onEnter: ['application', '$stateParams', 'appstateService',
                   function(app, $stateParams, appstateService) {
 
-            app.showViewports();
+            app.show();
 
             // Check if the app should load an app state
             var stateID = $stateParams.state;
@@ -53,8 +50,8 @@ angular.module('tmaps.ui')
                 });
             }
         }],
-        onLeave: ['application', function(app) {
-            app.hideViewports();
+        onExit: ['application', function(app) {
+            app.hide();
         }]
     })
     .state('userpanel', {

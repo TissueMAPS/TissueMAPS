@@ -1,14 +1,10 @@
-// class ToolWindowTabsCtrl {
-
-// }
-
-
 interface ToolWindowTabScope {
     open: boolean;
     session: ToolSession;
 }
+
 angular.module('tmaps.toolwindow')
-.directive('ToolWindowTab', () => {
+.directive('tmToolWindowTab', () => {
     return {
         require: '^ToolWindowTabbar',
         scope: {
@@ -25,14 +21,14 @@ angular.module('tmaps.toolwindow')
         template: '<li>{{ toolSession.tool.name }}</li>'
     };
 })
-.directive('ToolWindowTabbar', ['$compile', '$rootScope', ($compile, $rootScope) => {
+.directive('tmToolWindowTabbar', ['$compile', '$rootScope', ($compile, $rootScope) => {
     return {
         // TODO: Needs access to the viewport scope
         // TODO: Create a viewport (or maybe better AppInstance) directive that sits on the viewport div
         // The ViewportCtrl should then have the $scope directly on in.
         // In this way all directives can just "require: '^^viewport"
         // and get a link to the viewport scope that they can use to broadcast stuff.
-        template: 'sess in toolSessions ng-click="select(sess)"'
+        template: 'sess in toolSessions ng-click="select(sess)"',
         controller: ['$scope', ($scope) => {
             var tabs: ToolWindowTabScope[] = [];
 
@@ -44,15 +40,11 @@ angular.module('tmaps.toolwindow')
                 _(tabs).each((t) => {
                     t.open = false;
                 });
-                t.open = true;
+                tab.open = true;
                 // TODO: Show window
                 // $rootScope.$broadcast('showToolWindow', t.session);
             }
         }]
     };
 }])
-.directive('ToolWindowContainer', [() => {
-
-}]);
-
-angular.module('tmaps.toolwindow').controller('ToolWindowTabsCtrl', ToolWindowTabsCtrl);
+.directive('tmToolWindowContainer', [() => {}]);

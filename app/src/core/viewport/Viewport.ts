@@ -139,31 +139,9 @@ class Viewport implements Serializable<Viewport> {
         this.channelLayers.splice(idx, 1);
     }
 
-    /**
-     * Clean up method when the instance is closed (e.g. by deleting the Tab).
-     */
-    destroy() {
-        this.elementScope.then((scope) => {
-            scope.$destroy();
-            this.element.then((element) => {
-                // Destroy the stuff that this instance created
-                element.remove();
-            });
-        });
-    }
-
-    show() {
-        this.element.then((element) => {
-            element.show();
-            this.map.then((map) => {
-                map.updateSize();
-            });
-        });
-    }
-
-    hide() {
-        this.element.then((element) => {
-            element.hide();
+    update() {
+        this.map.then((map) => {
+            map.updateSize();
         });
     }
 
@@ -216,41 +194,70 @@ class Viewport implements Serializable<Viewport> {
         return deferred.promise;
     }
 
-    injectIntoDocumentAndAttach(appInstance: AppInstance) {
-        this.getTemplate('/templates/main/viewport.html').then((template) => {
-            var newScope = <ViewportElementScope> this._$rootScope.$new();
-            newScope.viewport = this;
-            newScope.appInstance = appInstance;
-            var ctrl = $injector.get<any>('$controller')('ViewportCtrl', {
-                '$scope': newScope,
-                'viewport': this
-            });
-            newScope.viewportCtrl = ctrl;
-
-            // The divs have to be shown and hidden manually since ngShow
-            // doesn't quite work correctly when doing it this way.
-            var elem = angular.element(template);
-
-            // Compile the element (expand directives)
-            var linkFunc = $injector.get<ng.ICompileService>('$compile')(elem);
-            // Link to scope
-            var viewportElem = linkFunc(newScope);
-
-            // Append to viewports
-            $injector.get<ng.IDocumentService>('$document').find('#viewports').append(viewportElem);
-            // Append map after the element has been added to the DOM.
-            // Otherwise the viewport size calculation of openlayers gets
-            // messed up.
-            var map = new ol.Map({
-                layers: [],
-                controls: [],
-                renderer: 'webgl',
-                target: viewportElem.find('.map-container')[0],
-                logo: false
-            });
-            this._elementDef.resolve(viewportElem);
-            this._elementScopeDef.resolve(newScope);
-            this._mapDef.resolve(map);
+    injectMap(element: HTMLElement) {
+        var map = new ol.Map({
+            layers: [],
+            controls: [],
+            renderer: 'webgl',
+            target: element,
+            logo: false
         });
+
+        this._mapDef.resolve(map);
     }
+
+    injectIntoDocumentAndAttach(appInstance: AppInstance) {
+
+        // $injector.get<ng.IDocumentService>('$document').find('#viewports');
+
+        // var map = new ol.Map({
+        //     layers: [],
+        //     controls: [],
+        //     renderer: 'webgl',
+        //     target: viewportElem.find('.map-container')[0],
+        //     logo: false
+        // });
+        // this._elementDef.resolve(viewportElem);
+        // this._elementScopeDef.resolve(newScope);
+        // this._mapDef.resolve(map);
+    // });
+        
+    }
+    // injectIntoDocumentAndAttach(appInstance: AppInstance) {
+    //     this.getTemplate('/templates/main/viewport.html').then((template) => {
+    //         var newScope = <ViewportElementScope> this._$rootScope.$new();
+    //         newScope.viewport = this;
+    //         newScope.appInstance = appInstance;
+    //         var ctrl = $injector.get<any>('$controller')('ViewportCtrl', {
+    //             '$scope': newScope,
+    //             'viewport': this
+    //         });
+    //         newScope.viewportCtrl = ctrl;
+
+    //         // The divs have to be shown and hidden manually since ngShow
+    //         // doesn't quite work correctly when doing it this way.
+    //         var elem = angular.element(template);
+
+    //         // Compile the element (expand directives)
+    //         var linkFunc = $injector.get<ng.ICompileService>('$compile')(elem);
+    //         // Link to scope
+    //         var viewportElem = linkFunc(newScope);
+
+    //         // Append to viewports
+    //         $injector.get<ng.IDocumentService>('$document').find('#viewports').append(viewportElem);
+    //         // Append map after the element has been added to the DOM.
+    //         // Otherwise the viewport size calculation of openlayers gets
+    //         // messed up.
+    //         var map = new ol.Map({
+    //             layers: [],
+    //             controls: [],
+    //             renderer: 'webgl',
+    //             target: viewportElem.find('.map-container')[0],
+    //             logo: false
+    //         });
+    //         this._elementDef.resolve(viewportElem);
+    //         this._elementScopeDef.resolve(newScope);
+    //         this._mapDef.resolve(map);
+    //     });
+    // }
 }

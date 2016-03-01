@@ -1,6 +1,6 @@
 angular.module('tmaps.auth')
-.service('authService', ['$http', 'session', 'User', '$rootScope', 'AUTH_EVENTS',
-         function($http, session, User, $rootScope, AUTH_EVENTS) {
+.service('authService', ['$http', 'session', 'User', '$rootScope', 'AUTH_EVENTS', '$q',
+         function($http, session, User, $rootScope, AUTH_EVENTS, $q) {
 
     /**
      * Ask the server to check if there is a username with a given
@@ -14,22 +14,28 @@ angular.module('tmaps.auth')
             username: username,
             password: password
         };
-        return $http
-        .post('/auth', credentials)
-        .success(function(data, status) {
-            var token = data.access_token;
-            // TODO: sessionStorage not supported in all browsers,
-            // include polyfill to make it supported.
-            var user = session.create(token);
-
-            $rootScope.$broadcast(AUTH_EVENTS.loginSuccess);
-
-            return user;
-        })
-        .error(function(data, status) {
+        var userDef = $q.defer();
+        $http.post('/auth', credentials)
+        .then(function(resp) {
+            if (resp.status == 200) {
+                var token = resp.data.access_token;
+                // TODO: sessionStorage not supported in all browsers,
+                // include polyfill to make it supported.
+                var user = session.create(token);
+                $rootScope.$broadcast(AUTH_EVENTS.loginSuccess);
+                userDef.resolve(user);
+            } else {
+                session.destroy();
+                $rootScope.$broadcast(AUTH_EVENTS.loginFailed);
+                userDef.reject('No such user found!');
+            }
+        },
+        function() {
             session.destroy();
             $rootScope.$broadcast(AUTH_EVENTS.loginFailed);
+            userDef.reject('No such user found!');
         });
+        return userDef.promise;
     };
 
     this.logout = function() {

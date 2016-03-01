@@ -17,6 +17,8 @@
         "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
         "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
 
+        "app/src/util/uuid.ts",
+
         "app/src/core/util/Color.ts",
 
         "app/src/core/AppInstance.ts",
@@ -66,10 +68,11 @@
         "app/src/tmAppbar.ts",
 
         "app/src/viewer/tmViewerWindow.ts",
-        "app/src/viewer/tmViewer.ts",
-        "app/src/viewer/tmViewersContainer.ts",
         "app/src/viewer/tmViewersTabbar.ts",
+        "app/src/viewer/tmViewport.ts",
+        "app/src/viewer/tmViewer.ts",
         "app/src/viewer/toolwindow/ToolWindowCtrl.ts",
+        "app/src/viewer/toolwindow/tmToolWindowTabbar.ts",
         "app/src/viewer/toolbar/tmToolbar.ts",
         "app/src/viewer/toolbar/ToolbarCtrl.ts",
         "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",
