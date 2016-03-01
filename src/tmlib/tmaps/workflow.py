@@ -9,7 +9,6 @@ import gc3libs
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import AbortOnError
-from gc3libs.workflow import StopOnError
 from .description import WorkflowDescription
 from .description import WorkflowStageDescription
 from ..errors import WorkflowTransitionError
@@ -220,7 +219,7 @@ class WorkflowStage(object):
         return jobs
 
 
-class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowStage):
+class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
 
     '''
     Class for a sequential TissueMAPS workflow stage, which is composed of one
@@ -322,9 +321,16 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
         -------
         gc3libs.Run.State
         '''
-        if self.tasks[done].execution.returncode != 0:
-            # delegate to StopOnError
-            return super(SequentialWorkflowStage, self).next(done)
+        logger.debug('state of %s: %s',
+                     self.__class__.__name__, self.execution.state)
+        # Implement StopOnError behavior: set the state of the task collection
+        # to the state of the last processed task.
+        self.execution.returncode = self.tasks[done].execution.returncode
+        if self.execution.returncode != 0:
+            # Stop the entire collection in case the last task "failed".
+            # We only stop the workflow, so that the workflow could in principle
+            # be resumed later.
+            return gc3libs.Run.State.STOPPED
         if self.execution.state == gc3libs.Run.State.STOPPED:
             return gc3libs.Run.State.STOPPED
         elif self.execution.state == gc3libs.Run.State.TERMINATED:
@@ -341,10 +347,12 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
                 logger.info('transit to next step ({0} of {1}): "{2}"'.format(
                             next_step_index, self.n_steps, next_step_name))
                 self._add_step(done+1)
+                return gc3libs.Run.State.RUNNING
             except KeyboardInterrupt:
                 logger.info('processing interrupted by used')
                 logger.info('aborting stage "%s"', self.name)
                 self.kill()
+                return gc3libs.Run.State.RUNNING
             except Exception as error:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 logger.error('transition to next stage failed: %s', error)
@@ -359,7 +367,8 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
                 logger.info('stopping stage "%s"', self.name)
                 self.execution.state = gc3libs.Run.State.STOPPED
                 return gc3libs.Run.State.STOPPED
-        return super(SequentialWorkflowStage, self).next(done)
+        else:
+            return gc3libs.Run.State.TERMINATED
 
 
 class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
@@ -417,7 +426,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
             self.add(step_jobs)
 
 
-class Workflow(StopOnError, SequentialTaskCollection):
+class Workflow(SequentialTaskCollection):
 
     def __init__(self, experiment, verbosity, description=None,
                  start_stage=None, start_step=None, waiting_time=120):
@@ -561,9 +570,13 @@ class Workflow(StopOnError, SequentialTaskCollection):
         -------
         gc3libs.Run.State
         '''
-        if self.tasks[done].execution.returncode != 0:
-            # delegate to StopOnError
-            return super(Workflow, self).next(done)
+        logger.debug('state of %s: %s',
+                     self.__class__.__name__, self.execution.state)
+        # Implement StopOnError behavior: set the state of the task collection
+        # to the state of the last processed task.
+        self.execution.returncode = self.tasks[done].execution.returncode
+        if self.execution.returncode != 0:
+            return gc3libs.Run.State.STOPPED
         if self.execution.state == gc3libs.Run.State.STOPPED:
             return gc3libs.Run.State.STOPPED
         elif self.execution.state == gc3libs.Run.State.TERMINATED:
@@ -580,10 +593,12 @@ class Workflow(StopOnError, SequentialTaskCollection):
                 logger.info('transit to next stage ({0} of {1}): "{2}"'.format(
                             next_stage_index, self.n_stages, next_stage_name))
                 self._add_stage(done+1)
+                return gc3libs.Run.State.RUNNING
             except KeyboardInterrupt:
                 logger.info('processing interrupted by used')
                 logger.info('killing workflow "%s"', self.name)
                 self.kill()
+                return gc3libs.Run.State.TERMINATED
             except Exception as error:
                 logger.error('transition to next stage failed: %s', error)
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -598,4 +613,5 @@ class Workflow(StopOnError, SequentialTaskCollection):
                 logger.info('stopping workflow "%s"', self.name)
                 self.execution.state = gc3libs.Run.State.STOPPED
                 return gc3libs.Run.State.STOPPED
-        return super(Workflow, self).next(done)
+        else:
+            return gc3libs.Run.State.TERMINATED

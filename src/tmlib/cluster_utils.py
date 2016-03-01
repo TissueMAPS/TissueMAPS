@@ -191,7 +191,7 @@ def print_task_status(task_data, monitoring_depth):
                 add_row_recursively(subtd, table, i+1)
     x = PrettyTable([
             'Name', 'Type', 'State', 'Done (%)',
-            'Time (HH:MM:SS)', 'Memory (GB)', 'ExitCode', 'ID'
+            'Time', 'Memory (KB)', 'ExitCode', 'ID'
     ])
     x.align['Name'] = 'l'
     x.align['Type'] = 'l'

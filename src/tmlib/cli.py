@@ -174,7 +174,7 @@ class CommandLineInterface(object):
         logger.debug('processing on node: %s', socket.gethostname())
         logger.debug('running program: %s' % parser.prog)
 
-        # Fine tune the output of some loggers
+        # Silence some chatty loggers
         gc3libs_logger = logging.getLogger('gc3.gc3libs')
         gc3libs_logger.setLevel(logging.CRITICAL)
         apscheduler_logger = logging.getLogger('apscheduler')
