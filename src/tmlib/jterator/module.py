@@ -337,8 +337,8 @@ class ImageProcessingModule(object):
                         # TODO: shouldn't this be handled by the checker?
                         raise PipelineRunError(
                                 'Incorrect value "%s" for argument "%s" '
-                                'in moduel "%s"'
-                                % (arg['value'], arg, self.name))
+                                'in module "%s"'
+                                % (arg['value'], arg['name'], self.name))
                     inputs[arg['name']] = pipe_in[arg['value']]
         # All additional info potentially required by modules => kwargs
         inputs['data_file'] = data_file
