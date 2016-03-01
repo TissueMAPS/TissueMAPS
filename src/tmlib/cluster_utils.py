@@ -96,7 +96,8 @@ def get_task_data(task, description=None):
             'failed': is_done and failed,
             'exitcode': task_.execution.exitcode,
             'percent_done': 0.0,  # fix later, if possible
-            'time': ''
+            'time': task_.get('duration', None),
+            'memory': task_.get('max_used_memory', None)
         }
 
         if isinstance(task_, WorkflowStep):
@@ -145,10 +146,12 @@ def get_task_data(task, description=None):
                 'Unhandled task class %r' % (task_.__class__))
 
         if task_.execution.state == gc3libs.Run.State.TERMINATED:
-            data['time'] = format_timestamp(
-                    task_.execution.state_last_changed -
-                    task_.execution.timestamp['SUBMITTED']
-            )
+            if not data['time']:
+                # In case duration is not provided, e.g. on localhost
+                data['time'] = format_timestamp(
+                        task_.execution.state_last_changed -
+                        task_.execution.timestamp['SUBMITTED']
+                )
 
         if isinstance(task_, gc3libs.workflow.TaskCollection):
             # loop recursively over subtasks
@@ -178,7 +181,8 @@ def print_task_status(task_data, monitoring_depth):
             data['type'],
             data['state'],
             '%.2f' % data['percent_done'],
-            data['time'],
+            data['time'] if data['time'] is not None else '',
+            data['memory'] if data['memory'] is not None else '',
             data['exitcode'] if data['exitcode'] is not None else '',
             data['id']
         ])
@@ -186,13 +190,15 @@ def print_task_status(task_data, monitoring_depth):
             for subtd in data.get('subtasks', list()):
                 add_row_recursively(subtd, table, i+1)
     x = PrettyTable([
-            'Name', 'Type', 'State', '% Done', 'Time', 'ExitCode', 'ID'
+            'Name', 'Type', 'State', 'Done (%)',
+            'Time (HH:MM:SS)', 'Memory (GB)', 'ExitCode', 'ID'
     ])
     x.align['Name'] = 'l'
     x.align['Type'] = 'l'
     x.align['State'] = 'l'
-    x.align['% Done'] = 'r'
+    x.align['Done (%)'] = 'r'
     x.align['Time'] = 'r'
+    x.align['Memory (KB)'] = 'r'
     x.align['ID'] = 'r'
     x.padding_width = 1
     add_row_recursively(task_data, x, 0)

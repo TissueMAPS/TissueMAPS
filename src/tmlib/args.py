@@ -376,7 +376,7 @@ class SubmitArgs(GeneralArgs):
         return {
             'interval', 'phase', 'jobs', 'depth',
             'memory', 'duration', 'cores',
-            'backup',
+            'backup'
         }
 
     @property
@@ -400,7 +400,7 @@ class SubmitArgs(GeneralArgs):
         if value is None:
             self._jobs = value
             return
-        if any([not isinstance(e, self._jobs_params['type'].__name__) for e in value]):
+        if any([not isinstance(e, self._jobs_params['type']) for e in value]):
             raise TypeError(
                     'Elements of attribute "jobs" must have type %s.'
                     % self._jobs_params['type'].__name__)

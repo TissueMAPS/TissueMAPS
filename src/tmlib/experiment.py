@@ -15,6 +15,10 @@ from .readers import YamlReader
 
 logger = logging.getLogger(__name__)
 
+# Has to be created outside of the function/method, because it creates
+# problems with pickle otherwise.
+Indices = collections.namedtuple('Indices', ['time', 'channel', 'zplane'])
+
 
 class Experiment(object):
     '''
@@ -328,8 +332,6 @@ class Experiment(object):
                 zplanes = np.unique(md['zplane_ix'])
                 for c in channels:
                     for z in zplanes:
-                        Indices = collections.namedtuple(
-                                    'Indices', ['time', 'channel', 'zplane'])
                         ix = Indices(t, c, z)
                         names[ix] = cfg.LAYER_NAME_FORMAT.format(t=t, c=c, z=z)
         return names

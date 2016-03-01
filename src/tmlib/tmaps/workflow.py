@@ -19,7 +19,7 @@ from ..jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
 
-WAIT = 120  # make an argument for submission of workflows?
+WAIT = 0  # make an argument for submission of workflows?
 
 
 def load_step_interface(step_name):
@@ -92,6 +92,21 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection):
                             'tmlib.jobs.CollectJob')
             tasks.append(collect_job)
         super(WorkflowStep, self).__init__(tasks=tasks, jobname=name)
+
+    def next(self, done):
+        '''
+        Progress to the next phase.
+
+        Parameters
+        ----------
+        done: int
+            zero-based index of the last processed phase
+
+        Returns
+        -------
+        gc3libs.Run.State
+        '''
+        return super(WorkflowStep, self).next(done)
 
 
 class WorkflowStage(object):
@@ -204,20 +219,6 @@ class WorkflowStage(object):
                         cores=step_description.cores)
         return jobs
 
-    # def _determine_reason_for_job_failure(self, job):
-    #     # check log file to figure out what went wrong
-    #     err_file = os.path.join(job.output_dir, job.stderr)
-    #     with open(err_file, 'r') as err:
-    #         if re.search(r'^FAILED', err, re.MULTILINE):
-    #             reason = 'Error'
-    #         elif re.search(r'^TIMEOUT', err, re.MULTILINE):
-    #             reason = 'Timeout'
-    #         elif re.search(r'^[0-9]*\s*\bKilled\b', err, re.MULTILINE):
-    #             reason = 'Memory'
-    #         else:
-    #             reason = 'Unknown'
-    #     return reason
-
 
 class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowStage):
 
@@ -231,7 +232,7 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
     '''
 
     def __init__(self, name, experiment, verbosity, description=None,
-                 start_step=None):
+                 start_step=None, waiting_time=120):
         '''
         Initialize an instance of class SequentialWorkflowStage.
 
@@ -248,12 +249,17 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
         start_step: str or int, optional
             name or index of a step from where the stage should be started
             (default: ``None``)
+        waiting_time: int, optional
+            time in seconds that should be waited upon transition from one
+            stage to the other to avoid issues related to network file systems
+            (default: ``120``)
         '''
         WorkflowStage.__init__(
                 self, name=name, experiment=experiment, verbosity=verbosity)
         SequentialTaskCollection.__init__(
                 self, tasks=None, jobname='%s' % name)
         self.start_step = start_step
+        self.waiting_time = waiting_time
         self._add_step(0)
 
     @property
@@ -316,17 +322,18 @@ class SequentialWorkflowStage(StopOnError, SequentialTaskCollection, WorkflowSta
         -------
         gc3libs.Run.State
         '''
+        if self.tasks[done].execution.returncode != 0:
+            # delegate to StopOnError
+            return super(SequentialWorkflowStage, self).next(done)
         if self.execution.state == gc3libs.Run.State.STOPPED:
             return gc3libs.Run.State.STOPPED
         elif self.execution.state == gc3libs.Run.State.TERMINATED:
             return gc3libs.Run.State.TERMINATED
-        if self.tasks[done].execution.returncode != 0:  # see AbortOnError
-            return super(SequentialWorkflowStage, self).next(done)
         logger.info('step "%s" is done', self._tasks_to_process[done].name)
         if done+1 < len(self._tasks_to_process):
             logger.info('waiting ...')
-            logger.debug('wait %d seconds', WAIT)
-            time.sleep(WAIT)
+            logger.debug('wait %d seconds', self.waiting_time)
+            time.sleep(self.waiting_time)
             try:
                 step_names = [s.name for s in self.description.steps]
                 next_step_name = self._tasks_to_process[done+1].name
@@ -413,7 +420,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
 class Workflow(StopOnError, SequentialTaskCollection):
 
     def __init__(self, experiment, verbosity, description=None,
-                 start_stage=None, start_step=None):
+                 start_stage=None, start_step=None, waiting_time=120):
         '''
         Initialize an instance of class Workflow.
 
@@ -431,6 +438,10 @@ class Workflow(StopOnError, SequentialTaskCollection):
         start_step: str or int, optional
             name or index of a step from where `start_stage` should be started
             (default: ``None``)
+        waiting_time: int, optional
+            time in seconds that should be waited upon transition from one
+            stage to the other to avoid issues related to network file systems
+            (default: ``120``)
 
         Note
         ----
@@ -455,6 +466,7 @@ class Workflow(StopOnError, SequentialTaskCollection):
         super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
         self.experiment = experiment
         self.verbosity = verbosity
+        self.waiting_time = waiting_time
         if description is not None:
             if not isinstance(description, WorkflowDescription):
                 raise TypeError(
@@ -524,7 +536,8 @@ class Workflow(StopOnError, SequentialTaskCollection):
                         experiment=self.experiment,
                         verbosity=self.verbosity,
                         description=stage,
-                        start_step=start_step)
+                        start_step=start_step,
+                        waiting_time=self.waiting_time)
         elif stage.mode == 'parallel':
             logger.debug('build parallel workflow stage')
             task = ParallelWorkflowStage(
@@ -548,17 +561,18 @@ class Workflow(StopOnError, SequentialTaskCollection):
         -------
         gc3libs.Run.State
         '''
+        if self.tasks[done].execution.returncode != 0:
+            # delegate to StopOnError
+            return super(Workflow, self).next(done)
         if self.execution.state == gc3libs.Run.State.STOPPED:
             return gc3libs.Run.State.STOPPED
         elif self.execution.state == gc3libs.Run.State.TERMINATED:
             return gc3libs.Run.State.TERMINATED
-        if self.tasks[done].execution.returncode != 0:  # see AbortOnError
-            return super(Workflow, self).next(done)
         logger.info('stage "%s" is done', self._tasks_to_process[done].name)
         if done+1 < len(self._tasks_to_process):
             logger.info('waiting ...')
-            logger.debug('wait %d seconds', WAIT)
-            time.sleep(WAIT)
+            logger.debug('wait %d seconds', self.waiting_time)
+            time.sleep(self.waiting_time)
             try:
                 stage_names = [s.name for s in self.description.stages]
                 next_stage_name = self._tasks_to_process[done+1].name

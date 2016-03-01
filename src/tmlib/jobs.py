@@ -2,8 +2,8 @@ import logging
 from gc3libs.workflow import AbortOnError
 from abc import ABCMeta
 from abc import abstractproperty
-# from abc import abstractmethod
 from gc3libs import Application
+# from abc import abstractmethod
 # from gc3libs.workflow import RetryableTask
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
@@ -19,15 +19,22 @@ class Job(Application):
 
     Note
     ----
-    Jobs can be constructed based on job descriptions, which persist on disk
+    Jobs are constructed based on job descriptions, which persist on disk
     in form of JSON files.
     '''
 
     # TODO: inherit from RetryableTask(max_retries=1) and implement
     # re-submission logic by overwriting retry() method:
-    # if exitcode != 0: don't resubmit
-    # if any([re.search(r"FAILED", f) for f in stderr_files]): don't resubmit
-    # if exitcode is None: resubmit
+    # 
+    #     with open(err_file, 'r') as err:
+    #         if re.search(r'^FAILED', err, re.MULTILINE):
+    #             reason = 'Exception'
+    #         elif re.search(r'^TIMEOUT', err, re.MULTILINE):
+    #             reason = 'Timeout'
+    #         elif re.search(r'^[0-9]*\s*\bKilled\b', err, re.MULTILINE):
+    #             reason = 'Memory'
+    #         else:
+    #             reason = 'Unknown'
 
     __metaclass__ = ABCMeta
 
@@ -210,7 +217,7 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
 
         Parameters
         ----------
-        run_job_collection: tmlib.jobs.RunJobCollection
+        run_job_collection: exittmlib.jobs.RunJobCollection
             collection of run jobs that should be added
 
         Raises

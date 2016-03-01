@@ -65,8 +65,10 @@ class Tmaps(object):
         logger.info('submit workflow')
         api = self._api_instance
         jobs = api.create_jobs(
-                            start_stage=args.variable_args.stage,
-                            start_step=args.variable_args.step)
+                    start_stage=args.variable_args.stage,
+                    start_step=args.variable_args.step,
+                    waiting_time=args.variable_args.wait
+        )
         session = api.create_session(backup=args.backup)
         session.add(jobs)
         session.save_all()

@@ -40,8 +40,8 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
             os.mkdir(self._project_dir)
         return self._project_dir
 
-    def create_jobs(self, job_descriptions=None,
-                    start_stage=None, start_step=None):
+    def create_jobs(self, job_descriptions=None, start_stage=None,
+                    start_step=None, waiting_time=120):
         '''
         Create a `TissueMAPS` workflow.
 
@@ -55,11 +55,14 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         start_step: str, optional
             name of the step in `start_stage` from which the workflow should be
             started (default: ``None``)
+        waiting_time: int, optional
+            time in seconds that should be waited upon transition from one
+            stage to the other to avoid issues related to network file systems
+            (default: ``120``)
 
         Returns
         -------
         tmlib.tmaps.workflow.Workflow
-            custom implementation of a GC3Pie sequential task collection
         '''
         logger.info('create jobs')
         jobs = Workflow(
@@ -67,5 +70,6 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
                     verbosity=self.verbosity,
                     description=job_descriptions,
                     start_stage=start_stage,
-                    start_step=start_step)
+                    start_step=start_step,
+                    waiting_time=waiting_time)
         return jobs

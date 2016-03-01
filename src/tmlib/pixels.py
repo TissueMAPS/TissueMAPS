@@ -973,5 +973,5 @@ class NumpyPixels(Pixels):
         tmlib.pixels.NumpyPixels
             smoothed pixels
         '''
-        a = ndi.filters.gaussian_filter(self.array.gaussblur, sigma)
+        a = ndi.filters.gaussian_filter(self.array, sigma)
         return NumpyPixels(a)

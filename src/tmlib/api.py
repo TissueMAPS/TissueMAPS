@@ -227,19 +227,14 @@ class BasicClusterRoutines(object):
                 if break_next:
                     break
 
-                # Break out of the loop when the last job in the list of
-                # subtasks is done.
-                # NOTE: We assume that we are dealing with a sequential
-                # collection of tasks.
-                last_task_state = task.tasks[-1].execution.state
-                if (last_task_state == gc3libs.Run.State.TERMINATED or
-                        last_task_state == gc3libs.Run.State.STOPPED):
+                if (task.execution.state == gc3libs.Run.State.TERMINATED or
+                        task.execution.state == gc3libs.Run.State.STOPPED):
                     break_next = True
                     e.progress()
 
         except KeyboardInterrupt:
             # User interrupted process, which should kill all running jobs
-            # TODO: stop them so that we can resume later
+            # TODO: only "stop" them so that we can resume later
             logger.info('killing jobs')
             logger.debug('killing task %s', task)
             e.kill(task)

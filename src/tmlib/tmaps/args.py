@@ -14,6 +14,7 @@ class TmapsSubmitArgs(VariableArgs):
         '''
         self.stage = self._stage_params['default']
         self.step = self._step_params['default']
+        self.wait = self._wait_params['default']
         super(TmapsSubmitArgs, self).__init__(**kwargs)
 
     @property
@@ -22,7 +23,7 @@ class TmapsSubmitArgs(VariableArgs):
 
     @property
     def _persistent_attrs(self):
-        return {'stage', 'step', 'backup'}
+        return {'stage', 'step', 'wait'}
 
     @property
     def stage(self):
@@ -79,5 +80,34 @@ class TmapsSubmitArgs(VariableArgs):
             'default': None,
             'help': '''
                 name of the step from where workflow should be started
+            '''
+        }
+
+    @property
+    def wait(self):
+        '''
+        Returns
+        -------
+        int
+            time in seconds to wait upon transition to the next task
+            (default: ``120``)
+        '''
+        return self._backup
+
+    @wait.setter
+    def wait(self, value):
+        if not isinstance(value, self._wait_params['type']):
+            raise TypeError('Attribute "wait" must have type %s.'
+                            % self._wait_params['type'].__name__)
+        self._backup = value
+
+    @property
+    def _wait_params(self):
+        return {
+            'default': 120,
+            'type': int,
+            'help': '''
+                time in seconds to wait upon transition to the next task
+                (default: 120)
             '''
         }
