@@ -1,12 +1,13 @@
-<div class="tool-window-header">
-    <span class="tool-name">
-        {{ ::tool.name }}
+<div class="tool-window tool-window-animation" ng-show="tool">
+  <div class="tool-window-header">
+    <h2 class="tool-name">
+      {{ tool.name }}
+    </h2>
+
+    <span class="spinner" ng-show="session.isRunning">
+      <i class="fa fa-refresh" ng-class="{'fa-spin': session.isRunning}"></i>
     </span>
 
-    <span class="spinner" ng-show="isRunning">
-        <i class="fa fa-refresh" ng-class="{'fa-spin': isRunning}"></i>
-    </span>
-
-</div>
-<div class="tool-window-body tm-content" ng-include="tool.windowOptions.templateUrl">
+  </div>
+  <div class="tool-window-body tm-content" ng-include="tool.windowOptions.templateUrl"></div>
 </div>

@@ -109,4 +109,4 @@ class ScatterPlotCtrl {
     }
 }
 
-angular.module('tmaps.toolwindow').controller('ScatterPlotCtrl', ScatterPlotCtrl);
+angular.module('tmaps.ui').controller('ScatterPlotCtrl', ScatterPlotCtrl);

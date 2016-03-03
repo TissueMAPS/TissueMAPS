@@ -1,4 +1,4 @@
-angular.module('tmaps.toolwindow')
+angular.module('tmaps.ui')
 .directive('tmObjectTypeSelectionWidget', () => {
     var template = 
         '<label>Object type: </label>' +

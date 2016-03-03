@@ -1,3 +1,7 @@
+interface ToolbarScope extends ViewerScope {
+
+}
+
 /**
  * ToolbarCtrl is a controller that manages the list of buttons with which
  * different tools may be accessed. This controller concerns itself with
@@ -8,8 +12,8 @@ class ToolbarCtrl {
 
     tools: Tool[] = [];
 
-    constructor(private $scope,
-                private application,
+    constructor(public $scope: ToolbarScope,
+                private application: Application,
                 private appstateService,
                 private authService) {
         // Add the tools as soon as they are ready
@@ -32,7 +36,11 @@ class ToolbarCtrl {
      * This function is called when the Tool's button is pressed.
      */
     clickToolTab(tool: Tool) {
-        tool.createSession();
+        var sess = tool.createSession();
+        this.$scope.viewerWindowCtrl.$scope.$broadcast('clickToolbarTab', {
+            tool: tool,
+            session: sess
+        });
     }
 }
 angular.module('tmaps.ui').controller('ToolbarCtrl', ToolbarCtrl);

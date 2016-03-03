@@ -13,7 +13,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     name: string;
     experiment: Experiment;
     viewport: Viewport;
-    toolSessions: ToolSession[] = [];
     private _element: JQuery = null;
     private _active: boolean;
 
@@ -96,17 +95,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     destroy() {
         var elem = this._getDOMElement();
         elem.remove();
-    }
-
-    addToolSession(s: ToolSession) {
-        this.toolSessions.push(s);
-    }
-
-    removeToolSession(s: ToolSession) {
-        var idx = this.toolSessions.indexOf(s);
-        if (idx > -1) {
-            this.toolSessions.splice(idx, 1);
-        }
     }
 
     private _getDOMElement(): JQuery {

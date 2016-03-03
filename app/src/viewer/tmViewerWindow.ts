@@ -19,7 +19,7 @@ class ViewerWindowCtrl {
 
     private viewers: AppInstance[];
 
-    constructor(private $scope: ViewerWindowScope,
+    constructor(public $scope: ViewerWindowScope,
                 private application: Application,
                 private $document: ng.IDocumentService) {
         this.viewers = application.appInstances;

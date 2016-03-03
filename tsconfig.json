@@ -57,7 +57,6 @@
         "app/src/core/tool/classes/ClassificationTool.ts",
         "app/src/core/tool/classes/FeatureStatsTool.ts",
         "app/src/core/tool/classes/SVMTool.ts",
-        "app/src/core/tool/classes/ClusterTool.ts",
         "app/src/core/tool/classes/ScatterPlotTool.ts",
 
         "app/src/core/viewport/Viewport.ts",
@@ -71,8 +70,20 @@
         "app/src/viewer/tmViewersTabbar.ts",
         "app/src/viewer/tmViewport.ts",
         "app/src/viewer/tmViewer.ts",
-        "app/src/viewer/toolwindow/ToolWindowCtrl.ts",
-        "app/src/viewer/toolwindow/tmToolWindowTabbar.ts",
+
+        "app/src/viewer/toolwindow/tmToolWindow.ts",
+
+        "app/src/viewer/toolwindow/widgets/tmFeatureSelectionWidget.ts",
+
+        "app/src/viewer/toolwindow/modules/cellstats/CellStatsCtrl.ts",
+
+        "app/src/viewer/toolwindow/modules/cluster/ClusterTool.ts",
+        "app/src/viewer/toolwindow/modules/cluster/ClusterCtrl.ts",
+
+        "app/src/viewer/toolwindow/modules/decisiontree/DecisionTreeCtrl.ts",
+        "app/src/viewer/toolwindow/modules/filter/FilterCtrl.ts",
+        "app/src/viewer/toolwindow/modules/scatterplot/ScatterPlotCtrl.ts",
+        "app/src/viewer/toolwindow/modules/svm/SVMCtrl.ts",
         "app/src/viewer/toolbar/tmToolbar.ts",
         "app/src/viewer/toolbar/ToolbarCtrl.ts",
         "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",

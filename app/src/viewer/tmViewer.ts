@@ -2,7 +2,6 @@ interface ViewerScope extends ViewerWindowScope {
     // FIXME: Remove this.
     appInstance: AppInstance;
     viewer: AppInstance;
-    isViewerActive: boolean;
 }
 
 class ViewerCtrl {
@@ -10,7 +9,6 @@ class ViewerCtrl {
     constructor(public $scope: ViewerScope) {
         $scope.appInstance = $scope.viewer;
         // FIXME. Should be set via tabs
-        $scope.isViewerActive = true;
     }
 }
 
