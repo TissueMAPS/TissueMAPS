@@ -85,39 +85,42 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
         from .. import plotting
 
         rf = 4
-
         ds_img = skimage.measure.block_reduce(
                             image, (rf, rf), func=np.mean).astype(int)
         ds_smooth_img = skimage.measure.block_reduce(
                             smoothed_image, (rf, rf), func=np.mean).astype(int)
 
-        # - keep image values at 16bit and adapt colorscale
-        # - rescale both images the same for better comparison
-        # - inverse y axis
-        # - remove ticks and tick labels from axis (old issue with the
-        #   assumption that 0, 0 is in the left lower corner)
-        # - show only pixel values in case of hover event
+        clip_value = np.percentile(ds_img, 99.99)
         data = [
             plotly.graph_objs.Heatmap(
                 z=ds_img,
                 colorscale='Greys',
                 hoverinfo='z',
                 zauto=False,
-                zmax=np.percentile(ds_img, 99.99),
+                zmax=clip_value,
                 zmin=0,
-                colorbar=dict(yanchor='bottom', y=0.55, len=0.45),
-                y=np.linspace(image.shape[0], 0, ds_img.shape[0]),
+                colorbar=dict(
+                    yanchor='bottom',
+                    y=0.57,
+                    len=0.43
+                ),
+                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
                 x=np.linspace(0, image.shape[1], ds_img.shape[1])
             ),
             plotly.graph_objs.Heatmap(
                 z=ds_smooth_img,
                 colorscale='Greys',
                 hoverinfo='z',
-                zmax=np.percentile(ds_img, 99.99),
+                zmax=clip_value,
                 zmin=0,
                 zauto=False,
-                colorbar=dict(yanchor='top', y=0.45, len=0.45),
-                y=np.linspace(image.shape[0], 0, ds_img.shape[0]),
+                colorbar=dict(
+                    yanchor='bottom',
+                    y=0.57,
+                    x=0.43,
+                    len=0.43
+                ),
+                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
                 x=np.linspace(0, image.shape[1], ds_img.shape[1]),
                 xaxis='x2',
                 yaxis='y2'
@@ -128,35 +131,28 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
             title='{name} smoothing filter of size {size}'.format(
                                     name=filter_name.capitalize(),
                                     size=filter_size),
-            scene1=plotly.graph_objs.Scene(
-                domain={'y': [0.55, 1.0]}
+            xaxis1=dict(
+                domain=[0, 0.43],
+                anchor='y1'
             ),
-            scene2=plotly.graph_objs.Scene(
-                domain={'y': [0.0, 0.45]}
+            yaxis1=dict(
+                domain=[0.57, 1],
+                anchor='x1',
+                autorange='reversed'
             ),
-            xaxis1=plotly.graph_objs.XAxis(
-                ticks='',
-                showticklabels=False
-            ),
-            yaxis1=plotly.graph_objs.YAxis(
-                ticks='',
-                showticklabels=False,
-                domain=[0.55, 1.0]
-            ),
-            xaxis2=plotly.graph_objs.XAxis(
-                ticks='',
-                showticklabels=False,
+            xaxis2=dict(
+                domain=[0.57, 1],
                 anchor='y2'
             ),
-            yaxis2=plotly.graph_objs.YAxis(
-                ticks='',
-                showticklabels=False,
-                domain=[0.0, 0.45],
-            )
+            yaxis2=dict(
+                ticks='', showticklabels=False,
+                domain=[0.57, 1],
+                anchor='x2',
+                autorange='reversed'
+            ),
         )
 
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-
         plotting.save_plotly_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'smoothed_image')

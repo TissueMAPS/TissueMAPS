@@ -53,28 +53,71 @@ def filter_objects(labeled_image, feature, threshold, keep, relabel, **kwargs):
         filtered_image = utils.label_image(filtered_image > 0)
 
     if kwargs['plot']:
-        import matplotlib.pyplot as plt
+        import plotly
         from .. import plotting
 
-        fig = plt.figure()
-        ax1 = fig.add_subplot(1, 2, 1)
-        ax2 = fig.add_subplot(1, 2, 2)
+        rf = 4
+        ds_labl_img = skimage.measure.block_reduce(
+                            labeled_image, (rf, rf), func=np.mean).astype(int)
+        ds_filt_img = skimage.measure.block_reduce(
+                            filtered_image, (rf, rf), func=np.mean).astype(int)
 
-        img_obj = labeled_image.copy().astype(float)
-        img_obj[labeled_image == 0] = np.nan
+        n_labeled = len(np.unique(ds_labl_img[ds_labl_img > 0]))
+        n_filtered = len(np.unique(ds_filt_img[ds_filt_img > 0]))
 
-        ax1.imshow(img_obj, cmap=plt.cm.jet, interpolation='none')
-        ax1.set_title('input objects', size=20)
+        if n_labeled == 1:
+            colors = [[0, 'rgb(0,0,0)'], [1, plotting.OBJECT_COLOR]]
+        else:
+            colors = plotting.create_plotly_palette('Set1', n_labeled)
 
-        img_obj = filtered_image.copy().astype(float)
-        img_obj[filtered_image == 0] = np.nan
+        data = [
+            plotly.graph_objs.Heatmap(
+                z=ds_labl_img,
+                hoverinfo='z',
+                colorscale=colors,
+                # colorbar=dict(yanchor='bottom', y=0.55, len=0.45),
+                showscale=False,
+                y=np.linspace(0, labeled_image.shape[0], ds_labl_img.shape[0]),
+                x=np.linspace(0, labeled_image.shape[1], ds_labl_img.shape[1])
+            ),
+            plotly.graph_objs.Heatmap(
+                z=ds_filt_img,
+                hoverinfo='z',
+                colorscale=colors[:n_filtered+1],
+                showscale=False,
+                y=np.linspace(0, filtered_image.shape[0], ds_filt_img.shape[0]),
+                x=np.linspace(0, filtered_image.shape[1], ds_filt_img.shape[1]),
+                xaxis='x2',
+                yaxis='y2'
+            )
+        ]
 
-        ax2.imshow(img_obj, cmap=plt.cm.jet, interpolation='none')
-        ax2.set_title('filtered objects', size=20)
+        layout = plotly.graph_objs.Layout(
+            title='Objects with {feature} values {above_below} {level}'.format(
+                        feature=feature, above_below=keep, level=threshold),
+            xaxis1=dict(
+                domain=[0, 0.43],
+                anchor='y1'
+            ),
+            yaxis1=dict(
+                domain=[0.57, 1],
+                anchor='x1',
+                autorange='reversed'
+            ),
+            xaxis2=dict(
+                domain=[0.57, 1],
+                anchor='y2'
+            ),
+            yaxis2=dict(
+                ticks='', showticklabels=False,
+                domain=[0.57, 1],
+                anchor='x2',
+                autorange='reversed'
+            ),
+        )
 
-        fig.tight_layout()
-
-        plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        fig = plotly.graph_objs.Figure(data=data, layout=layout)
+        plotting.save_plotly_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'filtered_objects')
     return Output(filtered_image)

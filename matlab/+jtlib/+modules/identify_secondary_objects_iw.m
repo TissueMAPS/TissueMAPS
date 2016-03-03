@@ -65,8 +65,25 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
 
     max_threshold = 1;
 
-    output_label_image = segmentSecondary(rescaled_input_image, input_label_image, input_label_image, ...
-                                          correction_factors, min_threshold, max_threshold); 
+    % Matlab labels images differently, which causes problems in some cases.
+    % Therefore, we relabel primary objects for the identification of
+    % secondary objects and create a mapping from new to original labels.
+    relabeled_image = bwlabel(input_label_image > 0);
+    obj_ids = unique(input_label_image(input_label_image > 0));
+    mapping = struct();
+    for obj in obj_ids
+        new_label = relabeled_image(input_label_image == obj);
+        mapping.(new_label) = obj;
+    end
+
+    output_label_image = segmentSecondary(rescaled_input_image, relabeled_image, relabeled_image, ...
+                                          correction_factors, min_threshold, max_threshold);
+
+    % Map object labels back.
+    final_output_label_image = zeros(size(output_label_image));
+    for obj in fieldnames(mapping)
+        final_output_label_image(output_label_image == obj) = mapping.obj;
+    end
 
     if varargin{4}
 

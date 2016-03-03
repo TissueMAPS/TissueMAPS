@@ -3,6 +3,7 @@ import mpld3
 import numpy as np
 import mahotas as mh
 import plotly
+import colorlover as cl
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 from bokeh.palettes import Reds5, Greens5, Blues5, Oranges5, BuPu5
@@ -13,6 +14,8 @@ from tmlib import image_utils
 # from bokeh.embed import components
 
 logger = logging.getLogger(__name__)
+
+OBJECT_COLOR = 'rgb(255, 191, 0)'
 
 
 def save_mpl_figure(fig, figure_file):
@@ -96,31 +99,80 @@ def save_plotly_figure(fig, figure_file):
     # plotly.plotly.image.save_as(fig, img_file)
 
 
-def create_bokeh_palette(mpl_cmap):
+def create_bokeh_palette(name, n=256):
     '''
-    Convert a
-    `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_
-    to a HEX color palette as required by
-    `bokeh <http://bokeh.pydata.org/en/latest/>`_.
+    Create a color palette in the format required by
+    `bokeh <http://bokeh.pydata.org/en/latest/>`_ based on a
+    `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_.
 
     Parameters
     ----------
-    mpl_cmap: matplotlib.colors.LinearSegmentedColormap
-        matplotlib colormap
+    name: str
+        name of a matplotlib colormap, e.g. ``"Greys"``
+    n: int, optional
+        number of colors (default: ``256``)
 
     Returns
     -------
     List[str]
-        color palette
+        HEX color palette
 
     Note
     ----
     Bokeh's build in palettes have only a few hues. If one wants to display
     values of a larger range one has to create a custom palette.
+
+    Examples
+    --------
+    >>>create_bokeh_palette('Greys', 5)
+    [u'#ffffff', u'#d9d9d9', u'#959595', u'#525252', u'#000000']
     '''
-    colormap = cm.get_cmap(mpl_cmap)
-    palette = [mpl.colors.rgb2hex(m) for m in colormap(np.arange(colormap.N))]
-    return palette
+    colormap = cm.get_cmap(name)
+    indices = np.round(np.linspace(0, 255, n)).astype(int)
+    rgb_values = colormap(indices)
+    return [mpl.colors.rgb2hex(v) for v in rgb_values]
+
+
+def create_plotly_palette(name, n=256):
+    '''
+    Create a color palette in the format required by
+    `plotly <https://plot.ly/python/>`_ based on a
+    `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_.
+
+    Parameters
+    ----------
+    name: str
+        name of a matplotlib colormap, e.g. ``"Greys"``
+    n: int
+        number of colors (default: ``256``)
+
+    Returns
+    -------
+    List[List[float, str]]
+        RGB color palette
+
+    Examples
+    --------
+    >>>create_plotly_palette('Greys', 5)
+    [[0.0, 'rgb(255,255,255)'],
+     [0.25, 'rgb(216,216,216)'],
+     [0.5, 'rgb(149,149,149)'],
+     [0.75, 'rgb(82,82,82)'],
+     [1.0, 'rgb(0,0,0)']]
+
+    Note
+    ----
+    You can invert a colorscale in a `plotly` graph using the
+    :py:attr:`reversescale` argument.
+    '''
+    colormap = cm.get_cmap(name)
+    indices = np.round(np.linspace(0, 255, n)).astype(int)
+    norm = np.linspace(0, 1, n)
+    rgb_values = (colormap(indices)[:, 0:3] * 255).astype(int)
+    return [
+        [norm[i], 'rgb(%d,%d,%d)' % tuple(v)]
+        for i, v in enumerate(rgb_values)
+    ]
 
 
 def create_bk_image_overlay(image, mask, outlines=True,
