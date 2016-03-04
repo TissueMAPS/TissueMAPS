@@ -15,7 +15,7 @@ Python was chosen as programming language because it represents a good trade-off
 - `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 - `vigra <http://ukoethe.github.io/vigra/doc/vigra/PythonBindingsTutorial.html>`_
 
-Jterator pipes data as `numpy <http://www.numpy.org/>`_ arrays and allows integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
+Jterator pipes data as `NumPy <http://www.numpy.org/>`_ arrays and allows integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
 
 - Matlab: `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ 
 - R: `rpy2 <http://rpy.sourceforge.net/>`_
@@ -28,7 +28,7 @@ The main ideas
 ==============
 
 - rapid development and testing of new workflows
-- clear separation of GUI handling from actual processing
+- clear separation of GUI handling and actual image processing
 - short list of dependencies
 - cross-language compatibility
 
@@ -114,7 +114,7 @@ Modules are the actual executable code in your pipeline. Each module is simply a
 Data
 ----
 
-Measurement data are written to *.data.h5* HDF5 files to disk and stored in the *data* folder, a subdirectory of the project folder.
+Modules can write data to *.data* HDF5 files on disk, which are stored in the *data* folder, a subdirectory of the project folder.
 
 The name of the data file is available to the module as ``kwargs["data_file"]``.
 
@@ -124,7 +124,7 @@ Figures
 -------
 
 
-Figures are written to *.html* files and stored in the *figures* folder on disk (a subdirectory of the project folder).
+Figures are written to *.html* files and stored in the *figures* folder on disk, a subdirectory of the project folder.
 The name of the figure file is available to the module as ``kwargs["figure_file"]``.
 
 
@@ -200,7 +200,7 @@ Shown here are minimalistic examples of modules implemented in different languag
 Module descriptor files
 -----------------------
 
-Describe your modules in the *.handles* (YAML) descriptor files:        
+Describe the input and output of your modules in *.handles* (YAML) descriptor files:        
 
 .. code-block:: yaml
 
@@ -258,15 +258,26 @@ Jterator internally adds the following keys in order to make this information av
 Developer documentation
 =======================
 
+Modules should be light weight wrappers that delegate the actual image processing to libraries. To this end, you can make use of external libraries such as `scikit image <http://scikit-image.org/>`_ or implement your own solutions in the `jtlib` library (available for each of the different languages). Module code should be mainly concerned with input/output handling and (optionally) the generation of a figure. Try to break your code down into smaller subroutines and encapsulate them in classes or individual functions. 
+
 .. _naming-conventions:
 
 Naming conventions
 ==================
 
-Since Jterator is written in Python, we recommend following `PEP 0008 -- Style Guide for Python Code <https://www.python.org/dev/peps/pep-0008/>`_ for module and function names.
+Since Jterator is written in Python, we recommend following `PEP 0008 <https://www.python.org/dev/peps/pep-0008/>`_ style guide for module and function names.
 Therefore, we use short *all-lowercase* names for Jterator modules with *underscores* separating words if necessary, e.g. ``modulename`` or ``long_module_name``. See `naming conventions <https://www.python.org/dev/peps/pep-0008/#prescriptive-naming-conventions>`_.
 In the case of Python, a jterator module is simply a Python module that contains a function with the same name as the module.
 This approach also works for `Matlab function files <http://ch.mathworks.com/help/matlab/matlab_prog/create-functions-in-files.html>`_ as well as `R scripts <https://cran.r-project.org/doc/contrib/Lemon-kickstart/kr_scrpt.html>`_.
+
+
+.. _coding-style:
+
+Coding style
+============
+
+For Python, we encourage you to follow `PEP 0008 <https://www.python.org/dev/peps/pep-0008/>`_.
+
 
 
 .. _module-outut:
@@ -274,8 +285,24 @@ This approach also works for `Matlab function files <http://ch.mathworks.com/hel
 Module output
 =============
 
-Output of modules is either returned or written to the provided HDF5 file. The required input parameter is made available to the modules as ``kwargs['data_file']`` in Python or ``varargin{1}`` in Matlab (`matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ doesn't support `struct` arrays).
+Modules either return output or write data to the provided HDF5 file. The path to the file is available as an input parameter of the module function as ``kwargs['data_file']`` in Python, ``varargin{1}`` in Matlab (unfortunately, `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ doesn't support `struct` arrays), or ``dots[['data_file']]`` in R.
 
 .. warning::
 
-    Don't write stuff to any other location on disk than to the provided HDF5 file.
+    Don't write stuff to any other location on disk than to the provided HDF5 file, since `jterator` won't know about it.
+
+
+... _figures:
+
+Figures
+=======
+
+The plotting library `plotly <https://plot.ly/api/>`_ is used to generate interactive plots for visualization of module results in the web-based user interface. The advantage of this library is that is has a uniform API and generates identical outputs across different languages (Python, Matlab, R, Julia). Each module creates only one figure. If you have the feeling that you need more than one figure, it's an indication that you should break down your code into multiple modules.
+
+
+... _documentation:
+
+Documentation
+=============
+
+We use `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate the documentation of modules. Each module should have a docstring that describes the function, input parameters, and outputs. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and follow the `PEP 0257 docstring conventions <https://www.python.org/dev/peps/pep-0257/>`_ to ensure that the documentation for your module will be displayed correctly.
