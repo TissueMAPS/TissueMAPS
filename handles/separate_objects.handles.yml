@@ -77,12 +77,12 @@ input:
   - name: min_angle
     class: parameter
     value: 6
-    help: Size of the sliding window used for perimeter analysis.
+    help: Minimal equivalent angle of the concave region.
 
   - name: min_radius
     class: parameter
     value: 30
-    help: Maximal radius of the circle fitting into the concave region.
+    help: Maximal radius of the circle fitting into concave regions.
 
   - name: perimeter_test_mode
     class: parameter
