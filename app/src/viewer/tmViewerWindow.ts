@@ -5,6 +5,7 @@ angular.module('tmaps.ui').directive('tmViewerWindow', [function() {
     return {
         restrict: 'EA',
         controller: 'ViewerWindowCtrl',
+        scope: true,
         controllerAs: 'viewerWindowCtrl',
         bindToController: true
     };

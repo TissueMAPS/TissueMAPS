@@ -12,7 +12,6 @@ class MapObjectResponseInterpreter {
 
     private _getForPolygonVisualType(type: MapObjectType,
                                      response: MapObjectTypeResponse) {
-        console.log(response);
         return _(response.ids).map((id) => {
             var coordinates = response.map_data.coordinates[id];
             var obj = new MapObject(id, type, 'polygon', {

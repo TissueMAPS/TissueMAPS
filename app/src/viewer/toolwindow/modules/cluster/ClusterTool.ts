@@ -8,7 +8,8 @@ class ClusterTool extends ClassificationTool {
                 templateUrl: '/src/viewer/toolwindow/modules/cluster/cluster.html',
                 icon: 'CLU',
                 defaultWindowHeight: 1025,
-                defaultWindowWidth: 450
+                defaultWindowWidth: 450,
+                controller: 'ClusterCtrl'
             }
           )
     }

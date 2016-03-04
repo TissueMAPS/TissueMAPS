@@ -4,13 +4,51 @@
 
 .tool-window {
     background: #eee;
-    padding: 5px;
     position: absolute;
-    left: @toolbar-width;
+    left: @toolbar-width + 4px;
+    top: 5px;
     height: auto;
     width: 450px;
-    border-right: 1px solid black;
+    border: 1px solid darken(@panel-bg-color, 20%);
     transition: 1s;
+    z-index: 50;
+}
+
+.tool-window-content {
+    padding: 10px;
+    border-top: 1px solid black;
+
+    .lh-background-image(linear-gradient(
+        to bottom,
+        @modal-background-color 0%,
+        darken(@modal-background-color, 5%) 100%
+    ));
+}
+
+.tool-window-header {
+    height: 50px;
+    padding: 10px;
+    background-color: @panel-bg-color;
+    color: @font-color-light;
+
+    .tool-session-id {
+        color: white;
+        font-size: 1em;
+    }
+
+    .tool-name {
+        font-size: 1em;
+        font-weight: bold;
+    }
+
+    .spinner {
+        font-size: 1.5em;
+        float: right;
+    }
+
+    .delete-btn {
+        float: right;
+    }
 }
 
 // .tool-windows-tabbar {

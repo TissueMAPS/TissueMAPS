@@ -1,13 +1,16 @@
-<div class="tool-window tool-window-animation" ng-show="tool">
+<div class="tool-window tool-window-animation" ng-show="toolWindowCtrl.showWindow">
   <div class="tool-window-header">
-    <h2 class="tool-name">
-      {{ tool.name }}
-    </h2>
+    <span class="tool-name">{{ toolWindowCtrl.tool.name }}</span>
+    <span class="delete-btn" ng-click="toolWindowCtrl.showWindow = false">
+      <i class="fa fa-times"></i>
+    </span>
+    <br>
+    <span class="tool-session-id">Session: {{ toolWindowCtrl.session.id }}</span>
 
-    <span class="spinner" ng-show="session.isRunning">
-      <i class="fa fa-refresh" ng-class="{'fa-spin': session.isRunning}"></i>
+    <span class="spinner" ng-show="toolWindowCtrl.session.isRunning">
+      <i class="fa fa-refresh" ng-class="{'fa-spin': toolWindowCtrl.session.isRunning}"></i>
     </span>
 
   </div>
-  <div class="tool-window-body tm-content" ng-include="tool.windowOptions.templateUrl"></div>
+  <div class="tool-window-content" tm-tool-window-content></div>
 </div>

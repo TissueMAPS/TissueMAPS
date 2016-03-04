@@ -120,7 +120,7 @@
         ng-keydown="app.keyDown($event)"
         ng-keyup="app.keyUp($event)">
 
-     <tm-appbar></tm-appbar>
+     <tm-appbar ng-show="appCtrl.isUserAuthenticated()"></tm-appbar>
      <!-- The main view holding the viewer, the setup window or the userpanel. -->
      <!-- Since the DOM of the viewers should not be reinserted by the UI router, its -->
      <!-- container div is made invisible using a onLeave-event instead of using ui-view. --> 

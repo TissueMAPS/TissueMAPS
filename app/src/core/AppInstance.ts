@@ -72,9 +72,9 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         // TODO: Get tools from server (specific for user)
         var $q = $injector.get<ng.IQService>('$q');
         return $q.when([
-            new FeatureStatsTool(this),
-            new ScatterPlotTool(this),
-            new SVMTool(this),
+            // new FeatureStatsTool(this),
+            // new ScatterPlotTool(this),
+            // new SVMTool(this),
             new ClusterTool(this)
         ]);
     }

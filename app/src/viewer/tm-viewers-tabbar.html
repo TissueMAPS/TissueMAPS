@@ -7,7 +7,7 @@
            ng-class="{active: viewer.active}">
          <div> 
            <span ng-click="viewersTabbarCtrl.clickTab(viewer)">
-             {{viewer.experiment.name}}
+             {{::viewer.experiment.name}}
            </span>
            <span ng-click="viewersTabbarCtrl.clickDelete(viewer)">
              <i class="fa fa-times"></i>

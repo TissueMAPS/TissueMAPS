@@ -3,6 +3,7 @@ interface ToolWindowOptions {
     icon: string;
     defaultWindowHeight: number;
     defaultWindowWidth: number;
+    controller: string;
 }
 
 interface ServerToolResponse {

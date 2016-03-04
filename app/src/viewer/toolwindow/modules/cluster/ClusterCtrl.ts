@@ -24,5 +24,4 @@ class ClusterCtrl {
     }
 }
 
-angular.module('tmaps.ui')
-.controller('ClusterCtrl', ClusterCtrl);
+angular.module('tmaps.ui').controller('ClusterCtrl', ClusterCtrl);
