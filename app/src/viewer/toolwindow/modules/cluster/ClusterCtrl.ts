@@ -3,11 +3,15 @@ interface ClusterScope extends ToolWindowScope {
 }
 
 class ClusterCtrl {
-    static $inject = ['$scope'];
+    static $inject = ['$scope', 'viewer', 'tool'];
 
     nClusters: number = 2;
 
-    constructor(public $scope: ClusterScope) {
+    constructor(public $scope: ClusterScope,
+                public viewer: AppInstance,
+                public tool: ClusterTool) {
+        console.log(viewer);
+        console.log(tool);
     }
 
     sendRequest() {
@@ -24,4 +28,4 @@ class ClusterCtrl {
     }
 }
 
-angular.module('tmaps.ui').controller('ClusterCtrl', ClusterCtrl);
+// angular.module('tmaps.ui').controller('ClusterCtrl', ClusterCtrl);

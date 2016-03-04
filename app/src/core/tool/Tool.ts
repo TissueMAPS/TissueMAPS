@@ -3,12 +3,17 @@ interface ToolWindowOptions {
     icon: string;
     defaultWindowHeight: number;
     defaultWindowWidth: number;
-    controller: string;
+    controller: ToolCtrl;
+    controllerAs: string;
 }
 
 interface ServerToolResponse {
     tool_id: string;
     result: any;
+}
+
+abstract class ToolCtrl {
+
 }
 
 abstract class Tool {

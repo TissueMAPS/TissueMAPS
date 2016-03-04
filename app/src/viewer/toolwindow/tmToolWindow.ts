@@ -52,6 +52,7 @@ angular.module('tmaps.ui')
         ($controller, $compile, $templateRequest, toolWindowDOMCache) => {
     return {
         restrict: 'A',
+        scope: true,
         link: function(scope, elem, attr, ctrl) {
             /**
              * Watch the session set in scope and check if it changes to another session.
@@ -78,15 +79,16 @@ angular.module('tmaps.ui')
                 var hasCachedDOMElement = cachedDOMElement !== undefined;
 
                 if (!hasCachedDOMElement) {
-                    var templateUrl = newSession.tool.windowOptions.templateUrl;
+                    var toolWindowOptions = newSession.tool.windowOptions;
+                    var templateUrl = toolWindowOptions.templateUrl;
                     $templateRequest(templateUrl).then(function(resp) {
                         var newScope = scope.$new();
-                        var toolCtrl = $controller(newSession.tool.windowOptions.controller, {
-                            viewer: scope.viewer,
-                            tool: newSession.tool,
-                            $scope: newScope
+                        var toolCtrl = $controller(toolWindowOptions.controller, {
+                            'viewer': scope.viewer,
+                            'tool': newSession.tool,
+                            '$scope': newScope
                         });
-                        newScope.toolCtrl = toolCtrl;
+                        newScope[toolWindowOptions.controllerAs] = toolCtrl;
                         var newContent = $compile(resp)(newScope)
                         elem.append(newContent);
                     });

@@ -9,7 +9,8 @@ class ClusterTool extends ClassificationTool {
                 icon: 'CLU',
                 defaultWindowHeight: 1025,
                 defaultWindowWidth: 450,
-                controller: 'ClusterCtrl'
+                controller: ClusterCtrl,
+                controllerAs: 'clusterCtrl'
             }
           )
     }
