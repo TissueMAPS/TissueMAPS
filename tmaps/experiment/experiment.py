@@ -22,7 +22,6 @@ import tmlib.cfg
     # access_level = db.Column(db.Enum(*EXPERIMENT_ACCESS_LEVELS,
     #                                  name='access_level'))
 
-
 def _default_experiment_location(exp):
     from _user import User
     user = User.query.get(exp.owner_id)
@@ -198,7 +197,21 @@ class Experiment(HashIdModel, CRUDMixin):
             self.creation_stage != 'CONVERTING_IMAGES' and all_plate_sources_ready
         return is_ready
 
+
     def as_dict(self):
+        map_object_info = []
+        with self.dataset as data:
+            for object_name in data['/objects']:
+                object_data = data['/objects/' + object_name]
+                if 'features' in object_data:
+                    features = [{'name': f} for f in object_data['features'].keys()]
+                else:
+                    features = []
+                map_object_info.append({
+                    'map_object_name': object_name,
+                    'features': features
+                })
+
         return {
             'id': self.hash,
             'name': self.name,
@@ -209,5 +222,6 @@ class Experiment(HashIdModel, CRUDMixin):
             'creation_stage': self.creation_stage,
             'layers': self.layers,
             'plate_sources': [pl.as_dict() for pl in self.plate_sources],
+            'map_object_info': map_object_info,
             'plates': [pl.as_dict() for pl in self.plates]
         }

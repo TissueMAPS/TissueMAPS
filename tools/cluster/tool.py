@@ -5,11 +5,8 @@ import numpy as np
 from matplotlib import cm
 import numpy as np
 
-from tmaps.tool import register_tool, Tool
 
-
-@register_tool('Cluster')
-class ClusterTool(Tool):
+class ClusterTool():
     def process_request(self, payload, experiment):
         """
         {

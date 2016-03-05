@@ -11,11 +11,6 @@ from flask.ext.migrate import Migrate, MigrateCommand
 from tmaps.appfactory import create_app
 from tmaps.extensions.database import db
 
-# Execute all model definitions
-from tmaps.user import User
-from tmaps.experiment import Experiment
-
-
 cfg = flask.Config(p.realpath(p.dirname(__file__)))
 cfg.from_envvar('TMAPS_SETTINGS')
 
@@ -63,7 +58,6 @@ def create_tables():
     """
     db.create_all()
 
-
 @db_manager.command
 def insert_data(yaml_file):
     """Insert some records values into the database.
@@ -76,7 +70,7 @@ def insert_data(yaml_file):
         The path to a yaml file with the following structure:
 
         records:
-            - ClassName:
+            - path.to.ClassName:
                 arg1: value1
                 arg2: value2
                 ...
@@ -84,6 +78,13 @@ def insert_data(yaml_file):
 
     """
     app = create_app(cfg)
+
+    def import_from_str(name):
+        components = name.split('.')
+        mod = __import__(components[0])
+        for comp in components[1:]:
+            mod = getattr(mod, comp)
+        return mod
 
     if yaml_file is None or yaml_file == '':
         print 'No yaml_file supplied, will not insert any data. '
@@ -96,14 +97,14 @@ def insert_data(yaml_file):
             for rec in sample_data['records']:
                 class_name = rec['class']
                 constr_args = rec['args']
-                model_constr = globals()[class_name]
+                model_constr = import_from_str(class_name)
 
                 # Check if there are objects that have to be looked up in the 
                 # database before creating new database records.
                 for k, v in constr_args.items():
                     if type(v) is dict:
                         obj_class = v['class']
-                        obj_model = globals()[obj_class]
+                        obj_model = import_from_str(obj_class)
                         lookup_properties = v['lookup_props']
                         arg_obj = db.session.query(obj_model).filter_by(**lookup_properties).first()
                         constr_args[k] = arg_obj

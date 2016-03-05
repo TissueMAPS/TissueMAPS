@@ -13,7 +13,16 @@ from tmaps.response import (
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE
 )
-from tmaps.tool import get_tool
+from tmaps.tool import Tool
+
+
+@api.route('/tools')
+@jwt_required()
+def get_tools():
+    # TODO: Only return tools for the current user
+    return jsonify({
+        'tools': [t.to_dict() for t in Tool.query.all()]
+    })
 
 
 @api.route('/tools/<tool_id>/request', methods=['POST'])
@@ -45,18 +54,22 @@ def process_tool_request(tool_id):
     """
     data = json.loads(request.data)
 
-    if not 'payload' in data or not 'experiment_id' in data:
+    if not 'payload' in data \
+            or not 'experiment_id' in data \
+            or not 'session_uuid' in data:
         return MALFORMED_REQUEST_RESPONSE
 
     payload = data.get('payload', {})
+    session_uuid = data.get('session_uuid')
+    experiment_id = data.get('experiment_id')
 
-    experiment_id = data.get('experiment_id', {})
     e = Experiment.get(experiment_id)
     if e is None:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
 
+    
     # Create the tool object
     # TODO: Could theoretically initialize the new tool instance with data that
     # was saved previously in the DB using a special id that the client knows
@@ -67,10 +80,11 @@ def process_tool_request(tool_id):
     # could save data on the tool object, which would then be saved on the db
     # and automatically restored on the next request. The tool creator wouldn't
     # know that the tool instance is destroyed after each request.
-    tool_cls = get_tool(tool_id)
+    # tool_cls = get_tool(tool_id)
     tool = tool_cls()
 
-    tool_res = tool.process_request(payload, e)
+    tool_result = tool.process_request(payload, e)
+    import ipdb; ipdb.set_trace()
 
     return jsonify(result=tool_res)
 

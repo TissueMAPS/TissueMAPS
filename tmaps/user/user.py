@@ -5,7 +5,7 @@ from tmaps.extensions.database import db
 from passlib.hash import sha256_crypt
 
 from werkzeug import secure_filename
-from tmaps.appstate import AppStateShare
+from tmaps.appstate import Appstate
 from tmaps.experiment import ExperimentShare
 from tmaps.model import CRUDMixin, Model
 from tmaps.model.decorators import auto_generate_hash, auto_create_directory

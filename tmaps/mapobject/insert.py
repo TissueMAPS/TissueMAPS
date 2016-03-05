@@ -1,8 +1,14 @@
+"""
+Insert mapobjects together with their outline coordinates into the PostGIS-enabled postgres database
+based on the information stored in an experiment's data.h5 file.
+This file can be run as a main module like this:
+    $ python tmaps/mapobject/insert.py --dbuser robin --dbpass SOME_PASS --expid 1
+"""
 import sqlalchemy
 import geoalchemy2
 
 from tmaps.experiment import Experiment
-from tmaps.mapobject import MapObjectCoords, MapObject
+from tmaps.mapobject import MapobjectCoords, Mapobject
 
 
 def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', dbport=5432):
@@ -34,12 +40,12 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
             mapobjs = []
             for id in object_ids:
                 print 'Add MapObject %d of type %s' % (id, object_name)
-                mapobj = MapObject(
-                    mapobject_id=id, name=object_name, experiment_id=e.id) 
-                mapobjects_by_id[object_name][mapobj.mapobject_id] = mapobj
+                mapobj = Mapobject(
+                    external_id=int(id), name=object_name, experiment_id=e.id) 
+                mapobjects_by_id[object_name][mapobj.external_id] = mapobj
                 mapobjs.append(mapobj)
 
-            session.add_all(mapobj)
+            session.add_all(mapobjs)
 
         # Insert all objects and generate ids
         print 'Commit MapObjects to DB'
@@ -64,16 +70,29 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
 
                 mapobj = mapobjects_by_id[object_name][int(id)]
 
-                mapobj_coords = MapObjectCoords(
+                mapobj_coords = MapobjectCoords(
                     time=t, z_level=z, geom=poly_ewkt,
-                    mapobject_row_id=mapobj.id)
+                    mapobject_id=mapobj.id)
+                    
 
                 coord_objects.append(mapobj_coords)
 
-            session.add_all(mapobj_coords)
+            session.add_all(coord_objects)
     print 'Commit MapObjectCoords to DB'
     session.commit()
 
     return session
 
-# insert_mapobject_data(1, 'robin', pass)
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Insert mapobject data into postgres')
+    parser.add_argument('--expid', help='The id of the experiment', type=int)
+    parser.add_argument('--dbname', help='The database name', default='tissuemaps')
+    parser.add_argument('--dbuser', help='The database user')
+    parser.add_argument('--dbpass', help='The database user\'s password')
+    parser.add_argument('--dbport', help='The database port', type=int, default=5432)
+    args = parser.parse_args()
+
+    insert_mapobject_data(args.expid, args.dbuser, args.dbpass, args.dbname, args.dbport)
+
