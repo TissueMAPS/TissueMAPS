@@ -1,6 +1,6 @@
 angular.module('tmaps.ui')
-.controller('AppCtrl', ['application', 'uiState', 'authService', 'session', '$rootScope', 'loginDialogService',
-            function(application, uiState, authService, session, $rootScope, loginDialogService) {
+.controller('AppCtrl', ['application', 'uiState', 'authService', 'session', '$rootScope', 'loginDialogService', '$state',
+            function(application, uiState, authService, session, $rootScope, loginDialogService, $state) {
     var self = this;
 
     /**

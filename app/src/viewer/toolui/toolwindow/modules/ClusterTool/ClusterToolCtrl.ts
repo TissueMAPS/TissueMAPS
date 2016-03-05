@@ -1,31 +1,26 @@
-interface ClusterScope extends ToolWindowScope {
-    // featureWidget: FeatureSelectionWidgetCtrl;
+interface ClusterScope extends ToolWindowContentScope {
+    featureWidget: FeatureSelectionWidgetCtrl;
+    objectNameWidget: ObjectNameWidgetCtrl;
 }
 
-class ClusterCtrl {
-    static $inject = ['$scope', 'viewer', 'tool'];
+class ClusterToolCtrl {
+    static $inject = ['$scope', 'viewer', 'session'];
 
     nClusters: number = 2;
 
     constructor(public $scope: ClusterScope,
                 public viewer: AppInstance,
-                public tool: ClusterTool) {
-        console.log(viewer);
-        console.log(tool);
+                public session: ClusterToolSession) {
     }
 
     sendRequest() {
-        // var selectedFeatures =
-        //     _(this._$scope.featureWidget.selectedFeatures).pluck('name');
-        // var payload = {
-        //     chosen_object_type: this._$scope.toolOptions.chosenMapObjectType,
-        //     selected_features: selectedFeatures,
-        //     k: this.nClusters
-        // };
-        // this._tool.sendRequest(payload).then((response) => {
-        //     console.log(response);
-        // });
+        console.log('asdf');
+        var selectedFeatures = this.$scope.featureWidget.selectedFeatures;
+        var payload = {
+            chosen_object_type: this.$scope.objectNameWidget.selectedName,
+            selected_features: selectedFeatures,
+            k: this.nClusters
+        };
+        this.session.sendRequest(this.viewer.experiment, payload);
     }
 }
-
-// angular.module('tmaps.ui').controller('ClusterCtrl', ClusterCtrl);

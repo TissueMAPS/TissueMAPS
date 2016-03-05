@@ -1,5 +1,5 @@
-interface ToolbarScope extends ViewerScope {
-
+interface ToolbarScope extends ToolUIScope {
+    toolbarCtrl: ToolbarCtrl;
 }
 
 /**
@@ -17,34 +17,17 @@ class ToolbarCtrl {
                 private appstateService,
                 private authService) {
         // Add the tools as soon as they are ready
+        console.log('asdjfk');
         this.$scope.viewer.tools.then((tools) => {
             this.tools = tools;
         });
     }
 
     /**
-     * The Toolbar should only be visible when the user is logged in and the
-     * appstate isn't marked as being a snapshot.
-     */
-    isToolbarVisible(): boolean {
-        var userIsViewingSnapshot = this.appstateService.getCurrentState().isSnapshot;
-        var userIsAuthenticated = this.authService.isUserAuthenticated();
-        return userIsAuthenticated && !userIsViewingSnapshot;
-    };
-
-    /**
      * This function is called when the Tool's button is pressed.
      */
     clickToolTab(tool: Tool) {
-        if (tool.sessions.length == 0) {
-            var sess = tool.createSession();
-        } else {
-            var sess = tool.sessions[tool.sessions.length - 1];
-        }
-        this.$scope.viewerCtrl.$scope.$broadcast('showToolWindow', {
-            tool: tool,
-            session: sess
-        });
+        this.$scope.toolUICtrl.toggleToolWindow(tool);
     }
 }
 angular.module('tmaps.ui').controller('ToolbarCtrl', ToolbarCtrl);
@@ -54,6 +37,6 @@ angular.module('tmaps.ui')
         restrict: 'E',
         controller: 'ToolbarCtrl',
         controllerAs: 'toolbarCtrl',
-        templateUrl: '/src/viewer/toolbar/tm-toolbar.html'
+        templateUrl: '/src/viewer/toolui/toolbar/tm-toolbar.html'
     };
 });

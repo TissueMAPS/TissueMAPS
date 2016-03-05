@@ -5,6 +5,7 @@ interface ExperimentArgs {
     name: string;
     description: string;
     channels: Channel[];
+    mapObjectInfo: {[objectName: string]: MapObjectInfo};
 }
 
 interface SerializedExperiment extends Serialized<Experiment> {
@@ -27,6 +28,8 @@ class Experiment implements Serializable<Experiment> {
     // TODO: Move this property into a new extending class.
     channels: Channel[];
 
+    private _mapObjectInfo: {[objectName: string]: MapObjectInfo};
+
     constructor(opt: ExperimentArgs) {
 
         var $q = $injector.get<ng.IQService>('$q');
@@ -34,8 +37,17 @@ class Experiment implements Serializable<Experiment> {
         this.id = opt.id;
         this.name = opt.name;
         this.description = opt.description;
+        this._mapObjectInfo = opt.mapObjectInfo;
 
         this.channels = opt.channels;
+    }
+
+    getMapObjectInfo(objectName: string) {
+        return this._mapObjectInfo[objectName];
+    }
+
+    get mapObjectNames() {
+        return _.keys(this._mapObjectInfo); 
     }
 
     serialize(): ng.IPromise<SerializedExperiment> {
@@ -74,11 +86,17 @@ class Experiment implements Serializable<Experiment> {
                 pyramidPath: l.pyramidPath
             };
         });
+        var mapObjectInfos: {[objectName: string]: MapObjectInfo} = {};
+        e.map_object_info.forEach((info) => {
+            mapObjectInfos[info.map_object_name] =
+                new MapObjectInfo(info.map_object_name, info.features);
+        });
         return new Experiment({
             id: e.id,
             name: e.name,
             description: e.description,
-            channels: channels
+            channels: channels,
+            mapObjectInfo: mapObjectInfos
         });
     }
 }

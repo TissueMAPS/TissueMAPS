@@ -1,14 +1,14 @@
-<div class="tool-window tool-window-animation" ng-show="toolWindowCtrl.showWindow">
+<div class="tool-window tool-window-animation" ng-show="toolUICtrl.showWindow">
   <div class="tool-window-header">
-    <span class="tool-name">{{ toolWindowCtrl.tool.name }}</span>
-    <span class="delete-btn" ng-click="toolWindowCtrl.showWindow = false">
+    <span class="tool-name">{{ toolUICtrl.currentTool.name }}</span>
+    <span class="delete-btn" ng-click="toolUICtrl.hideWindow()">
       <i class="fa fa-times"></i>
     </span>
     <br>
-    <span class="tool-session-id">Session: {{ toolWindowCtrl.session.id }}</span>
+    <span class="tool-session-id">Session: {{ toolUICtrl.currentSession.uuid }}</span>
 
-    <span class="spinner" ng-show="toolWindowCtrl.session.isRunning">
-      <i class="fa fa-refresh" ng-class="{'fa-spin': toolWindowCtrl.session.isRunning}"></i>
+    <span class="spinner" ng-show="toolUICtrl.currentSession.isRunning">
+      <i class="fa fa-refresh" ng-class="{'fa-spin': toolUICtrl.currentSession.isRunning}"></i>
     </span>
 
   </div>

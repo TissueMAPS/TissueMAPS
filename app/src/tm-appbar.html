@@ -54,7 +54,7 @@
       <a ui-sref="userpanel">
         <b>{{ appCtrl.getUser().name}}</b>
       </a>
-      <a ui-sref="welcome" ng-click="appCtrl.logout()">(logout)</a>
+      <a ng-click="appCtrl.logout()">(logout)</a>
     </div>
 
     <div ng-show="!appCtrl.isUserAuthenticated()">

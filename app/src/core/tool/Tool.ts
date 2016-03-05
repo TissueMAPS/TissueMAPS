@@ -1,12 +1,3 @@
-interface ToolWindowOptions {
-    templateUrl: string;
-    icon: string;
-    defaultWindowHeight: number;
-    defaultWindowWidth: number;
-    controller: ToolCtrl;
-    controllerAs: string;
-}
-
 interface ServerToolResponse {
     tool_id: string;
     result: any;
@@ -16,56 +7,72 @@ abstract class ToolCtrl {
 
 }
 
-abstract class Tool {
-    sessions: ToolSession[];
+interface GetToolResponse {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+}
 
-    constructor(public appInstance: AppInstance,
-                public id: string,
-                public name: string,
-                public description: string,
-                public windowOptions: ToolWindowOptions) {
+interface GetToolsResponse {
+    tools: GetToolResponse[];
+}
+
+interface ToolArgs {
+    id: string;
+    name: string,
+    description: string,
+    icon: string,
+}
+
+class Tool {
+    sessions: ToolSession[];
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    SessionClass: string;
+
+    constructor(options: ToolArgs) {
         this.sessions = [];
+        this.id = options.id;
+        this.name = options.name;
+        this.description = options.description;
+        this.icon = options.icon;
     }
 
-    abstract handleResult(res: ToolResult);
+    get sessionClass() {
+        return window[this.name + 'Session'];
+    }
+
+    get controller() {
+        return window[this.name + 'Ctrl'];
+    }
+
+    get templateUrl() {
+        return '/src/viewer/toolui/toolwindow/modules/' + this.name + '/' + this.name + 'Template.html';
+    }
 
     createSession(): ToolSession {
-        var sess = new ToolSession(this);
+        var sess = new this.sessionClass(this);
         this.sessions.push(sess);
         return sess;
     }
 
-    sendRequest(session: ToolSession, payload: any): ng.IPromise<ToolResult> {
-        var url = '/api/tools/' + this.id + '/request';
 
-        // TODO: Send event to Viewer messagebox
-        // this.appInstance.viewport.elementScope.then((vpScope) => {
-        //     vpScope.$broadcast('toolRequestSent');
-        // });
-
-        return $injector.get<ng.IHttpService>('$http').post(url, {
-            'experiment_id': this.appInstance.experiment.id,
-            'payload': payload
-        }).then(
-        (resp) => {
-            // this.appInstance.viewport.elementScope.then((vpScope) => {
-                // TODO: Send event to Viewer messagebox
-                // vpScope.$broadcast('toolRequestDone');
-                // vpScope.$broadcast('toolRequestSuccess');
-            // });
-            var data = <ServerToolResponse> resp.data;
-            session.results.push(data.result);
-            this.handleResult(data.result);
-            return data.result;
-        },
-        (err) => {
-            // this.appInstance.viewport.elementScope.then((vpScope) => {
-                // TODO: Send event to Viewer messagebox
-                // vpScope.$broadcast('toolRequestDone');
-                // vpScope.$broadcast('toolRequestFailed', err.data);
-            // });
-            return err.data;
+    static getAll(): ng.IPromise<Tool[]> {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        return $http.get('/api/tools').then((resp) => {
+            var data = <GetToolsResponse> resp.data;
+            return _.map(data.tools, (t) => {
+                return new Tool({
+                    id: t.id,
+                    name: t.name,
+                    description: t.description,
+                    icon: t.icon
+                });
+            });
         });
-    };
+    }
 
 }

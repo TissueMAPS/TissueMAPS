@@ -9,10 +9,16 @@ interface LayerAPIObject {
     pyramidPath: string;
 }
 
+interface MapObjectInfoAPIObject {
+    map_object_name: string;
+    features: {name: string; }[];
+}
+
 interface ExperimentAPIObject {
     id: string;
     name: string;
     description: string;
     owner: string;
     layers: LayerAPIObject[];
+    map_object_info: MapObjectInfoAPIObject[];
 }

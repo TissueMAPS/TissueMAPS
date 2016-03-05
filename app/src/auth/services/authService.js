@@ -1,6 +1,6 @@
 angular.module('tmaps.auth')
-.service('authService', ['$http', 'session', 'User', '$rootScope', 'AUTH_EVENTS', '$q',
-         function($http, session, User, $rootScope, AUTH_EVENTS, $q) {
+.service('authService', ['$http', 'session', 'User', '$rootScope', 'AUTH_EVENTS', '$q', '$state', 
+         function($http, session, User, $rootScope, AUTH_EVENTS, $q, $state) {
 
     /**
      * Ask the server to check if there is a username with a given
@@ -41,6 +41,7 @@ angular.module('tmaps.auth')
     this.logout = function() {
         session.destroy();
         $rootScope.$broadcast(AUTH_EVENTS.logoutSuccess);
+        $state.go('login');
     };
 
     /**

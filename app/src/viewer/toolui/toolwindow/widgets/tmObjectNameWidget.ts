@@ -1,30 +1,33 @@
 angular.module('tmaps.ui')
-.directive('tmObjectTypeSelectionWidget', () => {
+.directive('tmObjectNameWidget', () => {
     var template = 
         '<label>Object type: </label>' +
-        '<select ng-model="toolOptions.chosenMapObjectType">' +
-          '<option value="{{::t}}" ng-repeat="t in objectTypeSelectionWidget.selHandler.supportedMapObjectTypes">' +
+        '<select ng-model="objectNameWidget.selectedName">' +
+          '<option value="{{::t}}" ng-repeat="t in objectNameWidget.mapObjectNames">' +
           '{{::t}}' +
           '</option>' +
         '</select>';
     return {
         restrict: 'E',
         template: template,
-        controller: 'ObjectTypeSelectionWidgetCtrl',
-        controllerAs: 'objectTypeSelectionWidget'
+        controller: 'ObjectNameWidgetCtrl',
+        controllerAs: 'objectNameWidget'
     };
 });
 
-class ObjectTypeSelectionWidgetCtrl {
+class ObjectNameWidgetCtrl {
 
-    static $inject = ['tmapsProxy'];
+    static $inject = ['$scope'];
 
-    selHandler: MapObjectSelectionHandler;
+    mapObjectNames: string[] = [];
+    selectedName: string;
 
-    constructor(tmapsProxy: TmapsProxy) {
-        this.selHandler = tmapsProxy.appInstance.mapObjectSelectionHandler;
+    constructor($scope: any) {
+
+        this.selectedName = $scope.viewer.experiment.mapObjectNames[0];
+        this.mapObjectNames = $scope.$parent.viewer.experiment.mapObjectNames;
     }
 }
 
-angular.module('tmaps.toolwindow').
-controller('ObjectTypeSelectionWidgetCtrl', ObjectTypeSelectionWidgetCtrl);
+angular.module('tmaps.ui').
+controller('ObjectNameWidgetCtrl', ObjectNameWidgetCtrl);

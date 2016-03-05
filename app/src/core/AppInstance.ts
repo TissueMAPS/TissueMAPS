@@ -16,10 +16,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     private _element: JQuery = null;
     private _active: boolean;
 
-    // TODO: These properties might be better located on the Experiment class itself
-    mapObjectRegistry: MapObjectRegistry;
-    featureManager: FeatureManager;
-
     mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
 
@@ -33,20 +29,19 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.name = experiment.name;
         this.viewport = new Viewport();
         this.viewport.injectIntoDocumentAndAttach(this);
-        this.tools = this._loadTools();
+        this.tools = Tool.getAll();
         this.active = options.active === undefined ? false : options.active;
 
-        this.featureManager = new FeatureManager(experiment);
-        this.mapObjectRegistry = new MapObjectRegistry(experiment);
+        // TODO: Add selection handler
+        // this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this.viewport);
 
-        this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this.viewport, this.mapObjectRegistry);
-        this.mapObjectRegistry.mapObjectTypes.then((types) => {
-            _(types).each((t) => {
-                this.mapObjectSelectionHandler.addMapObjectType(t);
-                // Add an initial selection for the newly added type
-                this.mapObjectSelectionHandler.addNewSelection(t);
-            });
-        });
+        // this.mapObjectRegistry.mapObjectTypes.then((types) => {
+        //     _(types).each((t) => {
+        //         this.mapObjectSelectionHandler.addMapObjectType(t);
+        //         // Add an initial selection for the newly added type
+        //         this.mapObjectSelectionHandler.addNewSelection(t);
+        //     });
+        // });
 
         this._addExperimentToViewport();
     }
@@ -66,17 +61,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             var layer = new ChannelLayer(opt);
             this.viewport.addChannelLayer(layer);
         });
-    }
-
-    private _loadTools() {
-        // TODO: Get tools from server (specific for user)
-        var $q = $injector.get<ng.IQService>('$q');
-        return $q.when([
-            // new FeatureStatsTool(this),
-            // new ScatterPlotTool(this),
-            // new SVMTool(this),
-            new ClusterTool(this)
-        ]);
     }
 
     set active(active: boolean) {

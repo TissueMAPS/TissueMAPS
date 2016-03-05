@@ -1,6 +1,5 @@
 interface FeatureTab {
     selected: boolean;
-    mapObjectName: string;
     name: string;
 }
 
@@ -12,37 +11,29 @@ class FeatureSelectionWidgetCtrl {
     featureQuery: { name: string; } = {
         name: undefined
     };
+    selectedObjectName: string;
 
-    private _selHandler: MapObjectSelectionHandler;
-    private _featureTabsByType: {[objType: string]: FeatureTab[];} = {};
+    private _featureTabsByName: {[objName: string]: FeatureTab[];} = {};
 
-    static $inject = ['$http', '$scope'];
+    static $inject = ['$scope'];
 
-    constructor(public $http: ng.IHttpService,
-                public $scope: ToolWindowScope) {
-
+    constructor(public $scope: ToolWindowContentScope) {
         this.name = this.name === undefined ? 'featureWidget' : this.name;
-        this.maxSelections = this.name === undefined ? Infinity: this.maxSelections;
-        this._selHandler = this.$scope.viewer.mapObjectSelectionHandler;
+        this.maxSelections = this.maxSelections === undefined ? Infinity: this.maxSelections;
 
-        $scope.$parent[this.name] = this;
+        this.$scope.$parent[this.name] = this;
 
-        // this._selHandler.supportedMapObjectTypes.forEach((t) => {
-        //     // Init as empty array s.t. angular will just display
-        //     // no features when promise isn't resolved.
-        //     this._featureTabsByType[t] = [];
-        //     featManager.getFeaturesForType(t).then((feats) => {
-        //         // Create a tab object for each feature.
-        //         // Tabs are initially not selected.
-        //         this._featureTabsByType[t] = feats.map((f) => {
-        //             return {
-        //                 name: f.name,
-        //                 mapObjectType: t,
-        //                 selected: false
-        //             };
-        //         });
-        //     });
-        // });
+        var parentScope = <ToolWindowContentScope>this.$scope.$parent;
+        var experiment = parentScope.viewer.experiment;
+        experiment.mapObjectNames.forEach((objectName) => {
+            var featureTabs = _.map(experiment.getMapObjectInfo(objectName).features, (f) => {
+                return {
+                    name: f.name,
+                    selected: false
+                };
+            });
+            this._featureTabsByName[objectName] = featureTabs;
+        });
     }
 
     toggleFeatureSelection(tab: FeatureTab) {
@@ -58,7 +49,6 @@ class FeatureSelectionWidgetCtrl {
             var wasSelected = tab.selected;
             tab.selected = true;
             if (!wasSelected) {
-                // this._parentScope.$broadcast('featureSelected', tab, this);
                 this.nSelected += 1;
             }
         } else {
@@ -75,25 +65,22 @@ class FeatureSelectionWidgetCtrl {
         }
     }
 
-    // get featureTabsForChosenType() {
-    //     return this._featureTabsByType[this.toolOptions.chosenMapObjectType];
-    // }
+    get featureTabsForChosenName() {
+        return this._featureTabsByName[this.selectedObjectName];
+    }
 
     get selectedFeatures() {
-        var feats = [];
-        // this.featureTabsForChosenType.map((tab) => {
-        //     if (tab.selected) {
-        //         feats.push({
-        //             name: tab.name
-        //         });
-        //     }
-        // });
-        return feats;
+        return _.chain(this.featureTabsForChosenName)
+        .filter((t) => {
+            return t.selected;
+        }).map((f) => {
+            return f.name;
+        }).value();
     }
 
     setAll(isSelected: boolean) {
-        for (var t in this._featureTabsByType) {
-            this._featureTabsByType[t].forEach((tab) => {
+        for (var t in this._featureTabsByName) {
+            this._featureTabsByName[t].forEach((tab) => {
                 if (isSelected) {
                     this.selectFeature(tab);
                 } else {
@@ -117,13 +104,14 @@ angular.module('tmaps.ui')
 .directive('tmFeatureSelectionWidget', function() {
     return {
         restrict: 'E',
-        templateUrl: '/src/viewer/toolwindow/widgets/tm-feature-selection-widget.html',
+        templateUrl: '/src/viewer/toolui/toolwindow/widgets/tm-feature-selection-widget.html',
         controller: 'FeatureSelectionWidgetCtrl',
         controllerAs: 'featureWidget',
         bindToController: true,
         scope: {
             name: '@name',
-            maxSelections: '@maxSelections'
+            maxSelections: '@maxSelections',
+            selectedObjectName: '='
         }
     };
 });
