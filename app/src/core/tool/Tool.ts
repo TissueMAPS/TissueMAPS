@@ -1,6 +1,7 @@
 interface ServerToolResponse {
-    tool_id: string;
-    result: any;
+    tool_id: number;
+    session_uuid: any;
+    payload: any;
 }
 
 abstract class ToolCtrl {
@@ -50,7 +51,7 @@ class Tool {
     }
 
     get templateUrl() {
-        return '/src/viewer/toolui/toolwindow/modules/' + this.name + '/' + this.name + 'Template.html';
+        return '/src/tools/' + this.name + '/' + this.name + 'Template.html';
     }
 
     createSession(): ToolSession {

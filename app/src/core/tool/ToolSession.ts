@@ -10,10 +10,10 @@ abstract class ToolSession {
         this.uuid = makeUUID();
     }
 
-    abstract handleResult(res: ToolResult);
+    abstract handleResult(res: any);
 
     sendRequest(experiment: Experiment,
-                payload: any): ng.IPromise<ToolResult> {
+                payload: any): ng.IPromise<any> {
         var url = '/api/tools/' + this.tool.id + '/request';
         // TODO: Send event to Viewer messagebox
         return $injector.get<ng.IHttpService>('$http').post(url, {
@@ -26,9 +26,12 @@ abstract class ToolSession {
             // vpScope.$broadcast('toolRequestDone');
             // vpScope.$broadcast('toolRequestSuccess');
             var data = <ServerToolResponse> resp.data;
-            this.results.push(data.result);
-            this.handleResult(data.result);
-            return data.result;
+            var sessionUUID = data.session_uuid;
+            var toolId = data.tool_id;
+            var resultPayload = data.payload;
+            this.results.push(resultPayload);
+            this.handleResult(resultPayload);
+            return data.payload;
         },
         (err) => {
             // this.appInstance.viewport.elementScope.then((vpScope) => {
