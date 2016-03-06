@@ -4,10 +4,11 @@ from scipy.cluster.vq import kmeans, vq
 import numpy as np
 from matplotlib import cm
 import numpy as np
+from tools.result import Classification
 
 
 class ClusterTool():
-    def process_request(self, payload, experiment):
+    def process_request(self, payload, session, experiment):
         """
         {
             "chosen_object_type": str,
@@ -17,25 +18,18 @@ class ClusterTool():
 
         """
 
-        import ipdb; ipdb.set_trace()
         feature_names = payload['selected_features']
-        object_type = payload['chosen_object_type']
+        mapobject_name = payload['chosen_object_type']
         k = payload['k']
 
         with experiment.dataset as dataset:
-            labels = self._perform_clustering(dataset, object_type, feature_names, k)
+            predicted_labels = self._perform_clustering(
+                dataset, mapobject_name, feature_names, k)
+            ids = range(len(predicted_labels))
+        result = Classification(
+            ids=ids, labels=predicted_labels, mapobject_name=mapobject_name)
 
-        available_colors = \
-            ['#00ecff', '#ff5a00', '#56ff00', '#c900ff', '#ff00f4'] + \
-            ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a', '#ffff99', '#b15928']
-        colors = dict(zip(range(len(available_colors)), available_colors))
-
-        return {
-            'object_type': object_type,
-            'predicted_labels': labels,
-            'object_ids': range(len(labels)),
-            'colors': colors
-        }
+        return result
 
 
     def _perform_clustering(self, data, object_type, feature_names, k):

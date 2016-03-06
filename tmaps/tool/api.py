@@ -13,7 +13,8 @@ from tmaps.response import (
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE
 )
-from tmaps.tool import Tool
+from tmaps.tool import Tool, ToolSession, ClassificationResult
+from tools.result import Classification
 
 
 @api.route('/tools')
@@ -54,6 +55,7 @@ def process_tool_request(tool_id):
     """
     data = json.loads(request.data)
 
+    # Check if the request is valid.
     if not 'payload' in data \
             or not 'experiment_id' in data \
             or not 'session_uuid' in data:
@@ -63,31 +65,40 @@ def process_tool_request(tool_id):
     session_uuid = data.get('session_uuid')
     experiment_id = data.get('experiment_id')
 
+    # Check if the user has permissions to access this experiment.
     e = Experiment.get(experiment_id)
     if e is None:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
 
-    
-    # Create the tool object
-    # TODO: Could theoretically initialize the new tool instance with data that
-    # was saved previously in the DB using a special id that the client knows
-    # and can send with subsequent tool requests.
-    # This concept was previously implemented in the form of "ToolInstances".
-    # It could be reintroduced if necessary. Due to changes on the client side,
-    # a better name would be "ToolSession" or something. The tool creator
-    # could save data on the tool object, which would then be saved on the db
-    # and automatically restored on the next request. The tool creator wouldn't
-    # know that the tool instance is destroyed after each request.
-    # tool_cls = get_tool(tool_id)
+    # Instantiate the correct tool plugin class.
     tool = Tool.get(tool_id)
     tool_cls = tool.get_class()
     tool_inst = tool_cls()
 
-    tool_result = tool_inst.process_request(payload, e)
+    # Load or create the persistent tool session.
+    session = ToolSession.query.filter_by(uuid=session_uuid).first()
+    if session is None:
+        session = ToolSession.create(
+            experiment_id=e.id, user_id=current_identity.id,
+            uuid=session_uuid, tool_id=tool.id, appstate_id=None)
 
-    return jsonify(result=tool_result)
+    # Execute the tool plugin.
+    tool_result = tool_inst.process_request(payload, session, e)
+
+    # Persist the result and create the response.
+    if type(tool_result) is Classification:
+        res = ClassificationResult.save_result(tool_result, session)
+        response = {
+            'payload': {
+                'classification_result_id': res.id,
+            },
+            'session_uuid': session_uuid,
+            'tool_id': tool_id
+        }
+
+    return jsonify(response)
 
 
 # @api.route('/tools/<tool_id>/instances', methods=['POST'])

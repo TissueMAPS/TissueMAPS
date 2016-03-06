@@ -4,7 +4,7 @@ from tmaps.model import CRUDMixin, Model
 
 class ToolSession(Model, CRUDMixin):
     id = db.Column(db.Integer, primary_key=True)
-    uuid = db.Column(db.String(50), index=True)
+    uuid = db.Column(db.String(50), index=True, unique=True)
 
     experiment_id = \
         db.Column(db.Integer, db.ForeignKey('experiment.id'))
@@ -20,6 +20,12 @@ class ToolSession(Model, CRUDMixin):
 
     experiment = db.relationship('Experiment', uselist=False)
     user = db.relationship('User', uselist=False)
+
+    def set(key, value):
+        pass
+
+    def get(key):
+        pass
 
 #     def __repr__(self):
 #         return '<ToolInstance %s : %d>' % (self.tool_id, self.id)
