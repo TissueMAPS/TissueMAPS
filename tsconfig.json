@@ -71,15 +71,10 @@
 
         "app/src/viewer/toolui/toolwindow/widgets/tmObjectNameWidget.ts",
         "app/src/viewer/toolui/toolwindow/widgets/tmFeatureSelectionWidget.ts",
-        "app/src/viewer/toolui/toolwindow/modules/cellstats/CellStatsCtrl.ts",
 
-        "app/src/viewer/toolui/toolwindow/modules/ClusterTool/ClusterToolSession.ts",
-        "app/src/viewer/toolui/toolwindow/modules/ClusterTool/ClusterToolCtrl.ts",
+        "app/src/tools/ClusterTool/ClusterToolSession.ts",
+        "app/src/tools/ClusterTool/ClusterToolCtrl.ts",
 
-        "app/src/viewer/toolui/toolwindow/modules/decisiontree/DecisionTreeCtrl.ts",
-        "app/src/viewer/toolui/toolwindow/modules/filter/FilterCtrl.ts",
-        "app/src/viewer/toolui/toolwindow/modules/scatterplot/ScatterPlotCtrl.ts",
-        "app/src/viewer/toolui/toolwindow/modules/svm/SVMCtrl.ts",
         "app/src/viewer/toolui/toolbar/tmToolbar.ts",
         "app/src/viewer/toolui/toolbar/ToolbarCtrl.ts",
         "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",
