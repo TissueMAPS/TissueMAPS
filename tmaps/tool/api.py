@@ -81,12 +81,13 @@ def process_tool_request(tool_id):
     # and automatically restored on the next request. The tool creator wouldn't
     # know that the tool instance is destroyed after each request.
     # tool_cls = get_tool(tool_id)
-    tool = tool_cls()
+    tool = Tool.get(tool_id)
+    tool_cls = tool.get_class()
+    tool_inst = tool_cls()
 
-    tool_result = tool.process_request(payload, e)
-    import ipdb; ipdb.set_trace()
+    tool_result = tool_inst.process_request(payload, e)
 
-    return jsonify(result=tool_res)
+    return jsonify(result=tool_result)
 
 
 # @api.route('/tools/<tool_id>/instances', methods=['POST'])
