@@ -3,9 +3,13 @@ import json
 from flask import jsonify, request
 from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
+from sqlalchemy.sql import text
 
+from tmaps.mapobject import MapobjectCoords
 from tmaps.extensions.database import db
 from tmaps.extensions.encrypt import decode
+from tmaps.tool import Tool, ToolSession
+from tmaps.tool.result import LabelResult
 from tmaps.api import api
 from tmaps.experiment import Experiment
 from tmaps.response import (
@@ -13,8 +17,18 @@ from tmaps.response import (
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE
 )
-from tmaps.tool import Tool, ToolSession, ClassificationResult
-from tools.result import Classification
+
+
+def _create_mapobject_feature(obj_id, geometry_obj):
+    """Create a GeoJSON feature object given a object id of type int
+    and a object that represents a GeoJSON geometry definition."""
+    return {
+        "type": "Feature",
+        "geometry": geometry_obj,
+        "properties": {
+            "id": str(obj_id)
+        }
+    }
 
 
 @api.route('/tools')
@@ -87,19 +101,65 @@ def process_tool_request(tool_id):
     # Execute the tool plugin.
     tool_result = tool_inst.process_request(payload, session, e)
 
-    # Persist the result and create the response.
-    if type(tool_result) is Classification:
-        res = ClassificationResult.save_result(tool_result, session)
-        response = {
-            'payload': {
-                'classification_result_id': res.id,
-            },
-            'session_uuid': session_uuid,
-            'tool_id': tool_id
-        }
+    response = {
+        'result_type': tool_result.__class__.__name__,
+        'payload': tool_result.to_dict(),
+        'session_uuid': session_uuid,
+        'tool_id': tool_id
+    }
 
     return jsonify(response)
 
+
+
+@api.route('/labelresults/<labelresult_id>', methods=['GET'])
+def get_labelresult(labelresult_id):
+
+    # ex = Experiment.get(experiment_id)
+    # if not ex:
+    #     return RESOURCE_NOT_FOUND_RESPONSE
+    # TODO: Requests should have a auth token 
+    # if not ex.belongs_to(current_identity):
+    #     return NOT_AUTHORIZED_RESPONSE
+
+    # The coordinates of the requested tile
+    x = request.args.get('x')
+    y = request.args.get('y')
+    z = request.args.get('z')
+    zlevel = request.args.get('zlevel')
+    t = request.args.get('t')
+
+    # Check arguments for validity and convert to integers
+    if any([var is None for var in [x, y, z, zlevel, t]]):
+        return MALFORMED_REQUEST_RESPONSE
+    else:
+        x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
+
+    use_simple_geom = z < 3
+
+    label_res = LabelResult.get(int(labelresult_id))
+
+    features = []
+    query_res = label_res.get_labelled_mapobject_coords_within_tile(
+        x, y, z, zlevel, t, centroid=use_simple_geom)
+    for id, label, geom_geojson_str in query_res:
+        geom_geojson_obj = json.loads(geom_geojson_str)
+        feature = {
+            "type": "Feature",
+            "geometry": geom_geojson_obj,
+            "properties": {
+                "label": label,
+                "id": id
+            }
+        }
+        features.append(feature)
+
+    return jsonify(
+        {
+            "type": "FeatureCollection",
+            "features": features
+        }
+    )
 
 # @api.route('/tools/<tool_id>/instances', methods=['POST'])
 # @jwt_required()

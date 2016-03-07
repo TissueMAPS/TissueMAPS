@@ -1187,7 +1187,7 @@
 									"height": 13,
 									"autoResize": false,
 									"underline": false,
-									"text": "PredictedLabel",
+									"text": "ClassificationResultLabel",
 									"horizontalAlignment": 2,
 									"verticalAlignment": 5
 								},
@@ -3545,7 +3545,7 @@
 					"_parent": {
 						"$ref": "AAAAAAFLzntJC6EktCk="
 					},
-					"name": "PredictedLabel",
+					"name": "ClassificationResultLabel",
 					"ownedElements": [
 						{
 							"_type": "ERDRelationship",

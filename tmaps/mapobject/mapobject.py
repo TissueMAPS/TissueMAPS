@@ -3,6 +3,7 @@ from geoalchemy2 import Geometry
 from tmaps.extensions.database import db
 from tmaps.model import Model, CRUDMixin
 from sqlalchemy import and_
+import geoalchemy2.functions as geofunc
 
 
 class Mapobject(Model):
@@ -39,4 +40,39 @@ class MapobjectCoords(Model):
 
     mapobject_id = db.Column(db.Integer, db.ForeignKey('mapobject.id'))
     mapobject = db.relationship('Mapobject', backref='coordinates')
+
+    @staticmethod
+    def intersection_filter(x, y, z):
+        size = 256 * 2 ** (6 - z)
+        x0 = x * size
+        y0 = y * size
+
+        minx = x0
+        maxx = x0 + size
+        miny = -y0 - size
+        maxy = -y0
+
+        tile = 'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy})'.format(
+            minx=minx,
+            maxx=maxx,
+            miny=miny,
+            maxy=maxy
+        )
+
+        return MapobjectCoords.geom.intersects(tile)
+
+    @staticmethod
+    def get_object_outlines_within_tile(mapobject_name, x, y, z, t, zlevel):
+        coords = db.session.\
+            query(MapobjectCoords).\
+            join(Mapobject).\
+            filter(
+                (Mapobject.name == mapobject_name) &
+                (MapobjectCoords.time == t) &
+                (MapobjectCoords.z_level == zlevel) &
+                (MapobjectCoords.intersection_filter(x, y, z))
+            ).all()
+
+        return coords
+
 

@@ -4,7 +4,7 @@ from scipy.cluster.vq import kmeans, vq
 import numpy as np
 from matplotlib import cm
 import numpy as np
-from tools.result import Classification
+from tmaps.tool.result import LabelResult
 
 
 class ClusterTool():
@@ -26,10 +26,11 @@ class ClusterTool():
             predicted_labels = self._perform_clustering(
                 dataset, mapobject_name, feature_names, k)
             ids = range(len(predicted_labels))
-        result = Classification(
-            ids=ids, labels=predicted_labels, mapobject_name=mapobject_name)
+        response = LabelResult(
+            ids=ids, labels=predicted_labels, mapobject_name=mapobject_name,
+            session=session)
 
-        return result
+        return response
 
 
     def _perform_clustering(self, data, object_type, feature_names, k):

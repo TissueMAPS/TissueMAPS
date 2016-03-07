@@ -1,6 +1,4 @@
 # from base import GenericResponse, LayerModResponse, Tool, ClientProxy
+import result
 from tool import Tool
 from session import ToolSession
-from registry import register_tool, get_tool
-from result import ClassificationResult, ClassificationResultLabel
-import builtin
