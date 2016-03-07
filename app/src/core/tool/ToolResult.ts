@@ -1,10 +1,10 @@
-class ToolResult {
+abstract class ToolResult {
 
-    tool: Tool;
     session: ToolSession;
 
-    constructor(tool: Tool, session: ToolSession) {
-        this.tool = tool;
+    abstract handle(viewer: AppInstance);
+
+    constructor(session: ToolSession) {
         this.session = session;
     }
 };

@@ -64,10 +64,11 @@ angular.module('tmaps.ui')
                         var newScope = scope.$new();
                         var toolCtrl = $controller(newSession.tool.controller, {
                             'viewer': scope.viewer,
-                            'tool': newSession.tool,
-                            'session': newSession,
                             '$scope': newScope
                         });
+                        toolCtrl.sendRequest = function(payload) {
+                            return scope.viewer.sendToolRequest(newSession, payload);
+                        }.bind(toolCtrl);
                         newScope['toolCtrl'] = toolCtrl;
                         var newContent = $compile(resp)(newScope)
                         elem.append(newContent);

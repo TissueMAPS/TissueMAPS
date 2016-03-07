@@ -1,11 +1,14 @@
-interface ServerToolResponse {
-    tool_id: number;
-    session_uuid: any;
+interface ServerToolRequest {
+    experiment_id: string;
+    session_uuid: string;
     payload: any;
 }
 
-abstract class ToolCtrl {
-
+interface ServerToolResponse {
+    tool_id: number;
+    session_uuid: any;
+    result_type: string;
+    payload: any;
 }
 
 interface GetToolResponse {
@@ -32,7 +35,6 @@ class Tool {
     name: string;
     description: string;
     icon: string;
-    SessionClass: string;
 
     constructor(options: ToolArgs) {
         this.sessions = [];

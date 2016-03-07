@@ -3,24 +3,22 @@ interface ClusterScope extends ToolWindowContentScope {
     objectNameWidget: ObjectNameWidgetCtrl;
 }
 
-class ClusterToolCtrl {
-    static $inject = ['$scope', 'viewer', 'session'];
+class ClusterToolCtrl extends ToolCtrl {
+    static $inject = ['$scope', 'viewer'];
 
     nClusters: number = 2;
 
     constructor(public $scope: ClusterScope,
-                public viewer: AppInstance,
-                public session: ClusterToolSession) {
+                public viewer: AppInstance) {
+        super();
     }
 
-    sendRequest() {
-        console.log('asdf');
+    doCluster() {
         var selectedFeatures = this.$scope.featureWidget.selectedFeatures;
-        var payload = {
+        this.sendRequest({
             chosen_object_type: this.$scope.objectNameWidget.selectedName,
             selected_features: selectedFeatures,
             k: this.nClusters
-        };
-        this.session.sendRequest(this.viewer.experiment, payload);
+        });
     }
 }

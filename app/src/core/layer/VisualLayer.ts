@@ -33,80 +33,23 @@ interface VisualLayerOpts {
  * Layer class for Visuals, i.e. visualizable objects.
  * This is a wrapper around an openlayers vector layer.
  */
-class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
+class VisualLayer extends BaseLayer<ol.layer.Vector> {
 
     contentType: ContentType;
 
     private _visuals: Visual[] = [];
 
-    constructor(name: string, 
-                imageWidth: number,
-                imageHeight: number,
-                opt: VisualLayerOpts = {}) {
+    constructor(name: string, opt: VisualLayerOpts = {}) {
         super(name);
-        
-        // Same extent as zoomify
-        var extent = [0, -imageHeight, imageWidth, 0];
 
-        var vectorSource = new ol.source.VectorTile({
-            // features: []
-            url: 'api/experiments/Bvk6bkYO/mapobjects/cells?x={x}&y={y}&z={z}&t=0&zlevel=0',
-            // format: new ol.format.MVT(),
-            format: new ol.format.GeoJSON({
-                // NOTE: The projection has to equal the projection set on the 
-                // view of the map!
-                defaultDataProjection: new ol.proj.Projection({
-                    code: 'tm',
-                    units: 'pixels',
-                    extent: extent
-                })
-            }),
-            tileGrid: ol.tilegrid.createXYZ({
-                extent: extent,
-                maxZoom: 6,
-                origin: [0, 0]
-            })
-            // tileGrid: new ol.tilegrid.TileGrid({
-            //     extent: extent,
-            //     // maxZoom: 7,
-            //     origin: [0, 0]
-            // })
+        var vectorSource = new ol.source.Vector({
+            features: []
         });
 
-        this._olLayer = new ol.layer.VectorTile({
-            // FIXME
+        this._olLayer = new ol.layer.Vector({
             source: vectorSource,
             // style: styleFunction,
-            // visible: opt.visible === undefined ? true : false
-            visible: true,
-            style: function(feature, style) {
-                var geomType = feature.getGeometry().getType();
-                if (geomType === 'Polygon') {
-                    return [
-                        new ol.style.Style({
-                            fill: new ol.style.Fill({
-                                color: Color.GREEN.toOlColor()
-                            }),
-                            stroke: new ol.style.Stroke({
-                                color: Color.WHITE.toOlColor()
-                            })
-                        })
-                    ];
-                } else if (geomType === 'Point') {
-                    return [
-                        new ol.style.Style({
-                            image: new ol.style.Circle({
-                                fill: new ol.style.Fill({
-                                    color: [0, 255, 0, 1]
-                                }),
-                                radius: 2
-                            })
-                        })
-                    ];
-                } else {
-                    throw new Error('Unknown geometry type for feature');
-                }
-            }
+            visible: opt.visible === undefined ? true : false
         });
 
         if (opt.visuals !== undefined) {
@@ -121,34 +64,34 @@ class VisualLayer extends BaseLayer<ol.layer.VectorTile> {
     }
 
     addVisual(v: Visual) {
-        // if (v !== undefined && v !== null) {
-        //     this._visuals.push(v);
-        //     var src = this._olLayer.getSource();
-        //     var feat = v.olFeature
-        //     console.log(feat);
-        //     src.addFeature(feat);
-        // } else {
-        //     console.log('Warning: trying to add undefined or null Visual.');
-        // }
+        if (v !== undefined && v !== null) {
+            this._visuals.push(v);
+            var src = this._olLayer.getSource();
+            var feat = v.olFeature
+            console.log(feat);
+            src.addFeature(feat);
+        } else {
+            console.log('Warning: trying to add undefined or null Visual.');
+        }
     }
 
     addVisuals(vs: Visual[]) {
-        // var visuals = [];
-        // vs.forEach((v) => {
-        //     if (v !== undefined && v !== null) {
-        //         visuals.push(v);
-        //     } else {
-        //         console.log('Warning: trying to add undefined or null Visual.');
-        //     }
-        // });
-        // visuals.forEach((v) => {
-        //     this._visuals.push(v);
-        // });
-        // var features = _(visuals).map((v) => {
-        //     var feat = v.olFeature;
-        //     return feat;
-        // });
-        // this._olLayer.getSource().addFeatures(features);
+        var visuals = [];
+        vs.forEach((v) => {
+            if (v !== undefined && v !== null) {
+                visuals.push(v);
+            } else {
+                console.log('Warning: trying to add undefined or null Visual.');
+            }
+        });
+        visuals.forEach((v) => {
+            this._visuals.push(v);
+        });
+        var features = _(visuals).map((v) => {
+            var feat = v.olFeature;
+            return feat;
+        });
+        this._olLayer.getSource().addFeatures(features);
     }
 
     removeVisual(v: Visual) {

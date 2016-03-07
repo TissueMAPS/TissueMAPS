@@ -17,6 +17,9 @@
         "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
         "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
 
+        "app/src/AppCtrl.ts",
+        "app/src/tmAppbar.ts",
+
         "app/src/util/uuid.ts",
 
         "app/src/core/util/Color.ts",
@@ -34,6 +37,9 @@
         "app/src/core/layer/ChannelLayer.ts",
         "app/src/core/layer/Layer.ts",
         "app/src/core/layer/VisualLayer.ts",
+        "app/src/core/layer/VisualTileLayer.ts",
+        "app/src/core/layer/SegmentationLayer.ts",
+        "app/src/core/layer/LabelResultLayer.ts",
         "app/src/core/layer/TileLayer.ts",
         "app/src/core/layer/typedefs.ts",
         "app/src/core/visual/Visual.ts",
@@ -50,16 +56,15 @@
 
         "app/src/core/tool/Tool.ts",
         "app/src/core/tool/ToolSession.ts",
+        "app/src/core/tool/ToolCtrl.ts",
         "app/src/core/tool/ToolResult.ts",
+        "app/src/core/tool/result/LabelResult.ts",
 
         "app/src/core/tool/ClassifierToolSession.ts",
 
         "app/src/core/viewport/Viewport.ts",
         "app/src/core/viewport/MapPosition.ts",
         "app/src/core/viewport/ctrl/ViewportCtrl.ts",
-
-        "app/src/AppCtrl.ts",
-        "app/src/tmAppbar.ts",
 
         "app/src/viewer/tmViewerWindow.ts",
         "app/src/viewer/tmViewersTabbar.ts",
