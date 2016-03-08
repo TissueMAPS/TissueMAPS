@@ -243,7 +243,7 @@ class VisiviewMetadataHandler(MetadataHandler):
     REGEX = '.+_?(?P<w>[A-Z]\d{2})?_(?P<c>\w+)_s(?P<s>\d+)_?t?(?P<t>\d+)?\.'
 
     def __init__(self, image_files, additional_files, omexml_files,
-                 plate_index):
+                 plate):
         '''
         Initialize an instance of class VisiviewMetadataHandler.
 
@@ -259,11 +259,11 @@ class VisiviewMetadataHandler(MetadataHandler):
             index of the corresponding plate within the experiment
         '''
         super(VisiviewMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate_index)
+                image_files, additional_files, omexml_files, plate)
         self.image_files = image_files
         self.omexml_files = omexml_files
         self.additional_files = additional_files
-        self.plate_index = plate_index
+        self.plate = plate
 
     @cached_property
     def ome_additional_metadata(self):

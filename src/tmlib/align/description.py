@@ -262,24 +262,24 @@ class ShiftDescription(object):
     for images of the reference cycle.
     '''
 
-    _PERSISTENT_ATTRS = {'site_ix', 'x', 'y', 'is_above_limit'}
+    _PERSISTENT_ATTRS = {'site', 'x', 'y', 'is_above_limit'}
 
     @property
-    def site_ix(self):
+    def site(self):
         '''
         Returns
         -------
         int
             one-based globally unique position identifier number
         '''
-        return self._site_ix
+        return self._site
 
-    @site_ix.setter
-    def site_ix(self, value):
+    @site.setter
+    def site(self, value):
         if not isinstance(value, int):
             raise TypeError(
-                    'Attribute "site_ix" must have type int')
-        self._site_ix = value
+                    'Attribute "site" must have type int')
+        self._site = value
 
     @property
     def x(self):

@@ -58,9 +58,9 @@ class PyramidBuilder(ClusterRoutines):
         for indices in self.experiment.layer_names.keys():
             layer = ChannelLayer(
                             self.experiment,
-                            tpoint_ix=indices.time,
-                            channel_ix=indices.channel,
-                            zplane_ix=indices.zplane
+                            tpoint=indices.time,
+                            channel=indices.channel,
+                            zplane=indices.zplane
             )
             for index, level in enumerate(reversed(range(layer.n_zoom_levels))):
                 # NOTE: The pyramid "level" increases from top to bottom.
@@ -128,9 +128,9 @@ class PyramidBuilder(ClusterRoutines):
                         #     ]
                         # },
                         'outputs': {},
-                        'tpoint': layer.tpoint_ix,
-                        'channel': layer.channel_ix,
-                        'zplane': layer.zplane_ix,
+                        'tpoint': layer.tpoint,
+                        'channel': layer.channel,
+                        'zplane': layer.zplane,
                         'cycle': layer.metadata.cycle_ix,
                         'level': level,
                         'index': index,
@@ -155,9 +155,9 @@ class PyramidBuilder(ClusterRoutines):
                         'id': job_count,
                         'inputs': {},
                         'outputs': {},
-                        'tpoint': layer.tpoint_ix,
-                        'channel': layer.channel_ix,
-                        'zplane': layer.zplane_ix,
+                        'tpoint': layer.tpoint,
+                        'channel': layer.channel,
+                        'zplane': layer.zplane,
                         'cycle': layer.metadata.cycle_ix,
                         'level': level,
                         'index': index,
@@ -265,9 +265,9 @@ class PyramidBuilder(ClusterRoutines):
         '''
         layer = ChannelLayer(
                     self.experiment,
-                    tpoint_ix=batch['tpoint'],
-                    channel_ix=batch['channel'],
-                    zplane_ix=batch['zplane'])
+                    tpoint=batch['tpoint'],
+                    channel=batch['channel'],
+                    zplane=batch['zplane'])
 
         if batch['level'] == layer.base_level_index:
             logger.info(

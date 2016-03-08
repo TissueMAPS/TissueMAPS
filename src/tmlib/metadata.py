@@ -14,8 +14,8 @@ class ImageMetadata(object):
     __metaclass__ = ABCMeta
 
     _PERSISTENT_ATTRS = {
-        'id', 'name', 'zplane_ix', 'tpoint_ix', 'site_ix',
-        'plate_ix', 'well_name', 'well_position_x', 'well_position_y',
+        'id', 'name', 'zplane', 'tpoint', 'site',
+        'plate', 'well_name', 'well_position_x', 'well_position_y',
         'x_shift', 'y_shift',
         'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
         'is_aligned', 'is_omitted'
@@ -80,23 +80,23 @@ class ImageMetadata(object):
         self._name = str(value)
 
     @property
-    def plate_index(self):
+    def plate(self):
         '''
         Returns
         -------
-        str
-            name of the plate to which the image belongs
+        int
+            zero-based index of the plate to which the image belongs
         '''
-        return self._plate_index
+        return self._plate
 
-    @plate_index.setter
-    def plate_index(self, value):
+    @plate.setter
+    def plate(self, value):
         if not(isinstance(value, int)):
-            raise TypeError('Attribute "plate_index" must have type int')
-        self._plate_index = value
+            raise TypeError('Attribute "plate" must have type int')
+        self._plate = value
 
     @property
-    def site_ix(self):
+    def site(self):
         '''
         Returns
         -------
@@ -109,13 +109,13 @@ class ImageMetadata(object):
         images where acquired at the same "site", i.e. microscope stage
         position.
         '''
-        return self._site_ix
+        return self._site
 
-    @site_ix.setter
-    def site_ix(self, value):
+    @site.setter
+    def site(self, value):
         if not(isinstance(value, int)):
-            raise TypeError('Attribute "site_ix" must have type int')
-        self._site_ix = value
+            raise TypeError('Attribute "site" must have type int')
+        self._site = value
 
     @property
     def well_position_y(self):
@@ -166,7 +166,7 @@ class ImageMetadata(object):
         self._well_name = str(value)
 
     @property
-    def zplane_ix(self):
+    def zplane(self):
         '''
         Returns
         -------
@@ -174,29 +174,29 @@ class ImageMetadata(object):
             zero-based z index of the focal plane within a three dimensional
             stack
         '''
-        return self._zplane_ix
+        return self._zplane
 
-    @zplane_ix.setter
-    def zplane_ix(self, value):
+    @zplane.setter
+    def zplane(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "zplane_ix" must have type int')
-        self._zplane_ix = value
+            raise TypeError('Attribute "zplane" must have type int')
+        self._zplane = value
 
     @property
-    def tpoint_ix(self):
+    def tpoint(self):
         '''
         Returns
         -------
         int
             zero-based index of the time point in the time series
         '''
-        return self._tpoint_ix
+        return self._tpoint
 
-    @tpoint_ix.setter
-    def tpoint_ix(self, value):
+    @tpoint.setter
+    def tpoint(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "tpoint_ix" must have type int')
-        self._tpoint_ix = value
+            raise TypeError('Attribute "tpoint" must have type int')
+        self._tpoint = value
 
     @property
     def cycle_ix(self):
@@ -359,7 +359,7 @@ class ChannelImageMetadata(ImageMetadata):
     '''
 
     _PERSISTENT_ATTRS = ImageMetadata._PERSISTENT_ATTRS.union({
-        'channel_name', 'is_corrected', 'channel_ix'
+        'channel_name', 'is_corrected', 'channel'
     })
 
     def __init__(self, **kwargs):
@@ -404,20 +404,20 @@ class ChannelImageMetadata(ImageMetadata):
         self._channel_name = str(value)
 
     @property
-    def channel_ix(self):
+    def channel(self):
         '''
         Returns
         -------
         int
             zero-based channel identifier number
         '''
-        return self._channel_ix
+        return self._channel
 
-    @channel_ix.setter
-    def channel_ix(self, value):
+    @channel.setter
+    def channel(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "channel_ix" must have type int')
-        self._channel_ix = value
+            raise TypeError('Attribute "channel" must have type int')
+        self._channel = value
 
     @property
     def is_corrected(self):
@@ -598,36 +598,36 @@ class IllumstatsImageMetadata(object):
         self.is_smoothed = False
 
     @property
-    def tpoint_ix(self):
+    def tpoint(self):
         '''
         Returns
         -------
         int
             one-based time point identifier number
         '''
-        return self._tpoint_ix
+        return self._tpoint
 
-    @tpoint_ix.setter
-    def tpoint_ix(self, value):
+    @tpoint.setter
+    def tpoint(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "tpoint_ix" must have type int')
-        self._tpoint_ix = value
+            raise TypeError('Attribute "tpoint" must have type int')
+        self._tpoint = value
 
     @property
-    def channel_ix(self):
+    def channel(self):
         '''
         Returns
         -------
         int
             zero-based channel index
         '''
-        return self._channel_ix
+        return self._channel
 
-    @channel_ix.setter
-    def channel_ix(self, value):
+    @channel.setter
+    def channel(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "channel_ix" must have type int.')
-        self._channel_ix = value
+            raise TypeError('Attribute "channel" must have type int.')
+        self._channel = value
 
     @property
     def is_smoothed(self):
@@ -679,7 +679,7 @@ class ChannelLayerMetadata(object):
         self._name = str(value)
 
     @property
-    def zplane_ix(self):
+    def zplane(self):
         '''
         Returns
         -------
@@ -687,63 +687,63 @@ class ChannelLayerMetadata(object):
             zero-based z index of the focal plane within a three dimensional
             stack
         '''
-        return self._zplane_ix
+        return self._zplane
 
-    @zplane_ix.setter
-    def zplane_ix(self, value):
+    @zplane.setter
+    def zplane(self, value):
         if not(isinstance(value, int)):
-            raise TypeError('Attribute "zplane_ix" must have type int')
-        self._zplane_ix = value
+            raise TypeError('Attribute "zplane" must have type int')
+        self._zplane = value
 
     @property
-    def tpoint_ix(self):
+    def tpoint(self):
         '''
         Returns
         -------
         int
             one-based time point identifier number
         '''
-        return self._tpoint_ix
+        return self._tpoint
 
-    @tpoint_ix.setter
-    def tpoint_ix(self, value):
+    @tpoint.setter
+    def tpoint(self, value):
         if not(isinstance(value, int)):
-            raise TypeError('Attribute "tpoint_ix" must have type int')
-        self._tpoint_ix = value
+            raise TypeError('Attribute "tpoint" must have type int')
+        self._tpoint = value
 
     @property
-    def channel_ix(self):
+    def channel(self):
         '''
         Returns
         -------
         int
             channel index
         '''
-        return self._channel_ix
+        return self._channel
 
-    @channel_ix.setter
-    def channel_ix(self, value):
+    @channel.setter
+    def channel(self, value):
         if not(isinstance(value, int)):
-            raise TypeError('Attribute "channel_ix" must have type int')
-        self._channel_ix = value
+            raise TypeError('Attribute "channel" must have type int')
+        self._channel = value
 
     @property
-    def site_ixs(self):
+    def sites(self):
         '''
         Returns
         -------
         List[int]
             site identifier numbers of images contained in the mosaic
         '''
-        return self._site_ixs
+        return self._sites
 
-    @site_ixs.setter
-    def site_ixs(self, value):
+    @sites.setter
+    def sites(self, value):
         if not(isinstance(value, list)):
-            raise TypeError('Attribute "site_ixs" must have type list')
+            raise TypeError('Attribute "sites" must have type list')
         if not(all([isinstance(v, int) for v in value])):
-            raise TypeError('Elements of "site_ixs" must have type int')
-        self._site_ixs = value
+            raise TypeError('Elements of "sites" must have type int')
+        self._sites = value
 
     @property
     def filenames(self):

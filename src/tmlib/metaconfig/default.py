@@ -39,7 +39,7 @@ class MetadataHandler(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, image_files, additional_files, omexml_files, plate_index):
+    def __init__(self, image_files, additional_files, omexml_files, plate):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -51,15 +51,15 @@ class MetadataHandler(object):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate_index: int
+        plate: int
             index of the corresponding plate within the experiment
         '''
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        if not isinstance(plate_index, int):
-            raise TypeError('Argument "plate_index" must have type int')
-        self.plate_index = plate_index
+        if not isinstance(plate, int):
+            raise TypeError('Argument "plate" must have type int')
+        self.plate = plate
         self.file_mapper_list = list()
         self.file_mapper_lookup = defaultdict(list)
         self.wells = dict()
@@ -166,8 +166,8 @@ class MetadataHandler(object):
         metadata = OrderedDict()
         metadata['name'] = list()
         metadata['channel_name'] = list()
-        metadata['tpoint_ix'] = list()
-        metadata['zplane_ix'] = list()
+        metadata['tpoint'] = list()
+        metadata['zplane'] = list()
         metadata['stage_position_y'] = list()
         metadata['stage_position_x'] = list()
         for f in filenames:
@@ -197,8 +197,8 @@ class MetadataHandler(object):
                     metadata['name'].append(image.Name)
                     metadata['channel_name'].append(pixels.Channel(plane.TheC).Name)
 
-                    metadata['tpoint_ix'].append(plane.TheT)
-                    metadata['zplane_ix'].append(plane.TheZ)
+                    metadata['tpoint'].append(plane.TheT)
+                    metadata['zplane'].append(plane.TheZ)
                     # "TheC" will be defined later on, because this information
                     # is often not yet available at this point.
 
@@ -222,8 +222,8 @@ class MetadataHandler(object):
         self.metadata['well_name'] = np.empty((length, ), dtype=str)
         self.metadata['well_position_y'] = np.empty((length, ), dtype=int)
         self.metadata['well_position_x'] = np.empty((length, ), dtype=int)
-        self.metadata['site_ix'] = np.empty((length, ), dtype=int)
-        self.metadata['plate_ix'] = np.repeat(self.plate_index, length)
+        self.metadata['site'] = np.empty((length, ), dtype=int)
+        self.metadata['plate'] = np.repeat(self.plate, length)
 
         return self.metadata
 
@@ -348,7 +348,7 @@ class MetadataHandler(object):
                         'Incorrect reference to image files in plate element.')
             captures = match.groupdict()
             if 'z' not in captures.keys():
-                captures['z'] = md.at[i, 'zplane_ix']
+                captures['z'] = md.at[i, 'zplane']
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
             lookup[key] = i
@@ -410,9 +410,9 @@ class MetadataHandler(object):
         missing_metadata = set()
         if any(md['channel_name'].isnull()):
             missing_metadata.add('channel')
-        if any(md['zplane_ix'].isnull()):
+        if any(md['zplane'].isnull()):
             missing_metadata.add('focal plane')
-        if any(md['tpoint_ix'].isnull()):
+        if any(md['tpoint'].isnull()):
             missing_metadata.add('time point')
         return missing_metadata
 
@@ -497,10 +497,10 @@ class MetadataHandler(object):
                         'using regular expression "%s"' % (f, regex))
             capture = match.groupdict()
             md.at[i, 'channel_name'] = str(capture['c'])
-            md.at[i, 'zplane_ix'] = int(capture['z'])
-            md.at[i, 'tpoint_ix'] = int(capture['t'])
+            md.at[i, 'zplane'] = int(capture['z'])
+            md.at[i, 'tpoint'] = int(capture['t'])
             md.at[i, 'well_name'] = str(capture['w'])
-            md.at[i, 'site_ix'] = int(capture['s'])
+            md.at[i, 'site'] = int(capture['s'])
 
         return self.metadata
 
@@ -589,7 +589,7 @@ class MetadataHandler(object):
 
         # Determine the number of unique positions per well
         acquisitions_per_well = md.groupby([
-            'well_name', 'channel_name', 'zplane_ix', 'tpoint_ix'
+            'well_name', 'channel_name', 'zplane', 'tpoint'
         ])
 
         n_acquisitions_per_well = acquisitions_per_well.count().name
@@ -643,18 +643,18 @@ class MetadataHandler(object):
         # Remove all z-plane image entries except for the first
         projected_md = md.drop_duplicates([
             'well_name', 'well_position_x', 'well_position_y',
-            'channel_name', 'tpoint_ix'
+            'channel_name', 'tpoint'
         ])
         projected_md.index = range(projected_md.shape[0])
         # Update z-plane index for the projected image entries
-        projected_md.loc[:, 'zplane_ix'] = 0
+        projected_md.loc[:, 'zplane'] = 0
         # Names may no longer be accurate and will be updated separately
         projected_md.loc[:, 'name'] = None
 
         # Group metadata by focal planes (z-stacks)
         zstacks = md.groupby([
             'well_name', 'well_position_x', 'well_position_y',
-            'channel_name', 'tpoint_ix'
+            'channel_name', 'tpoint'
         ])
         logger.debug('identified %d z-stacks', zstacks.ngroups)
 
@@ -679,7 +679,7 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def update_channel_index(self):
+    def update_channel(self):
         '''
         Create for each channel a zero-based unique identifier number.
 
@@ -701,13 +701,13 @@ class MetadataHandler(object):
         md = self.metadata
         channels = np.unique(md.channel_name)
         for i, c in enumerate(channels):
-            md.loc[(md.channel_name == c), 'channel_ix'] = i
+            md.loc[(md.channel_name == c), 'channel'] = i
 
-        md.channel_ix = md.channel_ix.astype(int)
+        md.channel = md.channel.astype(int)
 
         return self.metadata
 
-    def update_zplane_index(self):
+    def update_zplane(self):
         '''
         Create for each focal plane a zero-based unique identifier number.
 
@@ -727,9 +727,9 @@ class MetadataHandler(object):
         '''
         logger.info('update z-plane index')
         md = self.metadata
-        zplanes = np.unique(md.zplane_ix)
+        zplanes = np.unique(md.zplane)
         for i, z in enumerate(zplanes):
-            md.loc[(md.zplane_ix == z), 'zplane_ix'] = i
+            md.loc[(md.zplane == z), 'zplane'] = i
         return self.metadata
 
     def build_image_filenames(self, image_file_format_string):
@@ -755,13 +755,13 @@ class MetadataHandler(object):
         md = self.metadata
         for i in md.index:
             fieldnames = {
-                'p': self.plate_index,
+                'p': self.plate,
                 'w': md.at[i, 'well_name'],
                 'y': md.at[i, 'well_position_y'],
                 'x': md.at[i, 'well_position_x'],
-                'c': md.at[i, 'channel_ix'],
-                'z': md.at[i, 'zplane_ix'],
-                't': md.at[i, 'tpoint_ix'],
+                'c': md.at[i, 'channel'],
+                'z': md.at[i, 'zplane'],
+                't': md.at[i, 'tpoint'],
             }
             md.at[i, 'name'] = image_file_format_string.format(**fieldnames)
 
@@ -787,9 +787,9 @@ class MetadataHandler(object):
         ])
         site_indices = sorted(sites.groups.values())
         for i, indices in enumerate(site_indices):
-            md.loc[indices, 'site_ix'] = i
+            md.loc[indices, 'site'] = i
 
-        md.site_ix = md.site_ix.astype(int)
+        md.site = md.site.astype(int)
 
         return self.metadata
 
@@ -860,7 +860,7 @@ class DefaultMetadataHandler(MetadataHandler):
 
     REGEX = ''
 
-    def __init__(self, image_files, additional_files, omexml_files, plate_index):
+    def __init__(self, image_files, additional_files, omexml_files, plate):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -872,7 +872,7 @@ class DefaultMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate_index: int
+        plate: int
             index of the corresponding plate within the experiment
 
         Returns
@@ -880,11 +880,11 @@ class DefaultMetadataHandler(MetadataHandler):
         tmlib.metaconfig.default.DefaultMetadataHandler
         '''
         super(DefaultMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate_index)
+                image_files, additional_files, omexml_files, plate)
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        self.plate_index = plate_index
+        self.plate = plate
 
     @property
     def ome_additional_metadata(self):

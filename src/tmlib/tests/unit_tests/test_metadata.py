@@ -44,13 +44,13 @@ class TestChannelImageMetadata(unittest.TestCase):
             'name': 'image_test',
             'plate_name': 'plate_test',
             'well_name': 'A01',
-            'channel_ix': 0,
-            'zplane_ix': 0,
-            'tpoint_ix': 0,
+            'channel': 0,
+            'zplane': 0,
+            'tpoint': 0,
             'channel_name': 'channel_test',
             'well_position_x': 0,
             'well_position_y': 0,
-            'site_ix': 0
+            'site': 0
         }
         metadata = ChannelImageMetadata(**args)
         self.assertEqual(metadata.id, 0)
@@ -92,53 +92,53 @@ class TestChannelImageMetadata(unittest.TestCase):
         with self.assertRaises(TypeError):
             metadata.name = 10
 
-    def test_site_ix_attribute(self):
+    def test_site_attribute(self):
         metadata = ChannelImageMetadata()
-        self.assertFalse(hasattr(metadata, 'site_ix'))
-        metadata.site_ix = 0
-        self.assertIsInstance(metadata.site_ix, int)
-        self.assertEqual(metadata.site_ix, 0)
+        self.assertFalse(hasattr(metadata, 'site'))
+        metadata.site = 0
+        self.assertIsInstance(metadata.site, int)
+        self.assertEqual(metadata.site, 0)
 
-    def test_site_ix_attribute_wrong_datatype(self):
+    def test_site_attribute_wrong_datatype(self):
         metadata = ChannelImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.site_ix = float(0)
+            metadata.site = float(0)
 
-    def test_tpoint_ix_attribute(self):
+    def test_tpoint_attribute(self):
         metadata = ChannelImageMetadata()
-        self.assertFalse(hasattr(metadata, 'tpoint_ix'))
-        metadata.tpoint_ix = 0
-        self.assertIsInstance(metadata.tpoint_ix, int)
-        self.assertEqual(metadata.tpoint_ix, 0)
+        self.assertFalse(hasattr(metadata, 'tpoint'))
+        metadata.tpoint = 0
+        self.assertIsInstance(metadata.tpoint, int)
+        self.assertEqual(metadata.tpoint, 0)
 
-    def test_tpoint_ix_attribute_wrong_datatype(self):
-        metadata = ChannelImageMetadata()
-        with self.assertRaises(TypeError):
-            metadata.tpoint_ix = float(0)
-
-    def test_channel_ix_attribute(self):
-        metadata = ChannelImageMetadata()
-        self.assertFalse(hasattr(metadata, 'channel_ix'))
-        metadata.channel_ix = 0
-        self.assertIsInstance(metadata.channel_ix, int)
-        self.assertEqual(metadata.channel_ix, 0)
-
-    def test_channel_ix_attribute_wrong_datatype(self):
+    def test_tpoint_attribute_wrong_datatype(self):
         metadata = ChannelImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.channel_ix = float(0)
+            metadata.tpoint = float(0)
 
-    def test_zplane_ix_attribute(self):
+    def test_channel_attribute(self):
         metadata = ChannelImageMetadata()
-        self.assertFalse(hasattr(metadata, 'zplane_ix'))
-        metadata.zplane_ix = 0
-        self.assertIsInstance(metadata.zplane_ix, int)
-        self.assertEqual(metadata.zplane_ix, 0)
+        self.assertFalse(hasattr(metadata, 'channel'))
+        metadata.channel = 0
+        self.assertIsInstance(metadata.channel, int)
+        self.assertEqual(metadata.channel, 0)
 
-    def test_zplane_ix_attribute_wrong_datatype(self):
+    def test_channel_attribute_wrong_datatype(self):
         metadata = ChannelImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.zplane_ix = float(0)
+            metadata.channel = float(0)
+
+    def test_zplane_attribute(self):
+        metadata = ChannelImageMetadata()
+        self.assertFalse(hasattr(metadata, 'zplane'))
+        metadata.zplane = 0
+        self.assertIsInstance(metadata.zplane, int)
+        self.assertEqual(metadata.zplane, 0)
+
+    def test_zplane_attribute_wrong_datatype(self):
+        metadata = ChannelImageMetadata()
+        with self.assertRaises(TypeError):
+            metadata.zplane = float(0)
 
     def test_well_name_attribute(self):
         metadata = ChannelImageMetadata()
@@ -284,13 +284,13 @@ class TestChannelImageMetadata(unittest.TestCase):
             'name': 'image_test',
             'plate_name': 'plate_test',
             'well_name': 'A01',
-            'channel_ix': 0,
-            'zplane_ix': 0,
-            'tpoint_ix': 0,
+            'channel': 0,
+            'zplane': 0,
+            'tpoint': 0,
             'channel_name': 'channel_test',
             'well_position_x': 0,
             'well_position_y': 0,
-            'site_ix': 0
+            'site': 0
         }
         metadata = ChannelImageMetadata(**args)
         metadata_as_dict = dict(metadata)
@@ -318,29 +318,29 @@ class TestIllumstatsImageMetadata(unittest.TestCase):
         self.assertIsInstance(metadata.filename, str)
         self.assertEqual(metadata.filename, 'image_test')
 
-    def test_tpoint_ix_attribute(self):
+    def test_tpoint_attribute(self):
         metadata = IllumstatsImageMetadata()
-        self.assertFalse(hasattr(metadata, 'tpoint_ix'))
-        metadata.tpoint_ix = 0
-        self.assertIsInstance(metadata.tpoint_ix, int)
-        self.assertEqual(metadata.tpoint_ix, 0)
+        self.assertFalse(hasattr(metadata, 'tpoint'))
+        metadata.tpoint = 0
+        self.assertIsInstance(metadata.tpoint, int)
+        self.assertEqual(metadata.tpoint, 0)
 
-    def test_tpoint_ix_attribute_wrong_datatype(self):
+    def test_tpoint_attribute_wrong_datatype(self):
         metadata = IllumstatsImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.tpoint_ix = float(0)
+            metadata.tpoint = float(0)
 
-    def test_channel_ix_attribute(self):
+    def test_channel_attribute(self):
         metadata = IllumstatsImageMetadata()
-        self.assertFalse(hasattr(metadata, 'channel_ix'))
-        metadata.channel_ix = 0
-        self.assertIsInstance(metadata.channel_ix, int)
-        self.assertEqual(metadata.channel_ix, 0)
+        self.assertFalse(hasattr(metadata, 'channel'))
+        metadata.channel = 0
+        self.assertIsInstance(metadata.channel, int)
+        self.assertEqual(metadata.channel, 0)
 
-    def test_channel_ix_attribute_wrong_datatype(self):
+    def test_channel_attribute_wrong_datatype(self):
         metadata = IllumstatsImageMetadata()
         with self.assertRaises(TypeError):
-            metadata.channel_ix = float(0)
+            metadata.channel = float(0)
 
 
 class TestMosaicMetadata(unittest.TestCase):
@@ -369,57 +369,57 @@ class TestMosaicMetadata(unittest.TestCase):
         with self.assertRaises(TypeError):
             metadata.name = 10
 
-    def test_tpoint_ix_attribute(self):
+    def test_tpoint_attribute(self):
         metadata = MosaicMetadata()
-        self.assertFalse(hasattr(metadata, 'tpoint_ix'))
-        metadata.tpoint_ix = 0
-        self.assertIsInstance(metadata.tpoint_ix, int)
-        self.assertEqual(metadata.tpoint_ix, 0)
+        self.assertFalse(hasattr(metadata, 'tpoint'))
+        metadata.tpoint = 0
+        self.assertIsInstance(metadata.tpoint, int)
+        self.assertEqual(metadata.tpoint, 0)
 
-    def test_tpoint_ix_attribute_wrong_datatype(self):
+    def test_tpoint_attribute_wrong_datatype(self):
         metadata = MosaicMetadata()
         with self.assertRaises(TypeError):
-            metadata.tpoint_ix = float(0)
+            metadata.tpoint = float(0)
 
-    def test_channel_ix_attribute(self):
+    def test_channel_attribute(self):
         metadata = MosaicMetadata()
-        self.assertFalse(hasattr(metadata, 'channel_ix'))
-        metadata.channel_ix = 0
-        self.assertIsInstance(metadata.channel_ix, int)
-        self.assertEqual(metadata.channel_ix, 0)
+        self.assertFalse(hasattr(metadata, 'channel'))
+        metadata.channel = 0
+        self.assertIsInstance(metadata.channel, int)
+        self.assertEqual(metadata.channel, 0)
 
-    def test_channel_ix_attribute_wrong_datatype(self):
-        metadata = MosaicMetadata()
-        with self.assertRaises(TypeError):
-            metadata.channel_ix = float(0)
-
-    def test_zplane_ix_attribute(self):
-        metadata = MosaicMetadata()
-        self.assertFalse(hasattr(metadata, 'zplane_ix'))
-        metadata.zplane_ix = 0
-        self.assertIsInstance(metadata.zplane_ix, int)
-        self.assertEqual(metadata.zplane_ix, 0)
-
-    def test_zplane_ix_attribute_wrong_datatype(self):
+    def test_channel_attribute_wrong_datatype(self):
         metadata = MosaicMetadata()
         with self.assertRaises(TypeError):
-            metadata.zplane_ix = float(0)
+            metadata.channel = float(0)
 
-    def test_site_ixs_attribute(self):
+    def test_zplane_attribute(self):
         metadata = MosaicMetadata()
-        self.assertFalse(hasattr(metadata, 'site_ixs'))
-        metadata.site_ixs = [0, 1, 2]
-        self.assertEqual(metadata.site_ixs, [0, 1, 2])
+        self.assertFalse(hasattr(metadata, 'zplane'))
+        metadata.zplane = 0
+        self.assertIsInstance(metadata.zplane, int)
+        self.assertEqual(metadata.zplane, 0)
 
-    def test_site_ixs_attribute_wrong_datatype_1(self):
-        metadata = MosaicMetadata()
-        with self.assertRaises(TypeError):
-            metadata.site_ixs = 0
-
-    def test_site_ixs_attribute_wrong_datatype_2(self):
+    def test_zplane_attribute_wrong_datatype(self):
         metadata = MosaicMetadata()
         with self.assertRaises(TypeError):
-            metadata.site_ixs = ['0', '1', '2']
+            metadata.zplane = float(0)
+
+    def test_sites_attribute(self):
+        metadata = MosaicMetadata()
+        self.assertFalse(hasattr(metadata, 'sites'))
+        metadata.sites = [0, 1, 2]
+        self.assertEqual(metadata.sites, [0, 1, 2])
+
+    def test_sites_attribute_wrong_datatype_1(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.sites = 0
+
+    def test_sites_attribute_wrong_datatype_2(self):
+        metadata = MosaicMetadata()
+        with self.assertRaises(TypeError):
+            metadata.sites = ['0', '1', '2']
 
     def test_filenames_attribute_1(self):
         metadata = MosaicMetadata()

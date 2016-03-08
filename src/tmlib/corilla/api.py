@@ -69,10 +69,10 @@ class IllumstatsGenerator(ClusterRoutines):
                 md = cycle.image_metadata
 
                 # Group image files per channel
-                channels = np.unique(md.channel_ix)
+                channels = np.unique(md.channel)
                 img_batches = list()
                 for c in channels:
-                    files = md[(md.channel_ix == c)].name
+                    files = md[(md.channel == c)].name
                     img_batches.append(files)
 
                 for i, batch in enumerate(img_batches):
@@ -89,13 +89,13 @@ class IllumstatsGenerator(ClusterRoutines):
                                 os.path.join(
                                     cycle.stats_dir,
                                     self.stats_file_format_string.format(
-                                        channel_ix=channels[i])
+                                        channel=channels[i])
                                 )
                             ]
                         },
                         'channel': channels[i],
                         'cycle': cycle.index,
-                        'tpoint': cycle.tpoint_index
+                        'tpoint': cycle.tpoint
                     })
         return job_descriptions
 
@@ -127,8 +127,8 @@ class IllumstatsGenerator(ClusterRoutines):
             writer.write('/stats/std', data=stats.std)
             writer.write('/stats/percentile', data=pctl.percentile)
             writer.write('/metadata/cycle', data=batch['cycle'])
-            writer.write('/metadata/tpoint_ix', data=batch['tpoint'])
-            writer.write('/metadata/channel_ix', data=batch['channel'])
+            writer.write('/metadata/tpoint', data=batch['tpoint'])
+            writer.write('/metadata/channel', data=batch['channel'])
 
     def apply_statistics(self, output_dir, plates, wells, sites, channels,
                          tpoints, zplanes, **kwargs):
@@ -163,22 +163,22 @@ class IllumstatsGenerator(ClusterRoutines):
                     continue
             for cycle in plate.cycles:
                 if tpoints:
-                    if cycle.tpoint_index not in tpoints:
+                    if cycle.tpoint not in tpoints:
                         continue
                 md = cycle.image_metadata
                 sld = md.copy()
                 if sites:
-                    sld = sld[sld['site_ix'].isin(sites)]
+                    sld = sld[sld['site'].isin(sites)]
                 if wells:
                     sld = sld[sld['well_name'].isin(wells)]
                 if channels:
-                    sld = sld[sld['channel_ix'].isin(channels)]
+                    sld = sld[sld['channel'].isin(channels)]
                 if zplanes:
-                    sld = sld[sld['zplane_ix'].isin(zplanes)]
-                selected_channels = list(set(sld['channel_ix'].tolist()))
+                    sld = sld[sld['zplane'].isin(zplanes)]
+                selected_channels = list(set(sld['channel'].tolist()))
                 for c in selected_channels:
                     stats = cycle.illumstats_images[c]
-                    sld = sld[sld['channel_ix'] == c]
+                    sld = sld[sld['channel'] == c]
                     image_indices = sld['name'].index
                     for i in image_indices:
                         image = cycle.images[i]

@@ -82,10 +82,11 @@ class Experiment(object):
                     'Argument "library" must be either "numpy" or "vips"')
         self.user_cfg = user_cfg
         if user_cfg is None:
-            if not os.path.exists(self.user_cfg_file):
+            user_cfg_file = os.path.join(self.dir, self.user_cfg_file)
+            if not os.path.exists(user_cfg_file):
                 raise OSError(
                         'User configuration settings file does not exist: %s'
-                        % self.user_cfg_file)
+                        % user_cfg_file)
 
     @property
     def dir(self):
@@ -127,8 +128,7 @@ class Experiment(object):
             absolute path to an experiment-specific user configuration settings
             file
         '''
-        return cfg.USER_CFG_FILE_FORMAT.format(
-                    experiment_dir=self.experiment_dir, sep=os.path.sep)
+        return cfg.USER_CFG_FILE_FORMAT.format()
 
     @property
     def user_cfg(self):
@@ -150,14 +150,15 @@ class Experiment(object):
             exist
         '''
         if self._user_cfg is None:
+            user_cfg_file = os.path.join(self.dir, self.user_cfg_file)
             logger.debug('loading user configuration settings from file: %s',
-                         self.user_cfg_file)
-            if not os.path.exists(self.user_cfg_file):
+                         user_cfg_file)
+            if not os.path.exists(user_cfg_file):
                 raise OSError(
                     'User configuration settings file does not exist: %s'
-                    % self.user_cfg_file)
+                    % user_cfg_file)
             with YamlReader() as reader:
-                config_settings = reader.read(self.user_cfg_file)
+                config_settings = reader.read(user_cfg_file)
                 if not config_settings:
                     raise ValueError('No user configuration provided.')
             self._user_cfg = cfg.UserConfiguration(self.dir, **config_settings)
@@ -229,12 +230,12 @@ class Experiment(object):
         OSError
             when the plate already exists
         '''
-        new_plate_index = len(self.plates)
-        new_plate_folder = Plate.PLATE_DIR_FORMAT.format(index=new_plate_index)
+        new_plate = len(self.plates)
+        new_plate_folder = Plate.PLATE_DIR_FORMAT.format(index=new_plate)
         new_plate_dir = os.path.join(self.plates_dir, new_plate_folder)
         if os.path.exists(new_plate_dir):
             raise OSError('Plate directory already exists: %s' % new_plate_dir)
-        logger.info('add plate #%d', new_plate_index)
+        logger.info('add plate #%d', new_plate)
         os.mkdir(new_plate_dir)
         new_plate = Plate(new_plate_dir,
                           self.user_cfg.plate_format, self.library)
@@ -326,14 +327,14 @@ class Experiment(object):
         names = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
-                t = cycle.tpoint_index
+                t = cycle.tpoint
                 md = cycle.image_metadata
-                channels = np.unique(md['channel_ix'])
-                zplanes = np.unique(md['zplane_ix'])
+                channels = np.unique(md['channel'])
+                zplanes = np.unique(md['zplane'])
                 for c in channels:
                     for z in zplanes:
-                        ix = Indices(t, c, z)
-                        names[ix] = cfg.LAYER_NAME_FORMAT.format(t=t, c=c, z=z)
+                        i = Indices(t, c, z)
+                        names[i] = cfg.LAYER_NAME_FORMAT.format(t=t, c=c, z=z)
         return names
 
     @property
@@ -344,32 +345,35 @@ class Experiment(object):
         Dict[str, tmlib.metadata.ChannelLayerMetadata]
             metadata for each layer
         '''
-        # TODO: make more efficient (e.g. pandas.DataFrame)
         layer_metadata = dict()
         for plate in self.plates:
             for cycle in plate.cycles:
                 md = cycle.image_metadata
-                for indices, name in self.layer_names.items():
+                for indices, name in self.layer_names.iteritems():
                     c = indices.channel
                     z = indices.zplane
-                    if c not in cycle.channel_indices:
+                    if c not in cycle.channels:
                         continue
                     metadata = ChannelLayerMetadata()
                     metadata.name = name
-                    metadata.channel_ix = c
-                    metadata.zplane_ix = z
+                    metadata.channel = c
+                    metadata.zplane = z
                     metadata.cycle_ix = cycle.index
-                    metadata.tpoint_ix = cycle.tpoint_index
-                    ix = ((md['channel_ix'] == c) & (md['zplane_ix'] == z))
-                    files = md[ix]['name'].tolist()
+                    metadata.tpoint = cycle.tpoint
+                    index = ((md['channel'] == c) & (md['zplane'] == z))
+                    files = md[index]['name'].tolist()
                     metadata.filenames = [
                         os.path.join(cycle.image_dir, f) for f in files
                     ]
-                    sites = md[ix]['site_ix'].tolist()
-                    metadata.site_ixs = sites
+                    sites = md[index]['site'].tolist()
+                    metadata.sites = sites
                     layer_metadata[name] = metadata
         return layer_metadata
 
+    # @property
+    # def channels(self):
+    #     return self._channels
+    
     # @cached_property
     # def visual_layers_map(self):
     #     '''
@@ -402,8 +406,8 @@ class Experiment(object):
     #         for cycle in plate.cycles:
     #             t = cycle.index
     #             md = cycle.image_metadata
-    #             channels = np.unique(md['channel_ix'])
-    #             zplanes = np.unique(md['zplane_ix'])
+    #             channels = np.unique(md['channel'])
+    #             zplanes = np.unique(md['zplane'])
     #             for c in channels:
     #                 for z in zplanes:
     #                     v_name = cfg.VISUAL_NAME_FORMAT[mode].format(t=t, c=c)

@@ -109,7 +109,7 @@ class TestCycle(fake_filesystem_unittest.TestCase):
         # Add illumination correction statistics file
         stats_dir = os.path.join(self.cycle_dir, 'stats')
         os.mkdir(stats_dir)
-        self.stats_file = self.cycle.STATS_FILE_FORMAT.format(channel_ix=0)
+        self.stats_file = self.cycle.STATS_FILE_FORMAT.format(channel=0)
         filename = os.path.join(stats_dir, self.stats_file)
         with open(filename, 'w') as f:
             f.write('')
@@ -138,19 +138,19 @@ class TestCycle(fake_filesystem_unittest.TestCase):
             self.cycle.image_metadata.loc[0, 'plate_name'],
             self.plate_name)
         self.assertEqual(
-            len(np.unique(self.cycle.image_metadata['tpoint_ix'])),
+            len(np.unique(self.cycle.image_metadata['tpoint'])),
             1)
         self.assertEqual(
-            self.cycle.image_metadata.loc[0, 'tpoint_ix'],
+            self.cycle.image_metadata.loc[0, 'tpoint'],
             self.cycle_index)
         self.assertEqual(
-            self.cycle.image_metadata.loc[0, 'channel_ix'],
+            self.cycle.image_metadata.loc[0, 'channel'],
             0)
         self.assertEqual(
             self.cycle.image_metadata.loc[0, 'channel_name'],
             self.channel_name)
         self.assertEqual(
-            self.cycle.image_metadata.loc[0, 'zplane_ix'],
+            self.cycle.image_metadata.loc[0, 'zplane'],
             0)
 
     def test_images(self):
@@ -162,10 +162,10 @@ class TestCycle(fake_filesystem_unittest.TestCase):
         self.assertEqual(self.cycle.illumstats_files, [self.stats_file])
 
     def test_illumstats_metadata(self):
-        self.assertEqual(self.cycle.illumstats_metadata[0].channel_ix, 0)
+        self.assertEqual(self.cycle.illumstats_metadata[0].channel, 0)
         self.assertEqual(
             self.cycle.illumstats_metadata[0].filename,
             self.stats_file)
         self.assertEqual(
-            self.cycle.illumstats_metadata[0].tpoint_ix,
+            self.cycle.illumstats_metadata[0].tpoint,
             self.cycle_index)

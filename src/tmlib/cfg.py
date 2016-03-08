@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 #: Format string for building the full path to the user configuration
 #: settings file.
-USER_CFG_FILE_FORMAT = '{experiment_dir}{sep}user.cfg.yml'
+USER_CFG_FILE_FORMAT = 'user.cfg.yml'
 
 #: Format string for building default layer names.
 LAYER_NAME_FORMAT = 't{t:0>3}_c{c:0>3}_z{z:0>3}'

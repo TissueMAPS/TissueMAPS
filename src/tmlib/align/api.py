@@ -94,7 +94,7 @@ class ImageRegistration(ClusterRoutines):
             when `args.ref_channel` does not exist across all cycles
         '''
         def get_targets(cycle):
-            md = cycle.image_metadata.sort_values('site_ix')
+            md = cycle.image_metadata.sort_values('site')
             ix = md['channel_name'] == args.ref_channel
             return md[ix]['name'].tolist()
 
@@ -118,8 +118,8 @@ class ImageRegistration(ClusterRoutines):
                 raise NotSupportedError(
                             'Alignment requires more than one cycle, but '
                             'plate #%d contains only one cycle.' % plate.index)
-            md = plate.cycles[0].image_metadata.sort_values('site_ix')
-            if len(np.unique(md['zplane_ix'])) > 1:
+            md = plate.cycles[0].image_metadata.sort_values('site')
+            if len(np.unique(md['zplane'])) > 1:
                 raise NotSupportedError(
                     'Alignment is currently only supported for 2D datasets.')
             # TODO: group images per site such that all z-planes will end up
@@ -141,7 +141,7 @@ class ImageRegistration(ClusterRoutines):
                             'Channel "%s" does not exist in cycle #%d.'
                             % (args.ref_channel, cycle.index))
             ix = md['channel_name'] == args.ref_channel
-            sites = md[ix]['site_ix'].tolist()
+            sites = md[ix]['site'].tolist()
             site_batches = self._create_batches(sites, args.batch_size)
 
             registration_batches = list()
@@ -233,8 +233,8 @@ class ImageRegistration(ClusterRoutines):
         --------
         :py:func:`tmlib.align.registration.fuse_registration`
         '''
-        for i, plate_index in enumerate(batch['plates']):
-            plate = self.experiment.plates[plate_index]
+        for i, plate in enumerate(batch['plates']):
+            plate = self.experiment.plates[plate]
 
             reg_files = batch['inputs']['registration_files'][i]
             cycle_folders = [os.path.basename(c.dir) for c in plate.cycles]
@@ -267,7 +267,7 @@ class ImageRegistration(ClusterRoutines):
                         sh = ShiftDescription()
                         sh.x = descriptions[j][k]['x_shift']
                         sh.y = descriptions[j][k]['y_shift']
-                        sh.site_ix = descriptions[j][k]['site']
+                        sh.site = descriptions[j][k]['site']
                         sh.is_above_limit = bool(dont_shift[k])
 
                         a.shifts.append(sh)
@@ -316,23 +316,23 @@ class ImageRegistration(ClusterRoutines):
                     continue
             for cycle in plate.cycles:
                 if tpoints:
-                    if cycle.tpoint_index not in tpoints:
+                    if cycle.tpoint not in tpoints:
                         continue
                 md = cycle.image_metadata
                 sld = md.copy()
                 if sites:
-                    sld = sld[sld['site_ix'].isin(sites)]
+                    sld = sld[sld['site'].isin(sites)]
                 if wells:
                     sld = sld[sld['well_name'].isin(wells)]
                 if channels:
-                    sld = sld[sld['channel_ix'].isin(channels)]
+                    sld = sld[sld['channel'].isin(channels)]
                 if zplanes:
-                    sld = sld[sld['zplane_ix'].isin(zplanes)]
-                selected_channels = list(set(sld['channel_ix'].tolist()))
+                    sld = sld[sld['zplane'].isin(zplanes)]
+                selected_channels = list(set(sld['channel'].tolist()))
                 for c in selected_channels:
                     if kwargs['illumcorr']:
                         stats = cycle.illumstats_images[c]
-                    sld = sld[sld['channel_ix'] == c]
+                    sld = sld[sld['channel'] == c]
                     image_indices = sld['name'].index
                     for i in image_indices:
                         image = cycle.images[i]

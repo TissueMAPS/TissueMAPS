@@ -99,10 +99,10 @@ class TestImage(TestImageSetup):
 
     def test_correct_illumination_vips(self):
         metadata = IllumstatsImageMetadata()
-        metadata.tpoint_ix = 0
-        metadata.channel_ix = 0
-        self.metadata.tpoint_ix = 0
-        self.metadata.channel_ix = 0
+        metadata.tpoint = 0
+        metadata.channel = 0
+        self.metadata.tpoint = 0
+        self.metadata.channel = 0
         stats = IllumstatsImages.create_from_file(self.stats_filename, metadata)
         image = ChannelImage.create_from_file(self.img_filename, self.metadata)
         corrected_image = image.correct(stats)
@@ -162,10 +162,10 @@ class TestImage(TestImageSetup):
 
     def test_correct_illumination_np(self):
         metadata = IllumstatsImageMetadata()
-        metadata.tpoint_ix = 0
-        metadata.channel_ix = 0
-        self.metadata.tpoint_ix = 0
-        self.metadata.channel_ix = 0
+        metadata.tpoint = 0
+        metadata.channel = 0
+        self.metadata.tpoint = 0
+        self.metadata.channel = 0
         stats = IllumstatsImages.create_from_file(self.stats_filename,
                                                   metadata, library='numpy')
         image = ChannelImage.create_from_file(self.img_filename, self.metadata,

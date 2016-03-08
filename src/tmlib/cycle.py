@@ -38,7 +38,7 @@ class Cycle(object):
 
     CYCLE_DIR_FORMAT = 'cycle_{index:0>2}'
 
-    STATS_FILE_FORMAT = 'channel_{channel_ix}.stat.h5'
+    STATS_FILE_FORMAT = 'channel_{channel}.stat.h5'
 
     def __init__(self, cycle_dir, library):
         '''
@@ -226,8 +226,8 @@ class Cycle(object):
             with JsonReader() as reader:
                 description = reader.read(alignment_file)
             align_description = AlignmentDescription(description)
-            # Match shift descriptions via "site_ix"
-            sites = metadata['site_ix']
+            # Match shift descriptions via "site"
+            sites = metadata['site']
             n_sites = len(sites)
             overhang = align_description.overhang
             metadata['upper_overhang'] = np.repeat(overhang.upper, n_sites)
@@ -236,7 +236,7 @@ class Cycle(object):
             metadata['left_overhang'] = np.repeat(overhang.left, n_sites)
             metadata['x_shift'] = np.repeat(0, n_sites)
             metadata['y_shift'] = np.repeat(0, n_sites)
-            align_sites = [shift.site_ix for shift in align_description.shifts]
+            align_sites = [shift.site for shift in align_description.shifts]
             for i, s in enumerate(sites):
                 ix = align_sites.index(s)
                 shift = align_description.shifts[ix]
@@ -246,24 +246,24 @@ class Cycle(object):
         return metadata
 
     @property
-    def tpoint_index(self):
+    def tpoint(self):
         '''
         Returns
         -------
         int
             zero-based index of the cycle in a time series
         '''
-        return np.unique(self.image_metadata['tpoint_ix'])[0]
+        return np.unique(self.image_metadata['tpoint'])[0]
 
     @property
-    def channel_indices(self):
+    def channels(self):
         '''
         Returns
         -------
         List[int]
             zero-based indices of the channels belonging to the cycle
         '''
-        return list(np.unique(self.image_metadata['channel_ix']))
+        return list(np.unique(self.image_metadata['channel']))
 
     @property
     def channel_names(self):
@@ -365,7 +365,7 @@ class Cycle(object):
         OSError
             when no illumination statistic files are found in `stats_dir`
         '''
-        stats_pattern = self.STATS_FILE_FORMAT.format(channel_ix='([0-9])')
+        stats_pattern = self.STATS_FILE_FORMAT.format(channel='([0-9])')
         regexp = re.compile(stats_pattern)
         files = {
             int(regexp.search(f).group(1)): f
@@ -387,8 +387,8 @@ class Cycle(object):
         illumstats_metadata = dict()
         for c, f in self.illumstats_files.iteritems():
             md = IllumstatsImageMetadata()
-            md.channel_ix = c
-            md.tpoint_ix = self.tpoint_index
+            md.channel = c
+            md.tpoint = self.tpoint
             md.cycle_ix = self.index
             md.filename = f
             illumstats_metadata[c] = md

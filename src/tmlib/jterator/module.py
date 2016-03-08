@@ -25,7 +25,7 @@ class CaptureOutput(dict):
     Examples
     --------
     with CaptureOutput() as output:
-        my_function(arg)
+        foo()
     '''
     def __enter__(self):
         self._stdout = sys.stdout

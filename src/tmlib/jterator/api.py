@@ -33,7 +33,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     '''
 
     def __init__(self, experiment, prog_name, verbosity, pipeline,
-                 pipe=None, handles=None, plot=False, **kwargs):
+                 pipe=None, handles=None, **kwargs):
         '''
         Initialize an instance of class ImageAnalysisPipeline.
 
@@ -53,8 +53,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         handles: List[dict], optional
             name of each module and the description of its input/output
             (default: ``None``)
-        plot: bool, optional
-            whether plotting should be enabled (default: ``False``)
         kwargs: dict, optional
             additional key-value pairs that are ignored
 
@@ -77,7 +75,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.pipe_name = pipeline
         self.prog_name = prog_name
         self.verbosity = verbosity
-        self.plot = plot
         self.project = JtProject(
                     project_dir=self.project_dir, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
@@ -234,12 +231,19 @@ class ImageAnalysisPipeline(ClusterRoutines):
             raise PipelineDescriptionError('No pipeline description available')
         return self._pipeline
 
-    def start_engines(self):
+    def start_engines(self, plot):
         '''
         Start engines for non-Python modules in the pipeline. We want to
         do this only once, because they may have long startup times, which
         would slow down the execution of the pipeline, if we would have to do
         it repeatedly for each module.
+
+        Parameters
+        ----------
+        plot: bool
+            whether plots should be generated; when ``False`` Matlab will be
+            started with the ``"-nojvm"`` option, which will disable plotting
+            functionality
 
         Note
         ----
@@ -256,7 +260,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # for use parallel processing on the cluster. Otherwise some jobs
             # hang up and get killed due to timeout.
             startup_options = '-nosplash -singleCompThread'
-            if not self.plot:
+            if not plot:
                 # Option minimizes memory usage and improves initial startup
                 # speed, but disables plotting functionality, so we can only
                 # use it in headless mode.
@@ -323,7 +327,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
-        # TODO: make this more general for 3D time series datasets
+        # TODO: only work with "channels" defined in experiment
 
         if 'planes' in self.project.pipe['description']['images']:
 
@@ -353,11 +357,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # different z-resolutions
 
             example_cycle = self.experiment.plates[0].cycles[0]
-            n_zplanes = len(np.unique(example_cycle.image_metadata.zplane_ix))
+            n_zplanes = len(np.unique(example_cycle.image_metadata.zplane))
             if n_zplanes == 1:
                 raise PipelineDescriptionError(
                         'A "stack" can only be generated for 3D datasets.')
-            n_tpoints = len(np.unique(example_cycle.image_metadata.tpoint_ix))
+            n_tpoints = len(np.unique(example_cycle.image_metadata.tpoint))
             mode = self.experiment.user_cfg.acquisition_mode
             # Works fine in "multiplexing", because each time point maps to
             # a different visual. This is not the case for "series" data.
@@ -392,12 +396,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # but at different time points.
 
             example_cycle = self.experiment.plates[0].cycles[0]
-            n_tpoints = len(np.unique(example_cycle.image_metadata.tpoint_ix))
+            n_tpoints = len(np.unique(example_cycle.image_metadata.tpoint))
             if n_tpoints == 1:
                 raise PipelineDescriptionError(
                         'A "series" can only be generated for datasets '
                         'with multiple time points')
-            n_zplanes = len(np.unique(example_cycle.image_metadata.zplane_ix))
+            n_zplanes = len(np.unique(example_cycle.image_metadata.zplane))
             if n_zplanes > 0:
                 raise NotSupportedError(
                         'Generation of "series" is not supported for '
@@ -455,7 +459,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             self.module_log_dir, i+1).values()
                         for module in self.pipeline
                     ])
-                }
+                },
+                'plot': args.plot
             } for i, batch in enumerate(batches)]
 
             job_descriptions['collect'] = {
@@ -493,19 +498,18 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job_descriptions['run'] = [{
                 'id': 1,
                 'inputs': dict(),
-                'outputs': dict()
+                'outputs': dict(),
+                'plot': False
             }]
             return job_descriptions
 
     def _build_run_command(self, batch):
-        # Overwrite method to account for additional "---pipelineipeline" argument
+        # Overwrite method to account for additional "---pipeline" argument
         command = [self.prog_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
         command.extend(['run', '--job', str(batch['id'])])
         command.extend(['--pipeline', self.pipe_name])
-        if self.plot:
-            command.append('--plot')
         return command
 
     def run_job(self, batch):
@@ -516,7 +520,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             /metadata                                               # Group
             /metadata/job_id                                        # Dataset {SCALAR}
-            /metadata/plate_index                                    # Dataset {SCALAR}
+            /metadata/plate                                         # Dataset {SCALAR}
             /metadata/well_name                                     # Dataset {SCALAR}
             /metadata/well_posistion                                # Group
             /metadata/well_posistion/x                              # Dataset {SCALAR}
@@ -560,7 +564,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         )
         checker.check_all()
         self._configure_loggers()
-        self.start_engines()
+        self.start_engines(batch['plot'])
         job_id = batch['id']
         data_file = self.build_data_filename(job_id)
         # Create the HDF5 file (truncate in case it already exists)
@@ -593,10 +597,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 if item['correct']:
                     logger.info('correct images for illumination artifacts')
                     for plate in self.experiment.plates:
-                        if plate.index != img.metadata.plate_ix:
+                        if plate.index != img.metadata.plate:
                             continue
                         cycle = plate.cycles[img.metadata.cycle_ix]
-                        stats = cycle.illumstats_images[img.metadata.channel_ix]
+                        stats = cycle.illumstats_images[img.metadata.channel]
                         stats.smooth_stats()
                         img = img.correct(stats)
                 logger.info('align images between cycles')
@@ -638,8 +642,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 with DatasetWriter(data_file) as data:
                     data.write('/metadata/job_id',
                                data=batch['id'])
-                    data.write('/metadata/plate_index',
-                               data=md.plate_ix)
+                    data.write('/metadata/plate',
+                               data=md.plate)
                     data.write('/metadata/well_name',
                                data=md.well_name)
                     data.write('/metadata/well_position/y',
@@ -665,14 +669,15 @@ class ImageAnalysisPipeline(ClusterRoutines):
             inputs = module.prepare_inputs(
                                 images=images,
                                 upstream_output=outputs['data'],
-                                data_file=data_file, figure_file=figure_file,
+                                data_file=data_file,
+                                figure_file=figure_file,
                                 job_id=job_id,
                                 experiment_dir=self.experiment.dir,
-                                plot=self.plot)
+                                plot=batch['plot'])
             logger.info('run module "%s"', module.name)
             logger.debug('module file: %s', module.module_file)
             out = module.run(inputs, self.engines[module.language])
-            if self.plot:
+            if batch['plot']:
                 # The output is also included in log report of the job.
                 # It is mainly used for setting up a pipeline in the GUI.
                 module.write_output_and_errors(

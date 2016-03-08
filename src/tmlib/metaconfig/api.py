@@ -257,8 +257,8 @@ class MetadataConfigurator(ClusterRoutines):
 
         # Create consistent zero-based ids
         # (some microscopes use one-based indexing)
-        handler.update_channel_index()
-        handler.update_zplane_index()
+        handler.update_channel()
+        handler.update_zplane()
         handler.build_image_filenames(self.image_file_format_string)
         handler.assign_acquisition_site_indices()
         md = handler.remove_redundant_columns()
@@ -307,7 +307,7 @@ class MetadataConfigurator(ClusterRoutines):
 
                 metadata = acquisition.image_metadata
 
-                tpoints = np.unique(metadata.tpoint_ix)
+                tpoints = np.unique(metadata.tpoint)
                 if source.acquisition_mode == 'multiplexing':
                     logger.info(
                             '%d multiplexing iteration found in source # %d',
@@ -330,7 +330,7 @@ class MetadataConfigurator(ClusterRoutines):
                     # Create a metadata subset that only contains information
                     # about image elements belonging to the currently processed
                     # cycle (time point)
-                    md = metadata[metadata.tpoint_ix == t]
+                    md = metadata[metadata.tpoint == t]
                     for ix in md.index:
                         # In case images were acquired as part of a
                         # "multiplexing" experiment, don't increment the "time"
@@ -340,30 +340,30 @@ class MetadataConfigurator(ClusterRoutines):
                         # markers, which are interpreted as different channels.
                         # The "channel_name" attribute remains unchanged.
                         if source.acquisition_mode == 'multiplexing':
-                            md.at[ix, 'tpoint_ix'] = 0
+                            md.at[ix, 'tpoint'] = 0
                             if cycle.index > 0:
                                 pre_cycle = self.experiment.plates[i].cycles[
                                                 cycle.index - 1
                                 ]
                                 pre_md = pre_cycle.image_metadata
-                                max_index = np.max(pre_md['channel_ix'])
-                                md.at[ix, 'channel_ix'] += max_index + 1
+                                max_index = np.max(pre_md['channel'])
+                                md.at[ix, 'channel'] += max_index + 1
                         else:
-                            md.at[ix, 'tpoint_ix'] = t
+                            md.at[ix, 'tpoint'] = t
                         fieldnames = {
-                            'p': md.at[ix, 'plate_ix'],
+                            'p': md.at[ix, 'plate'],
                             'w': md.at[ix, 'well_name'],
                             'y': md.at[ix, 'well_position_y'],
                             'x': md.at[ix, 'well_position_x'],
-                            'c': md.at[ix, 'channel_ix'],
-                            'z': md.at[ix, 'zplane_ix'],
-                            't': md.at[ix, 'tpoint_ix'],
+                            'c': md.at[ix, 'channel'],
+                            'z': md.at[ix, 'zplane'],
+                            't': md.at[ix, 'tpoint'],
                         }
                         md.at[ix, 'name'] = cfg.IMAGE_NAME_FORMAT.format(
                                                         **fieldnames)
 
                     # Add the corresponding plate index
-                    md.plate_ix = pd.Series(
+                    md.plate = pd.Series(
                         np.repeat(source.index, md.shape[0])
                     )
 
@@ -382,7 +382,7 @@ class MetadataConfigurator(ClusterRoutines):
                             (md.well_position_y == ref_md.well_position_y) &
                             (md.well_position_x == ref_md.well_position_x) &
                             (md.channel_name == ref_md.channel_name) &
-                            (md.zplane_ix == ref_md.zplane_ix)
+                            (md.zplane == ref_md.zplane)
                         )[0]
                         if len(ix) > 1:
                             raise ValueError('More than one reference found.')

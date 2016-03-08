@@ -22,7 +22,7 @@ class TestLayer(unittest.TestCase):
         spacer_size = 10
         layer = ChannelLayer.create(
                     experiment=self.experiment,
-                    tpoint_ix=0, channel_ix=0, zplane_ix=0,
+                    tpoint=0, channel=0, zplane=0,
                     spacer_size=spacer_size)
         self.assertIsInstance(layer, ChannelLayer)
         self.assertIsInstance(layer.mosaic, Mosaic)
@@ -48,7 +48,7 @@ class TestLayer(unittest.TestCase):
     def layer(self):
         return ChannelLayer.create(
                     experiment=self.experiment,
-                    tpoint_ix=0, channel_ix=0, zplane_ix=0)
+                    tpoint=0, channel=0, zplane=0)
 
     def test_clip_value(self):
         value = 100
@@ -70,7 +70,7 @@ class TestLayer(unittest.TestCase):
     def test_align(self):
         aligned_layer = ChannelLayer.create(
                             experiment=self.experiment,
-                            tpoint_ix=0, channel_ix=0, zplane_ix=0, align=True)
+                            tpoint=0, channel=0, zplane=0, align=True)
         self.assertEqual(aligned_layer.mosaic.dtype, Vips.BandFormat.USHORT)
         self.assertEqual(aligned_layer.mosaic.dimensions,
                          self.layer.mosaic.dimensions)
@@ -80,7 +80,7 @@ class TestLayer(unittest.TestCase):
     def test_illumcorr(self):
         corrected_layer = ChannelLayer.create(
                             experiment=self.experiment,
-                            tpoint_ix=0, channel_ix=0, zplane_ix=0,
+                            tpoint=0, channel=0, zplane=0,
                             illumcorr=True)
         self.assertEqual(corrected_layer.mosaic.dtype, Vips.BandFormat.USHORT)
         self.assertEqual(corrected_layer.mosaic.dimensions,

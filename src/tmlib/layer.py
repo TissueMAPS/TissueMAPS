@@ -133,7 +133,7 @@ class Layer(object):
         )
         return (plate_height, plate_width)
 
-    def _calc_global_offset(self, plate_index, well_coords, n_prior_wells):
+    def _calc_global_offset(self, plate, well_coords, n_prior_wells):
         # NOTE: the shifts between cycles must be added separately
         y_offset = (
             # Images in the well above the image
@@ -145,7 +145,7 @@ class Layer(object):
             # Gap introduced between wells
             n_prior_wells[0] * self.well_spacer_size +
             # Plates above the plate
-            plate_index * self.plate_dimensions[0]
+            plate * self.plate_dimensions[0]
         )
         x_offset = (
             # Images in the well left of the image
@@ -170,7 +170,7 @@ class ChannelLayer(Layer):
     directories.
     '''
 
-    def __init__(self, experiment, tpoint_ix, channel_ix, zplane_ix,
+    def __init__(self, experiment, tpoint, channel, zplane,
                  zoom_factor=2, image_displacement=0, well_spacer_size=500):
         '''
         Initialize an instance of class ChannelLayer.
@@ -179,11 +179,11 @@ class ChannelLayer(Layer):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        tpoint_ix: int
+        tpoint: int
             time point (cycle) index
-        channel_ix: int
+        channel: int
             channel index
-        zplane_ix: int
+        zplane: int
             z-plane index
         zoom_factor: int, optional
             zoom factor between levels (default: ``2`)
@@ -203,9 +203,9 @@ class ChannelLayer(Layer):
         super(ChannelLayer, self).__init__(
                 experiment, image_displacement, well_spacer_size)
         self.experiment = experiment
-        self.tpoint_ix = tpoint_ix
-        self.channel_ix = channel_ix
-        self.zplane_ix = zplane_ix
+        self.tpoint = tpoint
+        self.channel = channel
+        self.zplane = zplane
         self.zoom_factor = zoom_factor
         self.image_displacement = image_displacement
         self.well_spacer_size = well_spacer_size
@@ -220,7 +220,7 @@ class ChannelLayer(Layer):
             name of the pyramid
         '''
         return self.experiment.layer_names[
-            (self.tpoint_ix, self.channel_ix, self.zplane_ix)
+            (self.tpoint, self.channel, self.zplane)
         ]
 
     @property
@@ -243,7 +243,7 @@ class ChannelLayer(Layer):
         '''
         return [
             c.index for c in self.experiment.plates[0].cycles
-            if self.channel_ix in c.channel_indices
+            if self.channel in c.channels
         ][0]
 
     @property
@@ -350,9 +350,9 @@ class ChannelLayer(Layer):
                 prior_wells = (n_prior_wells_y, n_prior_wells_x)
 
                 index = np.where(
-                            (md['tpoint_ix'] == self.tpoint_ix) &
-                            (md['channel_ix'] == self.channel_ix) &
-                            (md['zplane_ix'] == self.zplane_ix) &
+                            (md['tpoint'] == self.tpoint) &
+                            (md['channel'] == self.channel) &
+                            (md['zplane'] == self.zplane) &
                             (md['well_name'] == well)
                 )[0]
 
@@ -593,7 +593,7 @@ class ChannelLayer(Layer):
         # Process tiles that map to one or more images.
         cycle = self.experiment.plates[0].cycles[self.cycle_index]
         if illumcorr:
-            stats = cycle.illumstats_images[self.channel_ix]
+            stats = cycle.illumstats_images[self.channel]
             stats.smooth_stats()
         md = cycle.image_metadata
         if subset_indices is None:
@@ -1081,15 +1081,15 @@ class SegmentedObjectLayer(Layer):
                     # accordingly, i.e. translate site-specific coordinates into
                     # global ones.
 
-                    plate_index = data.read('/metadata/plate_index')
-                    plate = self.experiment.plates[plate_index]
+                    plate = data.read('/metadata/plate')
+                    plate = self.experiment.plates[plate]
                     well_name = data.read('/metadata/well_name')
                     plate_coords = plate.map_well_id_to_coordinate(well_name)
                     well_coords = (
                         data.read('/metadata/well_position/y'),
                         data.read('/metadata/well_position/x')
                     )
-                    logger.debug('plate # %d', plate_index)
+                    logger.debug('plate # %d', plate)
                     logger.debug('well position within plate: {0}'.format(
                                     plate_coords))
                     logger.debug('well name: %s', well_name)
@@ -1164,8 +1164,8 @@ class SegmentedObjectLayer(Layer):
                     store.append('%s/is_border' % obj_path, is_border)
 
                     # Store the name of the corresponding plate and well
-                    plates = np.repeat(plate_index, len(object_ids))
-                    store.append('%s/metadata/plate_index' % obj_path, plates)
+                    plates = np.repeat(plate, len(object_ids))
+                    store.append('%s/metadata/plate' % obj_path, plates)
                     wells = np.repeat(well_name, len(object_ids))
                     store.append('%s/metadata/well_name' % obj_path, wells)
 
@@ -1246,7 +1246,7 @@ class WellObjectLayer(Layer):
                 feat_path[obj] = '%s/features' % obj_path
                 # NOTE: This assumes that the layers for segmented objects
                 # have already been created
-                plate_ref[obj] = data.read('%s/metadata/plate_index' % obj_path)
+                plate_ref[obj] = data.read('%s/metadata/plate' % obj_path)
                 well_ref[obj] = data.read('%s/metadata/well_name' % obj_path)
 
             with DatasetWriter(filename) as store:
