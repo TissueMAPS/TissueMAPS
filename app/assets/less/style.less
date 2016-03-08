@@ -43,11 +43,12 @@ body {
     position: relative;
 }
 
-.app, .main-window {
-    height: 100%;
+.main-window {
+    height: calc(~'100% - @{appbar-height}');
 }
 
 .app {
+    height: 100%;
     overflow: hidden;
 }
 

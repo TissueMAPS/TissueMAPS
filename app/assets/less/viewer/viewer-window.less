@@ -1,12 +1,11 @@
 @import "../variables.less";
 
 #viewer-window {
-    height: 100%;
     display: none;
 }
 
 .viewers-container {
-    height: 100%;
+    height: calc(~'100% - @{viewers-tabbar-container-height}');
 }
 
 .viewer {
