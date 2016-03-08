@@ -1,9 +1,9 @@
-function [objects2Cut, objectsNot2Cut] = selectObjectsForCutting(objects, maxSolidity, minFormFactor, maxArea, minArea)
+function [objects2Cut, objectsNot2Cut] = selectClumps(objects, maxSolidity, minFormFactor, maxArea, minArea)
 
-    import jtlib.plotting.rplabel;
+    import jtlib.plotting;
     import jtlib.calculateObjectSelectionFeatures;
 
-    [area, solidity, formFactor] = calculateObjectSelectionFeatures(objects);
+    [area, solidity, formFactor] = jtlib.calculateObjectSelectionFeatures(objects);
 
     % Select objects based on these features (user defined thresholds)
     obj2cut = solidity < maxSolidity & formFactor > minFormFactor & ...
@@ -13,7 +13,7 @@ function [objects2Cut, objectsNot2Cut] = selectObjectsForCutting(objects, maxSol
     objSelected = zeros(size(obj2cut));
     objSelected(obj2cut) = 1;
     objSelected(objNot2cut) = 2;
-    selectedObjects = rplabel(logical(objects),[],objSelected);
+    selectedObjects = jtlib.plotting.rplabel(logical(objects),[],objSelected);
 
     % Create mask image with objects selected for cutting
     objects2Cut = zeros(size(objects));

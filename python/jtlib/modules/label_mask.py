@@ -36,21 +36,15 @@ def label_mask(mask, **kwargs):
     logger.info('identified %d objects', len(np.unique(labeled_image))-1)
 
     if kwargs['plot']:
-        import matplotlib.pyplot as plt
         from .. import plotting
 
-        fig = plt.figure()
-        ax1 = fig.add_subplot(1, 1, 1)
+        plots = [
+            plotting.create_mask_image_plot(mask, 'ul'),
+            plotting.create_mask_image_plot(labeled_image, 'ur')
+        ]
 
-        img_obj = labeled_image.astype(float)
-        img_obj[labeled_image == 0] = np.nan
-
-        ax1.imshow(img_obj, cmap=plt.cm.jet, interpolation='none')
-        ax1.set_title('labeled objects', size=20)
-
-        fig.tight_layout()
-
-        plotting.save_mpl_figure(fig, kwargs['figure_file'])
+        fig = plotting.create_figure(plots, title='Labeled objects in mask.')
+        plotting.save_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'objects')
     return Output(labeled_image)

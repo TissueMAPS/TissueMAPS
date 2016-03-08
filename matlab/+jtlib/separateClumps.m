@@ -50,7 +50,7 @@ function CutMask = separateClumps(LabelImage, IntensityImage, ...
 %       Nicolas Battich
 
 import jtlib.dijkstra;
-import jtlib.plotting.freezeColors;
+% import jtlib.plotting.freezeColors;
 
 % Obtain pixels at inner periphery of objects
 props = regionprops(LabelImage,'BoundingBox');
@@ -250,7 +250,7 @@ if ~isempty(ObjectIDs)
                 figure(h), imagesc(padInt)
                 title(sprintf('Object # %d', i))
                 colormap(gray)
-                freezeColors
+                % freezeColors
                 hold on
                 scatter(J, I, 150, 'y', 's', 'MarkerFaceColor','y')
                 scatter(NodesCentroids(NodeToTest,1), NodesCentroids(NodeToTest,2), 2000, 'r', '.');

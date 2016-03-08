@@ -49,7 +49,8 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
     Raises
     ------
     ValueError
-        when `filter_name` is not in {"avarage", "gaussian", "median", "bilateral"}
+        when `filter_name` is not in
+        {"avarage", "gaussian", "median", "bilateral"}
     TypeError
         when `image` does not have unsigned integer type
     '''
@@ -81,79 +82,22 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
                          '"average", "gaussian", "median", and "bilateral"')
 
     if kwargs['plot']:
-        import plotly
         from .. import plotting
 
-        rf = 4
-        ds_img = skimage.measure.block_reduce(
-                            image, (rf, rf), func=np.mean).astype(int)
-        ds_smooth_img = skimage.measure.block_reduce(
-                            smoothed_image, (rf, rf), func=np.mean).astype(int)
-
-        clip_value = np.percentile(ds_img, 99.99)
+        clip_value = np.percentile(image, 99.99)
         data = [
-            plotly.graph_objs.Heatmap(
-                z=ds_img,
-                colorscale='Greys',
-                hoverinfo='z',
-                zauto=False,
-                zmax=clip_value,
-                zmin=0,
-                colorbar=dict(
-                    yanchor='bottom',
-                    y=0.57,
-                    len=0.43
-                ),
-                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
-                x=np.linspace(0, image.shape[1], ds_img.shape[1])
-            ),
-            plotly.graph_objs.Heatmap(
-                z=ds_smooth_img,
-                colorscale='Greys',
-                hoverinfo='z',
-                zmax=clip_value,
-                zmin=0,
-                zauto=False,
-                colorbar=dict(
-                    yanchor='bottom',
-                    y=0.57,
-                    x=0.43,
-                    len=0.43
-                ),
-                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
-                x=np.linspace(0, image.shape[1], ds_img.shape[1]),
-                xaxis='x2',
-                yaxis='y2'
-            )
+            plotting.create_intensity_image_plot(
+                        image, 'ul', clip_value=clip_value),
+            plotting.create_intensity_image_plot(
+                        smoothed_image, 'ur', clip_value=clip_value),
         ]
 
-        layout = plotly.graph_objs.Layout(
-            title='{name} smoothing filter of size {size}'.format(
-                                    name=filter_name.capitalize(),
-                                    size=filter_size),
-            xaxis1=dict(
-                domain=[0, 0.43],
-                anchor='y1'
-            ),
-            yaxis1=dict(
-                domain=[0.57, 1],
-                anchor='x1',
-                autorange='reversed'
-            ),
-            xaxis2=dict(
-                domain=[0.57, 1],
-                anchor='y2'
-            ),
-            yaxis2=dict(
-                ticks='', showticklabels=False,
-                domain=[0.57, 1],
-                anchor='x2',
-                autorange='reversed'
-            ),
+        fig = plotting.create_figure(
+                    data,
+                    title='''smoothed image with %s filter of size %s
+                    ''' % (filter_name, filter_size)
         )
-
-        fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        plotting.save_plotly_figure(fig, kwargs['figure_file'])
+        plotting.save_figure(fig, kwargs['figure_file'])
 
     Output = collections.namedtuple('Output', 'smoothed_image')
     return Output(smoothed_image.astype(input_dtype))

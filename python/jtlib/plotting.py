@@ -1,80 +1,516 @@
-import os
-import mpld3
 import numpy as np
-import mahotas as mh
 import plotly
-import colorlover as cl
-from bokeh.resources import CDN
-from bokeh.embed import file_html
-from bokeh.palettes import Reds5, Greens5, Blues5, Oranges5, BuPu5
-import matplotlib as mpl
+import skimage
 from matplotlib import cm
 import logging
-from tmlib import image_utils
-# from bokeh.embed import components
 
 logger = logging.getLogger(__name__)
 
+#: Color used to represented segmented objects in binary mask images
+#: (on black background).
 OBJECT_COLOR = 'rgb(255, 191, 0)'
 
+#: Height and width of each plot within the figure.
+PLOT_HEIGHT = 0.43
+PLOT_WIDTH = 0.43
 
-def save_mpl_figure(fig, figure_file):
+#: Mapping for the position of the colorbar relative to the figure.
+COLORBAR_POSITION_MAPPING = {
+    'ul': (1-PLOT_HEIGHT, PLOT_WIDTH),
+    'ur': (1-PLOT_HEIGHT, 1),
+    'll': (0, PLOT_WIDTH),
+    'lr': (0, 1),
+}
+
+#: Mapping for the position of the plot relative to the figure.
+PLOT_POSITION_MAPPING = {
+    'ul': ('y1', 'x1'),
+    'ur': ('y2', 'x2'),
+    'll': ('y3', 'x3'),
+    'lr': ('y4', 'x4'),
+}
+
+#: The factor by which the size of an image should be reduced for plotting.
+#: This helps reducing the amount of data that has to be send to the client.
+IMAGE_RESIZE_FACTOR = 4
+
+
+def _check_position_argument(position):
+    supported_positions = {'ul', 'ur', 'll', 'lr'}
+    if not isinstance(position, basestring):
+        raise TypeError('Argument "position" must have type basestring.')
+    if position not in supported_positions:
+        raise ValueError(
+                'A figure is a 2x2 grid of plots. '
+                'Values of argument "position" must be either "%s"'
+                % '", "'.join(supported_positions))
+
+
+def create_histogram_plot(data, position, color='grey'):
     '''
-    Write `mpld3 <http://mpld3.github.io/>`_ instance to file as HTML string
-    with embedded javascript code.
+    Create a histogram plot.
 
     Parameters
     ----------
-    fig: matplotlib.figure.Figure
-        figure instance
-    figure_file: str
-        name of the figure file
+    data: list or numpy.array
+        data that should be plotted
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    color: str, optional
+        color that should be used for the marker
 
-    Note
-    ----
-    Also saves a thumbnail of the figure as PNG image.
-
-    Warning
+    Returns
     -------
-    Display of the figure in the browser requires internet connection, because
-    the javascript library code is loaded via the web.
-    See `troubleshooting <http://mpld3.github.io/faq.html#troubleshooting>`_.
+    plotly.graph_objs.graph_objs.Histogram
     '''
-    fig.figsize = (100, 100)
-    mousepos = mpld3.plugins.MousePosition(fontsize=20)
-    mpld3.plugins.connect(fig, mousepos)
-    logger.debug('write figure to HTML file: "%s"' % figure_file)
-    mpld3.save_html(fig, figure_file)   # template_type='simple'
-    # Also save figure as image
-    img_file = '%s.png' % os.path.splitext(figure_file)[0]
-    fig.savefig(img_file)
+    _check_position_argument(position)
+    return plotly.graph_objs.Histogram(
+                x=data,
+                marker=dict(
+                    color=color
+                ),
+                showlegend=False,
+                yaxis=PLOT_POSITION_MAPPING[position][0],
+                xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
 
 
-def save_bokeh_figure(fig, figure_file):
+def create_scatter_plot(y_data, x_data, position, color='grey', marker_size=4):
     '''
-    Write `bokeh <http://bokeh.pydata.org/en/latest/>`_ figure instance to
-    file as HTML string with embedded javascript code.
+    Create a scatter plot.
 
     Parameters
     ----------
-    fig: bokeh.plotting.Figure
-        figure instance
-    figure_file: str
-        name of the figure file
+    y_data: list or numpy.array
+        data that should be plotted along the y-axis
+    x_data: list or numpy.array
+        data that should be plotted along the x-axis
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    color: str, optional
+        color of the points (default: ``"grey"``)
+    marker_size: int, optional (default: ``4``)
+        size of the points
+
+
+    Returns
+    -------
+    plotly.graph_objs.graph_objs.Scatter
     '''
-    html = file_html(fig, resources=CDN, title='jterator figure')
-    with open(figure_file, 'w') as f:
-        f.write(html)
+    _check_position_argument(position)
+    return plotly.graph_objs.Scatter(
+                y=y_data,
+                x=x_data,
+                marker=dict(
+                    size=marker_size,
+                    color=color,
+                ),
+                showlegend=False,
+                yaxis=PLOT_POSITION_MAPPING[position][0],
+                xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
 
 
-def save_plotly_figure(fig, figure_file):
+def create_line_plot(y_data, x_data, position, color='grey', line_width=4):
+    '''
+    Create a line plot.
+
+    Parameters
+    ----------
+    y_data: list or numpy.array
+        data that should be plotted along the y-axis
+    x_data: list or numpy.array
+        data that should be plotted along the x-axis
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    color: str, optional
+        color of the line (default: ``"grey"``)
+    line_width: int, optional
+        width of the line (default: ``4``)
+
+    Returns
+    -------
+    plotly.graph_objs.graph_objs.Scatter
+    '''
+    _check_position_argument(position)
+    return plotly.graph_objs.Scatter(
+                y=y_data,
+                x=x_data,
+                marker=dict(
+                    size=0,
+                ),
+                line=dict(
+                    color=color,
+                    width=line_width,
+                ),
+                showlegend=False,
+                yaxis=PLOT_POSITION_MAPPING[position][0],
+                xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
+
+
+def create_intensity_image_plot(image, position, clip=True, clip_value=None):
+    '''
+    Create a heatmap plot for an intensity image.
+    Intensity values will be encode with greyscale colors.
+
+    Paramters
+    ---------
+    image: numpy.ndarray[numpy.uint8 or numpy.uint16]
+        2D intensity image
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    clip: bool, optional
+        whether intensity values should be clipped (default: ``True``)
+    clip_value: int, optional
+        value above which intensity values should be clipped;
+        the 99th percentile of intensity values will be used in case no value
+        is provided; will only be considered when `clip` is ``True``
+        (default: ``None``)
+
+    Returns
+    -------
+    plotly.graph_objs.graph_objs.Heatmap
+
+    See also
+    --------
+    :py:function:`jtlib.plotting.create_intensity_image_plot`
+    :py:function:`jtlib.plotting.create_overlay_image_plot`
+    '''
+
+    _check_position_argument(position)
+
+    block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
+    ds_img = skimage.measure.block_reduce(
+                            image, block, func=np.mean).astype(int)
+
+    if clip:
+        if clip_value is None:
+            clip_value = np.percentile(image, 99.99)
+    else:
+        clip_value = np.max(image)
+
+    return plotly.graph_objs.Heatmap(
+                z=ds_img,
+                # Only show pixel intensities upon mouse hover.
+                hoverinfo='z',
+                # Background should be black and pixel intensities encode
+                # as grey values.
+                colorscale='Greys',
+                # Rescale pixel intensity values for display.
+                zmax=clip_value,
+                zmin=0,
+                zauto=False,
+                colorbar=dict(
+                    thickness=10,
+                    yanchor='bottom',
+                    y=COLORBAR_POSITION_MAPPING[position][0],
+                    x=COLORBAR_POSITION_MAPPING[position][1],
+                    len=PLOT_HEIGHT),
+                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
+                x=np.linspace(0, image.shape[1], ds_img.shape[1]),
+                yaxis=PLOT_POSITION_MAPPING[position][0],
+                xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
+
+
+def create_mask_image_plot(mask, position, colorscale=None):
+    '''
+    Create a heatmap plot for a mask image.
+    Unique object labels will be encoded with RGB colors.
+
+    Paramters
+    ---------
+    mask: numpy.ndarray[numpy.bool or numpy.int32]
+        binary or labeled 2D mask image
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    colorscale: List[List[int, str]]
+        colors that should be used to visually highlight the objects in the
+        mask image; a default color map will be used if not provided;
+        see `plotly docs <https://plot.ly/python/heatmap-and-contour-colorscales/>`_
+        for more information of colorscale format (default: ``None``)
+
+    Returns
+    -------
+    plotly.graph_objs.graph_objs.Heatmap
+
+    See also
+    --------
+    :py:function:`jtlib.plotting.create_intensity_image_plot`
+    :py:function:`jtlib.plotting.create_overlay_image_plot`
+    '''
+    _check_position_argument(position)
+
+    block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
+    ds_mask = skimage.measure.block_reduce(
+                            mask, block, func=np.max).astype(int)
+
+    n_objects = len(np.unique(mask[mask > 0]))
+    if colorscale is None:
+        if n_objects == 1:
+            colorscale = [[0, 'rgb(0,0,0)'], [1, OBJECT_COLOR]]
+        else:
+            colorscale = create_colorscale('summer', n_objects)
+            colorscale[0] = [0, 'rgb(0,0,0)']
+
+    plot = plotly.graph_objs.Heatmap(
+                z=ds_mask,
+                colorscale=colorscale,
+                hoverinfo='z',
+                colorbar=dict(
+                    thickness=10,
+                    yanchor='bottom',
+                    y=COLORBAR_POSITION_MAPPING[position][0],
+                    x=COLORBAR_POSITION_MAPPING[position][1],
+                    len=PLOT_HEIGHT
+                ),
+                y=np.linspace(0, mask.shape[0], ds_mask.shape[0]),
+                x=np.linspace(0, mask.shape[1], ds_mask.shape[1]),
+                yaxis=PLOT_POSITION_MAPPING[position][0],
+                xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
+
+    if n_objects == 1:
+        plot['colorbar'].update(
+                tickmode='array',
+                tickvals=[0, 1],
+        )
+
+    return plot
+
+
+def create_overlay_image_plot(image, mask, position,
+                              clip=True, clip_value=None, color=None):
+    '''
+    Create an intensity image plot and overlay the outlines of a mask
+    in color on top of the greyscale plot.
+
+    Parameters
+    ----------
+    image: numpy.ndarray[numpy.uint8 or numpy.uint16]
+        2D intensity image
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    clip: bool, optional
+        whether intensity values should be clipped (default: ``True``)
+    clip_value: int, optional
+        value above which intensity values should be clipped;
+        the 99th percentile of intensity values will be used in case no value
+        is provided; will only be considered when `clip` is ``True``
+        (default: ``None``)
+    color: str, optional
+        color of the mask outline;
+        :py:attribute:`jtlib.plotting.OBJECT_COLOR` will be used in case no color
+        is specified (default: ``None``)
+
+    Returns
+    -------
+    plotly.graph_objs.graph_objs.Heatmap
+
+    See also
+    --------
+    :py:function:`jtlib.plotting.create_intensity_image_plot`
+    :py:function:`jtlib.plotting.create_mask_image_plot`
+    '''
+
+    _check_position_argument(position)
+    block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
+    ds_mask = skimage.measure.block_reduce(
+                            mask, block, func=np.max).astype(int)
+    # We add 1 to each pixel value to make sure that there are no zeros
+    # in the image. This is important because we will later consider all
+    # zero pixels as outlines and colorize them accordingly (see below).
+    ds_img = skimage.measure.block_reduce(
+                            image, block, func=np.mean).astype(int) + 1
+
+    # Create the outline image for overlay of segmentation results
+    outlines = skimage.measure.find_contours(
+                        ds_mask, 0.5, fully_connected='high')
+    for coords in outlines:
+        y = coords[:, 0].astype(int)
+        x = coords[:, 1].astype(int)
+        # Set outline pixel values to zero. We make sure that images
+        # don't contain any zeros (see above).
+        # Sweet! A nice side effect of this approach is that the outline color
+        # will not be visible in the colorbar.
+        ds_img[y, x] = 0
+
+    if clip:
+        if clip_value is None:
+            clip_value = round(np.percentile(image, 99.99))
+    else:
+        clip_value = round(np.max(image))
+
+    colorscale = create_colorscale('Greys', clip_value)
+    # Insert the color for the outlines into the colorscale. We insert it
+    # at the end, but later reverse the scale for display, so zero values
+    # in the image will be labeled with that color.
+    if color is None:
+        colorscale[-1][1] = OBJECT_COLOR
+    else:
+        colorscale[-1][1] = color
+
+    return plotly.graph_objs.Heatmap(
+                z=ds_img,
+                # Only show pixel intensities upon mouse hover.
+                hoverinfo='z',
+                colorscale=colorscale,
+                reversescale=True,
+                # Rescale pixel intensity values for display.
+                zmax=clip_value,
+                zmin=0,
+                zauto=False,
+                colorbar=dict(
+                    thickness=10,
+                    yanchor='bottom',
+                    y=COLORBAR_POSITION_MAPPING[position][0],
+                    x=COLORBAR_POSITION_MAPPING[position][1],
+                    len=PLOT_HEIGHT),
+                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
+                x=np.linspace(0, image.shape[1], ds_img.shape[1]),
+                yaxis=PLOT_POSITION_MAPPING[position][0],
+                xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
+
+
+def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
+                  plot_is_image=[True, True, True, True], title=''):
+    '''
+    Create a figure based on one or more subplots. Plots will be arranged as
+    a 2x2 grid.
+
+    Parameters
+    ----------
+    plots: List[plotly.graph_objs.Plot or List[plotly.graph_objs.Plot]]
+        subplots that should be used in the figure; subplots can be further
+        nested, i.e. grouped together in case they should be combined at the
+        same figure position
+    plot_positions: List[str], optional
+        relative position of each plot in the figure;
+        ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        (default: ``['ul', 'ur', 'll', 'lr']``)
+    plot_is_image: List[bool], optional
+        whether a plot represents an image; for images the y axis is inverted
+        accounting for the fact that the 0,0 coordinate is located in
+        the upper left corner of the plot rather than in the default lower left
+        corner (default: ``[True, True, True, True]``)
+    title: str, optional
+        title for the figure
+
+    Returns
+    -------
+    plotly.graph_objs.Figure
+
+    Raises
+    ------
+    TypeError
+        when `plot`, `plot_positions`, or `plot_is_image` don't have type list
+    ValueError
+        when length of `plot`, `plot_positions`, or `plot_is_image` is larger
+        than 4
+    '''
+
+    args_to_check = [plots, plot_positions, plot_is_image]
+    if not all([isinstance(arg, list) for arg in args_to_check]):
+        raise TypeError(
+                'Arguments "%s" must have type list.'
+                % '", "'.join(args_to_check))
+    if any([len(arg) > 4 for arg in args_to_check]) == 1:
+        raise ValueError(
+                'Arguments "%s" can have maximally length 4.'
+                % '", "'.join(args_to_check))
+
+    data = list()
+    layout = plotly.graph_objs.Layout(title=title)
+    for i, p in enumerate(plots):
+        if plot_positions[i] == 'ul':
+            layout.update(
+                xaxis1=dict(
+                    domain=[0, PLOT_WIDTH],
+                    anchor='y1',
+                ),
+                yaxis1=dict(
+                    domain=[1-PLOT_HEIGHT, 1],
+                    anchor='x1',
+                )
+            )
+            if plot_is_image[i]:
+                layout['yaxis1']['autorange'] = 'reversed'
+        elif plot_positions[i] == 'ur':
+            layout.update(
+                xaxis2=dict(
+                    domain=[1-PLOT_WIDTH, 1],
+                    anchor='y2',
+                ),
+                yaxis2=dict(
+                    domain=[1-PLOT_HEIGHT, 1],
+                    anchor='x2',
+                )
+            )
+            if plot_is_image[i]:
+                layout['yaxis2']['autorange'] = 'reversed'
+        elif plot_positions[i] == 'll':
+            layout.update(
+                xaxis3=dict(
+                    domain=[0, PLOT_WIDTH],
+                    anchor='y3',
+                ),
+                yaxis3=dict(
+                    domain=[0, PLOT_HEIGHT],
+                    anchor='x3',
+                )
+            )
+            if plot_is_image[i]:
+                layout['yaxis3']['autorange'] = 'reversed'
+        elif plot_positions[i] == 'lr':
+            layout.update(
+                xaxis4=dict(
+                    domain=[1-PLOT_WIDTH, 1],
+                    anchor='y4',
+                ),
+                yaxis4=dict(
+                    domain=[0, PLOT_HEIGHT],
+                    anchor='x4',
+                )
+            )
+            if plot_is_image[i]:
+                layout['yaxis4']['autorange'] = 'reversed'
+        else:
+            raise ValueError(
+                    'Options for values of argument "plot_positions" are: %s'
+                    % ', '.join(map(str, ['ul', 'ur', 'll', 'lr'])))
+
+        # Flatten potentially nested list
+        if isinstance(p, list):
+            data.extend(p)
+        else:
+            data.append(p)
+
+    return plotly.graph_objs.Figure(data=data, layout=layout)
+
+
+def save_figure(fig, figure_file):
     '''
     Write `plotly <https://plot.ly/python/>`_ figure instance to
     file as HTML string with embedded javascript code.
 
     Parameters
     ----------
-    fig: plotly.graph_objs.Figure or plotly.graph_objs.Data
+    fig: plotly.graph_objs.Figure
         figure instance
     figure_file: str
         name of the figure file
@@ -90,7 +526,7 @@ def save_plotly_figure(fig, figure_file):
             fig,
             output_type='div',
             include_plotlyjs=True,
-            show_link=False
+            show_link=False,
     )
     with open(figure_file, 'w') as f:
         f.write(html)
@@ -99,41 +535,7 @@ def save_plotly_figure(fig, figure_file):
     # plotly.plotly.image.save_as(fig, img_file)
 
 
-def create_bokeh_palette(name, n=256):
-    '''
-    Create a color palette in the format required by
-    `bokeh <http://bokeh.pydata.org/en/latest/>`_ based on a
-    `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_.
-
-    Parameters
-    ----------
-    name: str
-        name of a matplotlib colormap, e.g. ``"Greys"``
-    n: int, optional
-        number of colors (default: ``256``)
-
-    Returns
-    -------
-    List[str]
-        HEX color palette
-
-    Note
-    ----
-    Bokeh's build in palettes have only a few hues. If one wants to display
-    values of a larger range one has to create a custom palette.
-
-    Examples
-    --------
-    >>>create_bokeh_palette('Greys', 5)
-    [u'#ffffff', u'#d9d9d9', u'#959595', u'#525252', u'#000000']
-    '''
-    colormap = cm.get_cmap(name)
-    indices = np.round(np.linspace(0, 255, n)).astype(int)
-    rgb_values = colormap(indices)
-    return [mpl.colors.rgb2hex(v) for v in rgb_values]
-
-
-def create_plotly_palette(name, n=256):
+def create_colorscale(name, n=256):
     '''
     Create a color palette in the format required by
     `plotly <https://plot.ly/python/>`_ based on a
@@ -153,7 +555,7 @@ def create_plotly_palette(name, n=256):
 
     Examples
     --------
-    >>>create_plotly_palette('Greys', 5)
+    >>>create_colorscale('Greys', 5)
     [[0.0, 'rgb(255,255,255)'],
      [0.25, 'rgb(216,216,216)'],
      [0.5, 'rgb(149,149,149)'],
@@ -165,78 +567,11 @@ def create_plotly_palette(name, n=256):
     You can invert a colorscale in a `plotly` graph using the
     :py:attr:`reversescale` argument.
     '''
-    colormap = cm.get_cmap(name)
+    cmap = cm.get_cmap(name)
     indices = np.round(np.linspace(0, 255, n)).astype(int)
-    norm = np.linspace(0, 1, n)
-    rgb_values = (colormap(indices)[:, 0:3] * 255).astype(int)
+    vals = np.linspace(0, 1, n)
+    rgb_values = (cmap(indices)[:, 0:3] * 255).astype(int)
     return [
-        [norm[i], 'rgb(%d,%d,%d)' % tuple(v)]
+        [vals[i], 'rgb(%d,%d,%d)' % tuple(v)]
         for i, v in enumerate(rgb_values)
     ]
-
-
-def create_bk_image_overlay(image, mask, outlines=True,
-                            color='red', transparency=0):
-    '''
-    Overlay a `mask` on a greyscale `image` by colorizing the pixels where
-    `mask` is ``True`` according to `color` and all other pixels with shades of
-    gray according to the values in `image`.
-
-    For selection of colors see
-    `html colors <http://www.w3schools.com/html/html_colors.asp>`_.
-
-    Parameters
-    ----------
-    img: numpy.ndarray[uint16]
-        intensity image
-    mask: numpy.ndarray[bool]
-        mask image
-    outlines: bool, optional
-        whether only the outlines should be overlayed (default: ``True``)
-    color: str, optional
-        "red", "green", "blue", "orange", or "purple" (default: ``"red"``)
-    transparency: int, optional
-        value between 0 and 5 (default: ``0``)
-
-    Returns
-    -------
-    Tuple[numpy.ndarray, List[str]]
-        image and corresponding palette
-
-    Note
-    ----
-    `image` is converted to 8-bit.
-    '''
-    if color == 'red':
-        color_palette = Reds5
-    elif color == 'green':
-        color_palette = Greens5
-    elif color == 'purple':
-        color_palette = BuPu5
-    elif color == 'blue':
-        color_palette = Blues5
-    elif color == 'orange':
-        color_palette = Oranges5
-    else:
-        raise ValueError(
-                'Argument color has to be one of the following options: "%s"'
-                % '", "'.join({'red', 'green', 'blue', 'orange', 'purple'}))
-
-    if outlines:
-        # Get the contours of the mask
-        mask = mh.labeled.borders(mask)
-
-    # Convert the image to 8-bit for display
-    img_rescaled = image_utils.convert_to_uint8(image)
-
-    # Bokeh cannot deal with RGB images in form of 3D numpy arrays.
-    # Therefore, we have to work around it by adapting the color palette.
-    img_rgb = img_rescaled.copy()
-    img_rgb[img_rescaled == 255] = 254
-    img_rgb[mask] = 255
-    # border pixels will be colorized, all others get different shades of gray
-    palette_grey = create_bokeh_palette('greys')
-    palette_rgb = np.array(palette_grey)
-    palette_rgb[-1] = color_palette[transparency]
-
-    return (img_rgb, palette_rgb)

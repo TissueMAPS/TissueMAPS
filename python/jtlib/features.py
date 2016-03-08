@@ -660,7 +660,7 @@ class Zernike(Features):
     Class for calculating Zernike moments.
     '''
 
-    def __init__(self, object_name, label_image):
+    def __init__(self, object_name, label_image, radius=100):
         '''
         Initialize an instance of class Zernike.
 
@@ -671,6 +671,9 @@ class Zernike(Features):
         label_image: numpy.ndarray[numpy.int32]
             labeled image, where background pixels have zero values and
             and object pixels have a unique identifier value
+        radius: int, optional
+            radius for rescaling of images (default: ``100``) to achieve
+            scale invariance
         '''
         super(Zernike, self).__init__(object_name, label_image)
         self.degree = 12
@@ -688,15 +691,10 @@ class Zernike(Features):
                     feats.append('%s-%s' % (n, l))
         return feats
 
-    def extract(self, radius=100):
+    @property
+    def values(self):
         '''
         Extract Zernike moments.
-
-        Parameters
-        ----------
-        radius: int, optional
-            radius for rescaling of images (default: ``100``) to achieve
-            scale invariance
 
         Returns
         -------
@@ -709,9 +707,9 @@ class Zernike(Features):
             features[name] = list()
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
-            mask_rs = mh.imresize(mask, [radius*2, radius*2])
+            mask_rs = mh.imresize(mask, [self.radius*2, self.radius*2])
             feats = mh.features.zernike_moments(
-                            mask_rs, degree=self.degree, radius=radius)
+                            mask_rs, degree=self.degree, radius=self.radius)
             if len(feats) != len(self.names):
                 raise IndexError(
                         'Number of features for object %d is incorrect.', obj)

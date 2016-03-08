@@ -108,4 +108,4 @@ def save_objects(image, name, **kwargs):
         )
 
         fig = plotly.graph_objs.Figure(data=data, layout=layout)
-        plotting.save_plotly_figure(fig, kwargs['figure_file'])
+        plotting.save_figure(fig, kwargs['figure_file'])
