@@ -5,7 +5,7 @@ from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
 from sqlalchemy.sql import text
 
-from tmaps.mapobject import MapobjectCoords
+from tmaps.mapobject import MapobjectOutline
 from tmaps.extensions.database import db
 from tmaps.extensions.encrypt import decode
 from tmaps.tool import Tool, ToolSession
@@ -114,14 +114,6 @@ def process_tool_request(tool_id):
 
 @api.route('/labelresults/<labelresult_id>', methods=['GET'])
 def get_labelresult(labelresult_id):
-
-    # ex = Experiment.get(experiment_id)
-    # if not ex:
-    #     return RESOURCE_NOT_FOUND_RESPONSE
-    # TODO: Requests should have a auth token 
-    # if not ex.belongs_to(current_identity):
-    #     return NOT_AUTHORIZED_RESPONSE
-
     # The coordinates of the requested tile
     x = request.args.get('x')
     y = request.args.get('y')
@@ -135,24 +127,29 @@ def get_labelresult(labelresult_id):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    use_simple_geom = z < 3
+    label_result = LabelResult.get(int(labelresult_id))
 
-    label_res = LabelResult.get(int(labelresult_id))
-
+    outlines = MapobjectOutline.get_mapobject_outlines_within_tile(
+        label_result.mapobject_name, x, y, z, zlevel, t)
     features = []
-    query_res = label_res.get_labelled_mapobject_coords_within_tile(
-        x, y, z, zlevel, t, centroid=use_simple_geom)
-    for id, label, geom_geojson_str in query_res:
-        geom_geojson_obj = json.loads(geom_geojson_str)
-        feature = {
-            "type": "Feature",
-            "geometry": geom_geojson_obj,
-            "properties": {
-                "label": label,
-                "id": id
+
+    if len(outlines) > 0:
+        n_points = sum([t[1] for t in outlines])
+        mapobject_ids = [c[0] for c in outlines]
+        mapobject_id_to_label = label_result.get_labels_for_objects(mapobject_ids)
+        do_simplify_geom = n_points > 10000
+
+        for id, n_points, poly_geojson, point_geojson in outlines:
+            geom_geojson = point_geojson if do_simplify_geom else poly_geojson
+            feature = {
+                "type": "Feature",
+                "geometry": json.loads(geom_geojson),
+                "properties": {
+                    "label": mapobject_id_to_label[id],
+                    "id": id
+                }
             }
-        }
-        features.append(feature)
+            features.append(feature)
 
     return jsonify(
         {

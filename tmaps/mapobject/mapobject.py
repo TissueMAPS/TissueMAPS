@@ -28,18 +28,19 @@ class Mapobject(Model):
         'Experiment', backref='mapobjects')
 
 
-class MapobjectCoords(Model):
-    __tablename__ = 'mapobject_coords'
+class MapobjectOutline(Model):
+    __tablename__ = 'mapobject_outline'
 
     id = db.Column(db.Integer, primary_key=True)
 
     time = db.Column(db.Integer)
     z_level = db.Column(db.Integer)
 
-    geom = db.Column(Geometry('POLYGON'))
+    geom_poly = db.Column(Geometry('POLYGON'))
+    geom_centroid = db.Column(Geometry('POINT'))
 
     mapobject_id = db.Column(db.Integer, db.ForeignKey('mapobject.id'))
-    mapobject = db.relationship('Mapobject', backref='coordinates')
+    mapobject = db.relationship('Mapobject', backref='outlines')
 
     @staticmethod
     def intersection_filter(x, y, z):
@@ -59,20 +60,21 @@ class MapobjectCoords(Model):
             maxy=maxy
         )
 
-        return MapobjectCoords.geom.intersects(tile)
+        return MapobjectOutline.geom_poly.intersects(tile)
 
     @staticmethod
-    def get_object_outlines_within_tile(mapobject_name, x, y, z, t, zlevel):
-        coords = db.session.\
-            query(MapobjectCoords).\
-            join(Mapobject).\
+    def get_mapobject_outlines_within_tile(mapobject_name, x, y, z, t, zlevel):
+            return db.session.\
+            query(
+                MapobjectOutline.mapobject_id,
+                MapobjectOutline.geom_poly.ST_NPoints(),
+                MapobjectOutline.geom_poly.ST_AsGeoJSON(),
+                MapobjectOutline.geom_centroid.ST_AsGeoJSON()).\
+            join(MapobjectOutline.mapobject).\
             filter(
                 (Mapobject.name == mapobject_name) &
-                (MapobjectCoords.time == t) &
-                (MapobjectCoords.z_level == zlevel) &
-                (MapobjectCoords.intersection_filter(x, y, z))
+                (MapobjectOutline.time == t) &
+                (MapobjectOutline.z_level == zlevel) &
+                (MapobjectOutline.intersection_filter(x, y, z))
             ).all()
-
-        return coords
-
 

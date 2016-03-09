@@ -10,12 +10,17 @@ from sqlalchemy.sql import text
 from tmaps.api import api
 from tmaps.extensions.database import db
 
+from tmaps.mapobject import MapobjectOutline
 from tmaps.experiment import Experiment
 from tmaps.response import (
     MALFORMED_REQUEST_RESPONSE,
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE
 )
+
+
+
+N_POINTS_COMPLEXITY_LIMIT = 1000
 
 
 def _create_mapobject_feature(obj_id, geometry_obj):
@@ -53,65 +58,73 @@ def get_mapobjects_tile(experiment_id, object_name):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    # The tile width/height expressed in coordinates on the highest zoom level
-    size = 256 * 2 ** (6 - z)
-    # Topleft corner
-    x0 = x * size
-    y0 = y * size
-    # Bounding box
-    minx = x0
-    maxx = x0 + size
-    miny = -y0 - size
-    maxy = -y0
+    query_res = MapobjectOutline.get_mapobject_outlines_within_tile(
+        object_name, x, y, z, t, zlevel)
 
-    # to query the database to return all objects contained within this polygon.
-    # The colon-prefixed placeholders are later filled in by sqlalchemy's text
-    # formatter.
-    bounding_polygon_str = \
-        '''(SELECT ST_MakePolygon(ST_GeomFromText('LINESTRING(:maxx :maxy,
-        :minx :maxy, :minx :miny, :maxx :miny, :maxx :maxy)')))'''
+    features = []
 
-    use_simple_geom = z < 3
+    if len(query_res) > 0:
+        # Try to estimate how many points there are in total within 
+        # the polygons of this tile.
+        n_points = sum([t[1] for t in query_res])
+        do_simplify_geom = n_points > N_POINTS_COMPLEXITY_LIMIT
 
-    # NOTE: String formatting using '%' is OK here since we're not inserting
-    # user provided content directly. Everything has to go through the string
-    # formatting function of sqlalchemy.
-    if not use_simple_geom:
-        mapobject_query_str = '''
-SELECT
-    o.mapobject_id, ST_AsGeoJSON(c.geom)
-FROM
-    mapobject_coords c JOIN mapobject o ON c.mapobject_row_id = o.id
-WHERE
-    c.z_level = :zlevel AND c.time = :t AND o.name = :object_name
-    AND ST_Intersects(%s, c.geom);
-''' % bounding_polygon_str
-    else:
-        mapobject_query_str = '''
-SELECT
-    o.mapobject_id, ST_AsGeoJSON(ST_Centroid(c.geom))
-FROM
-    mapobject_coords c JOIN mapobject o ON c.mapobject_row_id = o.id
-WHERE
-    c.z_level = :zlevel AND c.time = :t AND o.name = :object_name
-    AND ST_Intersects(%s, c.geom);
-''' % bounding_polygon_str
+        for id, n_points, poly_geojson, point_geojson in query_res:
+            geom_geojson = point_geojson if do_simplify_geom else poly_geojson
+            feature = {
+                "type": "Feature",
+                "geometry": json.loads(geom_geojson),
+                "properties": {
+                    "id": id
+                }
+            }
+            features.append(feature)
 
-    res = db.engine.execute(
-        text(mapobject_query_str),
-        maxx=maxx, maxy=maxy, minx=minx, miny=miny, t=t, z=z,
-        zlevel=zlevel, object_name=object_name
-    )
+    return jsonify({
+        "type": "FeatureCollection",
+        "features": features
+    })
 
-    # Tuples of the form (object_id, GeoJSON_geometry_object)
-    tuples = [(int(r[0]), json.loads(r[1])) for r in res.fetchall()]
-    features = \
-        [_create_mapobject_feature(obj_id=tpl[0], geometry_obj=tpl[1])
-         for tpl in tuples]
+#     # to query the database to return all objects contained within this polygon.
+#     # The colon-prefixed placeholders are later filled in by sqlalchemy's text
+#     # formatter.
+#     bounding_polygon_str = \
+#         '''(SELECT ST_MakePolygon(ST_GeomFromText('LINESTRING(:maxx :maxy,
+#         :minx :maxy, :minx :miny, :maxx :miny, :maxx :maxy)')))'''
 
-    return jsonify(
-        {
-            "type": "FeatureCollection",
-            "features": features
-        }
-    )
+
+#     # NOTE: String formatting using '%' is OK here since we're not inserting
+#     # user provided content directly. Everything has to go through the string
+#     # formatting function of sqlalchemy.
+#     if not use_simple_geom:
+#         mapobject_query_str = '''
+# SELECT
+#     o.id, ST_AsGeoJSON(c.geom)
+# FROM
+#     mapobject_coords c JOIN mapobject o ON c.mapobject_id = o.id
+# WHERE
+#     c.z_level = :zlevel AND c.time = :t AND o.name = :object_name
+#     AND ST_Intersects(%s, c.geom);
+# ''' % bounding_polygon_str
+#     else:
+#         mapobject_query_str = '''
+# SELECT
+#     o.id, ST_AsGeoJSON(ST_Centroid(c.geom))
+# FROM
+#     mapobject_coords c JOIN mapobject o ON c.mapobject_id = o.id
+# WHERE
+#     c.z_level = :zlevel AND c.time = :t AND o.name = :object_name
+#     AND ST_Intersects(%s, c.geom);
+# ''' % bounding_polygon_str
+
+#     res = db.engine.execute(
+#         text(mapobject_query_str),
+#         maxx=maxx, maxy=maxy, minx=minx, miny=miny, t=t, z=z,
+#         zlevel=zlevel, object_name=object_name
+#     )
+
+#     # Tuples of the form (object_id, GeoJSON_geometry_object)
+#     tuples = [(int(r[0]), json.loads(r[1])) for r in res.fetchall()]
+#     features = \
+#         [_create_mapobject_feature(obj_id=tpl[0], geometry_obj=tpl[1])
+#          for tpl in tuples]

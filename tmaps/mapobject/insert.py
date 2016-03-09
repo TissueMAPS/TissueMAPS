@@ -8,7 +8,7 @@ import sqlalchemy
 import geoalchemy2
 
 from tmaps.experiment import Experiment
-from tmaps.mapobject import MapobjectCoords, Mapobject
+from tmaps.mapobject import MapobjectOutline, Mapobject
 
 
 def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', dbport=5432):
@@ -51,34 +51,38 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
         print 'Commit MapObjects to DB'
         session.commit()
 
-        # Second add coordinates for all MapObjects 
+        # Second add outlines for all MapObjects 
         for object_name in data['/objects']:
-            coord_objects = []
+            outline_objects = []
             object_data = data['/objects/%s' % object_name]
-            coord_group = \
+            outline_group = \
                 object_data['map_data/outlines/coordinates/']
-            for id in coord_group:
-                print 'Add MapObjectCoords for MapObject %d of type %s' \
+            for id in outline_group:
+                print 'Add MapObjectOutline for MapObject %d of type %s' \
                     % (int(id), object_name)
 
-                coord = coord_group[id]
+                outline = outline_group[id]
 
                 # Create a string representation of the polygon using the EWKT
                 # format, e.g. "POLGON((1 2,3 4,6 7)))"
+                centroid = outline[()].mean(axis=0)
                 poly_ewkt = 'POLYGON((%s))' % ','.join(
-                    ['%d %d' % tuple(p) for p in coord])
-
+                    ['%d %d' % tuple(p) for p in outline])
+                centroid_ewkt = 'POINT(%.2f %.2f)' % (centroid[0], centroid[1])
+                
                 mapobj = mapobjects_by_id[object_name][int(id)]
 
-                mapobj_coords = MapobjectCoords(
-                    time=t, z_level=z, geom=poly_ewkt,
+                mapobj_outline = MapobjectOutline(
+                    time=t, z_level=z,
+                    geom_poly=poly_ewkt,
+                    geom_centroid=centroid_ewkt,
                     mapobject_id=mapobj.id)
                     
 
-                coord_objects.append(mapobj_coords)
+                outline_objects.append(mapobj_outline)
 
-            session.add_all(coord_objects)
-    print 'Commit MapObjectCoords to DB'
+            session.add_all(outline_objects)
+    print 'Commit MapObjectOutline to DB'
     session.commit()
 
     return session
