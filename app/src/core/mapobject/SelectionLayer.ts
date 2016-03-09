@@ -72,7 +72,6 @@ class SelectionLayer extends VisualLayer {
             })
         });
 
-        console.log(style);
         this._olLayer.setStyle(style);
     }
 }

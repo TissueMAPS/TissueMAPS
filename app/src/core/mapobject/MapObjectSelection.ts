@@ -52,7 +52,6 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
     }
 
     visualizeOnViewport(vp: Viewport) {
-        console.log('VISUALIXZ WON VIEWPORT');
         vp.addLayer(this._layer);
     }
 

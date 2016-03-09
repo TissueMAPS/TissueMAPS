@@ -17,7 +17,6 @@ class ToolbarCtrl {
                 private appstateService,
                 private authService) {
         // Add the tools as soon as they are ready
-        console.log('asdjfk');
         this.$scope.viewer.tools.then((tools) => {
             this.tools = tools;
         });

@@ -62,7 +62,6 @@ class Viewport implements Serializable<Viewport> {
         }
         // If this is the first time a layer is added, create a view and add it to the map.
         if (!alreadyHasLayers) {
-            console.log('ADD VIEW IF CHANNEL LAYER TOODO');
             this._setView((<ChannelLayer>layer).imageSize[0], (<ChannelLayer>layer).imageSize[1]);
         }
         this.layers.push(layer);
@@ -75,7 +74,6 @@ class Viewport implements Serializable<Viewport> {
             var height = mapHeight;
             var center = [width / 2, - height / 2];
             var extent = [0, 0, width, height];
-            console.log(extent);
             var view = new ol.View({
                 // We create a custom (dummy) projection that is based on pixels
                 projection: new ol.proj.Projection({
