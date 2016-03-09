@@ -1,7 +1,3 @@
-interface AppInstanceOpts {
-    active: boolean;
-}
-
 interface SerializedAppInstance extends Serialized<AppInstance> {
     experiment: SerializedExperiment;
     viewport: SerializedViewport;
@@ -14,24 +10,16 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     experiment: Experiment;
     viewport: Viewport;
     private _element: JQuery = null;
-    private _active: boolean;
 
     mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
 
-    constructor(experiment: Experiment, opt?: AppInstanceOpts) {
-        console.log('Creating AppInstance for Experiment with ID: ', experiment.id);
-        console.log('This Experiment can be added automatically by visiting:\n',
-                    'http://localhost:8002/#/viewport?loadex=' + experiment.id);
-        var options: AppInstanceOpts = opt === undefined ? <AppInstanceOpts> {} : opt;
+    constructor(experiment: Experiment) {
         this.id = makeUUID();
         this.experiment = experiment;
         this.name = experiment.name;
         this.viewport = new Viewport();
         this.tools = Tool.getAll();
-        this.active = options.active === undefined ? false : options.active;
-
-        // Add channel layers from the experiment, this will initialize the view.
         this._addChannelLayers();
 
         // Subsequently add the selection handler and initialize the selection layers.
@@ -61,19 +49,6 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         });
     }
 
-    set active(active: boolean) {
-        if (active) {
-            this._showViewer();
-        } else {
-            this._hideViewer();
-        }
-        this._active = active;
-    }
-
-    get active() {
-        return this._active;
-    }
-
     destroy() {
         var elem = this._getDOMElement();
         elem.remove();
@@ -87,11 +62,11 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         return this._element;
     }
 
-    private _hideViewer() {
+    hide() {
         this._getDOMElement().hide();
     }
 
-    private _showViewer() {
+    show() {
         this._getDOMElement().show();
         this.viewport.update();
     }

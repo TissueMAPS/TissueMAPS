@@ -31,6 +31,17 @@ class Application {
         }
     }
 
+    showViewer(viewer: AppInstance): AppInstance {
+        this.appInstances.forEach((v) => {
+            if (v !== viewer) {
+                v.hide();
+            }
+        });
+        this.show();
+        viewer.show();
+        return viewer;
+    }
+
     /**
      * Hide the whole viewport part of TissueMAPS.
      * Note that this will keep the active viewports. After calling
@@ -39,6 +50,9 @@ class Application {
      * visualization state.
      */
     hide() {
+        this.appInstances.forEach((viewer) => {
+            viewer.hide();
+        });
         this.$('#viewer-window').hide();
     }
 
@@ -52,16 +66,8 @@ class Application {
         });
     }
 
-    viewExperiment(experiment: Experiment) {
-        // TODO: Depending on the experiment's type, create a different type of appInstance.
-        // TODO: Class viewport and experiment should be abstract.
-        var isFirstExperiment = this.appInstances.length === 0;
-        var inst = new AppInstance(experiment, {
-            active: isFirstExperiment
-        });
-        this.appInstances.push(inst);
-
-        return inst;
+    addViewer(viewer: AppInstance) {
+        this.appInstances.push(viewer);
     }
 
     serialize(): ng.IPromise<SerializedApplication> {

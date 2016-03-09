@@ -80,17 +80,17 @@
             if (loginRequired && !authService.isAuthenticated()) {
                 event.preventDefault();
 
-                $state.go('app.login');
+                // $state.go('login');
 
-                // loginDialogService.showDialog()
-                // .then(function(user) {
-                //     // Login was successful, proceed with state transition.
-                //     return $state.go(toState.name, toParams);
-                // })
-                // .catch(function(err) {
-                //     // Dialog was dismissed and no login happened,
-                //     // don't proceed with state transition.
-                // });
+                loginDialogService.showDialog()
+                .then(function(user) {
+                    // Login was successful, proceed with state transition.
+                    return $state.go(toState.name, toParams);
+                })
+                .catch(function(err) {
+                    // Dialog was dismissed and no login happened,
+                    // don't proceed with state transition.
+                });
             }
         });
 

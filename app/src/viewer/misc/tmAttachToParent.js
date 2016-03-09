@@ -22,7 +22,8 @@ angular.module('tmaps.ui')
             var width = parseInt($elem.css('width'));
 
             if (!width) {
-                throw new Error('You must specify a width to use this directive!');
+                // throw new Error('You must specify a width to use this directive!');
+                console.log('You must specify a width to use this directive!');
             }
 
             var $parent = $elem.parent();

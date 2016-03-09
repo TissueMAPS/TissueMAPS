@@ -18,11 +18,15 @@ angular.module('tmaps.auth')
     }
 
     function isTokenExpired(token) {
-        var decoded = decodeToken(token);
-        var exp = decoded.payload.exp;
-        var d = new Date(0);
-        d.setUTCSeconds(exp);
-        return !(d.valueOf() > new Date().valueOf());
+        if (!token || token === '') {
+            return true;
+        } else {
+            var decoded = decodeToken(token);
+            var exp = decoded.payload.exp;
+            var d = new Date(0);
+            d.setUTCSeconds(exp);
+            return !(d.valueOf() > new Date().valueOf());
+        }
     }
 
     return {

@@ -2,10 +2,15 @@
 
 #viewer-window {
     display: none;
+
+    > div {
+        height: 100%;
+    }
 }
 
 .viewers-container {
-    height: calc(~'100% - @{viewers-tabbar-container-height}');
+    // height: calc(~'100% - @{viewers-tabbar-container-height}');
+    height: 100%;
 }
 
 .viewer {

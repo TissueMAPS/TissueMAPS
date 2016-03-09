@@ -24,23 +24,39 @@ angular.module('tmaps.ui')
         views: {
             'main-window': { template: '' }
         },
-        onEnter: ['application', '$stateParams', 'appstateService', '$state',
+        data: {
+            loginRequired: true
+        },
+        onEnter: ['application', '$stateParams', 'appstateService', '$state', 
                   function(app, $stateParams, appstateService, $state) {
 
             // Check if some experiments should be added
             var experimentId = $stateParams.experimentid;
-            if (angular.isDefined(experimentId) && experimentId !== '') {
-                console.log('Experiment Id: ', experimentId);
-                Experiment.get(experimentId).then(function(exp) {
-                    app.viewExperiment(exp);
-                    app.show();
+            var wasExperimentIdSupplied =
+                experimentId !== undefined && experimentId !== '';
+            if (wasExperimentIdSupplied) {
+                var viewerToBeShown = _(app.appInstances).find((viewer) => {
+                    return viewer.experiment.id === experimentId;
                 });
+                var viewerToBeShownExists = viewerToBeShown !== undefined;
+                if (viewerToBeShownExists) {
+                    app.showViewer(viewerToBeShown);
+                } else {
+                    Experiment.get(experimentId).then(function(exp) {
+                        var newViewer = new AppInstance(exp);
+                        app.addViewer(newViewer);
+                    });
+                }
+
+                app.show();
             } else {
-                $state.go('userpanel');
-                // app.show();
+                var availableViewers = app.appInstances;
+                if (availableViewers.length > 0)  {
+                    app.showViewer(availableViewers[0]);
+                } else {
+                    $state.go('userpanel');
+                }
             }
-
-
             // Check if the app should load an app state
             //var stateID = $stateParams.state;
             //var snapshotID = $stateParams.snapshot;

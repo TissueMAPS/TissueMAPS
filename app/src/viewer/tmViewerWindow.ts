@@ -27,14 +27,7 @@ class ViewerWindowCtrl {
     }
 
     selectViewer(viewer: AppInstance) {
-        if (!viewer.active) {
-            this.viewers.forEach((v) => {
-                if (v.active) {
-                    v.active = false;
-                }
-            });
-            viewer.active = true;
-        }
+        this.application.showViewer(viewer);
     }
 
     deleteViewer(viewer: AppInstance) {
