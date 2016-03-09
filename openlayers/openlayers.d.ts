@@ -3965,6 +3965,12 @@ declare module ol {
 
         class Projection {
             constructor(options: olx.Projection)
+
+
+            /**
+             * Get the validity extent for this projection.
+             */
+            getExtent(): ol.Extent;
         }
     }
 
