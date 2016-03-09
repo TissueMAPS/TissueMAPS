@@ -4460,7 +4460,7 @@ declare module ol {
     /**
      * A function that returns a style given a resolution. The this keyword inside the function references the ol.Feature to be styled.
      */
-    interface FeatureStyleFunction { (resolution: number): ol.style.Style }
+    interface FeatureStyleFunction { (feature: ol.Feature, resolution: number): ol.style.Style | ol.style.Style[] }
 
     /**
      * Loading strategy
