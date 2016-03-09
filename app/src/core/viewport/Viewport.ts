@@ -22,16 +22,9 @@ interface ViewportElementScope extends ng.IScope {
 
 class Viewport implements Serializable<Viewport> {
 
-    element: ng.IPromise<JQuery>;
-    elementScope: ng.IPromise<ViewportElementScope>;
-    map: ng.IPromise<ol.Map>;
+    map: ol.Map;
 
-    channelLayers: ChannelLayer[] = [];
-    visualLayers: VisualLayer[] = [];
-
-    private _mapDef: ng.IDeferred<ol.Map>;
-    private _elementDef: ng.IDeferred<JQuery>;
-    private _elementScopeDef: ng.IDeferred<ViewportElementScope>;
+    layers: Layer[] = [];
 
     private _$q: ng.IQService;
     private _$rootScope: ng.IRootScopeService;
@@ -40,62 +33,46 @@ class Viewport implements Serializable<Viewport> {
         this._$q = $injector.get<ng.IQService>('$q');
         this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
 
-        this._mapDef = this._$q.defer();
-        this.map = this._mapDef.promise;
-
-        // DEBUG
-        this.map.then((map) => {
-            window['map'] = map;
+        this.map = new ol.Map({
+            layers: [],
+            controls: [],
+            renderer: 'webgl',
+            logo: false
         });
 
-        this._elementDef = this._$q.defer();
-        this.element = this._elementDef.promise;
-
-        this._elementScopeDef = this._$q.defer();
-        this.elementScope = this._elementScopeDef.promise;
+        window['map'] = this.map;
     }
 
-    addVisualLayer(visLayer: VisualLayer): ng.IPromise<VisualLayer> {
-        this.visualLayers.push(visLayer);
+    get mapSize(): Size {
+        // [minx miny maxx maxy]
+        var ext = this.map.getView().getProjection().getExtent();
+        return {
+            width: ext[2],
+            height: ext[3]
+        };
+    }
 
-        // Workaround: Check where this visuallayer should be added.
-        // When a new outline selection is added, it shouldn't be added on top of
-        // already existing marker layers.
-        // TODO: This should be done through a more general mechanism.
-        insertAtPos;
-        if (visLayer.contentType === ContentType.mapObject) {
-            var firstMarkerLayer = _(this.visualLayers).find((l) => {
-                return l.contentType === ContentType.marker;
-            });
-            if (firstMarkerLayer !== undefined) {
-                var insertAtPos = this.visualLayers.indexOf(firstMarkerLayer);
-            }
+    addLayer(layer: Layer) {
+        // Add the layer as soon as the map is created (i.e. resolved after
+        // viewport injection)
+        layer.addToMap(this.map);
+        var alreadyHasLayers = this.layers.length !== 0;
+        if (!alreadyHasLayers && !(layer instanceof ChannelLayer)) {
+            throw new Error('The first layer to be added has to be a ChannelLayer in order to set the view!');
         }
-        return this.map.then((map) => {
-            visLayer.addToMap(map, insertAtPos);
-            return visLayer;
-        });
-    }
-
-    removeVisualLayer(visLayer: VisualLayer) {
-        var idx = this.visualLayers.indexOf(visLayer)
-        if (idx !== -1) {
-            this.map.then((map) => {
-                visLayer.removeFromMap(map);
-                this.visualLayers.splice(idx, 1);
-            });
-        }
-    }
-
-    addChannelLayer(channelLayer: ChannelLayer) {
-        var alreadyHasLayers = this.channelLayers.length !== 0;
-
         // If this is the first time a layer is added, create a view and add it to the map.
         if (!alreadyHasLayers) {
+            console.log('ADD VIEW IF CHANNEL LAYER TOODO');
+            this._setView((<ChannelLayer>layer).imageSize[0], (<ChannelLayer>layer).imageSize[1]);
+        }
+        this.layers.push(layer);
+    }
+
+    private _setView(mapWidth: number, mapHeight: number) {
             // Center the view in the iddle of the image
             // (Note the negative sign in front of half the height)
-            var width = channelLayer.imageSize[0];
-            var height = channelLayer.imageSize[1];
+            var width = mapWidth;
+            var height = mapHeight;
             var center = [width / 2, - height / 2];
             var extent = [0, 0, width, height];
             console.log(extent);
@@ -108,22 +85,11 @@ class Viewport implements Serializable<Viewport> {
                 }),
                 center: center,
                 zoom: 0, // 0 is zoomed out all the way
-                // starting at maxResolution where maxResolution
-                // is
+                // TODO: start such that whole map is in view
 
             });
 
-            this.map.then(function(map) {
-                map.setView(view);
-            });
-        }
-
-        // Add the layer as soon as the map is created (i.e. resolved after
-        // viewport injection)
-        this.map.then(function(map) {
-            channelLayer.addToMap(map);
-        });
-        this.channelLayers.push(channelLayer);
+            this.map.setView(view);
     }
 
     /**
@@ -131,55 +97,46 @@ class Viewport implements Serializable<Viewport> {
      * Use this method whenever a layer should be removed since it also updates
      * the app instance's internal state.
      */
-    removeChannelLayer(channelLayer: ChannelLayer) {
-        this.map.then(function(map) {
-            channelLayer.removeFromMap(map);
-        });
-        var idx = this.channelLayers.indexOf(channelLayer);
-        this.channelLayers.splice(idx, 1);
+    removeLayer(layer: Layer) {
+        layer.removeFromMap(this.map);
+        var idx = this.layers.indexOf(layer);
+        this.layers.splice(idx, 1);
     }
 
     update() {
-        this.map.then((map) => {
-            map.updateSize();
-        });
+        this.map.updateSize();
     }
 
     goToMapObject(obj: MapObject) {
-        this.map.then((map) => {
-            var feat = obj.getVisual().olFeature;
-            map.getView().fit(<ol.geom.SimpleGeometry> feat.getGeometry(), map.getSize(), {
-                padding: [100, 100, 100, 100]
-            });
+        var feat = obj.getVisual().olFeature;
+        this.map.getView().fit(<ol.geom.SimpleGeometry> feat.getGeometry(), this.map.getSize(), {
+            padding: [100, 100, 100, 100]
         });
     }
 
     serialize() {
-        var bpPromise = this.map.then((map) => {
-            var v = map.getView();
+        return <any>{};
+            // var v = map.getView();
 
-            var mapState = {
-                zoom: v.getZoom(),
-                center: v.getCenter(),
-                resolution: v.getResolution(),
-                rotation: v.getRotation()
-            };
+            // var mapState = {
+            //     zoom: v.getZoom(),
+            //     center: v.getCenter(),
+            //     resolution: v.getResolution(),
+            //     rotation: v.getRotation()
+            // };
 
-            var channelOptsPr = this._$q.all(_(this.channelLayers).map((l) => {
-                return l.serialize();
-            }));
-            var bundledPromises: any = {
-                channels: channelOptsPr,
-            };
-            return this._$q.all(bundledPromises).then((res: any) => {
-                return {
-                    channelLayerOptions: res.channels,
-                    mapState: mapState
-                };
-            });
-        });
-
-        return bpPromise;
+            // var channelOptsPr = this._$q.all(_(this.channelLayers).map((l) => {
+            //     return l.serialize();
+            // }));
+            // var bundledPromises: any = {
+            //     channels: channelOptsPr,
+            // };
+            // return this._$q.all(bundledPromises).then((res: any) => {
+            //     return {
+            //         channelLayerOptions: res.channels,
+            //         mapState: mapState
+            //     };
+            // });
     }
 
     private getTemplate(templateUrl): ng.IPromise<string> {
@@ -194,70 +151,7 @@ class Viewport implements Serializable<Viewport> {
         return deferred.promise;
     }
 
-    injectMap(element: HTMLElement) {
-        var map = new ol.Map({
-            layers: [],
-            controls: [],
-            renderer: 'webgl',
-            target: element,
-            logo: false
-        });
-
-        this._mapDef.resolve(map);
+    renderMap(element: Element) {
+        this.map.setTarget(element);
     }
-
-    injectIntoDocumentAndAttach(appInstance: AppInstance) {
-
-        // $injector.get<ng.IDocumentService>('$document').find('#viewports');
-
-        // var map = new ol.Map({
-        //     layers: [],
-        //     controls: [],
-        //     renderer: 'webgl',
-        //     target: viewportElem.find('.map-container')[0],
-        //     logo: false
-        // });
-        // this._elementDef.resolve(viewportElem);
-        // this._elementScopeDef.resolve(newScope);
-        // this._mapDef.resolve(map);
-    // });
-        
-    }
-    // injectIntoDocumentAndAttach(appInstance: AppInstance) {
-    //     this.getTemplate('/templates/main/viewport.html').then((template) => {
-    //         var newScope = <ViewportElementScope> this._$rootScope.$new();
-    //         newScope.viewport = this;
-    //         newScope.appInstance = appInstance;
-    //         var ctrl = $injector.get<any>('$controller')('ViewportCtrl', {
-    //             '$scope': newScope,
-    //             'viewport': this
-    //         });
-    //         newScope.viewportCtrl = ctrl;
-
-    //         // The divs have to be shown and hidden manually since ngShow
-    //         // doesn't quite work correctly when doing it this way.
-    //         var elem = angular.element(template);
-
-    //         // Compile the element (expand directives)
-    //         var linkFunc = $injector.get<ng.ICompileService>('$compile')(elem);
-    //         // Link to scope
-    //         var viewportElem = linkFunc(newScope);
-
-    //         // Append to viewports
-    //         $injector.get<ng.IDocumentService>('$document').find('#viewports').append(viewportElem);
-    //         // Append map after the element has been added to the DOM.
-    //         // Otherwise the viewport size calculation of openlayers gets
-    //         // messed up.
-    //         var map = new ol.Map({
-    //             layers: [],
-    //             controls: [],
-    //             renderer: 'webgl',
-    //             target: viewportElem.find('.map-container')[0],
-    //             logo: false
-    //         });
-    //         this._elementDef.resolve(viewportElem);
-    //         this._elementScopeDef.resolve(newScope);
-    //         this._mapDef.resolve(map);
-    //     });
-    // }
 }

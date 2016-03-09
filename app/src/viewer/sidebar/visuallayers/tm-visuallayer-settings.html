@@ -1,16 +1,10 @@
 <div class="visuallayer-settings">
 
-  <tm-multi-selection-box items="visualLayerCtrl.layers" by-name="'layer'"
-                          filter-properties="{contentType: visualLayerCtrl.contentTypeEnum}">
+  <tm-multi-selection-box items="visualLayerCtrl.layers" by-name="'layer'">
     <tm-selectable-tabs>
         <tm-selectable-tab ng-controller="VisualLayerCtrl as layerCtrl">
 
         <tm-selectable-tab-popup>
-          <!-- <div ng-repeat="color in layerCtrl.supportedColorProperties" ng-show="layer[color.property] !== undefined"> -->
-          <!--   {{::color.label}}:<br> -->
-          <!--   <ng-color-picker selected='layerCtrl.selectedColor[color.property]' colors="layerCtrl.selectableColors"></ng-color-picker> -->
-          <!-- </div> -->
-
           <p>
             Fill color:<br>
             <ng-color-picker selected="layerCtrl.selectedColor.fillColor" colors="layerCtrl.selectableColors"></ng-color-picker>

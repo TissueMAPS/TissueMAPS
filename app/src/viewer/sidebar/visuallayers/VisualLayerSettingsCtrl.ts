@@ -1,14 +1,10 @@
 class VisualLayerSettingsCtrl {
 
     viewport: Viewport;
-    contentType: string;
-    contentTypeEnum: ContentType;
 
-    static $inject = ['$scope'];
+    private _cachedLayers: VisualLayer[];
 
-    constructor() {
-        this.contentTypeEnum = stringToContentType(this.contentType);
-    }
+    constructor() {}
 
     /**
      * Filter the layers on the template level to avoid generating a new array
@@ -16,11 +12,18 @@ class VisualLayerSettingsCtrl {
      * to repeat infinitely.
      */
     get layers(): VisualLayer[] {
-        return this.viewport.visualLayers;
+        var layers = <VisualLayer[]> _(this.viewport.layers).filter((l) => {
+            return l instanceof LabelResultLayer;
+        });
+        if (!this._cachedLayers
+            || layers.length !== this._cachedLayers.length) {
+            this._cachedLayers = layers;
+        }
+        return this._cachedLayers;
     }
 
     removeLayer(layer: VisualLayer) {
-        this.viewport.removeVisualLayer(layer);
+        this.viewport.removeLayer(layer);
     }
 
 }

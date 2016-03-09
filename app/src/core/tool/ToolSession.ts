@@ -1,4 +1,4 @@
-abstract class ToolSession {
+class ToolSession {
 
     uuid: string;
     tool: Tool;

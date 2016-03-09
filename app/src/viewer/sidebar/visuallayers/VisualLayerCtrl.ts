@@ -21,8 +21,6 @@ class VisualLayerCtrl {
     static $inject = ['$scope'];
 
     constructor($scope: any) {
-        var layer: VisualLayer = $scope.layer;
-
         // Colors that can be selected from the settings popup
         // to use as fillColor/strokeColor/etc.
         this.selectableColors = [
@@ -39,29 +37,29 @@ class VisualLayerCtrl {
         // Also, the style arguments should maybe be settable on the layer
         // itself, and Visuals will just inherit them (as is the case
         // with the unwrapped openlayers classes).
-        $scope.$watch('layerCtrl.selectedColor.fillColor', function(newVal, oldVal) {
-            if (newVal !== oldVal && newVal !== undefined) {
-                // When white is selected it defaults back to "no" filling, 
-                // i.e. high transparency
-                if (newVal == '#ffffff') {
-                    var fillColor = Color.WHITE.withAlpha(0.02);
-                } else {
-                    var fillColor = Color.fromHex(<string>newVal);
-                }
-                console.log('changed fill color: ', fillColor)
-                layer.visuals.forEach((v: ColorizableVisual) => {
-                    v.fillColor = fillColor;
-                });
-            }
-        });
-        $scope.$watch('layerCtrl.selectedColor.strokeColor', function(newVal, oldVal) {
-            if (newVal !== oldVal && newVal !== undefined) {
-                var strokeColor = Color.fromHex(<string>newVal);
-                layer.visuals.forEach((v: ColorizableVisual) => {
-                    v.strokeColor = strokeColor;
-                });
-            }
-        });
+        // $scope.$watch('layerCtrl.selectedColor.fillColor', function(newVal, oldVal) {
+        //     if (newVal !== oldVal && newVal !== undefined) {
+        //         // When white is selected it defaults back to "no" filling, 
+        //         // i.e. high transparency
+        //         if (newVal == '#ffffff') {
+        //             var fillColor = Color.WHITE.withAlpha(0.02);
+        //         } else {
+        //             var fillColor = Color.fromHex(<string>newVal);
+        //         }
+        //         console.log('changed fill color: ', fillColor)
+        //         layer.visuals.forEach((v: ColorizableVisual) => {
+        //             v.fillColor = fillColor;
+        //         });
+        //     }
+        // });
+        // $scope.$watch('layerCtrl.selectedColor.strokeColor', function(newVal, oldVal) {
+        //     if (newVal !== oldVal && newVal !== undefined) {
+        //         var strokeColor = Color.fromHex(<string>newVal);
+        //         layer.visuals.forEach((v: ColorizableVisual) => {
+        //             v.strokeColor = strokeColor;
+        //         });
+        //     }
+        // });
 
         // Initialize the selected color of each property based on the color
         // that is already assigned to this property.

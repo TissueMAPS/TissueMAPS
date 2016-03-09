@@ -1,21 +1,20 @@
 class LabelResult extends ToolResult {
+
     id: number;
 
     handle(viewer) {
-        console.log('TODO: ADD VISUALLAYER');
-        var layer = new LabelResultLayer('new layer', {
-            imageWidth: 15860,
-            imageHeight: 9140, 
+        var layer = new LabelResultLayer(this.name, {
+            size: viewer.viewport.mapSize,
             visible: true,
             labelResultId: this.id,
             t: 0,
             zlevel: 0
         });
-        return viewer.viewport.addVisualLayer(layer);
+        return viewer.viewport.addLayer(layer);
     }
 
-    constructor(session: ToolSession, args: {id: number;}) {
-        super(session);
-        this.id = args.id
+    constructor(name: string, session: ToolSession, opt: {id: number;}) {
+        super(name, session);
+        this.id = opt.id
     }
 }

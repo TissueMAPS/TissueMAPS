@@ -22,7 +22,7 @@ interface GetToolsResponse {
     tools: GetToolResponse[];
 }
 
-interface ToolArgs {
+interface ToolOpts {
     id: string;
     name: string,
     description: string,
@@ -36,16 +36,12 @@ class Tool {
     description: string;
     icon: string;
 
-    constructor(options: ToolArgs) {
+    constructor(options: ToolOpts) {
         this.sessions = [];
         this.id = options.id;
         this.name = options.name;
         this.description = options.description;
         this.icon = options.icon;
-    }
-
-    get sessionClass() {
-        return window[this.name + 'Session'];
     }
 
     get controller() {
@@ -57,7 +53,7 @@ class Tool {
     }
 
     createSession(): ToolSession {
-        var sess = new this.sessionClass(this);
+        var sess = new ToolSession(this);
         this.sessions.push(sess);
         return sess;
     }

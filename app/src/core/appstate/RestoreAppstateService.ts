@@ -33,17 +33,15 @@ class RestoreAppstateService {
             var color = new Color(ch.color.r, ch.color.g, ch.color.b, ch.color.a);
             ch.color = color;
             var layer = new ChannelLayer(ch);
-            vp.addChannelLayer(layer);
+            vp.addLayer(layer);
         });
 
         // Restore the camera position
-        vp.map.then(function(map) {
-            var v = map.getView();
-            v.setZoom(vpState.mapState.zoom);
-            v.setCenter(vpState.mapState.center);
-            v.setResolution(vpState.mapState.resolution);
-            v.setRotation(vpState.mapState.rotation);
-        });
+        var v = vp.map.getView();
+        v.setZoom(vpState.mapState.zoom);
+        v.setCenter(vpState.mapState.center);
+        v.setResolution(vpState.mapState.resolution);
+        v.setRotation(vpState.mapState.rotation);
     }
 
     private restoreSelectionHandler(csh: MapObjectSelectionHandler,

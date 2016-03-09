@@ -7,6 +7,7 @@ angular.module('tmaps.ui')
         },
         controller: 'ChannelSettingsCtrl',
         controllerAs: 'channelsCtrl',
+        bindToController: true,
         templateUrl: '/templates/main/layerprops/channels/tm-channel-settings.html'
     };
 });

@@ -15,7 +15,7 @@ angular.module('tmaps.ui')
              * DIV. After this the map promise on the viewport will be resolved.
              */
             var htmlElem = elem.find('.map-container').get(0);
-            scope.viewer.viewport.injectMap(htmlElem);
+            scope.viewer.viewport.renderMap(htmlElem);
         }
     };
 }]);

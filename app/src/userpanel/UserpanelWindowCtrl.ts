@@ -11,8 +11,10 @@ class UserpanelWindowCtrl {
     static $inject = ['application', 'session', '$state'];
 
     viewExperiment(e: Experiment) {
-        this._viewerApp.viewExperiment(e);
-        this._$state.go('viewer');
+        // this._viewerApp.viewExperiment(e);
+        this._$state.go('viewer', {
+            experimentid: e.id
+        });
     };
     
     constructor(private _viewerApp: Application,

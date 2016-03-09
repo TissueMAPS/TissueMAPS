@@ -1,28 +1,29 @@
-/// <reference path='VisualTileLayer.ts'/>
-/// <reference path='typedefs.ts'/>
-
 interface SegmentationLayerOpts {
     t: number;
     zlevel: number;
+    size: Size;
     experimentId: string;
-    imageWidth: number,
-    imageHeight: number,
     visible?: boolean;
 }
 
 class SegmentationLayer extends VisualTileLayer {
-    constructor(name: string, opt: SegmentationLayerOpts) {
-        var url = '/api/experiments/' + opt.experimentId + '/mapobjects/cells?x={x}&y={y}&z={z}&t=' + opt.t + '&zlevel=' + opt.zlevel;
+
+    objectName: string;
+
+    constructor(objectName: string, opt: SegmentationLayerOpts) {
+        this.objectName = objectName;
+        var url = '/api/experiments/' + opt.experimentId + '/mapobjects/' +
+                  objectName + '?x={x}&y={y}&z={z}&t=' + opt.t + '&zlevel=' + opt.zlevel;
         var styleFunc = function(feature, style) {
             var geomType = feature.getGeometry().getType();
             if (geomType === 'Polygon') {
                 return [
                     new ol.style.Style({
                         fill: new ol.style.Fill({
-                            color: Color.GREEN.toOlColor()
+                            color: Color.GREEN.withAlpha(0).toOlColor()
                         }),
                         stroke: new ol.style.Stroke({
-                            color: Color.WHITE.toOlColor()
+                            color: Color.GREEN.toOlColor(),
                         })
                     })
                 ];
@@ -41,14 +42,12 @@ class SegmentationLayer extends VisualTileLayer {
                 throw new Error('Unknown geometry type for feature');
             }
         };
-        var options = <VisualTileLayerOpts>{};
-        _.defaults(options, opt);
-        _.defaults(options, {
+        super(objectName, {
+            visible: opt.visible,
+            size: opt.size,
             style: styleFunc,
             url: url
         });
-
-        super(name, options);
     }
 }
 

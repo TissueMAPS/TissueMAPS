@@ -1,32 +1,9 @@
 /**
- * A short descriptor of the type content that is visualized with this
- * VisualLayer. The UI might choose to differentiate between layers of
- * different content types.
- * On Viewport all VisualLayers are stored within the same container.
- */
-enum ContentType {mapObject, result, marker, default};
-
-/**
- * Convert a string to a ContentType. This function is mainly to circumvent
- * having to pass integers in angular templates.
- */
-function stringToContentType(t: string): ContentType {
-    switch (t) {
-        case 'mapObject': return ContentType.mapObject;
-        case 'result': return ContentType.result;
-        case 'marker': return ContentType.marker;
-        case 'default': return ContentType.default;
-        default: throw new Error('Unknown content type: ' + t);
-    }
-}
-
-/**
  * Optional arguments for the VisualLayer constructor.
  */
 interface VisualLayerOpts {
     visuals?: Visual[];
     visible?: boolean;
-    contentType?: ContentType;
 }
 
 /**
@@ -34,8 +11,6 @@ interface VisualLayerOpts {
  * This is a wrapper around an openlayers vector layer.
  */
 class VisualLayer extends BaseLayer<ol.layer.Vector> {
-
-    contentType: ContentType;
 
     private _visuals: Visual[] = [];
 
@@ -55,8 +30,6 @@ class VisualLayer extends BaseLayer<ol.layer.Vector> {
         if (opt.visuals !== undefined) {
             this.addVisuals(opt.visuals);
         }
-
-        this.contentType = opt.contentType !== undefined ? opt.contentType : ContentType.default;
     }
 
     get visuals() {

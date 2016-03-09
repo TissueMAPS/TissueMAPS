@@ -28,25 +28,23 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.experiment = experiment;
         this.name = experiment.name;
         this.viewport = new Viewport();
-        this.viewport.injectIntoDocumentAndAttach(this);
         this.tools = Tool.getAll();
         this.active = options.active === undefined ? false : options.active;
 
-        // TODO: Add selection handler
-        // this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this.viewport);
+        // Add channel layers from the experiment, this will initialize the view.
+        this._addChannelLayers();
 
-        // this.mapObjectRegistry.mapObjectTypes.then((types) => {
-        //     _(types).each((t) => {
-        //         this.mapObjectSelectionHandler.addMapObjectType(t);
-        //         // Add an initial selection for the newly added type
-        //         this.mapObjectSelectionHandler.addNewSelection(t);
-        //     });
-        // });
-
-        this._addExperimentToViewport();
+        // Subsequently add the selection handler and initialize the selection layers.
+        // TODO: The process of adding the layers could be made nicer.
+        // The view should be set independent of 'ChannelLayers' etc.
+        this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this);
+        this.experiment.mapObjectNames.forEach((name) => {
+            this.mapObjectSelectionHandler.addMapObjectType(name);
+            this.mapObjectSelectionHandler.addNewSelection(name);
+        });
     }
 
-    private _addExperimentToViewport() {
+    private _addChannelLayers() {
         var layerOpts = _(this.experiment.channels).map((ch) => {
             return {
                 name: ch.name,
@@ -59,7 +57,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
                 visible: i === 0
             });
             var layer = new ChannelLayer(opt);
-            this.viewport.addChannelLayer(layer);
+            this.viewport.addLayer(layer);
         });
     }
 
@@ -117,6 +115,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             payload: payload
         };
         console.log('ToolService: START REQUEST.');
+        session.isRunning = true;
         return $http.post(url, request).then(
         (resp) => {
             // TODO: Send event to Viewer messagebox
@@ -127,6 +126,7 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             var toolId = data.tool_id;
             console.log('ToolService: HANDLE REQUEST.');
             var result = this._createToolResult(session, data);
+            session.isRunning = false;
             if (result !== undefined) {
                 var resultPayload = data.payload;
                 session.results.push(resultPayload);
@@ -147,10 +147,12 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     }
 
     private _createToolResult(session: ToolSession, result: ServerToolResponse) {
+        var time = (new Date()).toLocaleTimeString();
+        var resultName = session.tool.name + ' at ' + time;
         switch (result.result_type) {
             case 'LabelResult':
                 console.log('Received LabelResult:', result);
-                return new LabelResult(session, result.payload);
+                return new LabelResult(resultName, session, result.payload);
             case 'SimpleResult':
                 console.log('Received SimpleResult:', result);
                 return undefined;

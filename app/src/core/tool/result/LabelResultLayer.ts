@@ -1,12 +1,8 @@
-/// <reference path='VisualTileLayer.ts'/>
-/// <reference path='typedefs.ts'/>
-
 interface LabelResultLayerOpts {
     labelResultId: number;
     t: number;
     zlevel: number;
-    imageWidth: number,
-    imageHeight: number,
+    size: Size;
     visible?: boolean;
 }
 
@@ -49,13 +45,11 @@ class LabelResultLayer extends VisualTileLayer {
         };
         var url = '/api/labelresults/' + opt.labelResultId + '?x={x}&y={y}&z={z}&t=' + opt.t + '&zlevel=' + opt.zlevel;
 
-        var options = <VisualTileLayerOpts>{};
-        _.defaults(options, opt);
-        _.defaults(options, {
+        super(name, {
             style: styleFunc,
-            url: url
+            url: url,
+            visible: opt.visible,
+            size: opt.size
         });
-
-        super(name, options);
     }
 }

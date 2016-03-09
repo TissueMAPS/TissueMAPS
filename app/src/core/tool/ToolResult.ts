@@ -1,10 +1,12 @@
 abstract class ToolResult {
 
+    name: string;
     session: ToolSession;
 
     abstract handle(viewer: AppInstance);
 
-    constructor(session: ToolSession) {
+    constructor(name: string, session: ToolSession) {
+        this.name = name;
         this.session = session;
     }
 };

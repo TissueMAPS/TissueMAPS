@@ -14,7 +14,7 @@ class VisualLayerControlsCtrl {
 
     removeSelectedLayers() {
         _(this._$scope.selectionBox.getSelectedItems()).each((layer) => {
-            this._$scope.visualLayerCtrl.viewport.removeVisualLayer(layer);
+            this._$scope.visualLayerCtrl.viewport.removeLayer(layer);
         });
     };
 

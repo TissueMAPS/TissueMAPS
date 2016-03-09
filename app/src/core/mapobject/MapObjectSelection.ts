@@ -40,7 +40,9 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
         this.color = color;
         this.name = 'Selection #' + id;
 
-        this._layer = new SelectionLayer(this.name, this.color);
+        this._layer = new SelectionLayer(this.name, {
+            color: this.color
+        });
 
         this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
     }
@@ -51,7 +53,7 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
 
     visualizeOnViewport(vp: Viewport) {
         console.log('VISUALIXZ WON VIEWPORT');
-        vp.addVisualLayer(this._layer);
+        vp.addLayer(this._layer);
     }
 
     get mapObjects() {

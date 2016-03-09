@@ -19,9 +19,6 @@ angular.module('tmaps.ui').directive('tmViewer', [function() {
         controller: ViewerCtrl,
         controllerAs: 'viewerCtrl',
         bindToController: true,
-        templateUrl: '/src/viewer/tm-viewer.html',
-        link: (scope, elem, attr, ctrl) => {
-            console.log(scope.viewer.id);
-        }
+        templateUrl: '/src/viewer/tm-viewer.html'
     };
 }]);

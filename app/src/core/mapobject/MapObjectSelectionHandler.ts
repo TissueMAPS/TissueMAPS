@@ -7,6 +7,7 @@ interface SerializedSelectionHandler extends Serialized<MapObjectSelectionHandle
 
 class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandler> {
 
+    viewer: AppInstance;
     viewport: Viewport;
 
     /**
@@ -25,19 +26,17 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _activeSelection: MapObjectSelection = null;
     private _outlineLayers: {[objectType: string]: VisualLayer;} = {};
 
-    constructor(viewport: Viewport) {
-
-        this.viewport = viewport;
+    constructor(viewer: AppInstance) {
+        this.viewer = viewer;
+        this.viewport = viewer.viewport;
 
         // Register click listeners on the map.
-        this.viewport.map.then((map) => {
-            map.on('singleclick', (evt) => {
-                map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
-                    console.log(evt);
-                    var mapObject = feat.get('mapObject');
-                    var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
-                    this.clickOnMapObject(mapObject, clickPos);
-                });
+        this.viewport.map.on('singleclick', (evt) => {
+            this.viewport.map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
+                console.log(evt);
+                var mapObject = feat.get('mapObject');
+                var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
+                this.clickOnMapObject(mapObject, clickPos);
             });
         });
     }
@@ -115,29 +114,21 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     addMapObjectType(t: MapObjectType) {
+        // Check if this is the first time a type is added (null is always in the dict,
+        // therefore we check if the length is 1).
+        var isFirstTypeAdded = _(this._selectionsByType).keys().length === 1;
         this._selectionsByType[t] = [];
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = t;
         }
-        // Get all objects for this type and add an outline layer to the viewport.
-        // TODO: Get types
-        // this.mapObjectRegistry.getMapObjectsForType(t)
-        // .then((objs) => {
-        //     var visuals = _(objs).map((o) => {
-        //         return o.getVisual({
-        //             fillColor: Color.WHITE.withAlpha(0.02),
-        //             strokeColor: Color.WHITE
-        //         });
-        //     });
-
-        //     var visualLayer = new VisualLayer(t, 15860, 9140, {
-        //         visuals: visuals,
-        //         visible: false,
-        //         contentType: ContentType.mapObject
-        //     });
-        //     this._outlineLayers[t] = visualLayer;
-        //     return this.viewport.addVisualLayer(visualLayer)
-        // });
+        var segmLayer = new SegmentationLayer(t, {
+            t: 0,
+            experimentId: this.viewer.experiment.id,
+            zlevel: 0,
+            size: this.viewport.mapSize,
+            visible: isFirstTypeAdded
+        });
+        this.viewport.addLayer(segmLayer);
     }
 
     addSelection(sel: MapObjectSelection) {
