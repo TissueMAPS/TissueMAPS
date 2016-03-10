@@ -252,8 +252,8 @@ class ImageRegistration(ClusterRoutines):
                             % cycle.index)
 
                     a = AlignmentDescription()
-                    a.cycle_ix = cycle.index
-                    a.ref_cycle_ix = batch['ref_cycle']
+                    a.cycle = cycle.index
+                    a.ref_cycle = batch['ref_cycle']
 
                     a.overhang = OverhangDescription()
                     a.overhang.lower = lower_oh

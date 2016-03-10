@@ -3,6 +3,7 @@
 plates_dir:
 sources_dir:
 layers_dir:
+data_dir:
 experiment_name: ExampleExperiment
 plate_format: 384
 workflow:

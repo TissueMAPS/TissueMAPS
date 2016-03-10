@@ -22,11 +22,11 @@ USER_CFG_FILE_FORMAT = 'user.cfg.yml'
 #: Format string for building default layer names.
 LAYER_NAME_FORMAT = 't{t:0>3}_c{c:0>3}_z{z:0>3}'
 
-#: Format string for each acquisition mode for building visual names.
-VISUAL_NAME_FORMAT = {
-    'multiplexing': 't{t:0>3}_c{c:0>3}',
-    'series': 'c{c:0>3}',
-}
+#: Format string for building default channel names.
+CHANNEL_NAME_FORMAT = 'c{c:0>3}'
+
+#: Format string for building data filenames.
+DATA_NAME_FORMAT = 'site_{s:0>6}.data.h5'
 
 #: Format string for building image filenames.
 IMAGE_NAME_FORMAT = 'p{p:0>2}_{w}_y{y:0>3}_x{x:0>3}_t{t:0>3}_c{c:0>3}_z{z:0>3}.tif'
@@ -45,7 +45,8 @@ class UserConfiguration(object):
     def __init__(self, experiment_dir, plate_format, experiment_name=None,
                  plate_names=None,
                  acquisition_mode='multiplexing',
-                 sources_dir=None, plates_dir=None, layers_dir=None, **kwargs):
+                 sources_dir=None, plates_dir=None, layers_dir=None,
+                 data_dir=None, **kwargs):
         '''
         Initialize an instance of class UserConfiguration.
 
@@ -69,6 +70,8 @@ class UserConfiguration(object):
             absolute path to the directory, where image files are located
         layers_dir: str, optional
             absolute path to the directory, where layers are located
+        data_dir: str, optional
+            absolute path to the directory, where data files are located
         **kwargs: dict
             optional configuration settings arguments as key-value pairs
 
@@ -86,9 +89,10 @@ class UserConfiguration(object):
         self.plate_names = plate_names
         self.plate_format = plate_format
         self.acquisition_mode = acquisition_mode
-        self._sources_dir = sources_dir
-        self._plates_dir = plates_dir
-        self._layers_dir = layers_dir
+        self.sources_dir = sources_dir
+        self.plates_dir = plates_dir
+        self.layers_dir = layers_dir
+        self.data_dir = data_dir
         self._workflow = None
         for k, v in kwargs.iteritems():
             if k in self._PERSISTENT_ATTRS:
@@ -199,7 +203,7 @@ class UserConfiguration(object):
 
         See also
         --------
-        :py:mod:`tmlib.illuminati.layers`
+        :py:mod:`tmlib.layer`
         '''
         if self._layers_dir is None:
             self._layers_dir = os.path.join(self.experiment_dir, 'layers')
@@ -215,6 +219,38 @@ class UserConfiguration(object):
             self._layers_dir = None
         else:
             self._layers_dir = str(value)
+
+    @property
+    def data_dir(self):
+        '''
+        Returns
+        -------
+        str
+            absolute path to the directory where data files are stored
+
+        Note
+        ----
+        Defaults to "data" subdirectory of the experiment directory if
+        not set.
+
+        See also
+        --------
+        :py:mod:`tmlib.jterator`
+        '''
+        if self._data_dir is None:
+            self._data_dir = os.path.join(self.experiment_dir, 'data')
+            logger.debug('set default "data" directory: %s',
+                         self._data_dir)
+        return self._data_dir
+
+    @data_dir.setter
+    def data_dir(self, value):
+        if not(isinstance(value, basestring) or value is None):
+            raise TypeError('Attribute "data_dir" must have type str')
+        if value is None:
+            self._data_dir = None
+        else:
+            self._data_dir = str(value)
 
     @property
     def experiment_name(self):

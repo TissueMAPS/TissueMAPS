@@ -7,6 +7,7 @@ import importlib
 import traceback
 import collections
 import numpy as np
+import pandas as pd
 import rpy2.robjects
 import rpy2.robjects.numpy2ri
 from rpy2.robjects.packages import importr
@@ -47,7 +48,7 @@ class ImageProcessingModule(object):
     Class for a Jterator module, the building block of a Jterator pipeline.
     '''
 
-    def __init__(self, name, module_file, handles_description):
+    def __init__(self, name, source_file, description):
         '''
         Initiate Module class.
 
@@ -55,9 +56,9 @@ class ImageProcessingModule(object):
         ----------
         name: str
             name of the module
-        module_file: str
+        source_file: str
             path to program file that should be executed
-        handles_description: dict
+        description: dict
             description of module input/output
 
         Returns
@@ -65,8 +66,8 @@ class ImageProcessingModule(object):
         tmlib.jterator.module.ImageProcessingModule
         '''
         self.name = name
-        self.module_file = module_file
-        self.handles_description = handles_description
+        self.source_file = source_file
+        self.description = description
         self.outputs = dict()
 
     def build_log_filenames(self, log_dir, job_id):
@@ -160,6 +161,22 @@ class ImageProcessingModule(object):
         with open(stderr_file, 'w+') as error_log:
             error_log.write(stderr_data)
 
+    @staticmethod
+    def save_figure(fig, figure_file):
+        '''
+        Write `plotly <https://plot.ly>`_ figure represented as
+        HTML string with embedded javascript code to file.
+
+        Parameters
+        ----------
+        fig: str
+            figure as HTML string
+        figure_file: str
+            name of the figure file
+        '''
+        with open(figure_file, 'w') as f:
+            f.write(fig)
+
     @property
     def language(self):
         '''
@@ -168,76 +185,95 @@ class ImageProcessingModule(object):
         str
             language of the module (e.g. "python")
         '''
-        return path_utils.determine_language(self.module_file)
+        return path_utils.determine_language(self.source_file)
 
     def _exec_m_module(self, inputs, output_names, engine):
-        logger.debug('adding module to Matlab path: "%s"' % self.module_file)
-        # engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.module_file)))
-        module_name = os.path.splitext(os.path.basename(self.module_file))[0]
+        logger.debug('adding module to Matlab path: "%s"' % self.source_file)
+        # engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.source_file)))
+        module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         engine.eval('import \'jtlib.modules.{0}\''.format(module_name))
         logger.debug('evaluating Matlab function with INPUTS: "%s"',
                      '", "'.join(inputs.keys()))
         for name, value in inputs.iteritems():
             engine.put('%s' % name, value)
-        function_name = os.path.splitext(os.path.basename(self.module_file))[0]
+        function_name = os.path.splitext(os.path.basename(self.source_file))[0]
         func_call = '[{args_out}] = jtlib.modules.{name}({args_in})'.format(
                                     args_out=', '.join(output_names),
                                     name=function_name,
                                     args_in=', '.join(inputs.keys()))
-        # Capture standard output and error
-        engine.eval("out = evalc('{0};')".format(func_call))
-        out = engine.get('out')
-        out = re.sub(r'\n$', '', out)  # naicify string
-        if out:
-            print out  # print to standard output
+        # Unfortunately, the matlab_wrapper engine doesn't return
+        # standard output and error (errors are caught)
+        engine.eval("stdout = evalc('{0};')".format(func_call))
+        stdout = engine.get('stdout')
+        stdout = re.sub(r'\n$', '', stdout)  # naicify string
+        if stdout:
+            print stdout
         for i, name in enumerate(output_names):
-            m_out = engine.get('%s' % name)
+            m_var_np = engine.get('%s' % name).copy(order='C')
             logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=m_out.shape))
+                                            name=name,
+                                            value=m_var_np.shape))
             logger.debug('type of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=type(m_out)))
-            logger.debug('dtype of elements of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=m_out.dtype))
+                                            name=name,
+                                            value=type(m_var_np)))
+            logger.debug('dtype of OUTPUT "{name}": {value}'.format(
+                                            name=name,
+                                            value=m_var_np.dtype))
             output_value = [
-                o['value'] for o in self.handles_description['output']
+                o['id'] for o in self.description['output']
                 if o['name'] == name
             ][0]
             # NOTE: Matlab generates numpy array in Fortran order
-            self.outputs[output_value] = m_out.copy(order='C')
+            self.outputs[output_value] = m_var_np
 
     def _exec_py_module(self, inputs, output_names):
-        logger.debug('importing module: "%s"' % self.module_file)
-        module_name = os.path.splitext(os.path.basename(self.module_file))[0]
+        logger.debug('importing module: "%s"' % self.source_file)
+        # NOTE: 
+        module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         module = importlib.import_module('jtlib.modules.%s' % module_name)
         func = getattr(module, module_name)
         logger.debug('evaluating Python function with INPUTS: "%s"',
                      '", "'.join(inputs.keys()))
         py_out = func(**inputs)
         if not output_names:
+            logger.debug('no output arguments specified in module description')
             return
-        if not len(py_out) == len(output_names):
-            raise PipelineRunError('number of outputs is incorrect.')
+        if not isinstance(py_out, dict):
+            raise PipelineRunError(
+                    'Module "%s" must return an object of type dict.'
+                    % self.name)
         for i, name in enumerate(output_names):
-            # NOTE: The Python function is supposed to return a namedtuple!
-            if py_out._fields[i] != name:
-                raise PipelineRunError('Incorrect output names.')
+            if name not in py_out.keys():
+                raise PipelineRunError(
+                        'Module "%s" didn\'t return output argument "%s".'
+                        % (self.name, name))
+            py_var_np = py_out[name]
+            if not(isinstance(py_var_np, np.ndarray) or
+                    isinstance(py_var_np, pd.DataFrame)):
+                raise PipelineRunError(
+                        'Output of module "%s" must have type '
+                        'numpy.ndarray or pandas.DataFrame' % self.name)
             logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=py_out[i].shape))
+                                            name=name,
+                                            value=py_var_np.shape))
             logger.debug('type of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=type(py_out[i])))
-            logger.debug('dtype of elements of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=py_out[i].dtype))
+                                            name=name,
+                                            value=type(py_var_np)))
+            logger.debug('dtype of OUTPUT "{name}": {value}'.format(
+                                            name=name,
+                                            value=py_var_np.dtype))
             output_value = [
-                o['value'] for o in self.handles_description['output']
+                o['id'] for o in self.description['output']
                 if o['name'] == name
             ][0]
-            self.outputs[output_value] = py_out[i]
+            self.outputs[output_value] = py_var_np
 
     def _exec_r_module(self, inputs, output_names):
-        logger.debug('sourcing module: "%s"' % self.module_file)
-        rpy2.robjects.r('source("{0}")'.format(self.module_file))
-        rpy2.robjects.numpy2ri.activate()  # enables use of numpy arrays
-        function_name = os.path.splitext(os.path.basename(self.module_file))[0]
+        logger.debug('sourcing module: "%s"' % self.source_file)
+        rpy2.robjects.r('source("{0}")'.format(self.source_file))
+        rpy2.robjects.numpy2ri.activate()   # enables use of numpy arrays
+        rpy2.robjects.pandas2ri.activate()  # enable use of pandas data frames
+        function_name = os.path.splitext(os.path.basename(self.source_file))[0]
         func = rpy2.robjects.globalenv['{0}'.format(function_name)]
         logger.debug('evaluating R function with INPUTS: "%s"'
                      % '", "'.join(inputs.keys()))
@@ -250,19 +286,33 @@ class ImageProcessingModule(object):
                         'convert unsigned integer data type to integer',
                         self.name, k)
                     inputs[k] = v.astype(int)
+            # TODO: we may have to translate pandas data frames into the
+            # R equivalent
+            # pd.com.convert_to_r_dataframe(v)
         args = rpy2.robjects.ListVector({k: v for k, v in inputs.iteritems()})
         base = importr('base')
-        r_var = base.do_call(func, args)
+        r_out = base.do_call(func, args)
         for i, name in enumerate(output_names):
-            r_var_np = np.array(r_var.rx2(name))
+            # NOTE: R functions are supposed to return a list. Therefore
+            # we can extract the output argument using rx2(name).
+            # The R equivalent would be indexing the list with "[[name]]".
+            if isinstance(r_out.rx2(name), rpy2.robjects.vectors.DataFrame):
+                # r_var_np = pd.DataFrame(r_var.rx2(name))
+                r_var_np = rpy2.robjects.pandas2ri(r_out.rx2(name))
+            else:
+                # r_var_np = np.array(r_var.rx2(name))
+                r_var_np = rpy2.robjects.numpy2ri(r_out.rx2(name))
             logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=r_var_np.shape))
+                                            name=name,
+                                            value=r_var_np.shape))
             logger.debug('type of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=type(r_var_np)))
-            logger.debug('dtype of elements of OUTPUT "{name}": {value}'.format(
-                                            name=name, value=r_var_np.dtype))
+                                            name=name,
+                                            value=type(r_var_np)))
+            logger.debug('dtype of OUTPUT "{name}": {value}'.format(
+                                            name=name,
+                                            value=r_var_np.dtype))
             output_value = [
-                o['value'] for o in self.handles_description['output']
+                o['id'] for o in self.description['output']
                 if o['name'] == name
             ][0]
             self.outputs[output_value] = r_var_np
@@ -277,8 +327,7 @@ class ImageProcessingModule(object):
         else:
             raise PipelineRunError('Language not supported.')
 
-    def prepare_inputs(self, images, upstream_output, data_file, figure_file,
-                       job_id, experiment_dir, plot):
+    def prepare_inputs(self, images, upstream_output, plot):
         '''
         Prepare input data that will be parsed to the module.
 
@@ -317,9 +366,9 @@ class ImageProcessingModule(object):
         # Prepare input provided by handles
         inputs = collections.OrderedDict()
         input_names = list()
-        for arg in self.handles_description['input']:
+        for arg in self.description['input']:
             input_names.append(arg['name'])
-            if arg['class'] == 'parameter':
+            if arg['mode'] == 'constant':
                 inputs[arg['name']] = arg['value']
             else:
                 if arg['value'] in images.keys():
@@ -340,12 +389,7 @@ class ImageProcessingModule(object):
                                 'in module "%s"'
                                 % (arg['value'], arg['name'], self.name))
                     inputs[arg['name']] = pipe_in[arg['value']]
-        # All additional info potentially required by modules => kwargs
-        inputs['data_file'] = data_file
-        inputs['figure_file'] = figure_file
-        inputs['experiment_dir'] = experiment_dir
         inputs['plot'] = plot
-        inputs['job_id'] = job_id
         return inputs
 
     def run(self, inputs, engine=None):
@@ -356,7 +400,7 @@ class ImageProcessingModule(object):
         Output has the following format::
 
             {
-                'data': ,               # dict
+                'outputs': ,            # dict
                 'stdout': ,             # str
                 'stderr': ,             # str
                 'success': ,            # bool
@@ -375,15 +419,16 @@ class ImageProcessingModule(object):
         dict
             output
         '''
-        if self.handles_description['output']:
+        if self.description['output']:
             output_names = [
-                o['name'] for o in self.handles_description['output']
+                o['name'] for o in self.description['output']
             ]
         else:
             output_names = []
 
         with CaptureOutput() as output:
             # TODO: the StringIO approach prevents debugging of modules
+            # build custom logger
             try:
                 self._execute_module(inputs, output_names, engine)
                 success = True
@@ -403,7 +448,7 @@ class ImageProcessingModule(object):
 
         if success:
             output = {
-                'data': self.outputs,
+                'outputs': self.outputs,
                 'stdout': stdout,
                 'stderr': stderr,
                 'success': success,
@@ -411,7 +456,7 @@ class ImageProcessingModule(object):
             }
         else:
             output = {
-                'data': None,
+                'outputs': None,
                 'stdout': stdout,
                 'stderr': stderr,
                 'success': success,
@@ -421,4 +466,4 @@ class ImageProcessingModule(object):
         return output
 
     def __str__(self):
-        return ':%s: @ <%s>' % (self.name, self.module_file)
+        return ':%s: @ <%s>' % (self.name, self.source_file)

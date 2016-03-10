@@ -7,18 +7,20 @@ from .args import JteratorInitArgs
 from .args import JteratorRunArgs
 from .args import JteratorCreateArgs
 from .args import JteratorSubmitArgs
-from .args import JteratorCollectArgs
 from .args import JteratorResubmitArgs
 from .args import JteratorLogArgs
 from .args import JteratorInfoArgs
 from .args import JteratorCheckArgs
 from .args import JteratorRemoveArgs
+from .args import JteratorCleanupArgs
 from ..args import CheckArgs
 from ..args import CreateArgs
 from ..args import RemoveArgs
 
 
-parser, subparsers = Jterator.get_parser_and_subparsers()
+parser, subparsers = Jterator.get_parser_and_subparsers({
+    'init', 'submit', 'resubmit', 'run', 'cleanup', 'log', 'info'
+})
 
 parser.description = '''
     Image analysis pipeline engine for applying a sequence of algorithms
@@ -37,11 +39,6 @@ run_extra_group = run_parser.add_argument_group(
     'additional step-specific arguments')
 JteratorRunArgs().add_to_argparser(run_extra_group)
 
-collect_parser = subparsers.choices['collect']
-collect_extra_group = collect_parser.add_argument_group(
-    'additional step-specific arguments')
-JteratorCollectArgs().add_to_argparser(collect_extra_group)
-
 resubmit_parser = subparsers.choices['resubmit']
 resubmit_extra_group = resubmit_parser.add_argument_group(
     'additional step-specific arguments')
@@ -51,6 +48,11 @@ submit_parser = subparsers.choices['submit']
 submit_extra_group = submit_parser.add_argument_group(
     'additional step-specific arguments')
 JteratorSubmitArgs().add_to_argparser(submit_extra_group)
+
+cleanup_parser = subparsers.choices['cleanup']
+cleanup_extra_group = cleanup_parser.add_argument_group(
+    'additional step-specific arguments')
+JteratorCleanupArgs().add_to_argparser(cleanup_extra_group)
 
 log_parser = subparsers.choices['log']
 log_extra_group = log_parser.add_argument_group(
@@ -82,7 +84,7 @@ JteratorRemoveArgs().add_to_argparser(remove_parser)
 check_parser = subparsers.add_parser(
     'check', help='check descriptor files')
 check_parser.description = '''
-    Check content of the .pipe and .handles files descriptor files.
+    Check content of the .pipe and .handle files descriptor files.
 '''
 CheckArgs().add_to_argparser(check_parser)
 JteratorCheckArgs().add_to_argparser(check_parser)

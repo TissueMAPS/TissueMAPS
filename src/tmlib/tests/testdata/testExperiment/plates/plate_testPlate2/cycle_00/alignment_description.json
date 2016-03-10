@@ -1,7 +1,7 @@
 {
-    "cycle_ix": 0,
+    "cycle": 0,
     "overhang": {"left": 0, "lower": 3, "right": 3, "upper": 0},
-    "ref_cycle_ix": 1,
+    "ref_cycle": 1,
     "shifts": [
         {"is_above_limit": false, "site": 0, "x": 2, "y": 1},
         {"is_above_limit": false, "site": 1, "x": 2, "y": 1},

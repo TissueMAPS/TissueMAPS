@@ -7,7 +7,7 @@ class AlignmentDescription(object):
     align images between cycles.
     '''
 
-    _PERSISTENT_ATTRS = {'cycle_ix', 'ref_cycle_ix', 'overhang', 'shift'}
+    _PERSISTENT_ATTRS = {'cycle', 'ref_cycle', 'overhang', 'shift'}
 
     def __init__(self, description=None):
         '''
@@ -53,38 +53,38 @@ class AlignmentDescription(object):
                         setattr(self, key, value)
 
     @property
-    def cycle_ix(self):
+    def cycle(self):
         '''
         Returns
         -------
         str
             identifier number of the corresponding target cycle
         '''
-        return self._cycle_ix
+        return self._cycle
 
-    @cycle_ix.setter
-    def cycle_ix(self, value):
+    @cycle.setter
+    def cycle(self, value):
         if not isinstance(value, int):
             raise TypeError(
-                    'Attribute "cycle_ix" must have type int')
-        self._cycle_ix = value
+                    'Attribute "cycle" must have type int')
+        self._cycle = value
 
     @property
-    def ref_cycle_ix(self):
+    def ref_cycle(self):
         '''
         Returns
         -------
         str
             identifier number of the corresponding reference cycle
         '''
-        return self._ref_cycle_ix
+        return self._ref_cycle
 
-    @ref_cycle_ix.setter
-    def ref_cycle_ix(self, value):
+    @ref_cycle.setter
+    def ref_cycle(self, value):
         if not(isinstance(value, int) or value is None):
             raise TypeError(
-                    'Attribute "ref_cycle_ix" must have type int')
-        self._ref_cycle_ix = value
+                    'Attribute "ref_cycle" must have type int')
+        self._ref_cycle = value
 
     @property
     def overhang(self):

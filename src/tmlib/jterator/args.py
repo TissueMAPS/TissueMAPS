@@ -244,18 +244,18 @@ class JteratorResubmitArgs(VariableArgs):
         }
 
 
-class JteratorCollectArgs(VariableArgs):
+class JteratorCleanupArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorCollectArgs.
+        Initialize an instance of class JteratorCleanupArgs.
 
         Parameters
         ----------
         **kwargs: dict
             arguments as key-value pairs
         '''
-        super(JteratorCollectArgs, self).__init__(**kwargs)
+        super(JteratorCleanupArgs, self).__init__(**kwargs)
 
     @property
     def _persistent_attrs(self):

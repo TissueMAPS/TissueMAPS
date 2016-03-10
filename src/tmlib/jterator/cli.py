@@ -91,7 +91,7 @@ class Jterator(CommandLineInterface):
         '''
         self._print_logo()
         api = self._api_instance
-        logger.info('check pipe and handles descriptor files')
+        logger.info('check pipe and handle descriptor files')
         api.check_pipeline()
 
     @staticmethod

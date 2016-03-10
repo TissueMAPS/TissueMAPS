@@ -131,7 +131,7 @@ class PyramidBuilder(ClusterRoutines):
                         'tpoint': layer.tpoint,
                         'channel': layer.channel,
                         'zplane': layer.zplane,
-                        'cycle': layer.metadata.cycle_ix,
+                        'cycle': layer.metadata.cycle,
                         'level': level,
                         'index': index,
                         'subset_indices': batch
@@ -158,7 +158,7 @@ class PyramidBuilder(ClusterRoutines):
                         'tpoint': layer.tpoint,
                         'channel': layer.channel,
                         'zplane': layer.zplane,
-                        'cycle': layer.metadata.cycle_ix,
+                        'cycle': layer.metadata.cycle,
                         'level': level,
                         'index': index,
                         'clip_value': None,

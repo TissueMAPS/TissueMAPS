@@ -11,6 +11,9 @@ from ..errors import PipelineOSError
 
 logger = logging.getLogger(__name__)
 
+HANDLE_SUFFIX = '.handle.yml'
+PIPE_SUFFIX = '.pipe.yml'
+
 
 def list_jtprojects(directory):
     '''
@@ -26,7 +29,7 @@ def list_jtprojects(directory):
         os.path.join(directory, name)
         for name in os.listdir(directory)
         if os.path.isdir(os.path.join(directory, name)) and
-        glob.glob(os.path.join(directory, name, '*.pipe.yml'))
+        glob.glob(os.path.join(directory, name, '*%s' % PIPE_SUFFIX))
     ]
     if not projects:
         logger.warning('No Jterator projects found in %s' % directory)
@@ -110,7 +113,7 @@ class JtProject(object):
     def _get_pipe_file(self, directory=None):
         if not directory:
             directory = self.project_dir
-        pipe_files = glob.glob(os.path.join(directory, '*.pipe.yml'))
+        pipe_files = glob.glob(os.path.join(directory, '*%s' % PIPE_SUFFIX))
         if len(pipe_files) == 1:
             return pipe_files[0]
         elif len(pipe_files) > 1:
@@ -127,11 +130,12 @@ class JtProject(object):
             directory = os.path.join(self.project_dir, 'handles')
         else:
             directory = os.path.join(directory, 'handles')
-        handles_files = glob.glob(os.path.join(directory, '*.handles.yml'))
+        handles_files = glob.glob(os.path.join(directory,
+                                               '*%s' % HANDLE_SUFFIX))
         if not handles_files:
             # We don't raise an exception, because an empty handles folder
             # can occur, for example upon creation of a new project
-            logger.warning('No .handles files found: %s' % directory)
+            logger.warning('No handle files found: %s' % directory)
         return handles_files
 
     @staticmethod
@@ -188,7 +192,7 @@ class JtProject(object):
             for i, module in enumerate(pipe['description']['pipeline']):
                 pipe['description']['pipeline'][i]['name'] = \
                     self._get_descriptor_name(
-                        pipe['description']['pipeline'][i]['handles'])
+                        pipe['description']['pipeline'][i]['handle'])
         return pipe
 
     @property
@@ -208,23 +212,26 @@ class JtProject(object):
                         f = os.path.join(self.project_dir, f)
                     if not os.path.exists(f):
                         raise PipelineOSError(
-                                'Handles file does not exist: "%s"' % f)
+                                'Handle file does not exist: "%s"' % f)
                     handles.append({
                         'name': self._get_descriptor_name(f),
                         'description': reader.read(f)
                     })
         # Sort handles information according to order of modules in the pipeline
         names = [h['name'] for h in handles]
-        sorted_handles = [
-            handles[names.index(name)]
-            for ix, name in enumerate(self._module_names)
-        ]
+        sorted_handles = list()
+        for name in self._module_names:
+            if name not in names:
+                raise ValueError(
+                        'Handle for module "%s" does not exist.' % name)
+            sorted_handles.append(handles[names.index(name)])
+
         return sorted_handles
 
     def _create_pipe_file(self, repo_dir):
         pipe_file = os.path.join(
                         self.project_dir,
-                        '%s.pipe.yml' % self.pipe_name)
+                        '%s%s' % (self.pipe_name, PIPE_SUFFIX))
         pipe_skeleton = {
             'project': {
                 'description': str()
@@ -253,14 +260,15 @@ class JtProject(object):
                 pipe_content = reader.read(pipe_file, use_ruamel=True)
             new_pipe_file = os.path.join(
                                 self.project_dir,
-                                '%s.pipe.yml' % self.pipe_name)
+                                '%s%s' % (self.pipe_name, PIPE_SUFFIX))
             with YamlWriter() as writer:
                 writer.write(new_pipe_file, pipe_content, use_ruamel=True)
         shutil.copytree(os.path.join(skel_dir, 'handles'),
                         os.path.join(self.project_dir, 'handles'))
 
     def _remove_pipe_file(self, name):
-        pipe_file = os.path.join(self.project_dir, '%s.pipe.yml' % name)
+        pipe_file = os.path.join(self.project_dir,
+                                 '%s%s' % (name, PIPE_SUFFIX))
         os.remove(pipe_file)
 
     def _remove_handles_folder(self):
@@ -286,7 +294,7 @@ class JtProject(object):
         # Create new .handles files for added modules
         for h in self.handles:
             filename = os.path.join(self.project_dir, 'handles',
-                                    '%s.handles.yml' % h['name'])
+                                    '%s%s' % (h['name'], HANDLE_SUFFIX))
             handles_files.append(filename)
         with YamlReader() as reader:
             for i, handles_file in enumerate(handles_files):
@@ -304,7 +312,7 @@ class JtProject(object):
                     writer.write(handles_file, mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(os.path.join(self.project_dir,
-                                           'handles', '*.handles.yml'))
+                                           'handles', '*%s' % HANDLE_SUFFIX))
         for f in existing_handles_files:
             if f not in handles_files:
                 os.remove(f)
@@ -490,7 +498,7 @@ class JtAvailableModules(object):
 
     def _get_corresponding_handles_file(self, module_name):
         handles_dir = os.path.join(self.repo_dir, 'handles')
-        search_string = '^%s\.handles.yml$' % module_name
+        search_string = '^%s\.handle.yml$' % module_name
         regexp_pattern = re.compile(search_string)
         handles_files = natsorted([
             os.path.join(handles_dir, f)

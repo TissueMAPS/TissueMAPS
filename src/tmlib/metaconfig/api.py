@@ -407,7 +407,7 @@ class MetadataConfigurator(ClusterRoutines):
                     # sort metadata according to name and reset indices.
                     md = md.sort_values('name')
                     md.index = range(md.shape[0])
-                    md['cycle_ix'] = np.repeat(cycle.index, md.shape[0])
+                    md['cycle'] = np.repeat(cycle.index, md.shape[0])
 
                     # Store the updated metadata in an HDF5 file
                     filename = os.path.join(cycle.dir,

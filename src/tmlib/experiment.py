@@ -10,14 +10,14 @@ from . import utils
 from .plate import Plate
 from .source import PlateSource
 from .metadata import ChannelLayerMetadata
+from .metadata import ChannelMetadata
 from .errors import MetadataError
 from .readers import YamlReader
 
 logger = logging.getLogger(__name__)
 
-# Has to be created outside of the function/method, because it creates
-# problems with pickle otherwise.
-Indices = collections.namedtuple('Indices', ['time', 'channel', 'zplane'])
+#: Class for hashing based on time point, channel, and z-plane.
+Index = collections.namedtuple('Index', ['tpoint', 'channel', 'zplane'])
 
 
 class Experiment(object):
@@ -322,7 +322,7 @@ class Experiment(object):
         -------
         Dict[tuple, str]
             names of layers for each combination of time point, channel,
-            and z-plane
+            and z-plane index
         '''
         names = dict()
         for plate in self.plates:
@@ -333,7 +333,7 @@ class Experiment(object):
                 zplanes = np.unique(md['zplane'])
                 for c in channels:
                     for z in zplanes:
-                        i = Indices(t, c, z)
+                        i = Index(t, c, z)
                         names[i] = cfg.LAYER_NAME_FORMAT.format(t=t, c=c, z=z)
         return names
 
@@ -343,7 +343,7 @@ class Experiment(object):
         Returns
         -------
         Dict[str, tmlib.metadata.ChannelLayerMetadata]
-            metadata for each layer
+            name and metadata of each layer
         '''
         layer_metadata = dict()
         for plate in self.plates:
@@ -358,7 +358,7 @@ class Experiment(object):
                     metadata.name = name
                     metadata.channel = c
                     metadata.zplane = z
-                    metadata.cycle_ix = cycle.index
+                    metadata.cycle = cycle.index
                     metadata.tpoint = cycle.tpoint
                     index = ((md['channel'] == c) & (md['zplane'] == z))
                     files = md[index]['name'].tolist()
@@ -370,67 +370,67 @@ class Experiment(object):
                     layer_metadata[name] = metadata
         return layer_metadata
 
-    # @property
-    # def channels(self):
-    #     return self._channels
-    
-    # @cached_property
-    # def visual_layers_map(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     Dict[str, List[str]]
-    #         layer names for each visual
-
-    #     Note
-    #     ----
-    #     A `visual` is an abstract group of `layers`, which are visualized
-    #     together. In the simplest case of a 2D dataset, each `visual` maps to
-    #     only one `layer`, but there are other scenarios:
-    #         * 3D dataset with multiple focal planes:
-    #           1 `visual` -> *n* `layers`
-    #         * Time series dataset with multiple time points:
-    #           1 `visual` -> *n*x*m* `layers`
-    #         * Multiplexing dataset with multiple time points:
-    #           1 `visual` -> *n* `layer`
-    #     where *n* is the number of focal planes and *m* is the number of
-    #     time points.
-    #     '''
-    #     if hasattr(self.user_cfg, 'visuals'):
-    #         # TODO: allow user to give visuals more meaningful names,
-    #         # such as "DAPI" instead of "t000_c000"
-    #         raise NotSupportedError('Functionality not yet supported.')
-    #     mode = self.user_cfg.acquisition_mode
-    #     names = defaultdict(list)
-    #     for plate in self.plates:
-    #         for cycle in plate.cycles:
-    #             t = cycle.index
-    #             md = cycle.image_metadata
-    #             channels = np.unique(md['channel'])
-    #             zplanes = np.unique(md['zplane'])
-    #             for c in channels:
-    #                 for z in zplanes:
-    #                     v_name = cfg.VISUAL_NAME_FORMAT[mode].format(t=t, c=c)
-    #                     names[v_name].append(self.layer_names[(t, c, z)])
-    #     return names
-
-    # @property
-    # def visual_names(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[str]
-    #         names of the visuals
-    #     '''
-    #     return self.visual_layers_map.keys()
+    @property
+    def channel_names(self):
+        '''
+        Returns
+        -------
+        List[str]
+            name of each channel, the image metadata attribute `channel_index`
+            can be used for indexing
+        '''
+        return self.channel_metadata.keys()
 
     @property
-    def data_file(self):
+    def channel_metadata(self):
+        '''
+        Returns
+        -------
+        Dict[str, tmlib.metadata.ChannelMetadata]
+            name and metadata of each channel
+        '''
+        layer_keys = np.array(self.layer_names.keys())
+        channels = sorted(np.unique(layer_keys[:, 1]))
+        metadata = collections.OrderedDict()  # preserve order!
+        for c in channels:
+            md = ChannelMetadata()
+            md.name = cfg.CHANNEL_NAME_FORMAT.format(c=c)
+            # We have to find out which layers belong to the channel and
+            # add the corresponding metadata attributes.
+            index = np.where(layer_keys[:, 1] == c)[0]
+            matching_layer_keys = layer_keys[index, :]
+            for index in matching_layer_keys:
+                name = self.layer_names[tuple(index)]
+                layer_md = self.layer_metadata[name]
+                md.add_layer_metadata(layer_md)
+            metadata[md.name] = md
+        return metadata
+
+    @utils.autocreate_directory_property
+    def data_dir(self):
         '''
         Returns
         -------
         str
-            name of the HDF5 file holding the measurement datasets,
+            absolute path to the folder holding the data files
+
+        Note
+        ----
+        Directory is autocreated if it doesn't exist.
+
+        See also
+        --------
+        :py:mod:`tmlib.jterator`
+        '''
+        return self.user_cfg.data_dir
+
+    @cached_property
+    def data_files(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names of the HDF5 files holding the measurement datasets,
             i.e. the results of an image analysis pipeline such as
             segmentations and features for the segmented objects
 
@@ -438,7 +438,13 @@ class Experiment(object):
         --------
         :py:class:`tmlib.layer.ObjectLayer`
         '''
-        return 'data.h5'
+        files = [
+            f for f in os.listdir(self.data_dir) if f.endswith('h5')
+        ]
+        files = natsorted(files)
+        if not files:
+            raise OSError('No data files found in "%s"' % self.data_dir)
+        return files
 
     def get_image_by_name(self, name):
         '''

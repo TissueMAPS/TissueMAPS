@@ -389,7 +389,7 @@ class Cycle(object):
             md = IllumstatsImageMetadata()
             md.channel = c
             md.tpoint = self.tpoint
-            md.cycle_ix = self.index
+            md.cycle = self.index
             md.filename = f
             illumstats_metadata[c] = md
         return illumstats_metadata

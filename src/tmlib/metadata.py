@@ -199,20 +199,20 @@ class ImageMetadata(object):
         self._tpoint = value
 
     @property
-    def cycle_ix(self):
+    def cycle(self):
         '''
         Returns
         -------
         int
             zero-based index of the corresponding cycle
         '''
-        return self._cycle_ix
+        return self._cycle
 
-    @cycle_ix.setter
-    def cycle_ix(self, value):
+    @cycle.setter
+    def cycle(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "cycle_ix" must have type int')
-        self._cycle_ix = value
+            raise TypeError('Attribute "cycle" must have type int')
+        self._cycle = value
 
     @property
     def upper_overhang(self):
@@ -762,3 +762,145 @@ class ChannelLayerMetadata(object):
         if not(all([isinstance(v, basestring) for v in value])):
             raise TypeError('Elements of "filenames" must have type str')
         self._filenames = [str(v) for v in value]
+
+
+class ChannelMetadata(object):
+
+    '''
+    Class for `channel` metadata.
+    A `channel` is a collections of `layers`, which are grouped according
+    to their :py:attribute:`tmlib.metadata.ChannelLayerMetadata.channel`
+    attribute. A `channel` may thus be composed of `layers` with different
+    time points and/or z-planes and is visualized and processed as a unit.
+
+    See also
+    --------
+    :py:method:`tmlib.jterator.api.ImageAnalysisPipeline.create_job_descriptions`
+    '''
+
+    def __init__(self):
+        self._zplanes = list()
+        self._tpoints = list()
+        self._sites = list()
+        self._layers = list()
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the channel
+        '''
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not(isinstance(value, basestring)):
+            raise TypeError('Attribute "name" must have type basestring')
+        self._name = str(value)
+
+    @property
+    def zplanes(self):
+        '''
+        Returns
+        -------
+        List[int]
+            zero-based z index of the focal plane within a three dimensional
+            stack
+        '''
+        return self._zplanes
+
+    @zplanes.setter
+    def zplanes(self, value):
+        if not isinstance(value, list):
+            raise TypeError('Attribute "zplanes" must have type list')
+        if not all([isinstance(v, int) for v in value]):
+            raise TypeError('Elements of "zplanes" must have type int')
+        self._zplanes = value
+
+    @property
+    def tpoints(self):
+        '''
+        Returns
+        -------
+        int
+            one-based time point identifier number
+        '''
+        return self._tpoints
+
+    @tpoints.setter
+    def tpoints(self, value):
+        if not isinstance(value, list):
+            raise TypeError('Attribute "tpoints" must have type list')
+        if not all([isinstance(v, int) for v in value]):
+            raise TypeError('Elements of "tpoints" must have type int')
+        self._tpoints = value
+
+    @property
+    def channel(self):
+        '''
+        Returns
+        -------
+        int
+            channel index
+        '''
+        return self._channel
+
+    @channel.setter
+    def channel(self, value):
+        if not(isinstance(value, int)):
+            raise TypeError('Attribute "channel" must have type int')
+        self._channel = value
+
+    @property
+    def sites(self):
+        '''
+        Returns
+        -------
+        List[int]
+            site identifier numbers of images contained in the mosaic
+        '''
+        return self._sites
+
+    @sites.setter
+    def sites(self, value):
+        if not(isinstance(value, list)):
+            raise TypeError('Attribute "sites" must have type list')
+        if not(all([isinstance(v, int) for v in value])):
+            raise TypeError('Elements of "sites" must have type int')
+        self._sites = value
+
+    @property
+    def layers(self):
+        '''
+        Returns
+        -------
+        List[str]
+            names of layers that belong to the channel
+        '''
+        return self._layers
+
+    @layers.setter
+    def layers(self, value):
+        if not(isinstance(value, list)):
+            raise TypeError('Attribute "layers" must have type list')
+        if not(all([isinstance(v, basestring) for v in value])):
+            raise TypeError('Elements of "layers" must have type str')
+        self._layers = [str(v) for v in value]
+
+    def add_layer_metadata(self, metadata):
+        '''
+        Convenience method to add metadata. Obtains the relevant information
+        (`name`, `tpoint`, and `zplane`) from `metadata` and adds the values
+        to the corresponding attributes of the object.
+
+        Parameters
+        ----------
+        metadata: tmlib.metadata.ChannelLayerMetadata
+            metadata of a layer
+        '''
+        self._layers.append(metadata.name)
+        self._tpoints.append(metadata.tpoint)
+        self._zplanes.append(metadata.zplane)
+        self.sites = metadata.sites

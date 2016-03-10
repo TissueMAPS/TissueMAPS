@@ -3,7 +3,7 @@ import sys
 import traceback
 import logging
 import shutil
-import json
+import yaml
 import argparse
 import socket
 from cached_property import cached_property
@@ -58,19 +58,12 @@ def create_cli_method_args(prog_name, method_name, **kwargs):
     ----
     The function knows which arguments to strip from `kwargs`.
 
-    Raises
-    ------
-    ValueError
-        when `method_name` is not a valid method name
-
     See also
     --------
     :py:func:`tmlib.tmaps.description.load_method_args`
     :py:func:`tmlib.tmaps.description.load_var_method_args`
     :py:class:`tmlib.args.Args`
     '''
-    if method_name not in AVAILABLE_METHODS:
-        raise ValueError('Method "%s" does not exist.' % method_name)
     args_handler = load_method_args(method_name)
     method_args = args_handler(**kwargs)
     variable_args_handler = load_var_method_args(prog_name, method_name)
@@ -93,17 +86,10 @@ def call_cli_method(cli_instance, method_name, method_args):
     method_args: tmlib.args.GeneralArgs
         arguments required for the method
 
-    Raises
-    ------
-    ValueError
-        when `method_name` is not a valid method name
-
     See also
     --------
     :py:func:`tmlib.cli.build_cli_method_args`
     '''
-    if method_name not in AVAILABLE_METHODS:
-        raise ValueError('Method "%s" does not exist.' % method_name)
     getattr(cli_instance, method_name)(method_args)
 
 
@@ -387,9 +373,8 @@ class CommandLineInterface(object):
         else:
             job_file = api.build_collect_job_filename()
         batch = api.read_job_file(job_file)
-        print('\nDESCRIPTION\n===========\n\n%s'
-              % json.dumps(
-                    batch, sort_keys=True, indent=4, separators=(',', ': ')))
+        print('\nJOB DESCRIPTION\n===============\n\n%s'
+              % yaml.safe_dump(batch, default_flow_style=False))
 
     def log(self, args):
         '''
