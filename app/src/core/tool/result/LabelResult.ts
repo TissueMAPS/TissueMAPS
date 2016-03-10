@@ -1,20 +1,24 @@
-class LabelResult extends ToolResult {
+class LabelResult extends LayerResult {
 
     id: number;
 
-    handle(viewer) {
-        var layer = new LabelResultLayer(this.name, {
-            size: viewer.viewport.mapSize,
-            visible: true,
-            labelResultId: this.id,
-            t: 0,
-            zlevel: 0
-        });
-        return viewer.viewport.addLayer(layer);
+    constructor(name: string, session: ToolSession,
+                opt: {id: number;}) {
+        this.id = opt.id;
+        super(name, session);
     }
 
-    constructor(name: string, session: ToolSession, opt: {id: number;}) {
-        super(name, session);
-        this.id = opt.id
+    show(viewer: AppInstance) {
+        if (this._layer === undefined) {
+            this._layer = new LabelResultLayer(this.name, {
+                size: viewer.viewport.mapSize,
+                visible: false,
+                labelResultId: this.id,
+                t: 0,
+                zlevel: 0
+            });
+            viewer.viewport.addLayer(this._layer);
+        }
+        super.show(viewer);
     }
 }

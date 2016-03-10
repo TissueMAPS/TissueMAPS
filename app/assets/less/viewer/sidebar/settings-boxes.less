@@ -3,9 +3,46 @@
 @import "../../ui.less";
 
 .inline-layer-control {
-    width: 30px;
     display: inline-block;
     text-align: center;
+    width: 30px;
+    margin-left: -15px;
+    &:first-child {
+        margin-left: 0px;
+    }
+}
+
+
+.inline-color-switcher:extend(.inline-layer-control) {
+
+    vertical-align: middle; // align div in middle of line
+    width: 40px;
+    height: 85%;
+    line-height: 85%; // align RGB in middle of div
+
+    // buttons should lie side by side
+    button {
+        &:focus { outline: 0; }
+        transition: background 500ms ease;
+        border: none;
+        background: @panel-bg-color;
+        font-size: 0.8em;
+        padding: 0px 2px;
+        height: 90%;
+        display: inline-block;
+
+        // Don't change even when selection on list item changes font colors
+        color: @font-color-light;
+    }
+    .r.active {
+        background-color: red;
+    }
+    .g.active {
+        background-color: green;
+    }
+    .b.active {
+        background-color: blue;
+    }
 }
 
 .no-input-style {
@@ -15,7 +52,7 @@
     outline: 0;
 }
 
-.channel-section, .selection-section, .object-section, .result-section {
+.channel-section, .selection-section, .object-section, .saved-result-section {
     .tm-selectable-tab-content {
         white-space: nowrap;
         input[type=text] {
@@ -36,37 +73,6 @@
         height: 100%;
     }
 
-    .inline-color-switcher:extend(.inline-layer-control) {
-
-        width: auto;
-        vertical-align: middle; // align div in middle of line
-        height: 85%;
-        line-height: 85%; // align RGB in middle of div
-
-        // buttons should lie side by side
-        button {
-            &:focus { outline: 0; }
-            transition: background 500ms ease;
-            border: none;
-            background: @panel-bg-color;
-            font-size: 0.8em;
-            padding: 0px 2px;
-            height: 100%;
-            display: inline-block;
-
-            // Don't change even when selection on list item changes font colors
-            color: @font-color-light;
-        }
-        .r.active {
-            background-color: red;
-        }
-        .g.active {
-            background-color: green;
-        }
-        .b.active {
-            background-color: blue;
-        }
-    }
 
     .tm-selectable-tabs {
         li {
@@ -198,5 +204,22 @@
         }
     }
 }
-.object-section { height: @object-section-height; }
-.result-section { height: @result-section-height; }
+
+.object-section {
+    height: @object-section-height;
+}
+
+.saved-results-section {
+    height: @saved-results-section-height;
+}
+
+.current-result-section {
+    height: @current-result-section-height;
+    .tm-selectable-tabs {
+        height: 100%;
+    }
+    .tm-selectable-tab-li {
+        height: @current-result-settings-li-height;
+        line-height: @current-result-settings-li-height;
+    }
+}

@@ -3,7 +3,8 @@ angular.module('tmaps.ui')
     return {
         restrict: 'E',
         scope: {
-            viewport: '='
+            viewport: '=',
+            layers: '='
         },
         bindToController: true,
         controllerAs: 'visualLayerCtrl',

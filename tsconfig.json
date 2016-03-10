@@ -38,11 +38,12 @@
         "app/src/core/experiment/Experiment.ts",
         "app/src/core/experiment/api.ts",
 
-        "app/src/core/layer/ChannelLayer.ts",
         "app/src/core/layer/Layer.ts",
+        "app/src/core/layer/ChannelLayer.ts",
         "app/src/core/layer/VisualLayer.ts",
         "app/src/core/layer/VisualTileLayer.ts",
         "app/src/core/layer/TileLayer.ts",
+        "app/src/core/layer/LayerGroup.ts",
         "app/src/core/layer/typedefs.ts",
 
         "app/src/core/visual/Visual.ts",
@@ -63,6 +64,8 @@
         "app/src/core/tool/ToolSession.ts",
         "app/src/core/tool/ToolCtrl.ts",
         "app/src/core/tool/ToolResult.ts",
+        "app/src/core/tool/result/LayerResult.ts",
+        "app/src/core/tool/result/PlotResult.ts",
         "app/src/core/tool/result/LabelResult.ts",
         "app/src/core/tool/result/LabelResultLayer.ts",
 

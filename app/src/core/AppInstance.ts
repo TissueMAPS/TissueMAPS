@@ -6,9 +6,13 @@ interface SerializedAppInstance extends Serialized<AppInstance> {
 // TODO: Rename to Viewer
 class AppInstance implements Serializable<SerializedAppInstance> {
     id: string;
+
     name: string;
     experiment: Experiment;
     viewport: Viewport;
+    currentResult: ToolResult;
+    savedResults: ToolResult[] = [];
+
     private _element: JQuery = null;
 
     mapObjectSelectionHandler: MapObjectSelectionHandler;
@@ -30,6 +34,11 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             this.mapObjectSelectionHandler.addMapObjectType(name);
             this.mapObjectSelectionHandler.addNewSelection(name);
         });
+    }
+
+    saveCurrentResult() {
+        this.savedResults.push(this.currentResult);
+        this.currentResult = undefined;
     }
 
     private _addChannelLayers() {
@@ -100,13 +109,12 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             var sessionUUID = data.session_uuid;
             var toolId = data.tool_id;
             console.log('ToolService: HANDLE REQUEST.');
-            var result = this._createToolResult(session, data);
+            var result = ToolResult.createToolResult(session, data);
             session.isRunning = false;
-            if (result !== undefined) {
-                var resultPayload = data.payload;
-                session.results.push(resultPayload);
-                result.handle(this);
-            } 
+            session.results.push(data.payload);
+            this.currentResult = result;
+            result.show(this);
+
             console.log('ToolService: DONE.');
             return data.payload;
         },
@@ -119,21 +127,5 @@ class AppInstance implements Serializable<SerializedAppInstance> {
             return err.data;
         });
 
-    }
-
-    private _createToolResult(session: ToolSession, result: ServerToolResponse) {
-        var time = (new Date()).toLocaleTimeString();
-        var resultName = session.tool.name + ' at ' + time;
-        switch (result.result_type) {
-            case 'LabelResult':
-                console.log('Received LabelResult:', result);
-                return new LabelResult(resultName, session, result.payload);
-            case 'SimpleResult':
-                console.log('Received SimpleResult:', result);
-                return undefined;
-            default:
-                console.log('Can\'t handle result:', result);
-                break;
-        }
     }
 }

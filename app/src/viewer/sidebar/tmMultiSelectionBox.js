@@ -118,7 +118,7 @@ angular.module('tmaps.ui')
             '<ul ui-sortable="{axis: \'y\'}"' +
                ' ng-model="selectionBox.items" >' +
                 '<li ng-repeat="item in selectionBox.items | filter:selectionBox.filterProperties"' +
-                     'class="tm-selectable-tab-li" inject tm-rename-item>' +
+                     'class="layer-tab tm-selectable-tab-li" inject tm-rename-item>' +
                 '</li>' +
             '</ul>' +
         '</div>';
@@ -140,13 +140,13 @@ angular.module('tmaps.ui')
 }])
 .directive('tmSelectableTabPopup', function() {
     var template =
-        '<div class="tm-selectable-tab-popup-button show-additional-layer-settings"' +
+        '<div class="layer-tab-popup-button tm-selectable-tab-popup-button show-additional-layer-settings"' +
              ' ng-click="tab.showPopupWindow()"' +
              ' tm-stop-click>' +
 
           '<i class="fa fa-chevron-left"></i>' +
 
-          '<div class="tm-selectable-tab-popup-window additional-layer-settings"' +
+          '<div class="layer-tab-popup tm-selectable-tab-popup-window additional-layer-settings"' +
                ' ng-mouseleave="tab.closePopupWindow()"' +
                ' ng-show="tab.isPopupWindowOpen"' +
                ' tm-attach-to-parent inject>' +
@@ -160,7 +160,7 @@ angular.module('tmaps.ui')
 })
 .directive('tmSelectableTabContent', function() {
     var template =
-        '<div class="tm-selectable-tab-content"' +
+        '<div class="tm-selectable-tab-content layer-tab-content"' +
            ' ng-class="{selected: tab.isSelected}"' +
            ' ng-click="tab.selectTab()"' +
            ' ng-mouseover="tab.mouseover = true"' +

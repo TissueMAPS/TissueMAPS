@@ -20,6 +20,7 @@ interface ViewportElementScope extends ng.IScope {
     appInstance: AppInstance;
 }
 
+
 class Viewport implements Serializable<Viewport> {
 
     map: ol.Map;
