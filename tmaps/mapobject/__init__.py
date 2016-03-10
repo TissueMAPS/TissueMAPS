@@ -1,1 +1,1 @@
-from mapobject import Mapobject, MapobjectOutline
+from mapobject import *
