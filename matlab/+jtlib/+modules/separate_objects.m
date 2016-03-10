@@ -1,7 +1,7 @@
 function output_mask = separate_objects(input_mask, input_image, cutting_passes, min_cut_area, ...
                                         max_solidity, min_formfactor, min_area, max_area, selection_test_mode, ...
                                         filter_size, sliding_window_size, min_angle, max_radius, perimeter_test_mode, ...,
-                                        varargin)
+                                        plot)
     % Jterator module for separating clumped objects, i.e. continuous pixel regions
     % in a binary image that satisfy certain morphological criteria (size and shape).
     % 
@@ -14,9 +14,9 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
     % 
     % Parameters
     % ----------
-    % input_mask: logical array
+    % input_mask: logical
     %   binary image in which clumps should be separated
-    % input_image: integer array
+    % input_image: integer
     %   grayscale image that should be used find optimal cut lines
     % cutting_passes: double
     %   number of cutting rounds that should be applied
@@ -49,13 +49,12 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
     %   whether result of the perimeter analysis should be plotted in order to
     %   empirically determine optimal values for `min_angle` and `max_radius`;
     %   no cutting will be performed
-    % varargin: cell array
-    %   additional arguments provided by Jterator:
-    %   {1}: "data_file", {2}: "figure_file", {3}: "project_dir", {4}: "plot"
+    % plot: bool
+    %   whether a figure should be generated
     % 
     % Returns
     % -------
-    % logical array
+    % logical
     %   output_mask: binary image with clumps in `input_mask` separated
     % 
     % References
@@ -190,7 +189,7 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
         
     end
 
-    if varargin{4}  % plot
+    if plot
 
     %     if perimeter_test_mode
 

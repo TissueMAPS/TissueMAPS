@@ -1,9 +1,9 @@
 import jtlib.features
 
 
-def measure_morphology(label_image, objects_name, plot=False):
+def measure_zernike(label_image, objects_name, plot=False):
     '''
-    Jterator module for measuring morhological features of objects
+    Jterator module for measuring Zernike features of objects
     (connected components) in a labeled image.
     For more details see
     `mahotas docs <http://mahotas.readthedocs.org/en/latest/features.html>`_.
@@ -20,15 +20,15 @@ def measure_morphology(label_image, objects_name, plot=False):
     Returns
     -------
     Dict[str, pandas.DataFrame[float] or str]
-        "measurements": extracted morphology features
+        "measurements": extracted Zernike features
         "figure": html string in case ``kwargs["plot"] == True``
 
     See also
     --------
-    :py:class:`jtlib.features.Morphology`
+    :py:class:`jtlib.features.Zernike`
     '''
-    f = jtlib.features.Morphology(
-                label_image=label_image,
-                objects_name=objects_name
+    f = jtlib.features.Zernike(
+                    label_image=label_image,
+                    objects_name=objects_name
     )
-    return {'objects': f.extract()}
+    return {'measurements': f.extract()}

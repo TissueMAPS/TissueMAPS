@@ -1,0 +1,43 @@
+---
+input:
+
+    - name: label_image
+      mode: pipe
+      kind: scalar
+      value: 
+      help: Labeled image in which objects should be filtered.
+
+    - name: feature
+      mode: constant
+      kind: scalar
+      value: 
+      help: >
+        Name of the region property based on which <i>label_image</i> should be filtered.
+
+    - name: threshold
+      mode: constant
+      kind: scalar
+      value: 
+      help: Threshold level for values of <i>feature</i>.
+
+    - name: remove
+      mode: constant
+      kind: scalar
+      value:
+      options: [above, below]
+      help: Whether values "above" or "below" <i>threshold</i> should be removed.
+
+    - name: relabel
+      mode: constant
+      kind: scalar
+      value:
+      options: [Yes, No]
+      help: Whether objects should be relabeled after filtering.
+
+output:
+
+    - name: filtered_objects
+      mode: pipe
+      kind: image
+      id: filter_objects.filtered_objects
+      help: Filtered label image.

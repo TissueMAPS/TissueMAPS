@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import plotly
 import skimage
@@ -10,9 +11,17 @@ logger = logging.getLogger(__name__)
 #: (on black background).
 OBJECT_COLOR = 'rgb(255, 191, 0)'
 
-#: Height and width of each plot within the figure.
+#: Relative height of each plot within the figure.
 PLOT_HEIGHT = 0.43
+
+#: Relative width of each plot within the figure.
 PLOT_WIDTH = 0.43
+
+#: Absolute height of the figure in pixels.
+FIGURE_HEIGHT = 800
+
+#: Absolute width of the figure in pixels.
+FIGURE_WIDTH = 800
 
 #: Mapping for the position of the colorbar relative to the figure.
 COLORBAR_POSITION_MAPPING = {
@@ -413,7 +422,8 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
 
     Returns
     -------
-    plotly.graph_objs.Figure
+    str
+        figure as html string
 
     Raises
     ------
@@ -500,39 +510,48 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
         else:
             data.append(p)
 
-    return plotly.graph_objs.Figure(data=data, layout=layout)
+    fig = plotly.graph_objs.Figure(data=data, layout=layout)
+    fig['layout']['width'] = FIGURE_WIDTH
+    fig['layout']['height'] = FIGURE_HEIGHT
 
-
-def save_figure(fig, figure_file):
-    '''
-    Write `plotly <https://plot.ly/python/>`_ figure instance to
-    file as HTML string with embedded javascript code.
-
-    Parameters
-    ----------
-    fig: plotly.graph_objs.Figure
-        figure instance
-    figure_file: str
-        name of the figure file
-    '''
-    fig['layout']['width'] = 800
-    fig['layout']['height'] = 800
-    # TODO: We have to include the library in order to be able to embed the
-    # figure using <iframe>. The file would be way more light weight without,
-    # but when we simply include the <div> on the client side, the dimensions
-    # of the figure get completely screwed up. Maybe we can inject the library
-    # code on the client side to reduce the amount of data we have to send.
-    html = plotly.offline.plot(
+    return plotly.offline.plot(
             fig,
             output_type='div',
             include_plotlyjs=True,
             show_link=False,
     )
-    with open(figure_file, 'w') as f:
-        f.write(html)
-    # NOTE: Creation of static images requires "log-in".
-    # img_file = '%s.png' % os.path.splitext(figure_file)[0]
-    # plotly.plotly.image.save_as(fig, img_file)
+
+
+# def save_figure(fig, figure_file):
+#     '''
+#     Write `plotly <https://plot.ly/python/>`_ figure instance to
+#     file as HTML string with embedded javascript code.
+
+#     Parameters
+#     ----------
+#     fig: plotly.graph_objs.Figure
+#         figure instance
+#     figure_file: str
+#         name of the figure file
+#     '''
+#     fig['layout']['width'] = 800
+#     fig['layout']['height'] = 800
+#     # TODO: We have to include the library in order to be able to embed the
+#     # figure using <iframe>. The file would be way more light weight without,
+#     # but when we simply include the <div> on the client side, the dimensions
+#     # of the figure get completely screwed up. Maybe we can inject the library
+#     # code on the client side to reduce the amount of data we have to send.
+#     html = plotly.offline.plot(
+#             fig,
+#             output_type='div',
+#             include_plotlyjs=True,
+#             show_link=False,
+#     )
+#     with open(figure_file, 'w') as f:
+#         f.write(html)
+#     # NOTE: Creation of static images requires "log-in".
+#     # img_file = '%s.png' % os.path.splitext(figure_file)[0]
+#     # plotly.plotly.image.save_as(fig, img_file)
 
 
 def create_colorscale(name, n=256):

@@ -1,6 +1,6 @@
-function output_label_image = identify_secondary_objects_iw(input_label_image, input_image, ...
+function output_label_image = identify_secondary_objects_iw(input_label_image, intensity_image, ...
                                                             correction_factors, min_threshold, ...
-                                                            varargin)
+                                                            plot)
 
     % Jterator module for identifying secondary objects based on an iterative
     % watershed approach using the primary objects in `input_label_image` as
@@ -11,21 +11,20 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
     % 
     % Parameters
     % ----------
-    % input_label_image: integer array
+    % input_label_image: integer
     %   binary image with primary objects that will be used as seeds
-    % input_image: integer array
+    % intensity_image: integer
     %   grayscale image in which objects should be identified
-    % correction_factors: double array
+    % correction_factors: double
     %   values by which calculated threshold levels will be multiplied
     % min_threshold: integer
     %     minimal threshold level
-    % varargin: cell array
-    %   additional arguments provided by Jterator:
-    %   {1}: "data_file", {2}: "figure_file", {3}: "experiment_dir", {4}: "plot", {5} "job_id"
+    % plot: bool
+    %   whether a figure should be generated
     % 
     % Returns
     % -------
-    % integer array
+    % integer
     %   output label image: binary image with identified objects
     % 
     % References
@@ -36,17 +35,17 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
     import jtlib.segmentSecondary;
     import jtlib.plotting.save_plotly_figure;
 
-    if ~isa(input_image, 'integer')
-        error('Argument "input_image" must have type integer.')
+    if ~isa(intensity_image, 'integer')
+        error('Argument "intensity_image" must have type integer.')
     end
-    if isa(input_image, 'uint16')
-        rescaled_input_image = double(input_image) ./ 2^16;
+    if isa(intensity_image, 'uint16')
+        rescaled_input_image = double(intensity_image) ./ 2^16;
         min_threshold = double(min_threshold) / 2^16;
-    elseif isa(input_image, 'uint8')
-        rescaled_input_image = double(input_image) ./ 2^8;
+    elseif isa(intensity_image, 'uint8')
+        rescaled_input_image = double(intensity_image) ./ 2^8;
         min_threshold = double(min_threshold) / 2^8;
     else
-        error('Argument "input_image" must have type uint8 or uint16.')
+        error('Argument "intensity_image" must have type uint8 or uint16.')
     end
 
 
@@ -85,13 +84,13 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
         final_output_label_image(output_label_image == obj) = mapping.obj;
     end
 
-    if varargin{4}
+    if varargin{1}
 
         rf = 1 / 4;
 
-        ds_img = imresize(input_image, rf);
+        ds_img = imresize(intensity_image, rf);
         ds_labled = imresize(int32(output_label_image), rf);
-        [x_dim, y_dim] = size(input_image);
+        [x_dim, y_dim] = size(intensity_image);
         [ds_x_dim, ds_y_dim] = size(ds_img);
 
 

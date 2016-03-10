@@ -2,37 +2,37 @@
 project:
   description: ''
   lib: ''
-images:
-  planes: []
+input:
+  channels: []
 pipeline:
 - active: true
-  handles: handles/smooth_image_dapi.handles.yml
-  module: smooth_image.py
+  handle: handle/smooth_image_dapi.handle.yml
+  source: smooth_image.py
 - active: true
-  handles: handles/threshold_image.handles
-  module: threshold_image.py
+  handle: handle/threshold_image.handle.yml
+  source: threshold_image.py
 - active: true
-  handles: handles/fill_mask.handles
-  module: fill_mask.py
+  handle: handle/fill_mask.handle
+  source: fill_mask.py
 - active: true
-  handles: handles/separate_objects.handles.yml
-  module: separate_objects.m
+  handle: handle/separate_objects.handle.yml
+  source: separate_objects.m
 - active: true
-  handles: handles/filter_objects.handles
-  module: filter_objects.py
+  handle: handle/filter_objects.handle.yml
+  source: filter_objects.py
 - active: true
-  handles: handles/save_nuclei.handles
-  module: save_objects.py
+  handle: handle/save_nuclei.handle
+  source: save_objects.py
 - active: true
-  handles: handles/smooth_image_celltrace.handles.yml
-  module: smooth_image.py
+  handle: handle/smooth_image_celltrace.handle.yml
+  source: smooth_image.py
 - active: true
-  handles: handles/identify_cells.handles.yml
-  module: identify_secondary_objects_iw.m
+  handle: handle/identify_cells.handle.yml
+  source: identify_secondary_objects_iw.m
 - active: true
-  handles: handles/save_cells.handles.yml
-  module: save_objects.py
+  handle: handle/save_cells.handle.yml
+  source: save_objects.py
 - active: true
-  handles: handles/relate_objects.handles.yml
-  module: relate_objects.py
+  handle: handle/relate_objects.handle.yml
+  source: relate_objects.py
 

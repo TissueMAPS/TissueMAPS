@@ -1,0 +1,35 @@
+---
+input:
+
+    - name: label_image
+      mode: pipe
+      kind: image
+      value:
+      help: >
+        Labeled image containing the objects whose segmentation should be saved.
+
+    - name: objects_name
+      mode: constant
+      kind: scalar
+      value:
+      help: Name of the objects in <i>label_image</i>.
+
+output:
+
+    - name: outlines
+      mode: store
+      kind: coordinates
+      ref: objects_name
+      help: Outlines of the objects in <i>label_image</i>.
+
+    - name: centroids
+      mode: store
+      kind: coordinates
+      ref: objects_name
+      help: Centroids of the objects in <i>label_image</i>.
+
+    - name: is_border
+      mode: store
+      kind: attribute
+      ref: objects_name
+      help: Boolean index of objects at the border of the <i>label_image</i>.

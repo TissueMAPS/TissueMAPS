@@ -1,0 +1,26 @@
+---
+input:
+
+    - name: label_image
+      mode: pipe
+      kind: image
+      value: 
+      help: >
+        Labeled image containing the objects
+        for which Zernike features should be extracted.
+
+    - name: objects_name
+      mode: constant
+      kind: scalar
+      value:
+      help: Name of the objects in <i>label_image</i>.
+
+output:
+
+    - name: measurements
+      mode: store
+      kind: feature
+      ref: objects_name
+      help: Extracted Zernike features.
+
+

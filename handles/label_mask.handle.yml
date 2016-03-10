@@ -1,0 +1,20 @@
+---
+input:
+
+    - name: mask
+      mode: pipe
+      kind: image
+      value: 
+      help: Binary image that should be labeled.
+
+output:
+
+    - name: label_image
+      mode: pipe
+      kind: image
+      id: label_mask.label_image
+      help: >
+        Labeled image with pixels of each connected component
+        having a unique non-zero value.
+
+

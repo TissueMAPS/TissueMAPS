@@ -1,0 +1,36 @@
+---
+input:
+
+    - name: parents_image
+      mode: pipe
+      kind: image
+      value: 
+      help: Label image containing parent objects.
+
+    - name: parents_name
+      mode: constant
+      kind: scalar
+      value:
+      help: Name of the objects in <i>parents_image</i>.
+
+    - name: children_image
+      mode: pipe
+      kind: image
+      value: 
+      help: Label image containing children objects.
+
+    - name: children_name
+      mode: constant
+      kind: scalar
+      value: 
+      help: Name of the objects in the <i>children_image</i>.
+
+output:
+
+    - name: parent_ids
+      mode: store
+      kind: attribute
+      ref: children_name
+      help: Parent object ID for each children object. 
+
+

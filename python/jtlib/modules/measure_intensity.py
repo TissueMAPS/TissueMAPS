@@ -1,35 +1,45 @@
 import jtlib.features
 
 
-def measure_intensity(labeled_image, objects_name, intensity_image, layer_name,
-                      **kwargs):
+def measure_intensity(label_image, intensity_image, objects_name, channel_name,
+                      plot=False):
     '''
     Jterator module for measuring intensity features for objects defined by
-    `labeled_image` based on greyscale values in `intensity_image`.
+    `label_image` based on greyscale values in `intensity_image`.
 
     Parameters
     ----------
-    labeled_image: numpy.ndarray[int]
-        labeled image
-    objects_name: str
-        name of the objects in `labeled_image`
-    intensity_image: numpy.ndarray[uint]
+    label_image: numpy.ndarray[int32]
+        labeled image; pixels with the same label encode an object
+    intensity_image: numpy.ndarray[unit8 or uint16]
         grayscale image that should be used to measure intensity
-    layer_name: str
-        name of the `intensity_image`
-    **kwargs: dict
-        additional arguments provided by Jterator:
-        "data_file", "figure_file", "experiment_dir", "plot", "job_id"
+    objects_name: str
+        name of the objects in `label_image`
+    channel_name: str
+        name of the channel corresponding to `intensity_image`
+    plot: bool, optional
+        whether a plot should be generated (default: ``False``)
+
+    Returns
+    -------
+    Dict[str, pandas.DataFrame[float] or str]
+        "measurements": extracted intensity features
+        "figure": html string in case ``kwargs["plot"] == True``
+
+    Returns
+    -------
+    dict
+        outputs as key-value pairs:
+            * "objects" (pandas.DataFrame): name of the measured objects
 
     See also
     --------
     :py:class:`jtlib.features.Intensity`
     '''
     f = jtlib.features.Intensity(
-                object_name=objects_name,
-                label_image=labeled_image,
-                channel_name=layer_name,
-                intensity_image=intensity_image
+                label_image=label_image,
+                intensity_image=intensity_image,
+                objects_name=objects_name,
+                channel_name=channel_name,
     )
-    features = f.extract()
-    f.save(features, kwargs['data_file'])
+    return {'objects': f.extract()}

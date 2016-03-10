@@ -2,30 +2,30 @@
 project:
   description: ''
   lib: ''
-images:
-  planes: []
+input:
+  channels: []
 pipeline:
 - active: true
-  handles: handles/load_nuclei.handles.yml
-  module: load_objects.py
+  handle: handle/load_nuclei.handle.yml
+  source: load_objects.py
 - active: true
-  handles: handles/measure_morphology_nuclei.handles.yml
-  module: measure_morphology.py
+  handle: handle/measure_morphology_nuclei.handle.yml
+  source: measure_morphology.py
 - active: true
-  handles: handles/measure_intensity_nuclei.handles.yml
-  module: measure_intensity.py
+  handle: handle/measure_intensity_nuclei.handle.yml
+  source: measure_intensity.py
 - active: true
-  handles: handles/measure_texture_nuclei.handles.yml
-  module: measure_texture.py
+  handle: handle/measure_texture_nuclei.handle.yml
+  source: measure_texture.py
 - active: true
-  handles: handles/load_cells.handles.yml
-  module: load_objects.py
+  handle: handle/load_cells.handle.yml
+  source: load_objects.py
 - active: true
-  handles: handles/measure_morphology_cells.handles.yml
-  module: measure_morphology.py
+  handle: handle/measure_morphology_cells.handle.yml
+  source: measure_morphology.py
 - active: true
-  handles: handles/measure_intensity_cells.handles.yml
-  module: measure_intensity.py
+  handle: handle/measure_intensity_cells.handle.yml
+  source: measure_intensity.py
 - active: true
-  handles: handles/measure_texture_cells.handles.yml
-  module: measure_texture.py
+  handle: handle/measure_texture_cells.handle.yml
+  source: measure_texture.py

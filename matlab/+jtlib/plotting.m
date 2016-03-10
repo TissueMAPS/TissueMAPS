@@ -25,6 +25,79 @@ classdef plotting
 
     end
 
+
+    methods (Static, Access=private, Hidden)
+
+    function html = plotlyofflineplot(plotlyfig)
+        
+        % grab the bundled dependencies
+        userhome = getuserdir();
+        plotly_config_folder   = fullfile(userhome,'.plotly');
+        plotly_js_folder = fullfile(plotly_config_folder, 'plotlyjs');
+        bundle_name = 'plotly-matlab-offline-bundle.js'; 
+        bundle_file = fullfile(plotly_js_folder, bundle_name);
+        
+        % check that the bundle exists 
+        try
+            bundle = fileread(bundle_file); 
+        catch
+            error(['Error reading: %s.\nPlease download the required ', ... 
+                   'dependencies using: >>getplotlyoffline \n', ...
+                   'or contact support@plot.ly for assistance.'], ...
+                   bundle_file);   
+        end
+        
+        % handle plot div specs
+        id = char(java.util.UUID.randomUUID); 
+        width = [num2str(plotlyfig.layout.width) 'px']; 
+        height = [num2str(plotlyfig.layout.height) 'px']; 
+        
+        if plotlyfig.PlotOptions.ShowLinkText
+            link_text = plotlyfig.PlotOptions.LinkText;   
+        else
+            link_text = ''; 
+        end
+        
+        % format the data and layout
+        jdata = m2json(plotlyfig.data); 
+        jlayout = m2json(plotlyfig.layout);
+        clean_jdata = escapechars(jdata); 
+        clean_jlayout = escapechars(jlayout); 
+       
+        % template dependencies 
+        dep_script = sprintf('<script type="text/javascript">%s</script>', ...
+                             bundle); 
+                         
+        % template environment vars        
+        plotly_domain = plotlyfig.UserData.PlotlyDomain;
+        env_script = sprintf(['\n<script type="text/javascript">', ...
+                              'window.PLOTLYENV=window.PLOTLYENV || {};', ...
+                              'window.PLOTLYENV.BASE_URL="%s";', ...
+                              'Plotly.LINKTEXT="%s";', ...
+                              '</script>'], plotly_domain, link_text); 
+            
+        % template Plotly.plot
+        script = sprintf(['\n Plotly.plot("%s", %s, %s).then(function(){'...
+                          '\n    $(".%s.loading").remove();' ...
+                          '\n    $(".link--embedview").text("%s");'...
+                          '\n    });'], id, clean_jdata, clean_jlayout, ...
+                          id, link_text);
+        
+        plotly_script = sprintf(['\n<div class="%s loading" style=', ...
+                                 'color: rgb(50,50,50);">Drawing...</div>' ... 
+                                 '\n<div id="%s" style="height: %s;',...
+                                 'width: %s;" class="plotly-graph-div">' ...
+                                 '</div> \n<script type="text/javascript">' ...
+                                 '%s \n</script>'], id, id, height, width, ... 
+                                 script);
+        
+        % template entire script
+        html = [dep_script env_script plotly_script];
+
+        end
+
+    end
+
     methods (Static)
 
         function plot = create_histogram_plot(data, position, varargin)
@@ -416,6 +489,8 @@ classdef plotting
             % Returns
             % -------
             % plotlyfig
+            import json.savejson;
+
             plot_pos_index = strcmp(varargin, 'plot_positions');
             if any(plot_pos_index)
                 plot_positions = varargin{plot_pos_index+1};
@@ -499,32 +574,36 @@ classdef plotting
             fig = plotlyfig;
             fig.data = plots;
             fig.layout = layout;
+            fig.layout.width = jtlib.plotting.FIGURE_WIDTH;
+            fig.layout.height = jtlib.plotting.FIGURE_HEIGHT;
+
+            fig = jtlib.plotting.plotlyofflineplot(fig);  % required a hack
 
         end
 
-        function save_figure(fig, figure_file)
-            % Write `plotly <https://plot.ly/python/>`_ figure instance to
-            % file as HTML string with embedded javascript code.
-            % 
-            % Parameters
-            % ----------
-            % fig: plotlyfig
-            %     figure instance
-            % figure_file: char
-            %     name of the figure file
-            fig.layout.width = 800;
-            fig.layout.height = 800;
-            % Unfortunately, one cannot just pass the absolute path to the file
-            % but only the name and file will then automatically be written
-            % into the current working directory. Typical Matlab stupidity!
-            [folder, filename, extension] = fileparts(figure_file);
-            fig.PlotOptions.FileName = filename;
-            current_dir = pwd;
-            cd(folder);
-            html_file = plotlyoffline(fig);
-            cd(current_dir);
+        % function save_figure(fig, figure_file)
+        %     % Write `plotly <https://plot.ly/python/>`_ figure instance to
+        %     % file as HTML string with embedded javascript code.
+        %     % 
+        %     % Parameters
+        %     % ----------
+        %     % fig: plotlyfig
+        %     %     figure instance
+        %     % figure_file: char
+        %     %     name of the figure file
+        %     fig.layout.width = 800;
+        %     fig.layout.height = 800;
+        %     % Unfortunately, one cannot just pass the absolute path to the file
+        %     % but only the name and file will then automatically be written
+        %     % into the current working directory. Typical Matlab stupidity!
+        %     [folder, filename, extension] = fileparts(figure_file);
+        %     fig.PlotOptions.FileName = filename;
+        %     current_dir = pwd;
+        %     cd(folder);
+        %     html_file = plotlyoffline(fig);
+        %     cd(current_dir);
 
-        end
+        % end
 
         function colorscale = create_colorscale(name, n)
             % Create a color palette in the format required by

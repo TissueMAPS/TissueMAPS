@@ -8,13 +8,11 @@ from abc import abstractmethod
 from cached_property import cached_property
 from skimage import measure
 from skimage import filters
-from mahotas.features import surf
 from scipy import ndimage as ndi
-from scipy.spatial import distance
+# from mahotas.features import surf
+# from scipy.spatial import distance
 from centrosome.filter import gabor
-# from skimage.filters import gabor_kernel
 from jtlib import utils
-from tmlib.writers import DatasetWriter
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +25,22 @@ class Features(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, object_name, label_image,
-                 channel_name=None, intensity_image=None):
+    def __init__(self, label_image, intensity_image=None,
+                 objects_name=None, channel_name=None):
         '''
         Initialize an instance of class Features.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zero and
             and object pixels have a unique identifier value
-        channel_name: str, optional
-            name of the channel that corresponds to `intensity_image`
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
+        objects_name: str, optional
+            name of the objects in `label_image`
+        channel_name: str, optional
+            name of the channel corresponding to `intensity_image`
 
         Raises
         ------
@@ -51,9 +49,9 @@ class Features(object):
         ValueError
             when `intensity_image` and `label_image` don't have identical shape
         '''
-        self.object_name = object_name
         self.label_image = label_image
         self.channel_name = channel_name
+        self.objects_name = objects_name
         self.intensity_image = intensity_image
         if self.intensity_image is not None:
             if not str(self.intensity_image.dtype).startswith('uint'):
@@ -70,29 +68,23 @@ class Features(object):
         '''
         Returns
         -------
-        str
+        List[str]
             names of the features
-
-        Note
-        ----
-        Names must adhere to the following naming convention::
-            "{object_name}_{feature_group}_{feature}".format()
         '''
         return [
-            '{object_name}_{feature_group}_{feature}'.format(
-                object_name=self.object_name.capitalize(),
+            '{objects}_{feature_group}_{feature}'.format(
+                objects=self.objects_name,
                 feature_group=self._feature_group,
                 feature=f)
-            for f in self._features
+            for f in self._feature_names
         ]
 
     @abstractproperty
     def _feature_group(self):
-        # examples of feature types are "Intensity", "Morphology", "Texture"
         pass
 
     @abstractproperty
-    def _features(self):
+    def _feature_names(self):
         pass
 
     @abstractmethod
@@ -166,30 +158,6 @@ class Features(object):
                     intensity_image=self.intensity_image)
         return {region.label: region for region in props}
 
-    def save(self, features, filename):
-        '''
-        Write values for each extracted feature to a separate dataset in the
-        HDF5 file.
-
-        Parameters
-        ----------
-        features: pandas.DataFrame
-            table with dimensions *n*x*p*, where *n* is the number of objects
-            and *p* the number of features
-        filename: str
-            absolute path to the HDF5 file
-
-        Note
-        ----
-        Dataset is written using `h5py`.
-        '''
-        logger.debug('save features to HDF5 file')
-        with DatasetWriter(filename) as f:
-            for name, values in features.iteritems():
-                p = 'objects/%s/features/%s' % (self.object_name, name)
-                logger.debug('save feature "%s"', p)
-                f.write(p, values)
-
     def plot(self):
         # TODO
         pass
@@ -197,32 +165,32 @@ class Features(object):
 
 class Intensity(Features):
 
-    def __init__(self, object_name, label_image,
-                 channel_name, intensity_image):
+    def __init__(self, label_image, intensity_image,
+                 objects_name, channel_name):
         '''
         Initialize an instance of class Features.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zero and
             and object pixels have a unique identifier value
-        channel_name: str, optional
-            name of the channel that corresponds to `intensity_image`
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
+        objects_name: str, optional
+            name of the objects in `label_image`
+        channel_name: str, optional
+            name of the channel corresponding to `intensity_image`
         '''
         super(Intensity, self).__init__(
-                object_name, label_image, channel_name, intensity_image)
+                label_image, intensity_image, objects_name, channel_name)
 
     @property
     def _feature_group(self):
         return self.__class__.__name__
 
     @property
-    def _features(self):
+    def _feature_names(self):
         feats = ['max', 'mean', 'min', 'sum', 'std']
         return ['%s_%s' % (f, self.channel_name) for f in feats]
 
@@ -238,8 +206,7 @@ class Intensity(Features):
             extracted feature values for each object in `label_image`
         '''
         # Create an empty dataset in case no objects were detected
-        logger.info('extract intensity features for objects "%s" and channel "%s"',
-                    self.object_name, self.channel_name)
+        logger.info('extract intensity features ')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
@@ -267,26 +234,26 @@ class Intensity(Features):
 
 class Morphology(Features):
 
-    def __init__(self, object_name, label_image):
+    def __init__(self, label_image, objects_name):
         '''
         Initialize an instance of class Morphology.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
+        objects_name: str, optional
+            name of the objects in `label_image`
         '''
-        super(Morphology, self).__init__(object_name, label_image)
+        super(Morphology, self).__init__(label_image, objects_name)
 
     @property
     def _feature_group(self):
         return self.__class__.__name__
 
     @property
-    def _features(self):
+    def _feature_names(self):
         return [
             'area',
             'eccentricity',
@@ -334,22 +301,22 @@ class Haralick(Features):
     ..[1] Haralick R.M. (1979): "Statistical and structural approaches to texture". Proceedings of the IEEE
     '''
 
-    def __init__(self, object_name, label_image,
-                 channel_name, intensity_image):
+    def __init__(self, label_image, intensity_image,
+                 objects_name, channel_name):
         '''
         Initialize an instance of class Haralick.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
-        channel_name: str, optional
-            name of the channel that corresponds to `intensity_image`
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
+        objects_name: str, optional
+            name of the objects in `label_image`
+        channel_name: str, optional
+            name of the channel corresponding to `intensity_image`
 
         Note
         ----
@@ -361,14 +328,14 @@ class Haralick(Features):
         '''
         intensity_image = mh.stretch(intensity_image)
         super(Haralick, self).__init__(
-                object_name, label_image, channel_name, intensity_image)
+                label_image, intensity_image, objects_name, channel_name)
 
     @property
     def _feature_group(self):
         return self.__class__.__name__
 
     @property
-    def _features(self):
+    def _feature_names(self):
         feats = [
             'angular-second-moment',
             'contrast',
@@ -435,25 +402,25 @@ class TAS(Features):
     .. [1] Hamilton N.A. et al. (2007): "Fast automated cell phenotype image classification". BMC Bioinformatics
     '''
 
-    def __init__(self, object_name, label_image,
-                 channel_name, intensity_image):
+    def __init__(self, label_image, intensity_image,
+                 objects_name, channel_name):
         '''
         Initialize an instance of class TAS.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
-        channel_name: str, optional
-            name of the channel that corresponds to `intensity_image`
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
+        objects_name: str, optional
+            name of the objects in `label_image`
+        channel_name: str, optional
+            name of the channel corresponding to `intensity_image`
         '''
         super(TAS, self).__init__(
-                object_name, label_image, channel_name, intensity_image)
+                label_image, intensity_image, objects_name, channel_name)
         self.threshold = filters.threshold_otsu(intensity_image)
 
     @property
@@ -461,7 +428,7 @@ class TAS(Features):
         return self.__class__.__name__
 
     @property
-    def _features(self):
+    def _feature_names(self):
         feats = ['center-%s' % i for i in xrange(9)] + \
                 ['n-center-%s' % i for i in xrange(9)] + \
                 ['mu-margin-%s' % i for i in xrange(9)] + \
@@ -507,23 +474,23 @@ class Gabor(Features):
     Class for calculating Gabor texture features.
     '''
 
-    def __init__(self, object_name, label_image,
-                 channel_name, intensity_image,
+    def __init__(self, label_image, intensity_image,
+                 objects_name, channel_name,
                  theta_range=4, frequencies={1, 5, 10}):
         '''
         Initialize an instance of class Gabor.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
-        channel_name: str, optional
-            name of the channel that corresponds to `intensity_image`
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
+        objects_name: str, optional
+            name of the objects in `label_image`
+        channel_name: str, optional
+            name of the channel corresponding to `intensity_image`
         theta_range: int, optional
             number of angles to define the orientations of the Gabor
             filters (default: 4)
@@ -531,7 +498,7 @@ class Gabor(Features):
             frequencies of the Gabor filters
         '''
         super(Gabor, self).__init__(
-                object_name, label_image, channel_name, intensity_image)
+                label_image, intensity_image, objects_name, channel_name)
         self.theta_range = theta_range
         self.frequencies = frequencies
 
@@ -540,7 +507,7 @@ class Gabor(Features):
         return self.__class__.__name__
 
     @property
-    def _features(self):
+    def _feature_names(self):
         feats = ['frequency-%.2f' % f for f in self.frequencies]
         return ['%s_%s' % (f, self.channel_name) for f in feats]
 
@@ -601,32 +568,32 @@ class Hu(Features):
     ..[1] M. K. Hu (1962): "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
     '''
 
-    def __init__(self, object_name, label_image,
-                 channel_name, intensity_image):
+    def __init__(self, label_image, intensity_image,
+                 objects_name, channel_name):
         '''
         Initialize an instance of class Hu.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
-        channel_name: str, optional
-            name of the channel that corresponds to `intensity_image`
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
+        objects_name: str, optional
+            name of the objects in `label_image`
+        channel_name: str, optional
+            name of the channel corresponding to `intensity_image`
         '''
         super(Hu, self).__init__(
-                object_name, label_image, channel_name, intensity_image)
+                label_image, intensity_image, objects_name, channel_name)
 
     @property
     def _feature_group(self):
         return self.__class__.__name__
 
     @property
-    def _features(self):
+    def _feature_names(self):
         feats = map(str, range(7))
         return ['%s_%s' % (f, self.channel_name) for f in feats]
 
@@ -660,22 +627,23 @@ class Zernike(Features):
     Class for calculating Zernike moments.
     '''
 
-    def __init__(self, object_name, label_image, radius=100):
+    def __init__(self, label_image, objects_name, radius=100):
         '''
         Initialize an instance of class Zernike.
 
         Parameters
         ----------
-        object_name: str
-            name of the objects in `label_image`
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels have zero values and
+            labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
+        objects_name: str, optional
+            name of the objects in `label_image`
         radius: int, optional
-            radius for rescaling of images (default: ``100``) to achieve
-            scale invariance
+            radius for rescaling of images to achieve scale invariance
+            (default: ``100``)
         '''
-        super(Zernike, self).__init__(object_name, label_image)
+        super(Zernike, self).__init__(label_image, objects_name)
+        self.radius = radius
         self.degree = 12
 
     @property
@@ -683,7 +651,7 @@ class Zernike(Features):
         return self.__class__.__name__
 
     @property
-    def _features(self):
+    def _feature_names(self):
         feats = list()
         for n in xrange(self.degree+1):
             for l in xrange(n+1):
@@ -691,8 +659,7 @@ class Zernike(Features):
                     feats.append('%s-%s' % (n, l))
         return feats
 
-    @property
-    def values(self):
+    def extract(self):
         '''
         Extract Zernike moments.
 
@@ -718,66 +685,66 @@ class Zernike(Features):
         return pd.DataFrame(features)
 
 
-def measure_surf(im, mask):
-    '''
-    Calculate statisics based on the Speeded-Up Robust Features (SURF).
+# def measure_surf(im, mask):
+#     '''
+#     Calculate statisics based on the Speeded-Up Robust Features (SURF).
 
-    Parameters
-    ----------
-    im: numpy.ndarray[int]
-        intensity image
-    mask: numpy.ndarray[bool]
-        mask image containing one object (i.e. one connected pixel component);
-        must have the same size as `im`
+#     Parameters
+#     ----------
+#     im: numpy.ndarray[int]
+#         intensity image
+#     mask: numpy.ndarray[bool]
+#         mask image containing one object (i.e. one connected pixel component);
+#         must have the same size as `im`
 
-    Returns
-    -------
-    dict
-        features
+#     Returns
+#     -------
+#     dict
+#         features
 
-    Raises
-    ------
-    ValueError
-        when `im` and `mask` don't have the same size
-    TypeError
-        when elements of `mask` don't have type bool
+#     Raises
+#     ------
+#     ValueError
+#         when `im` and `mask` don't have the same size
+#     TypeError
+#         when elements of `mask` don't have type bool
 
-    See also
-    --------
-    :py:func:`mahotas.features.surf`
-    '''
-    if not im.shape == mask.shape:
-        raise ValueError('Images must have the same size.')
-    if not mask.dtype == 'bool':
-        raise TypeError('Mask image must have type bool.')
+#     See also
+#     --------
+#     :py:func:`mahotas.features.surf`
+#     '''
+#     if not im.shape == mask.shape:
+#         raise ValueError('Images must have the same size.')
+#     if not mask.dtype == 'bool':
+#         raise TypeError('Mask image must have type bool.')
 
-    points = surf.surf(im, descriptor_only=True)
+#     points = surf.surf(im, descriptor_only=True)
 
-    features = dict()
-    if len(points) == 0:
-        features['SURF_n-points'] = 0
-        features['SURF_mean-inter-point-distance'] = np.nan
-        features['SURF_var-inter-point-distance'] = np.nan
-        features['SURF_mean-point-scale'] = np.nan
-        features['SURF_var-point-scale'] = np.nan
-        features['SURF_mean-descriptor-value'] = np.nan
-        features['SURF_var-descriptor-value'] = np.nan
-    else:
-        # Number of detected interest points
-        features['SURF_n-points'] = len(points)
-        # Mean distance between interest points normalized for object size
-        # (size of the image, which represents the bounding box of the object)
-        y = points[:, 0]
-        x = points[:, 1]
-        coordinates = np.array((y, x)).T
-        dist = distance.cdist(coordinates, coordinates)
-        features['SURF_mean-inter-point-distance'] = np.mean(dist) / im.size
-        features['SURF_var-inter-point-distance'] = np.var(dist) / im.size
-        # Mean scale of interest points
-        scale = points[:, 2]
-        features['SURF_mean-point-scale'] = np.mean(scale)
-        features['SURF_var-point-scale'] = np.var(scale)
-        descriptors = points[:, 6:]
-        features['SURF_mean-descriptor-value'] = np.mean(descriptors)
-        features['SURF_var-descriptor-value'] = np.var(descriptors)
-    return features
+#     features = dict()
+#     if len(points) == 0:
+#         features['SURF_n-points'] = 0
+#         features['SURF_mean-inter-point-distance'] = np.nan
+#         features['SURF_var-inter-point-distance'] = np.nan
+#         features['SURF_mean-point-scale'] = np.nan
+#         features['SURF_var-point-scale'] = np.nan
+#         features['SURF_mean-descriptor-value'] = np.nan
+#         features['SURF_var-descriptor-value'] = np.nan
+#     else:
+#         # Number of detected interest points
+#         features['SURF_n-points'] = len(points)
+#         # Mean distance between interest points normalized for object size
+#         # (size of the image, which represents the bounding box of the object)
+#         y = points[:, 0]
+#         x = points[:, 1]
+#         coordinates = np.array((y, x)).T
+#         dist = distance.cdist(coordinates, coordinates)
+#         features['SURF_mean-inter-point-distance'] = np.mean(dist) / im.size
+#         features['SURF_var-inter-point-distance'] = np.var(dist) / im.size
+#         # Mean scale of interest points
+#         scale = points[:, 2]
+#         features['SURF_mean-point-scale'] = np.mean(scale)
+#         features['SURF_var-point-scale'] = np.var(scale)
+#         descriptors = points[:, 6:]
+#         features['SURF_mean-descriptor-value'] = np.mean(descriptors)
+#         features['SURF_var-descriptor-value'] = np.var(descriptors)
+#     return features

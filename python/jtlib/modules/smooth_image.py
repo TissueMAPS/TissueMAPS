@@ -2,12 +2,11 @@ import cv2
 import skimage.morphology
 import skimage.filters.rank
 import skimage.measure
-import collections
 import numpy as np
 
 
 def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
-                 sigma_space=0, **kwargs):
+                 sigma_space=0, plot=False):
     '''
     Jterator module for smoothing an image.
 
@@ -37,20 +36,20 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
         Gaussian component (filter_name sigma) applied in the spacial domain
         (coordinate space) - only relevant for "bilateral" filter_name
         (default: ``0``)
-    **kwargs: dict
-        additional arguments provided by Jterator:
-        "data_file", "figure_file", "experiment_dir", "plot", "job_id"
+    plot: bool, optional
+        whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    collections.collections.namedtuple[numpy.ndarray]
-        smoothed image: "smoothed_image"
+    Dict[str, numpy.ndarray[numpy.int32]]
+        "smoothed_image": smoothed intensity image
+        "figure": html string in case ``kwargs["plot"] == True``
 
     Raises
     ------
     ValueError
-        when `filter_name` is not in
-        {"avarage", "gaussian", "median", "bilateral"}
+        when `filter_name` is not
+        ``"avarage"``, ``"gaussian"``, ``"median"``, or ``"bilateral"``
     TypeError
         when `image` does not have unsigned integer type
     '''
@@ -81,7 +80,8 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
         raise ValueError('Unknown filter_name. Implemented filters are:\n'
                          '"average", "gaussian", "median", and "bilateral"')
 
-    if kwargs['plot']:
+    output = {'smoothed_image': smoothed_image.astype(input_dtype)}
+    if plot:
         from .. import plotting
 
         clip_value = np.percentile(image, 99.99)
@@ -92,12 +92,11 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
                         smoothed_image, 'ur', clip_value=clip_value),
         ]
 
-        fig = plotting.create_figure(
-                    data,
-                    title='''smoothed image with %s filter of size %s
-                    ''' % (filter_name, filter_size)
+        output['figure'] = plotting.create_figure(
+                                data,
+                                title='''
+                                    smoothed image with %s filter of size %s
+                                ''' % (filter_name, filter_size)
         )
-        plotting.save_figure(fig, kwargs['figure_file'])
 
-    Output = collections.namedtuple('Output', 'smoothed_image')
-    return Output(smoothed_image.astype(input_dtype))
+    return output

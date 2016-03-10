@@ -1,9 +1,8 @@
 import numpy as np
-from tmlib.writers import DatasetWriter
 
 
 def relate_objects(parents_image, parents_name,
-                   children_image, children_name, **kwargs):
+                   children_image, children_name, plot=False):
     '''
     Jterator module for relating objects.
 
@@ -22,9 +21,8 @@ def relate_objects(parents_image, parents_name,
         label image containing the children objects
     children_name: str
         name of the children objects
-    **kwargs: dict
-        additional arguments provided by Jterator:
-        "data_file", "figure_file", "experiment_dir", "plot", "job_id"
+    plot: bool, optional
+        whether a plot should be generated (default: ``False``)
     '''
     children_ids = np.unique(children_image[children_image != 0])
 
@@ -33,12 +31,5 @@ def relate_objects(parents_image, parents_name,
         p = np.unique(parents_image[children_image == i])[0]
         parent_ids.append(p)
 
-    if len(children_ids) > 0:
+    return {'parent_ids': parent_ids, 'figure': ''}
 
-        group_name = '/objects/%s/segmentation' % children_name
-
-        with DatasetWriter(kwargs['data_file']) as f:
-            f.write('%s/parent_name' % group_name,
-                    data=parents_name)
-            f.write('%s/parent_objects_ids' % group_name,
-                    data=parent_ids)

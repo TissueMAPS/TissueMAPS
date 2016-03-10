@@ -2,7 +2,8 @@
 input:
 
     - name: mask
-      class: pipeline
+      mode: pipe
+      kind: image
       value: 
       help: >
         Binary image in which holes of connected components should be filled.
@@ -10,8 +11,9 @@ input:
 output:
 
     - name: filled_mask
-      class: pipeline
-      value: 
+      mode: pipe
+      kind: image
+      id: fill_mask.filled_mask
       help: Filled binary image.
 
 

@@ -1,28 +1,28 @@
 from scipy import ndimage as ndi
-import collections
 
 
-def fill_mask(mask, **kwargs):
+def fill_mask(mask, plot=False):
     '''
     Jterator module to fill holes (enclosed pixel regions of connected components)
     in a binary image.
 
     Parameters
     ----------
-    mask: numpy.ndarray
+    mask: numpy.ndarray[numpy.bool]
         binary image that should be filled
-    **kwargs: dict
-        additional arguments provided by Jterator:
-        "data_file", "figure_file", "experiment_dir", "plot", "job_id"
+    plot: bool, optional
+        whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    collections.namedtuple[numpy.ndarray[bool]]
-        filled binary image: "filled_mask"
+    Dict[str, numpy.ndarray[numpy.int32] or str]
+        "filled_mask": filled binary image
+        "figure": html string in case ``kwargs["plot"] == True``
     '''
     filled_mask = ndi.binary_fill_holes(mask)
 
-    if kwargs['plot']:
+    output = {'filled_mask': filled_mask}
+    if plot:
         import plotly
         from .. import plotting
 
@@ -31,8 +31,7 @@ def fill_mask(mask, **kwargs):
             plotting.create_mask_image_plot(filled_mask, 'ur'),
         ]
 
-        fig = plotting.create_figure(plots, title='Holes in mask filled.')
-        plotting.save_figure(fig, kwargs['figure_file'])
+        output['figure'] = plotting.create_figure(
+                                plots, title='Holes in mask filled.')
 
-    Output = collections.namedtuple('Output', 'filled_mask')
-    return Output(filled_mask)
+    return output
