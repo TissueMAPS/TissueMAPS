@@ -1,4 +1,4 @@
-function output_label_image = identify_secondary_objects_iw(input_label_image, intensity_image, ...
+function [output_label_image, figure] = identify_secondary_objects_iw(input_label_image, intensity_image, ...
                                                             correction_factors, min_threshold, ...
                                                             plot)
 
@@ -19,8 +19,8 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
     %   values by which calculated threshold levels will be multiplied
     % min_threshold: integer
     %     minimal threshold level
-    % plot: bool
-    %   whether a figure should be generated
+    % plot: bool, optional
+    %   whether a figure should be generated (default: ``false``)
     % 
     % Returns
     % -------
@@ -34,6 +34,11 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
 
     import jtlib.segmentSecondary;
     import jtlib.plotting.save_plotly_figure;
+
+    if nargin < 5
+        plot = false;
+    end
+    figure = '';
 
     if ~isa(intensity_image, 'integer')
         error('Argument "intensity_image" must have type integer.')
@@ -69,10 +74,11 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
     % secondary objects and create a mapping from new to original labels.
     relabeled_image = bwlabel(input_label_image > 0);
     obj_ids = unique(input_label_image(input_label_image > 0));
-    mapping = struct();
-    for obj in obj_ids
+    mapping = zeros(length(obj_ids));
+    for i = 1:length(obj_ids)
+        obj = obj_ids(i);
         new_label = relabeled_image(input_label_image == obj);
-        mapping.(new_label) = obj;
+        mapping(new_label) = obj;
     end
 
     output_label_image = segmentSecondary(rescaled_input_image, relabeled_image, relabeled_image, ...
@@ -80,11 +86,12 @@ function output_label_image = identify_secondary_objects_iw(input_label_image, i
 
     % Map object labels back.
     final_output_label_image = zeros(size(output_label_image));
-    for obj in fieldnames(mapping)
-        final_output_label_image(output_label_image == obj) = mapping.obj;
+    for i = 1:length(mapping)
+        obj = mapping(i);
+        final_output_label_image(output_label_image == obj) = mapping(obj);
     end
 
-    if varargin{1}
+    if plot
 
         rf = 1 / 4;
 

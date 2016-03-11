@@ -1,7 +1,8 @@
 import jtlib.features
 
 
-def measure_gabor(label_image, intensity_image, channel_name, plot=False):
+def measure_gabor(label_image, objects_name, intensity_image, channel_name,
+                  plot=False):
     '''
     Jterator module for measuring Gabor texture features for objects
     in a labeled image.
@@ -10,6 +11,8 @@ def measure_gabor(label_image, intensity_image, channel_name, plot=False):
     ----------
     label_image: numpy.ndarray[int32]
         labeled image; pixels with the same label encode an object
+    objects_name: str
+        name of the objects in `label_image`
     intensity_image: numpy.ndarray[unit8 or uint16]
         grayscale input image
     channel_name: str
@@ -29,7 +32,8 @@ def measure_gabor(label_image, intensity_image, channel_name, plot=False):
     '''
     f = jtlib.features.Gabor(
             label_image=label_image,
+            objects_name=objects_name,
             channel_name=channel_name,
             intensity_image=intensity_image
     )
-    return {'features': f.extract()}
+    return {'measurements': f.extract()}

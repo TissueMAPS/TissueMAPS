@@ -19,7 +19,7 @@ output:
 
     - name: measurements
       mode: store
-      kind: feature
+      kind: features
       ref: objects_name
       help: Extracted morphology features.
 

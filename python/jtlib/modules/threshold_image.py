@@ -59,7 +59,7 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
     logger.info('threshold correction factor: %.2f', correction_factor)
     corr_thresh = thresh * correction_factor
-    logger.info('final threshold level: %d', thresh)
+    logger.info('final threshold level: %d', corr_thresh)
 
     if corr_thresh > max_threshold:
         corr_thresh = max_threshold

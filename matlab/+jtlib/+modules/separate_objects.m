@@ -1,4 +1,4 @@
-function output_mask = separate_objects(input_mask, input_image, cutting_passes, min_cut_area, ...
+function [output_mask, figure] = separate_objects(input_mask, input_image, cutting_passes, min_cut_area, ...
                                         max_solidity, min_formfactor, min_area, max_area, selection_test_mode, ...
                                         filter_size, sliding_window_size, min_angle, max_radius, perimeter_test_mode, ...,
                                         plot)
@@ -49,8 +49,8 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
     %   whether result of the perimeter analysis should be plotted in order to
     %   empirically determine optimal values for `min_angle` and `max_radius`;
     %   no cutting will be performed
-    % plot: bool
-    %   whether a figure should be generated
+    % plot: bool, optional
+    %   whether a figure should be generated (default: ``false``)
     % 
     % Returns
     % -------
@@ -61,6 +61,11 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
     % ----------
     % _[1] Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L.
     %      Computer vision for image-based transcriptomics. Methods. 2015
+
+    if nargin < 15
+        plot = false;
+    end
+    figure = '';
 
     % those functions could become privat
     import jtlib.analysePerimeter;
@@ -362,8 +367,8 @@ function output_mask = separate_objects(input_mask, input_image, cutting_passes,
 
     };
 
-    fig = jtlib.plotting.create_figure(plots);
-    jtlib.plotting.save_figure(fig, varargin{2});
+    figure = jtlib.plotting.create_figure(plots);
+    % jtlib.plotting.save_figure(fig, varargin{2});
 
     if test_mode
         if selection_test_mode

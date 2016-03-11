@@ -246,7 +246,7 @@ class Morphology(Features):
         objects_name: str, optional
             name of the objects in `label_image`
         '''
-        super(Morphology, self).__init__(label_image, objects_name)
+        super(Morphology, self).__init__(label_image, objects_name=objects_name)
 
     @property
     def _feature_group(self):
@@ -642,7 +642,7 @@ class Zernike(Features):
             radius for rescaling of images to achieve scale invariance
             (default: ``100``)
         '''
-        super(Zernike, self).__init__(label_image, objects_name)
+        super(Zernike, self).__init__(label_image, objects_name=objects_name)
         self.radius = radius
         self.degree = 12
 

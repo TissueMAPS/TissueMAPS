@@ -7,7 +7,7 @@ from .. import utils
 logger = logging.getLogger(__name__)
 
 
-def save_segmentation(label_image, plot=False):
+def save_segmentation(label_image, objects_name, plot=False):
     '''
     Jterator module for saving segmented objects
     that were detected in an image,
@@ -16,11 +16,19 @@ def save_segmentation(label_image, plot=False):
     ----------
     label_image: numpy.ndarray[int32]
         labeled image where pixel value encodes objects id
+    objects_name: str
+        name of objects in `label_image`
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
+
+    Returns
+    -------
+    Dict[str, pandas.DataFrame or str]
+        * "outlines"
+        * "centroids"
     '''
     objects_ids = np.unique(label_image[label_image > 0])
-    border_indices = utils.find_border_objects(label_image)
+    border_indices = pd.Series(utils.find_border_objects(label_image))
 
     y_coordinates = list()
     x_coordinates = list()

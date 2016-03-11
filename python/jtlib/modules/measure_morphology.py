@@ -31,4 +31,4 @@ def measure_morphology(label_image, objects_name, plot=False):
                 label_image=label_image,
                 objects_name=objects_name
     )
-    return {'objects': f.extract()}
+    return {'measurements': f.extract()}
