@@ -8,6 +8,7 @@ from . import utils
 from .metadata import ImageFileMapping
 from .formats import Formats
 from .readers import JsonReader
+from .readers import TablesReader
 from .errors import RegexError
 
 logger = logging.getLogger(__name__)
@@ -352,14 +353,14 @@ class PlateAcquisition(object):
         return files
 
     @property
-    def image_metadata_file(self):
+    def metadata_file(self):
         '''
         Returns
         -------
         str
             name of the HDF5 file contains acquisition-specific image metadata
         '''
-        return 'image_metadata.h5'
+        return 'metadata.h5'
 
     @property
     def image_metadata(self):
@@ -367,13 +368,11 @@ class PlateAcquisition(object):
         Returns
         -------
         pandas.DataFrame
-            image metadata
+            image metadata table
         '''
-        filename = os.path.join(self.dir, self.image_metadata_file)
-        store = pd.HDFStore(filename)
-        metadata = store.select('metadata')
-        store.close()
-        return metadata
+        filename = os.path.join(self.dir, self.metadata_file)
+        with TablesReader(filename) as reader:
+            return reader.read('image_metadata')
 
     @property
     def image_mapping_file(self):

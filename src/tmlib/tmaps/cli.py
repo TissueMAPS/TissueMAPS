@@ -87,6 +87,8 @@ class Tmaps(object):
                 engine.progress()
                 if jobs.is_terminated:
                     break
+        except Exception:
+            raise
 
     def resume(self, args):
         '''
@@ -119,6 +121,8 @@ class Tmaps(object):
                 engine.progress()
                 if jobs.is_terminated:
                     break
+        except Exception:
+            raise
 
     def _call(self, args):
         method_args = cli.create_cli_method_args(

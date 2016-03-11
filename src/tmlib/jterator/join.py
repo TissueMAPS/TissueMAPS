@@ -1,6 +1,6 @@
 import logging
-from ..readers import DatasetReader
-from ..writers import DatasetWriter
+from ..readers import Hdf5Reader
+from ..writers import Hdf5Writer
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +17,12 @@ def merge_datasets(input_files, output_file):
     output_file: str
         path to the final data file that should contain the entire datasets
     '''
-    with DatasetWriter(output_file) as store:
+    with Hdf5Writer(output_file) as store:
 
         for i, filename in enumerate(input_files):
             logger.debug('process datasets of file %s')
 
-            with DatasetReader(filename) as data:
+            with Hdf5Reader(filename) as data:
 
                 object_names = data.list_groups('/objects')
                 if len(object_names) == 0:

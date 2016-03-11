@@ -3,11 +3,9 @@ import re
 import logging
 import shutil
 import numpy as np
+import pandas as pd
 from . import registration as reg
-from .description import AlignmentDescription
-from .description import OverhangDescription
-from .description import ShiftDescription
-from ..writers import JsonWriter
+from ..writers import TablesWriter
 from ..api import ClusterRoutines
 from ..errors import NotSupportedError
 
@@ -109,7 +107,7 @@ class ImageRegistration(ClusterRoutines):
                 'registration_files': list()
             },
             'outputs': {
-                'align_descriptor_files': list()
+                'metadata_files': list()
             },
             'removals': ['registration_files']
         }
@@ -187,8 +185,8 @@ class ImageRegistration(ClusterRoutines):
             jdc = job_descriptions['collect']
             jdc['plates'].append(plate.index)
             jdc['inputs']['registration_files'].append(registration_files)
-            jdc['outputs']['align_descriptor_files'].append([
-                os.path.join(c.dir, c.align_descriptor_file)
+            jdc['outputs']['metadata_files'].append([
+                os.path.join(c.dir, c.metadata_file)
                 for c in plate.cycles
             ])
 
@@ -239,43 +237,44 @@ class ImageRegistration(ClusterRoutines):
             reg_files = batch['inputs']['registration_files'][i]
             cycle_folders = [os.path.basename(c.dir) for c in plate.cycles]
 
-            descriptions = reg.fuse_registration(reg_files, cycle_folders)
+            shift_description = reg.fuse_registration(reg_files, cycle_folders)
 
             # Calculate overhang between cycles
             upper_oh, lower_oh, right_oh, left_oh, dont_shift = \
-                reg.calculate_overhang(descriptions, batch['limit'])
+                reg.calculate_overhang(shift_description, batch['limit'])
 
-            with JsonWriter() as writer:
-                for j, cycle in enumerate(plate.cycles):
-                    logger.info(
-                            'collect registration statistics for cycle %s'
-                            % cycle.index)
+            for j, cycle in enumerate(plate.cycles):
+                logger.info(
+                        'collect registration statistics for cycle %s'
+                        % cycle.index)
 
-                    a = AlignmentDescription()
-                    a.cycle = cycle.index
-                    a.ref_cycle = batch['ref_cycle']
+                overhangs = pd.DataFrame()
+                overhangs['upper'] = pd.Series(upper_oh)
+                overhangs['lower'] = pd.Series(lower_oh)
+                overhangs['right'] = pd.Series(right_oh)
+                overhangs['left'] = pd.Series(left_oh)
 
-                    a.overhang = OverhangDescription()
-                    a.overhang.lower = lower_oh
-                    a.overhang.upper = upper_oh
-                    a.overhang.right = right_oh
-                    a.overhang.left = left_oh
+                x_shifts = list()
+                y_shifts = list()
+                sites = list()
+                is_above_limit = list()
+                for k in xrange(len(dont_shift)):
+                    x_shifts.append(shift_description[j][k]['x_shift'])
+                    y_shifts.append(shift_description[j][k]['y_shift'])
+                    sites.append(shift_description[j][k]['site'])
+                    is_above_limit.append(bool(dont_shift[k]))
 
-                    a.shifts = list()
-                    for k in xrange(len(dont_shift)):
+                shifts = pd.DataFrame()
+                shifts['x'] = pd.Series(x_shifts)
+                shifts['y'] = pd.Series(y_shifts)
+                shifts['site'] = pd.Series(sites)
+                shifts['is_above_limit'] = pd.Series(is_above_limit)
 
-                        sh = ShiftDescription()
-                        sh.x = descriptions[j][k]['x_shift']
-                        sh.y = descriptions[j][k]['y_shift']
-                        sh.site = descriptions[j][k]['site']
-                        sh.is_above_limit = bool(dont_shift[k])
-
-                        a.shifts.append(sh)
-
-                    logger.info('write alignment descriptor file')
-                    writer.write(
-                        batch['outputs']['align_descriptor_files'][i][j],
-                        dict(a))
+                logger.info('write alignment description to file')
+                filename = batch['outputs']['metadata_files'][0][j]
+                with TablesWriter(filename) as writer:
+                    writer.write('overhangs', overhangs)
+                    writer.write('shifts', shifts)
 
             logger.info('remove intermediate registration files')
             reg_dir = os.path.dirname(reg_files[0])

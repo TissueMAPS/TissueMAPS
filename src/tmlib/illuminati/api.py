@@ -6,7 +6,7 @@ from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 from .. import utils
 from ..layer import ChannelLayer
-from ..readers import DatasetReader
+from ..readers import Hdf5Reader
 from ..api import ClusterRoutines
 from ..jobs import RunJob
 from ..jobs import RunJobCollection
@@ -58,7 +58,7 @@ class PyramidBuilder(ClusterRoutines):
         for indices in self.experiment.layer_names.keys():
             layer = ChannelLayer(
                             self.experiment,
-                            tpoint=indices.time,
+                            tpoint=indices.tpoint,
                             channel=indices.channel,
                             zplane=indices.zplane
             )
@@ -280,7 +280,7 @@ class PyramidBuilder(ClusterRoutines):
                 cycle = self.experiment.plates[0].cycles[batch['cycle']]
                 filename = cycle.illumstats_files[batch['channel']]
                 f = os.path.join(cycle.stats_dir, filename)
-                with DatasetReader(f) as data:
+                with Hdf5Reader(f) as data:
                     clip_value = data.read('/stats/percentile')
             else:
                 clip_value = batch['clip_value']

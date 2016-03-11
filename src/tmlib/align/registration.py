@@ -2,38 +2,29 @@ import os
 import numpy as np
 import logging
 import image_registration
-from ..readers import DatasetReader
-from ..writers import DatasetWriter
-from ..readers import NumpyImageReader
+from ..readers import Hdf5Reader
+from ..writers import Hdf5Writer
+from ..readers import OpenCVReader
 
 logger = logging.getLogger(__name__)
 
 
-def calculate_shift(target_filename, reference_filename):
+def calculate_shift(target_image, reference_image):
     '''
     Calculate displacement between two images based on fast Fourier transform.
 
-    "Apparently astronomical images look a lot like microscopic images." [1]_
-
     Parameters
     ----------
-    target_filename: str
-        absolute path to the image that should be registered
-    reference_filename: str
-        absolute path to image that should be used as a reference
+    target_image: numpy.ndarray
+        image that should be registered
+    reference_image: numpy.ndarray
+        image that should be used as a reference
 
     Returns
     -------
     Tuple[int]
         shift in x, y direction
-
-    References
-    ----------
-    .. [1] http://image-registration.readthedocs.org/en/latest/
     '''
-    with NumpyImageReader() as reader:
-        target_image = reader.read(target_filename)
-        reference_image = reader.read(reference_filename)
     x, y, a, b = image_registration.chi2_shift(target_image, reference_image)
     return (x, y)
 
@@ -73,7 +64,10 @@ def register_images(sites, target_files, reference_files, output_file):
                         % os.path.basename(ref_filename))
 
             # Calculate shift between images
-            x, y = calculate_shift(target_filename, ref_filename)
+            with OpenCVReader() as reader:
+                target_image = reader.read(target_filename)
+                reference_image = reader.read(ref_filename)
+            x, y = calculate_shift(target_image, reference_image)
 
             # Store shift values and name of the registered image
             out[cycle]['x_shift'].append(int(x))
@@ -82,7 +76,7 @@ def register_images(sites, target_files, reference_files, output_file):
             out[cycle]['site'].append(sites[i])
 
     logger.debug('write registration to file: %s' % output_file)
-    with DatasetWriter(output_file, truncate=True) as writer:
+    with Hdf5Writer(output_file, truncate=True) as writer:
         for cycle, data in out.iteritems():
             for feature, values in data.iteritems():
                 # The calculated features will be stored
@@ -170,7 +164,7 @@ def fuse_registration(output_files, cycle_names):
     shift_descriptor = [list() for name in cycle_names]
     for f in output_files:
         for i, key in enumerate(cycle_names):
-            with DatasetReader(f) as reader:
+            with Hdf5Reader(f) as reader:
                 filenames = reader.read(os.path.join(key, 'filename'))
                 x_shifts = reader.read(os.path.join(key, 'x_shift'))
                 y_shifts = reader.read(os.path.join(key, 'y_shift'))

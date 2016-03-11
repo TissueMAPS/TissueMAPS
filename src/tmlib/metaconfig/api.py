@@ -10,6 +10,7 @@ from ..plate import determine_plate_dimensions
 from ..metadata import ImageFileMapping
 from ..api import ClusterRoutines
 from ..writers import JsonWriter
+from ..writers import TablesWriter
 from ..errors import NotSupportedError
 from ..errors import MetadataError
 from ..formats import Formats
@@ -111,7 +112,7 @@ class MetadataConfigurator(ClusterRoutines):
                     'outputs': {
                         'metadata_files': [
                             os.path.join(acquisition.dir,
-                                         acquisition.image_metadata_file)
+                                         acquisition.metadata_file)
                         ],
                         'mapper_files': [
                             os.path.join(acquisition.dir,
@@ -133,7 +134,7 @@ class MetadataConfigurator(ClusterRoutines):
             'inputs': {
                 'metadata_files': [
                     os.path.join(acquisition.dir,
-                                 acquisition.image_metadata_file)
+                                 acquisition.metadata_file)
                     for source in self.experiment.sources
                     for acquisition in source.acquisitions
                 ],
@@ -269,7 +270,8 @@ class MetadataConfigurator(ClusterRoutines):
     @staticmethod
     def _write_metadata_to_file(filename, metadata):
         store = pd.HDFStore(filename, 'w')  # truncate file!
-        store.put('metadata', metadata, format='table', data_columns=True)
+        store.put('image_metadata', metadata,
+                  format='table', data_columns=True)
         store.close()
 
     @staticmethod
@@ -304,6 +306,9 @@ class MetadataConfigurator(ClusterRoutines):
                 plate = self.experiment.add_plate()
             cycle_count = 0
             for acquisition in source.acquisitions:
+
+                # TODO: Why is this fast in the first cycle, but takes long
+                # in subsequent cycles?
 
                 metadata = acquisition.image_metadata
 
@@ -411,11 +416,9 @@ class MetadataConfigurator(ClusterRoutines):
 
                     # Store the updated metadata in an HDF5 file
                     filename = os.path.join(cycle.dir,
-                                            cycle.image_metadata_file)
-                    store = pd.HDFStore(filename, 'w')
-                    store.append('metadata', md,
-                                 format='table', data_columns=True)
-                    store.close()
+                                            cycle.metadata_file)
+                    with TablesWriter(filename, truncate=True) as writer:
+                        writer.write('image_metadata', md)
 
                     # Remove the intermediate cycle-specific mapper file
                     # since it is no no longer needed

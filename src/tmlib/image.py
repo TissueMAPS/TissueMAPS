@@ -5,7 +5,7 @@ import logging
 from cached_property import cached_property
 from .pixels import VipsPixels
 from .pixels import NumpyPixels
-from .readers import DatasetReader
+from .readers import Hdf5Reader
 from .errors import MetadataError
 from .metadata import IllumstatsImageMetadata
 
@@ -128,7 +128,7 @@ class ChannelImage(Image):
     '''
 
     @staticmethod
-    def create_from_file(filename, metadata, library='vips'):
+    def create_from_file(filename, metadata, library='numpy'):
         '''
         Create a ChannelImage object from a file on disk.
 
@@ -140,7 +140,7 @@ class ChannelImage(Image):
             image metadata object
         library: str, optional
             image library that should be used, ``"vips"`` or ``"numpy"``
-            (default: ``"vips"``)
+            (default: ``"numpy"``)
 
         Returns
         -------
@@ -467,7 +467,7 @@ class IllumstatsImages(object):
 
     @cached_property
     def _stats(self):
-        with DatasetReader(self.filename) as reader:
+        with Hdf5Reader(self.filename) as reader:
             mean = self._factory(reader.read('stats/mean'))
             std = self._factory(reader.read('stats/std'))
             tpoint = reader.read('metadata/tpoint')

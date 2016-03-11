@@ -135,7 +135,7 @@ class TestPlateAcquisitionFiles(TestSourceSetup):
 
     def _add_metadata_file(self):
         filename = os.path.join(self.acquisition.dir,
-                                self.acquisition.image_metadata_file)
+                                self.acquisition.metadata_file)
         with open(filename, 'w') as f:
             # example from
             f.write(u'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>

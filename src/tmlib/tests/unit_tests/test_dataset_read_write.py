@@ -3,20 +3,20 @@ import random
 import tempfile
 import numpy as np
 import unittest
-from tmlib.readers import DatasetReader
-from tmlib.writers import DatasetWriter
+from tmlib.readers import Hdf5Reader
+from tmlib.writers import Hdf5Writer
 
 
-class TestDatasetReaderWriter(unittest.TestCase):
+class TestHdf5ReaderWriter(unittest.TestCase):
 
     def setUp(self):
         tmp_dir = tempfile.gettempdir()
         self.filename = os.path.join(tmp_dir, 'testfile.h5')
 
     def write_array_to_HDF5_file_and_read_it_back(self, arr_write):
-        with DatasetWriter(self.filename, truncate=True) as writer:
+        with Hdf5Writer(self.filename, truncate=True) as writer:
             writer.write('arr', arr_write)
-        with DatasetReader(self.filename) as reader:
+        with Hdf5Reader(self.filename) as reader:
             arr_read = reader.read('arr')
         return arr_read
 

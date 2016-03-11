@@ -211,7 +211,7 @@ class PipelineChecker(object):
             possible_modes = {'pipe', 'store', 'constant'}
             possible_kinds = {
                 'constant': {'scalar', 'sequence'},
-                'store': {'coordinates', 'feature', 'attribute'},
+                'store': {'coordinates', 'features', 'attribute'},
                 'pipe': {'image'}
             }
             for j, input_item in enumerate(handle['input']):
@@ -418,8 +418,9 @@ class PipelineChecker(object):
 
                 # Store all upstream output items
                 for output_item in handle['output']:
-                    output = output_item['id']
-                    upstream_outputs.append(output)
+                    if 'id' in output_item:
+                        output = output_item['id']
+                        upstream_outputs.append(output)
         logger.info('pipeline IO check successful')
 
     def check_all(self):

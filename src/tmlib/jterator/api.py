@@ -18,8 +18,8 @@ from ..api import ClusterRoutines
 from ..errors import PipelineRunError
 from ..errors import PipelineDescriptionError
 from ..errors import NotSupportedError
-from ..writers import DatasetWriter
-from ..readers import DatasetReader
+from ..writers import Hdf5Writer
+from ..readers import Hdf5Reader
 from ..logging_utils import map_logging_verbosity
 
 logger = logging.getLogger(__name__)
@@ -526,7 +526,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     offset_x = 0
                 # All images processed per job were acquired at the same site
                 # and thus share the positional metadata information
-                with DatasetWriter(data_file) as data:
+                with Hdf5Writer(data_file) as data:
                     data.write('/metadata/job_id',
                                data=batch['id'])
                     data.write('/metadata/plate',
@@ -563,7 +563,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     log_files['stderr'], out['stderr'])
             if not out['success']:
                 sys.exit(out['error_message'])
-            for key, value in out['outputs'].iteritems():
+            for key, value in out['pipeline_store'].iteritems():
                 # NOTE: In the handles description the mapping
                 # of an input/output item has keys "name" and "value".
                 # "name" in this context is the formal parameter in the
@@ -577,52 +577,58 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # in the handle description.
                 # TODO: the whole "mode" and "kind" YAML shit should be
                 # mirrored by classes in Python
-                index = [
-                    h['id'] for h in module.description['output']
-                ].index(key)
-                mode = module.description['output'][index]['mode']
-                kind = module.description['output'][index]['kind']
-                if name == 'figure':
-                    # Figures must be provided as an html string
-                    if not isinstance(value, basestring):
-                        raise PipelineRunError(
-                                'Figure of module "%s" must be '
-                                'returned as string.' % module.name)
-                    figure_file = module.build_figure_filename(
-                                        self.figures_dir, job_id)
-                    module.save_figure(value, figure_file)
-                elif mode == 'store':
-                    with DatasetWriter(data_file) as f:
-                        for name, obj in value.iteritems():
-                            if kind == 'features':
-                                group = 'features'
-                            elif kind == 'coordinates':
-                                group = 'coordinates'
-                            elif kind == 'attribute':
-                                group = 'attributes'
-                            else:
-                                # This shouldn't happen after the initial
-                                # checks, but safety first :)
-                                raise PipelineDescriptionError(
-                                        'Unknown kind "%s" for output '
-                                        '"%s" of module "%s"'
-                                        % (kind, key, module.name))
-                            p = 'objects/%s/%s/%s' % (obj, group, name)
-                            f.write(p, value)
-                elif mode == 'pipe':
-                    if kind != 'image':
-                        raise NotSupportedError(
-                                'Kind "%s" is not supported for outputs '
-                                'with mode "pipe"')
-                    if not isinstance(value, np.ndarray):
-                        raise TypeError(
-                                'Outputs of kind "pipe" image must have '
-                                'type numpy.ndarray')
-                    pipeline_data[key] = value
-                else:
+                kind = [
+                    o['kind'] for o in module.description['output']
+                    if o['id'] == key
+                ][0]
+                if kind != 'image':
+                    raise NotSupportedError(
+                            'Kind "%s" is not supported for outputs '
+                            'with mode "pipe"')
+                if not isinstance(value, np.ndarray):
+                    raise TypeError(
+                            'Outputs of kind "pipe" image must have '
+                            'type numpy.ndarray')
+                pipeline_data[key] = value
+
+            for key, value in out['persistent_store'].iteritems():
+
+                kind = [
+                    o['kind'] for o in module.description['output']
+                    if o['ref'] == key
+                ][0]
+
+                obj = [
+                    o['value'] for o in module.description['input']
+                    if o['name'] == key
+                ][0]
+
+                with Hdf5Writer(data_file) as f:
+                    for name, data in value.iteritems():
+                        if kind == 'features':
+                            group = 'features'
+                        elif kind == 'coordinates':
+                            group = 'coordinates'
+                        elif kind == 'attribute':
+                            group = 'attributes'
+                        else:
+                            # This shouldn't happen after the initial
+                            # checks, but safety first :)
+                            raise PipelineDescriptionError(
+                                    'Unknown kind "%s" for output '
+                                    '"%s" of module "%s"'
+                                    % (kind, key, module.name))
+                        p = 'objects/%s/%s/%s' % (obj, group, name)
+                        f.write(p, data)
+
+            if out['figure']:
+                if not isinstance(out['figure'], basestring):
                     raise PipelineRunError(
-                            'Format of output "%s" of module "%s" is '
-                            'not recognized.' % (name, module.name))
+                            'Figure of module "%s" must be '
+                            'returned as string.' % module.name)
+                figure_file = module.build_figure_filename(
+                                    self.figures_dir, job_id)
+                module.save_figure(out['figure'], figure_file)
 
         # TODO: approximate polygons and add global offset to coordinates
         # Refactor tmlib.layer.SegmentedObjectsLayer class

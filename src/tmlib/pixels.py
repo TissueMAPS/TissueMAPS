@@ -1,8 +1,7 @@
 import numpy as np
-import cv2
 import scipy.ndimage as ndi
 from gi.repository import Vips
-from skimage.exposure import rescale_intensity
+import skimage
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
@@ -10,8 +9,10 @@ from . import image_utils
 from .align import shift
 from .corilla import illumcorr
 from .illuminati import segment
-from .readers import VipsImageReader
-from .readers import NumpyImageReader
+from .readers import VipsReader
+from .readers import OpenCVReader
+from .writers import VipsWriter
+from .writers import NumpyWriter
 
 
 class Pixels(object):
@@ -111,30 +112,30 @@ class Pixels(object):
     def smooth(self, sigma):
         pass
 
+    def shrink(self, factor):
+        pass
+
+    @abstractmethod
+    def create_from_file(self, filename):
+        pass
+
 
 class VipsPixels(Pixels):
 
     '''
-    Class for a pixel array of type `Vips.Image`.
+    Class for a pixel array of type :py:class:`Vips.Image`.
     '''
 
     def __init__(self, array):
         '''
-        Initialize an instance of class VipsPixels.
-
         Parameters
         ----------
         array: gi.overrides.Vips.Image
             image pixel array
-
-        Returns
-        -------
-        tmlib.pixels.VipsPixels
         '''
-        super(VipsPixels, self).__init__(array)
         if not isinstance(array, Vips.Image):
             raise TypeError('Argument array must have type Vips.Image')
-        self.array = array
+        super(VipsPixels, self).__init__(array)
 
     @property
     def dimensions(self):
@@ -327,9 +328,9 @@ class VipsPixels(Pixels):
 
         See also
         --------
-        :py:class:`tmlib.readers.VipsImageReader`
+        :py:class:`tmlib.readers.VipsReader`
         '''
-        with VipsImageReader() as reader:
+        with VipsReader() as reader:
             return VipsPixels(reader.read(filename))
 
     @staticmethod
@@ -360,8 +361,13 @@ class VipsPixels(Pixels):
         ----------
         filename: str
             absolute path to output file
+
+        See also
+        --------
+        :py:method:`tmlib.writers.VipsWriter.write`
         '''
-        self.array.write_to_file(filename)
+        with VipsWriter() as writer:
+            writer.write(filename, self.array)
 
     def extract(self, y_offset, x_offset, height, width):
         '''
@@ -551,17 +557,50 @@ class VipsPixels(Pixels):
         a = self.array.gaussblur(sigma)
         return VipsPixels(a)
 
+    def shrink(self, factor):
+        '''
+        Reduce the size of the pixels.
+
+        Parameters
+        ----------
+        factor: int
+            factor by which the size of the pixels array should be reduced
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixels
+            shrunken pixels
+        '''
+        a = self.array.shrink(factor, factor)
+        return VipsPixels(a)
+
+    @staticmethod
+    def create_from_file(filename):
+        '''
+        Create an object of class :py:class:`tmlib.pixels.VipsPixels`
+        from an image file.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the file
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixels
+        '''
+        with VipsReader() as reader:
+            return VipsPixels(reader.read(filename))
+
 
 class NumpyPixels(Pixels):
 
     '''
-    Class for a pixel array of type `numpy.ndarray`.
+    Class for a pixel array of type :py:class:`numpy.ndarray`.
     '''
 
     def __init__(self, array):
         '''
-        Initialize an instance of class NumpyPixels.
-
         Parameters
         ----------
         array: numpy.ndarray
@@ -571,10 +610,9 @@ class NumpyPixels(Pixels):
         -------
         tmlib.pixels.NumpyPixels
         '''
-        super(NumpyPixels, self).__init__(array)
         if not isinstance(array, np.ndarray):
             raise TypeError('Argument array must have type numpy.ndarray')
-        self.array = array
+        super(NumpyPixels, self).__init__(array)
 
     @property
     def dimensions(self):
@@ -759,9 +797,9 @@ class NumpyPixels(Pixels):
 
         See also
         --------
-        :py:class:`tmlib.readers.NumpyImageReader`
+        :py:class:`tmlib.readers.OpenCVReader`
         '''
-        with NumpyImageReader() as reader:
+        with OpenCVReader() as reader:
             return NumpyPixels(reader.read(filename))
 
     @staticmethod
@@ -788,12 +826,22 @@ class NumpyPixels(Pixels):
         '''
         Write pixels array to file on disk.
 
+        The format depends on the file extension:
+            - *.png for PNG (8-bit and 16-bit)
+            - *.tiff or *.tif for TIFF (8-bit and 16-bit)
+            - *.jpeg or *.jpg for JPEG (8-bit)
+            - *.ppm for PPM (8-bit and 16-bit)
+
         Parameters
         ----------
         filename: str
             absolute path to output file
+        See also
+        --------
+        :py:method:`tmlib.writers.NumpyWriter.write`
         '''
-        cv2.imwrite(filename, self.array)
+        with NumpyWriter() as writer:
+            writer.write(filename, self.array)
 
     def extract(self, y_offset, x_offset, height, width):
         '''
@@ -836,7 +884,7 @@ class NumpyPixels(Pixels):
             rescaled pixels
         '''
         if self.dtype == 'uint16':
-            a = rescale_intensity(
+            a = skimage.exposure.rescale_intensity(
                         self.array,
                         out_range='uint8',
                         in_range=(0, threshold)
@@ -975,3 +1023,39 @@ class NumpyPixels(Pixels):
         '''
         a = ndi.filters.gaussian_filter(self.array, sigma)
         return NumpyPixels(a)
+
+    def shrink(self, factor):
+        '''
+        Reduce the size of the pixels.
+
+        Parameters
+        ----------
+        factor: int
+            factor by which the size of the pixels array should be reduced
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+            shrunken pixels
+        '''
+        a = skimage.measure.block_reduce(
+                    self.array, (factor, factor), func=np.mean)
+        return NumpyPixels(a)
+
+    @staticmethod
+    def create_from_file(filename):
+        '''
+        Create an object of class :py:class:`tmlib.pixels.NumpyPixels`
+        from an image file.
+
+        Parameters
+        ----------
+        filename: str
+            absolute path to the file
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+        '''
+        with OpenCVReader() as reader:
+            return NumpyPixels(reader.read(filename))

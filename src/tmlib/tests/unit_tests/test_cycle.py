@@ -88,10 +88,10 @@ class TestCycle(fake_filesystem_unittest.TestCase):
                                 z=image.Pixels.Plane(0).TheZ)
         # Write metadata to file
         omexml = md.to_xml()
-        self.image_metadata_file = os.path.join(
+        self.metadata_file = os.path.join(
                                     self.cycle_dir,
                                     'image_metadata.ome.xml')
-        with open(self.image_metadata_file, 'w') as f:
+        with open(self.metadata_file, 'w') as f:
             f.write(omexml)
 
         # Add image files to cycle

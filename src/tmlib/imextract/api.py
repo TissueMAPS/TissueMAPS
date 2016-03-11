@@ -3,9 +3,9 @@ import numpy as np
 import logging
 import collections
 from .. import utils
-from ..readers import BioformatsImageReader
+from ..readers import BioformatsReader
 from ..api import ClusterRoutines
-from ..writers import ImageWriter
+from ..writers import NumpyWriter
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class ImageExtractor(ClusterRoutines):
         batch: dict
             joblist element, i.e. description of a single job
         '''
-        with BioformatsImageReader() as reader:
+        with BioformatsReader() as reader:
             for i, filenames in enumerate(batch['inputs']['image_files']):
                 planes = list()
                 for j, f in enumerate(filenames):
@@ -128,7 +128,7 @@ class ImageExtractor(ClusterRoutines):
                 output_filename = batch['outputs']['image_files'][i]
                 logger.info('extracted image: %s',
                             os.path.basename(output_filename))
-                with ImageWriter() as writer:
+                with NumpyWriter() as writer:
                     writer.write(output_filename, img)
 
     @utils.notimplemented

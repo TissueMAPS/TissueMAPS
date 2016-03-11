@@ -551,6 +551,8 @@ class CommandLineInterface(object):
                 engine.progress()
                 if jobs.is_terminated:
                     break
+        except Exception:
+            raise
 
     def resubmit(self, args):
         '''
@@ -601,6 +603,8 @@ class CommandLineInterface(object):
                 engine.progress()
                 if jobs.is_terminated:
                     break
+        except Exception:
+            raise
 
     def collect(self, args):
         '''

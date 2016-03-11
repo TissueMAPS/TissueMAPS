@@ -77,10 +77,10 @@ class TestPlate(fake_filesystem_unittest.TestCase):
                 sample.PositionX = well_pos[s][1]
         # Write metadata to file
         omexml = md.to_xml()
-        self.image_metadata_file = os.path.join(
+        self.metadata_file = os.path.join(
                                     self.cycle_dir,
                                     'image_metadata.ome.xml')
-        with open(self.image_metadata_file, 'w') as f:
+        with open(self.metadata_file, 'w') as f:
             f.write(omexml)
 
     def tearDown(self):

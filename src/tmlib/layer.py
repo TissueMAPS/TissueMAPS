@@ -10,13 +10,13 @@ from abc import ABCMeta
 from abc import abstractmethod
 from cached_property import cached_property
 from collections import defaultdict
-from .readers import DatasetReader
+from .readers import Hdf5Reader
 from .errors import PyramidCreationError
 from .errors import RegexError
-from .writers import ImageWriter
-from .writers import DatasetWriter
+from .writers import Hdf5Writer
+from .writers import NumpyWriter
 from .writers import XmlWriter
-from .readers import NumpyImageReader
+from .pixels import NumpyPixels
 
 logger = logging.getLogger(__name__)
 
@@ -548,7 +548,7 @@ class ChannelLayer(Layer):
         for t in missing_tile_coords:
             tile = np.zeros((self.tile_size, self.tile_size), dtype=np.uint8)
             tile_file = self.tile_files[-1][t]
-            with ImageWriter(self.dir) as writer:
+            with NumpyWriter(self.dir) as writer:
                 writer.write(tile_file, tile)
 
     def create_base_tiles(self, clip_value=None, illumcorr=False, align=False,
@@ -718,7 +718,6 @@ class ChannelLayer(Layer):
             (default: ``None``)
         '''
         logger.info('create tiles for level %d', level)
-        block_size = (self.zoom_factor, self.zoom_factor)
         tile_info = self.tile_files[level]
         pre_tile_files = self.tile_files[level + 1]
         if subset_indices is None:
@@ -726,31 +725,31 @@ class ChannelLayer(Layer):
         else:
             filenames = list(np.array(tile_info.values())[subset_indices])
         for f in filenames:
+            # TODO: do this in Vips???
             logger.debug('create tile "%s"', f)
             coordinates = self.get_tiles_of_next_higher_level(f)
             rows = np.unique([c[0] for c in coordinates])
             cols = np.unique([c[1] for c in coordinates])
-            # Build the mosaic by loading the required higher level tiles
+            # Build the mosaic by loading required higher level tiles
             # (created in a previous run) and stitching them together
-            with NumpyImageReader(self.dir) as reader:
-                for i, r in enumerate(rows):
-                    for j, c in enumerate(cols):
-                        pre_tile_filename = pre_tile_files[(r, c)]
-                        image = reader.read(pre_tile_filename)
-                        if j == 0:
-                            row_image = image
-                        else:
-                            row_image = np.hstack([row_image, image])
-                    if i == 0:
-                        mosaic = row_image
+            for i, r in enumerate(rows):
+                for j, c in enumerate(cols):
+                    pre_tile_filename = os.path.join(
+                                            self.dir, pre_tile_files[(r, c)])
+                    pixels = NumpyPixels.create_from_file(f)
+                    if j == 0:
+                        row_pixels = pixels
                     else:
-                        mosaic = np.vstack([mosaic, row_image])
+                        row_pixels = row_pixels.join(pixels, 'horizontal')
+                if i == 0:
+                    mosaic = row_pixels
+                else:
+                    mosaic = mosaic.join(row_pixels, 'vertical')
             # Create the tile at the current level by downsampling the mosaic
-            tile = skimage.measure.block_reduce(mosaic, block_size, func=np.mean)
+            tile = mosaic.shrink(self.zoom_factor)
             # Write the tile to file on disk
             logger.info('write tile to file: "%s"', f)
-            with ImageWriter(self.dir) as writer:
-                writer.write(f, tile)
+            tile.write_to_file(f)
 
     def create_tile_groups(self):
         '''
@@ -1048,7 +1047,7 @@ class SegmentedObjectLayer(Layer):
             contour is used (default: ``1``)
         '''
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
-        with DatasetWriter(filename) as store:
+        with Hdf5Writer(filename) as store:
             obj_path = '/objects/%s' % self.name
             store.create_group(obj_path)
             store.set_attribute(obj_path, 'visual_type', 'polygon')
@@ -1057,7 +1056,7 @@ class SegmentedObjectLayer(Layer):
             centroid_coord_path = '%s/map_data/centroids/coordinates' % obj_path
             global_obj_id = 0
             for j, f in enumerate(data_files):
-                with DatasetReader(f) as data:
+                with Hdf5Reader(f) as data:
 
                     logger.debug('process data in file "%s"', f)
                     logger.debug('calculate object outline coordinates')
@@ -1234,7 +1233,7 @@ class WellObjectLayer(Layer):
         ``/objects/wells/features/<feature_name>``.
         '''
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
-        with DatasetReader(filename) as data:
+        with Hdf5Reader(filename) as data:
             objects = data.list_groups('/objects')
             if 'wells' in objects:
                 objects.remove('wells')
@@ -1249,7 +1248,7 @@ class WellObjectLayer(Layer):
                 plate_ref[obj] = data.read('%s/metadata/plate' % obj_path)
                 well_ref[obj] = data.read('%s/metadata/well_name' % obj_path)
 
-            with DatasetWriter(filename) as store:
+            with Hdf5Writer(filename) as store:
                 obj_path = '/objects/%s' % self.name
                 store.create_group(obj_path)
                 store.set_attribute(obj_path, 'visual_type', 'polygon')

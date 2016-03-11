@@ -14,6 +14,7 @@ from rpy2.robjects.packages import importr
 from cStringIO import StringIO
 from . import path_utils
 from ..errors import PipelineRunError
+from ..errors import NotSupportedError
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,8 @@ class ImageProcessingModule(object):
         self.name = name
         self.source_file = source_file
         self.description = description
-        self.outputs = dict()
+        self.pipeline_store = dict()
+        self.persistent_store = dict()
 
     def build_log_filenames(self, log_dir, job_id):
         '''
@@ -197,7 +199,7 @@ class ImageProcessingModule(object):
         for name, value in inputs.iteritems():
             engine.put('%s' % name, value)
         function_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        func_call = '[{args_out}] = jtlib.modules.{name}({args_in})'.format(
+        func_call = '[{args_out}, figure] = jtlib.modules.{name}({args_in})'.format(
                                     args_out=', '.join(output_names),
                                     name=function_name,
                                     args_in=', '.join(inputs.keys()))
@@ -219,16 +221,21 @@ class ImageProcessingModule(object):
             logger.debug('dtype of OUTPUT "{name}": {value}'.format(
                                             name=name,
                                             value=m_var_np.dtype))
-            output_value = [
-                o['id'] for o in self.description['output']
-                if o['name'] == name
-            ][0]
-            # NOTE: Matlab generates numpy array in Fortran order
-            self.outputs[output_value] = m_var_np
+            index = output_names.index(name)
+            output_param = self.description['output'][index]
+            if output_param['mode'] == 'pipe':
+                self.pipeline_store[output_param['id']] = m_var_np
+            else:
+                raise NotSupportedError(
+                        'Matlab module only supports mode "pipe"')
+
+        try:
+            self.figure = engine.get('figure')
+        except:
+            self.figure = ''
 
     def _exec_py_module(self, inputs, output_names):
         logger.debug('importing module: "%s"' % self.source_file)
-        # NOTE: 
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         module = importlib.import_module('jtlib.modules.%s' % module_name)
         func = getattr(module, module_name)
@@ -249,24 +256,35 @@ class ImageProcessingModule(object):
                         % (self.name, name))
             py_var_np = py_out[name]
             if not(isinstance(py_var_np, np.ndarray) or
-                    isinstance(py_var_np, pd.DataFrame)):
+                    isinstance(py_var_np, pd.DataFrame) or
+                    isinstance(py_var_np, pd.Series)):
                 raise PipelineRunError(
-                        'Output of module "%s" must have type '
-                        'numpy.ndarray or pandas.DataFrame' % self.name)
+                        'Output of module "%s" must have type numpy.ndarray,'
+                        'pandas.DataFrame, or pandas.Series' % self.name)
             logger.debug('dimensions of OUTPUT "{name}": {value}'.format(
                                             name=name,
                                             value=py_var_np.shape))
             logger.debug('type of OUTPUT "{name}": {value}'.format(
                                             name=name,
                                             value=type(py_var_np)))
-            logger.debug('dtype of OUTPUT "{name}": {value}'.format(
+            try:
+                logger.debug('dtype of OUTPUT "{name}": {value}'.format(
                                             name=name,
                                             value=py_var_np.dtype))
-            output_value = [
-                o['id'] for o in self.description['output']
-                if o['name'] == name
-            ][0]
-            self.outputs[output_value] = py_var_np
+            except:
+                logger.debug('OUTPUT "{name} is a data frame'.format(
+                                            name=name))
+
+            index = output_names.index(name)
+            output_param = self.description['output'][index]
+            if output_param['mode'] == 'pipe':
+                self.pipeline_store[output_param['id']] = py_var_np
+            elif output_param['mode'] == 'store':
+                self.persistent_store[output_param['ref']] = py_var_np
+            else:
+                raise NotSupportedError()
+
+        self.figure = py_out.get('figure', '')
 
     def _exec_r_module(self, inputs, output_names):
         logger.debug('sourcing module: "%s"' % self.source_file)
@@ -308,14 +326,27 @@ class ImageProcessingModule(object):
             logger.debug('type of OUTPUT "{name}": {value}'.format(
                                             name=name,
                                             value=type(r_var_np)))
-            logger.debug('dtype of OUTPUT "{name}": {value}'.format(
+            try:
+                logger.debug('dtype of OUTPUT "{name}": {value}'.format(
                                             name=name,
                                             value=r_var_np.dtype))
-            output_value = [
-                o['id'] for o in self.description['output']
-                if o['name'] == name
-            ][0]
-            self.outputs[output_value] = r_var_np
+            except:
+                logger.debug('OUTPUT "{name} is a data frame'.format(
+                                            name=name))
+
+            index = output_names.index(name)
+            output_param = self.description['output'][index]
+            if output_param['mode'] == 'pipe':
+                self.pipeline_store[output_param['id']] = r_var_np
+            elif output_param['mode'] == 'store':
+                self.persistent_store[output_param['ref']] = r_var_np
+            else:
+                raise NotSupportedError()
+
+        try:
+            self.figure = r_out.rx2('figure')
+        except:
+            self.figure = ''
 
     def _execute_module(self, inputs, output_names, engine=None):
         if self.language == 'Python':
@@ -337,14 +368,6 @@ class ImageProcessingModule(object):
             name of each image and the corresponding pixels array
         upstream_output: dict
             output data generated by modules upstream in the pipeline
-        data_file: str
-            absolute path to the data file
-        figure_file: str
-            absolute path to the figure file
-        job_id: str
-            one-based job identifier number
-        experiment_dir: str
-            path to experiment directory
         plot: bool
             whether plotting should be enabled
 
@@ -400,7 +423,8 @@ class ImageProcessingModule(object):
         Output has the following format::
 
             {
-                'outputs': ,            # dict
+                'pipeline_store': ,     # dict
+                'persistent_store': ,   # dict
                 'stdout': ,             # str
                 'stderr': ,             # str
                 'success': ,            # bool
@@ -448,7 +472,9 @@ class ImageProcessingModule(object):
 
         if success:
             output = {
-                'outputs': self.outputs,
+                'pipeline_store': self.pipeline_store,
+                'persistent_store': self.persistent_store,
+                'figure': self.figure,
                 'stdout': stdout,
                 'stderr': stderr,
                 'success': success,
@@ -456,7 +482,9 @@ class ImageProcessingModule(object):
             }
         else:
             output = {
-                'outputs': None,
+                'pipeline_store': None,
+                'persistent_store': None,
+                'figure': None,
                 'stdout': stdout,
                 'stderr': stderr,
                 'success': success,

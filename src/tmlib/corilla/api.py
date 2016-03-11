@@ -5,8 +5,8 @@ import numpy as np
 from .. import utils
 from .stats import OnlineStatistics
 from .stats import OnlinePercentile
-from ..writers import DatasetWriter
-from ..readers import NumpyImageReader
+from ..writers import Hdf5Writer
+from ..readers import OpenCVReader
 from ..api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         image_files = batch['inputs']['image_files']
         logger.info('calculate illumination statistics')
-        with NumpyImageReader() as reader:
+        with OpenCVReader() as reader:
             img = reader.read(image_files[0])
             stats = OnlineStatistics(image_dimensions=img.shape)
             pctl = OnlinePercentile()
@@ -122,7 +122,7 @@ class IllumstatsGenerator(ClusterRoutines):
                 pctl.update(img)
         stats_file = batch['outputs']['stats_files'][0]
         logger.info('write calculated statistics to file')
-        with DatasetWriter(stats_file, truncate=True) as writer:
+        with Hdf5Writer(stats_file, truncate=True) as writer:
             writer.write('/stats/mean', data=stats.mean)
             writer.write('/stats/std', data=stats.std)
             writer.write('/stats/percentile', data=pctl.percentile)

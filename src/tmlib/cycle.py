@@ -6,14 +6,13 @@ import pandas as pd
 from natsort import natsorted
 from cached_property import cached_property
 from . import utils
-from .readers import JsonReader
+from .readers import TablesReader
 from .image import is_image_file
 from .image import ChannelImage
 from .image import IllumstatsImages
 from .metadata import ChannelImageMetadata
 from .metadata import IllumstatsImageMetadata
 from .errors import RegexError
-from align.description import AlignmentDescription
 
 logger = logging.getLogger(__name__)
 
@@ -164,26 +163,14 @@ class Cycle(object):
         return files
 
     @property
-    def image_metadata_file(self):
+    def metadata_file(self):
         '''
         Returns
         -------
         str
             name of the HDF5 file containing cycle-specific image metadata
         '''
-        return 'image_metadata.h5'
-
-    @property
-    def align_descriptor_file(self):
-        '''
-        Returns
-        -------
-        str
-            name of the file that contains cycle-specific descriptions required
-            for the alignment of images of the current cycle relative to the
-            reference cycle
-        '''
-        return 'alignment_description.json'
+        return 'metadata.h5'
 
     @property
     def image_metadata(self):
@@ -208,40 +195,31 @@ class Cycle(object):
         for details on indexing and selecting data.
         '''
         logger.debug('read image metadata from HDF5 file')
-        metadata_file = os.path.join(self.dir, self.image_metadata_file)
-        store = pd.HDFStore(metadata_file)
-        # metadata = store.select('metadata').sort_values(by='name')
-        metadata = store['metadata'].sort_values(by='name')
-        store.close()
+        filename = os.path.join(self.dir, self.metadata_file)
+        with TablesReader(filename) as reader:
+            metadata = reader.read('image_metadata').sort_values(by='name')
+            if reader.exists('overhangs'):
+                align_description_available = True
+                overhangs = reader.read('overhangs')
+                shifts = reader.read('shifts').sort_values(by='site')
+            else:
+                align_description_available = False
         metadata.index = range(metadata.shape[0])
 
-        # TODO: consider returning the store for subset selection using the
-        # select(), select_column(), or select_as_multiple() methods
-
-        # TODO: store alignment in pytables format and merge the tables
-
         # Add the alignment description to each image element (if available)
-        alignment_file = os.path.join(self.dir, self.align_descriptor_file)
-        if os.path.exists(alignment_file):
-            with JsonReader() as reader:
-                description = reader.read(alignment_file)
-            align_description = AlignmentDescription(description)
-            # Match shift descriptions via "site"
-            sites = metadata['site']
-            n_sites = len(sites)
-            overhang = align_description.overhang
-            metadata['upper_overhang'] = np.repeat(overhang.upper, n_sites)
-            metadata['lower_overhang'] = np.repeat(overhang.lower, n_sites)
-            metadata['right_overhang'] = np.repeat(overhang.right, n_sites)
-            metadata['left_overhang'] = np.repeat(overhang.left, n_sites)
-            metadata['x_shift'] = np.repeat(0, n_sites)
-            metadata['y_shift'] = np.repeat(0, n_sites)
-            align_sites = [shift.site for shift in align_description.shifts]
-            for i, s in enumerate(sites):
-                ix = align_sites.index(s)
-                shift = align_description.shifts[ix]
-                metadata.at[i, 'x_shift'] = shift.x
-                metadata.at[i, 'y_shift'] = shift.y
+        if align_description_available:
+            n = len(metadata['site'])
+            metadata['upper_overhang'] = np.repeat(overhangs['upper'][0], n)
+            metadata['lower_overhang'] = np.repeat(overhangs['lower'][0], n)
+            metadata['right_overhang'] = np.repeat(overhangs['right'][0], n)
+            metadata['left_overhang'] = np.repeat(overhangs['left'][0], n)
+            metadata['x_shift'] = np.repeat(0, n)
+            metadata['y_shift'] = np.repeat(0, n)
+            for name, value in shifts.iteritems():
+                for i, v in enumerate(value):
+                    # Match via "site"
+                    index = metadata['site'] == shifts['site'][i]
+                    metadata.at[index, name] = v
 
         return metadata
 
