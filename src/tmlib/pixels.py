@@ -116,7 +116,11 @@ class Pixels(object):
         pass
 
     @abstractmethod
-    def create_from_file(self, filename):
+    def create_from_file(filename):
+        pass
+
+    @abstractmethod
+    def create_as_background(y_dimension, x_dimension, dtype):
         pass
 
 
@@ -588,9 +592,33 @@ class VipsPixels(Pixels):
         Returns
         -------
         tmlib.pixels.VipsPixels
+            pixels with array contained in file
         '''
         with VipsReader() as reader:
             return VipsPixels(reader.read(filename))
+
+    @staticmethod
+    def create_as_background(y_dimension, x_dimension, dtype):
+        '''
+        Create an object of class :py:class:`tmlib.pixels.VipsPixels`
+        with a background array, i.e. zero values.
+
+        Parameters
+        ----------
+        y_dimension: int
+            length of the array along the y-axis
+        x_dimension: int
+            length of the array along the x-axis
+        dtype: type
+            data type of the array
+
+        Returns
+        -------
+        tmlib.pixels.VipsPixels
+            pixels with background array
+        '''
+        a = Vips.Image.black(x_dimension, y_dimension, bands=1).cast(dtype)
+        return VipsPixels(a)
 
 
 class NumpyPixels(Pixels):
@@ -779,28 +807,6 @@ class NumpyPixels(Pixels):
         '''
         return NumpyPixels(illumcorr.illum_correct_numpy(
                     self.array, mean_image, std_image))
-
-    @staticmethod
-    def create_from_file(filename):
-        '''
-        Read an image from file and create an instance of class NumpyPixel.
-
-        Parameters
-        ----------
-        filename: str
-            absolute path to the image file
-
-        Returns
-        -------
-        tmlib.pixels.NumpyPixels
-            pixels object
-
-        See also
-        --------
-        :py:class:`tmlib.readers.OpenCVReader`
-        '''
-        with OpenCVReader() as reader:
-            return NumpyPixels(reader.read(filename))
 
     @staticmethod
     def create_from_vips_image(array):
@@ -1059,3 +1065,26 @@ class NumpyPixels(Pixels):
         '''
         with OpenCVReader() as reader:
             return NumpyPixels(reader.read(filename))
+
+    @staticmethod
+    def create_as_background(y_dimension, x_dimension, dtype):
+        '''
+        Create an object of class :py:class:`tmlib.pixels.VipsPixels`
+        with a background array, i.e. zero values.
+
+        Parameters
+        ----------
+        y_dimension: int
+            length of the array along the y-axis
+        x_dimension: int
+            length of the array along the x-axis
+        dtype: type
+            data type of the array
+
+        Returns
+        -------
+        tmlib.pixels.NumpyPixels
+            pixels with background array
+        '''
+        a = np.zeros((y_dimension, x_dimension), dtype=dtype)
+        return NumpyPixels(a)

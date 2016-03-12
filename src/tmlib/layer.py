@@ -546,10 +546,11 @@ class ChannelLayer(Layer):
         all_tile_coords = list(itertools.product(range(n_rows), range(n_cols)))
         missing_tile_coords = set(all_tile_coords) - set(tile_coords)
         for t in missing_tile_coords:
-            tile = np.zeros((self.tile_size, self.tile_size), dtype=np.uint8)
+            tile = NumpyPixels.create_as_background(
+                        self.tile_size, self.tile_size, np.uint8)
             tile_file = self.tile_files[-1][t]
-            with NumpyWriter(self.dir) as writer:
-                writer.write(tile_file, tile)
+            logger.info('write tile to file: "%s"', tile_file)
+            tile.write_to_file(tile_file)
 
     def create_base_tiles(self, clip_value=None, illumcorr=False, align=False,
                           subset_indices=None):
@@ -610,29 +611,29 @@ class ChannelLayer(Layer):
             # Determine location of the tile within the image
             image_info = self.base_tile_mappings['tile_to_images']
             # Create individual tiles
-            indices = None
-            images = list()
+            images = dict()
             for t in tile_coords:
                 logger.debug('create tile for column %d, row %d', t[1], t[0])
                 # A tile may be composed of pixels of multiple images:
                 # load all required images
                 names = [im['name'] for im in image_info[t]]
                 # Cache images to prevent reloading when not necessary
-                new_indices = [np.where(md['name'] == n)[0][0] for n in names]
-                if indices is None or indices != new_indices:
-                    indices = new_indices
-                    images = cycle.get_image_subset(indices)
-                    for i, img in enumerate(images):
+                indices = [np.where(md['name'] == n)[0][0] for n in names]
+                tiles = list()
+                for i, index in enumerate(indices):
+                    # Cache additionally required images for overlapping tiles
+                    # i.e. tiles that are composed of pixels from multiple
+                    # images.
+                    if index not in images.keys():
+                        img = cycle.get_image_subset([index])[0]
                         if illumcorr:
-                            # Correct image for illumination artifacts
                             # NOTE: This is the bottleneck. Can we make this
                             # faster? Cython: static types? Vips?
-                            images[i] = img.correct(stats)
+                            img = img.correct(stats)
                         if align:
-                            # Align image between cycles
-                            images[i] = img.align(crop=False)
-                tiles = list()
-                for i, img in enumerate(images):
+                            img = img.align(crop=False)
+                        images[index] = img
+
                     y_offset = image_info[t][i]['y_offset']
                     x_offset = image_info[t][i]['x_offset']
                     # We use the same approach for overlapping and
@@ -641,7 +642,7 @@ class ChannelLayer(Layer):
                     # of multiple images, and then deal with the overlap later.
                     tiles.append(
                         self._extract_tile_from_image(
-                                img, y_offset, x_offset)
+                                images[index], y_offset, x_offset)
                     )
                     # NOTE: a tile of type tmlib.pixels.Pixels
                 tiles = np.array(tiles)
@@ -736,7 +737,7 @@ class ChannelLayer(Layer):
                 for j, c in enumerate(cols):
                     pre_tile_filename = os.path.join(
                                             self.dir, pre_tile_files[(r, c)])
-                    pixels = NumpyPixels.create_from_file(f)
+                    pixels = NumpyPixels.create_from_file(pre_tile_filename)
                     if j == 0:
                         row_pixels = pixels
                     else:
