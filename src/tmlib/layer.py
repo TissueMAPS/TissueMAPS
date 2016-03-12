@@ -14,9 +14,9 @@ from .readers import Hdf5Reader
 from .errors import PyramidCreationError
 from .errors import RegexError
 from .writers import Hdf5Writer
-from .writers import NumpyWriter
 from .writers import XmlWriter
-from .pixels import NumpyPixels
+from .pixels import create_pixels_from_file
+from .pixels import create_background_pixels
 
 logger = logging.getLogger(__name__)
 
@@ -529,15 +529,10 @@ class ChannelLayer(Layer):
         '''
         return len(self.zoom_level_info) - 1
 
-    def create_empty_base_tiles(self, clip_value=None):
+    def create_empty_base_tiles(self):
         '''
         Create empty tiles for the highest resolution level that do not map
         that do not map to an image.
-
-        Parameters
-        ----------
-        clip_value: int, optional
-            fixed threshold value (default: ``None``)
         '''
         logger.debug('create empty tiles for level %d', self.base_level_index)
         tile_coords = self.base_tile_mappings['tile_to_images'].keys()
@@ -546,10 +541,12 @@ class ChannelLayer(Layer):
         all_tile_coords = list(itertools.product(range(n_rows), range(n_cols)))
         missing_tile_coords = set(all_tile_coords) - set(tile_coords)
         for t in missing_tile_coords:
-            tile = NumpyPixels.create_as_background(
-                        self.tile_size, self.tile_size, np.uint8)
-            tile_file = self.tile_files[-1][t]
-            logger.info('write tile to file: "%s"', tile_file)
+            tile = create_background_pixels(
+                        self.tile_size, self.tile_size, np.uint8,
+                        self.experiment.library)
+            tile_name = self.tile_files[-1][t]
+            logger.info('write tile to file: "%s"', tile_name)
+            tile_file = os.path.join(self.dir, tile_name)
             tile.write_to_file(tile_file)
 
     def create_base_tiles(self, clip_value=None, illumcorr=False, align=False,
@@ -681,10 +678,12 @@ class ChannelLayer(Layer):
                         logger.debug('4 images: vertical & horizontal overlap')
                         h_offset = abs(x_offsets[h][0])
                         right_upper = tiles[~v & h][0]
-                        upper = tile.merge(right_upper, 'horizontal', h_offset)
+                        upper = tile.merge(
+                                    right_upper, 'horizontal', h_offset)
                         left_lower = tiles[v & ~h][0]
                         right_lower = tiles[v & h][0]
-                        lower = left_lower.merge(right_lower, 'horizontal', h_offset)
+                        lower = left_lower.merge(
+                                    right_lower, 'horizontal', h_offset)
                         v_offset = abs(y_offsets[v][0])
                         tile = upper.merge(lower, 'vertical', v_offset)
                 else:
@@ -722,13 +721,13 @@ class ChannelLayer(Layer):
         tile_info = self.tile_files[level]
         pre_tile_files = self.tile_files[level + 1]
         if subset_indices is None:
-            filenames = tile_info.values()
+            names = tile_info.values()
         else:
-            filenames = list(np.array(tile_info.values())[subset_indices])
-        for f in filenames:
+            names = list(np.array(tile_info.values())[subset_indices])
+        for tile_name in names:
             # TODO: do this in Vips???
-            logger.debug('create tile "%s"', f)
-            coordinates = self.get_tiles_of_next_higher_level(f)
+            logger.debug('create tile "%s"', tile_name)
+            coordinates = self.get_tiles_of_next_higher_level(tile_name)
             rows = np.unique([c[0] for c in coordinates])
             cols = np.unique([c[1] for c in coordinates])
             # Build the mosaic by loading required higher level tiles
@@ -737,7 +736,9 @@ class ChannelLayer(Layer):
                 for j, c in enumerate(cols):
                     pre_tile_filename = os.path.join(
                                             self.dir, pre_tile_files[(r, c)])
-                    pixels = NumpyPixels.create_from_file(pre_tile_filename)
+                    pixels = create_pixels_from_file(
+                                            pre_tile_filename,
+                                            self.experiment.library)
                     if j == 0:
                         row_pixels = pixels
                     else:
@@ -749,8 +750,9 @@ class ChannelLayer(Layer):
             # Create the tile at the current level by downsampling the mosaic
             tile = mosaic.shrink(self.zoom_factor)
             # Write the tile to file on disk
-            logger.info('write tile to file: "%s"', f)
-            tile.write_to_file(f)
+            logger.info('write tile to file: "%s"', tile_name)
+            tile_file = os.path.join(self.dir, tile_name)
+            tile.write_to_file(tile_file)
 
     def create_tile_groups(self):
         '''

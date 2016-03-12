@@ -1088,3 +1088,61 @@ class NumpyPixels(Pixels):
         '''
         a = np.zeros((y_dimension, x_dimension), dtype=dtype)
         return NumpyPixels(a)
+
+
+def create_pixels_from_file(filename, library):
+    '''
+    Factory function that creates an instance of an
+    implementation of the :py:class:`tmlib.pixels.Pixels` class for an array
+    loaded from a file.
+
+    Parameters
+    ----------
+    filename: str
+        absolute path to the file 
+    library: str
+        either "numpy" or "vips"
+
+    Returns
+    -------
+    tmlib.pixels.NumpyPixels or tmlib.pixels.VipsPixels
+        pixels object 
+    '''
+    if library == 'numpy':
+        return NumpyPixels.create_from_file(filename)
+    elif library == 'vips':
+        return VipsPixels.create_from_file(filename)
+    else:
+        raise ValueError('Library must be either "numpy" or "vips".')
+
+
+def create_background_pixels(y_dimension, x_dimension, dtype, library):
+    '''
+    Factory function that creates an instance of an
+    implementation of the :py:class:`tmlib.pixels.Pixels` class for an array
+    filled with zeros.
+
+    Parameters
+    ----------
+    y_dimension: int
+        length of the array along the y-axis
+    x_dimension: int
+        length of the array along the x-axis
+    dtype: type
+        data type of the array
+    library: str
+        either "numpy" or "vips"
+
+    Returns
+    -------
+    tmlib.pixels.NumpyPixels or tmlib.pixels.VipsPixels
+        pixels object 
+    '''
+    if library == 'numpy':
+        return NumpyPixels.create_as_background(
+                                y_dimension, x_dimension, dtype)
+    elif library == 'vips':
+        return VipsPixels.create_as_background(
+                                y_dimension, x_dimension, dtype,)
+    else:
+        raise ValueError('Library must be either "numpy" or "vips".')
