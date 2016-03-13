@@ -223,7 +223,7 @@ class ChannelLayer(Layer):
             (self.tpoint, self.channel, self.zplane)
         ]
 
-    @property
+    @cached_property
     def metadata(self):
         '''
         Returns
@@ -550,7 +550,7 @@ class ChannelLayer(Layer):
             tile.write_to_file(tile_file)
 
     def create_base_tiles(self, clip_value=None, illumcorr=False, align=False,
-                          subset_indices=None):
+                          filenames=None):
         '''
         Create the tiles for the highest resolution level, i.e. the base of
         the image pyramid, using the original microscope images.
@@ -565,10 +565,9 @@ class ChannelLayer(Layer):
         align: bool, optional
             whether images should be aligned between cycles
             (default: ``False``)
-        subset_indices: List[int], optional
-            zero-based indices of images that should be processed;
-            if not provided, all images will be processed by default
-            (default: ``None``)
+        filenames: List[str], optional
+            absolute paths to image files that should be processed;
+            if not provided, all images will be processed (default: ``None``)
 
         Note
         ----
@@ -594,12 +593,9 @@ class ChannelLayer(Layer):
             stats = cycle.illumstats_images[self.channel]
             stats.smooth_stats()
         md = cycle.image_metadata
-        if subset_indices is None:
+        if filenames is None:
             logger.info('process all image files')
             filenames = self.metadata.filenames
-        else:
-            logger.info('process subset of image files')
-            filenames = list(np.array(self.metadata.filenames)[subset_indices])
         for f in filenames:
             name = os.path.basename(f)
             logger.info('create tiles that map to image "%s"', name)
@@ -700,7 +696,7 @@ class ChannelLayer(Layer):
                 tile_file = os.path.join(self.dir, tile_name)
                 tile.write_to_file(tile_file)
 
-    def create_downsampled_tiles(self, level, subset_indices=None):
+    def create_downsampled_tiles(self, level, filenames=None):
         '''
         The tiles for lower resolution levels are created using the tiles from
         the next higher level. To this end, n x n tiles are loaded and stitched
@@ -712,20 +708,17 @@ class ChannelLayer(Layer):
         ----------
         level: int
             zero-based zoom level index
-        subset_indices: List[int], optional
-            zero-based indices of tiles that should be processed;
-            if not provided, all tiles will be processed by default
-            (default: ``None``)
+        filenames: List[str], optional
+            absolute path to tile files that should be created;
+            if not provided, all tiles will be created (default: ``None``)
         '''
         logger.info('create tiles for level %d', level)
         tile_info = self.tile_files[level]
         pre_tile_files = self.tile_files[level + 1]
-        if subset_indices is None:
-            names = tile_info.values()
-        else:
-            names = list(np.array(tile_info.values())[subset_indices])
-        for tile_name in names:
-            # TODO: do this in Vips???
+        if filenames is None:
+            filenames = [os.path.join(self.dir, v) for v in tile_info.values()]
+        for f in filenames:
+            tile_name = os.path.relpath(f, self.dir)
             logger.debug('create tile "%s"', tile_name)
             coordinates = self.get_tiles_of_next_higher_level(tile_name)
             rows = np.unique([c[0] for c in coordinates])
