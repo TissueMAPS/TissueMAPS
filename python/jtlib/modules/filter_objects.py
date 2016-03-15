@@ -10,7 +10,7 @@ def filter_objects(label_image, feature, threshold, remove, relabel, plot):
 
     Parameters
     ----------
-    label_image: numpy.ndarray[numpy.bool or numpy.int32]
+    label_image: numpy.ndarray[numpy.int32]
         labeled image that should be filtered
     feature: str
         name of the region property based on which the image should be filtered
@@ -27,7 +27,7 @@ def filter_objects(label_image, feature, threshold, remove, relabel, plot):
     Returns
     -------
     Dict[str, numpy.ndarray[int32] or str]
-        "filtered_objects": filtered label image
+        "filtered_image": filtered label image
         "figure": html string in case ``kwargs["plot"] == True``
 
     Raises
@@ -35,19 +35,17 @@ def filter_objects(label_image, feature, threshold, remove, relabel, plot):
     ValueError
         when value of `remove` is not ``"below"`` or ``"above"``
     '''
-    is_binary = len(np.unique(label_image)) == 2
-    if is_binary:
-        # In case the input is a binary mask, we first have to label the
-        # objects in order to be able to keep track of them.
-        label_image = utils.label_image(label_image)
+    if label_image.dtype != np.int32:
+        raise TypeError('Argument label image must have data type int32.')
+
     regions = skimage.measure.regionprops(label_image)
     if remove == 'above':
         ids_to_keep = [r['label'] for r in regions if r[feature] < threshold]
     elif remove == 'below':
         ids_to_keep = [r['label'] for r in regions if r[feature] > threshold]
     else:
-        raise ValueError('Value of argument `remove` must be a either '
-                         '"above" or "below"')
+        raise ValueError(
+                'Argument "remove" must be a either "above" or "below"')
 
     filtered_image = np.zeros(label_image.shape)
     for ix in ids_to_keep:
@@ -55,15 +53,10 @@ def filter_objects(label_image, feature, threshold, remove, relabel, plot):
 
     n_removed = len(np.unique(label_image)) - len(np.unique(filtered_image))
 
-    if is_binary:
-        # Convert images back to binary mask.
-        label_image = label_image > 0
-        filtered_image = filtered_image > 0
-
     if relabel:
         filtered_image = utils.label_image(filtered_image > 0)
 
-    output = {'filtered_objects': filtered_image}
+    output = {'filtered_image': filtered_image}
     if plot:
         from .. import plotting
 
@@ -77,5 +70,7 @@ def filter_objects(label_image, feature, threshold, remove, relabel, plot):
                                     removed %d objects with %s values %s %d
                                 ''' % (n_removed, feature, remove, threshold)
         )
+    else:
+        output['figure'] = str()
 
     return output

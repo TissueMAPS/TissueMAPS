@@ -44,5 +44,7 @@ def label_mask(mask, plot=False):
 
         output['figure'] = plotting.create_figure(
                                 plots, title='Labeled objects in mask.')
+    else:
+        output['figure'] = str()
 
     return output

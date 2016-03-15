@@ -25,8 +25,7 @@ class Features(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, label_image, intensity_image=None,
-                 objects_name=None, channel_name=None):
+    def __init__(self, label_image, intensity_image=None):
         '''
         Initialize an instance of class Features.
 
@@ -37,10 +36,6 @@ class Features(object):
             and object pixels have a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
-        objects_name: str, optional
-            name of the objects in `label_image`
-        channel_name: str, optional
-            name of the channel corresponding to `intensity_image`
 
         Raises
         ------
@@ -50,8 +45,6 @@ class Features(object):
             when `intensity_image` and `label_image` don't have identical shape
         '''
         self.label_image = label_image
-        self.channel_name = channel_name
-        self.objects_name = objects_name
         self.intensity_image = intensity_image
         if self.intensity_image is not None:
             if not str(self.intensity_image.dtype).startswith('uint'):
@@ -72,16 +65,15 @@ class Features(object):
             names of the features
         '''
         return [
-            '{objects}_{feature_group}_{feature}'.format(
-                objects=self.objects_name,
+            '{feature_group}_{feature_name}'.format(
                 feature_group=self._feature_group,
-                feature=f)
+                feature_name=f)
             for f in self._feature_names
         ]
 
-    @abstractproperty
+    @property
     def _feature_group(self):
-        pass
+        return self.__class__.__name__
 
     @abstractproperty
     def _feature_names(self):
@@ -165,8 +157,7 @@ class Features(object):
 
 class Intensity(Features):
 
-    def __init__(self, label_image, intensity_image,
-                 objects_name, channel_name):
+    def __init__(self, label_image, intensity_image):
         '''
         Initialize an instance of class Features.
 
@@ -177,22 +168,13 @@ class Intensity(Features):
             and object pixels have a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
-        objects_name: str, optional
-            name of the objects in `label_image`
-        channel_name: str, optional
-            name of the channel corresponding to `intensity_image`
         '''
         super(Intensity, self).__init__(
-                label_image, intensity_image, objects_name, channel_name)
-
-    @property
-    def _feature_group(self):
-        return self.__class__.__name__
+                label_image, intensity_image)
 
     @property
     def _feature_names(self):
-        feats = ['max', 'mean', 'min', 'sum', 'std']
-        return ['%s_%s' % (f, self.channel_name) for f in feats]
+        return ['max', 'mean', 'min', 'sum', 'std']
 
     def extract(self):
         '''
@@ -234,7 +216,7 @@ class Intensity(Features):
 
 class Morphology(Features):
 
-    def __init__(self, label_image, objects_name):
+    def __init__(self, label_image):
         '''
         Initialize an instance of class Morphology.
 
@@ -243,14 +225,8 @@ class Morphology(Features):
         label_image: numpy.ndarray[numpy.int32]
             labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
-        objects_name: str, optional
-            name of the objects in `label_image`
         '''
-        super(Morphology, self).__init__(label_image, objects_name=objects_name)
-
-    @property
-    def _feature_group(self):
-        return self.__class__.__name__
+        super(Morphology, self).__init__(label_image)
 
     @property
     def _feature_names(self):
@@ -301,8 +277,7 @@ class Haralick(Features):
     ..[1] Haralick R.M. (1979): "Statistical and structural approaches to texture". Proceedings of the IEEE
     '''
 
-    def __init__(self, label_image, intensity_image,
-                 objects_name, channel_name):
+    def __init__(self, label_image, intensity_image):
         '''
         Initialize an instance of class Haralick.
 
@@ -313,10 +288,6 @@ class Haralick(Features):
             and object pixels have a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
-        objects_name: str, optional
-            name of the objects in `label_image`
-        channel_name: str, optional
-            name of the channel corresponding to `intensity_image`
 
         Note
         ----
@@ -327,16 +298,11 @@ class Haralick(Features):
         `Mahotas FAQs <http://mahotas.readthedocs.org/en/latest/faq.html#i-ran-out-of-memory-computing-haralick-features-on-16-bit-images-is-it-not-supported>`_  
         '''
         intensity_image = mh.stretch(intensity_image)
-        super(Haralick, self).__init__(
-                label_image, intensity_image, objects_name, channel_name)
-
-    @property
-    def _feature_group(self):
-        return self.__class__.__name__
+        super(Haralick, self).__init__(label_image, intensity_image)
 
     @property
     def _feature_names(self):
-        feats = [
+        return [
             'angular-second-moment',
             'contrast',
             'correlation',
@@ -351,7 +317,6 @@ class Haralick(Features):
             'info-measure-corr-1',
             'info-measure-corr-2'
         ]
-        return ['%s_%s' % (f, self.channel_name) for f in feats]
 
     def extract(self):
         '''
@@ -402,8 +367,7 @@ class TAS(Features):
     .. [1] Hamilton N.A. et al. (2007): "Fast automated cell phenotype image classification". BMC Bioinformatics
     '''
 
-    def __init__(self, label_image, intensity_image,
-                 objects_name, channel_name):
+    def __init__(self, label_image, intensity_image):
         '''
         Initialize an instance of class TAS.
 
@@ -414,28 +378,18 @@ class TAS(Features):
             and object pixels have a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
-        objects_name: str, optional
-            name of the objects in `label_image`
-        channel_name: str, optional
-            name of the channel corresponding to `intensity_image`
         '''
-        super(TAS, self).__init__(
-                label_image, intensity_image, objects_name, channel_name)
+        super(TAS, self).__init__(label_image, intensity_image)
         self.threshold = filters.threshold_otsu(intensity_image)
 
     @property
-    def _feature_group(self):
-        return self.__class__.__name__
-
-    @property
     def _feature_names(self):
-        feats = ['center-%s' % i for i in xrange(9)] + \
+        return ['center-%s' % i for i in xrange(9)] + \
                 ['n-center-%s' % i for i in xrange(9)] + \
                 ['mu-margin-%s' % i for i in xrange(9)] + \
                 ['n-mu-margin-%s' % i for i in xrange(9)] + \
                 ['mu-%s' % i for i in xrange(9)] + \
                 ['n-mu-%s' % i for i in xrange(9)]
-        return ['%s_%s' % (f, self.channel_name) for f in feats]
 
     def extract(self):
         '''
@@ -475,7 +429,6 @@ class Gabor(Features):
     '''
 
     def __init__(self, label_image, intensity_image,
-                 objects_name, channel_name,
                  theta_range=4, frequencies={1, 5, 10}):
         '''
         Initialize an instance of class Gabor.
@@ -487,29 +440,19 @@ class Gabor(Features):
             and object pixels have a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
-        objects_name: str, optional
-            name of the objects in `label_image`
-        channel_name: str, optional
-            name of the channel corresponding to `intensity_image`
         theta_range: int, optional
             number of angles to define the orientations of the Gabor
             filters (default: 4)
         frequencies: Set[float], optional
             frequencies of the Gabor filters
         '''
-        super(Gabor, self).__init__(
-                label_image, intensity_image, objects_name, channel_name)
+        super(Gabor, self).__init__(label_image, intensity_image)
         self.theta_range = theta_range
         self.frequencies = frequencies
 
     @property
-    def _feature_group(self):
-        return self.__class__.__name__
-
-    @property
     def _feature_names(self):
-        feats = ['frequency-%.2f' % f for f in self.frequencies]
-        return ['%s_%s' % (f, self.channel_name) for f in feats]
+        return ['frequency-%.2f' % f for f in self.frequencies]
 
     def extract(self):
         '''
@@ -568,8 +511,7 @@ class Hu(Features):
     ..[1] M. K. Hu (1962): "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
     '''
 
-    def __init__(self, label_image, intensity_image,
-                 objects_name, channel_name):
+    def __init__(self, label_image, intensity_image):
         '''
         Initialize an instance of class Hu.
 
@@ -580,22 +522,12 @@ class Hu(Features):
             and object pixels have a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
-        objects_name: str, optional
-            name of the objects in `label_image`
-        channel_name: str, optional
-            name of the channel corresponding to `intensity_image`
         '''
-        super(Hu, self).__init__(
-                label_image, intensity_image, objects_name, channel_name)
-
-    @property
-    def _feature_group(self):
-        return self.__class__.__name__
+        super(Hu, self).__init__(label_image, intensity_image)
 
     @property
     def _feature_names(self):
-        feats = map(str, range(7))
-        return ['%s_%s' % (f, self.channel_name) for f in feats]
+        return map(str, range(7))
 
     def extract(self):
         '''
@@ -627,7 +559,7 @@ class Zernike(Features):
     Class for calculating Zernike moments.
     '''
 
-    def __init__(self, label_image, objects_name, radius=100):
+    def __init__(self, label_image, radius=100):
         '''
         Initialize an instance of class Zernike.
 
@@ -636,19 +568,13 @@ class Zernike(Features):
         label_image: numpy.ndarray[numpy.int32]
             labeled image, where background pixels are zeros and
             and object pixels have a unique identifier value
-        objects_name: str, optional
-            name of the objects in `label_image`
         radius: int, optional
             radius for rescaling of images to achieve scale invariance
             (default: ``100``)
         '''
-        super(Zernike, self).__init__(label_image, objects_name=objects_name)
+        super(Zernike, self).__init__(label_image)
         self.radius = radius
         self.degree = 12
-
-    @property
-    def _feature_group(self):
-        return self.__class__.__name__
 
     @property
     def _feature_names(self):

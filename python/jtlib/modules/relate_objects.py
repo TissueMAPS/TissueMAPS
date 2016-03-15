@@ -1,8 +1,8 @@
 import numpy as np
+import pandas as pd
 
 
-def relate_objects(parents_image, parents_name,
-                   children_image, children_name, plot=False):
+def relate_objects(parents_image, children_image):
     '''
     Jterator module for relating objects.
 
@@ -15,14 +15,13 @@ def relate_objects(parents_image, parents_name,
     ----------
     parents_image: numpy.ndarray
         label image containing the parent objects
-    parents_name: str
-        name of the parent objects
     children_image: numpy.ndarray
         label image containing the children objects
-    children_name: str
-        name of the children objects
-    plot: bool, optional
-        whether a plot should be generated (default: ``False``)
+
+    Returns
+    -------
+    Dict[str, pandas.Series]
+        * "parent_ids": parent object ID for each children object
     '''
     children_ids = np.unique(children_image[children_image != 0])
 
@@ -31,5 +30,4 @@ def relate_objects(parents_image, parents_name,
         p = np.unique(parents_image[children_image == i])[0]
         parent_ids.append(p)
 
-    return {'parent_ids': parent_ids, 'figure': ''}
-
+    return {'parent_ids': pd.Series(parent_ids, name='parent_ids')}

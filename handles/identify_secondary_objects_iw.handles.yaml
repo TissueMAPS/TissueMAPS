@@ -2,40 +2,47 @@
 input:
 
   - name: input_label_image
-    mode: pipe
-    kind: image
-    value: 
+    type: LabelImage
+    key: 
     help: Binary image with primary objects that will be used as seeds.
 
   - name: intensity_image
-    mode: pipe
-    kind: image
-    value: 
+    type: IntensityImage
+    key: 
     help: Grayscale image in which objects should be identified.
 
   - name: correction_factors
-    mode: constant
-    kind: sequence
+    type: Sequence
     value: [2, 1.5, 1.3, 0.9, 0.7, 0.6, 0.58, 0.55, 0.50, 0.45, 0.4, 0.35, 0.3, 0.25]
     help: >
       Threshold correction factors that are multiplied with calculated
       threshold levels for manual fine-tuning.
 
   - name: min_threshold
-    mode: constant
-    kind: scalar
+    type: Scalar
     value: 120
     help: >
       Minimal threshold level. Lower boundary for pixel values to still be
       considered part of objects.
 
+  - name: plot
+    type: Scalar
+    value:
+    options: [true, false]
+    help: Should a figure be created?
+
 output:
 
   - name: output_label_image
-    mode: pipe
-    kind: image
-    id: identify_secondary_objects_iw.output_label_image
+    type: LabelImage
+    key: identify_secondary_objects_iw.output_label_image
     help: Binary output image.
+
+  - name: fig
+    type: Figure
+    help: >
+      Identified objects in <i>output_label_image</i> and overlay of object
+      outlines on <i>intensity_image</i>.
 
 
 

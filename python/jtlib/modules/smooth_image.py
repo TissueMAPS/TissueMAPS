@@ -41,9 +41,9 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.int32]]
-        "smoothed_image": smoothed intensity image
-        "figure": html string in case ``kwargs["plot"] == True``
+    Dict[str, numpy.ndarray[numpy.int32] or str]
+        * "smoothed_image": smoothed intensity image
+        * "figure": html string in case `plot` is ``True``
 
     Raises
     ------
@@ -98,5 +98,7 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
                                     smoothed image with %s filter of size %s
                                 ''' % (filter_name, filter_size)
         )
+    else:
+        output['figure'] = str()
 
     return output

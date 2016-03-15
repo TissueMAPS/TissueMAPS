@@ -2,14 +2,12 @@
 input:
 
     - name: image
-      mode: pipe
-      kind: image
-      value: 
+      type: IntensityImage
+      key: 
       help: Image that should be smoothed.
 
     - name: filter_name
-      mode: constant
-      kind: sequence
+      type: Scalar
       value: 
       options:
         - average
@@ -21,43 +19,47 @@ input:
           Name of the filter kernel that should be applied to the image.
 
     - name: filter_size
-      mode: constant
-      kind: scalar
+      type: Scalar
       value: 
       help: >
           Size (width and height) of the kernel.
           Provide a single positive and odd integer value.
 
     - name: sigma
-      mode: constant
-      kind: scalar
+      type: Scalar
       value:
       help: >
         Standard deviation of the Gaussian kernel,
         only relevant for "gaussian" filter
 
     - name: sigma_color
-      mode: constant
-      kind: scalar
+      type: Scalar
       value:
       help: >
         Gaussian component applied in the intensity domain (color space),
         only relevant for "bilateral" filter
 
     - name: sigma_space
-      mode: constant
-      kind: scalar
+      type: Scalar
       value:
       help: >
         Gaussian component applied in the spatial domain (coordinate space),
         only relevant for "bilateral" filter
 
+    - name: plot
+      type: Scalar
+      value:
+      options: [true, false]
+      help: Should a figure be created?
+
 output:
 
     - name: smoothed_image
-      mode: pipe
-      kind: image
-      id: smooth_image.smoothed_image
+      type: IntensityImage
+      key: smooth_image.smoothed_image
       help: Smoothed image.
+
+    - name: figure
+      type: Figure
 
 

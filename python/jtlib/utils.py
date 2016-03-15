@@ -136,31 +136,6 @@ def downsample_image(im, bins):
             return np.array(im.astype(float), dtype=np.uint8)
 
 
-def find_border_objects(im):
-    '''
-    Find the objects at the border of a labeled image.
-
-    Parameters
-    ----------
-    im: numpy.ndarray
-        label image
-
-    Returns
-    -------
-    List[int]
-        1 if an object represents a border object and 0 otherwise
-    '''
-    edges = [np.unique(im[0, :]),   # first row
-             np.unique(im[-1, :]),  # last row
-             np.unique(im[:, 0]),   # first col
-             np.unique(im[:, -1])]  # last col
-
-    # Count only unique ids and remove 0 since it signals 'empty space'
-    border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
-    object_ids = np.unique(im[im != 0])
-    return [1 if o in border_ids else 0 for o in object_ids]
-
-
 def sort_coordinates_counter_clockwise(coordinates):
     '''
     Sort *y*, *x* coordinates values in counter clockwise order.

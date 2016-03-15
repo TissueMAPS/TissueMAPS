@@ -6,7 +6,7 @@ input:
       key:
       help: >
         Labeled image containing the objects
-        for which Haralick features should be extracted.
+        for which TAS features should be extracted.
 
     - name: intensity_image
       type: IntensityImage
@@ -23,10 +23,10 @@ input:
 output:
 
     - name: measurements
-      type: features
+      type: Features
       objects_ref: label_image
       channel_ref: intensity_image
-      help: Extracted Haralick features.
+      help: Extracted TAS features.
 
     - name: figure
       type: Figure

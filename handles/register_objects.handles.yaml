@@ -1,0 +1,15 @@
+---
+input:
+
+    - name: label_image
+      type: LabelImage
+      key:
+      help: >
+        Labeled image containing the objects whose segmentation should be saved.
+
+output:
+
+    - name: objects
+      type: Objects
+      key:
+      help: Name that should be given to the objects in <i>label_image</i>.

@@ -31,11 +31,9 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
     Returns
     -------
-    dict
-        outputs as key-value pairs:
-            * "mask" (numpy.ndarray): thresholded mimage
-            * "figure" (str, optional): html representation of the figure
-              in case ``kwargs["plot"]`` is ``True``
+    Dict[str, numpy.ndarray[bool] or str]
+        * "mask": thresholded mimage
+        * "figure": html string in case `plot` is ``True``
 
     Raises
     ------
@@ -59,7 +57,7 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
 
     logger.info('threshold correction factor: %.2f', correction_factor)
     corr_thresh = thresh * correction_factor
-    logger.info('final threshold level: %d', corr_thresh)
+    logger.info('applied threshold level: %d', corr_thresh)
 
     if corr_thresh > max_threshold:
         corr_thresh = max_threshold
@@ -92,5 +90,7 @@ def threshold_image(image, correction_factor=1, min_threshold=None,
                         title='''thresholded image at pixel value %s
                         ''' % thresh
         )
+    else:
+        outputs['figure'] = str()
 
     return outputs

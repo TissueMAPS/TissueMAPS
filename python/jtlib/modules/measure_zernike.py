@@ -1,7 +1,7 @@
 import jtlib.features
 
 
-def measure_zernike(label_image, objects_name, plot=False):
+def measure_zernike(label_image, plot=False):
     '''
     Jterator module for measuring Zernike features of objects
     (connected components) in a labeled image.
@@ -12,8 +12,6 @@ def measure_zernike(label_image, objects_name, plot=False):
     ----------
     label_image: numpy.ndarray[int32]
         labeled image; pixels with the same label encode an object
-    objects_name: str
-        name of the objects in `label_image`
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -21,14 +19,21 @@ def measure_zernike(label_image, objects_name, plot=False):
     -------
     Dict[str, pandas.DataFrame[float] or str]
         "measurements": extracted Zernike features
-        "figure": html string in case ``kwargs["plot"] == True``
+        "figure": html string in case `plot` is ``True``
 
     See also
     --------
     :py:class:`jtlib.features.Zernike`
     '''
     f = jtlib.features.Zernike(
-                    label_image=label_image,
-                    objects_name=objects_name
+                    label_image=label_image
     )
-    return {'measurements': f.extract()}
+
+    outputs = {'measurements': f.extract()}
+
+    if plot:
+        outputs['figure'] = f.plot()
+    else:
+        outputs['figure'] = str()
+
+    return outputs

@@ -1,4 +1,4 @@
-function [output_label_image, figure] = identify_secondary_objects_iw(input_label_image, intensity_image, ...
+function [output_label_image, fig] = identify_secondary_objects_iw(input_label_image, intensity_image, ...
                                                             correction_factors, min_threshold, ...
                                                             plot)
 
@@ -38,7 +38,7 @@ function [output_label_image, figure] = identify_secondary_objects_iw(input_labe
     if nargin < 5
         plot = false;
     end
-    figure = '';
+    fig = '';
 
     if ~isa(intensity_image, 'integer')
         error('Argument "intensity_image" must have type integer.')
@@ -156,9 +156,6 @@ function [output_label_image, figure] = identify_secondary_objects_iw(input_labe
         fig.data = data;
         fig.layout = layout;
 
-        % TODO: figures for test modes
-
-        jtlib.plotting.save_plotly_figure(fig, varargin{2});
     end
 
     output_label_image = int32(output_label_image);

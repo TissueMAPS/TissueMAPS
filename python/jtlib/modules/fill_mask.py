@@ -23,7 +23,6 @@ def fill_mask(mask, plot=False):
 
     output = {'filled_mask': filled_mask}
     if plot:
-        import plotly
         from .. import plotting
 
         plots = [
@@ -33,5 +32,7 @@ def fill_mask(mask, plot=False):
 
         output['figure'] = plotting.create_figure(
                                 plots, title='Holes in mask filled.')
+    else:
+        output['figure'] = str()
 
     return output

@@ -1,0 +1,21 @@
+---
+input:
+
+    - name: parents_image
+      type: Objects
+      key: 
+      help: Label image containing parent objects.
+
+    - name: children_image
+      type: Objects
+      key: 
+      help: Label image containing children objects.
+
+output:
+
+    - name: parent_ids
+      type: Attribute
+      objects_ref: children_image
+      help: Parent object ID for each children object. 
+
+

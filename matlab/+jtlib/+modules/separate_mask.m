@@ -1,4 +1,4 @@
-function [output_mask, figure] = separate_objects(input_mask, input_image, cutting_passes, min_cut_area, ...
+function [output_mask, fig] = separate_mask(input_mask, input_image, cutting_passes, min_cut_area, ...
                                         max_solidity, min_formfactor, min_area, max_area, selection_test_mode, ...
                                         filter_size, sliding_window_size, min_angle, max_radius, perimeter_test_mode, ...,
                                         plot)
@@ -55,7 +55,7 @@ function [output_mask, figure] = separate_objects(input_mask, input_image, cutti
     % Returns
     % -------
     % logical
-    %   output_mask: binary image with clumps in `input_mask` separated
+    %   "output_mask": binary image
     % 
     % References
     % ----------
@@ -65,9 +65,9 @@ function [output_mask, figure] = separate_objects(input_mask, input_image, cutti
     if nargin < 15
         plot = false;
     end
-    figure = '';
+    fig = '';
 
-    % those functions could become privat
+    % those functions could become private
     import jtlib.analysePerimeter;
     import jtlib.separateClumps;
     import jtlib.selectClumps;
@@ -198,7 +198,7 @@ function [output_mask, figure] = separate_objects(input_mask, input_image, cutti
 
     %     if perimeter_test_mode
 
-    %         fig = figure;
+    %         fig = fig;
 
     %         if ~isempty(perimeters)
     %             h = cutting_passes;
@@ -265,7 +265,7 @@ function [output_mask, figure] = separate_objects(input_mask, input_image, cutti
     %         form_factor_image = rplabel(logical(mask), [], form_factor);
     %         area_image = rplabel(logical(mask), [], area);
 
-    %         fig = figure;
+    %         fig = fig;
             
     %         subplot(2,2,1), imagesc(solidity_image);
     %         title('Solidity');
@@ -290,7 +290,7 @@ function [output_mask, figure] = separate_objects(input_mask, input_image, cutti
     %         B = bwboundaries(output_mask, 'holes');
     %         labeled_mask = label2rgb(bwlabel(output_mask), 'jet', 'k', 'shuffle');
 
-    %         fig = figure;
+    %         fig = fig;
 
     %         subplot(2,2,2), imagesc(logical(selected_clumps(:,:,1)==1)),
     %         title('Cut lines on selected clumps in input mask');
@@ -367,7 +367,7 @@ function [output_mask, figure] = separate_objects(input_mask, input_image, cutti
 
     };
 
-    figure = jtlib.plotting.create_figure(plots);
+    fig = jtlib.plotting.create_figure(plots);
     % jtlib.plotting.save_figure(fig, varargin{2});
 
     if test_mode
