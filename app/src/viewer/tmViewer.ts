@@ -7,6 +7,10 @@ interface ViewerScope extends ViewerWindowScope {
 
 class ViewerCtrl {
     static $inject = ['$scope'];
+
+    tPoint = 0;
+    zPlane = 0;
+
     constructor(public $scope: ViewerScope) {
         $scope.appInstance = $scope.viewer;
     }

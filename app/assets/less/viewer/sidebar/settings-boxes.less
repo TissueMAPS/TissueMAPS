@@ -7,6 +7,7 @@
     text-align: center;
     width: 30px;
     margin-left: -15px;
+
     &:first-child {
         margin-left: 0px;
     }
@@ -16,7 +17,7 @@
 .inline-color-switcher:extend(.inline-layer-control) {
 
     vertical-align: middle; // align div in middle of line
-    width: 40px;
+    width: 55px;
     height: 85%;
     line-height: 85%; // align RGB in middle of div
 
@@ -207,6 +208,17 @@
 
 .object-section {
     height: @object-section-height;
+
+    .tm-selectable-tab-popup-window {
+        width: 160px;
+        /*
+         * This is interpreted as offset from parent since this the box uses
+         * tmAttachToParent which updates the location of the popup window based
+         * on the position of the parent.
+         * Necessary hack due to overflow-behavior.
+         */
+        right: @sidebar-section-padding + 1;
+    }
 }
 
 .saved-results-section {

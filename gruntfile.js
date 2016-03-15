@@ -391,15 +391,6 @@ module.exports = function(grunt) {
             }
         },
 
-        notify_hooks: {
-            options: {
-                enabled: true,
-                max_jshint_notifications: 5, // maximum number of notifications from jshint output
-                success: false,              // whether successful grunt executions should be notified automatically
-                duration: 3                  // the duration of notification in seconds, for `notify-send only
-            }
-        },
-
         karma: {
             options: {
                 frameworks: ['jasmine'],
@@ -506,9 +497,6 @@ module.exports = function(grunt) {
             all: {}
         }
     });
-
-    // Necessary when using custom options
-    grunt.task.run('notify_hooks');
 
     /*
      * ALIAS TASKS

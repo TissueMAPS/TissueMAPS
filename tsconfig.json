@@ -21,6 +21,7 @@
         "app/src/tmAppbar.ts",
 
         "app/src/util/uuid.ts",
+        "app/src/util/pad.ts",
 
         "app/src/core/util/Color.ts",
         "app/src/core/util/Size.ts",
@@ -88,15 +89,20 @@
 
         "app/src/viewer/toolui/toolbar/tmToolbar.ts",
         "app/src/viewer/toolui/toolbar/ToolbarCtrl.ts",
+
         "app/src/viewer/sidebar/channels/ChannelControlsCtrl.ts",
         "app/src/viewer/sidebar/channels/ChannelCtrl.ts",
         "app/src/viewer/sidebar/channels/tmChannelSettings.ts",
         "app/src/viewer/sidebar/channels/ChannelSettingsCtrl.ts",
+
         "app/src/viewer/sidebar/objects/ObjectsControlsCtrl.ts",
         "app/src/viewer/sidebar/objects/ObjectSettingsCtrl.ts",
         "app/src/viewer/sidebar/objects/tmObjectSettings.ts",
+        "app/src/viewer/sidebar/objects/ObjectLayerCtrl.ts",
+
         "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",
         "app/src/viewer/sidebar/selections/SelectionControlsCtrl.ts",
+
         "app/src/viewer/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
         "app/src/viewer/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
         "app/src/viewer/sidebar/visuallayers/VisualLayerCtrl.ts",

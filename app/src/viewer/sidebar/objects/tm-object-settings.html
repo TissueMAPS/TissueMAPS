@@ -2,9 +2,12 @@
 
   <tm-multi-selection-box items="objCtrl.layers" by-name="'layer'">
     <tm-selectable-tabs>
-        <tm-selectable-tab>
-
+      <tm-selectable-tab ng-controller="ObjectLayerCtrl as layerCtrl">
         <tm-selectable-tab-popup>
+          <p>
+            Stroke color:<br>
+            <ng-color-picker selected="layerCtrl.selectedColor.strokeColor" colors="layerCtrl.selectableColors"></ng-color-picker>
+          </p>
         </tm-selectable-tab-popup>
 
         <tm-selectable-tab-content>

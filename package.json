@@ -34,7 +34,6 @@
     "grunt-filerev": "^2.2.0",
     "grunt-include-source": "^0.5.1",
     "grunt-karma": "^0.10.1",
-    "grunt-notify": "^0.4.1",
     "grunt-protractor-runner": "^2.0.0",
     "grunt-typescript": "^0.7.0",
     "grunt-usebanner": "^0.3.1",

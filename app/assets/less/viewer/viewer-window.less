@@ -9,8 +9,19 @@
 }
 
 .viewers-container {
-    // height: calc(~'100% - @{viewers-tabbar-container-height}');
     height: 100%;
+}
+
+.viewer-middle {
+    height: calc(~'100% - 25px');
+    position: relative;
+}
+
+.viewer-bottom {
+    height: @viewer-bottom-height;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
 }
 
 .viewer {
