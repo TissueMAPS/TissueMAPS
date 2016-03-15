@@ -6,12 +6,15 @@ import geoalchemy2.functions as geofun
 
 class LabelResult(Model, CRUDMixin):
     id = db.Column(db.Integer, primary_key=True)
-    mapobject_name = db.Column(db.String(120))
     tool_session_id = \
         db.Column(db.Integer, db.ForeignKey('tool_session.id'))
+    mapobject_type_id = db.Column(
+        db.Integer, db.ForeignKey('mapobject_type.id'))
+    mapobject_type = db.relationship(
+        'MapobjectType', backref='label_results')
 
-    def __init__(self, ids, labels, mapobject_name, session):
-        self.mapobject_name = mapobject_name
+    def __init__(self, ids, labels, mapobject_type, session):
+        self.mapobject_type_id = mapobject_type.id
         self.tool_session_id = session.id
 
         db.session.add(self)
@@ -19,7 +22,7 @@ class LabelResult(Model, CRUDMixin):
 
         label_objs = []
         ids = Mapobject.translate_external_ids(
-            ids, session.experiment_id, mapobject_name)
+            ids, session.experiment_id, mapobject_type.id)
         for ext_id, label in zip(ids, labels):
             pl = LabelResultLabel(
                 mapobject_id=ext_id, label=label,

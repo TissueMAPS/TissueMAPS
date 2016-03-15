@@ -12,9 +12,32 @@ class MapobjectType(Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120))
+    min_poly_zoom = db.Column(db.Integer)
 
     experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
     experiment = db.relationship('Experiment', backref='mapobject_types')
+
+    def get_mapobject_outlines_within_tile(self, x, y, z, t, zplane):
+        do_simplify = z < self.min_poly_zoom
+        if do_simplify:
+            select_stmt = db.session.query(
+                MapobjectOutline.mapobject_id,
+                MapobjectOutline.geom_centroid.ST_AsGeoJSON())
+        else:
+            select_stmt = db.session.query(
+                MapobjectOutline.mapobject_id,
+                MapobjectOutline.geom_poly.ST_AsGeoJSON())
+
+        outlines = select_stmt.\
+            join(MapobjectOutline.mapobject).\
+            filter(
+                (Mapobject.mapobject_type_id == self.id) &
+                (MapobjectOutline.tpoint == t) &
+                (MapobjectOutline.zplane == zplane) &
+                (MapobjectOutline.intersection_filter(x, y, z))).\
+            all()
+
+        return outlines
 
 
 class Mapobject(Model):
@@ -27,14 +50,14 @@ class Mapobject(Model):
         'MapobjectType', backref='mapobjects')
 
     @staticmethod
-    def translate_external_ids(external_ids, experiment_id, mapobject_name):
+    def translate_external_ids(external_ids, experiment_id, mapobject_type_id):
         mapobjects = db.session.\
             query(Mapobject).\
             join(MapobjectType).\
             filter(
                 (Mapobject.external_id.in_(external_ids)) &
                 (MapobjectType.experiment_id == experiment_id) &
-                (MapobjectType.name == mapobject_name)
+                (MapobjectType.id == mapobject_type_id)
             ).all()
         ids = [o.id for o in mapobjects]
         return ids
@@ -73,23 +96,6 @@ class MapobjectOutline(Model):
         )
 
         return MapobjectOutline.geom_poly.intersects(tile)
-
-    @staticmethod
-    def get_mapobject_outlines_within_tile(mapobject_name, x, y, z, t, zplane):
-        return db.session.\
-        query(
-            MapobjectOutline.mapobject_id,
-            MapobjectOutline.geom_poly.ST_NPoints(),
-            MapobjectOutline.geom_poly.ST_AsGeoJSON(),
-            MapobjectOutline.geom_centroid.ST_AsGeoJSON()).\
-        join(MapobjectOutline.mapobject).\
-        join(MapobjectType).\
-        filter(
-            (MapobjectType.name == mapobject_name) &
-            (MapobjectOutline.tpoint == t) &
-            (MapobjectOutline.zplane == zplane) &
-            (MapobjectOutline.intersection_filter(x, y, z))
-        ).all()
 
 
 class Feature(Model):

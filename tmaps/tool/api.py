@@ -129,21 +129,18 @@ def get_labelresult(labelresult_id):
 
     label_result = LabelResult.get(int(labelresult_id))
 
-    outlines = MapobjectOutline.get_mapobject_outlines_within_tile(
-        label_result.mapobject_name, x, y, z, zlevel, t)
+    query_res = label_result.mapobject_type.get_mapobject_outlines_within_tile(
+        x, y, z, zlevel, t)
     features = []
 
-    if len(outlines) > 0:
-        n_points = sum([t[1] for t in outlines])
-        mapobject_ids = [c[0] for c in outlines]
+    if len(query_res) > 0:
+        mapobject_ids = [c[0] for c in query_res]
         mapobject_id_to_label = label_result.get_labels_for_objects(mapobject_ids)
-        do_simplify_geom = n_points > 10000
 
-        for id, n_points, poly_geojson, point_geojson in outlines:
-            geom_geojson = point_geojson if do_simplify_geom else poly_geojson
+        for id, geom_geojson_str in query_res:
             feature = {
                 "type": "Feature",
-                "geometry": json.loads(geom_geojson),
+                "geometry": json.loads(geom_geojson_str),
                 "properties": {
                     "label": mapobject_id_to_label[id],
                     "id": id

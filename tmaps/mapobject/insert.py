@@ -6,10 +6,14 @@ This file can be run as a main module like this:
 """
 import sqlalchemy
 import geoalchemy2
+from sqlalchemy.sql import func
+import itertools
 
 from tmaps.experiment import Experiment
 from tmaps.mapobject import MapobjectOutline, Mapobject, MapobjectType, Feature, FeatureValue
 
+
+N_POINTS_PER_TILE_LIMIT = 1500
 
 def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', dbport=5432):
     dburi = 'postgresql://%s:%s@localhost:%d/%s' % (dbuser, dbpass, dbport, dbname)
@@ -18,8 +22,8 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
     session = smaker()
     e = session.query(Experiment).get(experiment_id)
 
-    t = 0
-    z = 0
+    tpoint = 0
+    zplane = 0
 
     try:
         with e.dataset as data:
@@ -77,28 +81,32 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
     #                 for row in feature_df
 
             # Third add outlines for all Mapobjects 
-            for object_name in data['/objects']:
+            for mapobject_type in mapobject_types:
+                object_name = mapobject_type.name
                 outline_objects = []
                 object_data = data['/objects/%s' % object_name]
                 outline_group = \
                     object_data['map_data/outlines/coordinates/']
+
+
                 for external_id in outline_group:
                     print 'Add MapObjectOutline for MapObject %d of type %s' \
                         % (int(external_id), object_name)
 
-                    outline = outline_group[external_id]
+                    outline = outline_group[external_id][()]
 
                     # Create a string representation of the polygon using the EWKT
                     # format, e.g. "POLGON((1 2,3 4,6 7)))"
-                    centroid = outline[()].mean(axis=0)
+                    centroid = outline.mean(axis=0)
                     poly_ewkt = 'POLYGON((%s))' % ','.join(
                         ['%d %d' % tuple(p) for p in outline])
+
                     centroid_ewkt = 'POINT(%.2f %.2f)' % (centroid[0], centroid[1])
                     
                     mapobj = mapobjects_by_id[object_name][int(external_id)]
 
                     mapobj_outline = MapobjectOutline(
-                        tpoint=t, zplane=z,
+                        tpoint=tpoint, zplane=zplane,
                         geom_poly=poly_ewkt,
                         geom_centroid=centroid_ewkt,
                         mapobject_id=mapobj.id)
@@ -107,17 +115,78 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
                     outline_objects.append(mapobj_outline)
 
                 session.add_all(outline_objects)
+                session.flush()
+
+                max_z = 6
+                n_points_in_tile_per_z = calculate_n_points_in_tile(
+                    session, max_z,
+                    mapobject_outline_ids=[o.id for o in outline_objects],
+                    n_tiles_to_sample=10)
+
+                min_poly_zoom = min([z for z, n in n_points_in_tile_per_z.items()
+                                     if n <= N_POINTS_PER_TILE_LIMIT])
+                mapobject_type.min_poly_zoom = min_poly_zoom
+                session.flush()
+
+
 
 
         print 'Flush MapobjectOutlines to DB'
-    except:
+
+    except Exception as e:
         session.rollback()
         print 'ERROR: Transaction rolled back.'
+        raise e
     else:
         print 'SUCCESS: Commit.'
         session.commit()
 
     return session
+
+def calculate_n_points_in_tile(session, max_z,
+                               mapobject_outline_ids,
+                               n_tiles_to_sample):
+    import random
+
+    n_points_in_tile_per_z = {}
+
+    for z in range(max_z, -1, -1):
+        tilesize = 256 * 2 ** (6 - z)
+
+        rand_xs = [random.randrange(0, 2**z) for _ in range(n_tiles_to_sample)]
+        rand_ys = [random.randrange(0, 2**z) for _ in range(n_tiles_to_sample)]
+
+        n_points_in_tile_samples = []
+        for x, y in zip(rand_xs, rand_ys):
+            x0 = x * tilesize
+            y0 = -y * tilesize
+
+            minx = x0
+            maxx = x0 + tilesize
+            miny = y0 - tilesize
+            maxy = y0
+
+            tile = 'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy})'.format(
+                minx=minx,
+                maxx=maxx,
+                miny=miny,
+                maxy=maxy
+            )
+
+            n_points_in_tile = session.\
+                query(func.sum(MapobjectOutline.geom_poly.ST_NPoints())).\
+                filter(
+                    (MapobjectOutline.id.in_(mapobject_outline_ids)) &
+                    MapobjectOutline.geom_poly.intersects(tile)
+                ).scalar()
+
+            if n_points_in_tile is not None:
+                n_points_in_tile_samples.append(n_points_in_tile)
+
+        n_points_in_tile_per_z[z] = \
+            float(sum(n_points_in_tile_samples)) / len(n_points_in_tile_samples)
+
+    return n_points_in_tile_per_z
 
 
 if __name__ == '__main__':

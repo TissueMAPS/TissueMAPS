@@ -20,6 +20,8 @@ class ClusterTool():
 
         feature_names = payload['selected_features']
         mapobject_name = payload['chosen_object_type']
+        mapobject_type = [t for t in experiment.mapobject_types
+                          if t.name == mapobject_name][0]
         k = payload['k']
 
         with experiment.dataset as dataset:
@@ -27,8 +29,8 @@ class ClusterTool():
                 dataset, mapobject_name, feature_names, k)
             ids = range(len(predicted_labels))
         response = LabelResult(
-            ids=ids, labels=predicted_labels, mapobject_name=mapobject_name,
-            session=session)
+            ids=ids, labels=predicted_labels,
+            mapobject_type=mapobject_type, session=session)
 
         return response
 

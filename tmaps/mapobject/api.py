@@ -10,7 +10,7 @@ from sqlalchemy.sql import text
 from tmaps.api import api
 from tmaps.extensions.database import db
 
-from tmaps.mapobject import MapobjectOutline
+from tmaps.mapobject import MapobjectOutline, MapobjectType
 from tmaps.experiment import Experiment
 from tmaps.response import (
     MALFORMED_REQUEST_RESPONSE,
@@ -19,8 +19,6 @@ from tmaps.response import (
 )
 
 
-
-N_POINTS_COMPLEXITY_LIMIT = 1000
 
 
 def _create_mapobject_feature(obj_id, geometry_obj):
@@ -58,24 +56,21 @@ def get_mapobjects_tile(experiment_id, object_name):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    query_res = MapobjectOutline.get_mapobject_outlines_within_tile(
-        object_name, x, y, z, t, zlevel)
+    mapobject_type = MapobjectType.query.filter_by(name=object_name).one()
+    query_res = mapobject_type.get_mapobject_outlines_within_tile(
+        x, y, z, t, zlevel)
 
     features = []
 
     if len(query_res) > 0:
         # Try to estimate how many points there are in total within 
         # the polygons of this tile.
-        n_points = sum([t[1] for t in query_res])
-        do_simplify_geom = n_points > N_POINTS_COMPLEXITY_LIMIT
-
-        for id, n_points, poly_geojson, point_geojson in query_res:
-            geom_geojson = point_geojson if do_simplify_geom else poly_geojson
+        for mapobject_id, geom_geojson_str in query_res:
             feature = {
                 "type": "Feature",
-                "geometry": json.loads(geom_geojson),
+                "geometry": json.loads(geom_geojson_str),
                 "properties": {
-                    "id": id
+                    "id": mapobject_id
                 }
             }
             features.append(feature)
