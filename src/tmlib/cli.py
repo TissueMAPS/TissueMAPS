@@ -34,14 +34,14 @@ AVAILABLE_METHODS = {
 }
 
 
-def create_cli_method_args(prog_name, method_name, **kwargs):
+def create_cli_method_args(step_name, method_name, **kwargs):
     '''
     Create the argument object required as an input argument for methods of the
     :py:class:`tmlib.cli.CommandLineInterface` class.
 
     Parameters
     ----------
-    prog_name: str
+    step_name: str
         name of the program
     method_name: str
         name of the method for which arguments should be build
@@ -66,7 +66,7 @@ def create_cli_method_args(prog_name, method_name, **kwargs):
     '''
     args_handler = load_method_args(method_name)
     method_args = args_handler(**kwargs)
-    variable_args_handler = load_var_method_args(prog_name, method_name)
+    variable_args_handler = load_var_method_args(step_name, method_name)
     if variable_args_handler is not None:
         method_args.variable_args = variable_args_handler(**kwargs)
     return method_args
@@ -633,7 +633,7 @@ class CommandLineInterface(object):
     def _call(self, args):
         logger.debug('call "%s" method of class "%s"',
                      args.method_name, self.__class__.__name__)
-        method_args = create_cli_method_args(prog_name=self.name, **vars(args))
+        method_args = create_cli_method_args(step_name=self.name, **vars(args))
         call_cli_method(self, args.method_name, method_args)
 
     @staticmethod

@@ -13,7 +13,6 @@ import gc3libs
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 from gc3libs.session import Session
-from gc3libs.workflow import TaskCollection
 
 from . import utils
 from . import cluster_utils
@@ -238,7 +237,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment, prog_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ClusterRoutines.
 
@@ -246,7 +245,7 @@ class ClusterRoutines(BasicClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -258,7 +257,7 @@ class ClusterRoutines(BasicClusterRoutines):
         tmlib.api.ClusterRoutines
         '''
         super(ClusterRoutines, self).__init__(experiment)
-        self.prog_name = prog_name
+        self.step_name = step_name
         self.verbosity = verbosity
 
     @cached_property
@@ -270,7 +269,7 @@ class ClusterRoutines(BasicClusterRoutines):
             directory where *.job* files and log output will be stored
         '''
         project_dir = os.path.join(self.experiment.dir,
-                                         'tmaps', self.prog_name)
+                                         'tmaps', self.step_name)
         if not os.path.exists(project_dir):
             logger.debug('create project directory: %s' % project_dir)
             os.makedirs(project_dir)
@@ -455,7 +454,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         return os.path.join(
                     self.job_descriptions_dir,
-                    '%s_run_%.6d.job.json' % (self.prog_name, job_id))
+                    '%s_run_%.6d.job.json' % (self.step_name, job_id))
 
     def build_collect_job_filename(self):
         '''
@@ -467,7 +466,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         return os.path.join(
                     self.job_descriptions_dir,
-                    '%s_collect.job.json' % self.prog_name)
+                    '%s_collect.job.json' % self.step_name)
 
     def _make_paths_absolute(self, batch):
         for key, value in batch['inputs'].items():
@@ -669,14 +668,14 @@ class ClusterRoutines(BasicClusterRoutines):
         # the structure of the command see documentation of subprocess package:
         # https://docs.python.org/2/library/subprocess.html.
         job_id = batch['id']
-        command = [self.prog_name]
+        command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
         command.extend(['run', '--job', str(job_id)])
         return command
 
     def _build_collect_command(self):
-        command = [self.prog_name]
+        command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
         command.extend(['collect'])
@@ -836,11 +835,11 @@ class ClusterRoutines(BasicClusterRoutines):
 
         if 'run' in job_descriptions.keys():
             logger.info('create jobs for "run" phase')
-            run_jobs = RunJobCollection(self.prog_name)
+            run_jobs = RunJobCollection(self.step_name)
             for i, batch in enumerate(job_descriptions['run']):
 
                 job = RunJob(
-                        step_name=self.prog_name,
+                        step_name=self.step_name,
                         arguments=self._build_run_command(batch),
                         output_dir=self.log_dir,
                         job_id=batch['id']
@@ -866,7 +865,7 @@ class ClusterRoutines(BasicClusterRoutines):
             batch = job_descriptions['collect']
 
             collect_job = CollectJob(
-                    step_name=self.prog_name,
+                    step_name=self.step_name,
                     arguments=self._build_collect_command(),
                     output_dir=self.log_dir
             )
@@ -877,7 +876,7 @@ class ClusterRoutines(BasicClusterRoutines):
             collect_job = None
 
         jobs = WorkflowStep(
-                    name=self.prog_name,
+                    name=self.step_name,
                     run_jobs=run_jobs,
                     collect_job=collect_job
         )

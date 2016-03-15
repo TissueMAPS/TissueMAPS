@@ -10,10 +10,10 @@ from abc import ABCMeta
 from abc import abstractmethod
 from cached_property import cached_property
 from collections import defaultdict
-from .readers import Hdf5Reader
+from .readers import DatasetReader
 from .errors import PyramidCreationError
 from .errors import RegexError
-from .writers import Hdf5Writer
+from .writers import DatasetWriter
 from .writers import XmlWriter
 from .pixels import create_pixels_from_file
 from .pixels import create_background_pixels
@@ -1043,7 +1043,7 @@ class SegmentedObjectLayer(Layer):
             contour is used (default: ``1``)
         '''
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
-        with Hdf5Writer(filename) as store:
+        with DatasetWriter(filename) as store:
             obj_path = '/objects/%s' % self.name
             store.create_group(obj_path)
             store.set_attribute(obj_path, 'visual_type', 'polygon')
@@ -1052,7 +1052,7 @@ class SegmentedObjectLayer(Layer):
             centroid_coord_path = '%s/map_data/centroids/coordinates' % obj_path
             global_obj_id = 0
             for j, f in enumerate(data_files):
-                with Hdf5Reader(f) as data:
+                with DatasetReader(f) as data:
 
                     logger.debug('process data in file "%s"', f)
                     logger.debug('calculate object outline coordinates')
@@ -1076,8 +1076,8 @@ class SegmentedObjectLayer(Layer):
                     # accordingly, i.e. translate site-specific coordinates into
                     # global ones.
 
-                    plate = data.read('/metadata/plate')
-                    plate = self.experiment.plates[plate]
+                    plate_index = data.read('/metadata/plate')
+                    plate = self.experiment.plates[plate_index]
                     well_name = data.read('/metadata/well_name')
                     plate_coords = plate.map_well_id_to_coordinate(well_name)
                     well_coords = (
@@ -1098,7 +1098,8 @@ class SegmentedObjectLayer(Layer):
                     n_prior_wells = (n_prior_well_rows, n_prior_well_cols)
 
                     y_offset, x_offset = self._calc_global_offset(
-                                                p, well_coords, n_prior_wells)
+                                                plate_index,
+                                                well_coords, n_prior_wells)
 
                     if align:
                         # Images may need to be aligned between cycles
@@ -1229,7 +1230,7 @@ class WellObjectLayer(Layer):
         ``/objects/wells/features/<feature_name>``.
         '''
         filename = os.path.join(self.experiment.dir, self.experiment.data_file)
-        with Hdf5Reader(filename) as data:
+        with DatasetReader(filename) as data:
             objects = data.list_groups('/objects')
             if 'wells' in objects:
                 objects.remove('wells')
@@ -1244,7 +1245,7 @@ class WellObjectLayer(Layer):
                 plate_ref[obj] = data.read('%s/metadata/plate' % obj_path)
                 well_ref[obj] = data.read('%s/metadata/well_name' % obj_path)
 
-            with Hdf5Writer(filename) as store:
+            with DatasetWriter(filename) as store:
                 obj_path = '/objects/%s' % self.name
                 store.create_group(obj_path)
                 store.set_attribute(obj_path, 'visual_type', 'polygon')

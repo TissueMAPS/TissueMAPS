@@ -10,7 +10,7 @@ from ..plate import determine_plate_dimensions
 from ..metadata import ImageFileMapping
 from ..api import ClusterRoutines
 from ..writers import JsonWriter
-from ..writers import TablesWriter
+from ..writers import DataTableWriter
 from ..errors import NotSupportedError
 from ..errors import MetadataError
 from ..formats import Formats
@@ -38,7 +38,7 @@ class MetadataConfigurator(ClusterRoutines):
     separate JSON file.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class MetadataConfigurator.
 
@@ -46,7 +46,7 @@ class MetadataConfigurator(ClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -54,7 +54,7 @@ class MetadataConfigurator(ClusterRoutines):
             mapping of additional key-value pairs that are ignored
         '''
         super(MetadataConfigurator, self).__init__(
-                experiment, prog_name, verbosity)
+                experiment, step_name, verbosity)
 
     @property
     def image_file_format_string(self):
@@ -417,7 +417,7 @@ class MetadataConfigurator(ClusterRoutines):
                     # Store the updated metadata in an HDF5 file
                     filename = os.path.join(cycle.dir,
                                             cycle.metadata_file)
-                    with TablesWriter(filename, truncate=True) as writer:
+                    with DataTableWriter(filename, truncate=True) as writer:
                         writer.write('image_metadata', md)
 
                     # Remove the intermediate cycle-specific mapper file

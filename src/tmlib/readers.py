@@ -80,6 +80,9 @@ class TextReader(Reader):
 class XmlReader(TextReader):
 
     # TODO: implement xpath subset reading via lxml
+    '''
+    Class for reading data from files in XML format.
+    '''
 
     @utils.same_docstring_as(Reader.__init__)
     def __init__(self, directory=None):
@@ -130,7 +133,7 @@ def load_json(string):
 
 class JsonReader(TextReader):
     '''
-    Class for reading data from JSON files.
+    Class for reading data from files in JSON format.
     '''
 
     @utils.same_docstring_as(Reader.__init__)
@@ -165,7 +168,7 @@ class JsonReader(TextReader):
             return load_json(f.read())
 
 
-def load_yaml(string, use_ruamel=False):
+def load_yaml(string):
     '''
     Convert YAML string to Python object.
 
@@ -173,22 +176,17 @@ def load_yaml(string, use_ruamel=False):
     ----------
     string: str
         YAML string
-    use_ruamel: bool, optional
-        when the `ruamel.yaml` library should be used (defaults to ``False``)
 
     Returns
     -------
     dict or list
     '''
-    if use_ruamel:
-        return ruamel.yaml.load(string, ruamel.yaml.RoundTripLoader)
-    else:
-        return yaml.load(string)
+    return ruamel.yaml.load(string, ruamel.yaml.RoundTripLoader)
 
 
 class YamlReader(TextReader):
     '''
-    Class for reading data from YAML files.
+    Class for reading data from files in YAML 1.2 format.
     '''
 
     @utils.same_docstring_as(Reader.__init__)
@@ -196,7 +194,7 @@ class YamlReader(TextReader):
 
         super(YamlReader, self).__init__(directory)
 
-    def read(self, filename, use_ruamel=False):
+    def read(self, filename):
         '''
         Read YAML file.
 
@@ -204,8 +202,6 @@ class YamlReader(TextReader):
         ----------
         filename: str
             path to the YAML file
-        use_ruamel: bool, optional
-            whether `ruamel.yaml` library should be used
 
         Returns
         -------
@@ -223,7 +219,7 @@ class YamlReader(TextReader):
             raise OSError('File does not exist: %s' % filename)
         logger.debug('read file: %s', filename)
         with open(filename, 'r') as f:
-            return load_yaml(f.read(), use_ruamel)
+            return load_yaml(f.read())
 
 
 class TablesReader(object):
@@ -297,7 +293,7 @@ class TablesReader(object):
         return self._stream.select(path)
 
 
-class Hdf5Reader(object):
+class DatasetReader(object):
 
     '''
     Class for reading datasets and attributes from HDF5 files
@@ -578,45 +574,28 @@ class Hdf5Reader(object):
         return dtype
 
 
-class SlideReader(Reader):
+class ImageReader(Reader):
 
     '''
-    Abstract base class for reading whole slide images from files.
-    '''
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def read(self, filename):
-        pass
-
-    @abstractmethod
-    def split(self):
-        pass
-
-
-class BioformatsReader(Reader):
-
-    '''
-    Class for reading data from files as :py:class:`numpy.ndarray` objects
-    using the `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
+    Class for reading data from vendor-specific image file formats as
+    :py:class:`numpy.ndarray` objects using the
+    `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
     library.
 
     Note
     ----
-    Requires a running Java Virtual Machine (VM). This is achieved via the
-    `javabridge <http://pythonhosted.org/javabridge/start_kill.html>`_
-    package.
+    Requires a running Java Virtual Machine (VM). This is handled automatically
+    via `javabridge <http://pythonhosted.org/javabridge/start_kill.html>`_.
 
     Warning
     -------
-    Once the VM is killed it cannot be started again. This means that a second
-    call of this class will fail.
+    Once the VM is killed it cannot be started again within the same Python
+    session.
 
     Examples
     --------
     >>> filename = '/path/to/image/file'
-    >>> with BioformatsReader() as reader:
+    >>> with ImageReader() as reader:
     ...     img = reader.read(filename)
     >>> type(img)
     numpy.ndarray
@@ -624,7 +603,7 @@ class BioformatsReader(Reader):
 
     @utils.same_docstring_as(Reader.__init__)
     def __init__(self, directory=None):
-        super(BioformatsReader, self).__init__(directory)
+        super(ImageReader, self).__init__(directory)
 
     def __enter__(self):
         # NOTE: updated "loci_tools.jar" file to latest schema:
@@ -716,16 +695,16 @@ class BioformatsReader(Reader):
                 sys.stdout.write(tb)
 
 
-class OpenCVReader(Reader):
+class NumpyReader(Reader):
 
     '''
-    Class for reading data from files as :py:class:`numpy.ndarray` objects
-    using the `OpenCV <http://docs.opencv.org>`_ library.
+    Class for reading data from standard image file formats as
+    :py:class:`numpy.ndarray` objects.
 
     Examples
     --------
     >>> filename = '/path/to/image/file'
-    >>> with OpenCVReader() as reader:
+    >>> with NumpyReader() as reader:
     ...     img = reader.read(filename)
     >>> type(img)
     numpy.ndarray
@@ -733,7 +712,7 @@ class OpenCVReader(Reader):
 
     @utils.same_docstring_as(Reader.__init__)
     def __init__(self, directory=None):
-        super(OpenCVReader, self).__init__(directory)
+        super(NumpyReader, self).__init__(directory)
 
     def read(self, filename):
         '''
@@ -833,7 +812,7 @@ class VipsReader(Reader):
         return image
 
 
-class OpenslideImageReader(SlideReader):
+class SlideReader(object):
 
     '''
     Class for reading whole slide images and associated metadata using the
@@ -874,8 +853,7 @@ class OpenslideImageReader(SlideReader):
         Vips.Image
             image pixel array
         '''
-        image = Vips.Image.openslideload(filename, level=0)
-        return image
+        return Vips.Image.openslideload(filename, level=0)
 
     def read_subset(self, filename, series_index=None, plane_index=None):
         raise AttributeError('%s doesn\'t have a "read_subset" method. '

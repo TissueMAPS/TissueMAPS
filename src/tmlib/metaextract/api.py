@@ -13,7 +13,7 @@ class MetadataExtractor(ClusterRoutines):
     and written to XML files.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class MetadataExtractor.
 
@@ -21,7 +21,7 @@ class MetadataExtractor(ClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -29,7 +29,7 @@ class MetadataExtractor(ClusterRoutines):
             mapping of additional key-value pairs that are ignored
         '''
         super(MetadataExtractor, self).__init__(
-                experiment, prog_name, verbosity)
+                experiment, step_name, verbosity)
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):
@@ -104,7 +104,7 @@ class MetadataExtractor(ClusterRoutines):
         '''
         raise NotImplementedError(
                 '"%s" object has no "run_job" method'
-                % self.prog_name)
+                % self.step_name)
 
     def collect_job_output(self, batch):
         '''

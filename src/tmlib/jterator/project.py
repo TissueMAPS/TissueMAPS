@@ -11,8 +11,8 @@ from ..errors import PipelineOSError
 
 logger = logging.getLogger(__name__)
 
-HANDLE_SUFFIX = '.handle.yml'
-PIPE_SUFFIX = '.pipe.yml'
+HANDLES_SUFFIX = '.handles.yaml'
+PIPE_SUFFIX = '.pipe.yaml'
 
 
 def list_jtprojects(directory):
@@ -130,12 +130,12 @@ class JtProject(object):
             directory = os.path.join(self.project_dir, 'handles')
         else:
             directory = os.path.join(directory, 'handles')
-        handles_files = glob.glob(os.path.join(directory,
-                                               '*%s' % HANDLE_SUFFIX))
+        handles_files = glob.glob(os.path.join(
+                                    directory, '*%s' % HANDLES_SUFFIX))
         if not handles_files:
             # We don't raise an exception, because an empty handles folder
             # can occur, for example upon creation of a new project
-            logger.warning('No handle files found: %s' % directory)
+            logger.warning('No handles files found: %s' % directory)
         return handles_files
 
     @staticmethod
@@ -192,7 +192,7 @@ class JtProject(object):
             for i, module in enumerate(pipe['description']['pipeline']):
                 pipe['description']['pipeline'][i]['name'] = \
                     self._get_descriptor_name(
-                        pipe['description']['pipeline'][i]['handle'])
+                        pipe['description']['pipeline'][i]['handles'])
         return pipe
 
     @property
@@ -212,7 +212,7 @@ class JtProject(object):
                         f = os.path.join(self.project_dir, f)
                     if not os.path.exists(f):
                         raise PipelineOSError(
-                                'Handle file does not exist: "%s"' % f)
+                                'Handles file does not exist: "%s"' % f)
                     handles.append({
                         'name': self._get_descriptor_name(f),
                         'description': reader.read(f)
@@ -223,7 +223,7 @@ class JtProject(object):
         for name in self._module_names:
             if name not in names:
                 raise ValueError(
-                        'Handle for module "%s" does not exist.' % name)
+                        'Handles for module "%s" does not exist.' % name)
             sorted_handles.append(handles[names.index(name)])
 
         return sorted_handles
@@ -294,7 +294,7 @@ class JtProject(object):
         # Create new .handles files for added modules
         for h in self.handles:
             filename = os.path.join(self.project_dir, 'handles',
-                                    '%s%s' % (h['name'], HANDLE_SUFFIX))
+                                    '%s%s' % (h['name'], HANDLES_SUFFIX))
             handles_files.append(filename)
         with YamlReader() as reader:
             for i, handles_file in enumerate(handles_files):
@@ -312,7 +312,7 @@ class JtProject(object):
                     writer.write(handles_file, mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(os.path.join(self.project_dir,
-                                           'handles', '*%s' % HANDLE_SUFFIX))
+                                           'handles', '*%s' % HANDLES_SUFFIX))
         for f in existing_handles_files:
             if f not in handles_files:
                 os.remove(f)

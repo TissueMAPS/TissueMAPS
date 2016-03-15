@@ -5,7 +5,7 @@ import shutil
 import numpy as np
 import pandas as pd
 from . import registration as reg
-from ..writers import TablesWriter
+from ..writers import DataTableWriter
 from ..api import ClusterRoutines
 from ..errors import NotSupportedError
 
@@ -22,7 +22,7 @@ class ImageRegistration(ClusterRoutines):
     Alignment is so far only supported for 2D image datasets.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ImageRegistration.
 
@@ -30,7 +30,7 @@ class ImageRegistration(ClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -38,9 +38,9 @@ class ImageRegistration(ClusterRoutines):
             additional arguments in form of key-value pairs (ignored)
         '''
         super(ImageRegistration, self).__init__(
-                experiment, prog_name, verbosity)
+                experiment, step_name, verbosity)
         self.experiment = experiment
-        self.prog_name = prog_name
+        self.step_name = step_name
         self.verbosity = verbosity
 
     @property
@@ -272,7 +272,7 @@ class ImageRegistration(ClusterRoutines):
 
                 logger.info('write alignment description to file')
                 filename = batch['outputs']['metadata_files'][0][j]
-                with TablesWriter(filename) as writer:
+                with DataTableWriter(filename) as writer:
                     writer.write('overhangs', overhangs)
                     writer.write('shifts', shifts)
 

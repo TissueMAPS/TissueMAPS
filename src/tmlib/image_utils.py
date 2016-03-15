@@ -274,3 +274,28 @@ def convert_to_uint8(img, min_value=None, max_value=None):
     img_rescaled = rescale_intensity(
                     img, out_range='uint8', in_range=in_range).astype(np.uint8)
     return img_rescaled
+
+
+def find_border_objects(im):
+    '''
+    Find the objects at the border of a labeled image.
+
+    Parameters
+    ----------
+    im: numpy.ndarray[int32]
+        label image
+
+    Returns
+    -------
+    List[int]
+        1 if an object represents a border object and 0 otherwise
+    '''
+    edges = [np.unique(im[0, :]),   # first row
+             np.unique(im[-1, :]),  # last row
+             np.unique(im[:, 0]),   # first col
+             np.unique(im[:, -1])]  # last col
+
+    # Count only unique ids and remove 0 since it signals 'empty space'
+    border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
+    object_ids = np.unique(im[im != 0])
+    return [1 if o in border_ids else 0 for o in object_ids]

@@ -5,7 +5,7 @@ import logging
 from cached_property import cached_property
 from .pixels import VipsPixels
 from .pixels import NumpyPixels
-from .readers import Hdf5Reader
+from .readers import DatasetReader
 from .errors import MetadataError
 from .metadata import IllumstatsImageMetadata
 
@@ -467,7 +467,7 @@ class IllumstatsImages(object):
 
     @cached_property
     def _stats(self):
-        with Hdf5Reader(self.filename) as reader:
+        with DatasetReader(self.filename) as reader:
             mean = self._factory(reader.read('stats/mean'))
             std = self._factory(reader.read('stats/std'))
             tpoint = reader.read('metadata/tpoint')

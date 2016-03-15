@@ -3,7 +3,7 @@ import numpy as np
 import logging
 import collections
 from .. import utils
-from ..readers import BioformatsReader
+from ..readers import ImageReader
 from ..api import ClusterRoutines
 from ..writers import NumpyWriter
 
@@ -18,7 +18,7 @@ class ImageExtractor(ClusterRoutines):
     The extracted arrays are written to PNG files.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ImageExtractor.
 
@@ -26,7 +26,7 @@ class ImageExtractor(ClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -34,7 +34,7 @@ class ImageExtractor(ClusterRoutines):
             mapping of additional key-value pairs that are ignored
         '''
         super(ImageExtractor, self).__init__(
-                experiment, prog_name, verbosity)
+                experiment, step_name, verbosity)
 
     def _create_output_dirs(self):
         for cycle in self.cycles:
@@ -104,7 +104,7 @@ class ImageExtractor(ClusterRoutines):
         batch: dict
             joblist element, i.e. description of a single job
         '''
-        with BioformatsReader() as reader:
+        with ImageReader() as reader:
             for i, filenames in enumerate(batch['inputs']['image_files']):
                 planes = list()
                 for j, f in enumerate(filenames):

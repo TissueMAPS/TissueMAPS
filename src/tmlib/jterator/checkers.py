@@ -5,7 +5,9 @@ import logging
 from os.path import splitext, basename, exists, dirname
 from collections import Counter
 from . import path_utils
-from .project import HANDLE_SUFFIX
+from .handles import create_handle
+from .handles import PipeHandle
+from .project import HANDLES_SUFFIX
 from ..readers import YamlReader
 from ..errors import PipelineDescriptionError
 
@@ -13,8 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineChecker(object):
+
     '''
-    Class for checking pipeline and handle descriptions.
+    Class for checking pipeline and handles descriptions.
     '''
 
     def __init__(self, project_dir, pipe_description,
@@ -68,12 +71,13 @@ class PipelineChecker(object):
                         'The value of "%s" in the "inputs" section '
                         'of the pipe file must be a list.' % key)
             # Check for presence of required keys
-            required_subkeys = {'name'}
-            possible_subkeys = required_subkeys.union({'correct', 'align'})
+            REQUIRED_HANDLE_ITEM_KEYS = {'name'}
+            possible_subkeys = REQUIRED_HANDLE_ITEM_KEYS.union(
+                                    {'correct', 'align'})
             inputs = self.pipe_description['input'][key]
             if inputs:
                 for inpt in inputs:
-                    for k in required_subkeys:
+                    for k in REQUIRED_HANDLE_ITEM_KEYS:
                         if k not in inpt:
                             raise PipelineDescriptionError(
                                     'Each element of "%s" in the "inputs" '
@@ -94,7 +98,7 @@ class PipelineChecker(object):
             raise PipelineDescriptionError(
                     'The value of "pipeline" in the pipe file must be a list.')
 
-        required_subkeys = {'handle', 'source', 'active'}
+        required_subkeys = {'handles', 'source', 'active'}
         for module_description in self.pipe_description['pipeline']:
             for key in required_subkeys:
                 if key not in module_description:
@@ -115,7 +119,7 @@ class PipelineChecker(object):
                                 'file must be a string.' % key)
 
         # Ensure that handles filenames are unique
-        n = Counter([splitext(basename(m['handle']))[0]
+        n = Counter([splitext(basename(m['handles']))[0]
                     for m in self.pipe_description['pipeline']])
         repeated = [x for x in n.values() if x > 1]
         if repeated:
@@ -149,214 +153,126 @@ class PipelineChecker(object):
                             % source_path)
 
             # Check whether descriptor files exist
-            handle_path = path_utils.complete_path(
-                            module['handle'], self.project_dir)
+            handles_path = path_utils.complete_path(
+                            module['handles'], self.project_dir)
 
             if not self.handles_descriptions:
                 # A description could also be provided from the user interface.
                 # In this case .handles files may not exist.
-                if not exists(handle_path):
+                if not exists(handles_path):
                     raise PipelineDescriptionError(
-                            'Handle file "%s" does not exist.' % handle_path)
+                            'Handles file "%s" does not exist.' % handles_path)
 
                 # The user interface requires that all handles files
                 # have the certain suffix and are stored in a folder called
                 # "handles".
-                handle_basename = splitext(basename(handle_path))
-                handle_dirname = dirname(handle_path)
-                if not handle_basename == HANDLE_SUFFIX:
+                handle_basename = splitext(basename(handles_path))
+                handle_dirname = dirname(handles_path)
+                if not handle_basename == HANDLES_SUFFIX:
                     logger.warning(
-                            'Handle file "%s" should have suffix "%s"',
-                            handle_path, HANDLE_SUFFIX)
+                            'Handles file "%s" should have suffix "%s"',
+                            handles_path, HANDLES_SUFFIX)
                 if not re.search(r'handles$', handle_dirname):
                     logger.warning(
-                            'Handle file "%s" should reside in a '
-                            'folder called "handles".', handle_path)
+                            'Handles file "%s" should reside in a '
+                            'folder called "handles".', handles_path)
 
                 try:
-                    handle = yaml.load(open(handle_path).read())
+                    handles = yaml.load(open(handles_path).read())
                 except Exception as e:
                     raise PipelineDescriptionError(
-                            'Could not read handle file "%s".\n'
-                            'Error message:\n%s' % (module['handle'], str(e)))
+                            'Could not read handles file "%s".\n'
+                            'Error message:\n%s' % (module['handles'], str(e)))
 
             else:
-                handle = self.handles_descriptions[i]
+                handles = self.handles_descriptions[i]
 
             required_keys = {'input', 'output'}
             possible_keys = required_keys.union()
             for key in required_keys:
-                if key not in handle:
+                if key not in handles:
                     raise PipelineDescriptionError(
-                                'Handle file "%s" must contain the key "%s".'
-                                % (handle_path, key))
+                                'Handles file "%s" must contain the key "%s".'
+                                % (handles_path, key))
                 elif key == 'input':
-                    if not handle[key]:
+                    if not handles[key]:
                         raise PipelineDescriptionError(
-                                'The value of "%s" in handle file "%s" '
-                                'cannot be empty.' % (key, handle_path))
-                    if not isinstance(handle[key], list):
+                                'The value of "%s" in handles file "%s" '
+                                'cannot be empty.' % (key, handles_path))
+                    if not isinstance(handles[key], list):
                         raise PipelineDescriptionError(
-                                'The value of "%s" in handle file "%s" '
-                                'must be a list.' % (key, handle_path))
+                                'The value of "%s" in handles file "%s" '
+                                'must be a list.' % (key, handles_path))
 
-            for key in handle:
+            for key in handles:
                 if key not in possible_keys:
                     raise PipelineDescriptionError(
-                                'Possible keys in handle file "%s" are: "%s"'
-                                % (handle_path, '" or "'.join(possible_keys)))
+                                'Possible keys in handles file "%s" are: "%s"'
+                                % (handles_path, '" or "'.join(possible_keys)))
 
-            required_subkeys = {'name', 'value', 'mode', 'kind'}
-            possible_subkeys = required_subkeys.union({'help', 'options'})
-            possible_modes = {'pipe', 'store', 'constant'}
-            possible_kinds = {
-                'constant': {'scalar', 'sequence'},
-                'store': {'coordinates', 'features', 'attribute'},
-                'pipe': {'image'}
-            }
-            for j, input_item in enumerate(handle['input']):
-                for key in required_subkeys:
+            n = len(set(([o['name'] for o in handles['input']])))
+            if n < len(handles['input']):
+                raise PipelineDescriptionError(
+                            'Names of input items in handles file "%s" '
+                            'must be unique.' % handles_path)
+
+            REQUIRED_HANDLE_ITEM_KEYS = {'name', 'type'}
+            for j, input_item in enumerate(handles['input']):
+                logger.debug('check input item #%d in handles file "%s"',
+                             j, handles_path)
+                for key in REQUIRED_HANDLE_ITEM_KEYS:
                     if key not in input_item:
                         raise PipelineDescriptionError(
-                                    'Input argument #%d in handles file "%s" '
-                                    'misses required key "%s".'
-                                    % (j, handle_path, key))
-                mode = input_item['mode']
-                for key in input_item:
-                    if key not in possible_subkeys:
-                        raise PipelineDescriptionError(
-                                    'Unknown key for input item #%d '
-                                    'in handle file "%s".\n'
-                                    'Possible keys are: "%s".'
-                                    % (j, handle_path,
-                                       '" or "'.join(possible_subkeys)))
-                    if key == 'mode':
-                        if not isinstance(input_item[key], basestring):
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" of input item #%d '
-                                    'in handles file "%s" must be a string.'
-                                    % (key, j, handle_path))
-                        if input_item[key] not in possible_modes:
-                            raise PipelineDescriptionError(
-                                    'Unknown mode "%s" for input item #%d '
-                                    'in handle file "%s".\n'
-                                    'Possible modes for inputs are: "%s"'
-                                    % (input_item[key], j, handle_path,
-                                       '", "'.join(possible_modes)))
-                    elif key == 'kind':
-                        if not isinstance(input_item[key], basestring):
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" of input item #%d '
-                                    'in handles file "%s" must be a string.'
-                                    % (key, j, handle_path))
-                        if input_item[key] not in possible_kinds[mode]:
-                            raise PipelineDescriptionError(
-                                    'Unknown kind "%s" for input item '
-                                    '#%d in handle file "%s".\n'
-                                    'Possible kinds for inputs are: "%s"'
-                                    % (input_item[key], j, handle_path,
-                                       '", "'.join(possible_kinds[mode])))
-                    elif key == 'value':
-                        if not input_item[key]:
-                            continue  # allow to be empty
-                        if not (isinstance(input_item[key], str) or
-                                isinstance(input_item[key], int) or
-                                isinstance(input_item[key], float) or
-                                isinstance(input_item[key], list)):
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" of input item #%d '
-                                    'in handles file "%s" must be either '
-                                    'a string, a number, or '
-                                    'a list of strings/numbers.'
-                                    % (key, j, handle_path))
+                            'Input #%d in handles file "%s" misses required '
+                            'key "%s"' % (j, handles_path, key))
+                try:
+                    input_handle = create_handle(**input_item)
+                except AttributeError as error:
+                    raise PipelineDescriptionError(
+                            'Value of "type" of input item #%d named "%s" '
+                            'in handles file "%s" specifies an invalid type:\n%s'
+                            % (j, input_item['name'], handles_path, str(error)))
+                except TypeError as error:
+                    raise PipelineDescriptionError(
+                            'Input item #%d named "%s" in handles file "%s" is '
+                            'not specified correctly:\n%s'
+                            % (j, input_item['name'], handles_path, str(error)))
+                except Exception:
+                    raise
 
-            required_subkeys = {'name', 'mode', 'kind'}
-            possible_subkeys = possible_subkeys.union({'ref', 'id'})
-            if not handle['output']:
-                continue  # allow to be empty
-            for j, output_item in enumerate(handle['output']):
-                for key in required_subkeys:
+            n = len(set(([o['name'] for o in handles['output']])))
+            if n < len(handles['output']):
+                raise PipelineDescriptionError(
+                            'Names of output items in handles file "%s" '
+                            'must be unique.' % handles_path)
+
+            for j, output_item in enumerate(handles['output']):
+                logger.debug('check output item #%d in handles file "%s"',
+                             j, handles_path)
+                for key in REQUIRED_HANDLE_ITEM_KEYS:
                     if key not in output_item:
                         raise PipelineDescriptionError(
-                                    'Output argument #%d in handles file "%s" '
-                                    'misses required key "%s".'
-                                    % (j, handle_path, key))
-                mode = output_item['mode']
-                for key in output_item:
-                    if key not in possible_subkeys:
-                        raise PipelineDescriptionError(
-                                    'Unknown keys for output item #%d '
-                                    'in handle file "%s".\n'
-                                    'Possible keys are: "%s".'
-                                    % (j, handle_path,
-                                       '" or "'.join(possible_subkeys)))
-                    if key == 'mode':
-                        if not isinstance(output_item[key], basestring):
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" of output item #%d '
-                                    'in handles file "%s" must be a string.'
-                                    % (key, j, handle_path))
-                        if output_item[key] not in possible_modes:
-                            raise PipelineDescriptionError(
-                                    'Unknown mode "%s" for output item #%d '
-                                    'in handle file "%s".\n'
-                                    'Possible modes for outputs are: "%s".'
-                                    % (output_item[key], j, handle_path,
-                                       '", "'.join(possible_modes)))
-                        if output_item[key] == 'pipe':
-                            if 'id' not in output_item:
-                                raise PipelineDescriptionError(
-                                    'Output item #%d in handle file "%s" '
-                                    'has mode "pipe" and thus '
-                                    'requires key "id".'
-                                    % (j, handle_path))
-                    elif key == 'kind':
-                        if not isinstance(output_item[key], basestring):
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" of output item #%d '
-                                    'in handles file "%s" must be a string.'
-                                    % (key, j, handle_path))
-                        if output_item[key] not in possible_kinds[mode]:
-                            raise PipelineDescriptionError(
-                                    'Unknown kind "%s" for output item '
-                                    '#%d in handle file "%s".\n'
-                                    'Possible kinds for inputs are: "%s"'
-                                    % (output_item[key], j, handle_path,
-                                       '", "'.join(possible_kinds[mode])))
-                    elif key == 'ref':
-                        if not isinstance(output_item[key], basestring):
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" of output item #%d '
-                                    'in handles file "%s" must be a string.'
-                                    % (key, j, handle_path))
-                        if output_item.get('mode', 'constant') != 'store':
-                            raise PipelineDescriptionError(
-                                    'Value of "mode" for output item #%d '
-                                    'in handle file "%s" must be "store" '
-                                    'to be able to specify "%s".'
-                                    % (j, handle_path, key))
-                        arg_names = [arg['name'] for arg in handle['input']]
-                        if output_item[key] not in arg_names:
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" for output item #%d '
-                                    'in handle file "%s" must match a '
-                                    '"name" of one of the input items.'
-                                    % (key, j, handle_path,
-                                       '", "'.join(possible_kinds)))
-                    elif key == 'id':
-                        if not isinstance(output_item[key], basestring):
-                            raise PipelineDescriptionError(
-                                    'The value of "%s" of output item #%d '
-                                    'in handles file "%s" must be a string.'
-                                    % (key, j, handle_path))
+                            'Output #%d in handles file "%s" misses required '
+                            'key "%s"' % (j, handles_path, key))
+                try:
+                    output_handle = create_handle(**output_item)
+                except AttributeError as error:
+                    logger.error('handles description check failed')
+                    raise PipelineDescriptionError(
+                            'Value of "type" of output item #%d named "%s" '
+                            'in handles file "%s" specifies an invalid type:\n%s'
+                            % (j, output_item['name'], handles_path, str(error)))
+                except TypeError as error:
+                    logger.error('handles description check failed')
+                    raise PipelineDescriptionError(
+                            'Output item #%d named "%s" in handles file "%s" is '
+                            'not specified correctly:\n%s'
+                            % (j, output_item['name'], handles_path, str(error)))
+                except Exception:
+                    logger.error('handles description check failed')
+                    raise
 
-            # Ensure that handles filenames are unique
-            n = Counter([o['name'] for o in handle['output']])
-            repeated = [x for x in n.values() if x > 1]
-            if repeated:
-                raise PipelineDescriptionError('Output names must be unique.')
-
-        logger.info('handle descriptions check successful')
+        logger.info('handles descriptions check successful')
 
     def check_pipeline_io(self):
         '''
@@ -366,60 +282,57 @@ class PipelineChecker(object):
         upstream_outputs = list()
         with YamlReader() as reader:
             for i, module in enumerate(self.pipe_description['pipeline']):
-                handle_path = path_utils.complete_path(
-                                module['handle'], self.project_dir)
+                handles_path = path_utils.complete_path(
+                                module['handles'], self.project_dir)
                 if self.handles_descriptions is None:
-                    handle = reader.read(handle_path)
+                    handles = reader.read(handles_path)
                 else:
-                    handle = self.handles_descriptions[i]
+                    handles = self.handles_descriptions[i]
 
                 # Ensure that names of piped arguments are unique
-                n = Counter([arg['name'] for arg in handle['input']])
+                n = Counter([arg['name'] for arg in handles['input']])
                 repeated = [x for x in n.values() if x > 1]
                 if repeated:
                     raise PipelineDescriptionError(
-                            'Names of input items in handle file "%s" '
-                            'must be unique.' % handle_path)
+                            'Names of input items in handles file "%s" '
+                            'must be unique.' % handles_path)
 
-                if not handle['output']:
+                if not handles['output']:
                     continue
-                n = Counter([arg['name'] for arg in handle['output']])
+                n = Counter([arg['name'] for arg in handles['output']])
                 repeated = [x for x in n.values() if x > 1]
                 if repeated:
                     raise PipelineDescriptionError(
-                            'Names of output items in handle file "%s" '
-                            'must be unique.' % handle_path)
+                            'Names of output items in handles file "%s" '
+                            'must be unique.' % handles_path)
 
-                for j, input_item in enumerate(handle['input']):
-                    if (input_item['mode'] != 'pipe' or
-                            input_item['value'] is None):
+                for j, input_item in enumerate(handles['input']):
+                    input_handle = create_handle(**input_item)
+                    if not isinstance(handles, PipeHandle):
                         # We only check piped arguments
                         continue
-                    name = input_item['value']
                     channels = self.pipe_description['input']['channels']
                     if channels:
                         layer_names = [ch['name'] for ch in channels]
-                        if name in layer_names:
-                            # These names are written into the HDF5 file by
-                            # the program and are therefore not created
-                            # upstream in the pipeline.
+                        if input_handle.key in layer_names:
+                            # Only check piped data
                             continue
                         if not module['active']:
                             # Don't check inactive modules
                             continue
-                        if input_item['value'] not in upstream_outputs:
+                        if input_handle.key not in upstream_outputs:
                             raise PipelineDescriptionError(
-                                    'The value of "value" of input item #%d '
-                                    'with name "%s" in handle file "%s" '
+                                    'The value of "key" of input item #%d '
+                                    'with name "%s" in handles file "%s" '
                                     'is not created upstream in the pipeline: '
                                     '\n"%s"'
-                                    % (j, input_item['name'], handle_path,
-                                       input_item['value']))
+                                    % (j, input_handle.name, handles_path,
+                                       input_handle.key))
 
                 # Store all upstream output items
-                for output_item in handle['output']:
-                    if 'id' in output_item:
-                        output = output_item['id']
+                for output_item in handles['output']:
+                    if 'key' in output_item:
+                        output = output_item['key']
                         upstream_outputs.append(output)
         logger.info('pipeline IO check successful')
 

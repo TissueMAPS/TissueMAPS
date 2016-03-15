@@ -232,9 +232,9 @@ class WorkflowStage(object):
             jobs
         '''
         logger.info('create jobs for step "%s"', step_description.name)
-        prog_name = step_description.name
-        logger.debug('load program "%s"', prog_name)
-        prog = load_step_interface(prog_name)
+        step_name = step_description.name
+        logger.debug('load program "%s"', step_name)
+        prog = load_step_interface(step_name)
         logger.debug('create a program instance')
         # TODO: The only exception is the "jterator" step, where we need to
         # parse the "pipeline" argument. This should be implemented more

@@ -6,12 +6,11 @@ from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 from .. import utils
 from ..layer import ChannelLayer
-from ..readers import Hdf5Reader
+from ..readers import DatasetReader
 from ..api import ClusterRoutines
 from ..jobs import RunJob
 from ..jobs import RunJobCollection
 from ..jobs import MultiRunJobCollection
-from ..jobs import CollectJob
 from ..tmaps.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class PyramidBuilder(ClusterRoutines):
 
-    def __init__(self, experiment, prog_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class PyramidBuilder.
 
@@ -27,7 +26,7 @@ class PyramidBuilder(ClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -35,7 +34,7 @@ class PyramidBuilder(ClusterRoutines):
             mapping of additional key-value pairs that are ignored
         '''
         super(PyramidBuilder, self).__init__(
-                experiment, prog_name, verbosity)
+                experiment, step_name, verbosity)
 
     def create_job_descriptions(self, args):
         '''
@@ -62,6 +61,7 @@ class PyramidBuilder(ClusterRoutines):
                             channel=indices.channel,
                             zplane=indices.zplane
             )
+
             for index, level in enumerate(reversed(range(layer.n_zoom_levels))):
                 # NOTE: The pyramid "level" increases from top to bottom.
                 # We build the pyramid bottom-up, therefore, the "index"
@@ -94,22 +94,22 @@ class PyramidBuilder(ClusterRoutines):
                             os.path.relpath(f, layer.dir)
                             for f in filenames
                         ]
-                        # tile_mapping = layer.base_tile_mappings['image_to_tiles']
-                        # output_files = [
-                        #     layer.tile_files[level][c]
-                        #     for f in input_files
-                        #     for c in tile_mapping[os.path.basename(f)]
-                        # ]
-                    else:
-                        input_files = []
+                        tile_map = layer.base_tile_mappings['image_to_tiles']
+                        output_files = [
+                            layer.tile_files[level][c]
+                            for f in input_files
+                            for c in tile_map[os.path.basename(f)]
+                        ]
                     # else:
-                    #     output_files = layer.tile_files[level].values()
-                    #     output_files = list(np.array(output_files)[batch])
-                    #     input_files = [
-                    #         layer.tile_files[level + 1][c]
-                    #         for f in output_files
-                    #         for c in layer.get_tiles_of_next_higher_level(f)
-                    #     ]
+                    #     input_files = []
+                    else:
+                        output_files = layer.tile_files[level].values()
+                        output_files = list(np.array(output_files)[batch])
+                        input_files = [
+                            layer.tile_files[level+1][c]
+                            for f in output_files
+                            for c in layer.get_tiles_of_next_higher_level(f)
+                        ]
 
                     # NOTE: keeping track of input/output files for each job
                     # becomes problematic because the number of tiles increases
@@ -119,22 +119,22 @@ class PyramidBuilder(ClusterRoutines):
                         'id': job_count,
                         'inputs': {
                             'image_files': [
-                                os.path.join(layer.dir, f) for f in input_files
+                                os.path.join(layer.dir, f)
+                                for f in input_files
                             ]
                         },
-                        # 'outputs': {
-                        #     'image_files': [
-                        #         os.path.join(layer.dir, f) for f in output_files
-                        #     ]
-                        # },
-                        'outputs': {},
+                        'outputs': {
+                            'image_files': [
+                                os.path.join(layer.dir, f)
+                                for f in output_files
+                            ]
+                        },
                         'tpoint': layer.tpoint,
                         'channel': layer.channel,
                         'zplane': layer.zplane,
                         'cycle': layer.metadata.cycle,
                         'level': level,
-                        'index': index,
-                        'subset_indices': batch
+                        'index': index
                     }
                     if level == layer.base_level_index:
                         # Only base tiles need to be corrected for illumination
@@ -161,8 +161,7 @@ class PyramidBuilder(ClusterRoutines):
                         'cycle': layer.metadata.cycle,
                         'level': level,
                         'index': index,
-                        'clip_value': None,
-                        'subset_indices': None
+                        'clip_value': None
                     })
         return job_descriptions
 
@@ -198,7 +197,7 @@ class PyramidBuilder(ClusterRoutines):
             for i, batch in enumerate(job_descriptions['run']):
 
                 job = RunJob(
-                        step_name=self.prog_name,
+                        step_name=self.step_name,
                         arguments=self._build_run_command(batch),
                         output_dir=self.log_dir,
                         job_id=batch['id'],
@@ -219,36 +218,15 @@ class PyramidBuilder(ClusterRoutines):
 
                 multi_run_jobs[batch['index']].append(job)
 
-            run_jobs = MultiRunJobCollection(self.prog_name)
+            run_jobs = MultiRunJobCollection(self.step_name)
             for index, jobs in multi_run_jobs.iteritems():
                 run_jobs.add(
-                    RunJobCollection(self.prog_name, jobs, index=index))
+                    RunJobCollection(self.step_name, jobs, index=index))
 
         else:
             run_jobs = None
 
-        if 'collect' in job_descriptions.keys():
-            logger.info('create job for "collect" phase')
-            batch = job_descriptions['collect']
-
-            collect_job = CollectJob(
-                    step_name=self.prog_name,
-                    arguments=self._build_collect_command(),
-                    output_dir=self.log_dir
-            )
-            collect_job.requested_walltime = Duration('01:00:00')
-            collect_job.requested_memory = Memory(4, Memory.GB)
-
-        else:
-            collect_job = None
-
-        jobs = WorkflowStep(
-                    name=self.prog_name,
-                    run_jobs=run_jobs,
-                    collect_job=collect_job
-        )
-
-        return jobs
+        return WorkflowStep(name=self.step_name, run_jobs=run_jobs)
 
     def run_job(self, batch):
         '''
@@ -272,7 +250,7 @@ class PyramidBuilder(ClusterRoutines):
         if batch['level'] == layer.base_level_index:
             logger.info(
                     'create base level pyramid tiles for layer "%s": '
-                    'tpoint %d, channel %d, z-plane %d',
+                    'time point %d, channel %d, z-plane %d',
                     layer.name,
                     batch['tpoint'], batch['channel'], batch['zplane'])
             if batch['clip_value'] is None:
@@ -280,7 +258,7 @@ class PyramidBuilder(ClusterRoutines):
                 cycle = self.experiment.plates[0].cycles[batch['cycle']]
                 filename = cycle.illumstats_files[batch['channel']]
                 f = os.path.join(cycle.stats_dir, filename)
-                with Hdf5Reader(f) as data:
+                with DatasetReader(f) as data:
                     clip_value = data.read('/stats/percentile')
             else:
                 clip_value = batch['clip_value']
@@ -290,19 +268,19 @@ class PyramidBuilder(ClusterRoutines):
                             clip_value=clip_value,
                             illumcorr=batch['illumcorr'],
                             align=batch['align'],
-                            subset_indices=batch['subset_indices'])
+                            filenames=batch['inputs']['image_files'])
             else:
-                layer.create_empty_base_tiles(
-                            clip_value=clip_value)
+                layer.create_empty_base_tiles()
 
         else:
             logger.info(
                     'create level %d pyramid tiles for layer "%s": '
-                    'tpoint %d, channel %d, z-plane %d',
+                    'time point %d, channel %d, z-plane %d',
                     batch['level'], layer.name,
                     batch['tpoint'], batch['channel'], batch['zplane'])
+            # NOTE: Here we pass the "output" files to the function!
             layer.create_downsampled_tiles(
-                    batch['level'], batch['subset_indices'])
+                    batch['level'], filenames=batch['outputs']['image_files'])
 
     @utils.notimplemented
     def collect_job_output(self, batch):

@@ -126,7 +126,7 @@ class Tmaps(object):
 
     def _call(self, args):
         method_args = cli.create_cli_method_args(
-                            prog_name=self.name, **vars(args))
+                            step_name=self.name, **vars(args))
         cli.call_cli_method(self, args.method_name, method_args)
 
     @staticmethod

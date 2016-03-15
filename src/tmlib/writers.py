@@ -51,7 +51,6 @@ class Writer(object):
             if not os.path.exists(self.directory):
                 raise OSError('Directory does not exist: %s', self.directory)
 
-
     def __enter__(self):
         return self
 
@@ -63,20 +62,35 @@ class Writer(object):
                 sys.stdout.write(tb)
 
 
-class TextWriter(Writer):
+class HtmlWriter(Writer):
 
     '''
-    Abstract base class for writing strings to files.
+    Class for writing data to file on disk in HTML format.
     '''
 
-    __metaclass__ = ABCMeta
+    @utils.same_docstring_as(Writer.__init__)
+    def __init__(self, directory=None):
+        super(HtmlWriter, self).__init__(directory)
 
-    @abstractmethod
-    def write(self, filename, data, **kwargs):
-        pass
+    def write(self, filename, data):
+        '''
+        Write data to HTML file.
+
+        Parameters
+        ----------
+        filename: str
+            name of the HTML file
+        data: list or dict
+            the HTML string that should be written to the file
+        '''
+        if self.directory:
+            filename = os.path.join(self.directory, filename)
+        logger.debug('write data to file: %s' % filename)
+        with open(filename, 'w') as f:
+            f.write(data)
 
 
-class XmlWriter(TextWriter):
+class XmlWriter(Writer):
 
     '''
     Class for writing data to file on disk in XML format.
@@ -86,7 +100,7 @@ class XmlWriter(TextWriter):
     def __init__(self, directory=None):
         super(XmlWriter, self).__init__(directory)
 
-    def write(self, filename, data, **kwargs):
+    def write(self, filename, data):
         '''
         Write data to XML file.
 
@@ -96,8 +110,6 @@ class XmlWriter(TextWriter):
             name of the XML file
         data: list or dict
             the XML string that should be written to the file
-        **kwargs: dict
-            additional arguments as key-value pairs (none implemented)
         '''
         if self.directory:
             filename = os.path.join(self.directory, filename)
@@ -106,7 +118,7 @@ class XmlWriter(TextWriter):
             f.write(data)
 
 
-class JsonWriter(TextWriter):
+class JsonWriter(Writer):
 
     '''
     Class for writing data to file on disk in JSON format.
@@ -116,7 +128,7 @@ class JsonWriter(TextWriter):
     def __init__(self, directory=None):
         super(JsonWriter, self).__init__(directory)
 
-    def write(self, filename, data, **kwargs):
+    def write(self, filename, data):
         '''
         Write data to JSON file.
 
@@ -126,9 +138,6 @@ class JsonWriter(TextWriter):
             name of the JSON file
         data: list or dict
             the JSON string that should be written to the file
-        **kwargs: dict
-            additional arguments as key-value pairs
-            ("naicify": *bool*, whether `data` should be pretty-printed)
 
         Note
         ----
@@ -149,17 +158,17 @@ class JsonWriter(TextWriter):
                 json.dump(data, f, sort_keys=True)
 
 
-class YamlWriter(TextWriter):
+class YamlWriter(Writer):
 
     '''
-    Class for writing data to file on disk in YAML format
+    Class for writing data to file on disk in YAML 1.2 format
     '''
 
     @utils.same_docstring_as(Writer.__init__)
     def __init__(self, directory=None):
         super(YamlWriter, self).__init__(directory)
 
-    def write(self, filename, data, **kwargs):
+    def write(self, filename, data):
         '''
         Write data to YAML file.
 
@@ -169,9 +178,6 @@ class YamlWriter(TextWriter):
             name of the YAML file
         data: list or dict
             the YAML string that should be written to the file
-        **kwargs: dict
-            additional arguments as key-value pairs
-            ("use_ruamel": *bool*, when `ruamel.yaml` library should be used)
 
         Note
         ----
@@ -180,25 +186,21 @@ class YamlWriter(TextWriter):
         if self.directory:
             filename = os.path.join(self.directory, filename)
         logger.debug('write data to file: %s' % filename)
-        if 'use_ruamel' in kwargs:
-            use_ruamel = kwargs['use_ruamel']
-        else:
-            use_ruamel = False
         with open(filename, 'w') as f:
-            if use_ruamel:
-                f.write(ruamel.yaml.dump(data,
-                        Dumper=ruamel.yaml.RoundTripDumper,
-                        explicit_start=True))
-            else:
-                f.write(yaml.safe_dump(data,
-                        default_flow_style=False,
-                        explicit_start=True))
+            f.write(
+                ruamel.yaml.dump(
+                    data,
+                    Dumper=ruamel.yaml.RoundTripDumper,
+                    explicit_start=True
+                )
+            )
 
 
 class NumpyWriter(Writer):
 
     '''
-    Class for writing :py:class:`numpy.ndarray` objects to image files.
+    Class for writing :py:class:`numpy.ndarray` objects to image files
+    using the `OpenCV <http://docs.opencv.org>`_ library.
     '''
 
     @utils.same_docstring_as(Writer.__init__)
@@ -276,11 +278,10 @@ class VipsWriter(Writer):
         data.write_to_file(filename)
 
 
-class TablesWriter(object):
+class DataTableWriter(object):
 
     '''
-    Class for writing datasets and attributes to HDF5 files
-    using the `pytables <http://www.pytables.org/>`_ library.
+    Class for writing data tables to a persistent store.
     '''
 
     def __init__(self, filename, truncate=False):
@@ -359,11 +360,10 @@ class TablesWriter(object):
         self._stream.append(path, data, format='table', data_columns=True)
 
 
-class Hdf5Writer(object):
+class DatasetWriter(object):
 
     '''
-    Class for writing datasets and attributes to HDF5 files
-    using the `h5py <http://docs.h5py.org/en/latest/>`_ library.
+    Class for writing data sets to a persistent store.
     '''
 
     def __init__(self, filename, truncate=False):
@@ -648,7 +648,7 @@ class Hdf5Writer(object):
         '''
         Append data to an existing one-dimensional dataset.
         The dataset needs to be created first using the
-        :py:func:`tmlib.writers.Hdf5Writer.create` method and the
+        :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
         set to ``None``.
 
@@ -695,7 +695,7 @@ class Hdf5Writer(object):
         '''
         Vertically append data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
-        :py:func:`tmlib.writers.Hdf5Writer.create` method and the
+        :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
         set to ``None``.
 
@@ -754,7 +754,7 @@ class Hdf5Writer(object):
         '''
         Horizontally append data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
-        :py:func:`tmlib.writers.Hdf5Writer.create` method and the
+        :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the horizontal dimension needs to be
         set to ``None``.
 

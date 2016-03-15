@@ -5,8 +5,8 @@ import numpy as np
 from .. import utils
 from .stats import OnlineStatistics
 from .stats import OnlinePercentile
-from ..writers import Hdf5Writer
-from ..readers import OpenCVReader
+from ..writers import DatasetWriter
+from ..readers import NumpyReader
 from ..api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class IllumstatsGenerator(ClusterRoutines):
     Class for calculating illumination statistics.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class IllumstatsGenerator.
 
@@ -26,7 +26,7 @@ class IllumstatsGenerator(ClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -34,7 +34,7 @@ class IllumstatsGenerator(ClusterRoutines):
             mapping of additional key-value pairs that are ignored
         '''
         super(IllumstatsGenerator, self).__init__(
-                experiment, prog_name, verbosity)
+                experiment, step_name, verbosity)
 
     @property
     def stats_file_format_string(self):
@@ -110,7 +110,7 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         image_files = batch['inputs']['image_files']
         logger.info('calculate illumination statistics')
-        with OpenCVReader() as reader:
+        with NumpyReader() as reader:
             img = reader.read(image_files[0])
             stats = OnlineStatistics(image_dimensions=img.shape)
             pctl = OnlinePercentile()
@@ -122,7 +122,7 @@ class IllumstatsGenerator(ClusterRoutines):
                 pctl.update(img)
         stats_file = batch['outputs']['stats_files'][0]
         logger.info('write calculated statistics to file')
-        with Hdf5Writer(stats_file, truncate=True) as writer:
+        with DatasetWriter(stats_file, truncate=True) as writer:
             writer.write('/stats/mean', data=stats.mean)
             writer.write('/stats/std', data=stats.std)
             writer.write('/stats/percentile', data=pctl.percentile)

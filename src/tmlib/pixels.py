@@ -10,7 +10,7 @@ from .align import shift
 from .corilla import illumcorr
 from .illuminati import segment
 from .readers import VipsReader
-from .readers import OpenCVReader
+from .readers import NumpyReader
 from .writers import VipsWriter
 from .writers import NumpyWriter
 
@@ -1063,7 +1063,7 @@ class NumpyPixels(Pixels):
         -------
         tmlib.pixels.NumpyPixels
         '''
-        with OpenCVReader() as reader:
+        with NumpyReader() as reader:
             return NumpyPixels(reader.read(filename))
 
     @staticmethod
@@ -1090,23 +1090,52 @@ class NumpyPixels(Pixels):
         return NumpyPixels(a)
 
 
+def create_pixels_from_array(array):
+    '''
+    Factory function to create an instance of an implementation of the
+    :py:class:`tmlib.pixels.Pixels` base class using the provided `array`.
+
+    Parameters
+    ----------
+    array: numpy.ndarray or Vips.Image
+        array for which a `Pixels` object should be created
+
+    Returns
+    -------
+    tmlib.pixels.Pixels
+        pixels object
+
+    Raises
+    ------
+    TypeError
+        when `array` doesn't have type numpy.ndarray or Vips.Image
+    '''
+    if isinstance(array, np.ndarray):
+        return NumpyPixels(array)
+    elif isinstance(array, Vips.Image):
+        return VipsPixels(array)
+    else:
+        raise TypeError(
+                'Argument "array" must have type numpy.ndarray or Vips.Image')
+
+
 def create_pixels_from_file(filename, library):
     '''
     Factory function that creates an instance of an
-    implementation of the :py:class:`tmlib.pixels.Pixels` class for an array
-    loaded from a file.
+    implementation of the :py:class:`tmlib.pixels.Pixels` base class using
+    array loaded from a file.
 
     Parameters
     ----------
     filename: str
-        absolute path to the file 
+        absolute path to the file
     library: str
         either "numpy" or "vips"
 
     Returns
     -------
-    tmlib.pixels.NumpyPixels or tmlib.pixels.VipsPixels
-        pixels object 
+    tmlib.pixels.Pixels
+        pixels object
     '''
     if library == 'numpy':
         return NumpyPixels.create_from_file(filename)
@@ -1135,7 +1164,7 @@ def create_background_pixels(y_dimension, x_dimension, dtype, library):
 
     Returns
     -------
-    tmlib.pixels.NumpyPixels or tmlib.pixels.VipsPixels
+    tmlib.pixels.Pixels
         pixels object 
     '''
     if library == 'numpy':

@@ -1,6 +1,5 @@
 import os
 import sys
-import h5py
 import shutil
 import logging
 import numpy as np
@@ -9,7 +8,7 @@ import collections
 from cached_property import cached_property
 from . import path_utils
 from .project import JtProject
-from .join import merge_datasets
+from . import handles
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
 from .. import cfg
@@ -18,8 +17,8 @@ from ..api import ClusterRoutines
 from ..errors import PipelineRunError
 from ..errors import PipelineDescriptionError
 from ..errors import NotSupportedError
-from ..writers import Hdf5Writer
-from ..readers import Hdf5Reader
+from ..writers import DataTableWriter
+# from ..readers import DatasetReader
 from ..logging_utils import map_logging_verbosity
 
 logger = logging.getLogger(__name__)
@@ -31,7 +30,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     Class for running an image processing pipeline.
     '''
 
-    def __init__(self, experiment, prog_name, verbosity, pipeline,
+    def __init__(self, experiment, step_name, verbosity, pipeline,
                  pipe=None, handles=None, **kwargs):
         '''
         Initialize an instance of class ImageAnalysisPipeline.
@@ -40,7 +39,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         ----------
         experiment: tmlib.experiment.Experiment
             configured experiment object
-        prog_name: str
+        step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
@@ -58,22 +57,16 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Note
         ----
         If `pipe` or `handles` are not provided
-        they are obtained from the YAML *.pipe* and *.handles* descriptor
+        they are obtained from the YAML *.pipe* and *.handle* descriptor
         files on disk.
-
-        Raises
-        ------
-        tmlib.errors.PipelineDescriptionError
-            when `pipe` or `handles` are incorrect
-        tmlib.errors.PipelineOSError
-            when the *.pipe* or *.handles* files do not exist
         '''
         super(ImageAnalysisPipeline, self).__init__(
-                experiment, prog_name, verbosity)
+                experiment, step_name, verbosity)
         self.experiment = experiment
         self.pipe_name = pipeline
-        self.prog_name = prog_name
+        self.step_name = step_name
         self.verbosity = verbosity
+        self.engines = {'Python': None, 'R': None}
         self.project = JtProject(
                     project_dir=self.project_dir, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
@@ -89,7 +82,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         project_dir = os.path.join(
                             self.experiment.dir, 'tmaps',
-                            '%s_%s' % (self.prog_name, self.pipe_name))
+                            '%s_%s' % (self.step_name, self.pipe_name))
         return project_dir
 
     @property
@@ -235,9 +228,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         in order to add module dependencies to the Matlab path.
         '''
         languages = [m.language for m in self.pipeline]
-        self.engines = dict()
-        self.engines['Python'] = None
-        self.engines['R'] = None
         if 'Matlab' in languages:
             logger.info('start Matlab engine')
             # NOTE: It is absolutely necessary to specify these startup options
@@ -398,7 +388,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def _build_run_command(self, batch):
         # Overwrite method to account for additional "---pipeline" argument
-        command = [self.prog_name]
+        command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
         command.extend(['run', '--job', str(batch['id'])])
@@ -408,40 +398,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def run_job(self, batch):
         '''
         Run pipeline, i.e. execute each module in the order defined by the
-        pipeline description. Each job stores its output in a HDF5 file
-        with the following structure::
-
-            /metadata                                               # Group
-            /metadata/job_id                                        # Dataset {SCALAR}
-            /metadata/plate                                         # Dataset {SCALAR}
-            /metadata/well_name                                     # Dataset {SCALAR}
-            /metadata/well_posistion                                # Group
-            /metadata/well_posistion/x                              # Dataset {SCALAR}
-            /metadata/well_posistion/y                              # Dataset {SCALAR}
-            /metadata/shift_offset                                  # Group
-            /metadata/shift_offset/x                                # Dataset {SCALAR}
-            /metadata/shift_offset/y                                # Dataset {SCALAR}
-            /metadata/image_dimensions                              # Group
-            /metadata/image_dimensions/x                            # Dataset {SCALAR}
-            /metadata/image_dimensions/y                            # Dataset {SCALAR}
-            /objects                                                # Group
-            /objects/<object_name>                                  # Group
-            /objects/<object_name>/ids                              # Dataset {n}
-            /objects/<object_name>/segmentation                     # Group
-            /objects/<object_name>/segmentation/parent_name         # Dataset {n}
-            /objects/<object_name>/segmentation/object_ids          # Dataset {n}
-            /objects/<object_name>/segmentation/is_border           # Dataset {n}
-            /objects/<object_name>/segmentation/centroids           # Group
-            /objects/<object_name>/segmentation/centroids/y         # Dataset {n}
-            /objects/<object_name>/segmentation/centroids/x         # Dataset {n}
-            /objects/<object_name>/segmentation/outlines            # Group
-            /objects/<object_name>/segmentation/outlines/y          # Dataset {n}
-            /objects/<object_name>/segmentation/outlines/x          # Dataset {n}
-            /objects/<object_name>/segmentation/image_dimensions    # Group
-            /objects/<object_name>/segmentation/image_dimensions/y  # Dataset {n}
-            /objects/<object_name>/segmentation/image_dimensions/x  # Dataset {n}
-            /objects/<object_name>/features                         # Group
-            /objects/<object_name>/features/<feature_name>          # Dataset {n}
+        pipeline description.
 
         Parameters
         ----------
@@ -459,10 +416,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self._configure_loggers()
         self.start_engines(batch['plot'])
         job_id = batch['id']
-        data_file = self.build_data_filename(job_id)
-        # Create the HDF5 file (truncate in case it already exists)
-        logger.debug('create data file: %s', data_file)
-        h5py.File(data_file, 'w').close()
+        data_file = batch['outputs']['data_files'][0]
+        with DataTableWriter(data_file, truncate=True) as writer:
+            logger.debug('data is stored in file "%s"', data_file)
 
         # Load the images,correct them if requested and align them if required.
         # NOTE: When the experiment was acquired in "multiplexing" mode,
@@ -470,7 +426,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # desired behavior, but one should consider making the alignment
         # optional and give the user the possibility to decide similar to
         # illumination correction.
-        images = dict()
+        store = {
+            'pipe': dict(),
+            'figures': list(),
+            'objects': dict(),
+            'channels': list()
+        }
         channels = self.project.pipe['description']['input']['channels']
         # TODO: objects
         for i, ch in enumerate(channels):
@@ -494,7 +455,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 img = img.align()
                 if not isinstance(img.pixels.array, np.ndarray):
                     raise TypeError(
-                            'Jterator requires images as "numpy" arrays. '
+                            'Pixels arrays must have type numpy.ndarray.'
                             'Set argument "library" to "numpy".')
                 else:
                     pixels_array = img.pixels.array
@@ -502,13 +463,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # Combine images into "stack"
                 if j == 0 and n > 1:
                     dims = img.pixels.dimensions
-                    images[ch['name']] = np.empty(
+                    store['pipe'][ch['name']] = np.empty(
                                             (n, dims[0], dims[1]),
                                             dtype=img.pixels.dtype)
                 if n > 1:
-                    images[ch['name']][j, :, :] = pixels_array
+                    store['pipe'][ch['name']][j, :, :] = pixels_array
                 else:
-                    images[ch['name']] = pixels_array
+                    store['pipe'][ch['name']] = pixels_array
+                store['channels'].append(ch['name'])
 
             # Add some metadata to the HDF5 file, which may be required later
             if i == 0:
@@ -524,114 +486,25 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     offset_x = abs(shift_x)
                 else:
                     offset_x = 0
-                # All images processed per job were acquired at the same site
-                # and thus share the positional metadata information
-                with Hdf5Writer(data_file) as data:
-                    data.write('/metadata/job_id',
-                               data=batch['id'])
-                    data.write('/metadata/plate',
-                               data=md.plate)
-                    data.write('/metadata/well_name',
-                               data=md.well_name)
-                    data.write('/metadata/well_position/y',
-                               data=md.well_position_y)
-                    data.write('/metadata/well_position/x',
-                               data=md.well_position_x)
-                    data.write('/metadata/image_dimensions/y',
-                               data=orig_dims[0])
-                    data.write('/metadata/image_dimensions/x',
-                               data=orig_dims[1])
-                    data.write('/metadata/shift_offset/y',
-                               data=offset_y)
-                    data.write('/metadata/shift_offset/x',
-                               data=offset_x)
 
-        # run the pipeline, i.e. execute modules in specified order
-        pipeline_data = dict()
-        for module in self.pipeline:
+        # Run modules
+        for i, module in enumerate(self.pipeline):
+            logger.info('run module "%s"', module.name)
+            module.update_handles(store, batch['plot'])
+            output = module.run(self.engines[module.language])
+
             log_files = module.build_log_filenames(
                                 self.module_log_dir, job_id)
-            inputs = module.prepare_inputs(
-                                images=images,
-                                upstream_output=pipeline_data,
-                                plot=batch['plot'])
-            logger.info('run module "%s"', module.name)
-            out = module.run(inputs, self.engines[module.language])
-            if batch['plot']:
-                module.write_output_and_errors(
-                    log_files['stdout'], out['stdout'],
-                    log_files['stderr'], out['stderr'])
-            if not out['success']:
-                sys.exit(out['error_message'])
-            for key, value in out['pipeline_store'].iteritems():
-                # NOTE: In the handles description the mapping
-                # of an input/output item has keys "name" and "value".
-                # "name" in this context is the formal parameter in the
-                # function definition and "value" the argument that is
-                # passed to the function.
-                # However, for input arguments that are piped between modules
-                # "value" specifies the id of the variable (actually the
-                # key in the "pipeline_data" dictionary) to which the
-                # argument was assigned. Here, the "key" thus
-                # corresponds to the value of "value" key of the input item
-                # in the handle description.
-                # TODO: the whole "mode" and "kind" YAML shit should be
-                # mirrored by classes in Python
-                kind = [
-                    o['kind'] for o in module.description['output']
-                    if o['id'] == key
-                ][0]
-                if kind != 'image':
-                    raise NotSupportedError(
-                            'Kind "%s" is not supported for outputs '
-                            'with mode "pipe"')
-                if not isinstance(value, np.ndarray):
-                    raise TypeError(
-                            'Outputs of kind "pipe" image must have '
-                            'type numpy.ndarray')
-                pipeline_data[key] = value
+            module.write_output_and_errors(
+                log_files['stdout'], output['stdout'],
+                log_files['stderr'], output['stderr'])
 
-            for key, value in out['persistent_store'].iteritems():
+            if not output['success']:
+                sys.exit(output['error_message'])
 
-                kind = [
-                    o['kind'] for o in module.description['output']
-                    if o['ref'] == key
-                ][0]
+            store = module.update_store(store)
 
-                obj = [
-                    o['value'] for o in module.description['input']
-                    if o['name'] == key
-                ][0]
-
-                with Hdf5Writer(data_file) as f:
-                    for name, data in value.iteritems():
-                        if kind == 'features':
-                            group = 'features'
-                        elif kind == 'coordinates':
-                            group = 'coordinates'
-                        elif kind == 'attribute':
-                            group = 'attributes'
-                        else:
-                            # This shouldn't happen after the initial
-                            # checks, but safety first :)
-                            raise PipelineDescriptionError(
-                                    'Unknown kind "%s" for output '
-                                    '"%s" of module "%s"'
-                                    % (kind, key, module.name))
-                        p = 'objects/%s/%s/%s' % (obj, group, name)
-                        f.write(p, data)
-
-            if out['figure']:
-                if not isinstance(out['figure'], basestring):
-                    raise PipelineRunError(
-                            'Figure of module "%s" must be '
-                            'returned as string.' % module.name)
-                figure_file = module.build_figure_filename(
-                                    self.figures_dir, job_id)
-                module.save_figure(out['figure'], figure_file)
-
-        # TODO: approximate polygons and add global offset to coordinates
-        # Refactor tmlib.layer.SegmentedObjectsLayer class
+        # 
 
     @utils.notimplemented
     def collect_job_output(self, batch):
