@@ -88,14 +88,26 @@ class MapobjectOutline(Model):
         miny = -y0 - size
         maxy = -y0
 
-        tile = 'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy})'.format(
+        tile = 'POLYGON(({maxx} {maxy},{minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
             minx=minx,
             maxx=maxx,
             miny=miny,
-            maxy=maxy
-        )
+            maxy=maxy)
+        top_border = 'LINESTRING({minx} {miny}, {maxx} {miny})'.format(
+            minx=minx,
+            maxx=maxx,
+            miny=miny)
+        left_border = 'LINESTRING({minx} {maxy}, {minx} {miny})'.format(
+            minx=minx,
+            maxy=maxy,
+            miny=miny)
 
-        return MapobjectOutline.geom_poly.intersects(tile)
+        tile_filter =  (
+            (MapobjectOutline.geom_poly.ST_Intersects(tile)) &
+            (~MapobjectOutline.geom_poly.ST_Intersects(left_border)) &
+            (~MapobjectOutline.geom_poly.ST_Intersects(top_border)))
+
+        return tile_filter
 
 
 class Feature(Model):
