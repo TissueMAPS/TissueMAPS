@@ -200,17 +200,12 @@ class Experiment(HashIdModel, CRUDMixin):
 
     def as_dict(self):
         map_object_info = []
-        with self.dataset as data:
-            for object_name in data['/objects']:
-                object_data = data['/objects/' + object_name]
-                if 'features' in object_data:
-                    features = [{'name': f} for f in object_data['features'].keys()]
-                else:
-                    features = []
-                map_object_info.append({
-                    'map_object_name': object_name,
-                    'features': features
-                })
+        for t in self.mapobject_types:
+            features = [f.name for f in t.features]
+            map_object_info.append({
+                'map_object_name': t.name,
+                'features': features
+            })
 
         return {
             'id': self.hash,
@@ -220,7 +215,7 @@ class Experiment(HashIdModel, CRUDMixin):
             'plate_format': self.plate_format,
             'microscope_type': self.microscope_type,
             'creation_stage': self.creation_stage,
-            'layers': self.layers,
+            'layers': [l.as_dict() for l in self.layers],
             'plate_sources': [pl.as_dict() for pl in self.plate_sources],
             'map_object_info': map_object_info,
             'plates': [pl.as_dict() for pl in self.plates]

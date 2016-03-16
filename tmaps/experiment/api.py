@@ -14,7 +14,7 @@ import tmlib.logging_utils
 import tmlib.tmaps.canonical
 from tmlib.readers import DatasetReader
 
-from tmaps.experiment import Experiment
+from tmaps.experiment import Experiment, ChannelLayer
 from tmaps.experiment.setup import TaskSubmission
 from tmaps.extensions.encrypt import decode
 from tmaps.api import api
@@ -30,22 +30,22 @@ import logging
 tmlib_logger = tmlib.logging_utils.configure_logging(logging.INFO)
 
 
-@api.route('/experiments/<experiment_id>/layers/<layer_name>/<path:filename>', methods=['GET'])
-def expdata_file(experiment_id, layer_name, filename):
+@api.route('/channels/<channel_id>/tiles/<path:filename>', methods=['GET'])
+def get_image_tile(channel_id, filename):
     """Send a tile image for a specific layer.
     This route is accessed by openlayers."""
-    # TODO: This method should also be flagged with `@jwt_required()`.
-    # openlayers needs to send the token along with its request for files s.t.
-    # the server can check if the user is authorized to access the experiment
-    # with id `experiment_id`.
-    # import ipdb; ipdb.set_trace()
-    e = Experiment.get(experiment_id)
+    ch = ChannelLayer.get(channel_id)
+
+    if ch is None:
+        return RESOURCE_NOT_FOUND_RESPONSE
+
+    # TODO: Check if experiment belongs to user
     is_authorized = True
-    if is_authorized:
-        filepath = p.join(e.location, 'layers', layer_name, filename)
-        return send_file(filepath)
-    else:
+    if not is_authorized:
         return NOT_AUTHORIZED_RESPONSE
+
+    filepath = p.join(ch.location, filename)
+    return send_file(filepath)
 
 
 # TODO: Make auth required. tools subapp should receive token
