@@ -34,9 +34,9 @@ class VisualTileLayer extends BaseLayer<ol.layer.VectorTile> {
             if (geomType === 'Polygon') {
                 return [
                     new ol.style.Style({
-                        // fill: new ol.style.Fill({
-                        //     color: this.fillColor.toOlColor()
-                        // }),
+                        fill: new ol.style.Fill({
+                            color: this.fillColor.toOlColor()
+                        }),
                         stroke: new ol.style.Stroke({
                             color: this.strokeColor.toOlColor(),
                         })

@@ -68,21 +68,22 @@
 // Channels
 @channel-section-height: 40%;
 @channel-settings-li-height: 34px;
-
 // Objects
-@object-section-height: 15%;
+@object-section-height: 20%;
 @object-settings-li-height: 30px;
-
 // Selections
-@selection-section-height: 15%;
+@selection-section-height: 20%;
 @selection-settings-li-height: 30px;
-
 // Results
-@current-result-settings-li-height: 30px;
-@current-result-section-height: 15%;
-
-@saved-results-section-height: 15%;
+//// Saved
+@saved-results-section-height: calc(~'20% - @{current-result-section-height}');
 @saved-results-settings-li-height: 30px;
+//// Current
+@current-result-settings-li-height: 30px;
+@current-result-section-height:
+    @current-result-settings-li-height +
+    2 * @sidebar-section-padding +
+    @sidebar-section-title-height;
 
 @map-container-width: calc(~'100% - @{toolbar-width} - @{sidebar-width}');
 

@@ -4,10 +4,17 @@
     <tm-selectable-tabs>
       <tm-selectable-tab ng-controller="ObjectLayerCtrl as layerCtrl">
         <tm-selectable-tab-popup>
-          <p>
-            Stroke color:<br>
+          <h4>Stroke color</h4>
             <ng-color-picker selected="layerCtrl.selectedColor.strokeColor" colors="layerCtrl.selectableColors"></ng-color-picker>
           </p>
+
+          <h4>Opacity</h4>
+          <span class="output" ng-bind="layerCtrl.opacityInput"></span>
+          <div ui-slider
+               min="0" max="100"
+               ng-model="layerCtrl.opacityInput">
+          </div>
+
         </tm-selectable-tab-popup>
 
         <tm-selectable-tab-content>

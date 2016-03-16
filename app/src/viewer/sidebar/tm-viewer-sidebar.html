@@ -37,40 +37,46 @@
             <span>Saved results</span>
         </div>
         <div class="sidebar-section-content">
-            <tm-visual-layer-settings viewport="viewport" layers="viewer.savedResults"/>
+          <tm-results-settings viewport="viewport" results="viewer.savedResults"/>
         </div>
     </div>
 
-    <div class="sidebar-section current-result-section">
-        <div class="sidebar-section-title" tm-resize-handle>
+    <div class="sidebar-section current-result-section" tm-no-resize>
+        <div class="sidebar-section-title">
             <span>Current result</span>
         </div>
-        <div class="sidebar-section-content">
-            <ul class="tm-selectable-tabs">
-                <li ng-show="viewer.currentResult" class="tm-selectable-tab-li">
-                    <div class="tm-selectable-tab-popup">
-                        <div class="tm-selectable-tab-popup-button">
-                            <i class="fa fa-chevron-left"></i>
-                        </div>
-                        <!-- <div class="tm-selectable-tab-popup-content"></div> -->
-                    </div>
-                    <div class="tm-selectable-tab-content">
-                      <span class="inline-layer-control" tm-stop-click>
-                          <i ng-show="viewer.currentResult.visible" ng-click="viewer.currentResult.hide(viewer)"
-                              class="fa fa-eye"></i>
-                          <i ng-hide="viewer.currentResult.visible" ng-click="viewer.currentResult.show(viewer)"
-                              class="fa fa-circle-thin"></i>
-                      </span>
-                      <span class="inline-layer-control" tm-stop-click>
-                          <i ng-click="viewer.saveCurrentResult()" class="fa fa-floppy-o"></i>
-                      </span>
+        <div class="sidebar-section-content" ng-controller="CurrentResultCtrl as currentResultCtrl">
+          <tm-multi-selection-box items="currentResultCtrl.results" by-name="'result'">
+            <tm-selectable-tabs>
+              <tm-selectable-tab ng-controller="ResultCtrl as resultCtrl">
+                <tm-selectable-tab-popup>
+                  <h4>Opacity</h4>
+                  <span class="output" ng-bind="resultCtrl.opacityInput"></span>
+                  <div ui-slider
+                       min="0" max="100"
+                       ng-model="resultCtrl.opacityInput">
+                  </div>
+                </tm-selectable-tab-popup>
 
-                        {{ viewer.currentResult.name }}
+                <tm-selectable-tab-content>
+                  <span class="inline-layer-control" tm-stop-click>
+                      <i ng-show="result.visible" ng-click="result.hide(viewer)"
+                          class="fa fa-eye"></i>
+                      <i ng-hide="result.visible" ng-click="result.show(viewer)"
+                          class="fa fa-circle-thin"></i>
+                  </span>
+                  <span class="inline-layer-control" tm-stop-click>
+                      <i ng-click="viewer.saveCurrentResult()" class="fa fa-floppy-o"></i>
+                  </span>
+                  <!-- <input type="text" ng-model="result.name" tm-stop-click></input> -->
+                  <span contenteditable strip-br="true" ng-model="result.name"
+                       select-non-editable="true">
+                  </span>
 
-                    </div>
-                </li>
-            </ul>
+                </tm-selectable-tab-content>
+              </tm-selectable-tab>
+            </tm-selectable-tabs>
+          </tm-multi-selection-box>
         </div>
     </div>
-
 </div>

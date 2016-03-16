@@ -1,4 +1,9 @@
 angular.module('tmaps.ui')
+.directive('tmNoResize', function() {
+    return {
+        restrict: 'A'
+    };
+})
 .directive('tmResizeHandle', ['$document', function($document) {
     return {
         restrict: 'A',
@@ -34,6 +39,12 @@ angular.module('tmaps.ui')
 
                 var nextElement = direction === 'upwards' ? elem.prev() : elem.next();
                 var nextElementExists = nextElement.length != 0;
+                // TODO: Quickfix to check whether the next element has a resize-handle on it.
+                // In case it doesn't the element should be shrinkable.
+                var isNextElementResizable = false;
+                if (nextElementExists) {
+                    isNextElementResizable = !nextElement[0].hasAttribute('tm-no-resize');
+                }
 
                 var minHeight = parseInt(elem.css('minHeight'));
                 var height = elem.height();
@@ -57,7 +68,7 @@ angular.module('tmaps.ui')
                         var newHeightPercentage = toPercentage(height - effectiveAmount);
                         elem.css('height', newHeightPercentage + '%');
                     }
-                    if (nextElementExists) {
+                    if (nextElementExists && isNextElementResizable) {
                         var shrinkedBySibling =
                             shrinkElement(nextElement, amount - effectiveAmount, direction);
                         return effectiveAmount + shrinkedBySibling;

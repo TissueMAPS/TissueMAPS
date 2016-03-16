@@ -103,9 +103,11 @@
         "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",
         "app/src/viewer/sidebar/selections/SelectionControlsCtrl.ts",
 
-        "app/src/viewer/sidebar/visuallayers/VisualLayerControlsCtrl.ts",
-        "app/src/viewer/sidebar/visuallayers/VisualLayerSettingsCtrl.ts",
-        "app/src/viewer/sidebar/visuallayers/VisualLayerCtrl.ts",
+        "app/src/viewer/sidebar/results/CurrentResultCtrl.ts",
+        "app/src/viewer/sidebar/results/ResultsControlsCtrl.ts",
+        "app/src/viewer/sidebar/results/ResultsSettingsCtrl.ts",
+        "app/src/viewer/sidebar/results/ResultCtrl.ts",
+        "app/src/viewer/sidebar/results/tmResultsSettings.ts",
 
         "app/src/userpanel/UserpanelWindowCtrl.ts",
 

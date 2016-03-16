@@ -86,14 +86,6 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
         }
     }
 
-    get opacity(): number {
-        return this._olLayer.getOpacity();
-    }
-
-    set opacity(val: number) {
-        this._olLayer.setOpacity(val);
-    }
-
     get min(): number {
         return this._olLayer.getMin();
     }

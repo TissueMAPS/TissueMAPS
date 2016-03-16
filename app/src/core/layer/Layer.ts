@@ -2,7 +2,6 @@ interface Layer {
     name: string;
     addToMap(map: ol.Map);
     removeFromMap(map: ol.Map);
-
     // Change to this:
     // addToViewport(vp: Viewport);
     // removeFromViewport(vp: Viewport);
@@ -21,6 +20,14 @@ class BaseLayer<LayerT extends ol.layer.Layer> implements Layer {
 
     set visible(val: boolean) {
         this._olLayer.setVisible(val);
+    }
+
+    get opacity(): number {
+        return this._olLayer.getOpacity();
+    }
+
+    set opacity(val: number) {
+        this._olLayer.setOpacity(val);
     }
 
     /*
