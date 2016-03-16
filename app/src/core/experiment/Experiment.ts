@@ -16,9 +16,9 @@ interface SerializedExperiment extends Serialized<Experiment> {
 }
 
 interface Channel {
+    id: string;
     name: string;
-    imageSize: ImageSize;
-    pyramidPath: string;
+    imageSize: Size;
 }
 
 class Experiment implements Serializable<Experiment> {
@@ -81,9 +81,9 @@ class Experiment implements Serializable<Experiment> {
     static _fromServerResponse(e: ExperimentAPIObject) {
         var channels = _.map(e.layers, (l) => {
             return {
+                id: l.id,
                 name: l.name,
-                imageSize: l.imageSize,
-                pyramidPath: l.pyramidPath
+                imageSize: l.image_size
             };
         });
         var mapObjectInfos: {[objectName: string]: MapObjectInfo} = {};

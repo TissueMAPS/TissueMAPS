@@ -63,7 +63,7 @@ class Viewport implements Serializable<Viewport> {
         }
         // If this is the first time a layer is added, create a view and add it to the map.
         if (!alreadyHasLayers) {
-            this._setView((<ChannelLayer>layer).imageSize[0], (<ChannelLayer>layer).imageSize[1]);
+            this._setView((<ChannelLayer>layer).imageSize.width, (<ChannelLayer>layer).imageSize.height);
         }
         this.layers.push(layer);
     }

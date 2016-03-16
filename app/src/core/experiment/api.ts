@@ -4,9 +4,12 @@ interface GetExperimentResponse {
 }
 
 interface LayerAPIObject {
+    id: string;
     name: string;
-    imageSize: ImageSize;
-    pyramidPath: string;
+    image_size: {
+        width: number;
+        height: number;
+    };
 }
 
 interface MapObjectInfoAPIObject {

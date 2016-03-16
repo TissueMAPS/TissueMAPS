@@ -44,9 +44,9 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     private _addChannelLayers() {
         var layerOpts = _(this.experiment.channels).map((ch) => {
             return {
+                channelId: ch.id,
                 name: ch.name,
-                imageSize: ch.imageSize,
-                pyramidPath: ch.pyramidPath
+                imageSize: ch.imageSize
             };
         });
         _(layerOpts).each((opt, i) => {

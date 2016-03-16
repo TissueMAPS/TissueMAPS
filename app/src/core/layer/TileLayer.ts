@@ -3,8 +3,7 @@
 
 interface SerializedTileLayer extends Serialized<TileLayer> {
       name: string;
-      pyramidPath: string;
-      imageSize: ImageSize;
+      imageSize: Size;
       color: SerializedColor;
       additiveBlend: boolean;
       visible: boolean;
@@ -15,9 +14,9 @@ interface SerializedTileLayer extends Serialized<TileLayer> {
 }
 
 interface TileLayerArgs {
+    channelId: string;
     name: string;
-    imageSize: ImageSize;
-    pyramidPath: string;
+    imageSize: Size;
 
     additiveBlend?: string;
     visible?: boolean;
@@ -29,18 +28,17 @@ interface TileLayerArgs {
 }
 
 class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<TileLayer> {
-    pyramidPath: string;
-    imageSize: ImageSize;
+    imageSize: Size;
 
     constructor(opt: TileLayerArgs) {
         super(opt.name);
 
         // Add trailing slash if not already present
-        var pyramidPath = opt.pyramidPath;
-        if (pyramidPath.substr(pyramidPath.length - 1) !== '/') {
-            pyramidPath += '/';
-        }
-        this.pyramidPath = pyramidPath;
+        // var pyramidPath = opt.pyramidPath;
+        // if (pyramidPath.substr(pyramidPath.length - 1) !== '/') {
+        //     pyramidPath += '/';
+        // }
+        // this.pyramidPath = pyramidPath;
         this.imageSize = opt.imageSize;
 
         // Some default properties
@@ -62,8 +60,8 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
         _olLayerArgs.color = _olLayerColor;
 
         _olLayerArgs.source = new ol.source.Zoomify({
-            size: <ol.Size> this.imageSize,
-            url: '/api' + pyramidPath,
+            size:  [this.imageSize.width, this.imageSize.height],
+            url: '/api/channels/' + opt.channelId + '/tiles/',
             crossOrigin: 'anonymous'
         });
 
@@ -123,7 +121,6 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
             var $q = $injector.get<ng.IQService>('$q');
             return $q.when({
                 name: this.name,
-                pyramidPath: this.pyramidPath,
                 imageSize: this.imageSize,
                 color: c,
                 additiveBlend: this.additiveBlend,
