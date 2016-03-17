@@ -79953,14 +79953,14 @@ goog.addSingletonGetter(ol.render.webgl.polygonreplay.shader.DefaultFragment);
  * @const
  * @type {string}
  */
-ol.render.webgl.polygonreplay.shader.DefaultFragment.DEBUG_SOURCE = 'precision mediump float;\nvarying vec4 v_color;\n\n\n\nvoid main(void) {\n  gl_FragColor = v_color;\n}\n';
+ol.render.webgl.polygonreplay.shader.DefaultFragment.DEBUG_SOURCE = 'precision mediump float;\nvarying vec4 v_color;\n\n\n\nuniform float u_opacity;\n\nvoid main(void) {\n  gl_FragColor = v_color;\n  gl_FragColor *= u_opacity;\n}\n';
 
 
 /**
  * @const
  * @type {string}
  */
-ol.render.webgl.polygonreplay.shader.DefaultFragment.OPTIMIZED_SOURCE = 'precision mediump float;varying vec4 a;void main(void){gl_FragColor=a;}';
+ol.render.webgl.polygonreplay.shader.DefaultFragment.OPTIMIZED_SOURCE = 'precision mediump float;varying vec4 a;uniform float e;void main(void){gl_FragColor=a;gl_FragColor*=e;}';
 
 
 /**
@@ -80014,6 +80014,12 @@ ol.render.webgl.polygonreplay.shader.DefaultVertex.SOURCE = goog.DEBUG ?
  * @struct
  */
 ol.render.webgl.polygonreplay.shader.Default.Locations = function(gl, program) {
+
+  /**
+   * @type {WebGLUniformLocation}
+   */
+  this.u_opacity = gl.getUniformLocation(
+      program, goog.DEBUG ? 'u_opacity' : 'e');
 
   /**
    * @type {WebGLUniformLocation}
@@ -81833,27 +81839,27 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
  */
 ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
     function(polygonGeometry, feature) {
-  // Get fill color
-  // TODO: Check if feature has a fill color, if not, get the
-  // fillColor of this layer.
   var fillColor;
   if (!goog.isNull(feature.getStyle())) {
       var color = feature.getStyle().getFill().getColor();
       fillColor = ol.color.asArray(color);
   } else if (!goog.isNull(this.fillColor_)) {
       fillColor = this.fillColor_;
-  } else {
-    return;
   }
 
-  var coordinates = polygonGeometry.getCoordinates();
-  this.startIndices_.push(this.indices_.length);
-  this.startIndicesFeature_.push(feature);
-  this.drawCoordinates_(coordinates, fillColor);
-  var endIndex = this.indices_.length;
-  this.endIndices_.push(endIndex);
+  // Plot polygon body
+  if (fillColor) {
+    var coordinates = polygonGeometry.getCoordinates();
+    this.startIndices_.push(this.indices_.length);
+    this.startIndicesFeature_.push(feature);
+    this.drawCoordinates_(coordinates, fillColor);
+    var endIndex = this.indices_.length;
+    this.endIndices_.push(endIndex);
+  }
 
-  if (!goog.isNull(this.lineStringReplay_.strokeColor_)) {
+  // Plot polygon ring
+  var strokeColor = this.lineStringReplay_.strokeColor_;
+  if (strokeColor) {
     var linearRings = polygonGeometry.getLinearRings();
     var i, ii;
     for (i = 0, ii = linearRings.length; i < ii; i++) {
@@ -81965,6 +81971,8 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
   }
 
   context.useProgram(program);
+
+  gl.uniform1f(locations.u_opacity, opacity);
 
   // enable the vertex attrib arrays
   gl.enableVertexAttribArray(locations.a_position);
@@ -84426,8 +84434,6 @@ goog.require('ol.renderer.webgl.Layer');
 goog.require('ol.layer.VectorTile');
 goog.require('ol.render.webgl.ReplayGroup');
 goog.require('ol.style.Style');
-goog.require('ol.style.Stroke');
-goog.require('ol.style.Fill');
 
 
 /**
