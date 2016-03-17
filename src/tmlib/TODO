@@ -1,9 +1,0 @@
-[ ] further extend class for configuration settings
-[ ] check types in metadata class
-[ ] check .out files for 😞 
-[ ] update documentation
-[ ] jterator collect step: segmentation data, global ids and coordinates
-[ ] split the OMEXML file in case additional cycles are created and capture the initial state of the directory layout
-[ ] separate uploaded data from extracted data (map via original_filename key)
-[ ] handle init 'args' in a better way without kwargs
-[ ] add argument groups to subparsers
