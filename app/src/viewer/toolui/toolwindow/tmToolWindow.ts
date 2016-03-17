@@ -58,7 +58,6 @@ angular.module('tmaps.ui')
                 var hasCachedDOMElement = cachedDOMElement !== undefined;
 
                 if (!hasCachedDOMElement) {
-                    console.log(newSession.tool.templateUrl);
                     var templateUrl = newSession.tool.templateUrl;
                     $templateRequest(templateUrl).then(function(resp) {
                         var newScope = scope.$new();
