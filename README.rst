@@ -5,9 +5,9 @@ Introduction
 
 Jterator is a **cross-language pipeline engine** for scientific computing and image analysis.
 
-It is designed to be flexible and customizable, while at the same time being easy to use. The program itself is written in `Python <https://www.python.org/>`_, but it can process data across different languages. It makes use of easily readable and modifiable `YAML <http://yaml.org/>`_ files to define project layout, pipeline logic, and module input/output and stores output data in `HDF5 <https://www.hdfgroup.org/HDF5/>`_ files. It comes with a **command line interface** as well as a **web-based user interface**.
+The program itself is written in `Python <https://www.python.org/>`_, but it can process data across different languages. It makes use of easily human readable and modifiable `YAML <http://yaml.org/>`_ files to define pipeline logic and module input/output.
 
-Python was chosen as programming language because it represents a good trade-off between development time and performance. In addition, it provides access to numerous powerful image processing libraries, such as   
+Python was chosen as programming language because it represents a good trade-off between development time and performance. In combination with the `NumPy <http://www.numpy.org/>`_ package, it provides an ideal framework for scientific computing and image analysis. In addition, there are numerous powerful image processing libraries with Python bindings that use NumPy arrays as data container:   
 
 - `scikit-image <http://scikit-image.org/docs/dev/auto_examples/>`_   
 - `simpleITK <http://www.simpleitk.org/>`_
@@ -15,7 +15,7 @@ Python was chosen as programming language because it represents a good trade-off
 - `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 - `vigra <http://ukoethe.github.io/vigra/doc/vigra/PythonBindingsTutorial.html>`_
 
-Jterator pipes data as `NumPy <http://www.numpy.org/>`_ arrays and allows integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
+This makes it easy to combine algorithms from different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
 
 - Matlab: `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ 
 - R: `rpy2 <http://rpy.sourceforge.net/>`_
@@ -24,27 +24,14 @@ Jterator pipes data as `NumPy <http://www.numpy.org/>`_ arrays and allows integr
 
 .. _main-ideas:
 
-The main ideas
-==============
+Main ideas
+==========
 
-- rapid development and testing of new workflows
-- clear separation of GUI handling and actual image processing
-- short list of dependencies
-- cross-language compatibility
-
-.. _project:
-
-Project
-=======
-
-A Jterator project corresponds to a folder on disk with the following layout:
-
-* **handles** folder contains all the YAML *.handles.yml* module descriptor files, which are passed as STDIN stream to *modules*. This folder is created when you set up your pipeline, either via user interface or via the command line using the ``jterator create`` command.
-* **data** folder contains all the *.data.h5* HDF5 output files. Jterator will automatically create this folder in your project directory.
-- **figures** folder contains all the figure files. These files may either be *HTML* documents or *PNG* image files.        
-* **logs** folder contains all the output from STDOUT and STERR streams, obtained for each executable that has been executed in the pipeline. The logging level can be controlled via the ``-v`` or ``--verbosity`` argument.
-
-The actual module files can reside in the project directory or at any other location, for example a central repository (see *lib* key in pipeline descriptor file). This may be more convenient, because the code is generally reused and independent of the actual project.
+- *Simple module development and testing*: A module represents a file (a Python module) that contains a function with the same name as the file.
+- *Short list of dependencies*: Writing a module only requires the `NumPy <http://www.numpy.org/>`_ package.
+- *Independence of individual processing steps*: Module arguments are either NumPy arrays, scalars (integer and floating point numbers and strings), or a sequence of scalars. Modules don't perform IO. They are therefore unit testable.
+- *separation of GUI handling from the actual image processing*: Modules don't interact with a GUI. They can, however, generate and return a HTML representation of a figure which can be visualized in a browser.
+- *Cross-language compatibility*: Restricting module input/output to NumPy arrays and build-in Python types facilitates interfaces to other languages.
 
 
 .. _pipeline:
@@ -52,8 +39,8 @@ The actual module files can reside in the project directory or at any other loca
 Pipeline
 ========
 
-A pipeline is a sequence of connected modules (a linked list) that represents a task, i.e. a unit of execution that runs on a single machine.
-The sequence and structure of your pipeline is defined in a *.pipe* YAML `pipeline descriptor file`_. The input/output settings for each module are provided by additional *.handles* YAML `module descriptor files`_.
+A pipeline is a sequence of connected modules that collectively represents a computational task, i.e. a unit of execution that runs on a single machine.
+The sequence and structure of your pipeline is defined in a *pipe* YAML `pipeline descriptor file`_. The input/output settings for each module are provided by additional *handles* YAML `module IO descriptor files`_.
 
 
 .. _pipeline-descriptor-file:
@@ -61,20 +48,19 @@ The sequence and structure of your pipeline is defined in a *.pipe* YAML `pipeli
 Pipeline descriptor file
 ------------------------
 
-Jterator allows only very simplistic types of work-flow -  *pipeline* (somewhat similar to a UNIX-world pipeline). Description of such work-flow must be put sibling to the folder structure described above, i.e. inside the project folder. Recognizable file name must be *.pipe.yml*. Description is YAML format. 
+Jterator allows only very simplistic types of work-flow -  *pipeline* (somewhat similar to a UNIX-world pipeline). 
 
 Example of a *.pipe.yml* YAML descriptor file:
 
 .. code-block:: yaml
 
-    project:
+    description: An example project that does nothing.
+    
+    lib: ''
 
-        description: An example project that does nothing.
-        lib: ''
+    input:
 
-    images:
-
-        planes:
+        channels:
           - name: myExampleLayer1
             correct: true
           - name: myExampleLayer2
@@ -82,50 +68,43 @@ Example of a *.pipe.yml* YAML descriptor file:
 
     pipeline:
 
-        -   module: myModule1.py
-            handles: handles/myModule1.handles
+        -   source: my_python_module.py
+            handle: handles/my_python_module.handle.yml
             active: true
 
-        -   module: myModule2.r
-            handles: handles/myModule2.handles
+        -   source: my_r_module.r
+            handle: handles/my_r_module.handle.yml
             active: true
 
-        -   module: myModule3.m
-            handles: handles/myModule3.handles
+        -   source: my_m_module.m
+            handle: handles/my_m_module.handle.yml
             active: true
 
-        -   module: myModule4.jl
-            handles: handles/myModule4.handles
-            active: false
 
-
-Note that the working directory is by default the project folder. You can make use of the ``lib`` variable within the pipeline descriptor file to specify the path to the local copy of this repository, where the module files are located. Best practice is to have the ``handles`` folder in you project directory, because the specifications in the handles descriptor files are usually project specific (this is even required for the user interface).   
-The **images** section will create a list of jobs with filenames and id for each job that will be stored in a *.jobs.json* job descriptor file.    
+Handle files can in principle reside at any location and their path has to be provided in the pipeline descriptor file. The path to a handle file can be absolute or relative to the working directory (as in the example above). Module files must reside within this repository. The path to the local copy of the repository can either be provided by setting the ``JTLIB`` environment variable or by setting a value for the ``lib`` key within the pipeline descriptor file.  
+All *channels* specified in **input** will be loaded by the program and the corresponding images made available to modules in the pipeline.
 
 .. _modules:
 
 Modules
 =======
 
-Modules are the actual executable code in your pipeline. Each module is simply a file that defines a function with the same name as the file.
+Modules are the actual executable code in the pipeline. Each module is simply a file that defines a function with the same name as the file.
 
 .. _data:
 
 Data
 ----
 
-Modules can write data to *.data* HDF5 files on disk, which are stored in the *data* folder, a subdirectory of the project folder.
+Modules don't perform disk IO! Special modules are available for storing data generated within a pipeline, such as segmentation results and features extracted for the segmented objects.
 
-The name of the data file is available to the module as ``kwargs["data_file"]``.
 
 .. _figures:
 
 Figures
 -------
 
-
-Figures are written to *.html* files and stored in the *figures* folder on disk, a subdirectory of the project folder.
-The name of the figure file is available to the module as ``kwargs["figure_file"]``.
+Figures are generated using the `plotly <https://plot.ly/api/>`_ library and returned by modules as HTML strings.
 
 
 .. _module-expamples:
@@ -133,45 +112,61 @@ The name of the figure file is available to the module as ``kwargs["figure_file"
 Module examples
 ---------------
 
-Shown here are minimalistic examples of modules implemented in different languages.
+Shown here are minimalistic examples of modules that simply return their input implemented in different languages:
 
 **Python example**:     
 
 .. code:: python
-    
+
     import jtlib
-    import collections
 
-    def myInitialPythonModule(InputImage, **kwargs):
+    def my_python_module(input_image, plot=False):
 
-        Output = collections.namedtuple('Output', ['OutputImage'])
-        return Output(InputImage)
+        output = dict()
+        output['output_image'] = input_image
+
+        if plot:
+            output['figure'] = jtlib.plotting.create_figure()
+        else:
+            output['figure'] = ""
+
+        return output
 
 
 .. Note::
 
-    Python functions should provide output as a `collections.namedtuple`.
+    The return value in Python must have type ``dict``.
 
 **Matlab example**:     
 
 .. code-block:: matlab
-    
-    import jtlib.*
-    
-    function [OutputImage] = myMatlabModule(InputImage, varargin)
 
-        OutputImage = InputImage;
+    import jtlib.*;
+    
+    function [output_image, figure] = my_m_module(input_image, plot)
+
+        if nargin < 2
+            plot = false;
+        end
+
+        if plot
+            figure = jtlib.plotting.create_figure();
+        else
+            figure = '';
+        end
+
+        output_image = input_image;
 
     end
 
 
 .. Note::
 
-    Matlab functions should provide output as an array using the ``[]`` notation.
+    Matlab functions must return output arguments using the ``[]`` notation.
 
 .. Warning::
 
-    Matlab functions cannot handle input of class `struct`!
+    Class `struct` is not supported for arguments or return values!
 
 **R example**:
 
@@ -179,12 +174,16 @@ Shown here are minimalistic examples of modules implemented in different languag
 
     library(jtlib)
 
-    myRModule <- function(InputImage, ...){
-
-        dots <- list(...)
+    my_r_module <- function(input_image, plot=FALSE){
 
         output <- list()
-        output[['OutputImage']] <- InputImage
+        output[['output_image']] <- input_image
+
+        if (plot) {
+            output[['figure']] <- jtlib::plotting.create_figure()
+        } else {
+            output[['figure']] <- ''
+        }
 
         return(output)
     }
@@ -192,7 +191,7 @@ Shown here are minimalistic examples of modules implemented in different languag
 
 .. Note::
     
-    R functions should provide output as a `list` with named members.
+    The return value in R must have type `list` and the list must have named members.
 
 
 .. _module_descriptor-files:
@@ -200,57 +199,58 @@ Shown here are minimalistic examples of modules implemented in different languag
 Module descriptor files
 -----------------------
 
-Describe the input and output of your modules in *.handles* (YAML) descriptor files:        
+Input and output of modules is described in module-specific *handles* files:        
 
 .. code-block:: yaml
 
     input:
 
-        - name: StringExample:
-          class: parameter
-          value: myString
+        - name: string_example
+          type: Scalar
+          value: mystring
 
-        - name: IntegerExample
-          class: parameter
+        - name: integer_example
+          type: Scalar
           value: 1
+          options:
+            - 1
+            - 2
 
-        - name: PipelineInputExample
-          class: pipeline
-          value: myModule.InputData
+        - name: pipeline_input_example
+          type: Image
+          key: a.unique.string
 
-        - name: ListExample
-          class: parameter
+        - name: array_example
+          type: Sequence
           value: 
-            - myString1
-            - myString2
-            - myString3
+            - 2.3
+            - 1.7
+            - 4.6
 
-        - name: BoolExample
-          class: parameter
+        - name: boolean_example
+          type: Scalar
           value: true
+
+        - name: plot
+          type: Plot
+          value: false
 
     output:
 
-        - name: PipelineOutputExample
-          class: pipeline
-          value: myModule.OutputData
+        - name: pipeline_output_example
+          type: Image
+          key: another.unique.string
 
-    plot: false 
-
-
-There are two different **classes** of input/output arguments:
-
-* **pipeline** corresponds to data that has to be produced upstream in the pipeline by another module. The corresponding value must be a string that has to be unique.
-* **parameter** is an argument that is used to control the behavior of the module. It is module-specific and hence independent of other modules. It can be of any YAML supported type (integer, string, array, ...).
+        - name: figure
+          type: Figure
 
 
-Jterator internally adds the following keys in order to make this information available to the modules:   
+Each item (*handle*) in the array of inputs describes an argument that is passed to the module function and each item in the array of outputs describes a key-value pair in the mapping that should be returned by the function.
 
-- **data_file**: absolute path to the HDF5 file, where data is stored    
-- **figure_file**: filename of a potential figure. This enables the module to save a figure to a pre-defined location on disk, which the program is aware of
-- **experiment_dir**: absolute path to the root directory of the currently processed experiment
-- **plot**: boolean indicator whether a figure should be created or not
-- **job_id**: one-based job identifier number
+Handles can have different *types* and each type is mirrored by a Python class. Constant input arguments have a "value" key, which represents the actual argument. Images can be piped between modules and have a "key" key, which serves as a lookup for the actual value, i.e. the image, in an in-memory key-value store. The value for that YAML key (a bit confusing) must be a hashable, i.e. a string that's unique within the pipeline. Since the names of handles files are unique, best practice is to use handle filenames as a namespace and combine them with the name of the output handle to create a unique hashable identifier.
+
+
+The ``Plot`` input handle type and ``Figure`` output handle type should be used to implement plotting functionality. The program will set ``plot`` to ``false`` when running in headless mode on the cluster.
 
 
 .. _developer-documentation:
@@ -258,12 +258,13 @@ Jterator internally adds the following keys in order to make this information av
 Developer documentation
 =======================
 
-Modules should be light weight wrappers that delegate the actual image processing to libraries. To this end, you can make use of external libraries such as `scikit image <http://scikit-image.org/>`_ or implement your own solutions in the `jtlib` library (available for each of the different languages). Module code should be mainly concerned with input/output handling and (optionally) the generation of a figure. Try to break your code down into smaller subroutines and encapsulate them in classes or individual functions. 
+Modules should be light weight wrappers and the code mainly concerned with input/output handling and (optionally) the generation of a figure. The actual image processing should be delegated to libraries. To this end, one can make use of external libraries or implement custom solutions in the `jtlib` package (available for each of the implemented languages). This makes it also easier to reuse code across modules.
+
 
 .. _naming-conventions:
 
 Naming conventions
-==================
+------------------
 
 Since Jterator is written in Python, we recommend following `PEP 0008 <https://www.python.org/dev/peps/pep-0008/>`_ style guide for module and function names.
 Therefore, we use short *all-lowercase* names for Jterator modules with *underscores* separating words if necessary, e.g. ``modulename`` or ``long_module_name``. See `naming conventions <https://www.python.org/dev/peps/pep-0008/#prescriptive-naming-conventions>`_.
@@ -274,28 +275,15 @@ This approach also works for `Matlab function files <http://ch.mathworks.com/hel
 .. _coding-style:
 
 Coding style
-============
+------------
 
-For Python, we encourage you to follow `PEP 0008 <https://www.python.org/dev/peps/pep-0008/>`_.
-
-
-
-.. _module-outut:
-
-Module output
-=============
-
-Modules either return output or write data to the provided HDF5 file. The path to the file is available as an input parameter of the module function as ``kwargs['data_file']`` in Python, ``varargin{1}`` in Matlab (unfortunately, `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ doesn't support `struct` arrays), or ``dots[['data_file']]`` in R.
-
-.. warning::
-
-    Don't write stuff to any other location on disk than to the provided HDF5 file, since `jterator` won't know about it.
+For Python, we encourage following `PEP 0008 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_. For Matlab and R we recommend following Google's style guidelines, see ` Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
 
 
 ... _figures:
 
 Figures
-=======
+-------
 
 The plotting library `plotly <https://plot.ly/api/>`_ is used to generate interactive plots for visualization of module results in the web-based user interface. The advantage of this library is that is has a uniform API and generates identical outputs across different languages (Python, Matlab, R, Julia). Each module creates only one figure. If you have the feeling that you need more than one figure, it's an indication that you should break down your code into multiple modules.
 
@@ -303,6 +291,6 @@ The plotting library `plotly <https://plot.ly/api/>`_ is used to generate intera
 ... _documentation:
 
 Documentation
-=============
+-------------
 
 We use `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate the documentation of modules. Each module should have a docstring that describes the function, input parameters, and outputs. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and follow the `PEP 0257 docstring conventions <https://www.python.org/dev/peps/pep-0257/>`_ to ensure that the documentation for your module will be displayed correctly.
