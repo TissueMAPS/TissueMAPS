@@ -30,11 +30,11 @@ import logging
 tmlib_logger = tmlib.logging_utils.configure_logging(logging.INFO)
 
 
-@api.route('/channels/<channel_id>/tiles/<path:filename>', methods=['GET'])
-def get_image_tile(channel_id, filename):
+@api.route('/channel_layers/<channel_layer_id>/tiles/<path:filename>', methods=['GET'])
+def get_image_tile(channel_layer_id, filename):
     """Send a tile image for a specific layer.
     This route is accessed by openlayers."""
-    ch = ChannelLayer.get(channel_id)
+    ch = ChannelLayer.get(channel_layer_id)
 
     if ch is None:
         return RESOURCE_NOT_FOUND_RESPONSE

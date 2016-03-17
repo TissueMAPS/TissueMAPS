@@ -5,21 +5,39 @@ from tmaps.extensions.database import db
 from tmaps.model import HashIdModel
 
 
-class ChannelLayer(HashIdModel):
+class Channel(HashIdModel):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120))
 
     experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
-    experiment = db.relationship('Experiment', backref='layers')
+    experiment = db.relationship('Experiment', backref='channels')
+
+    @property
+    def location(self):
+        return p.join(self.experiment.channels_location, self.name)
+
+    def as_dict(self):
+        return {
+            'id': self.hash,
+            'name': self.name,
+            'layers': [l.as_dict() for l in self.layers]
+        }
+
+
+class ChannelLayer(HashIdModel):
+    id = db.Column(db.Integer, primary_key=True)
 
     zplane = db.Column(db.Integer)
     tpoint = db.Column(db.Integer)
 
-    created_on = db.Column(db.DateTime, default=db.func.now())
+    channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'))
+    channel = db.relationship('Channel', backref='layers')
 
     @property
     def location(self):
-        return p.join(self.experiment.layers_location, self.name)
+        return p.join(
+            self.channel.location, 'layer_z%d_t%d'
+            % (self.zplane, self.tpoint))
 
     @property
     def image_size(self):
@@ -34,8 +52,9 @@ class ChannelLayer(HashIdModel):
         image_width, image_height = self.image_size
         return {
             'id': self.hash,
-            'name': self.name,
-            'image_size': {
+            'zplane': self.zplane,
+            'tpoint': self.tpoint,
+            'imageSize': {
                 'width': image_width,
                 'height': image_height
             }

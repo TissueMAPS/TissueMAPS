@@ -3,7 +3,7 @@ import os.path as p
 from contextlib import contextmanager
 from xml.dom import minidom
 from werkzeug import secure_filename
-from ..extensions.database import db
+from tmaps.extensions.database import db
 from tmaps.model.decorators import (
     auto_create_directory, exec_func_after_insert,
     auto_remove_directory
@@ -33,8 +33,9 @@ def _get_tmlib_object(location, plate_format):
     cfg = tmlib.cfg.UserConfiguration(location, plate_format)
     return tmlib.experiment.Experiment(location, cfg)
 
-def _layers_location(exp):
-    return _get_tmlib_object(exp.location, exp.plate_format).layers_dir
+def _channels_location(exp):
+    # return _get_tmlib_object(exp.location, exp.plate_format).layers_dir
+    return p.join(exp.location, 'channels')
 
 def _plates_location(exp):
     return _get_tmlib_object(exp.location, exp.plate_format).plates_dir
@@ -158,36 +159,8 @@ class Experiment(HashIdModel, CRUDMixin):
         return '<Experiment %r>' % self.name
 
     @property
-    def layers_location(self):
-        return _layers_location(self)
-
-    @property
-    def layers(self):
-        layers_dir = self.layers_location
-        layer_names = [name for name in os.listdir(layers_dir)
-                       if p.isdir(p.join(layers_dir, name))]
-        layers = []
-
-        for layer_name in layer_names:
-            layer_dir = p.join(layers_dir, layer_name)
-            metainfo_file = p.join(layer_dir, 'ImageProperties.xml')
-
-            if p.exists(metainfo_file):
-                with open(metainfo_file, 'r') as f:
-                    dom = minidom.parse(f)
-                    width = int(dom.firstChild.getAttribute('WIDTH'))
-                    height = int(dom.firstChild.getAttribute('HEIGHT'))
-
-                    pyramid_path = '/experiments/{id}/layers/{name}/'.format(
-                            id=self.hash, name=layer_name)
-
-                    layers.append({
-                        'name': layer_name,
-                        'imageSize': [width, height],
-                        'pyramidPath': pyramid_path
-                    })
-
-        return layers
+    def channels_location(self):
+        return p.join(self.location, 'channels')
 
     @property
     def is_ready_for_image_conversion(self):
@@ -197,13 +170,12 @@ class Experiment(HashIdModel, CRUDMixin):
             self.creation_stage != 'CONVERTING_IMAGES' and all_plate_sources_ready
         return is_ready
 
-
     def as_dict(self):
-        map_object_info = []
+        mapobject_info = []
         for t in self.mapobject_types:
             features = [f.name for f in t.features]
-            map_object_info.append({
-                'map_object_name': t.name,
+            mapobject_info.append({
+                'mapobject_type_name': t.name,
                 'features': features
             })
 
@@ -215,8 +187,8 @@ class Experiment(HashIdModel, CRUDMixin):
             'plate_format': self.plate_format,
             'microscope_type': self.microscope_type,
             'creation_stage': self.creation_stage,
-            'layers': [l.as_dict() for l in self.layers],
+            'channels': [ch.as_dict() for ch in self.channels],
             'plate_sources': [pl.as_dict() for pl in self.plate_sources],
-            'map_object_info': map_object_info,
+            'mapobject_info': mapobject_info,
             'plates': [pl.as_dict() for pl in self.plates]
         }
