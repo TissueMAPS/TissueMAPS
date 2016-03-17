@@ -146,16 +146,8 @@ class JsonWriter(Writer):
         if self.directory:
             filename = os.path.join(self.directory, filename)
         logger.debug('write data to file: %s' % filename)
-        if 'naicify' in kwargs:
-            naicify = kwargs['naicify']
-        else:
-            naicify = False
         with open(filename, 'w') as f:
-            if naicify:
-                json.dump(data, f, sort_keys=True,
-                          indent=4, separators=(',', ': '))
-            else:
-                json.dump(data, f, sort_keys=True)
+            json.dump(data, f, sort_keys=True)
 
 
 class YamlWriter(Writer):
