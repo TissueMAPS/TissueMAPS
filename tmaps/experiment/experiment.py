@@ -173,7 +173,11 @@ class Experiment(HashIdModel, CRUDMixin):
     def as_dict(self):
         mapobject_info = []
         for t in self.mapobject_types:
-            features = [f.name for f in t.features]
+            # TODO: Change to this as soon as DB is ready
+            # features = [f.name for f in t.features]
+            with self.dataset as d:
+                feature_names = d['/objects/%s/features' % t.name].keys()
+                features = [{'name': n} for n in feature_names]
             mapobject_info.append({
                 'mapobject_type_name': t.name,
                 'features': features
