@@ -1,7 +1,7 @@
 class PlotResult extends LayerResult {
     constructor(name: string, session: ToolSession) {
         super(name, session);
-        // this._layer = new VisualLayer(this.name, {
+        // this._layer = new VectorLayer(this.name, {
         //     visible: true,
         //     visuals: []
         // });

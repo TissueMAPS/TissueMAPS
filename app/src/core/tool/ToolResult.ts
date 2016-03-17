@@ -5,8 +5,7 @@ abstract class ToolResult {
     abstract show(viewer: AppInstance);
     abstract hide(viewer: AppInstance);
 
-    constructor(public name: string, public session: ToolSession) {
-    }
+    constructor(public name: string, public session: ToolSession) {}
 
     static createToolResult(session: ToolSession, result: ServerToolResponse) {
         var time = (new Date()).toLocaleTimeString();

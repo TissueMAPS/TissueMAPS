@@ -1,11 +1,11 @@
-interface VisualTileLayerOpts {
+interface VectorTileLayerOpts {
     url: string;
     size: Size;
     style?: ol.style.Style | ol.FeatureStyleFunction;
     visible?: boolean;
 }
 
-class VisualTileLayer extends BaseLayer<ol.layer.VectorTile> {
+class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
 
     private _fillColor: Color = Color.WHITE.withAlpha(0);
     private _strokeColor: Color = Color.WHITE;
@@ -63,10 +63,10 @@ class VisualTileLayer extends BaseLayer<ol.layer.VectorTile> {
         };
     }
 
-    constructor(name: string, opt?: VisualTileLayerOpts) {
-        super(name);
+    constructor(opt?: VectorTileLayerOpts) {
+        super();
 
-        var opt = opt === undefined ? <VisualTileLayerOpts> {} : opt;
+        var opt = opt === undefined ? <VectorTileLayerOpts> {} : opt;
         
         // Same extent as zoomify
         var extent = [0, -opt.size.height, opt.size.width, 0];

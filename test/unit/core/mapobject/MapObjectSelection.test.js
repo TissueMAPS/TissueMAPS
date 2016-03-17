@@ -16,15 +16,15 @@ describe('In MapObjectSelection', function() {
         l = new MapObjectSelection('some selection', 'cell', Color.RED);
     });
 
-    it('should have a VisualLayer as a property', function() {
+    it('should have a VectorLayer as a property', function() {
         expect(l._layer).toBeDefined();
     });
 
     describe('the function visualizeOnViewport', function() {
         it('should add the map', function() {
-            var viewport = jasmine.createSpyObj('viewport', ['addVisualLayer']);
+            var viewport = jasmine.createSpyObj('viewport', ['addVectorLayer']);
             l.visualizeOnViewport(viewport);
-            expect(viewport.addVisualLayer).toHaveBeenCalledWith(l._layer);
+            expect(viewport.addVectorLayer).toHaveBeenCalledWith(l._layer);
         });
     });
 

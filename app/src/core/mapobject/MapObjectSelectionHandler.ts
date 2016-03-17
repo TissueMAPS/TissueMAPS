@@ -24,7 +24,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _markerSelectionModeActive: boolean = false;
     private _activeMapObjectType: MapObjectType = null;
     private _activeSelection: MapObjectSelection = null;
-    private _outlineLayers: {[objectType: string]: VisualLayer;} = {};
+    private _outlineLayers: {[objectType: string]: VectorLayer;} = {};
 
     constructor(viewer: AppInstance) {
         this.viewer = viewer;

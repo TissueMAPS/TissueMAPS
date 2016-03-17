@@ -18,7 +18,7 @@ describe('In MapObjectSelectionHandler', function() {
     beforeEach(function() {
         vp = {
             map: jasmine.createSpyObj('map', ['then', 'on']),
-            addVisualLayer: jasmine.createSpy('addVisualLayer')
+            addVectorLayer: jasmine.createSpy('addVectorLayer')
         };
         mapObjectRegistry = {
             getMapObjectsForType: jasmine.createSpy('getMapObjectsForType').and.returnValue(

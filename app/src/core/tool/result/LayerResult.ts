@@ -1,5 +1,5 @@
 abstract class LayerResult extends ToolResult implements Layer {
-    protected _layer: VisualTileLayer;
+    protected _layer: VectorTileLayer;
 
     get opacity() {
         return this._layer.opacity;

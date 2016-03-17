@@ -1,6 +1,3 @@
-type MapObjectId = number;
-type MapObjectType = string;
-
 /**
  * Objects that can be clicked and that are associated with 
  * server-side information that can be used in various machine
@@ -10,24 +7,25 @@ type MapObjectType = string;
  * descriptor that is used on the server. An example for such a type
  * could be 'cell' or 'nucleus' etc.
  *
- * The id attribute should identify a object uniquely within its type.
+ * The id attribute should identify a object uniquely.
  */
+type MapObjectType = string;
+
 class MapObject {
 
-    constructor(public id: MapObjectId,
-                public type: MapObjectType,
-                public visualType: string,
-                public extraData: any) {}
+    id: number;
+    type: MapObjectType;
+    outline: PolygonCoordinates;
 
-    getVisual(opt?: any): ColorizableVisual {
-        var visual: ColorizableVisual;
-        switch (this.visualType) {
-            case 'polygon':
-                visual = new PolygonVisual(this.extraData.coordinates, opt);
-                break;
-            default:
-                throw new Error('Unknown visual type');
-        }
+    constructor(id: number, type: MapObjectType, outline) {
+        this.id = id;
+        this.type = type;
+        this.outline = outline;
+    }
+
+
+    getVisual(): ColorizableVisual {
+        var visual = new PolygonVisual(this.outline);
         // Set this mapobject as a property on the visual's underlying
         // openlayers feature, so this information can be restored when the user
         // clicks on the feature.

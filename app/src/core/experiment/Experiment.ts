@@ -1,45 +1,49 @@
-type ExperimentId = string;
+interface SerializedMapObjectInfo {
+    mapobject_type_name: string;
+    features: {name: string; }[];
+}
 
-interface ExperimentArgs {
+
+interface SerializedExperiment {
     id: string;
     name: string;
     description: string;
-    channels: Channel[];
-    mapObjectInfo: {[objectName: string]: MapObjectInfo};
+    channels: SerializedChannel[];
+    mapobject_info: SerializedMapObjectInfo[];
 }
 
-interface SerializedExperiment extends Serialized<Experiment> {
-    id: ExperimentId;
-    name: string;
-    description: string;
-    channels: Channel[];
-}
 
-interface Channel {
+type ExperimentArgs = SerializedExperiment;
+
+
+class Experiment {
     id: string;
     name: string;
-    imageSize: Size;
-}
-
-class Experiment implements Serializable<Experiment> {
-    id: ExperimentId;
-    name: string;
     description: string;
-    // TODO: Move this property into a new extending class.
-    channels: Channel[];
+    channels: Channel[] = [];
 
-    private _mapObjectInfo: {[objectName: string]: MapObjectInfo};
+    private _mapObjectInfo: {[objectName: string]: MapObjectInfo} = {};
 
-    constructor(opt: ExperimentArgs) {
+    constructor(args: ExperimentArgs) {
 
         var $q = $injector.get<ng.IQService>('$q');
 
-        this.id = opt.id;
-        this.name = opt.name;
-        this.description = opt.description;
-        this._mapObjectInfo = opt.mapObjectInfo;
+        this.id = args.id;
+        this.name = args.name;
+        this.description = args.description;
 
-        this.channels = opt.channels;
+        args.mapobject_info.forEach((i) => {
+            this._mapObjectInfo[i.mapobject_type_name] =
+                new MapObjectInfo(i.mapobject_type_name, i.features);
+        });
+
+        args.channels.forEach((ch) => {
+            var isFirstChannel = this.channels.length == 0;
+            var channel = new Channel(_.extend(ch, {
+                visible: isFirstChannel
+            }));
+            this.channels.push(channel);
+        });
     }
 
     getMapObjectInfo(objectName: string) {
@@ -50,53 +54,33 @@ class Experiment implements Serializable<Experiment> {
         return _.keys(this._mapObjectInfo); 
     }
 
-    serialize(): ng.IPromise<SerializedExperiment> {
-        var ser: SerializedExperiment = {
-            id: this.id,
-            name: this.name,
-            description: this.description,
-            channels: this.channels
-        };
-        return $injector.get<ng.IQService>('$q').when(ser);
-    }
+    // serialize(): ng.IPromise<SerializedExperiment> {
+    //     var ser: SerializedExperiment = {
+    //         id: this.id,
+    //         name: this.name,
+    //         description: this.description,
+    //         channels: this.channels
+    //     };
+    //     return $injector.get<ng.IQService>('$q').when(ser);
+    // }
 
     static getAll(): ng.IPromise<Experiment[]> {
         var $http = $injector.get<ng.IHttpService>('$http');
         return $http.get('/api/experiments')
-        .then((resp: any) => {
+        .then((resp: { data: { experiments: SerializedExperiment[]; } }) => {
             var exps = resp.data.experiments;
-            return _.map(exps, Experiment._fromServerResponse);
+            return exps.map((e) => {
+                return new Experiment(e);
+            });
         });
     }
 
     // TODO: error handling
-    static get(id: ExperimentId): ng.IPromise<Experiment> {
+    static get(id: string): ng.IPromise<Experiment> {
         var $http = $injector.get<ng.IHttpService>('$http');
         return $http.get('/api/experiments/' + id)
-        .then((resp: {data: ExperimentAPIObject}) => {
-            return Experiment._fromServerResponse(resp.data);
-        });
-    }
-
-    static _fromServerResponse(e: ExperimentAPIObject) {
-        var channels = _.map(e.layers, (l) => {
-            return {
-                id: l.id,
-                name: l.name,
-                imageSize: l.image_size
-            };
-        });
-        var mapObjectInfos: {[objectName: string]: MapObjectInfo} = {};
-        e.map_object_info.forEach((info) => {
-            mapObjectInfos[info.map_object_name] =
-                new MapObjectInfo(info.map_object_name, info.features);
-        });
-        return new Experiment({
-            id: e.id,
-            name: e.name,
-            description: e.description,
-            channels: channels,
-            mapObjectInfo: mapObjectInfos
+        .then((resp: {data: SerializedExperiment}) => {
+            return new Experiment(resp.data);
         });
     }
 }

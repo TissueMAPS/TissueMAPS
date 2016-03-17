@@ -3,14 +3,15 @@ class LabelResult extends LayerResult {
     id: number;
 
     constructor(name: string, session: ToolSession,
-                opt: {id: number;}) {
-        this.id = opt.id;
+                args: {id: number;}) {
+        this.id = args.id;
+        this.name = name;
         super(name, session);
     }
 
     show(viewer: AppInstance) {
         if (this._layer === undefined) {
-            this._layer = new LabelResultLayer(this.name, {
+            this._layer = new LabelResultLayer({
                 size: viewer.viewport.mapSize,
                 visible: false,
                 labelResultId: this.id,

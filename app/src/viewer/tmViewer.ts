@@ -8,8 +8,13 @@ interface ViewerScope extends ViewerWindowScope {
 class ViewerCtrl {
     static $inject = ['$scope'];
 
-    tPoint = 0;
-    zPlane = 0;
+    get currentZplane() {
+        return this.$scope.viewer.currentZplane;
+    }
+    set currentZplane(z) {
+        console.log(z);
+        this.$scope.viewer.currentZplane = Math.floor((z - 10) / 10);
+    }
 
     constructor(public $scope: ViewerScope) {
         $scope.appInstance = $scope.viewer;

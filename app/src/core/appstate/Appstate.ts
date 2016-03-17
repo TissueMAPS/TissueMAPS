@@ -1,7 +1,7 @@
-interface Appstate {
-    id: string;
-    name: string;
-    isSnapshot: boolean;
-    owner: string;
-    blueprint: SerializedApplication;
-}
+// interface Appstate {
+//     id: string;
+//     name: string;
+//     isSnapshot: boolean;
+//     owner: string;
+//     blueprint: SerializedApplication;
+// }

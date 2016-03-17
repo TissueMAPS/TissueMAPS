@@ -17,16 +17,15 @@
         "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
         "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
 
-        "app/src/AppCtrl.ts",
-        "app/src/tmAppbar.ts",
-
         "app/src/util/uuid.ts",
         "app/src/util/pad.ts",
 
         "app/src/core/util/Color.ts",
         "app/src/core/util/Size.ts",
+        "app/src/core/util/MapPosition.ts",
 
-        "app/src/core/AppInstance.ts",
+        "app/src/core/Viewer.ts",
+        "app/src/core/Viewport.ts",
         "app/src/core/Application.ts",
 
         "app/src/core/appstate/Appstate.ts",
@@ -37,15 +36,13 @@
         "app/src/core/appstate/api.ts",
 
         "app/src/core/experiment/Experiment.ts",
-        "app/src/core/experiment/api.ts",
+        "app/src/core/experiment/Channel.ts",
+        "app/src/core/experiment/ChannelLayer.ts",
 
         "app/src/core/layer/Layer.ts",
-        "app/src/core/layer/ChannelLayer.ts",
-        "app/src/core/layer/VisualLayer.ts",
-        "app/src/core/layer/VisualTileLayer.ts",
-        "app/src/core/layer/TileLayer.ts",
-        "app/src/core/layer/LayerGroup.ts",
-        "app/src/core/layer/typedefs.ts",
+        "app/src/core/layer/VectorLayer.ts",
+        "app/src/core/layer/VectorTileLayer.ts",
+        "app/src/core/layer/ImageTileLayer.ts",
 
         "app/src/core/visual/Visual.ts",
         "app/src/core/visual/PolygonVisual.ts",
@@ -70,9 +67,8 @@
         "app/src/core/tool/result/LabelResult.ts",
         "app/src/core/tool/result/LabelResultLayer.ts",
 
-        "app/src/core/viewport/Viewport.ts",
-        "app/src/core/viewport/MapPosition.ts",
-        "app/src/core/viewport/ctrl/ViewportCtrl.ts",
+        "app/src/AppCtrl.ts",
+        "app/src/tmAppbar.ts",
 
         "app/src/viewer/tmViewerWindow.ts",
         "app/src/viewer/tmViewersTabbar.ts",

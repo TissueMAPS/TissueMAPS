@@ -8,13 +8,12 @@ interface ToolbarScope extends ToolUIScope {
  * what happens when such a button is pressed.
  */
 class ToolbarCtrl {
-    static $inject = ['$scope', 'application', 'appstateService', 'authService'];
+    static $inject = ['$scope', 'application', 'authService'];
 
     tools: Tool[] = [];
 
     constructor(public $scope: ToolbarScope,
                 private application: Application,
-                private appstateService,
                 private authService) {
         // Add the tools as soon as they are ready
         this.$scope.viewer.tools.then((tools) => {

@@ -1,4 +1,4 @@
-describe('In VisualLayer', function() {
+describe('In VectorLayer', function() {
     // Load the module of ObjectLayer and its dependencies
     beforeEach(module('tmaps.core'));
 
@@ -26,7 +26,7 @@ describe('In VisualLayer', function() {
 
     describe('the constructor', function() {
         it('will accept a visuals argument that will set the visuals', function() {
-            var l = new VisualLayer('some layer', {
+            var l = new VectorLayer('some layer', {
                 visuals: visuals
             });
 
@@ -38,7 +38,7 @@ describe('In VisualLayer', function() {
         var layer;
 
         beforeEach(function() {
-            layer = new VisualLayer('Cell layer')
+            layer = new VectorLayer('Cell layer')
         });
 
         it('should add a feature to the openlayers layer', function() {
@@ -72,7 +72,7 @@ describe('In VisualLayer', function() {
         var layer;
 
         beforeEach(function() {
-            layer = new VisualLayer('some layer')
+            layer = new VectorLayer('some layer')
         });
 
         it('should add a single MapVisual', function() {
@@ -90,7 +90,7 @@ describe('In VisualLayer', function() {
 
     describe('the getter visuals', function() {
         it('should get the visuals', function() {
-            var l = new VisualLayer('some layer', {
+            var l = new VectorLayer('some layer', {
                 visuals: visuals
             });
 

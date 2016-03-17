@@ -1,3 +1,5 @@
+/// <reference path='../layer/VectorTileLayer.ts'/>
+
 interface SegmentationLayerOpts {
     t: number;
     zlevel: number;
@@ -6,15 +8,15 @@ interface SegmentationLayerOpts {
     visible?: boolean;
 }
 
-class SegmentationLayer extends VisualTileLayer {
+class SegmentationLayer extends VectorTileLayer {
 
-    objectName: string;
+    objectTypeName: string;
 
-    constructor(objectName: string, opt: SegmentationLayerOpts) {
-        this.objectName = objectName;
+    constructor(objectTypeName: string, opt: SegmentationLayerOpts) {
+        this.objectTypeName = objectTypeName;
         var url = '/api/experiments/' + opt.experimentId + '/mapobjects/' +
-                  objectName + '?x={x}&y={y}&z={z}&t=' + opt.t + '&zlevel=' + opt.zlevel;
-        super(objectName, {
+                  objectTypeName + '?x={x}&y={y}&z={z}&t=' + opt.t + '&zlevel=' + opt.zlevel;
+        super({
             visible: opt.visible,
             size: opt.size,
             url: url

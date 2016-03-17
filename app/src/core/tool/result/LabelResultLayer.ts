@@ -1,4 +1,4 @@
-interface LabelResultLayerOpts {
+interface LabelResultLayerArgs {
     labelResultId: number;
     t: number;
     zlevel: number;
@@ -7,8 +7,8 @@ interface LabelResultLayerOpts {
 }
 
 
-class LabelResultLayer extends VisualTileLayer {
-    constructor(name: string, opt: LabelResultLayerOpts) {
+class LabelResultLayer extends VectorTileLayer {
+    constructor(args: LabelResultLayerArgs) {
         var styleFunc = function(feature, style) {
             var geomType = feature.getGeometry().getType();
             var fillColor;
@@ -43,13 +43,13 @@ class LabelResultLayer extends VisualTileLayer {
                 throw new Error('Unknown geometry type for feature');
             }
         };
-        var url = '/api/labelresults/' + opt.labelResultId + '?x={x}&y={y}&z={z}&t=' + opt.t + '&zlevel=' + opt.zlevel;
+        var url = '/api/labelresults/' + args.labelResultId + '?x={x}&y={y}&z={z}&t=' + args.t + '&zlevel=' + args.zlevel;
 
-        super(name, {
+        super({
             style: styleFunc,
             url: url,
-            visible: opt.visible,
-            size: opt.size
+            visible: args.visible,
+            size: args.size
         });
     }
 }

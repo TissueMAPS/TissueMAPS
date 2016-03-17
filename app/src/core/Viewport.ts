@@ -9,7 +9,7 @@ interface SerializedViewport extends Serialized<Viewport> {
     // TODO: Create separate interface for serialized layer options.
     // The color object on channelLayerOptions isn't a full Color object
     // when restored.
-    channelLayerOptions: TileLayerArgs[];
+    channelLayerOptions: ImageTileLayerArgs[];
     mapState: MapState;
 }
 
@@ -53,42 +53,33 @@ class Viewport implements Serializable<Viewport> {
         };
     }
 
+
     addLayer(layer: Layer) {
-        // Add the layer as soon as the map is created (i.e. resolved after
-        // viewport injection)
         layer.addToMap(this.map);
-        var alreadyHasLayers = this.layers.length !== 0;
-        if (!alreadyHasLayers && !(layer instanceof ChannelLayer)) {
-            throw new Error('The first layer to be added has to be a ChannelLayer in order to set the view!');
-        }
-        // If this is the first time a layer is added, create a view and add it to the map.
-        if (!alreadyHasLayers) {
-            this._setView((<ChannelLayer>layer).imageSize.width, (<ChannelLayer>layer).imageSize.height);
-        }
         this.layers.push(layer);
     }
 
-    private _setView(mapWidth: number, mapHeight: number) {
-            // Center the view in the iddle of the image
-            // (Note the negative sign in front of half the height)
-            var width = mapWidth;
-            var height = mapHeight;
-            var center = [width / 2, - height / 2];
-            var extent = [0, 0, width, height];
-            var view = new ol.View({
-                // We create a custom (dummy) projection that is based on pixels
-                projection: new ol.proj.Projection({
-                    code: 'tm',
-                    units: 'pixels',
-                    extent: extent
-                }),
-                center: center,
-                zoom: 0, // 0 is zoomed out all the way
-                // TODO: start such that whole map is in view
+    initMap(mapSize: Size) {
+        // Center the view in the iddle of the image
+        // (Note the negative sign in front of half the height)
+        var width = mapSize.width
+        var height = mapSize.height;
+        var center = [width / 2, - height / 2];
+        var extent = [0, 0, width, height];
+        var view = new ol.View({
+            // We create a custom (dummy) projection that is based on pixels
+            projection: new ol.proj.Projection({
+                code: 'tm',
+                units: 'pixels',
+                extent: extent
+            }),
+            center: center,
+            zoom: 0, // 0 is zoomed out all the way
+            // TODO: start such that whole map is in view
 
-            });
+        });
 
-            this.map.setView(view);
+        this.map.setView(view);
     }
 
     /**

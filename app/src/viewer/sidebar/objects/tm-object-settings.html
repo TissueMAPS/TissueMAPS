@@ -23,10 +23,7 @@
               <i ng-hide="layer.visible" ng-click="layer.visible = true" class="fa fa-circle-thin"></i>
           </span>
 
-          <!-- <input type="text" ng-model="layer.name" tm-stop-click></input> -->
-          <span contenteditable strip-br="true" ng-model="layer.name"
-               select-non-editable="true">
-          </span>
+        {{layer.objectTypeName}}
 
         </tm-selectable-tab-content>
 

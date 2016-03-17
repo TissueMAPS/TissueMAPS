@@ -1,18 +1,14 @@
 interface Layer {
-    name: string;
-    addToMap(map: ol.Map);
-    removeFromMap(map: ol.Map);
     // Change to this:
     // addToViewport(vp: Viewport);
     // removeFromViewport(vp: Viewport);
-
+    addToMap(map: ol.Map);
+    removeFromMap(map: ol.Map);
     visible: boolean;
 }
 
 class BaseLayer<LayerT extends ol.layer.Layer> implements Layer {
     protected _olLayer: LayerT;
-
-    constructor(public name: string) {}
 
     get visible(): boolean {
         return this._olLayer.getVisible();

@@ -1,8 +1,23 @@
 /// <reference path='Layer.ts'/>
-/// <reference path='typedefs.ts'/>
+interface OlImageTileLayer extends ol.layer.Tile {
+    getMin(): number;
+    setMin(val: number);
+    getMax(): number;
+    setMax(val: number);
+    setColor(c: number[]);
+    getColor(): number[];
+    setAdditiveBlend(b: boolean);
+    getAdditiveBlend(): boolean;
+}
 
-interface SerializedTileLayer extends Serialized<TileLayer> {
-      name: string;
+interface OlImageTileLayerArgs extends olx.layer.LayerOptions {
+    color?: number[];  // for example: [1, 0, 0] == red
+    additiveBlend?: boolean;
+    min?: number;
+    max?: number;
+}
+
+interface SerializedImageTileLayer extends Serialized<ImageTileLayer> {
       imageSize: Size;
       color: SerializedColor;
       additiveBlend: boolean;
@@ -13,10 +28,9 @@ interface SerializedTileLayer extends Serialized<TileLayer> {
       opacity: number;
 }
 
-interface TileLayerArgs {
-    channelId: string;
-    name: string;
+interface ImageTileLayerArgs {
     imageSize: Size;
+    url: string;
 
     additiveBlend?: string;
     visible?: boolean;
@@ -27,29 +41,29 @@ interface TileLayerArgs {
     max?: number;
 }
 
-class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<TileLayer> {
+class ImageTileLayer extends BaseLayer<OlImageTileLayer> {
     imageSize: Size;
 
-    constructor(opt: TileLayerArgs) {
-        super(opt.name);
+    constructor(args: ImageTileLayerArgs) {
+        super();
 
         // Add trailing slash if not already present
-        // var pyramidPath = opt.pyramidPath;
+        // var pyramidPath = args.pyramidPath;
         // if (pyramidPath.substr(pyramidPath.length - 1) !== '/') {
         //     pyramidPath += '/';
         // }
         // this.pyramidPath = pyramidPath;
-        this.imageSize = opt.imageSize;
+        this.imageSize = args.imageSize;
 
         // Some default properties
         var _olLayerColor: number[];
-        if (opt.color !== undefined) {
-            _olLayerColor = opt.color.toNormalizedRGBArray();
+        if (args.color !== undefined) {
+            _olLayerColor = args.color.toNormalizedRGBArray();
         } else {
             _olLayerColor = [1, 1, 1];
         }
 
-        var _olLayerArgs: ModifiedOlTileLayerArgs = _.defaults(opt, {
+        var _olLayerArgs: OlImageTileLayerArgs = _.defaults(args, {
             brightness: 0,
             opacity: 1,
             min: 0,
@@ -61,12 +75,12 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
 
         _olLayerArgs.source = new ol.source.Zoomify({
             size:  [this.imageSize.width, this.imageSize.height],
-            url: '/api/channels/' + opt.channelId + '/tiles/',
+            url: args.url,
             crossOrigin: 'anonymous'
         });
 
         // Create the underlying openlayers layer object
-        this._olLayer = <ModifiedOlTileLayer> new ol.layer.Tile(_olLayerArgs);
+        this._olLayer = <OlImageTileLayer> new ol.layer.Tile(_olLayerArgs);
     }
 
     get color(): Color {
@@ -116,21 +130,20 @@ class TileLayer extends BaseLayer<ModifiedOlTileLayer> implements Serializable<T
         this._olLayer.setAdditiveBlend(val);
     }
 
-    serialize() {
-        return this.color.serialize().then((c) => {
-            var $q = $injector.get<ng.IQService>('$q');
-            return $q.when({
-                name: this.name,
-                imageSize: this.imageSize,
-                color: c,
-                additiveBlend: this.additiveBlend,
-                visible: this.visible,
-                brightness: this.brightness,
-                min: this.min,
-                max: this.max,
-                opacity: this.opacity
-            });
-        });
-    }
+    // serialize() {
+    //     return this.color.serialize().then((c) => {
+    //         var $q = $injector.get<ng.IQService>('$q');
+    //         return $q.when({
+    //             imageSize: this.imageSize,
+    //             color: c,
+    //             additiveBlend: this.additiveBlend,
+    //             visible: this.visible,
+    //             brightness: this.brightness,
+    //             min: this.min,
+    //             max: this.max,
+    //             opacity: this.opacity
+    //         });
+    //     });
+    // }
 
 }

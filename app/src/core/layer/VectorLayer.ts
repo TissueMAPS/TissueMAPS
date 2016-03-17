@@ -1,7 +1,7 @@
 /**
- * Optional arguments for the VisualLayer constructor.
+ * Optional arguments for the VectorLayer constructor.
  */
-interface VisualLayerOpts {
+interface VectorLayerArgs {
     visuals?: Visual[];
     visible?: boolean;
 }
@@ -10,12 +10,12 @@ interface VisualLayerOpts {
  * Layer class for Visuals, i.e. visualizable objects.
  * This is a wrapper around an openlayers vector layer.
  */
-class VisualLayer extends BaseLayer<ol.layer.Vector> {
+class VectorLayer extends BaseLayer<ol.layer.Vector> {
 
     private _visuals: Visual[] = [];
 
-    constructor(name: string, opt: VisualLayerOpts = {}) {
-        super(name);
+    constructor(args: VectorLayerArgs = {}) {
+        super();
 
         var vectorSource = new ol.source.Vector({
             features: []
@@ -23,12 +23,11 @@ class VisualLayer extends BaseLayer<ol.layer.Vector> {
 
         this._olLayer = new ol.layer.Vector({
             source: vectorSource,
-            // style: styleFunction,
-            visible: opt.visible === undefined ? true : false
+            visible: args.visible === undefined ? true : false
         });
 
-        if (opt.visuals !== undefined) {
-            this.addVisuals(opt.visuals);
+        if (args.visuals !== undefined) {
+            this.addVisuals(args.visuals);
         }
     }
 

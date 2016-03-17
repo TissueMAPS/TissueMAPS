@@ -1,17 +1,17 @@
-interface SerializedAppInstance extends Serialized<AppInstance> {
-    experiment: SerializedExperiment;
-    viewport: SerializedViewport;
-}
+// interface SerializedAppInstance extends Serialized<AppInstance> {
+//     experiment: SerializedExperiment;
+//     viewport: SerializedViewport;
+// }
 
 // TODO: Rename to Viewer
-class AppInstance implements Serializable<SerializedAppInstance> {
+class AppInstance {
     id: string;
 
-    name: string;
     experiment: Experiment;
     viewport: Viewport;
     currentResult: ToolResult;
     savedResults: ToolResult[] = [];
+    private _currentZplane = 0;
 
     private _element: JQuery = null;
 
@@ -21,10 +21,14 @@ class AppInstance implements Serializable<SerializedAppInstance> {
     constructor(experiment: Experiment) {
         this.id = makeUUID();
         this.experiment = experiment;
-        this.name = experiment.name;
         this.viewport = new Viewport();
         this.tools = Tool.getAll();
-        this._addChannelLayers();
+
+        this.viewport.initMap(this.experiment.channels[0].layers[0].imageSize)
+
+        this.experiment.channels.forEach((ch) => {
+            this.viewport.addLayer(ch);
+        });
 
         // Subsequently add the selection handler and initialize the selection layers.
         // TODO: The process of adding the layers could be made nicer.
@@ -36,25 +40,20 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         });
     }
 
+
     saveCurrentResult() {
         this.savedResults.push(this.currentResult);
         this.currentResult = undefined;
     }
 
-    private _addChannelLayers() {
-        var layerOpts = _(this.experiment.channels).map((ch) => {
-            return {
-                channelId: ch.id,
-                name: ch.name,
-                imageSize: ch.imageSize
-            };
-        });
-        _(layerOpts).each((opt, i) => {
-            opt = _.defaults(opt, {
-                visible: i === 0
-            });
-            var layer = new ChannelLayer(opt);
-            this.viewport.addLayer(layer);
+    get currentZplane() {
+        return this._currentZplane;
+    }
+
+    set currentZplane(z: number) {
+        console.log('viewer: ', z);
+        this.experiment.channels.forEach((ch) => {
+            ch.setZplane(z);
         });
     }
 
@@ -80,14 +79,14 @@ class AppInstance implements Serializable<SerializedAppInstance> {
         this.viewport.update();
     }
 
-    serialize(): ng.IPromise<SerializedAppInstance> {
-        return $injector.get<ng.IQService>('$q').all({
-            experiment: this.experiment.serialize(),
-            viewport: this.viewport.serialize()
-        }).then((res: any) => {
-            return res;
-        });
-    }
+    // serialize(): ng.IPromise<SerializedAppInstance> {
+    //     return $injector.get<ng.IQService>('$q').all({
+    //         experiment: this.experiment.serialize(),
+    //         viewport: this.viewport.serialize()
+    //     }).then((res: any) => {
+    //         return res;
+    //     });
+    // }
 
     sendToolRequest(session: ToolSession, payload: any) {
         var url = '/api/tools/' + session.tool.id + '/request';

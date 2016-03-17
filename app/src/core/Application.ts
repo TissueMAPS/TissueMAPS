@@ -70,23 +70,24 @@ class Application {
         this.appInstances.push(viewer);
     }
 
-    serialize(): ng.IPromise<SerializedApplication> {
-        var instPromises = _(this.appInstances).map((inst) => {
-            return inst.serialize();
-        });
-        return this.$q.all(instPromises).then((sers) => {
-            var serApp =  {
-                activeAppInstanceNumber: this._activeAppInstanceNumber,
-                appInstances: sers
-            };
-            return serApp;
-        });
-    }
+    // serialize(): ng.IPromise<SerializedApplication> {
+    //     var instPromises = _(this.appInstances).map((inst) => {
+    //         return inst.serialize();
+    //     });
+    //     return this.$q.all(instPromises).then((sers) => {
+    //         var serApp =  {
+    //             activeAppInstanceNumber: this._activeAppInstanceNumber,
+    //             appInstances: sers
+    //         };
+    //         return serApp;
+    //     });
+    // }
+
 }
 
 angular.module('tmaps.core').service('application', Application);
 
-interface SerializedApplication extends Serialized<Application> {
-    activeAppInstanceNumber: number;
-    appInstances: SerializedAppInstance[];
-}
+// interface SerializedApplication extends Serialized<Application> {
+//     activeAppInstanceNumber: number;
+//     appInstances: SerializedAppInstance[];
+// }

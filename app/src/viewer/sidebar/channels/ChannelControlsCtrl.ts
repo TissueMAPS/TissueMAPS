@@ -9,7 +9,7 @@ angular.module('tmaps.ui')
             ['$scope', 'removeLayerService',
             function($scope, removeLayerService) {
 
-    this.removeSelectedLayers = function() {
+    this.removeSelectedChannels = function() {
         var sel = $scope.selectionBox.getSelectedItems();
         removeLayerService.removeChannelsAfterPrompt(sel);
     };

@@ -1,3 +1,5 @@
+/// <reference path='../layer/VectorLayer.ts'/>
+
 declare type SelectionId = number;
 
 class MarkerImageVisual extends Visual {
@@ -52,11 +54,15 @@ interface SelectionLayerOpts {
     visible?: boolean;
 }
 
-class SelectionLayer extends VisualLayer {
+class SelectionLayer extends VectorLayer {
     color: Color;
+    name: string;
 
     constructor(name: string, opt: SelectionLayerOpts) {
-        super(name, { visible: opt.visible });
+        this.name = name;
+
+        super({ visible: opt.visible });
+
         this.color = opt.color;
         var size = 42; // Compute via resolution
         // Avoid whitespaces in image name

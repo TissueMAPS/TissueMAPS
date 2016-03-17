@@ -27,8 +27,8 @@ angular.module('tmaps.ui')
         data: {
             loginRequired: true
         },
-        onEnter: ['application', '$stateParams', 'appstateService', '$state', 
-                  function(app, $stateParams, appstateService, $state) {
+        onEnter: ['application', '$stateParams', '$state', 
+                  function(app, $stateParams, $state) {
 
             // Check if some experiments should be added
             var experimentId = $stateParams.experimentid;

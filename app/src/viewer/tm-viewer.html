@@ -13,9 +13,9 @@
       <span class="z-plane-indicator">
         z plane
       </span>
-      <div ui-slider min="0" max="255" ng-model="viewerCtrl.zPlane"></div>
+      <div ui-slider min="10" max="100" step="10" ng-model="viewerCtrl.currentZplane"></div>
       <span class="z-plane-indicator">
-        {{ viewerCtrl.zPlane | pad:3 }} 
+        {{ viewer.currentZplane | pad:3 }} 
       </span>
       <!-- <div ui-slider min="0" max="255" ng-model="viewerCtrl.tPoint"></div> -->
       <!-- time: {{ viewerCtrl.tPoint }} -->
