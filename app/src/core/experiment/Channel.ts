@@ -118,4 +118,12 @@ class Channel implements Layer {
         }
         this._visible = val;
     }
+
+    get maxZ(): number {
+        return Math.max.apply(this, _.keys(this._layers));
+    }
+
+    get minZ(): number {
+        return Math.min.apply(this, _.keys(this._layers));
+    }
 }

@@ -13,7 +13,10 @@
       <span class="z-plane-indicator">
         z plane
       </span>
-      <div ui-slider min="10" max="100" step="10" ng-model="viewerCtrl.currentZplane"></div>
+      <div ui-slider
+        min="{{viewerCtrl.minZ}}" max="{{viewerCtrl.maxZ}}"
+        step="{{viewerCtrl.zStep}}" ng-model="viewerCtrl.currentZplane">
+      </div>
       <span class="z-plane-indicator">
         {{ viewer.currentZplane | pad:3 }} 
       </span>

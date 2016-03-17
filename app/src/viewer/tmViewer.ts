@@ -8,16 +8,27 @@ interface ViewerScope extends ViewerWindowScope {
 class ViewerCtrl {
     static $inject = ['$scope'];
 
+    maxZ: number;
+    minZ: number;
+    zStep: number;
+
     get currentZplane() {
         return this.$scope.viewer.currentZplane;
     }
     set currentZplane(z) {
         console.log(z);
-        this.$scope.viewer.currentZplane = Math.floor((z - 10) / 10);
+        this.$scope.viewer.currentZplane = Math.floor((z - this.zStep) / this.zStep);
     }
 
     constructor(public $scope: ViewerScope) {
         $scope.appInstance = $scope.viewer;
+        this.zStep = 10;
+        // The slider won't be able to set currentZplane to 0 if
+        // the knob is all the way to the left. Therefore
+        // we set 0 to be zStep and substract this value before
+        // settings the current zplane on the viewer.
+        this.maxZ = $scope.viewer.experiment.maxZ * this.zStep + this.zStep;
+        this.minZ = this.zStep;
     }
 }
 

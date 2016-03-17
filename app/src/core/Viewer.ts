@@ -51,10 +51,10 @@ class AppInstance {
     }
 
     set currentZplane(z: number) {
-        console.log('viewer: ', z);
         this.experiment.channels.forEach((ch) => {
             ch.setZplane(z);
         });
+        this._currentZplane = z;
     }
 
     destroy() {

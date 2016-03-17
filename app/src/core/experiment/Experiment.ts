@@ -63,6 +63,19 @@ class Experiment {
     //     };
     //     return $injector.get<ng.IQService>('$q').when(ser);
     // }
+    get maxZ(): number {
+        var zs = this.channels.map((ch) => {
+            return ch.maxZ;
+        });
+        return Math.max.apply(this, zs);
+    }
+
+    get minZ(): number {
+        var zs = this.channels.map((ch) => {
+            return ch.minZ;
+        });
+        return Math.min.apply(this, zs);
+    }
 
     static getAll(): ng.IPromise<Experiment[]> {
         var $http = $injector.get<ng.IHttpService>('$http');
@@ -83,4 +96,5 @@ class Experiment {
             return new Experiment(resp.data);
         });
     }
+
 }
