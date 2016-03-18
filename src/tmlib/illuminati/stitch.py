@@ -2,38 +2,6 @@ import re
 import numpy as np
 
 
-def calc_sites_number(image_files, regexp):
-    '''
-    Determine the maximum position, i.e. the total number of image acquisition
-    sites from a set of image filenames.
-
-    Parameters
-    ----------
-    image_files: List[str]
-        image filenames
-    regexp: str
-        named regular expression containing a symbolic group name "site"
-        (see `re module <https://docs.python.org/2/library/re.html>`_ for
-         more information on regular expressions)
-
-    Returns
-    -------
-    int
-        number of image acquisition sites
-
-    Raises
-    ------
-    ValueError
-        when `regexp` doesn't match `image_files`
-    '''
-    image_sites = [re.search(regexp, f) for f in image_files]
-    if not image_sites:
-        raise ValueError('Regular expression doesn\'t match filenames')
-    image_sites = [int(s.group('site')) for s in image_sites]
-    n_sites = max(image_sites)
-    return n_sites
-
-
 def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
     '''
     Simple algorithm to guess correct dimensions of a stitched mosaic image.

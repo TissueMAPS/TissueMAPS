@@ -331,7 +331,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
     '''
 
     def __init__(self, name, experiment, verbosity, description=None,
-                 start_step=None, waiting_time=120):
+                 start_step=None, waiting_time=0):
         '''
         Initialize an instance of class SequentialWorkflowStage.
 
@@ -351,7 +351,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
         waiting_time: int, optional
             time in seconds that should be waited upon transition from one
             stage to the other to avoid issues related to network file systems
-            (default: ``120``)
+            (default: ``0``)
         '''
         WorkflowStage.__init__(
                 self, name=name, experiment=experiment, verbosity=verbosity)
@@ -437,9 +437,10 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
             return gc3libs.Run.State.TERMINATED
         logger.info('step "%s" is done', self._tasks_to_process[done].name)
         if done+1 < len(self._tasks_to_process):
-            logger.info('waiting ...')
-            logger.debug('wait %d seconds', self.waiting_time)
-            time.sleep(self.waiting_time)
+            if self.waiting_time > 0:
+                logger.info('waiting ...')
+                logger.debug('wait %d seconds', self.waiting_time)
+                time.sleep(self.waiting_time)
             try:
                 step_names = [s.name for s in self.description.steps]
                 next_step_name = self._tasks_to_process[done+1].name
@@ -524,7 +525,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
 class Workflow(SequentialTaskCollection):
 
     def __init__(self, experiment, verbosity, description=None,
-                 start_stage=None, start_step=None, waiting_time=120):
+                 start_stage=None, start_step=None, waiting_time=0):
         '''
         Initialize an instance of class Workflow.
 
@@ -545,7 +546,7 @@ class Workflow(SequentialTaskCollection):
         waiting_time: int, optional
             time in seconds that should be waited upon transition from one
             stage to the other to avoid issues related to network file systems
-            (default: ``120``)
+            (default: ``0``)
 
         Note
         ----
@@ -728,9 +729,10 @@ class Workflow(SequentialTaskCollection):
             return gc3libs.Run.State.TERMINATED
         logger.info('stage "%s" is done', self._tasks_to_process[done].name)
         if done+1 < len(self._tasks_to_process):
-            logger.info('waiting ...')
-            logger.debug('wait %d seconds', self.waiting_time)
-            time.sleep(self.waiting_time)
+            if self.waiting_time > 0:
+                logger.info('waiting ...')
+                logger.debug('wait %d seconds', self.waiting_time)
+                time.sleep(self.waiting_time)
             try:
                 stage_names = [s.name for s in self.description.stages]
                 next_stage_name = self._tasks_to_process[done+1].name
@@ -744,10 +746,10 @@ class Workflow(SequentialTaskCollection):
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 tb = traceback.extract_tb(exc_traceback)[-1]
                 logger.error('error in "%s" line %d', tb[0], tb[1])
-                tb_string = ''
+                tb_string = str()
                 for tb in traceback.format_tb(exc_traceback):
                     tb_string += '\n'
-                    tb_string += tb
+                    tb_string += tb[0]  # TODO
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping workflow "%s"', self.name)

@@ -6,12 +6,9 @@ import numpy as np
 import pandas as pd
 import logging
 import json
-import yaml
 import ruamel.yaml
 import traceback
 from abc import ABCMeta
-from abc import abstractmethod
-from gi.repository import Vips
 from . import utils
 
 logger = logging.getLogger(__name__)
@@ -188,7 +185,7 @@ class YamlWriter(Writer):
             )
 
 
-class NumpyWriter(Writer):
+class ImageWriter(Writer):
 
     '''
     Class for writing :py:class:`numpy.ndarray` objects to image files
@@ -197,7 +194,7 @@ class NumpyWriter(Writer):
 
     @utils.same_docstring_as(Writer.__init__)
     def __init__(self, directory=None):
-        super(NumpyWriter, self).__init__(directory)
+        super(ImageWriter, self).__init__(directory)
 
     def write(self, filename, data):
         '''
@@ -229,45 +226,6 @@ class NumpyWriter(Writer):
             cv2.imwrite(filename, data, [cv2.IMWRITE_PXM_BINARY, 0])
         else:
             cv2.imwrite(filename, data)
-
-
-class VipsWriter(Writer):
-
-    '''
-    Class for writing :py:class:`Vips.Image` objects to image files.
-    '''
-
-    @utils.same_docstring_as(Writer.__init__)
-    def __init__(self, directory=None):
-        super(VipsWriter, self).__init__(directory)
-
-    def write(self, filename, data):
-        '''
-        Write `data` to an image file.
-
-        The format depends on the file extension:
-        - *.png for PNG (8-bit and 16-bit)
-        - *.tiff or *.tif for TIFF (8-bit and 16-bit)
-        - *.jpeg or *.jpg for JPEG (only supports 8-bit)
-
-        Parameters
-        ----------
-        data: Vips.Image 
-            image that should be saved
-        filename: str
-            path to the image file
-
-        Raises
-        ------
-        TypeError
-            when `data` is not of type Vips.Image 
-        '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        logger.debug('write image to file: %s' % filename)
-        if not isinstance(data, Vips.Image):
-            raise TypeError('Image must have type Vips.Image.')
-        data.write_to_file(filename)
 
 
 class DataTableWriter(object):

@@ -3,14 +3,12 @@ import sys
 import h5py
 import logging
 import json
-import yaml
 import ruamel.yaml
 import traceback
 import cv2
 import bioformats
 import javabridge
 import pandas as pd
-from gi.repository import Vips
 from abc import ABCMeta
 from abc import abstractmethod
 from .errors import NotSupportedError
@@ -574,7 +572,7 @@ class DatasetReader(object):
         return dtype
 
 
-class ImageReader(Reader):
+class BFImageReader(Reader):
 
     '''
     Class for reading data from vendor-specific image file formats as
@@ -595,7 +593,7 @@ class ImageReader(Reader):
     Examples
     --------
     >>> filename = '/path/to/image/file'
-    >>> with ImageReader() as reader:
+    >>> with BFImageReader() as reader:
     ...     img = reader.read(filename)
     >>> type(img)
     numpy.ndarray
@@ -603,7 +601,7 @@ class ImageReader(Reader):
 
     @utils.same_docstring_as(Reader.__init__)
     def __init__(self, directory=None):
-        super(ImageReader, self).__init__(directory)
+        super(BFImageReader, self).__init__(directory)
 
     def __enter__(self):
         # NOTE: updated "loci_tools.jar" file to latest schema:
@@ -695,7 +693,7 @@ class ImageReader(Reader):
                 sys.stdout.write(tb)
 
 
-class NumpyReader(Reader):
+class ImageReader(Reader):
 
     '''
     Class for reading data from standard image file formats as
@@ -704,7 +702,7 @@ class NumpyReader(Reader):
     Examples
     --------
     >>> filename = '/path/to/image/file'
-    >>> with NumpyReader() as reader:
+    >>> with ImageReader() as reader:
     ...     img = reader.read(filename)
     >>> type(img)
     numpy.ndarray
@@ -712,7 +710,7 @@ class NumpyReader(Reader):
 
     @utils.same_docstring_as(Reader.__init__)
     def __init__(self, directory=None):
-        super(NumpyReader, self).__init__(directory)
+        super(ImageReader, self).__init__(directory)
 
     def read(self, filename):
         '''
@@ -751,65 +749,6 @@ class NumpyReader(Reader):
         '''
         raise AttributeError('%s doesn\'t have a "read_subset" method'
                              % self.__class__.__name__)
-
-
-class VipsReader(Reader):
-
-    '''
-    Class for reading data from files as :py:class:`Vips.Image` objects.
-
-    Uses the
-    `Vips <http://www.vips.ecs.soton.ac.uk/index.php?title=Libvips>`_ library.
-
-    Examples
-    --------
-    >>> filename = '/path/to/image/file'
-    >>> with VipsReader() as reader:
-    ...     img = reader.read(filename)
-    >>> type(img)
-    Vips.Image
-    '''
-
-    @utils.same_docstring_as(Reader.__init__)
-    def __init__(self, directory=None):
-        super(VipsReader, self).__init__(directory)
-
-    def read(self, filename):
-        '''
-        Read an image from file.
-
-        Parameters
-        ----------
-        filename: str
-            absolute path to the file
-
-        Returns
-        -------
-        Vips.Image
-            image pixel array
-
-        Raises
-        ------
-        OSError
-            when `filename` does not exist
-
-        Note
-        ----
-        Images are read with access mode `Vips.Access.SEQUENTIAL_UNBUFFERED`
-        to save memory. For more information, please refer to the
-        `Vips documentation <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/libvips-VipsImage.html#VIPS-ACCESS-SEQUENTIAL-UNBUFFERED:CAPS>`_
-        
-        See also
-        --------
-        :py:meth:`Vips.Image.new_from_file()`
-        '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        if not os.path.exists(filename):
-            raise OSError('Image file does not exist: %s' % filename)
-        image = Vips.Image.new_from_file(
-                    filename, access=Vips.Access.SEQUENTIAL_UNBUFFERED)
-        return image
 
 
 class SlideReader(object):

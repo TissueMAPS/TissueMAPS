@@ -165,8 +165,6 @@ class CommandLineInterface(object):
         gc3libs_logger.setLevel(logging.CRITICAL)
         apscheduler_logger = logging.getLogger('apscheduler')
         apscheduler_logger.setLevel(logging.CRITICAL)
-        vips_logger = logging.getLogger('gi.overrides.Vips')
-        vips_logger.setLevel(logging.CRITICAL)
 
         try:
             if arguments.handler:

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Argument parsing
 OPTIND=1
 

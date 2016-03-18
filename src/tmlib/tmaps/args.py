@@ -90,7 +90,7 @@ class TmapsSubmitArgs(VariableArgs):
         -------
         int
             time in seconds to wait upon transition to the next task
-            (default: ``120``)
+            (default: ``0``)
         '''
         return self._backup
 
@@ -104,10 +104,10 @@ class TmapsSubmitArgs(VariableArgs):
     @property
     def _wait_params(self):
         return {
-            'default': 120,
+            'default': 0,
             'type': int,
             'help': '''
                 time in seconds to wait upon transition to the next task
-                (default: 120)
+                (default: 0)
             '''
         }

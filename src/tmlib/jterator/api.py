@@ -6,19 +6,16 @@ import numpy as np
 import matlab_wrapper as matlab
 import collections
 from cached_property import cached_property
-from . import path_utils
 from .project import JtProject
-from . import handles
 from .module import ImageProcessingModule
 from .checkers import PipelineChecker
 from .. import cfg
 from .. import utils
+from . import path_utils
 from ..api import ClusterRoutines
-from ..errors import PipelineRunError
 from ..errors import PipelineDescriptionError
 from ..errors import NotSupportedError
 from ..writers import DataTableWriter
-# from ..readers import DatasetReader
 from ..logging_utils import map_logging_verbosity
 
 logger = logging.getLogger(__name__)
@@ -311,7 +308,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     continue
                 if name not in self.experiment.channel_names:
                     raise PipelineDescriptionError(
-                            '"%s" is not a valid image name' % name)
+                            '"%s" is not a valid channel name' % name)
 
                 example_cycle = self.experiment.plates[0].cycles[0]
                 n_zplanes = len(np.unique(example_cycle.image_metadata.zplane))
@@ -326,12 +323,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             self.experiment.layer_metadata[layer].filenames
                     )
 
-            # TODO: objects from HDF5 files
+            # TODO: objects
 
         else:
             # There might be use cases, where a pipeline doesn't require any
             # input (e.g. for unit tests)
-            logger.warning('pipeline doesn\'t describe any input images')
+            logger.warning('pipeline doesn\'t describe any inputs')
             logger.info('create a single empty job description')
             images_files = collections.defaultdict(list)
 
@@ -451,21 +448,16 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         stats.smooth_stats()
                         img = img.correct(stats)
                 logger.info('align images between cycles')
-                orig_dims = img.pixels.dimensions
+                orig_dims = img.dimensions
                 img = img.align()
-                if not isinstance(img.pixels.array, np.ndarray):
-                    raise TypeError(
-                            'Pixels arrays must have type numpy.ndarray.'
-                            'Set argument "library" to "numpy".')
-                else:
-                    pixels_array = img.pixels.array
+                pixels_array = img.pixels
 
                 # Combine images into "stack"
                 if j == 0 and n > 1:
-                    dims = img.pixels.dimensions
+                    dims = img.dimensions
                     store['pipe'][ch['name']] = np.empty(
                                             (n, dims[0], dims[1]),
-                                            dtype=img.pixels.dtype)
+                                            dtype=img.dtype)
                 if n > 1:
                     store['pipe'][ch['name']][j, :, :] = pixels_array
                 else:

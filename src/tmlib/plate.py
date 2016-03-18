@@ -55,7 +55,7 @@ class Plate(object):
 
     PLATE_DIR_FORMAT = 'plate_{index:0>2}'
 
-    def __init__(self, plate_dir, plate_format, library):
+    def __init__(self, plate_dir, plate_format):
         '''
         Initialize an instance of class WellPlate.
 
@@ -65,9 +65,6 @@ class Plate(object):
             absolute path to plate folder
         plate_format: int
             number of wells in the plate
-        library: str
-            image library that should be used
-            (options: ``"vips"`` or ``"numpy"``)
 
         Returns
         -------
@@ -79,7 +76,6 @@ class Plate(object):
         '''
         self.plate_dir = plate_dir
         self.plate_format = plate_format
-        self.library = library
 
     @property
     def dir(self):
@@ -139,10 +135,7 @@ class Plate(object):
             not d.startswith('.')
         ]
         cycle_dirs = natsorted(cycle_dirs)
-        return [
-            Cycle(cycle_dir=d, library=self.library)
-            for d in cycle_dirs
-        ]
+        return [Cycle(cycle_dir=d) for d in cycle_dirs]
 
     def add_cycle(self):
         '''
@@ -162,7 +155,7 @@ class Plate(object):
         logger.debug('add cycle: %s', cycle_index)
         logger.debug('create directory for new cycle: %s', new_cycle_dir)
         os.mkdir(new_cycle_dir)
-        new_cycle = Cycle(cycle_dir=new_cycle_dir, library=self.library)
+        new_cycle = Cycle(cycle_dir=new_cycle_dir)
         self.cycles.append(new_cycle)
         return new_cycle
 

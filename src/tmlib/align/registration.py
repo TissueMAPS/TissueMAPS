@@ -4,7 +4,7 @@ import logging
 import image_registration
 from ..readers import DatasetReader
 from ..writers import DatasetWriter
-from ..readers import NumpyReader
+from ..readers import ImageReader
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def register_images(sites, target_files, reference_files, output_file):
                         % os.path.basename(ref_filename))
 
             # Calculate shift between images
-            with NumpyReader() as reader:
+            with ImageReader() as reader:
                 target_image = reader.read(target_filename)
                 reference_image = reader.read(ref_filename)
             x, y = calculate_shift(target_image, reference_image)

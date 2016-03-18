@@ -6,7 +6,7 @@ from .. import utils
 from .stats import OnlineStatistics
 from .stats import OnlinePercentile
 from ..writers import DatasetWriter
-from ..readers import NumpyReader
+from ..readers import ImageReader
 from ..api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         image_files = batch['inputs']['image_files']
         logger.info('calculate illumination statistics')
-        with NumpyReader() as reader:
+        with ImageReader() as reader:
             img = reader.read(image_files[0])
             stats = OnlineStatistics(image_dimensions=img.shape)
             pctl = OnlinePercentile()

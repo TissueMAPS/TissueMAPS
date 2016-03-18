@@ -109,7 +109,7 @@ class Jterator(CommandLineInterface):
         --------
         :py:mod:`tmlib.jterator.argparser`
         '''
-        experiment = Experiment(args.experiment_dir, library='numpy')
+        experiment = Experiment(args.experiment_dir)
         # We reverse the logic for "headless" mode, because the default for
         # command line use is not to plot.
         Jterator(experiment, args.verbosity, args.pipeline)._call(args)

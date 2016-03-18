@@ -15,8 +15,7 @@ from .errors import PyramidCreationError
 from .errors import RegexError
 from .writers import DatasetWriter
 from .writers import XmlWriter
-from .pixels import create_pixels_from_file
-from .pixels import create_background_pixels
+from .image import ChannelImage
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ class Layer(object):
         '''
         cycle = self.experiment.plates[0].cycles[0]
         image = cycle.get_image_subset([0])[0]
-        return image.pixels.dimensions
+        return image.dimensions
 
     @cached_property
     def well_dimensions(self):
@@ -486,25 +485,25 @@ class ChannelLayer(Layer):
         if y_offset < 0:
             n_top = abs(y_offset)
             y_offset = 0
-        elif (image.pixels.dimensions[0] - y_offset) < self.tile_size:
-            n_bottom = self.tile_size - (image.pixels.dimensions[0] - y_offset)
+        elif (image.dimensions[0] - y_offset) < self.tile_size:
+            n_bottom = self.tile_size - (image.dimensions[0] - y_offset)
         if x_offset < 0:
             n_left = abs(x_offset)
             x_offset = 0
-        elif (image.pixels.dimensions[1] - x_offset) < self.tile_size:
-            n_right = self.tile_size - (image.pixels.dimensions[1] - x_offset)
+        elif (image.dimensions[1] - x_offset) < self.tile_size:
+            n_right = self.tile_size - (image.dimensions[1] - x_offset)
 
-        tile = image.pixels.extract(
+        tile = image.extract(
                     y_offset, x_offset, y_end-y_offset, x_end-x_offset)
 
         if n_top is not None:
-            tile = tile.add_background(n_top, 'top')
+            tile = tile.pad_with_background(n_top, 'top')
         if n_bottom is not None:
-            tile = tile.add_background(n_bottom, 'bottom')
+            tile = tile.pad_with_background(n_bottom, 'bottom')
         if n_left is not None:
-            tile = tile.add_background(n_left, 'left')
+            tile = tile.pad_with_background(n_left, 'left')
         if n_right is not None:
-            tile = tile.add_background(n_right, 'right')
+            tile = tile.pad_with_background(n_right, 'right')
 
         return tile
 
@@ -541,9 +540,8 @@ class ChannelLayer(Layer):
         all_tile_coords = list(itertools.product(range(n_rows), range(n_cols)))
         missing_tile_coords = set(all_tile_coords) - set(tile_coords)
         for t in missing_tile_coords:
-            tile = create_background_pixels(
-                        self.tile_size, self.tile_size, np.uint8,
-                        self.experiment.library)
+            tile = ChannelImage.create_as_background(
+                        self.tile_size, self.tile_size, np.uint8)
             tile_name = self.tile_files[-1][t]
             logger.info('write tile to file: "%s"', tile_name)
             tile_file = os.path.join(self.dir, tile_name)
@@ -621,7 +619,7 @@ class ChannelLayer(Layer):
                         img = cycle.get_image_subset([index])[0]
                         if illumcorr:
                             # NOTE: This is the bottleneck. Can we make this
-                            # faster? Cython: static types? Vips?
+                            # faster? Cython: static types?
                             img = img.correct(stats)
                         if align:
                             img = img.align(crop=False)
@@ -729,17 +727,15 @@ class ChannelLayer(Layer):
                 for j, c in enumerate(cols):
                     pre_tile_filename = os.path.join(
                                             self.dir, pre_tile_files[(r, c)])
-                    pixels = create_pixels_from_file(
-                                            pre_tile_filename,
-                                            self.experiment.library)
+                    img = ChannelImage.create_from_file(pre_tile_filename)
                     if j == 0:
-                        row_pixels = pixels
+                        row_img = img
                     else:
-                        row_pixels = row_pixels.join(pixels, 'horizontal')
+                        row_img = row_img.join(img, 'horizontal')
                 if i == 0:
-                    mosaic = row_pixels
+                    mosaic = row_img
                 else:
-                    mosaic = mosaic.join(row_pixels, 'vertical')
+                    mosaic = mosaic.join(row_img, 'vertical')
             # Create the tile at the current level by downsampling the mosaic
             tile = mosaic.shrink(self.zoom_factor)
             # Write the tile to file on disk

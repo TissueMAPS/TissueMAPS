@@ -2,7 +2,6 @@ import re
 import os
 import logging
 import numpy as np
-import pandas as pd
 from natsort import natsorted
 from cached_property import cached_property
 from . import utils
@@ -39,7 +38,7 @@ class Cycle(object):
 
     STATS_FILE_FORMAT = 'channel_{channel}.stat.h5'
 
-    def __init__(self, cycle_dir, library):
+    def __init__(self, cycle_dir):
         '''
         Initialize an instance of class Cycle.
 
@@ -47,9 +46,6 @@ class Cycle(object):
         ----------
         cycle_dir: str
             absolute path to the cycle directory
-        library: str
-            image library that should be used
-            (options: ``"vips"`` or ``"numpy"``)
 
         Returns
         -------
@@ -63,7 +59,6 @@ class Cycle(object):
         self.cycle_dir = os.path.abspath(cycle_dir)
         if not os.path.exists(self.cycle_dir):
             raise OSError('Cycle directory does not exist.')
-        self.library = library
         self._metadata = None
 
     @property
@@ -306,8 +301,7 @@ class Cycle(object):
             image_metadata.id = table.index[0]
             img = ChannelImage.create_from_file(
                     filename=os.path.join(self.image_dir, f),
-                    metadata=image_metadata,
-                    library=self.library)
+                    metadata=image_metadata)
             images.append(img)
         return images
 
@@ -390,7 +384,6 @@ class Cycle(object):
         for c, f in self.illumstats_files.iteritems():
             img = IllumstatsImages.create_from_file(
                     filename=os.path.join(self.stats_dir, f),
-                    metadata=self.illumstats_metadata[c],
-                    library=self.library)
+                    metadata=self.illumstats_metadata[c])
             illumstats_images[c] = img
         return illumstats_images

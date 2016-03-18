@@ -40,7 +40,7 @@ class Experiment(object):
     :py:class:`tmlib.cycle.Cycle`
     '''
 
-    def __init__(self, experiment_dir, user_cfg=None, library='numpy'):
+    def __init__(self, experiment_dir, user_cfg=None):
         '''
         Initialize an instance of class Experiment.
 
@@ -50,17 +50,12 @@ class Experiment(object):
             absolute path to the experiment root folder
         user_cfg: tmlib.cfg.UserConfiguration, optional
             user configuration settings (default: ``None``)
-        library: str, optional
-            image library that should be used
-            (options: ``"vips"`` or ``"numpy"``, default: ``"numpy"``)
 
         Raises
         ------
         OSError
             when `experiment_dir` does not exist or when `user_cfg` is ``None``
             and user configuration file does not exist
-        ValueError
-            when `library` is not specified correctly
 
         Note
         ----
@@ -76,10 +71,6 @@ class Experiment(object):
         self.experiment_dir = os.path.abspath(self.experiment_dir)
         if not os.path.exists(self.experiment_dir):
             raise OSError('Experiment directory does not exist')
-        self.library = library
-        if self.library not in {'vips', 'numpy'}:
-            raise ValueError(
-                    'Argument "library" must be either "numpy" or "vips"')
         self.user_cfg = user_cfg
         if user_cfg is None:
             user_cfg_file = os.path.join(self.dir, self.user_cfg_file)
@@ -210,10 +201,7 @@ class Experiment(object):
             self._is_plate_dir(d)
         ]
         plate_dirs = natsorted(plate_dirs)
-        return [
-            Plate(d, self.user_cfg.plate_format, self.library)
-            for d in plate_dirs
-        ]
+        return [Plate(d, self.user_cfg.plate_format) for d in plate_dirs]
 
     def add_plate(self):
         '''
@@ -237,8 +225,7 @@ class Experiment(object):
             raise OSError('Plate directory already exists: %s' % new_plate_dir)
         logger.info('add plate #%d', new_plate)
         os.mkdir(new_plate_dir)
-        new_plate = Plate(new_plate_dir,
-                          self.user_cfg.plate_format, self.library)
+        new_plate = Plate(new_plate_dir, self.user_cfg.plate_format)
         self.plates.append(new_plate)
         return new_plate
 

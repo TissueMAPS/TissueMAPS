@@ -36,6 +36,35 @@ class PyramidBuilder(ClusterRoutines):
         super(PyramidBuilder, self).__init__(
                 experiment, step_name, verbosity)
 
+    def list_input_files(self, job_descriptions):
+        '''
+        Provide a list of all input files that are required by the program.
+
+        Parameters
+        ----------
+        job_descriptions: List[dict]
+            job descriptions
+        '''
+        files = list()
+        if job_descriptions['run']:
+            run_files = utils.flatten([
+                j['inputs'].values() for j in job_descriptions['run']
+                if j['index'] == 0  # only base tile inputs
+            ])
+            if all([isinstance(f, list) for f in run_files]):
+                run_files = utils.flatten(run_files)
+                if all([isinstance(f, list) for f in run_files]):
+                    run_files = utils.flatten(run_files)
+                files.extend(run_files)
+            elif any([isinstance(f, dict) for f in run_files]):
+                files.extend(utils.flatten([
+                    utils.flatten(f.values())
+                    for f in run_files if isinstance(f, dict)
+                ]))
+            else:
+                files.extend(run_files)
+        return files
+
     def create_job_descriptions(self, args):
         '''
         Create job descriptions for parallel computing.
@@ -100,8 +129,6 @@ class PyramidBuilder(ClusterRoutines):
                             for f in input_files
                             for c in tile_map[os.path.basename(f)]
                         ]
-                    # else:
-                    #     input_files = []
                     else:
                         output_files = layer.tile_files[level].values()
                         output_files = list(np.array(output_files)[batch])
@@ -112,7 +139,7 @@ class PyramidBuilder(ClusterRoutines):
                         ]
 
                     # NOTE: keeping track of input/output files for each job
-                    # becomes problematic because the number of tiles increases
+                    # is problematic because the number of tiles increases
                     # exponentially with the number of image files.
 
                     description = {
