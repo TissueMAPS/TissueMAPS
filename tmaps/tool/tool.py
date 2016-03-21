@@ -1,16 +1,16 @@
-from tmaps.extensions.database import db
-from tmaps.model import CRUDMixin, HashIdModel
-from tmaps.model.decorators import auto_generate_hash 
+from sqlalchemy import Column, String, Text
+
+from tmaps.model import CRUDMixin
+from tmaps.model import Model
 
 
-@auto_generate_hash
-class Tool(HashIdModel, CRUDMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    hash = db.Column(db.String(20))
-    name = db.Column(db.String(120))
-    icon = db.Column(db.String(120))
-    description = db.Column(db.Text)
-    full_class_path = db.Column(db.String(120))
+class Tool(Model, CRUDMixin):
+    __tablename__ = 'tools'
+
+    name = Column(String(120))
+    icon = Column(String(120))
+    description = Column(Text)
+    full_class_path = Column(String(120))
 
     def get_class(self):
         def import_from_str(name):

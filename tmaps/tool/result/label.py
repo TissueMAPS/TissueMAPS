@@ -1,24 +1,26 @@
-from tmaps.extensions.database import db
+from sqlalchemy import Integer, ForeignKey, Column, Float
+from sqlalchemy.orm import relationship
+
 from tmaps.model import CRUDMixin, Model
-from tmaps.mapobject import Mapobject, MapobjectOutline
-import geoalchemy2.functions as geofun
+from tmaps.mapobject import Mapobject
 
 
 class LabelResult(Model, CRUDMixin):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'label_results'
+
     tool_session_id = \
-        db.Column(db.Integer, db.ForeignKey('tool_session.id'))
-    mapobject_type_id = db.Column(
-        db.Integer, db.ForeignKey('mapobject_type.id'))
-    mapobject_type = db.relationship(
+        Column(Integer, ForeignKey('tool_sessions.id'))
+    mapobject_type_id = Column(
+        Integer, ForeignKey('mapobject_types.id'))
+    mapobject_type = relationship(
         'MapobjectType', backref='label_results')
 
     def __init__(self, ids, labels, mapobject_type, session):
         self.mapobject_type_id = mapobject_type.id
         self.tool_session_id = session.id
 
-        db.session.add(self)
-        db.session.flush()
+        session.add(self)
+        session.flush()
 
         label_objs = []
         ids = Mapobject.translate_external_ids(
@@ -29,8 +31,8 @@ class LabelResult(Model, CRUDMixin):
                 label_result_id=self.id)
             label_objs.append(pl)
 
-        db.session.add_all(label_objs)
-        db.session.commit()
+        session.add_all(label_objs)
+        session.commit()
 
     def to_dict(self):
         return {
@@ -45,12 +47,13 @@ class LabelResult(Model, CRUDMixin):
 
 
 class LabelResultLabel(Model, CRUDMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    mapobject_id = db.Column(
-        db.Integer, db.ForeignKey('mapobject.id'))
-    label_result_id = \
-        db.Column(db.Integer, db.ForeignKey('label_result.id'))
+    __tablename__ = 'label_result_labels'
 
-    label_result = db.relationship('LabelResult', backref='labels')
-    mapobject = db.relationship('Mapobject', backref='labels')
-    label = db.Column(db.Float(precision=15))
+    mapobject_id = Column(
+        Integer, ForeignKey('mapobjects.id'))
+    label_result_id = \
+        Column(Integer, ForeignKey('label_results.id'))
+
+    label_result = relationship('LabelResult', backref='labels')
+    mapobject = relationship('Mapobject', backref='labels')
+    label = Column(Float(precision=15))

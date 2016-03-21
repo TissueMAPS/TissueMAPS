@@ -2,3 +2,4 @@
 import result
 from tool import Tool
 from session import ToolSession
+import serialize

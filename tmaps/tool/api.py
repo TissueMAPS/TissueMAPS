@@ -6,7 +6,7 @@ from flask.ext.jwt import current_identity
 from sqlalchemy.sql import text
 
 from tmaps.mapobject import MapobjectOutline
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 from tmaps.extensions.encrypt import decode
 from tmaps.tool import Tool, ToolSession
 from tmaps.tool.result import LabelResult
@@ -36,7 +36,7 @@ def _create_mapobject_feature(obj_id, geometry_obj):
 def get_tools():
     # TODO: Only return tools for the current user
     return jsonify({
-        'tools': [t.to_dict() for t in Tool.query.all()]
+        'tools': db.session.query(Tool).all()
     })
 
 

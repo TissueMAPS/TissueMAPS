@@ -7,7 +7,7 @@ import pytest
 import tmaps
 from tmaps.user import User
 from tmaps.appfactory import create_app
-from tmaps.extensions.database import db as _db
+from tmaps.extensions import db as _db
 
 
 @pytest.fixture(scope='session')

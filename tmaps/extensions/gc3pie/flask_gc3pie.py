@@ -43,7 +43,7 @@ import logging
 
 from tmlib import engine as tmlib_engine
 from tmaps.model import Model
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 
 
 class GC3PieTask(Model):

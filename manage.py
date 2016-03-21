@@ -4,12 +4,14 @@ import yaml
 import os.path as p
 from subprocess import call
 
+import sqlalchemy
 import flask
 from flask.ext.script import Manager, Server
 from flask.ext.migrate import Migrate, MigrateCommand
 
+from tmlib.models import Model
 from tmaps.appfactory import create_app
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 
 cfg = flask.Config(p.realpath(p.dirname(__file__)))
 cfg.from_envvar('TMAPS_SETTINGS')
@@ -56,7 +58,10 @@ def create_tables():
         $ python manage.py create_db
 
     """
-    db.create_all()
+    db_uri = cfg['SQLALCHEMY_DATABASE_URI']
+    engine = sqlalchemy.create_engine(db_uri)
+    Model.metadata.create_all(engine)
+
 
 @db_manager.command
 def insert_data(yaml_file):

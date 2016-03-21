@@ -1,1 +1,1 @@
-from user import User
+from tmlib.models import User

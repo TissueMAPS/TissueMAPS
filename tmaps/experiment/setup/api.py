@@ -10,7 +10,7 @@ from tmaps.extensions.gc3pie import gc3pie_engine
 from tmaps.experiment import Experiment
 from tmaps.experiment.setup import Plate, PlateSource, PlateAcquisition
 # from tmaps.experiment.setup import Task
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 from tmaps.response import *
 
 

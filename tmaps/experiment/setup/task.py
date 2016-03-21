@@ -1,5 +1,5 @@
 from tmaps.model import Model, CRUDMixin
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 
 
 class TaskSubmission(Model, CRUDMixin):

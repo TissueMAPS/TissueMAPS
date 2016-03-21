@@ -8,7 +8,7 @@ from flask import jsonify, request
 from sqlalchemy.sql import text
 
 from tmaps.api import api
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 
 from tmaps.mapobject import MapobjectOutline, MapobjectType
 from tmaps.experiment import Experiment

@@ -1,3 +1,4 @@
-from experiment import Experiment
+from tmlib.models import Experiment, Channel, ChannelLayer
+
 from experiment_share import ExperimentShare
-from channel import ChannelLayer, Channel
+import serialize

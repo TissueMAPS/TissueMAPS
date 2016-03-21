@@ -1,5 +1,4 @@
 import json
-import os
 import os.path as p
 
 from flask import jsonify, request, send_file, current_app
@@ -12,11 +11,11 @@ import tmlib.experiment
 import tmlib.tmaps.workflow
 import tmlib.logging_utils
 import tmlib.tmaps.canonical
-from tmlib.readers import DatasetReader
 
-from tmaps.experiment import Experiment, ChannelLayer
-from tmaps.experiment.setup import TaskSubmission
-from tmaps.extensions.encrypt import decode
+from tmlib.models import Experiment, ChannelLayer, Submission
+from tmlib.models.utils import decode_pk
+
+from tmaps.extensions import db
 from tmaps.api import api
 from tmaps.response import (
     MALFORMED_REQUEST_RESPONSE,
@@ -30,11 +29,12 @@ import logging
 tmlib_logger = tmlib.logging_utils.configure_logging(logging.INFO)
 
 
+
 @api.route('/channel_layers/<channel_layer_id>/tiles/<path:filename>', methods=['GET'])
 def get_image_tile(channel_layer_id, filename):
     """Send a tile image for a specific layer.
     This route is accessed by openlayers."""
-    ch = ChannelLayer.get(channel_layer_id)
+    ch = db.session.query(ChannelLayer).get_with_hash(channel_layer_id)
 
     if ch is None:
         return RESOURCE_NOT_FOUND_RESPONSE
@@ -68,7 +68,7 @@ def get_features(experiment_id):
 
     """
 
-    ex = Experiment.get(experiment_id)
+    ex = db.session.query(Experiment).get_with_hash(experiment_id)
     if not ex:
         return RESOURCE_NOT_FOUND_RESPONSE
 
@@ -109,7 +109,7 @@ def get_feature_data(experiment_id, object_type, feature_name):
 
     """
 
-    ex = Experiment.get(experiment_id)
+    ex = db.session.query(Experiment).get_with_hash(experiment_id)
     if not ex:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not ex.belongs_to(current_identity):
@@ -167,20 +167,22 @@ def get_experiment(experiment_id):
 
     Response:
     {
-        an experiment object serialized to json
+        experiment: an experiment object serialized to json
     }
 
     where an experiment object is a dict as returned by
     Experiment.as_dict().
 
     """
-
-    e = Experiment.get(experiment_id)
+    e = db.session.query(Experiment).get_with_hash(experiment_id)
     if not e:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
-    return jsonify(e.as_dict())
+
+    return jsonify({
+        'experiment': e
+    })
 
 
 def _get_feat_property_extractor(prop):
@@ -215,13 +217,13 @@ def create_experiment():
         plate_format=plate_format
     )
 
-    return jsonify(exp.as_dict())
+    return jsonify(exp)
 
 
 @api.route('/experiments/<experiment_id>', methods=['DELETE'])
 @jwt_required()
 def delete_experiment(experiment_id):
-    e = Experiment.get(experiment_id)
+    e = db.session.query(Experiment).get_with_hash(experiment_id)
     if not e:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
@@ -238,64 +240,64 @@ def convert_images(exp_id):
     Performs stage "image_conversion" of the canonical TissueMAPS workflow,
     consisting of the steps "metaextract", "metaconfig", and "imextract"
     """
-    e = Experiment.get(exp_id)
-    if not e:
-        return RESOURCE_NOT_FOUND_RESPONSE
-    if not e.belongs_to(current_identity):
-        return NOT_AUTHORIZED_RESPONSE
-    # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
-    #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
+    # e = Experiment.get(exp_id)
+    # if not e:
+    #     return RESOURCE_NOT_FOUND_RESPONSE
+    # if not e.belongs_to(current_identity):
+    #     return NOT_AUTHORIZED_RESPONSE
+    # # if not e.creation_stage == 'WAITING_FOR_IMAGE_CONVERSION':
+    # #     return 'Experiment not in stage WAITING_FOR_IMAGE_CONVERSION', 400
 
-    engine = current_app.extensions['gc3pie'].engine
-    session = current_app.extensions['gc3pie'].session
+    # engine = current_app.extensions['gc3pie'].engine
+    # session = current_app.extensions['gc3pie'].session
 
-    data = json.loads(request.data)
-    metaconfig_args = data['metaconfig']
-    imextract_args = data['imextract']
+    # data = json.loads(request.data)
+    # metaconfig_args = data['metaconfig']
+    # imextract_args = data['imextract']
 
-    exp = e.tmlib_object
+    # exp = e.tmlib_object
 
-    workflow_description = tmlib.tmaps.canonical.CanonicalWorkflowDescription()
-    conversion_stage = tmlib.tmaps.canonical.CanonicalWorkflowStageDescription(
-        name='image_conversion')
-    metaextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
-        name='metaextract', args={})
-    metaconfig_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
-        name='metaconfig', args=metaconfig_args)
-    imextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
-        name='imextract', args=imextract_args)
-    conversion_stage.add_step(metaextract_step)
-    conversion_stage.add_step(metaconfig_step)
-    conversion_stage.add_step(imextract_step)
-    workflow_description.add_stage(conversion_stage)
+    # workflow_description = tmlib.tmaps.canonical.CanonicalWorkflowDescription()
+    # conversion_stage = tmlib.tmaps.canonical.CanonicalWorkflowStageDescription(
+    #     name='image_conversion')
+    # metaextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
+    #     name='metaextract', args={})
+    # metaconfig_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
+    #     name='metaconfig', args=metaconfig_args)
+    # imextract_step = tmlib.tmaps.canonical.CanonicalWorkflowStepDescription(
+    #     name='imextract', args=imextract_args)
+    # conversion_stage.add_step(metaextract_step)
+    # conversion_stage.add_step(metaconfig_step)
+    # conversion_stage.add_step(imextract_step)
+    # workflow_description.add_stage(conversion_stage)
 
-    # Create tmlib.workflow.Workflow object that can be added to the session
-    jobs = tmlib.tmaps.workflow.Workflow(exp, verbosity=1, start_stage='image_conversion',
-                    description=workflow_description)
+    # # Create tmlib.workflow.Workflow object that can be added to the session
+    # jobs = tmlib.tmaps.workflow.Workflow(exp, verbosity=1, start_stage='image_conversion',
+    #                 description=workflow_description)
 
-    # Add the task to the persistent session
-    e.update(creation_stage='CONVERTING_IMAGES')
+    # # Add the task to the persistent session
+    # e.update(creation_stage='CONVERTING_IMAGES')
 
-    # Add the new task to the session
-    persistent_id = session.add(jobs)
+    # # Add the new task to the session
+    # persistent_id = session.add(jobs)
 
-    # TODO: Check if necessary
-    # TODO: Consider session.flush()
-    session.save_all()
+    # # TODO: Check if necessary
+    # # TODO: Consider session.flush()
+    # session.save_all()
 
-    # Add only the new task in the session to the engine
-    # (all other tasks are already in the engine)
-    task = session.load(persistent_id)
-    engine.add(task)
+    # # Add only the new task in the session to the engine
+    # # (all other tasks are already in the engine)
+    # task = session.load(persistent_id)
+    # engine.add(task)
 
-    # Create a database entry that links the current user
-    # to the task and experiment for which this task is executed.
-    TaskSubmission.create(
-        submitting_user_id=current_identity.id,
-        experiment_id=e.id,
-        task_id=persistent_id)
+    # # Create a database entry that links the current user
+    # # to the task and experiment for which this task is executed.
+    # Submission.create(
+    #     submitting_user_id=current_identity.id,
+    #     experiment_id=e.id,
+    #     task_id=persistent_id)
 
-    e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+    # e.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
 
     # TODO: Return thumbnails
     return 'Creation ok', 200
@@ -313,7 +315,7 @@ def rerun_metaconfig(exp_id):
     This works only if the "metaextract" step was already performed previously
     and terminated successfully.
     """
-    e = Experiment.get(exp_id)
+    e = db.session.query(Experiment).get_with_hash(exp_id)
     if not e:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
@@ -382,7 +384,7 @@ def create_pyramids(exp_id):
     in case the arguments "illumcorr" and/or "align" of the "illuminati" step
     were set to ``True``.
     """
-    e = Experiment.get(exp_id)
+    e = db.session.query(Experiment).get_with_hash(exp_id)
     if not e:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
@@ -477,7 +479,7 @@ def get_objects(experiment_id):
     }
 
     """
-    ex = Experiment.get(experiment_id)
+    ex = db.session.query(Experiment).get_with_hash(experiment_id)
     if not ex:
         return RESOURCE_NOT_FOUND_RESPONSE
 
@@ -524,7 +526,7 @@ def get_objects(experiment_id):
 @api.route('/experiments/<exp_id>/creation-stage', methods=['PUT'])
 @jwt_required()
 def change_creation_state(exp_id):
-    e = Experiment.get(exp_id)
+    e = db.session.query(Experiment).get_with_hash(exp_id)
     if not e:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):

@@ -1,44 +1,22 @@
-from tmaps.extensions.database import db
+from tmaps.model import Model
+
+from sqlalchemy import Integer, ForeignKey, Column, Text, String
 from sqlalchemy.dialects.postgresql import JSON
-from tmaps.model.decorators import auto_generate_hash
+from sqlalchemy.orm import relationship
 
 
-# class AppStateShare(db.Model):
-#     __tablename__ = 'appstate_share'
+class Appstate(Model):
+    __tablename__ = 'appstates'
 
-#     id = db.Column(db.Integer, primary_key=True)
+    name = Column(String(80), nullable=False)
+    blueprint = Column(JSON, nullable=False)
 
-#     recipient_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-#     donor_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-#     appstate_id = db.Column(db.Integer, db.ForeignKey('appstate.id'))
+    owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    description = Column(Text)
 
-#     appstate = db.relationship('AppState', uselist=False)
-#     recipient = db.relationship('User', uselist=False,
-#                                 foreign_keys=[recipient_user_id])
-#     donor = db.relationship('User', uselist=False,
-#                             foreign_keys=[donor_user_id])
-#     # access_level = db.Column(db.Enum(*EXPERIMENT_ACCESS_LEVELS,
-#     #                                  name='access_level'))
+    owner = relationship('User', backref='appstates')
 
-@auto_generate_hash
-class Appstate(db.Model):
-    __tablename__ = 'appstate'
-
-    id = db.Column(db.Integer, primary_key=True)
-    hash = db.Column(db.String(20))
-
-    name = db.Column(db.String(80), nullable=False)
-    blueprint = db.Column(JSON, nullable=False)
-
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    description = db.Column(db.Text)
-
-    created_on = db.Column(db.DateTime, default=db.func.now())
-    last_used_on = db.Column(db.DateTime, default=db.func.now())
-
-    owner = db.relationship('User', backref='appstates')
-
-    type = db.Column(db.String(20))
+    type = Column(String(20))
 
     # @property
     # def is_snapshot(self):
@@ -65,13 +43,31 @@ class Appstate(db.Model):
     #         'created_on': self.is_snapshot
     #     }
 
+# class AppStateShare(Model):
+#     __tablename__ = 'appstate_share'
+
+#     id = Column(Integer, primary_key=True)
+
+#     recipient_user_id = Column(Integer, ForeignKey('user.id'))
+#     donor_user_id = Column(Integer, ForeignKey('user.id'))
+#     appstate_id = Column(Integer, ForeignKey('appstate.id'))
+
+#     appstate = relationship('AppState', uselist=False)
+#     recipient = relationship('User', uselist=False,
+#                                 foreign_keys=[recipient_user_id])
+#     donor = relationship('User', uselist=False,
+#                             foreign_keys=[donor_user_id])
+#     # access_level = Column(Enum(*EXPERIMENT_ACCESS_LEVELS,
+#     #                                  name='access_level'))
+
+
 
 # @auto_generate_hash
 # class AppStateSnapshot(AppStateBase):
 
-#     parent_appstate_id = db.Column(db.Integer, db.ForeignKey('appstate.id'))
+#     parent_appstate_id = Column(Integer, ForeignKey('appstate.id'))
 
-#     appstate = db.relationship('AppState', uselist=False)
+#     appstate = relationship('AppState', uselist=False)
 
 #     __mapper_args__ = {
 #         'polymorphic_identity': 'snapshot'
@@ -94,8 +90,8 @@ class Appstate(db.Model):
 #             parent_appstate_id=self.id
 #         )
 
-#         db.session.add(st)
-#         db.session.commit()
+#         session.add(st)
+#         session.commit()
 
 #         # for t in self.tool_instances:
 #         #     clone = ToolInstance(
@@ -119,7 +115,7 @@ class Appstate(db.Model):
 #         #     )
 #         #     st.layermods.append(clone)
 
-#         db.session.commit()
+#         session.commit()
 
 #         return st
 

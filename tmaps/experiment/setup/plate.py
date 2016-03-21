@@ -4,7 +4,7 @@ from werkzeug import secure_filename
 
 from tmlib import plate as tmlib_plate
 
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 from tmaps.model.decorators import auto_remove_directory, auto_create_directory
 from tmaps.experiment import Experiment
 

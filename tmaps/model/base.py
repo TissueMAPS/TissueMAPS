@@ -1,8 +1,4 @@
-from tmaps.extensions.encrypt import (
-        decode, encode, DecodeFailedException
-)
-from tmaps.extensions.database import db
-from flask import current_app
+from tmaps.extensions import db
 
 
 class CRUDMixin(object):
@@ -33,36 +29,3 @@ class CRUDMixin(object):
         """Remove the record from the database."""
         db.session.delete(self)
         return commit and db.session.commit()
-
-
-class Model(db.Model):
-
-    __abstract__ = True
-
-    @classmethod
-    def get(cls, id):
-        return cls.query.get(id)
-
-
-class HashIdModel(Model):
-
-    __abstract__ = True
-
-    @property
-    def hash(self):
-        return encode(self.id)
-
-    @classmethod
-    def get(cls, id):
-        if type(id) == unicode or type(id) == str:
-            try:
-                decoded_id = decode(id)
-            except DecodeFailedException as e:
-                current_app.logger.error(e.message)
-                return None
-        elif type(id) == int:
-            decoded_id = id
-        else:
-            raise ValueError('Cannot handle type of id: ' + str(type(id)))
-
-        return super(HashIdModel, cls).get(decoded_id)

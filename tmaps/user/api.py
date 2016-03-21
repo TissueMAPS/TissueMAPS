@@ -4,7 +4,7 @@ from flask import request, jsonify
 
 from tmaps.user import User
 from tmaps.api import api
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 
 
 @api.route('/register', methods=['POST'])

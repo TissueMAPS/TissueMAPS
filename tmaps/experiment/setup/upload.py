@@ -11,7 +11,7 @@ from tmaps.extensions.redis import redis_store
 from tmaps.api import api
 
 from tmaps.experiment.setup import PlateAcquisition
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 from tmaps.response import *
 
 

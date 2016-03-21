@@ -5,11 +5,12 @@ import logging
 from flask import Flask
 import gc3libs
 
-from tmaps.extensions.database import db
+from tmaps.extensions import db
 from tmaps.extensions.auth import jwt
 from tmaps.extensions.redis import redis_store
 from tmaps.extensions.gc3pie import gc3pie_engine
 from tmaps.config import default as default_config
+from tmaps.serialize import TmJSONEncoder
 
 
 MAIN_DIR_LOCATION = abspath(join(dirname(__file__), os.pardir, os.pardir))
@@ -36,6 +37,9 @@ def create_app(config):
     # Load the default settings
     app.config.from_object(default_config)
     app.config.update(config)
+
+    # Set the JSON encoder
+    app.json_encoder = TmJSONEncoder
 
     # Add log handlers
     # TODO: Consider adding mail and file handlers if being in a production

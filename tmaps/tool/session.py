@@ -1,25 +1,26 @@
-from tmaps.extensions.database import db
+from sqlalchemy.orm import relationship
+from sqlalchemy import Integer, ForeignKey, Column, String
+
 from tmaps.model import CRUDMixin, Model
 
 
 class ToolSession(Model, CRUDMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    uuid = db.Column(db.String(50), index=True, unique=True)
+    __tablename__ = 'tool_sessions'
+
+    uuid = Column(String(50), index=True, unique=True)
 
     experiment_id = \
-        db.Column(db.Integer, db.ForeignKey('experiment.id'))
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    tool_id = db.Column(db.Integer, db.ForeignKey('tool.id'))
-    appstate_id = db.Column(db.Integer, db.ForeignKey('appstate.id'))
+        Column(Integer, ForeignKey('experiments.id'))
+    user_id = Column(Integer, ForeignKey('users.id'))
+    tool_id = Column(Integer, ForeignKey('tools.id'))
+    appstate_id = Column(Integer, ForeignKey('appstates.id'))
 
-    created_on = db.Column(db.DateTime, default=db.func.now())
-
-    # appstate = db.relationship(
-    #     'AppStateBase', uselist=False, backref=db.backref(
+    # appstate = relationship(
+    #     'AppStateBase', uselist=False, backref=backref(
     #         'tool_instances', cascade='all, delete-orphan'))
 
-    experiment = db.relationship('Experiment', uselist=False)
-    user = db.relationship('User', uselist=False)
+    experiment = relationship('Experiment', uselist=False)
+    user = relationship('User', uselist=False)
 
     def set(key, value):
         pass
