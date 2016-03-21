@@ -407,7 +407,7 @@ class IllumStatsFile(Model):
 
     #: Table columns
     name = Column(String, index=True)
-    channel_id = Column(Integer, index=True)
+    channel_id = Column(Integer, ForeignKey('channels.id'))
     cycle_id = Column(Integer, ForeignKey('cycles.id'))
 
     #: Relationships to other tables
