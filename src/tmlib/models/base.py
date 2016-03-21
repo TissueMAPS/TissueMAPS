@@ -2,7 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy import func
 
-from .. import db_utils
+from . import utils
 
 _Base = declarative_base()
 
@@ -33,4 +33,4 @@ class Model(_Base):
         str
             encoded ID
         '''
-        return db_utils.encode_pk(self.id)
+        return utils.encode_pk(self.id)

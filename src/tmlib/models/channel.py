@@ -16,7 +16,7 @@ CHANNEL_LOCATION_FORMAT = 'channel_{id}'
 
 #: Format string for channel layer locations
 # TODO: Should this be renamed to layer_XX?
-CHANNEL_LAYER_LOCATION_FORMAT = 'channellayer_{id}'
+CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
