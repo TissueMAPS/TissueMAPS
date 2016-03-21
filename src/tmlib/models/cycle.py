@@ -15,11 +15,22 @@ CYCLE_LOCATION_FORMAT = 'cycle_{id}'
 
 @auto_remove_directory(lambda obj: obj.location)
 class Cycle(Model):
-    '''
-    A *cycle* represents an individual image acquisition time point.
+
+    '''A *cycle* represents an individual image acquisition time point.
     In case of a time series experiment, *cycles* have different time point,
     but the same channel indices, while in case of a "multiplexing"
     experiment, they have the same time point, but different channel indices.
+
+    Attributes
+    ----------
+    tpoint: int
+        time point of the cycle
+    status: str
+        processing status
+    plate_id: int
+        ID of the parent plate
+    plate: tmlib.models.Plate
+        parent plate to which the cycle belongs
     '''
 
     #: Name of the corresponding database table
@@ -48,12 +59,7 @@ class Cycle(Model):
 
     @autocreate_directory_property
     def location(self):
-        '''
-        Returns
-        -------
-        str
-            location were the acquisition content is stored
-        '''
+        '''str: location were the acquisition content is stored'''
         if self.id is None:
             raise AttributeError(
                 'Cycle "%s" doesn\'t have an entry in the database yet. '
@@ -66,30 +72,12 @@ class Cycle(Model):
 
     @autocreate_directory_property
     def channel_images_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where channel image files are stored
-
-        See also
-        --------
-        :py:class:`tmlib.models.ChannelImageFile`
-        '''
+        '''str: location where channel image files are stored'''
         return os.path.join(self.location, 'channel_images')
 
     @autocreate_directory_property
     def illumstats_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where illumination statistics files are stored
-
-        See also
-        --------
-        :py:class:`tmlib.models.IllumstatsFile`
-        '''
+        '''str: location where illumination statistics files are stored'''
         return os.path.join(self.location, 'illumstats')
 
     def __repr__(self):

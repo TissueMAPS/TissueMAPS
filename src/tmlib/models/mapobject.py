@@ -10,16 +10,21 @@ logger = logging.getLogger(__name__)
 
 class MapobjectType(Model):
 
-    '''
-    *Map objects* represent connected pixel components that are the outcome of
-    image segmentation. They have coordinates that allows drawing their
-    outlines on the map. They may further be associated with measurements
-    (*features*), which can be queried or used for analysis.
-    The user can define different types of *map objects*, representing
-    different biological entities, such as "cells" or "nuclei" for example.
-    In addition, the program provides build-in types, such as "wells",
-    and automatically calculates *features* for them, for example statistics
-    for all children *map objects* that fall within a "well".
+    '''A *map object type* represent a conceptual group of *map objects*
+    (segmented objects) that reflect different biological entities,
+    such as "cells" or "nuclei" for example.
+
+    Attributes
+    ----------
+    name: str
+        name of the map objects type
+    min_poly_zoom: int
+        zoom level where visualization should switch from centroids
+        to outlines
+    experiment_id: int
+        ID of the parent experiment
+    experiment: tmlib.models.Experiment
+        parent experiment to which map objects belong
     '''
 
     #: Name of the corresponding database table
@@ -50,8 +55,7 @@ class MapobjectType(Model):
         self.experiment_id = experiment.id
 
     def get_mapobject_outlines_within_tile(self, session, x, y, z, tpoint, zplane):
-        '''
-        Get the outlines of all objects that fall within a given pyramid tile,
+        '''Get outlines of all objects that fall within a given pyramid tile,
         defined by their `y`, `x`, `z` coordinates.
 
         Parameters
@@ -71,9 +75,9 @@ class MapobjectType(Model):
 
         Returns
         -------
-        ???
+        Tuple[int, str]
+            GeoJSON string for each selected map object
         '''
-        # TODO: docstring
         do_simplify = z < self.min_poly_zoom
         if do_simplify:
             select_stmt = session.query(
@@ -99,7 +103,17 @@ class MapobjectType(Model):
 class Mapobject(Model):
 
     '''
-    An individual *map object*.
+    An individual *map object* represents a connected pixel component in an
+    image. They have coordinates that allows drawing their
+    outlines on the map and may also be associated with measurements
+    (*features*), which can be queried or used for analysis.
+
+    Attributes
+    ----------
+    mapobject_type_id: int
+        ID of the parent mapobject
+    mapobject_type: tmlib.models.MapobjectType
+        parent mapobject type to which map objects belong
     '''
 
     #: Name of the corresponding database table
@@ -123,9 +137,22 @@ class Mapobject(Model):
 
 class MapobjectOutline(Model):
 
-    '''
-    Coordinates of an individual *map object* in the three-dimensional
-    `y`, `x`, `z` visualization space.
+    '''Outlines of an individual *map object*.
+
+    Attributes
+    ----------
+    tpoint: int
+        time point index
+    zplane: int
+        z-plane index
+    geom_poly: str
+        EWKT polygon geometry
+    geom_centroid: str
+        EWKT point geometry
+    mapobject_id: int
+        ID of parent mapobject
+    mapobject: tmlib.models.Mapobject
+        parent mapobject to which the outline belongs
     '''
 
     #: Name of the corresponding database table
@@ -149,14 +176,13 @@ class MapobjectOutline(Model):
             time point index
         zplane: int
             z-plane index
-        geom_poly: ???
-            polygon coordinates
-        geom_centroid: ???
-            centroid coordinate
+        geom_poly: str
+            EWKT polygon geometry
+        geom_centroid: str
+            EWKT point geometry
         mapobject: tmlib.models.Mapobject
             parent map object to which the outline belongs
         '''
-        # TODO: docstring
         self.tpoint = tpoint
         self.zplane = zplane
         self.geom_poly = geom_poly
@@ -166,6 +192,9 @@ class MapobjectOutline(Model):
     @staticmethod
     def intersection_filter(x, y, z):
         '''
+        Generate an `SQLalchemy` query filter to select mapobject outlines
+        for a given `y`, `x`, `z` pyramid coordinate.
+
         Parameters
         ----------
         x: int
@@ -208,12 +237,21 @@ class MapobjectOutline(Model):
 
 class Feature(Model):
 
-    '''
-    A *feature* is a measurement that is associated with a particular
-    *map object type*. For example the *feature* named "Cells_Morphology_Area"
+    '''A *feature* is a measurement that is associated with a particular
+    *map object type*. For example the *feature* named "Morphology_Area"
     would correspond to a vector where each value would reflect the area of an
-    individual *map object* with *map object type* "cells".
+    individual *map object* of a given *map object type*.
+
+    Attributes
+    ----------
+    name: str
+        name of the feature
+    mapobject_type_id: int
+        ID of parent mapobject type
+    mapobject_type: tmlib.models.MapobjectType
+        parent map object type to which the feature belongs
     '''
+
     #: Name of the corresponding database table
     __tablename__ = 'features'
 
@@ -239,9 +277,21 @@ class Feature(Model):
 
 class FeatureValue(Model):
 
-    '''
-    An individual value of a *feature* that was measured for a given
+    '''An individual value of a *feature* that was measured for a given
     *map object*.
+
+    Attributes
+    ----------
+    value: float
+        the actual measurement
+    tpoint: int
+        time point index
+    feature: tmlib.models.Feature
+        parent feature to which the feature belongs
+    mapobject_id: int
+        ID of the parent mapobject
+    mapobject: tmlib.models.MapobjectType
+        parent mapobject to which the feature belongs
     '''
 
     #: Name of the corresponding database table

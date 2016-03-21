@@ -21,6 +21,7 @@ def add_plate(plate_name, experiment_name):
         plate = tmlib.models.Plate(name=plate_name, experiment=experiment)
         session.add(plate)
 
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(

@@ -38,6 +38,7 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
         session.add(experiment)
         return experiment.id
 
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(

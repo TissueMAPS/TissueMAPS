@@ -31,6 +31,28 @@ class Experiment(Model):
     an *experiment* is composed of a single *plate* with one *cycle* where
     each sample was imaged once.
 
+    Attributes
+    ----------
+    name: str
+        name of the experiment
+    root_directory: str
+        absolute path to root directory where experiment directory
+        should be created in
+    description: str
+        description of the experimental setup
+    status: str
+        processing status
+    microscope_type: str
+        microscope that was used to acquire the images
+    plate_format: int
+        number of wells in the plate, e.g. 384
+    plate_acquisition_mode: str
+        the way plates were acquired with the microscope
+    user_id: int
+        ID of the owner
+    user: tmlib.models.User
+        the `TissueMAPS` user who owns the experiment
+
     See also
     --------
     :py:class:`tmlib.models.Plate`
@@ -69,12 +91,11 @@ class Experiment(Model):
             number of wells in the plate, e.g. 384
         plate_acquisition_mode: str
             the way plates were acquired with the microscope
-            (default: ``"multiplexing"``)
         root_directory: str, optional
             absolute path to root directory where experiment directory
             should be created in (default: `$TMAPS_STORAGE`)
         description: str, optional
-            description of the experimental
+            description of the experimental setup
 
         See also
         --------
@@ -112,12 +133,8 @@ class Experiment(Model):
 
     @property
     def location(self):
-        '''
-        Returns
-        -------
-        str
-            location of the experiment,
-            e.g. absolute path to a directory on disk
+        '''str: location of the experiment,
+        e.g. absolute path to a directory on disk
         '''
         if self.id is None:
             raise AttributeError(
@@ -131,34 +148,18 @@ class Experiment(Model):
 
     @autocreate_directory_property
     def plates_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where plates are stored
-
-        See also
-        --------
-        :py:class:`tmlib.plate.Plate`
-        '''
+        '''str: location where plates are stored'''
         return os.path.join(self.location, 'plates')
 
     @autocreate_directory_property
     def channels_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where channels are stored
-
-        See also
-        --------
-        :py:class:`tmlib.channel.Channel`
-        '''
+        '''str: location where channels are stored'''
         return os.path.join(self.location, 'channels')
 
     def belongs_to(self, user):
         '''
+        Determines whether the experiment belongs to a given `user`.
+
         Parameters
         ----------
         user: tmlib.user.User
@@ -173,12 +174,8 @@ class Experiment(Model):
 
     @property
     def is_ready_for_processing(self):
-        '''
-        Returns
-        -------
-        bool
-            whether the experiment is ready for processing
-            (requires that upload of images is complete)
+        '''bool: whether the experiment is ready for processing
+        (requires that upload of images is complete)
         '''
         return all([pls.is_ready_for_processing for pls in self.plate_sources])
 

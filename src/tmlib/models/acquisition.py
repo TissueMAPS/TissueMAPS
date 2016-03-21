@@ -18,13 +18,25 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 @auto_create_directory(lambda obj: obj.location)
 class Acquisition(Model):
 
-    '''
-    An *acquisition* contains all files belonging to one microscope image
+    '''An *acquisition* contains all files belonging to one microscope image
     acquisition process. Note that in contrast to a *cycle*, an *acquisition*
     may contain more than one time point.
 
     The incentive to grouped files this way relates to the fact that most
     microscopes generate separate metadata files for each *acquisition*.
+
+    Attributes
+    ----------
+    name: str
+        name of the acquisition
+    description: str
+        description of the acquisition
+    status: str
+        processing status
+    plate_id: int
+        ID of the parent plate
+    plate: tmlib.models.Plate
+        parent plate to which the acquisition belongs
     '''
 
     #: Name of the corresponding database table
@@ -58,12 +70,7 @@ class Acquisition(Model):
 
     @property
     def location(self):
-        '''
-        Returns
-        -------
-        str
-            location were the acquisition content is stored
-        '''
+        '''str: location were the acquisition content is stored'''
         if self.id is None:
             raise AttributeError(
                 'Acquisition "%s" doesn\'t have an entry in the database yet. '
@@ -76,49 +83,21 @@ class Acquisition(Model):
 
     @autocreate_directory_property
     def microscope_images_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where microscope image files are stored
-
-        See also
-        --------
-        :py:class:`tmlib.models.MicroscopeImageFile`
-        '''
+        '''str: location where microscope image files are stored'''
         return os.path.join(self.location, 'microscope_images')
 
     @autocreate_directory_property
     def microscope_metadata_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where microscope metadata files are stored
-
-        See also
-        --------
-        :py:class:`tmlib.models.MicroscopeMetadataFile`
-        '''
+        '''str: location where microscope metadata files are stored'''
         return os.path.join(self.location, 'microscope_metadata')
 
     @autocreate_directory_property
     def omexml_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where extracted OMEXML files are stored
-
-        See also
-        --------
-        :py:class:`tmlib.models.OmeXmlFile`
-        '''
+        '''str: location where extracted OMEXML files are stored'''
         return os.path.join(self.location, 'omexml')
 
     def as_dict(self):
-        '''
-        Return attributes as key-value pairs.
+        '''Return attributes as key-value pairs.
 
         Returns
         -------

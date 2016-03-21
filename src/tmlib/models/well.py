@@ -13,13 +13,21 @@ logger = logging.getLogger(__name__)
 
 class Well(Model):
 
-    '''
-    A *well* is a reservoir for biological samples and multiple *wells* are
+    '''A *well* is a reservoir for biological samples and multiple *wells* are
     typically arranged as a grid on a *plate*.
     From an imaging point of view, a *well* represents a continuous area of
     image acquisition projected onto the y,x plane of the *plate* bottom.
     Images may not be acquired continuously along the z axis, however,
     and a full volume reconstruction therefore not possible.
+
+    Attributes
+    ----------
+    name: str
+        name of the well
+    plate_id: int
+        ID of the parent plate
+    plate: tmlib.models.Plate
+        parent plate to which the well belongs
     '''
 
     #: Name of the corresponding database table
@@ -47,22 +55,13 @@ class Well(Model):
 
     @property
     def plate_coordinate(self):
-        '''
-        Returns
-        -------
-        Tuple[int]
-            row, column coordinate of the well within the plate
-        '''
+        '''Tuple[int]: row, column coordinate of the well within the plate'''
         return self.map_name_to_plate_coordinate(self.name)
 
     @cached_property
     def dimensions(self):
-        '''
-        Returns
-        -------
-        Tuple[int]
-            number of sites in the well along the vertical and horizontal
-            axis, i.e. the number of rows and columns
+        '''Tuple[int]: number of sites in the well along the vertical and
+        horizontal axis, i.e. the number of rows and columns
         '''
         return tuple(np.sum(
             np.array(
@@ -124,4 +123,3 @@ class Well(Model):
 
     def __repr__(self):
         return '<Well(id=%r, name=%r)>' % (self.id, self.name)
-    

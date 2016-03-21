@@ -29,9 +29,7 @@ PLATE_LOCATION_FORMAT = 'plate_{id}'
 
 
 def determine_plate_dimensions(n_wells):
-    '''
-    Determine the dimensions of a well plate given the number of wells in the
-    plate.
+    '''Determine the dimensions of a plate given its number of wells.
 
     Parameters
     ----------
@@ -41,7 +39,7 @@ def determine_plate_dimensions(n_wells):
     Returns
     -------
     Tuple[int]
-        number of rows and column in the well plate
+        number of rows and column in the plate
     '''
     plate_dimensions = {
         1:   (1, 1),
@@ -55,21 +53,32 @@ def determine_plate_dimensions(n_wells):
 @auto_create_directory(lambda obj: obj.location)
 class Plate(Model):
 
-    '''
-    A *plate* represents a container with multiple reservoirs for biological
+    '''A *plate* represents a container with reservoirs for biological
     samples (*wells*).
     It's assumed that the imaged area projected onto the x, y plane of the
     *well* bottom is continuous and the same for all *wells* in the *plate*.
     It's further assumed that all images of a *plate* were acquired with the
-    same microscope settings and each acquisition (*cycle*) thus has the same
-    number of *z-planes* and *channels*.
+    same microscope settings implying that each acquisition (*cycle*) has the
+    same number of *z-planes* and *channels*.
 
     The *format* of the plate is encode by the number of wells in the plate,
     e.g. ``384``.
 
     Note
     ----
-    For consistency, a *slide* is considered a single-well *plate*.
+    For consistency, a *slide* is considered a single-well *plate*, i.e. a
+    *plate* with only one *well*.
+
+    Attributes
+    ----------
+    name: str
+        name of the plate
+    description: str, optional
+        description of the plate
+    experiment_id: int
+        ID of the parent experiment
+    experiment: tmlib.experiment.Experiment
+        parent experiment to which the plate belongs
     '''
 
     #: Name of the corresponding database table
@@ -103,12 +112,7 @@ class Plate(Model):
 
     @property
     def location(self):
-        '''
-        Returns
-        -------
-        str
-            location were the plate content is stored
-        '''
+        '''str: location were the plate content is stored'''
         if self.id is None:
             raise AttributeError(
                 'Plate "%s" doesn\'t have an entry in the database yet. '
@@ -121,57 +125,31 @@ class Plate(Model):
 
     @autocreate_directory_property
     def acquisitions_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where acquisitions are stored
-
-        See also
-        --------
-        :py:class:`tmlib.acquisition.Acquisition`
-        '''
+        '''str: location where acquisitions are stored'''
         return os.path.join(self.location, 'acquisitions')
 
     @autocreate_directory_property
     def cycles_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where cycles are stored
-        '''
+        '''str: location where cycles are stored'''
         return os.path.join(self.location, 'cycles')
 
     @property
     def n_wells(self):
-        '''
-        Returns
-        -------
-        int
-            number of wells in the plate
-        '''
+        '''int: number of wells in the plate'''
         # TODO: Ensure that this is actually correct!
         return self.experiment.plate_format
 
     @property
     def dimensions(self):
-        '''
-        Returns
-        -------
-        Tuple[int]
-            number of wells in the plate along the vertical and horizontal
-            axis, i.e. the number of rows and columns
+        '''Tuple[int]: number of wells in the plate along the vertical and
+        horizontal axis, i.e. the number of rows and columns
         '''
         return determine_plate_dimensions(self.n_wells)
 
     @cached_property
     def grid(self):
-        '''
-        Returns
-        -------
-        numpy.ndarray[tmlib.models.Well]
-            wells arranged according to their position within the plate
+        '''numpy.ndarray[tmlib.models.Well]: wells arranged according to their
+        position within the plate
         '''
         plate_cooridinates = [w.plate_cooridinate for w in self.wells]
         height, width = self.dimensions  # one-based
@@ -182,12 +160,8 @@ class Plate(Model):
 
     @property
     def empty_wells_coordinates(self):
-        '''
-        Returns
-        -------
-        List[Tuple[int]]
-            y, x coordinates of each empty well in the plate, i.e. wells that
-            were not imaged
+        '''List[Tuple[int]]: y, x coordinates of each empty well in the plate,
+        i.e. wells that were not imaged
         '''
         empty_wells = np.where(np.logical_not(self.grid))
         coordinates = list()
@@ -197,12 +171,8 @@ class Plate(Model):
 
     @property
     def nonempty_column_indices(self):
-        '''
-        Returns
-        -------
-        List[int]
-            indices of nonempty columns, i.e. columns of the plate where every
-            well has been imaged
+        '''List[int]: indices of nonempty columns, i.e. columns of the plate
+        where every well has been imaged
         '''
         nonempty_columns = list()
         for i in xrange(self.grid.shape[1]):
@@ -212,12 +182,8 @@ class Plate(Model):
 
     @property
     def nonempty_row_indices(self):
-        '''
-        Returns
-        -------
-        List[int]
-            indices of nonempty rows, i.e. rows of the plate where every well
-            has been imaged
+        '''List[int]: indices of nonempty rows, i.e. rows of the plate where
+        every well has been imaged
         '''
         nonempty_rows = list()
         for i in xrange(self.grid.shape[0]):
@@ -255,7 +221,7 @@ class Plate(Model):
 
     def as_dict(self):
         '''
-        Return selected attributes as key-value pairs.
+        Return attributes as key-value pairs.
 
         Returns
         -------

@@ -9,9 +9,18 @@ _Base = declarative_base()
 
 class Model(_Base):
 
-    '''
-    Abstract base class for a `TissueMAPS` model,
-    which maps Python classes to relational database tables.
+    '''Abstract base class for a `TissueMAPS` model.
+    
+    It maps Python classes to relational database tables.
+
+    Attributes
+    ----------
+    id: int
+        unique global identifier
+    created_on: datetime.datetime
+        datetime of creation
+    updated_on: datetime.datetime
+        datetime of last modification
     '''
 
     __abstract__ = True
@@ -27,10 +36,5 @@ class Model(_Base):
 
     @property
     def hash(self):
-        '''
-        Returns
-        -------
-        str
-            encoded ID
-        '''
+        '''str: encoded `id`'''
         return utils.encode_pk(self.id)

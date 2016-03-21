@@ -6,9 +6,21 @@ from tmlib.models import Model
 
 class Submission(Model):
 
-    '''
-    A *submission* handles the processing of a computational *task*
+    '''A *submission* handles the processing of a computational *task*
     on a cluster.
+
+    Attributes
+    ----------
+    task: gc3libs.Task
+        submitted task
+    experiment_id: int
+        ID of the parent experiment
+    experiment: tmlib.experiment.Experiment
+        parent experiment to which the submission belongs
+    user_id: int
+        ID of the submitting user
+    user: tmlib.user.User
+        parent user to which the submission belongs
     '''
 
     #: Name of the corresponding database table
@@ -41,9 +53,15 @@ class Submission(Model):
 
 class Task(Model):
 
-    '''
-    A *task* is a job that can be submitted to a cluster for processing and its
-    state can be monitored while being processed.
+    '''A *task* is a job that can be submitted to a cluster for processing
+    and its state can be monitored while being processed.
+
+    Attributes
+    ----------
+    state: str
+        processing state
+    data: gc3libs.Task
+        Python object representation of the task
     '''
 
     #: Name of the corresponding database table

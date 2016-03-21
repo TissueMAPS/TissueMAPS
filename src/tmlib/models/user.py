@@ -1,14 +1,21 @@
 from passlib.hash import sha256_crypt
-from sqlalchemy import Column, String, Boolean
+from sqlalchemy import Column, String
 
 from tmlib.models import Model
 
 
 class User(Model):
 
-    '''
-    A user must be registered in the `TissueMAPS` database to be able to
-    process experiments.
+    '''A *user*.
+
+    Attributes
+    ----------
+    name: str
+        user name
+    email: str
+        email address
+    password: str
+        password
     '''
 
     #: Name of the corresponding database table
@@ -18,7 +25,6 @@ class User(Model):
     name = Column(String, index=True, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
-    active = Column(Boolean, default=True)
 
     def __init__(self, name, email, password):
         '''
@@ -36,7 +42,4 @@ class User(Model):
         self.password = sha256_crypt.encrypt(password)
 
     def __repr__(self):
-        return (
-            '<User(id=%r, name=%r, email=%r>'
-            % (self.id, self.name, self.email)
-        )
+        return '<User(id=%r, name=%r)' % (self.id, self.name)

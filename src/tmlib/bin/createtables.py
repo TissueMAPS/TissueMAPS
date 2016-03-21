@@ -2,11 +2,10 @@
 import argparse
 
 import tmlib.models
-from tmlib.db_utils import create_tmaps_database_engine
 
 
 def create_tables():
-    engine = create_tmaps_database_engine()
+    engine = tmlib.models.utils.create_tmaps_database_engine()
     # Create all tables defined by declarative classes in tmlib.models
     tmlib.models.Model.metadata.create_all(engine)
 

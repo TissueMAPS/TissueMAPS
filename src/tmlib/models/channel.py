@@ -23,10 +23,18 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 @auto_create_directory(lambda obj: obj.location)
 class Channel(Model):
 
-    '''
-    A *channel* represents all *images* across different time points and
+    '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
     microscope filter settings.
+
+    Attributes
+    ----------
+    name: str
+        name of the plate
+    experiment_id: int
+        ID of the parent experiment
+    experiment: tmlib.models.Experiment
+        parent experiment to which the plate belongs
     '''
 
     #: Name of the corresponding database table
@@ -54,12 +62,7 @@ class Channel(Model):
 
     @property
     def location(self):
-        '''
-        Returns
-        -------
-        str
-            location were the channel content is stored
-        '''
+        '''str: location were the channel content is stored'''
         if self.id is None:
             raise AttributeError(
                 'Channel "%s" doesn\'t have an entry in the database yet. '
@@ -72,12 +75,7 @@ class Channel(Model):
 
     @autocreate_directory_property
     def layers_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where layers are stored
-        '''
+        '''str: location where layers are stored'''
         return os.path.join(self.location, 'layers')
 
     def __repr__(self):
@@ -85,7 +83,7 @@ class Channel(Model):
 
     def as_dict(self):
         '''
-        Return the attributes of the object as key-value pairs.
+        Return attributes as key-value pairs.
 
         Returns
         -------
@@ -100,18 +98,28 @@ class Channel(Model):
 
 class ChannelLayer(Model):
 
-    '''
-    A *channel layer* is a pyramid that represents an overview of all images
+    '''A *channel layer* represents a pyramid with an overview of all images
     belonging to a given *channel*, time point, and z-plane at different
     resolution levels.
+
+    Attributes
+    ----------
+    tpoint: int
+        time point index
+    zplane: int
+        z-plane index
+    channel_id: int
+        ID of the parent channel
+    channel: tmlib.models.Channel
+        parent channel to which the plate belongs
     '''
 
     #: Name of the corresponding database table
     __tablename__ = 'channel_layers'
 
     #: Table columns
-    zplane = Column(Integer)
     tpoint = Column(Integer)
+    zplane = Column(Integer)
     channel_id = Column(Integer, ForeignKey('channels.id'))
 
     #: Relationships to other tables
@@ -134,12 +142,7 @@ class ChannelLayer(Model):
 
     @property
     def location(self):
-        '''
-        Returns
-        -------
-        str
-            location were the acquisition content is stored
-        '''
+        '''str: location were the acquisition content is stored'''
         if self.id is None:
             raise AttributeError(
                 'Channel layer "%s" doesn\'t have an entry in the database yet. '
@@ -152,11 +155,8 @@ class ChannelLayer(Model):
 
     @property
     def image_size(self):
-        '''
-        Returns
-        -------
-        Tuple[int]
-            number of pixels along the y and x axis at the highest zoom level
+        '''Tuple[int]: number of pixels along the y and x axis at the highest
+        zoom level
         '''
         metainfo_file = os.path.join(self.location, 'ImageProperties.xml')
         with open(metainfo_file, 'r') as f:
@@ -169,7 +169,7 @@ class ChannelLayer(Model):
 
     def as_dict(self):
         '''
-        Return the attributes of the object as key-value pairs.
+        Return attributes as key-value pairs.
 
         Returns
         -------
