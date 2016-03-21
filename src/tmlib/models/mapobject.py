@@ -38,20 +38,16 @@ class MapobjectType(Model):
     #: Relationship to other tables
     experiment = relationship('Experiment', backref='mapobject_types')
 
-    def __init__(self, name, min_poly_zoom, experiment):
+    def __init__(self, name, experiment):
         '''
         Parameters
         ----------
         name: str
             name of the map objects type, e.g. "cells"
-        min_poly_zoom: int
-            zoom level where visualization should switch from centroids
-            to outlines
         experiment: tmlib.models.Experiment
             parent experiment to which map objects belong
         '''
         self.name = name
-        self.min_poly_zoom = min_poly_zoom
         self.experiment_id = experiment.id
 
     def get_mapobject_outlines_within_tile(self, session, x, y, z, tpoint, zplane):
