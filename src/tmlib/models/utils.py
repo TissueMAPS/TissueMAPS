@@ -1,8 +1,9 @@
 import os
-import os.path as p
 import shutil
-
+import logging
 from sqlalchemy import event
+
+logger = logging.getLogger(__name__)
 
 
 def auto_remove_directory(get_location_func):
@@ -15,6 +16,7 @@ def auto_remove_directory(get_location_func):
     def class_decorator(cls):
         def after_delete_callback(mapper, connection, target):
             loc = get_location_func(target)
+            logger.info('remove location: %s', loc)
             shutil.rmtree(loc)
 
         event.listen(cls, 'after_delete', after_delete_callback)
@@ -32,13 +34,11 @@ def auto_create_directory(get_location_func):
     def class_decorator(cls):
         def after_insert_callback(mapper, connection, target):
             loc = get_location_func(target)
-            if not p.exists(loc):
+            if not os.path.exists(loc):
+                logger.info('create location: %s', loc)
                 os.mkdir(loc)
             else:
-                print (
-                    'WARNING: Tried to create location %s '
-                    'but it exists already!' % loc
-                )
+                logger.warn('location already exists: %s', loc)
         event.listen(cls, 'after_insert', after_insert_callback)
         return cls
     return class_decorator

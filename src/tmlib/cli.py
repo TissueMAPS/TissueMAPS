@@ -10,6 +10,7 @@ from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
+
 from . import __version__
 from .args import InitArgs
 from .args import SubmitArgs
@@ -25,6 +26,9 @@ from .import_utils import load_var_method_args
 from .logging_utils import configure_logging
 from .logging_utils import map_logging_verbosity
 from .errors import JobDescriptionError
+
+from . import db_utils
+from tmlib.models import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +157,11 @@ class CommandLineInterface(object):
         '''
         arguments = parser.parse_args()
 
+        if not arguments.handler:
+            parser.print_help()
+            sys.exit(0)
+            return 0
+
         configure_logging(logging.CRITICAL)
         logger = logging.getLogger('tmlib')
         level = map_logging_verbosity(arguments.verbosity)
@@ -167,13 +176,22 @@ class CommandLineInterface(object):
         apscheduler_logger.setLevel(logging.CRITICAL)
 
         try:
-            if arguments.handler:
-                arguments.handler(arguments)
-            else:
-                parser.print_help()
-            logger.info('COMPLETED')
-            sys.exit(0)
-            return 0
+            with open(arguments.key_file) as f:
+                key_file_content = f.read()
+            key = db_utils.decode_pk(key_file_content)
+
+            # TODO: user authentication
+            with db_utils.Session() as session:
+                experiment = session.query(Experiment).get(key)
+
+                # TODO: do we have to pass the session or is it sufficient
+                # to use with the queried experiment object, since it defines the
+                # relations to all other required objects
+
+                arguments.handler(arguments, experiment)
+                logger.info('COMPLETED')
+                sys.exit(0)
+                return 0
         except Exception as error:
             sys.stderr.write('\nFAILED:\n%s\n' % str(error))
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -181,6 +199,12 @@ class CommandLineInterface(object):
                 sys.stderr.write(tb)
             sys.exit(1)
             return 1
+
+    def _call(self, args):
+        logger.debug('call "%s" method of class "%s"',
+                     args.method_name, self.__class__.__name__)
+        method_args = create_cli_method_args(step_name=self.name, **vars(args))
+        call_cli_method(self, args.method_name, method_args)
 
     @abstractproperty
     def name(self):
@@ -203,7 +227,7 @@ class CommandLineInterface(object):
         pass
 
     @abstractmethod
-    def call(args):
+    def call(args, experiment):
         '''
         Handler function that can be called by a subparser.
 
@@ -214,6 +238,8 @@ class CommandLineInterface(object):
         ----------
         args: argparse.Namespace
             parsed command line arguments
+        experiment: tmlib.experiment.Experiment
+            experiment object
 
         Note
         ----
@@ -627,12 +653,6 @@ class CommandLineInterface(object):
         batch = api.read_job_file(job_file)
         logger.info('collect job output')
         api.collect_job_output(batch)
-
-    def _call(self, args):
-        logger.debug('call "%s" method of class "%s"',
-                     args.method_name, self.__class__.__name__)
-        method_args = create_cli_method_args(step_name=self.name, **vars(args))
-        call_cli_method(self, args.method_name, method_args)
 
     @staticmethod
     def get_parser_and_subparsers(methods=None):

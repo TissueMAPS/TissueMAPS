@@ -246,7 +246,7 @@ class Image(object):
             image with rescaled pixels
         '''
         if self.dtype == np.uint16:
-            pxls = image_utils.convert_to_uint8(self.pixels, 0, threshold)
+            pxls = image_utils.map_to_uint8(self.pixels, 0, threshold)
             return self.__class__(pxls, self.metadata)
         elif self.dtype == np.uint8:
             return self
@@ -379,7 +379,7 @@ class Image(object):
 
         Returns
         -------
-        tmlib.image.ChannelImage
+        tmlib.image.Image
             aligned image
 
         Warning

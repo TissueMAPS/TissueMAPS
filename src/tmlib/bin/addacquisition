@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+import argparse
+import sqlalchemy.orm.exc
+
+import tmlib.models
+from tmlib.db_utils import Session
+
+
+def add_acquisition(experiment_name, plate_name, acquisition_name):
+    # TODO: authentication
+    with Session() as session:
+        try:
+            plate = session.query(tmlib.models.Plate).\
+                filter(tmlib.modelsPlate.experiment.name == experiment_name).\
+                one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Plate "%s" with parent experiment "%s" does not exist!'
+                % (plate_name, experiment_name)
+            )
+        except:
+            raise
+        acquisition = tmlib.models.Acquisition(
+            name=acquisition_name, plate=plate
+        )
+        session.add(acquisition)
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        desctiption='''
+            Add a new acquisition to an existing plate
+            in the TissueMAPS database.
+        '''
+    )
+    parser.add_argument(
+        '-e', '--experiment_name', required=True,
+        help='name of the parent experiment'
+    )
+    parser.add_argument(
+        '-p', '--plate_name', required=True,
+        help='name of the parent plate'
+    )
+    parser.add_argument(
+        '-a', '--acquisition_name', required=True,
+        help='name of the new acquisition'
+    )
+
+    args = parser.parse_args()
+
+    add_acquisition(args.experiment_name, args.plate_name, args.aquisition_name)

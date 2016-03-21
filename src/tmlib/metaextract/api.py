@@ -33,8 +33,10 @@ class MetadataExtractor(ClusterRoutines):
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):
-        return re.sub(r'(%s)$' % os.path.splitext(image_filename)[1],
-                      '.ome.xml', image_filename)
+        return re.sub(
+            r'(%s)$' % os.path.splitext(image_filename)[1],
+            '.ome.xml', image_filename
+        )
 
     def create_job_descriptions(self, args):
         '''

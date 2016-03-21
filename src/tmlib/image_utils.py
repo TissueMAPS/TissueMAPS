@@ -103,48 +103,90 @@ def compute_outlines(img, keep_ids=False):
         return output
 
 
-def convert_to_uint8(img, min_value=None, max_value=None):
-    '''
-    Scale an image to 8-bit by linearly scaling from a given range
-    to 0-255. The lower and upper values of the range can be set. If not set
-    they default to the minimum and maximum intensity value of `img`.
+# def convert_to_uint8(img, min_value=None, max_value=None):
+#     '''
+#     Scale an image to 8-bit by linearly scaling from a given range
+#     to 0-255. The lower and upper values of the range can be set. If not set
+#     they default to the minimum and maximum intensity value of `img`.
     
-    This can be useful for displaying an image in a figure, for example.
+#     This can be useful for displaying an image in a figure, for example.
 
+#     Parameters
+#     ----------
+#     img: numpy.ndarray
+#         image that should be rescaled
+#     min_value: int, optional
+#         lower intensity value of rescaling range (default: `None`)
+#     max_value: int, optional
+#         upper intensity value of rescaling range (default: `None`)
+
+#     Returns
+#     -------
+#     numpy.ndarray[uint8]
+
+#     Note
+#     ----
+#     When no `min_value` or `max_value` is provided the result is equivalent to
+#     the corresponding method in ImageJ: Image > Type > 8-bit.
+#     '''
+#     if min_value is not None:
+#         if not isinstance(min_value, int):
+#             raise TypeError('Argument "min_value" must have type int.')
+#         min_value = min_value
+#     else:
+#         min_value = np.min(img)
+#     if max_value is not None:
+#         if not isinstance(max_value, int):
+#             raise TypeError('Argument "max_value" must have type int.')
+#         max_value = max_value
+#     else:
+#         max_value = np.max(img)
+#     in_range = (min_value, max_value)
+#     img_rescaled = rescale_intensity(
+#                     img, out_range='uint8', in_range=in_range).astype(np.uint8)
+#     return img_rescaled
+
+
+def map_to_uint8(img, lower_bound=None, upper_bound=None):
+    '''
+    Map a 16-bit image trough a lookup table to convert it to 8-bit.
+    
     Parameters
     ----------
-    img: numpy.ndarray
-        image that should be rescaled
-    min_value: int, optional
-        lower intensity value of rescaling range (default: `None`)
-    max_value: int, optional
-        upper intensity value of rescaling range (default: `None`)
-
+    img: numpy.ndarray[np.uint16]
+        image that should be mapped
+    lower_bound: int, optional
+        lower bound of the range that should be mapped to ``[0, 255]``,
+        value must be in the range ``[0, 65535]``
+        (defaults to ``numpy.min(img)``)
+    upper_bound: int, optional
+        upper bound of the range that should be mapped to ``[0, 255]``,
+        value must be in the range ``[0, 65535]``
+        (defaults to ``numpy.max(img)``)
+    
     Returns
     -------
     numpy.ndarray[uint8]
-
-    Note
-    ----
-    When no `min_value` or `max_value` is provided the result is equivalent to
-    the corresponding method in ImageJ: Image > Type > 8-bit.
+        mapped image
     '''
-    if min_value is not None:
-        if not isinstance(min_value, int):
-            raise TypeError('Argument "min_value" must have type int.')
-        min_value = min_value
-    else:
-        min_value = np.min(img)
-    if max_value is not None:
-        if not isinstance(max_value, int):
-            raise TypeError('Argument "max_value" must have type int.')
-        max_value = max_value
-    else:
-        max_value = np.max(img)
-    in_range = (min_value, max_value)
-    img_rescaled = rescale_intensity(
-                    img, out_range='uint8', in_range=in_range).astype(np.uint8)
-    return img_rescaled
+    if not img.dtype != np.uint16:
+        raise TypeError('"img" must have 16-bit unsigned integer type.')
+    if not(0 <= lower_bound < 2**16) and lower_bound is not None:
+            raise ValueError('"lower_bound" must be in the range [0, 65535]')
+    if not(0 <= upper_bound < 2**16) and upper_bound is not None:
+        raise ValueError('"upper_bound" must be in the range [0, 65535]')
+    if lower_bound is None:
+        lower_bound = np.min(img)
+    if upper_bound is None:
+        upper_bound = np.max(img)
+    if lower_bound >= upper_bound:
+        raise ValueError('"lower_bound" must be smaller than "upper_bound"')
+    lut = np.concatenate([
+        np.zeros(lower_bound, dtype=np.uint16),
+        np.linspace(0, 255, upper_bound - lower_bound).astype(np.uint16),
+        np.ones(2**16 - upper_bound, dtype=np.uint16) * 255
+    ])
+    return lut[img].astype(np.uint8)
 
 
 def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):

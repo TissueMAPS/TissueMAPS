@@ -40,8 +40,7 @@ def create_timestamp():
 
 def regex_from_format_string(format_string):
     '''
-    Convert a format string of the sort "{name}_bla/something_{number}"
-    to a named regular expression a la "P<name>.*_bla/something_P<number>\d+".
+    Convert a format string with keywords into a regular expression object.
 
     Parameters
     ----------
@@ -50,8 +49,14 @@ def regex_from_format_string(format_string):
 
     Returns
     -------
-    str
-        named regular expression pattern
+    _sre.SRE_Pattern
+        compiled named regular expression pattern
+
+    Examples
+    --------
+    >>>r = regex_from_format_string("{directory}/{filename}")
+    >>>r.search("foo/bar.txt").groupdict()
+    {'directory': 'foo', 'filename': 'bar.txt'}
     '''
     # Extract the names of all placeholders from the format string
     format_string = re.sub(r'\.', '\.', format_string)  # escape dot
@@ -63,12 +68,9 @@ def regex_from_format_string(format_string):
 
     regex = format_string
     for pl_name, pl_regex in zip(placeholder_names, placeholder_regexes):
-        if re.search(r'number', pl_name):
-            regex = re.sub(pl_regex, '(?P<%s>\d+)' % pl_name, regex)
-        else:
-            regex = re.sub(pl_regex, '(?P<%s>.*)' % pl_name, regex)
+        regex = re.sub(pl_regex, '(?P<%s>.*)' % pl_name, regex)
 
-    return regex
+    return re.compile(regex)
 
 
 def indices(data, item):
@@ -247,7 +249,7 @@ def missing_elements(data, start=None, end=None):
     if not end:
         end = len(data)-1
 
-    if end - start <= 1: 
+    if end - start <= 1:
         if data[end] - data[start] > 1:
             for d in range(data[start] + 1, data[end]):
                 yield d

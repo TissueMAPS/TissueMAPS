@@ -435,20 +435,6 @@ class ChannelImageMetadata(ImageMetadata):
             raise TypeError('Attribute "is_corrected" must have type bool')
         self._is_corrected = value
 
-    def __iter__(self):
-        for attr in dir(self):
-            if attr in self._PERSISTENT_ATTRS:
-                if hasattr(self, attr):
-                    yield (attr, getattr(self, attr))
-                else:
-                    raise AttributeError(
-                            '"%s" object doesn\'t have attribute "%s"'
-                            % (self.__class__.__name__, attr))
-
-    def __str__(self):
-        # TODO: pretty print
-        pass
-
 
 class ImageFileMapping(object):
 

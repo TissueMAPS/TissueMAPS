@@ -9,3 +9,6 @@ logo = '''
  |_|_|_\___|\__\__,_\__\___/_||_|_| |_\__, |        https://github.com/TissueMAPS/TmLibrary
                                       |___/ 
 '''
+
+
+SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager'}

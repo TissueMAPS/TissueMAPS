@@ -1,28 +1,36 @@
-import base64
-
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy import func
 
-Base = declarative_base()
+from .. import db_utils
+
+_Base = declarative_base()
 
 
-def decode_pk(pk_str):
-    return int(base64.urlsafe_b64decode(str(pk_str))[5:])
+class Model(_Base):
 
+    '''
+    Abstract base class for a `TissueMAPS` model,
+    which maps Python classes to relational database tables.
+    '''
 
-def encode_pk(pk):
-    return base64.urlsafe_b64encode('tmaps' + str(pk))
+    __abstract__ = True
 
-
-class Model(Base):
-
+    #: Table columns
     id = Column(Integer, primary_key=True)
-
-    created_on = Column(DateTime, default=func.now())
+    created_on = Column(
+        DateTime, default=func.now()
+    )
     updated_on = Column(
-        DateTime, default=func.now(), onupdate=func.now())
+        DateTime, default=func.now(), onupdate=func.now()
+    )
 
     @property
     def hash(self):
-        return encode_pk(self.id)
+        '''
+        Returns
+        -------
+        str
+            encoded ID
+        '''
+        return db_utils.encode_public(self.id)

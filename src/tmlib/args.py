@@ -91,7 +91,7 @@ class Args(object):
                 # Arguments "experiment_dir" and "verbosity" get special
                 # treatment because they are arguments of the main parser and
                 # shared across all command line interfaces.
-                if attr == 'experiment_dir':
+                if attr == 'key_file':
                     # Positional arguments cannot have "required" argument
                     del kwargs['required']
                     parser.add_argument(attr, **kwargs)
@@ -165,31 +165,31 @@ class GeneralArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        return {'experiment_dir', 'verbosity'}
+        return {'key_file', 'verbosity'}
 
     @property
-    def experiment_dir(self):
+    def key_file(self):
         '''
         Returns
         -------
         str
-            path to the experiment directory
+            path to the key file
         '''
-        return self._experiment_dir
+        return self._key_file
 
-    @experiment_dir.setter
-    def experiment_dir(self, value):
-        if not isinstance(value, self._experiment_dir_params['type']):
+    @key_file.setter
+    def key_file(self, value):
+        if not isinstance(value, self._key_file_params['type']):
             raise TypeError('Attribute "backup" must have type %s.'
-                            % self._experiment_dir_params['type'].__name__)
-        self._experiment_dir = value
+                            % self._key_file_params['type'].__name__)
+        self._key_file = value
 
     @property
-    def _experiment_dir_params(self):
+    def _key_file_params(self):
         return {
             'type': str,
             'required': True,
-            'help': 'path to experiment directory'
+            'help': 'path to key file'
         }
 
     @property

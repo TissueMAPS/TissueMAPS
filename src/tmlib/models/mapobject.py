@@ -43,8 +43,7 @@ class Mapobject(Model):
     __tablename__ = 'mapobjects'
 
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
-    mapobject_type = relationship(
-        'MapobjectType', backref='mapobjects')
+    mapobject_type = relationship('MapobjectType', backref='mapobjects')
 
 
 class MapobjectOutline(Model):

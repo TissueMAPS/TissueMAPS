@@ -3,7 +3,6 @@ from . import logo
 from . import __version__
 from .api import MetadataExtractor
 from ..cli import CommandLineInterface
-from ..experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ class Metaextract(CommandLineInterface):
                              % self.__class__.__name__)
 
     @staticmethod
-    def call(args):
+    def call(args, experiment):
         '''
         Initialize an instance of the cli class with the parsed command
         line arguments and call the method matching the name of the subparser.
@@ -62,10 +61,11 @@ class Metaextract(CommandLineInterface):
         ----------
         args: arparse.Namespace
             parsed command line arguments
+        experiment: tmlib.models.Experiment
+            experiment that should be processed
 
         See also
         --------
         :py:mod:`tmlib.metaextract.argparser`
         '''
-        experiment = Experiment(args.experiment_dir)
         Metaextract(experiment, args.verbosity)._call(args)

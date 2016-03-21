@@ -136,7 +136,11 @@ class BasicClusterRoutines(object):
             backup_dir = '%s_%s' % (self.session_dir, current_time)
             logger.debug('create backup of session directory: %s', backup_dir)
             shutil.move(self.session_dir, backup_dir)
-        return Session(self.session_dir)
+        return Session(
+            self.session_dir,
+            store_url=gc3pie_store_uri,  # TODO
+            table_name='tasks'
+        )
 
     def create_engine(self):
         '''
