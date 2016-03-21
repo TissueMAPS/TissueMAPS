@@ -33,4 +33,4 @@ class Model(_Base):
         str
             encoded ID
         '''
-        return db_utils.encode_public(self.id)
+        return db_utils.encode_pk(self.id)

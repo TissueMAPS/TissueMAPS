@@ -3,7 +3,6 @@ Database models.
 '''
 
 import base
-import decorators
 
 from base import Model
 from user import User

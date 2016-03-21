@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 CHANNEL_LOCATION_FORMAT = 'channel_{id}'
 
 #: Format string for channel layer locations
+# TODO: Should this be renamed to layer_XX?
 CHANNEL_LAYER_LOCATION_FORMAT = 'channellayer_{id}'
 
 
@@ -82,6 +83,20 @@ class Channel(Model):
     def __repr__(self):
         return '<Channel(id=%r, name=%r)>' % (self.id, self.name)
 
+    def as_dict(self):
+        '''
+        Return the attributes of the object as key-value pairs.
+
+        Returns
+        -------
+        dict
+        '''
+        return {
+            'id': self.id,
+            'name': self.name,
+            'layers': [l.as_dict() for l in self.layers]
+        }
+
 
 class ChannelLayer(Model):
 
@@ -102,7 +117,7 @@ class ChannelLayer(Model):
     #: Relationships to other tables
     channel = relationship('Channel', backref='layers')
 
-    def __init__(self, tpoint, zplane, layer):
+    def __init__(self, tpoint, zplane, channel):
         '''
         Parameters
         ----------
@@ -110,13 +125,12 @@ class ChannelLayer(Model):
             time point index
         zplane: int
             z-plane index
-        experiment: tmlib.models.Experiment
-            parent experiment to which the plate belongs
+        channel: tmlib.models.Channel
+            channel object to which the plate belongs
         '''
         self.tpoint = tpoint
         self.zplane = zplane
-        self.layer = layer
-        self.layer_id = layer.id
+        self.channel_id = channel.id
 
     @property
     def location(self):
