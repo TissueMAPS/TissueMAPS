@@ -32,7 +32,7 @@ interface ImageTileLayerArgs {
     imageSize: Size;
     url: string;
 
-    additiveBlend?: string;
+    additiveBlend?: boolean;
     visible?: boolean;
     color?: Color;
     brightness?: number;

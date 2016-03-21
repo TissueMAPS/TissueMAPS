@@ -92,8 +92,8 @@ class Experiment {
     static get(id: string): ng.IPromise<Experiment> {
         var $http = $injector.get<ng.IHttpService>('$http');
         return $http.get('/api/experiments/' + id)
-        .then((resp: {data: SerializedExperiment}) => {
-            return new Experiment(resp.data);
+        .then((resp: {data: {experiment: SerializedExperiment}}) => {
+            return new Experiment(resp.data.experiment);
         });
     }
 
