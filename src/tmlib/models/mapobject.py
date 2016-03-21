@@ -1,7 +1,8 @@
 import logging
 from geoalchemy2 import Geometry
-from sqlalchemy import Column, String, Integer, Float, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import Model
 
@@ -32,27 +33,34 @@ class MapobjectType(Model):
 
     #: Table columns
     name = Column(String)
-    min_poly_zoom = Column(Integer)
+    _min_poly_zoom = Column('min_poly_zoom', Integer)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     #: Relationship to other tables
     experiment = relationship('Experiment', backref='mapobject_types')
 
-    def __init__(self, name, min_poly_zoom, experiment):
+    def __init__(self, name, experiment):
         '''
         Parameters
         ----------
         name: str
             name of the map objects type, e.g. "cells"
-        min_poly_zoom: int
-            zoom level where visualization should switch from centroids
-            to outlines
         experiment: tmlib.models.Experiment
             parent experiment to which map objects belong
         '''
         self.name = name
-        self.min_poly_zoom = min_poly_zoom
         self.experiment_id = experiment.id
+
+    @hybrid_property
+    def min_poly_zoom(self):
+        '''int: zoom level at which visualization switches from drawing
+        polygons instead of centroids
+        '''
+        return self._min_poly_zoom
+
+    @min_poly_zoom.setter
+    def min_poly_zoom(self, value):
+        self._min_poly_zoom = value
 
     def get_mapobject_outlines_within_tile(self, session, x, y, z, tpoint, zplane):
         '''Get outlines of all objects that fall within a given pyramid tile,
@@ -102,14 +110,16 @@ class MapobjectType(Model):
 
 class Mapobject(Model):
 
-    '''
-    An individual *map object* represents a connected pixel component in an
+    '''An individual *map object* represents a connected pixel component in an
     image. They have coordinates that allows drawing their
     outlines on the map and may also be associated with measurements
     (*features*), which can be queried or used for analysis.
 
     Attributes
     ----------
+    is_border: bool
+        whether the object touches at the border of a *site* and is
+        therefore only partially represented on the corresponding image
     mapobject_type_id: int
         ID of the parent mapobject
     mapobject_type: tmlib.models.MapobjectType
@@ -120,18 +130,23 @@ class Mapobject(Model):
     __tablename__ = 'mapobjects'
 
     #: Table columns
+    is_border = Column(Boolean)
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
     #: Relationships to other tables
     mapobject_type = relationship('MapobjectType', backref='mapobjects')
 
-    def __init__(self, mapobject_type):
+    def __init__(self, is_border, mapobject_type):
         '''
         Parameters
         ----------
+        is_border: bool
+            whether the object touches at the border of a *site* and is
+            therefore only partially represented on the corresponding image
         mapobject_type: tmlib.models.MapobjectType
             parent map object type to which map objects belong
         '''
+        self.is_border = is_border
         self.mapobject_type_id = mapobject_type.id
 
 
