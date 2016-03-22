@@ -4,11 +4,10 @@ from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
 from tmlib.models import Model
-from tmlib.models.utils import auto_create_directory
 from tmlib.models.utils import auto_remove_directory
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
-from ..metaconfig import SUPPORTED_MICROSCOPE_TYPES
+from ..steps.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from ..utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -18,7 +17,6 @@ EXPERIMENT_LOCATION_FORMAT = 'experiment_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-@auto_create_directory(lambda obj: obj.location)
 class Experiment(Model):
 
     '''

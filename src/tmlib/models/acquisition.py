@@ -4,7 +4,6 @@ from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
 from tmlib.models.base import Model
-from tmlib.models.utils import auto_create_directory
 from tmlib.models.utils import auto_remove_directory
 from ..utils import autocreate_directory_property
 
@@ -15,7 +14,6 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-@auto_create_directory(lambda obj: obj.location)
 class Acquisition(Model):
 
     '''An *acquisition* contains all files belonging to one microscope image
@@ -74,7 +72,7 @@ class Acquisition(Model):
         self.plate_id = plate.id
         self.status = 'WAITING'
 
-    @property
+    @autocreate_directory_property
     def location(self):
         '''str: location were the acquisition content is stored'''
         if self.id is None:
@@ -83,7 +81,7 @@ class Acquisition(Model):
                 'Therefore, its location cannot be determined.' % self.name
             )
         return os.path.join(
-            self.plate.aqusitions_location,
+            self.plate.acquisitions_location,
             ACQUISITION_LOCATION_FORMAT.format(id=self.id)
         )
 

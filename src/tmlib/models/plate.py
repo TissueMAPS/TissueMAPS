@@ -50,7 +50,6 @@ def determine_plate_dimensions(n_wells):
 
 
 @auto_remove_directory(lambda obj: obj.location)
-@auto_create_directory(lambda obj: obj.location)
 class Plate(Model):
 
     '''A *plate* represents a container with reservoirs for biological

@@ -58,7 +58,9 @@ class MicroscopeImageFile(Model):
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(self.acquisition.images_location, self.name)
+        return os.path.join(
+            self.acquisition.microscope_images_location, self.name
+        )
 
     def as_dict(self):
         '''
@@ -120,7 +122,9 @@ class MicroscopeMetadataFile(Model):
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(self.acquisition.metadata_location, self.name)
+        return os.path.join(
+            self.acquisition.microscope_metadata_location, self.name
+        )
 
     def as_dict(self):
         '''
