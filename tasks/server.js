@@ -4,7 +4,7 @@ module.exports = function(gulp, $) {
     var connect = require('gulp-connect');
     var proxy = require('http-proxy-middleware');
 
-    gulp.task('server', function() {
+    gulp.task('start-server', function() {
         connect.server({
             port: 8002,
             root: 'build',

@@ -7,107 +7,28 @@
   <meta name="viewport" content="width=device-width">
   <link rel="shortcut icon" href="/resources/img/favicon.ico">
 
-
-
   <!-- ================================================================
        |                             JS                               |
        ================================================================ -->
-  <!-- build:js script-main.min.js -->
-      <script type="text/javascript" charset="utf-8">
-          // There are some vector layer render issues when loading the page on a HighDPI
-          // display like that of the MBP. In that case devicePixelRatio is set to 2, which will
-          // cause the vectors to appear twice as large.
-          // As a temp. workaround we set the pixelratio to 1 before openlayers is loaded.
-          devicePixelRatio = 1;
-      </script>
-
-      <script src="/assets/libs/bower_components/jquery/dist/jquery.js" type="text/javascript" charset="utf-8"></script>
-      <!-- Custom jquery build with required components for slider and sortable widget -->
-      <!-- http://jqueryui.com/download/#!version=1.10&components=1110000010000000000000000000000000 -->
-      <!-- THIS NEEDS TO COME BEFORE ANGULAR DUE TO A BUG THAT OCCURS OTHERWISE WHEN REMOVING A SLIDER-->
-      <script src="/assets/libs/unmanaged/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script>
-
-      <script src="/assets/libs/bower_components/underscore/underscore.js" type="text/javascript" charset="utf-8"></script>
-
-      <script src="/assets/libs/ol-debug.js" type="text/javascript" charset="utf-8"></script>
-
-      <!-- Angular -->
-      <script src="/assets/libs/bower_components/angular/angular.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/assets/libs/bower_components/angular-ui-router/release/angular-ui-router.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/assets/libs/bower_components/angular-sanitize/angular-sanitize.js"></script>
-
-      <!-- Highcharts -->
-      <script src="/assets/libs/bower_components/highcharts/highcharts.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/assets/libs/bower_components/highcharts-ng/dist/highcharts-ng.min.js" type="text/javascript" charset="utf-8"></script>
-
-      <!-- Angular UI -->
-      <script src="/assets/libs/bower_components/angular-ui-sortable/sortable.min.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/assets/libs/bower_components/angular-ui-slider/src/slider.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/assets/libs/bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js" type="text/javascript" charset="utf-8"></script>
-
-      <!-- Other plugins -->
-      <script src="/assets/libs/unmanaged/ng-color-picker/color-picker.js" type="text/javascript" charset="utf-8"></script>
-
-      <script src="/assets/libs/bower_components/perfect-scrollbar/js/perfect-scrollbar.jquery.js" type="text/javascript" charset="utf-8"></script>
-      <!-- I made some small changes to the following file since it had some bugs and the pull requests weren't accepted on the original repo -->
-      <script src="/assets/libs/unmanaged/angular-perfect-scrollbar.js" type="text/javascript" charset="utf-8"></script>
-      <script src="/assets/libs/bower_components/momentjs/moment.js" type="text/javascript" charset="utf-8"></script>
-
-      <script src="/assets/libs/bower_components/ng-websocket/ng-websocket.js" type="text/javascript" charset="utf-8"></script>
-
-      <script src="/assets/libs/bower_components/tmauth/dist/tmauth.js" type="text/javascript" charset="utf-8"></script>
-
-      <!-- Application code -->
-      <!-- All source files are linked here in a preprocessing step by 'grunt-glob-html' -->
-
-      <!-- Module declaration -->
-      <script src="src/tmaps.js" type="text/javascript" charset="utf-8"></script>
-      <script src="src/tmaps.routes.js" type="text/javascript" charset="utf-8"></script>
-      <script src="src/uiState.js" type="text/javascript" charset="utf-8"></script>
-      <script src="build/compiled-ts.js" type="text/javascript" charset="utf-8"></script>
-      <!-- Other files -->
-      <!-- include: "type": "js", "files": ["src/auth/**/*.js", "!src/auth/**/*.test.js"] -->
-      <!-- include: "type": "js", "files": ["src/viewer/**/*.js", "!src/viewer/**/*.test.js"] -->
-      <!-- include: "type": "js", "files": ["src/userpanel/**/*.js", "!src/userpanel/**/*.test.js"] -->
-      <!-- include: "type": "js", "files": ["src/setup/**/*.js", "!src/setup/**/*.test.js"] -->
-
-  <!-- endbuild -->
-
-
+  <script type="text/javascript" charset="utf-8">
+      // There are some vector layer render issues when loading the page on a HighDPI
+      // display like that of the MBP. In that case devicePixelRatio is set to 2, which will
+      // cause the vectors to appear twice as large.
+      // As a temp. workaround we set the pixelratio to 1 before openlayers is loaded.
+      devicePixelRatio = 1;
+  </script>
+  <script src="libs.js" type="text/javascript" charset="utf-8"></script>
+  <script src="script.js" type="text/javascript" charset="utf-8"></script>
 
   <!-- ================================================================
        |                             CSS                              |
        ================================================================ -->
-  <!-- build:css style.min.css -->
-      <!-- Library styles -->
-      <!-- TODO: These should probably be linked directly from the libs/bower dir or from libs/unmanaged -->
-
-      <!-- Unmanaged styles -->
-      <link rel="stylesheet" href="/assets/css/bootstrap.css">
-
-      <!-- TODO: Maybe remove the following two styles if they aren't needed -->
-      <link rel="stylesheet" href="/assets/css/jquery-ui.css">
-      <link rel="stylesheet" href="/assets/css/jquery.ui.theme.css">
-
-      <!-- Styles of libraries -->
-      <link rel="stylesheet" href="/assets/libs/unmanaged/ng-color-picker/color-picker.css">
-      <link rel="stylesheet" href="/assets/libs/bower_components/perfect-scrollbar/css/perfect-scrollbar.css">
-      <link rel="stylesheet" href="/assets/libs/bower_components/fontawesome/css/font-awesome.css">
-
-      <!-- Applications style -->
-      <link rel="stylesheet" href="/assets/css/style.css">
-  <!-- endbuild -->
-
-
+  <link rel="stylesheet" href="style.css">
 
   <!-- ================================================================
        |                             DEV                              |
        ================================================================ -->
-  <!-- Usemin will remove this part when building for production
-       since 'dev' is an unknown block type -->
-  <!-- build:dev -->
-       <script src="//localhost:35729/livereload.js"></script>
-  <!-- endbuild -->
+  <script src="//localhost:35729/livereload.js"></script>
 
 </head>
 

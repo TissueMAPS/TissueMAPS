@@ -74,10 +74,9 @@ angular.module('tmaps.ui')
             filterProperties: '=?filterProperties'
         },
         link: function(scope, elem, attrs, ctrl, transclude) {
-
             // Same as ng-transclude but add the ctrl instance
             // to the scope, s.t. it is accessible by the child ctrls.
-            var innerScope = scope.$parent.$new();
+            var innerScope: any = scope.$parent.$new();
             innerScope.selectionBox = ctrl;
 
             transclude(innerScope, function(clone) {
@@ -185,8 +184,8 @@ angular.module('tmaps.ui')
         priority: -1,
         link: function(scope, element, attrs, controller) {
             // Alias the item under a new name
-            if (controller.byName) {
-                scope[controller.byName] = scope.item;
+            if (controller['byName']) {
+                scope[controller['byName']] = (<any>scope).item;
             }
         }
     };

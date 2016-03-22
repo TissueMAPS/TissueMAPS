@@ -1,17 +1,17 @@
-var argv = require('yargs').argv;
-
 module.exports = function(gulp, $) {
     'use strict';
 
     var runSequence = require('run-sequence');
 
-    // Clean old build files
-    gulp.task('build', function() {
+    gulp.task('default', function() {
         return runSequence(
+            // Clean old build files
             'clean',
             // 'compile-ol-debug',
             ['make-script', 'make-style'], 
-            'copy'
+            'copy',
+            'watch',
+            'start-server'
         );
     });
 

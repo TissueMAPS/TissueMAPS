@@ -11,11 +11,16 @@
     "files": [
         "app/src/core/globals.ts",
 
+        "app/typedefs/libs.d.ts",
         "app/typedefs/DefinitelyTyped/underscore/underscore.d.ts",
         "app/typedefs/DefinitelyTyped/angularjs/angular.d.ts",
         "app/typedefs/DefinitelyTyped/bluebird/bluebird.d.ts",
         "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
         "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
+
+        "app/src/tmaps.module.ts",
+        "app/src/tmaps.routes.ts",
+        "app/src/uiState.ts",
 
         "app/src/auth/constants/AUTH_EVENTS.ts",
         "app/src/auth/constants/USER_ROLES.ts",
@@ -134,6 +139,5 @@
         "app/src/userpanel/UserpanelWindowCtrl.ts",
 
         "app/src/setup/SetupWindowCtrl.ts"
-
     ]
 }

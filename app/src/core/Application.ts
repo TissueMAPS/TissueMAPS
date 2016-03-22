@@ -5,15 +5,9 @@ class Application {
 
     private _activeAppInstanceNumber = 0;
 
-    static $inject = [
-        '$q',
-        '$',
-        'openlayers'
-    ];
+    static $inject = ['$q'];
 
-    constructor(private $q: ng.IQService,
-                private $: JQueryStatic,
-                private ol) {
+    constructor(private $q: ng.IQService) {
         // Check if the executing browser is PhantomJS (= code runs in
         // testing mode.
         var isPhantom = /PhantomJS/.test(window.navigator.userAgent);
@@ -53,14 +47,14 @@ class Application {
         this.appInstances.forEach((viewer) => {
             viewer.hide();
         });
-        this.$('#viewer-window').hide();
+        $('#viewer-window').hide();
     }
 
     /**
      * Show the appInstances after hiding them with `hideViewports`.
      */
     show() {
-        this.$('#viewer-window').show();
+        $('#viewer-window').show();
         this.appInstances.forEach((inst) => {
             inst.viewport.update();
         });

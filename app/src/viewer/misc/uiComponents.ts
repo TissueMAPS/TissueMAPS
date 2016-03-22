@@ -9,7 +9,7 @@ angular.module('tmaps.ui')
     return {
         restrict: 'A', // only activate on element attribute
         require: '?ngModel', // get a hold of NgModelController
-        link: function (scope, element, attrs, ngModel) {
+        link: function (scope, element, attrs, ngModel: any) {
             if (!ngModel) return; // do nothing if no ng-model
 
             // Specify how UI should be updated

@@ -5,27 +5,17 @@
     ]);
 
     /**
-     * Injectable third-party modules.
-     */
-    angular.module('tmaps.thirdpartymodules', [])
-    .factory('openlayers', function() { return window.ol; })
-    .factory('_', function() { return window._; })
-    .factory('$', function() { return window.$; });
-
-    /**
      * Declare all modules here.
      * => Make sure to never redeclare a module in another file
      * (i.e. never call an already declared module with an array argument).
      */
     angular.module('tmaps.toolwindow', []); // TODO: remove this
     angular.module('tmaps.core', [
-        'tmaps.thirdpartymodules',
         'ui.bootstrap',
         'tmaps.auth'
     ]);
 
     angular.module('tmaps.ui', [
-        'tmaps.thirdpartymodules',
         'tmaps.core',
         'ui.slider',
         'ui.bootstrap',
@@ -59,7 +49,7 @@
     }]);
 
     tmaps.run(['$injector', function($injector) {
-        window.$injector = $injector;
+        window['$injector'] = $injector;
     }]);
 
     // Run this code after all providers have been registered
