@@ -52,12 +52,10 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
             object_name = mapobject_type.name
             mapobjects_by_external_id[mapobject_type.name] = {}
             object_data = data['/objects/%s' % object_name]
-            external_object_ids = \
-                map(int, object_data['map_data/outlines/coordinates/'].keys())
+            external_object_ids = object_data['ids'][()]
             has_is_border_info = 'is_border' in object_data
             if has_is_border_info:
                 is_border = object_data['is_border'][()]
-
             mapobjs = []
             for external_id in external_object_ids:
                 print 'Add Mapobject %d of type %s' % (external_id, object_name)
@@ -77,20 +75,33 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
         print 'Flush Mapobjects to DB'
         session.flush()
 
-#         # Second add features for mapobjects
-#         for mapobject_type in mapobject_types:
-#             object_name = mapobject_type.name
-#             object_data = data['/objects/%s' % object_name]
-#             feature_data = object_data['features']
-#             features = \
-#                 [Feature(name=n, mapobject_type_id=mapobject_type.id)
-#                  for n in feature_data.keys()]
-#             session.add_all(features)
-#             session.flush()
+        # Second add features for mapobjects
+        for mapobject_type in mapobject_types:
+            print repr(mapobject_type)
+            object_name = mapobject_type.name
+            object_data = data['/objects/%s' % object_name]
+            feature_data = object_data['features']
+            features = [Feature(name=fname, mapobject_type=mapobject_type)
+                        for fname in feature_data.keys()]
+            print 'Add all %d features' % len(features)
+            session.add_all(features)
+            print 'Flush'
+            session.flush()
 
-#             for feat in features:
-#                 feature_df = object_data['features/%s' % feat.name][()]
-#                 for row in feature_df
+            feature_values = []
+            for feat in features:
+                feature_arr = object_data['features/%s' % feat.name][()]
+                for idx, val in enumerate(feature_arr):
+                    mapobj = \
+                        mapobjects_by_external_id[mapobject_type.name][idx]
+                    feat_val = FeatureValue(
+                        mapobject=mapobj,
+                        value=val,
+                        tpoint=0,
+                        feature=feat)
+                    feature_values.append(feat_val)
+            print 'Flush feature values'
+            session.flush()
 
         # Third add outlines for all Mapobjects 
         for mapobject_type in mapobject_types:
@@ -144,10 +155,10 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
 
         print 'Flush MapobjectOutlines to DB'
 
-    except Exception as e:
+    except:
         session.rollback()
         print 'ERROR: Transaction rolled back.'
-        raise e
+        raise
     else:
         print 'SUCCESS: Commit.'
         session.commit()
