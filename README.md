@@ -18,6 +18,10 @@ Install the postgres database server.
 #### Via postgres.app (easiest)
 
     Install postgres.app from [](http://postgresapp.com/).
+    
+You also need to do the following:
+
+    sudo ln -s /Applications/Postgres.app/Contents/Versions/9.4/lib/libpq.5.dylib /usr/lib
 
 Add the command line tools to the PATH:
 
