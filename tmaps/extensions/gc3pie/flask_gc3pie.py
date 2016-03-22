@@ -41,7 +41,7 @@ from flask import _app_ctx_stack as stack
 import gc3libs
 import logging
 
-from tmlib import engine as tmlib_engine
+from tmlib.workflow import engine as tmlib_engine
 from tmaps.model import Model
 from tmaps.extensions import db
 
