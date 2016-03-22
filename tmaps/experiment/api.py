@@ -7,11 +7,6 @@ from flask.ext.jwt import current_identity
 
 import numpy as np
 
-import tmlib.experiment
-import tmlib.tmaps.workflow
-import tmlib.logging_utils
-import tmlib.tmaps.canonical
-
 from tmlib.models import Experiment, ChannelLayer, Submission
 
 from tmaps.extensions import db
@@ -21,12 +16,6 @@ from tmaps.response import (
     RESOURCE_NOT_FOUND_RESPONSE,
     NOT_AUTHORIZED_RESPONSE
 )
-
-import logging
-
-# configure tmlib loggers
-tmlib_logger = tmlib.logging_utils.configure_logging(logging.INFO)
-
 
 
 @api.route('/channel_layers/<channel_layer_id>/tiles/<path:filename>', methods=['GET'])
