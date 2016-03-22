@@ -5,10 +5,8 @@ import argparse
 import sqlalchemy.orm.exc
 
 import tmlib.models
-from tmlib.db_utils import Session
-from tmlib.db_utils import encode_pk
 
-# Don't trash the user with long tracebacks 
+# Don't trash the user with long tracebacks
 sys.tracebacklimit = 0
 
 
@@ -21,7 +19,7 @@ def valid_dir(path):
 def add_experiment(experiment_name, user_name, microscope_type, plate_format,
                    plate_acquisition_mode):
     # TODO: authentication
-    with Session() as session:
+    with tmlib.models.utils.Session() as session:
         try:
             user = session.query(tmlib.models.User).\
                 filter_by(name=user_name).one()
@@ -87,7 +85,7 @@ if __name__ == '__main__':
         args.plate_format, args.plate_acquisition_mode
     )
 
-    key = encode_pk(experiment_id)
+    key = tmlib.models.utils.encode_pk(experiment_id)
     key_file = os.path.join(args.output_dir, '%s.key' % args.experiment_name)
     with open(key_file, 'w') as f:
         f.write(key)

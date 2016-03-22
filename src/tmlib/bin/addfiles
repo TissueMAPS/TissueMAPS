@@ -1,0 +1,180 @@
+#!/usr/bin/env python
+import os
+import re
+import shutil
+import argparse
+import paramiko
+import sqlalchemy.orm.exc
+
+import tmlib.models
+from tmlib.steps.metaconfig import metadata_handler_factory
+
+
+class RemoteFileCopy(object):
+
+    def __enter__(self):
+        # TODO
+        hostname = ''
+        username = ''
+        key_name = ''
+        self.ssh = paramiko.SSHClient()
+        key = paramiko.RSAKey.from_private_key_file(
+            os.path.expanduser(os.path.join('~', '.ssh', key_name))
+        )
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.connect(hostname=hostname, username=username, pkey=key)
+        self.sftp = self.ssh.open_sftp()
+        return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        self.sftp.close()
+        self.ssh.close()
+
+    def copy(self, src, dst):
+        self.sftp.put(src, dst)
+
+
+class LocalFileCopy(object):
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        pass  # ???
+
+    def copy(self, src, dst):
+        shutil.copyfile(src, dst)
+
+
+def copy_factory(remote):
+    if remote:
+        return RemoteFileCopy
+    else:
+        return LocalFileCopy
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description='''
+            Add new microscope files to an existing acquisition
+            in the TissueMAPS database.
+        '''
+    )
+    parser.add_argument(
+        '-e', '--experiment_name', required=True,
+        help='name of the parent experiment'
+    )
+    parser.add_argument(
+        '-p', '--plate_name', required=True,
+        help='name of the parent plate'
+    )
+    parser.add_argument(
+        '-a', '--acquisition_name', required=True,
+        help='name of the new acquisition'
+    )
+    parser.add_argument(
+        '-s', '--source_directory', required=True,
+        help='path to directory that contains the microscope files'
+    )
+    parser.add_argument(
+        '-r', '--remote', action='store_true',
+        help='whether files should be uploaded to a remote server via ssh'
+    )
+
+    args = parser.parse_args()
+
+    with tmlib.models.utils.Session() as session:
+
+        try:
+            acquisition = session.query(tmlib.models.Acquisition).\
+                join(tmlib.models.Plate).\
+                join(tmlib.models.Experiment).\
+                filter(tmlib.models.Experiment.name == args.experiment_name).\
+                filter(tmlib.models.Plate.name == args.plate_name).\
+                filter(tmlib.models.Acquisition.name == args.acquisition_name).\
+                one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Acquisition "%s" with parent plate "%s" and experiment "%s" '
+                'does not exist!'
+                % (args.acquisition_name, args.plate_name, args.experiment_name)
+            )
+        except:
+            raise
+
+        # Register all files in the database.
+        # This will automatically set upload_status to "WAITING".
+        if not os.path.exists(args.source_directory):
+            raise OSError(
+                'Source directory does not exist: %s' % args.source_directory
+            )
+        microscope_type = acquisition.plate.experiment.microscope_type
+        module = metadata_handler_factory(microscope_type)[0]
+        r_image = re.compile(module.IMAGE_FILE_REGEX_PATTERN)
+        r_metadata = re.compile(module.METADATA_FILE_REGEX_PATTERN)
+        image_file_names = [
+            f.name for f in acquisition.microscope_image_files
+        ]
+        metdata_file_names = [
+            f.name for f in acquisition.microscope_metadata_files
+        ]
+        for f in os.listdir(args.source_directory):
+            if r_image.search(f):
+                name = os.path.basename(f)
+                if name not in image_file_names:
+                    print 'register image file "%s"' % name
+                    file = tmlib.models.MicroscopeImageFile(
+                        name=name, acquisition=acquisition
+                    )
+                    session.add(file)
+                    session.flush()
+            elif r_metadata.search(f):
+                name = os.path.basename(f)
+                if name not in metdata_file_names:
+                    print 'register metadata file "%s"' % name
+                    file = tmlib.models.MicroscopeMetadataFile(
+                        name=name, acquisition=acquisition
+                    )
+                    session.add(file)
+                    session.flush()
+
+        session.commit()
+
+        acquisition.status = 'UPLOADING'
+        session.add(acquisition)
+        session.commit()
+
+        Copy = copy_factory(args.remote)
+
+        with Copy() as c:
+
+            # Copy ("upload") the files and update their upload_status.
+            for f in acquisition.microscope_image_files:
+                if f.upload_status != 'UPLOAD_COMPLETE':
+                    print 'copy image file "%s"' % f.name
+                    src = os.path.join(args.source_directory, f.name)
+                    dst = f.location
+                    f.upload_status = 'UPLOADING'
+                    session.add(f)
+                    session.commmit()
+                    c.copy(src, dst)
+                    f.upload_status = 'UPLOAD_COMPLETE'
+                    session.add(f)
+                    session.commmit()
+
+            for f in acquisition.microscope_metadata_files:
+                if f.upload_status != 'UPLOAD_COMPLETE':
+                    print 'copy metadata file "%s"' % f.name
+                    src = os.path.join(args.source_directory, f.name)
+                    dst = f.location
+                    f.upload_status = 'UPLOADING'
+                    session.add(f)
+                    session.commmit()
+                    c.copy(src, dst)
+                    f.upload_status = 'UPLOAD_COMPLETE'
+                    session.add(f)
+                    session.commmit()
+
+        acquisition.status = 'UPLOAD_COMPLETE'
+        session.add(acquisition)

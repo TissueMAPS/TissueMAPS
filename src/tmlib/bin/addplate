@@ -3,12 +3,11 @@ import argparse
 import sqlalchemy.orm.exc
 
 import tmlib.models
-from tmlib.db_utils import Session
 
 
 def add_plate(plate_name, experiment_name):
     # TODO: authentication
-    with Session() as session:
+    with tmlib.models.utils.Session() as session:
         try:
             experiment = session.query(tmlib.models.Experiment).\
                 filter_by(name=experiment_name).one()

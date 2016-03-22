@@ -3,15 +3,14 @@ import argparse
 import sqlalchemy.orm.exc
 
 import tmlib.models
-from tmlib.db_utils import Session
 
 
 def add_acquisition(experiment_name, plate_name, acquisition_name):
-    # TODO: authentication
-    with Session() as session:
+    with tmlib.models.utils.Session() as session:
         try:
             plate = session.query(tmlib.models.Plate).\
-                filter(tmlib.modelsPlate.experiment.name == experiment_name).\
+                join(tmlib.models.Experiment).\
+                filter(tmlib.models.Experiment.name == experiment_name).\
                 one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(
@@ -25,10 +24,11 @@ def add_acquisition(experiment_name, plate_name, acquisition_name):
         )
         session.add(acquisition)
 
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-        desctiption='''
+        description='''
             Add a new acquisition to an existing plate
             in the TissueMAPS database.
         '''
@@ -48,4 +48,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    add_acquisition(args.experiment_name, args.plate_name, args.aquisition_name)
+    add_acquisition(args.experiment_name, args.plate_name, args.acquisition_name)
