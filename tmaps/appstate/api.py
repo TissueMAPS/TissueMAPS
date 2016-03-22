@@ -8,7 +8,7 @@ from tmaps.appstate import Appstate
 from tmaps.user import User
 from tmaps.extensions import db
 from tmaps.api import api
-from tmaps.extensions.encrypt import decode
+from tmaps.model import decode_pk
 
 
 # @api.route('/appstates/<appstate_id>', methods=['GET'])

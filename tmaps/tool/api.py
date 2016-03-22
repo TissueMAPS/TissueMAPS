@@ -7,7 +7,6 @@ from sqlalchemy.sql import text
 
 from tmaps.mapobject import MapobjectOutline
 from tmaps.extensions import db
-from tmaps.extensions.encrypt import decode
 from tmaps.tool import Tool, ToolSession
 from tmaps.tool.result import LabelResult
 from tmaps.api import api

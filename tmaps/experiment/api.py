@@ -13,7 +13,6 @@ import tmlib.logging_utils
 import tmlib.tmaps.canonical
 
 from tmlib.models import Experiment, ChannelLayer, Submission
-from tmlib.models.utils import decode_pk
 
 from tmaps.extensions import db
 from tmaps.api import api
