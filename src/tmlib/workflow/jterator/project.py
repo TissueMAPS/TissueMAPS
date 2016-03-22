@@ -46,13 +46,13 @@ class JtProject(object):
     of YAML pipeline and module descriptor files that can be edited in the
     JtUI app.
     '''
-    def __init__(self, project_dir, pipe_name, pipe=None, handles=None):
+    def __init__(self, project_location, pipe_name, pipe=None, handles=None):
         '''
         Initialize an instance of class Jtproject.
 
         Parameters
         ----------
-        project_dir: str
+        project_location: str
             path to the project folder
         pipe_name: str
             name of the pipeline
@@ -61,7 +61,7 @@ class JtProject(object):
         handles: List[dict], optional
             module descriptions (default: ``None``)
         '''
-        self.project_dir = project_dir
+        self.project_location = project_location
         self.pipe_name = pipe_name
         self.pipe = pipe
         self.handles = handles
@@ -75,7 +75,7 @@ class JtProject(object):
             name of the corresponding experiment
         '''
         self._experiment = os.path.basename(
-                            os.path.dirname(os.path.dirname(self.project_dir)))
+                            os.path.dirname(os.path.dirname(self.project_location)))
         return self._experiment
 
     @property
@@ -112,7 +112,7 @@ class JtProject(object):
 
     def _get_pipe_file(self, directory=None):
         if not directory:
-            directory = self.project_dir
+            directory = self.project_location
         pipe_files = glob.glob(os.path.join(directory, '*%s' % PIPE_SUFFIX))
         if len(pipe_files) == 1:
             return pipe_files[0]
@@ -127,7 +127,7 @@ class JtProject(object):
 
     def _get_handles_files(self, directory=None):
         if not directory:
-            directory = os.path.join(self.project_dir, 'handles')
+            directory = os.path.join(self.project_location, 'handles')
         else:
             directory = os.path.join(directory, 'handles')
         handles_files = glob.glob(os.path.join(
@@ -209,7 +209,7 @@ class JtProject(object):
             if handles_files:
                 for f in handles_files:
                     if not os.path.isabs(f):
-                        f = os.path.join(self.project_dir, f)
+                        f = os.path.join(self.project_location, f)
                     if not os.path.exists(f):
                         raise PipelineOSError(
                                 'Handles file does not exist: "%s"' % f)
@@ -230,7 +230,7 @@ class JtProject(object):
 
     def _create_pipe_file(self, repo_dir):
         pipe_file = os.path.join(
-                        self.project_dir,
+                        self.project_location,
                         '%s%s' % (self.pipe_name, PIPE_SUFFIX))
         pipe_skeleton = {
             'project': {
@@ -247,32 +247,32 @@ class JtProject(object):
             writer.write(pipe_file, pipe_skeleton, use_ruamel=True)
 
     def _create_handles_folder(self):
-        handles_dir = os.path.join(self.project_dir, 'handles')
+        handles_dir = os.path.join(self.project_location, 'handles')
         if not os.path.exists(handles_dir):
             os.mkdir(handles_dir)
 
     def _create_project_from_skeleton(self, skel_dir, repo_dir=None):
         pipe_file = self._get_pipe_file(skel_dir)
         if not repo_dir:
-            shutil.copy(pipe_file, self.project_dir)
+            shutil.copy(pipe_file, self.project_location)
         else:
             with YamlReader() as reader:
                 pipe_content = reader.read(pipe_file, use_ruamel=True)
             new_pipe_file = os.path.join(
-                                self.project_dir,
+                                self.project_location,
                                 '%s%s' % (self.pipe_name, PIPE_SUFFIX))
             with YamlWriter() as writer:
                 writer.write(new_pipe_file, pipe_content, use_ruamel=True)
         shutil.copytree(os.path.join(skel_dir, 'handles'),
-                        os.path.join(self.project_dir, 'handles'))
+                        os.path.join(self.project_location, 'handles'))
 
     def _remove_pipe_file(self, name):
-        pipe_file = os.path.join(self.project_dir,
+        pipe_file = os.path.join(self.project_location,
                                  '%s%s' % (name, PIPE_SUFFIX))
         os.remove(pipe_file)
 
     def _remove_handles_folder(self):
-        handles_dir = os.path.join(self.project_dir, 'handles')
+        handles_dir = os.path.join(self.project_location, 'handles')
         shutil.rmtree(handles_dir)
 
     def _modify_pipe(self):
@@ -293,7 +293,7 @@ class JtProject(object):
         handles_files = []
         # Create new .handles files for added modules
         for h in self.handles:
-            filename = os.path.join(self.project_dir, 'handles',
+            filename = os.path.join(self.project_location, 'handles',
                                     '%s%s' % (h['name'], HANDLES_SUFFIX))
             handles_files.append(filename)
         with YamlReader() as reader:
@@ -311,7 +311,7 @@ class JtProject(object):
                 with YamlWriter() as writer:
                     writer.write(handles_file, mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
-        existing_handles_files = glob.glob(os.path.join(self.project_dir,
+        existing_handles_files = glob.glob(os.path.join(self.project_location,
                                            'handles', '*%s' % HANDLES_SUFFIX))
         for f in existing_handles_files:
             if f not in handles_files:
@@ -352,9 +352,9 @@ class JtProject(object):
         Update the content of *.pipe* and *.handles* files on disk
         according to modifications to the pipeline and module descriptions.
         '''
-        if not os.path.exists(self.project_dir):
+        if not os.path.exists(self.project_location):
             raise PipelineOSError(
-                    'Project does not exist: %s' % self.project_dir)
+                    'Project does not exist: %s' % self.project_location)
         self._modify_pipe()
         self._modify_handles()
 
@@ -384,10 +384,10 @@ class JtProject(object):
             skel_dir = os.path.expandvars(skel_dir)
             skel_dir = os.path.expanduser(skel_dir)
             skel_dir = os.path.abspath(skel_dir)
-        if os.path.exists(self.project_dir):
+        if os.path.exists(self.project_location):
             raise PipelineOSError(
                     'Project already exists. Remove existing project first.')
-        os.mkdir(self.project_dir)
+        os.mkdir(self.project_location)
         # TODO: handle creation of project based on provided pipe
         if skel_dir:
             self._create_project_from_skeleton(skel_dir, repo_dir)
@@ -399,12 +399,12 @@ class JtProject(object):
         '''
         Remove a Jterator project, i.e. kill the folder on disk.
         '''
-        # remove_pipe_file(self.project_dir, self.pipe['name'])
-        # remove_handles_folder(self.project_dir)
-        if not os.path.exists(self.project_dir):
+        # remove_pipe_file(self.project_location, self.pipe['name'])
+        # remove_handles_folder(self.project_location)
+        if not os.path.exists(self.project_location):
             raise PipelineOSError(
-                    'Project does not exist: %s' % self.project_dir)
-        shutil.rmtree(self.project_dir)
+                    'Project does not exist: %s' % self.project_location)
+        shutil.rmtree(self.project_location)
 
 
 class JtAvailableModules(object):

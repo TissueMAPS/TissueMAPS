@@ -1,4 +1,3 @@
-import os
 import re
 import logging
 import bioformats
@@ -7,11 +6,17 @@ from cached_property import cached_property
 from lxml import etree
 from .ome_xml import XML_DECLARATION
 from .default import MetadataHandler
-from .. import utils
-from ..readers import MetadataReader
+from ... import utils
+from ...readers import MetadataReader
 from ..illuminati import stitch
 
 logger = logging.getLogger(__name__)
+
+#: Regular expression pattern to identify image files
+IMAGE_FILE_REGEX_PATTERN = '[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.'
+
+#: Supported extensions for metadata files
+METADATA_FILE_REGEX_PATTERN = '\.(mlf|mrf)$'
 
 
 class CellvoyagerMetadataReader(MetadataReader):
@@ -61,13 +66,14 @@ class CellvoyagerMetadataReader(MetadataReader):
         # from the ".mlf" file:
         mlf_tree = etree.parse(mlf_filename)
         mlf_root = mlf_tree.getroot()
-        mlf_elements = mlf_root.xpath('.//bts:MeasurementRecord',
-                                      namespaces=mlf_root.nsmap)
+        mlf_elements = mlf_root.xpath(
+            './/bts:MeasurementRecord', namespaces=mlf_root.nsmap
+        )
         mlf_ns = mlf_root.nsmap['bts']
 
         metadata.image_count = len(mlf_elements)
         lookup = defaultdict(list)
-        r = re.compile(CellvoyagerMetadataHandler.REGEX)
+        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
         for i, e in enumerate(mlf_elements):
             img = metadata.image(i)
             # A name has to be set as a flag for the handler to update
@@ -84,8 +90,10 @@ class CellvoyagerMetadataReader(MetadataReader):
             if e.attrib['{%s}Type' % mlf_ns] == 'IMG':
                 img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
             else:
-                logger.error('erroneous acquisition - no channel information '
-                             'available for image "%s"', img.Name)
+                logger.error(
+                    'erroneous acquisition - no channel information '
+                    'available for image "%s"', img.Name
+                )
                 img.Pixels.Channel(0).Name = None
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
@@ -132,11 +140,6 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     microscope.
     '''
 
-    SUPPORTED_FILE_EXTENSIONS = {'.mlf', '.mrf'}
-
-    REGEX = ('[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)'
-             'F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.')
-
     def __init__(self, image_files, additional_files, omexml_files,
                  plate):
         '''
@@ -154,7 +157,8 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             index of the corresponding plate within the experiment
         '''
         super(CellvoyagerMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate)
+                image_files, additional_files, omexml_files, plate
+        )
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
@@ -172,19 +176,19 @@ class CellvoyagerMetadataHandler(MetadataHandler):
         --------
         :py:class:`tmlib.metaconfig.cellvoyager.CellvoyagerMetadataReader`
         '''
-        files = [
-            f for f in self.additional_files
-            if os.path.splitext(f)[1] in self.SUPPORTED_FILE_EXTENSIONS
-        ]
-        if len(files) != len(self.SUPPORTED_FILE_EXTENSIONS):
-            logger.warning('%d metadata files would be required: "%s"'
-                           % (len(self.SUPPORTED_FILE_EXTENSIONS),
-                              '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
+        r = re.compile(METADATA_FILE_REGEX_PATTERN)
+        files = [f for f in self.additional_files if r.search(f)]
+        if not files:
+            # NOTE: This microscope stores each plane in a single file and
+            # most information is encoded in the the filename. Therefore, we
+            # don't through an error in case metadata files were not found, but
+            # only issue a warning.
+            logger.warning('Microscope metadata files were not found')
             self._ome_additional_metadata = bioformats.OMEXML(XML_DECLARATION)
             # Add an empty *Plate* element
             self._ome_additional_metadata.PlatesDucktype(
-                        self._ome_additional_metadata.root_node).newPlate(
-                        name='default')
+                self._ome_additional_metadata.root_node
+            ).newPlate(name='default')
         else:
             mlf_file = [f for f in files if f.endswith('.mlf')][0]
             mrf_file = [f for f in files if f.endswith('.mrf')][0]
@@ -197,5 +201,6 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     def _calculate_coordinates(positions):
         # y axis is inverted
         coordinates = stitch.calc_grid_coordinates_from_positions(
-                        positions, reverse_rows=True)
+            positions, reverse_rows=True
+        )
         return coordinates

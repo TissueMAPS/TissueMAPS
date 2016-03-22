@@ -11,14 +11,18 @@ from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
 from .ome_xml import XML_DECLARATION
-from ..metadata import ImageFileMapping
+from ...metadata import ImageFileMapping
 from ..illuminati import stitch
-from ..errors import MetadataError
-from ..errors import RegexError
-from ..errors import NotSupportedError
-from ..readers import MetadataReader
+from ...errors import MetadataError
+from ...errors import RegexError
+from ...errors import NotSupportedError
+from ...readers import MetadataReader
 
 logger = logging.getLogger(__name__)
+
+
+#: Regular expression pattern to identify image files
+IMAGE_FILE_REGEX_PATTERN = ''
 
 
 class MetadataHandler(object):
@@ -317,7 +321,7 @@ class MetadataHandler(object):
 
             return self.metadata
 
-        if not self.REGEX:
+        if not IMAGE_FILE_REGEX_PATTERN:
             raise RegexError('No regular expression available.')
 
         logger.info('configure OMEXML provided by additional files')
@@ -331,7 +335,7 @@ class MetadataHandler(object):
         md = self.metadata
 
         lookup = dict()
-        r = re.compile(self.REGEX)
+        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
         for i in xrange(n_images):
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
@@ -465,7 +469,7 @@ class MetadataHandler(object):
                     'works only when each image file contains a single plane.')
 
         if not regex:
-            regex = self.REGEX
+            regex = IMAGE_FILE_REGEX_PATTERN
         if not regex:
             raise RegexError('No regular expression provided.')
 
@@ -857,8 +861,6 @@ class DefaultMetadataHandler(MetadataHandler):
     Class for handling image metadata in standard cases where additional
     metadata files are not required or not available.
     '''
-
-    REGEX = ''
 
     def __init__(self, image_files, additional_files, omexml_files, plate):
         '''

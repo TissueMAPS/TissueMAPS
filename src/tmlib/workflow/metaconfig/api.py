@@ -1,19 +1,18 @@
 import os
-import re
 import logging
-import importlib
 import numpy as np
 import pandas as pd
+from . import metadata_handler_factory
 from .. import utils
 from .. import cfg
-from ..plate import determine_plate_dimensions
-from ..metadata import ImageFileMapping
 from ..api import ClusterRoutines
-from ..writers import JsonWriter
-from ..writers import DataTableWriter
-from ..errors import NotSupportedError
-from ..errors import MetadataError
-from ..formats import Formats
+from ..models.plate import determine_plate_dimensions
+from ...metadata import ImageFileMapping
+from ...writers import JsonWriter
+from ...writers import DataTableWriter
+from ...errors import NotSupportedError
+from ...errors import MetadataError
+from ...formats import Formats
 
 logger = logging.getLogger(__name__)
 
@@ -161,15 +160,6 @@ class MetadataConfigurator(ClusterRoutines):
 
         return job_descriptions
 
-    def _handler_factory(self, file_format):
-        module_name = re.sub(r'([^.]\w+)$', file_format, __name__)
-        logger.debug('import module for specified format "%s"' % module_name)
-        module_inst = importlib.import_module(module_name)
-        class_name = '%sMetadataHandler' % file_format.capitalize()
-        logger.debug('instantiate metadata handler class "%s"' % class_name)
-        class_inst = getattr(module_inst, class_name)
-        return class_inst
-
     def run_job(self, batch):
         '''
         Format the OMEXML metadata extracted from image files, complement it
@@ -202,25 +192,31 @@ class MetadataConfigurator(ClusterRoutines):
         :py:mod:`tmlib.metaconfig.cellvoyager`
         :py:mod:`tmlib.metaconfig.visiview`
         '''
-        handler_class = self._handler_factory(batch['file_format'])
+        handler_module, handler_class = metadata_handler_factory(
+            batch['file_format']
+        )
         handler = handler_class(
-                            batch['inputs']['uploaded_image_files'],
-                            batch['inputs']['uploaded_additional_files'],
-                            batch['inputs']['omexml_files'],
-                            batch['plate'])
+            batch['inputs']['uploaded_image_files'],
+            batch['inputs']['uploaded_additional_files'],
+            batch['inputs']['omexml_files'],
+            batch['plate']
+        )
 
         handler.configure_ome_metadata_from_image_files()
         handler.configure_ome_metadata_from_additional_files()
         missing_md = handler.determine_missing_metadata()
         if missing_md:
-            if batch['regex'] or handler.REGEX:
+            if batch['regex'] or handler_module.IMAGE_FILE_REGEX_PATTERN:
                 logger.warning('required metadata information is missing')
-                logger.info('try to retrieve missing metadata from filenames '
-                            'using regular expression')
+                logger.info(
+                    'try to retrieve missing metadata from filenames '
+                    'using regular expression'
+                )
                 n_wells = self.experiment.user_cfg.plate_format
                 plate_dimensions = determine_plate_dimensions(n_wells)
                 handler.configure_metadata_from_filenames(
-                    plate_dimensions=plate_dimensions, regex=batch['regex'])
+                    plate_dimensions=plate_dimensions, regex=batch['regex']
+                )
             else:
                 raise MetadataError(
                     'The following metadata information is missing:\n"%s"\n'
@@ -231,24 +227,30 @@ class MetadataConfigurator(ClusterRoutines):
         if missing_md:
             raise MetadataError(
                     'The following metadata information is missing:\n"%s"\n'
-                    % '", "'.join(missing_md))
+                    % '", "'.join(missing_md)
+            )
         # Once we have collected basic metadata such as information about
         # channels and focal planes, we try to determine the relative position
         # of images within the acquisition grid
         try:
-            logger.info('try to determine grid coordinates from microscope '
-                        'stage positions')
+            logger.info(
+                'try to determine grid coordinates from microscope '
+                'stage positions'
+            )
             handler.determine_grid_coordinates_from_stage_positions()
         except MetadataError as error:
-            logger.warning('microscope stage positions are not available: "%s"'
-                           % str(error))
-            logger.info('try to determine grid coordinates from provided '
-                        'stitch layout')
+            logger.warning(
+                'microscope stage positions are not available: "%s"'
+                % str(error)
+            )
+            logger.info(
+                'try to determine grid coordinates from provided stitch layout'
+            )
             handler.determine_grid_coordinates_from_layout(
-                    stitch_layout=batch['stitch_layout'],
-                    stitch_major_axis=batch['stitch_major_axis'],
-                    stitch_dimensions=(batch['n_vertical'],
-                                       batch['n_horizontal']))
+                stitch_layout=batch['stitch_layout'],
+                stitch_major_axis=batch['stitch_major_axis'],
+                stitch_dimensions=(batch['n_vertical'], batch['n_horizontal'])
+            )
 
         if not batch['keep_z_stacks']:
             logger.info('project focal planes to 2D')
@@ -270,8 +272,9 @@ class MetadataConfigurator(ClusterRoutines):
     @staticmethod
     def _write_metadata_to_file(filename, metadata):
         store = pd.HDFStore(filename, 'w')  # truncate file!
-        store.put('image_metadata', metadata,
-                  format='table', data_columns=True)
+        store.put(
+            'image_metadata', metadata, format='table', data_columns=True
+        )
         store.close()
 
     @staticmethod
@@ -315,18 +318,22 @@ class MetadataConfigurator(ClusterRoutines):
                 tpoints = np.unique(metadata.tpoint)
                 if source.acquisition_mode == 'multiplexing':
                     logger.info(
-                            '%d multiplexing iteration found in source # %d',
-                            len(tpoints), acquisition.index)
+                        '%d multiplexing iteration found in source # %d',
+                        len(tpoints), acquisition.index
+                    )
                 else:
                     logger.info(
-                            '%d time points found in source # %d',
-                            len(tpoints), acquisition.index)
+                        '%d time points found in source # %d',
+                        len(tpoints), acquisition.index
+                    )
 
                 # Create a cycle for each acquired time point
                 for t in tpoints:
 
-                    logger.info('update metadata information for cycle #%d',
-                                cycle_count)
+                    logger.info(
+                        'update metadata information for cycle #%d',
+                        cycle_count
+                    )
                     try:
                         cycle = plate.cycles[cycle_count]
                     except IndexError:
@@ -393,7 +400,8 @@ class MetadataConfigurator(ClusterRoutines):
                             raise ValueError('More than one reference found.')
                         new_element.ref_index = ix[0]
                         # Update name in the file mapper and make path relative
-                        new_element.ref_file = os.path.relpath(os.path.join(
+                        new_element.ref_file = os.path.relpath(
+                            os.path.join(
                                 cycle.image_dir,
                                 md.at[new_element.ref_index, 'name']
                             ),
@@ -415,15 +423,19 @@ class MetadataConfigurator(ClusterRoutines):
                     md['cycle'] = np.repeat(cycle.index, md.shape[0])
 
                     # Store the updated metadata in an HDF5 file
-                    filename = os.path.join(cycle.dir,
-                                            cycle.metadata_file)
+                    filename = os.path.join(
+                        cycle.dir, cycle.metadata_file
+                    )
                     with DataTableWriter(filename, truncate=True) as writer:
                         writer.write('image_metadata', md)
 
                     # Remove the intermediate cycle-specific mapper file
                     # since it is no no longer needed
-                    os.remove(os.path.join(acquisition.dir,
-                              acquisition.image_mapping_file))
+                    os.remove(
+                        os.path.join(
+                            acquisition.dir, acquisition.image_mapping_file
+                        )
+                    )
 
                     cycle_count += 1
 

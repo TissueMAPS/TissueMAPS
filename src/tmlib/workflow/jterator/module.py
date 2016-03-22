@@ -77,14 +77,14 @@ class ImageProcessingModule(object):
         self.outputs = dict()
         self.persistent_store = dict()
 
-    def build_log_filenames(self, log_dir, job_id):
+    def build_log_filenames(self, log_location, job_id):
         '''
         Build names of log-files into which the module will write
         standard output and error of the current job.
 
         Parameters
         ----------
-        log_dir: str
+        log_location: str
             path to directory for log output
         job_id: int
             one-based job index
@@ -94,8 +94,8 @@ class ImageProcessingModule(object):
         Dict[str, str]
             absolute path to files for standard output and error
         '''
-        out_file = os.path.join(log_dir, '%s_%.5d.out' % (self.name, job_id))
-        err_file = os.path.join(log_dir, '%s_%.5d.err' % (self.name, job_id))
+        out_file = os.path.join(log_location, '%s_%.5d.out' % (self.name, job_id))
+        err_file = os.path.join(log_location, '%s_%.5d.err' % (self.name, job_id))
         return {'stdout': out_file, 'stderr': err_file}
 
     def build_figure_filename(self, figures_dir, job_id):

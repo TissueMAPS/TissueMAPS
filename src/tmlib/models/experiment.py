@@ -7,8 +7,8 @@ from tmlib.models import Model
 from tmlib.models.utils import auto_remove_directory
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
-from ..steps.metaconfig import SUPPORTED_MICROSCOPE_TYPES
-from ..utils import autocreate_directory_property
+from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
+from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
 

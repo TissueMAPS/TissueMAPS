@@ -226,7 +226,7 @@ class PyramidBuilder(ClusterRoutines):
                 job = RunJob(
                         step_name=self.step_name,
                         arguments=self._build_run_command(batch),
-                        output_dir=self.log_dir,
+                        output_dir=self.log_location,
                         job_id=batch['id'],
                         index=batch['index']
                 )

@@ -20,14 +20,14 @@ class PipelineChecker(object):
     Class for checking pipeline and handles descriptions.
     '''
 
-    def __init__(self, project_dir, pipe_description,
+    def __init__(self, project_location, pipe_description,
                  handles_descriptions=None):
         '''
         Initialize an instance of class JtChecker.
 
         Parameters
         ----------
-        project_dir: str
+        project_location: str
             path to Jterator project folder
         pipe_description: dict
             pipeline description (module order)
@@ -36,7 +36,7 @@ class PipelineChecker(object):
         '''
         self.pipe_description = pipe_description
         self.handles_descriptions = handles_descriptions
-        self.project_dir = project_dir
+        self.project_location = project_location
 
     def check_pipeline(self):
         '''
@@ -48,7 +48,7 @@ class PipelineChecker(object):
                     'Pipeline file must contain the key "description".')
         if 'lib' in self.pipe_description.keys():
             libpath = self.pipe_description['lib']
-            libpath = path_utils.complete_path(libpath, self.project_dir)
+            libpath = path_utils.complete_path(libpath, self.project_location)
             if libpath:
                 if not exists(libpath):
                     raise PipelineDescriptionError(
@@ -136,7 +136,7 @@ class PipelineChecker(object):
         if lib_path:
             self.libpath = self.pipe_description['lib']
             self.libpath = path_utils.complete_path(
-                            self.libpath, self.project_dir)
+                            self.libpath, self.project_location)
         else:
             if 'JTLIB' in os.environ:
                 self.libpath = os.environ['JTLIB']
@@ -154,7 +154,7 @@ class PipelineChecker(object):
 
             # Check whether descriptor files exist
             handles_path = path_utils.complete_path(
-                            module['handles'], self.project_dir)
+                            module['handles'], self.project_location)
 
             if not self.handles_descriptions:
                 # A description could also be provided from the user interface.
@@ -283,7 +283,7 @@ class PipelineChecker(object):
         with YamlReader() as reader:
             for i, module in enumerate(self.pipe_description['pipeline']):
                 handles_path = path_utils.complete_path(
-                                module['handles'], self.project_dir)
+                                module['handles'], self.project_location)
                 if self.handles_descriptions is None:
                     handles = reader.read(handles_path)
                 else:

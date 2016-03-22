@@ -2,8 +2,6 @@
 Database models.
 '''
 
-import base
-
 from base import Model
 from user import User
 from experiment import Experiment

@@ -1,11 +1,11 @@
 import logging
-from . import logo
-from . import __version__
-from .api import WorkflowClusterRoutines
-from ..experiment import Experiment
-from .. import cli
-from ..args import SubmitArgs
-from ..args import ResumeArgs
+
+from tmlib.workflow.tmaps import logo
+from tmlib.workflow.api import WorkflowClusterRoutines
+from tmlib.models import Experiment
+from tmilb.workflow import cli
+from tmlib.workflow.args import SubmitArgs
+from tmlib.workflow.args import ResumeArgs
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class Tmaps(object):
 
     @staticmethod
     def _print_logo():
-        print logo % {'version': __version__}
+        print logo
 
     @property
     def name(self):

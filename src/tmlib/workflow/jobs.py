@@ -7,7 +7,8 @@ import gc3libs
 # from gc3libs.workflow import RetryableTask
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
-from .utils import create_datetimestamp
+
+from ..utils import create_datetimestamp
 
 logger = logging.getLogger(__name__)
 

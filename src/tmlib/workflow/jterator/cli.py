@@ -60,7 +60,7 @@ class Jterator(CommandLineInterface):
         '''
         self._print_logo()
         api = self._api_instance
-        logger.info('create project: %s' % api.project_dir)
+        logger.info('create project: %s' % api.project_location)
         api.project.create(args.variable_args.repo_dir,
                            args.variable_args.skel_dir)
 
@@ -76,7 +76,7 @@ class Jterator(CommandLineInterface):
         '''
         self._print_logo()
         api = self._api_instance
-        logger.info('remove project: %s' % api.project_dir)
+        logger.info('remove project: %s' % api.project_location)
         api.project.remove()
 
     def check(self, args):

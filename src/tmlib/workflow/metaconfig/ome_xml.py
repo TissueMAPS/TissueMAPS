@@ -1,5 +1,5 @@
 import re
-from ..errors import RegexError
+from ...errors import RegexError
 
 
 def get_image_ix(image_id):

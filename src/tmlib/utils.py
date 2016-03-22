@@ -473,14 +473,20 @@ class autocreate_directory_property(object):
             return self
         value = obj.__dict__[self.func.__name__] = self.func(obj)
         if not isinstance(value, basestring):
-            raise TypeError('Value of property "%s" must have type basestring.'
-                            % value)
+            raise TypeError(
+                'Value of property "%s" must have type basestring: %s'
+                % (self.func.__name__, value)
+            )
         if not value:
-            raise ValueError('Value of property "%s" cannot be empty.'
-                             % value)
+            raise ValueError(
+                'Value of property "%s" cannot be empty.'
+                % self.func.__name__
+        )
         if not os.path.exists(os.path.dirname(value)):
-            raise OSError('Value of property "%s" must be a valid path.'
-                          % value)
+            raise OSError(
+                'Value of property "%s" must be a valid path: %s'
+                % (self.func.__name__, value)
+            )
         if not os.path.exists(value):
             logger.debug('create directory: %s')
             os.mkdir(value)

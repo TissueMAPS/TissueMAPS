@@ -1,6 +1,5 @@
 import logging
 from . import logo
-from . import __version__
 from .api import MetadataExtractor
 from ..cli import CommandLineInterface
 
@@ -13,34 +12,20 @@ class Metaextract(CommandLineInterface):
     Command line interface for extraction of metadata from image files.
     '''
 
-    def __init__(self, experiment, verbosity, **kwargs):
+    def __init__(self, experiment, verbosity):
         '''
-        Initialize an instance of class Metaextract.
-
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment: tmlib.models.Experiment
+            experiment that should be processed
         verbosity: int
             logging level
-        kwargs: dict
-            additional key-value pairs that are ignored
         '''
         super(Metaextract, self).__init__(experiment, verbosity)
 
     @staticmethod
     def _print_logo():
-        print logo % {'version': __version__}
-
-    @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the command line program
-        '''
-        return self.__class__.__name__.lower()
+        print logo
 
     @property
     def _api_instance(self):

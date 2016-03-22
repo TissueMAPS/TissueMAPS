@@ -11,24 +11,23 @@ from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
 
-from . import __version__
-from .args import InitArgs
-from .args import SubmitArgs
-from .args import ResubmitArgs
-from .args import RunArgs
-from .args import CollectArgs
-from .args import CleanupArgs
-from .args import LogArgs
-from .args import InfoArgs
-from .args import GeneralArgs
-from .import_utils import load_method_args
-from .import_utils import load_var_method_args
-from .logging_utils import configure_logging
-from .logging_utils import map_logging_verbosity
-from .errors import JobDescriptionError
+from tmlib import __version__
+from tmlib.workflow.args import InitArgs
+from tmlib.workflow.args import SubmitArgs
+from tmlib.workflow.args import ResubmitArgs
+from tmlib.workflow.args import RunArgs
+from tmlib.workflow.args import CollectArgs
+from tmlib.workflow.args import CleanupArgs
+from tmlib.workflow.args import LogArgs
+from tmlib.workflow.args import InfoArgs
+from tmlib.workflow.args import GeneralArgs
+from tmlib.import_utils import load_method_args
+from tmlib.import_utils import load_var_method_args
+from tmlib.logging_utils import configure_logging
+from tmlib.logging_utils import map_logging_verbosity
+from tmlib.errors import JobDescriptionError
 
-from . import db_utils
-from tmlib.models import Experiment
+import tmlib.models
 
 logger = logging.getLogger(__name__)
 
@@ -39,23 +38,21 @@ AVAILABLE_METHODS = {
 
 
 def create_cli_method_args(step_name, method_name, **kwargs):
-    '''
-    Create the argument object required as an input argument for methods of the
-    :py:class:`tmlib.cli.CommandLineInterface` class.
+    '''Create the argument object required as an input argument for methods of
+    the :py:class:`tmlib.cli.CommandLineInterface` class.
 
     Parameters
     ----------
     step_name: str
-        name of the program
+        name of the step (command line program)
     method_name: str
         name of the method for which arguments should be build
     **kwargs: dict, optional
-        mapping of key-value pairs with names and values of
-        potential arguments
+        description of keyword arguments that are passed to the method
 
     Returns
     -------
-    tmlib.args.GeneralArgs
+    tmlibtmlib.workflow.args.GeneralArgs
         arguments object that can be parsed to the specified method
 
     Note
@@ -64,9 +61,9 @@ def create_cli_method_args(step_name, method_name, **kwargs):
 
     See also
     --------
-    :py:func:`tmlib.tmaps.description.load_method_args`
-    :py:func:`tmlib.tmaps.description.load_var_method_args`
-    :py:class:`tmlib.args.Args`
+    :py:func:`tmlib.import_utils.load_method_args`
+    :py:func:`tmlib.import_utils.load_var_method_args`
+    :py:class:`tmlibtmlib.workflow.args.Args`
     '''
     args_handler = load_method_args(method_name)
     method_args = args_handler(**kwargs)
@@ -76,36 +73,34 @@ def create_cli_method_args(step_name, method_name, **kwargs):
     return method_args
 
 
-def call_cli_method(cli_instance, method_name, method_args):
-    '''
-    Call a method of a *cli* class with the parsed command line arguments.
+# def call_cli_method(cli_instance, method_name, method_args):
+#     '''Call a method of a *cli* class with the parsed command line arguments.
 
-    Parameters
-    ----------
-    cli_instance: tmlib.cli.CommandLineInterface
-        an instance of an implementation of the
-        :py:class:`tmlib.cli.CommandLineInterface` base class
-    method_name: str
-        name of the method that should be called
-    method_args: tmlib.args.GeneralArgs
-        arguments required for the method
+#     Parameters
+#     ----------
+#     cli_instance: tmlib.steps.cli.CommandLineInterface
+#         an instance of an implementation of the
+#         :py:class:`tmlib.cli.CommandLineInterface` base class
+#     method_name: str
+#         name of the method that should be called
+#     method_args: tmlib.stepstmlib.workflow.args.GeneralArgs
+#         arguments required for the method
 
-    See also
-    --------
-    :py:func:`tmlib.cli.build_cli_method_args`
-    '''
-    getattr(cli_instance, method_name)(method_args)
+#     See also
+#     --------
+#     :py:func:`tmlib.steps.cli.create_cli_method_args`
+#     '''
+#     getattr(cli_instance, method_name)(method_args)
 
 
 class CommandLineInterface(object):
 
-    '''
-    Abstract base class for command line interfaces.
+    '''Abstract base class for command line interfaces.
 
     Note
     ----
     There must be a method for each subparser, where the name of the method
-    has to match the name of the corresponding subparser.
+    has to match that of the subparser.
     '''
 
     __metaclass__ = ABCMeta
@@ -116,8 +111,8 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment: tmlib.models.Experiment
+            experiment that should be processed
         verbosity: int
             logging level
 
@@ -130,11 +125,11 @@ class CommandLineInterface(object):
 
     @staticmethod
     def main(parser):
-        '''
-        Main entry point for command line interface.
+        '''Main entry point for command line interfaces.
 
-        Parsers the command line arguments to the corresponding handler
-        and configures logging.
+        Parsers the command line arguments to the corresponding handler,
+        retrieves the specified experiment from the database, and
+        configures logging.
 
         Parameters
         ----------
@@ -178,16 +173,13 @@ class CommandLineInterface(object):
         try:
             with open(arguments.key_file) as f:
                 key_file_content = f.read()
-            key = db_utils.decode_pk(key_file_content)
+            key = tmlib.models.utils.decode_pk(key_file_content)
 
-            # TODO: user authentication
-            with db_utils.Session() as session:
-                experiment = session.query(Experiment).get(key)
-
-                # TODO: do we have to pass the session or is it sufficient
-                # to use with the queried experiment object, since it defines the
-                # relations to all other required objects
-
+            with tmlib.models.utils.Session() as session:
+                experiment = session.query(tmlib.models.Experiment).get(key)
+                # Add the key_file to the experiment object so that I can
+                # later be parsed to subsequent "run" or "collect" calls
+                experiment.key_file = arguments.key_file
                 arguments.handler(arguments, experiment)
                 logger.info('COMPLETED')
                 sys.exit(0)
@@ -199,32 +191,6 @@ class CommandLineInterface(object):
                 sys.stderr.write(tb)
             sys.exit(1)
             return 1
-
-    def _call(self, args):
-        logger.debug('call "%s" method of class "%s"',
-                     args.method_name, self.__class__.__name__)
-        method_args = create_cli_method_args(step_name=self.name, **vars(args))
-        call_cli_method(self, args.method_name, method_args)
-
-    @abstractproperty
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the program
-        '''
-        pass
-
-    @abstractproperty
-    def _api_instance(self):
-        '''
-        Returns
-        -------
-        tmlib.api.ClusterRoutines
-            an instance of a the *api* class
-        '''
-        pass
 
     @abstractmethod
     def call(args, experiment):
@@ -245,6 +211,33 @@ class CommandLineInterface(object):
         ----
         `args` must have the attribute "subparser_name", which specifies the
         name of the subparser.
+        '''
+        pass
+
+    def _call(self, args):
+        logger.debug('call "%s" method of class "%s"',
+                     args.method_name, self.__class__.__name__)
+        method_args = create_cli_method_args(step_name=self.name, **vars(args))
+        # call_cli_method(self, args.method_name, method_args)
+        getattr(self, args.method_name)(method_args)
+
+    @property
+    def name(self):
+        '''
+        Returns
+        -------
+        str
+            name of the step (command line program)
+        '''
+        return self.__class__.__name__.lower()
+
+    @abstractproperty
+    def _api_instance(self):
+        '''
+        Returns
+        -------
+        tmlib.api.ClusterRoutines
+            an instance of a the *api* class
         '''
         pass
 
@@ -293,7 +286,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.CleanupArgs
+        args: tmlibtmlib.workflow.args.CleanupArgs
             method-specific arguments
         '''
         self._print_logo()
@@ -307,7 +300,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.InitArgs
+        args: tmlibtmlib.workflow.args.InitArgs
             method-specific arguments
 
         Returns
@@ -322,24 +315,24 @@ class CommandLineInterface(object):
             logger.info('backup log reports and job descriptions '
                         'of previous submission')
             timestamp = api.create_datetimestamp()
-            shutil.move(api.log_dir,
+            shutil.move(api.log_location,
                         '{name}_backup_{time}'.format(
-                            name=api.log_dir,
+                            name=api.log_location,
                             time=timestamp))
-            shutil.move(api.job_descriptions_dir,
+            shutil.move(api.job_descriptions_location,
                         '{name}_backup_{time}'.format(
-                            name=api.job_descriptions_dir,
+                            name=api.job_descriptions_location,
                             time=timestamp))
-            if os.path.exists(api.session_dir):
-                shutil.move(api.job_descriptions_dir,
+            if os.path.exists(api.session_location):
+                shutil.move(api.job_descriptions_location,
                         '{name}_backup_{time}'.format(
-                            name=api.session_dir,
+                            name=api.session_location,
                             time=timestamp))
         else:
             logger.debug('remove log reports and job descriptions '
                          'of previous submission')
-            shutil.rmtree(api.job_descriptions_dir)
-            shutil.rmtree(api.log_dir)
+            shutil.rmtree(api.job_descriptions_location)
+            shutil.rmtree(api.log_location)
 
         logger.info('create job descriptions')
         job_descriptions = api.create_job_descriptions(args.variable_args)
@@ -357,7 +350,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.RunArgs
+        args: tmlibtmlib.workflow.args.RunArgs
             method-specific arguments
 
         Note
@@ -380,7 +373,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.LogArgs
+        args: tmlibtmlib.workflow.args.LogArgs
             method-specific arguments
         '''
         if args.job is not None and args.phase != 'run':
@@ -408,7 +401,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.LogArgs
+        args: tmlibtmlib.workflow.args.LogArgs
             method-specific arguments
         '''
         if args.job is not None and args.phase != 'run':
@@ -534,7 +527,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.SubmitArgs
+        args: tmlibtmlib.workflow.args.SubmitArgs
             method-specific arguments
 
         Note
@@ -558,7 +551,7 @@ class CommandLineInterface(object):
             session = api.create_session(backup=True)
         else:
             session = api.create_session()
-        logger.debug('add jobs to session "%s"', api.session_dir)
+        logger.debug('add jobs to session "%s"', api.session_location)
         session.add(jobs)
         session.save_all()
         logger.debug('add session to engine store')
@@ -587,7 +580,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.ResubmitArgs
+        args: tmlibtmlib.workflow.args.ResubmitArgs
             method-specific arguments
 
         Note
@@ -601,7 +594,7 @@ class CommandLineInterface(object):
             raise AttributeError(
                     'Argument "jobs" can only be set when '
                     'value of argument "phase" is "run".')
-        if not os.path.exists(api.session_dir):
+        if not os.path.exists(api.session_location):
             raise OSError('There are no jobs that can be resubmitted.')
         jobs = self.create_jobs(
                     duration=args.duration,
@@ -610,7 +603,7 @@ class CommandLineInterface(object):
                     phase=args.phase,
                     ids=args.jobs)
         session = api.create_session(overwrite=False)
-        logger.debug('add jobs to session "%s"', api.session_dir)
+        logger.debug('add jobs to session "%s"', api.session_location)
         session.add(jobs)
         session.save_all()
         logger.debug('add session to engine store')
@@ -638,7 +631,7 @@ class CommandLineInterface(object):
 
         Parameters
         ----------
-        args: tmlib.args.CollectArgs
+        args: tmlibtmlib.workflow.args.CollectArgs
             method-specific arguments
 
         Note

@@ -11,9 +11,10 @@ description is correct and thereby prevent submission of an incorrectly
 described workflow in the first place.
 '''
 from collections import OrderedDict
-from .description import WorkflowDescription
-from .description import WorkflowStageDescription
-from .description import WorkflowStepDescription
+
+from ..workflow import WorkflowDescription
+from ..workflow import WorkflowStageDescription
+from ..workflow import WorkflowStepDescription
 from ..errors import WorkflowDescriptionError
 from .. import utils
 

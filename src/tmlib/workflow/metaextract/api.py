@@ -19,14 +19,14 @@ class MetadataExtractor(ClusterRoutines):
 
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment: tmlib.models.Experiment
+            experiment that should be processed
         step_name: str
-            name of the corresponding program (command line interface)
+            name of the corresponding step
         verbosity: int
             logging level
         kwargs: dict
-            mapping of additional key-value pairs that are ignored
+            ignored keyword arguments
         '''
         super(MetadataExtractor, self).__init__(
                 experiment, step_name, verbosity)
@@ -44,22 +44,23 @@ class MetadataExtractor(ClusterRoutines):
 
         Parameters
         ----------
-        args: tmlib.metaextract.args.MetaextractArgs
+        args: tmlib.steps.metaextract.args.MetaextractArgs
             step-specific arguments
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        Dict[str, List[dict]]
             job descriptions
         '''
         job_descriptions = dict()
         job_descriptions['run'] = list()
         count = 0
-        for source in self.experiment.sources:
-            for acquisition in source.acquisitions:
+        for plate in self.experiment.plates:
+            for acquisition in plate.acquisitions:
 
-                batches = self._create_batches(acquisition.image_files,
-                                               args.batch_size)
+                batches = self._create_batches(
+                    acquisition.microscope_image_files, args.batch_size
+                )
 
                 for j, files in enumerate(batches):
                     count += 1
@@ -67,14 +68,19 @@ class MetadataExtractor(ClusterRoutines):
                         'id': count,
                         'inputs': {
                             'image_files': [
-                                os.path.join(acquisition.image_dir, f)
+                                os.path.join(
+                                    acquisition.microscope_images_location,
+                                    f.name
+                                )
                                 for f in files
                             ]
                         },
                         'outputs': {
                             'omexml_files': [
-                                os.path.join(acquisition.omexml_dir,
-                                             self._get_ome_xml_filename(f))
+                                os.path.join(
+                                    acquisition.omexml_location,
+                                    self._get_ome_xml_filename(f.name)
+                                )
                                 for f in files
                             ]
                         }

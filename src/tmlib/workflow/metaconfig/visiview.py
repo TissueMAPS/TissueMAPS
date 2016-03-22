@@ -6,10 +6,17 @@ from collections import defaultdict
 from cached_property import cached_property
 from .ome_xml import XML_DECLARATION
 from .default import MetadataHandler
-from .. import utils
-from ..readers import MetadataReader
+from ... import utils
+from ...errors import RegexError
+from ...readers import MetadataReader
 
 logger = logging.getLogger(__name__)
+
+#: Regular expression pattern to identify image files
+IMAGE_FILE_REGEX_PATTERN = '.+_?(?P<w>[A-Z]\d{2})?_(?P<c>\w+)_s(?P<s>\d+)_?t?(?P<t>\d+)?\.'
+
+#: Supported extensions for metadata files
+METADATA_FILE_REGEX_PATTERN = '\.nd$'
 
 
 def read_nd_file(filename):
@@ -194,7 +201,7 @@ class VisiviewMetadataReader(MetadataReader):
             for i in xrange(len(sites))
         ]
         lut = defaultdict(list)
-        r = re.compile(VisiviewMetadataHandler.REGEX)
+        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
         for f in image_filenames:
             matches = r.search(f)
             # NOTE: We assume that the "site" id is global per plate
@@ -238,10 +245,6 @@ class VisiviewMetadataHandler(MetadataHandler):
     i.e. placed in another folder.
     '''
 
-    SUPPORTED_FILE_EXTENSIONS = {'.nd'}
-
-    REGEX = '.+_?(?P<w>[A-Z]\d{2})?_(?P<c>\w+)_s(?P<s>\d+)_?t?(?P<t>\d+)?\.'
-
     def __init__(self, image_files, additional_files, omexml_files,
                  plate):
         '''
@@ -277,17 +280,14 @@ class VisiviewMetadataHandler(MetadataHandler):
         --------
         :py:class:`tmlib.metaconfig.visiview.VisiviewMetadataHandler`
         '''
-        files = [
-            f for f in self.additional_files
-            if os.path.splitext(f)[1] in self.SUPPORTED_FILE_EXTENSIONS
-        ]
-        if len(files) != len(self.SUPPORTED_FILE_EXTENSIONS):
-            raise OSError('%d metadata files are required: "%s"'
-                          % (len(self.SUPPORTED_FILE_EXTENSIONS),
-                             '", "'.join(self.SUPPORTED_FILE_EXTENSIONS)))
+        r = re.compile(METADATA_FILE_REGEX_PATTERN)
+        files = [f for f in self.additional_files if r.search(f)]
+        if not files:
+            raise RegexError('Mircoscope metadata files were not found.')
         nd_file = files[0]
         logger.info('read metadata from provided files')
         with VisiviewMetadataReader() as reader:
             self._ome_additional_metadata = reader.read(
-                                                nd_file, self.image_files)
+                nd_file, self.image_files
+            )
         return self._ome_additional_metadata

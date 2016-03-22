@@ -24,7 +24,7 @@ def get_module_directories(repo_dir):
     return {k: os.path.join(repo_dir, v) for k, v in dirs.iteritems()}
 
 
-def complete_path(input_path, project_dir):
+def complete_path(input_path, project_location):
     '''
     Complete relative path variables.
 
@@ -32,7 +32,7 @@ def complete_path(input_path, project_dir):
     ----------
     input_path: str
         relative path the should be completed
-    project_dir: str
+    project_location: str
         absolute path to project folder
 
     Returns
@@ -46,7 +46,7 @@ def complete_path(input_path, project_dir):
         input_path = os.path.expandvars(input_path)
         input_path = os.path.expanduser(input_path)
         if input_path.startswith('.'):
-            input_path = os.path.join(project_dir, input_path)
+            input_path = os.path.join(project_location, input_path)
         return input_path
 
 

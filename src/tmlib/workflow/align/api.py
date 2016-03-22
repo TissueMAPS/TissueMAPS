@@ -52,7 +52,7 @@ class ImageRegistration(ClusterRoutines):
             absolute path to the folder holding the calculated shift values
             of the image registration step
         '''
-        self._registration_dir = os.path.join(self.project_dir, 'registration')
+        self._registration_dir = os.path.join(self.project_location, 'registration')
         if not os.path.exists(self._registration_dir):
             os.mkdir(self._registration_dir)
         return self._registration_dir

@@ -8,27 +8,30 @@ from natsort import natsorted
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
-from cached_property import cached_property
 import gc3libs
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 from gc3libs.session import Session
 
-from . import utils
-from . import cluster_utils
-from .readers import JsonReader
-from .writers import JsonWriter
-from .errors import JobDescriptionError
-from .errors import WorkflowError
-from .jobs import RunJob
-from .jobs import RunJobCollection
-from .jobs import CollectJob
-from .tmaps.workflow import WorkflowStep
+from tmlib import utils
+from tmlib import cluster_utils
+from tmlib.readers import JsonReader
+from tmlib.writers import JsonWriter
+from tmlib.errors import JobDescriptionError
+from tmlib.errors import WorkflowError
+from tmlib.jobs import RunJob
+from tmlib.jobs import RunJobCollection
+from tmlib.jobs import CollectJob
+from tmlib.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)
 
 
 class BasicClusterRoutines(object):
+
+    '''
+    Abstract base class for cluster routines.
+    '''
 
     __metaclass__ = ABCMeta
 
@@ -38,44 +41,35 @@ class BasicClusterRoutines(object):
 
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment: tmlib.models.Experiment
+            experiment
         '''
         self.experiment = experiment
 
     @abstractproperty
-    def project_dir(self):
+    def project_location(self):
         pass
 
-    @cached_property
-    def log_dir(self):
+    @utils.autocreate_directory_property
+    def log_location(self):
         '''
         Returns
         -------
         str
-            directory where log files are stored
-
-        Note
-        ----
-        The directory is created if it doesn't exist.
+            location where log files are stored
         '''
-        self._log_dir = os.path.join(self.project_dir, 'log')
-        if not os.path.exists(self._log_dir):
-            logger.debug('create output directory for log files: %s',
-                         self._log_dir)
-            os.mkdir(self._log_dir)
-        return self._log_dir
+        return os.path.join(self.project_location, 'log')
 
     @property
-    def session_dir(self):
+    def session_location(self):
         '''
         Returns
         -------
         str
-            directory for a
+            location for a
             `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
         '''
-        return os.path.join(self.project_dir, 'cli_session')
+        return os.path.join(self.project_location, 'cli_session')
 
     @property
     def datetimestamp(self):
@@ -128,16 +122,16 @@ class BasicClusterRoutines(object):
         '''
         logger.info('create session')
         if overwrite:
-            if os.path.exists(self.session_dir):
-                logger.debug('remove session directory: %s', self.session_dir)
-                shutil.rmtree(self.session_dir)
+            if os.path.exists(self.session_location):
+                logger.debug('remove session directory: %s', self.session_location)
+                shutil.rmtree(self.session_location)
         if backup:
             current_time = self.create_datetimestamp()
-            backup_dir = '%s_%s' % (self.session_dir, current_time)
+            backup_dir = '%s_%s' % (self.session_location, current_time)
             logger.debug('create backup of session directory: %s', backup_dir)
-            shutil.move(self.session_dir, backup_dir)
+            shutil.move(self.session_location, backup_dir)
         return Session(
-            self.session_dir,
+            self.session_location,
             store_url=gc3pie_store_uri,  # TODO
             table_name='tasks'
         )
@@ -212,7 +206,7 @@ class BasicClusterRoutines(object):
             t_string = cluster_utils.format_timestamp(t_elapsed)
             logger.info('duration: %s', t_string)
 
-            logger.info('progress ...')
+            logger.info('progress tmlib..')
             engine.progress()
 
             status_data = cluster_utils.get_task_data(jobs)
@@ -241,57 +235,46 @@ class ClusterRoutines(BasicClusterRoutines):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, experiment, step_name, verbosity, **kwargs):
+    def __init__(self, experiment, step_name, verbosity):
         '''
         Initialize an instance of class ClusterRoutines.
 
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment: tmlib.models.Experiment
+            experiment
         step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        kwargs: dict
-            mapping of additional key-value pairs that are ignored
-
-        Returns
-        -------
-        tmlib.api.ClusterRoutines
         '''
         super(ClusterRoutines, self).__init__(experiment)
         self.step_name = step_name
         self.verbosity = verbosity
 
-    @cached_property
-    def project_dir(self):
+    @utils.autocreate_directory_property
+    def project_location(self):
         '''
         Returns
         -------
         str
             directory where *.job* files and log output will be stored
         '''
-        project_dir = os.path.join(self.experiment.dir,
-                                         'tmaps', self.step_name)
-        if not os.path.exists(project_dir):
-            logger.debug('create project directory: %s' % project_dir)
-            os.makedirs(project_dir)
-        return project_dir
+        return os.path.join(self.experiment.location, 'tmaps', self.step_name)
 
     @utils.autocreate_directory_property
-    def job_descriptions_dir(self):
+    def job_descriptions_location(self):
         '''
         Returns
         -------
         str
-            directory where job description files are stored
+            location where job description files are stored
 
         Note
         ----
         Directory is autocreated if it doesn't exist.
         '''
-        return os.path.join(self.project_dir, 'job_descriptions')
+        return os.path.join(self.project_location, 'job_descriptions')
 
     def get_job_descriptions_from_files(self):
         '''
@@ -308,15 +291,16 @@ class ClusterRoutines(BasicClusterRoutines):
         :py:exc:`tmlib.errors.JobDescriptionError`
             when no job descriptor files are found
         '''
-        directory = self.job_descriptions_dir
         job_descriptions = dict()
         job_descriptions['run'] = list()
-        run_job_files = glob.glob(os.path.join(
-                                  directory, '*_run_*.job.json'))
+        run_job_files = glob.glob(
+            os.path.join(self.job_descriptions_location, '*_run_*.job.json')
+        )
         if not run_job_files:
             raise JobDescriptionError('No job descriptor files found.')
-        collect_job_files = glob.glob(os.path.join(
-                                      directory, '*_collect.job.json'))
+        collect_job_files = glob.glob(
+            os.path.join(self.job_descriptions_location, '*_collect.job.json')
+        )
 
         for f in run_job_files:
             batch = self.read_job_file(f)
@@ -347,19 +331,34 @@ class ClusterRoutines(BasicClusterRoutines):
         recent one will be used (sorted by submission date and time point).
         '''
 
-        directory = self.log_dir
         if job_id is not None:
-            stdout_files = glob.glob(os.path.join(
-                                     directory, '*_run*_%.6d_*.out' % job_id))
-            stderr_files = glob.glob(os.path.join(
-                                     directory, '*_run*_%.6d_*.err' % job_id))
+            stdout_files = glob.glob(
+                os.path.join(
+                    self.job_descriptions_location,
+                    '*_run*_%.6d_*.out' % job_id
+                )
+            )
+            stderr_files = glob.glob(
+                os.path.join(
+                    self.job_descriptions_location,
+                    '*_run*_%.6d_*.err' % job_id
+                )
+            )
             if not stdout_files or not stderr_files:
                 raise IOError('No log files found for run job # %d' % job_id)
         else:
-            stdout_files = glob.glob(os.path.join(
-                                     directory, '*_collect_*.out'))
-            stderr_files = glob.glob(os.path.join(
-                                     directory, '*_collect_*.err'))
+            stdout_files = glob.glob(
+                os.path.join(
+                    self.job_descriptions_location,
+                    '*_collect_*.out'
+                )
+            )
+            stderr_files = glob.glob(
+                os.path.join(
+                    self.job_descriptions_location,
+                    '*_collect_*.err'
+                )
+            )
             if not stdout_files or not stderr_files:
                 raise IOError('No log files found for collect job')
         # Take the most recent log files
@@ -457,8 +456,9 @@ class ClusterRoutines(BasicClusterRoutines):
         The total number of jobs is limited to 10^6.
         '''
         return os.path.join(
-                    self.job_descriptions_dir,
-                    '%s_run_%.6d.job.json' % (self.step_name, job_id))
+            self.job_descriptions_location,
+            '%s_run_%.6d.job.json' % (self.step_name, job_id)
+        )
 
     def build_collect_job_filename(self):
         '''
@@ -469,8 +469,9 @@ class ClusterRoutines(BasicClusterRoutines):
             job with the given `job_id`
         '''
         return os.path.join(
-                    self.job_descriptions_dir,
-                    '%s_collect.job.json' % self.step_name)
+            self.job_descriptions_location,
+            '%s_collect.job.json' % self.step_name
+        )
 
     def _make_paths_absolute(self, batch):
         for key, value in batch['inputs'].items():
@@ -478,24 +479,25 @@ class ClusterRoutines(BasicClusterRoutines):
                 for k, v in batch['inputs'][key].items():
                     if isinstance(v, list):
                         batch['inputs'][key][k] = [
-                            os.path.join(self.experiment.dir, sub_v)
+                            os.path.join(self.experiment.location, sub_v)
                             for sub_v in v
                         ]
                     else:
                         batch['inputs'][key][k] = \
-                            os.path.join(self.experiment.dir, v)
+                            os.path.join(self.experiment.location, v)
             elif isinstance(value, list):
                 if len(value) == 0:
                     continue
                 if isinstance(value[0], list):
                     for i, v in enumerate(value):
                         batch['inputs'][key][i] = [
-                            os.path.join(self.experiment.dir, sub_v)
+                            os.path.join(self.experiment.location, sub_v)
                             for sub_v in v
                         ]
                 else:
                     batch['inputs'][key] = [
-                        os.path.join(self.experiment.dir, v) for v in value
+                        os.path.join(self.experiment.location, v)
+                        for v in value
                     ]
             else:
                 raise TypeError(
@@ -507,17 +509,17 @@ class ClusterRoutines(BasicClusterRoutines):
                 if isinstance(value[0], list):
                     for i, v in enumerate(value):
                         batch['outputs'][key][i] = [
-                            os.path.join(self.experiment.dir, sub_v)
+                            os.path.join(self.experiment.location, sub_v)
                             for sub_v in v
                         ]
                 else:
                     batch['outputs'][key] = [
-                        os.path.join(self.experiment.dir, v)
+                        os.path.join(self.experiment.location, v)
                         for v in value
                     ]
             elif isinstance(value, basestring):
                 batch['outputs'][key] = \
-                    os.path.join(self.experiment.dir, value)
+                    os.path.join(self.experiment.location, value)
             else:
                 raise TypeError(
                         'Value of "outputs" must have type list or str.')
@@ -549,9 +551,10 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         if not os.path.exists(filename):
             raise WorkflowError(
-                    'Job description file does not exist: %s.\n'
-                    'Initialize the step first by calling the "init" method.',
-                    filename)
+                'Job description file does not exist: %s.\n'
+                'Initialize the step first by calling the "init" method.'
+                % filename
+            )
         with JsonReader() as reader:
             batch = reader.read(filename)
             return self._make_paths_absolute(batch)
@@ -591,24 +594,24 @@ class ClusterRoutines(BasicClusterRoutines):
                 for k, v in batch['inputs'][key].items():
                     if isinstance(v, list):
                         batch['inputs'][key][k] = [
-                            os.path.relpath(sub_v, self.experiment.dir)
+                            os.path.relpath(sub_v, self.experiment.location)
                             for sub_v in v
                         ]
                     else:
                         batch['inputs'][key][k] = \
-                            os.path.relpath(v, self.experiment.dir)
+                            os.path.relpath(v, self.experiment.location)
             elif isinstance(value, list):
                 if len(value) == 0:
                     continue
                 if isinstance(value[0], list):
                     for i, v in enumerate(value):
                         batch['inputs'][key][i] = [
-                            os.path.relpath(sub_v, self.experiment.dir)
+                            os.path.relpath(sub_v, self.experiment.location)
                             for sub_v in v
                         ]
                 else:
                     batch['inputs'][key] = [
-                        os.path.relpath(v, self.experiment.dir)
+                        os.path.relpath(v, self.experiment.location)
                         for v in value
                     ]
             else:
@@ -621,17 +624,17 @@ class ClusterRoutines(BasicClusterRoutines):
                 if isinstance(value[0], list):
                     for i, v in enumerate(value):
                         batch['outputs'][key][i] = [
-                            os.path.relpath(sub_v, self.experiment.dir)
+                            os.path.relpath(sub_v, self.experiment.location)
                             for sub_v in v
                         ]
                 else:
                     batch['outputs'][key] = [
-                        os.path.relpath(v, self.experiment.dir)
+                        os.path.relpath(v, self.experiment.location)
                         for v in value
                     ]
             elif isinstance(value, basestring):
                 batch['outputs'][key] = \
-                    os.path.relpath(value, self.experiment.dir)
+                    os.path.relpath(value, self.experiment.location)
             else:
                 raise TypeError(
                         'Value of "outputs" must have type list or str.')
@@ -651,9 +654,9 @@ class ClusterRoutines(BasicClusterRoutines):
         The paths for "inputs" and "outputs" are made relative to the
         experiment directory.
         '''
-        if not os.path.exists(self.job_descriptions_dir):
+        if not os.path.exists(self.job_descriptions_location):
             logger.debug('create directories for job descriptor files')
-            os.makedirs(self.job_descriptions_dir)
+            os.makedirs(self.job_descriptions_location)
         self._check_io_description(job_descriptions)
 
         with JsonWriter() as writer:
@@ -674,14 +677,14 @@ class ClusterRoutines(BasicClusterRoutines):
         job_id = batch['id']
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        command.append(self.experiment.dir)
+        command.append(self.experiment.key_file)
         command.extend(['run', '--job', str(job_id)])
         return command
 
     def _build_collect_command(self):
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        command.append(self.experiment.dir)
+        command.append(self.experiment.key_file)
         command.extend(['collect'])
         return command
 
@@ -755,7 +758,7 @@ class ClusterRoutines(BasicClusterRoutines):
                         "inputs": ,        # list or dict,
                         "outputs": ,       # list or dict,
                     },
-                    ...
+                    tmlib..
                     ]
                 "collect":
                     {
@@ -845,7 +848,7 @@ class ClusterRoutines(BasicClusterRoutines):
                 job = RunJob(
                         step_name=self.step_name,
                         arguments=self._build_run_command(batch),
-                        output_dir=self.log_dir,
+                        output_dir=self.log_location,
                         job_id=batch['id']
                 )
                 if duration:
@@ -871,9 +874,9 @@ class ClusterRoutines(BasicClusterRoutines):
             collect_job = CollectJob(
                     step_name=self.step_name,
                     arguments=self._build_collect_command(),
-                    output_dir=self.log_dir
+                    output_dir=self.log_location
             )
-            collect_job.requested_walltime = Duration('01:00:00')
+            collect_job.requested_walltime = Duration('06:00:00')
             collect_job.requested_memory = Memory(4, Memory.GB)
 
         else:

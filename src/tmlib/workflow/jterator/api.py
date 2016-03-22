@@ -65,11 +65,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.verbosity = verbosity
         self.engines = {'Python': None, 'R': None}
         self.project = JtProject(
-                    project_dir=self.project_dir, pipe_name=self.pipe_name,
+                    project_location=self.project_location, pipe_name=self.pipe_name,
                     pipe=pipe, handles=handles)
 
     @property
-    def project_dir(self):
+    def project_location(self):
         '''
         Returns
         -------
@@ -77,10 +77,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             directory where joblist file, pipeline and module descriptor files,
             log output, figures and data will be stored
         '''
-        project_dir = os.path.join(
+        project_location = os.path.join(
                             self.experiment.dir, 'tmaps',
                             '%s_%s' % (self.step_name, self.pipe_name))
-        return project_dir
+        return project_location
 
     @property
     def project(self):
@@ -105,7 +105,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         handles_descriptions = [h['description'] for h in self.project.handles]
         checker = PipelineChecker(
-                project_dir=self.project_dir,
+                project_location=self.project_location,
                 pipe_description=self.project.pipe['description'],
                 handles_descriptions=handles_descriptions
         )
@@ -124,13 +124,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
         ----
         Directory is created if it doesn't exist.
         '''
-        self._figures_dir = os.path.join(self.project_dir, 'figures')
+        self._figures_dir = os.path.join(self.project_location, 'figures')
         if not os.path.exists(self._figures_dir):
             os.mkdir(self._figures_dir)
         return self._figures_dir
 
     @cached_property
-    def module_log_dir(self):
+    def module_log_location(self):
         '''
         Returns
         -------
@@ -142,12 +142,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         ----
         Directory is created if it doesn't exist.
         '''
-        module_log_dir = os.path.join(self.project_dir, 'log_modules')
-        if not os.path.exists(module_log_dir):
+        module_log_location = os.path.join(self.project_location, 'log_modules')
+        if not os.path.exists(module_log_location):
             logger.debug('create directory for module log output: %s'
-                         % module_log_dir)
-            os.mkdir(module_log_dir)
-        return module_log_dir
+                         % module_log_location)
+            os.mkdir(module_log_location)
+        return module_log_location
 
     def remove_previous_output(self):
         '''
@@ -158,7 +158,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         These files are only produced in the first place when `plot` is set
         to ``True``.
         '''
-        shutil.rmtree(self.module_log_dir)
+        shutil.rmtree(self.module_log_location)
         shutil.rmtree(self.figures_dir)
 
     @cached_property
@@ -184,7 +184,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 libpath = os.environ['JTLIB']
             else:
                 raise OSError('JTLIB environment variable not set.')
-        libpath = path_utils.complete_path(libpath, self.project_dir)
+        libpath = path_utils.complete_path(libpath, self.project_location)
         self._pipeline = list()
         for i, element in enumerate(self.project.pipe['description']['pipeline']):
             if not element['active']:
@@ -356,7 +356,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     ],
                     'log_files': utils.flatten([
                         module.build_log_filenames(
-                            self.module_log_dir, i+1).values()
+                            self.module_log_location, i+1).values()
                         for module in self.pipeline
                     ])
                 },
@@ -403,7 +403,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             description of the *run* job
         '''
         checker = PipelineChecker(
-                project_dir=self.project_dir,
+                project_location=self.project_location,
                 pipe_description=self.project.pipe['description'],
                 handles_descriptions=[
                     h['description'] for h in self.project.handles
@@ -486,7 +486,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             output = module.run(self.engines[module.language])
 
             log_files = module.build_log_filenames(
-                                self.module_log_dir, job_id)
+                                self.module_log_location, job_id)
             module.write_output_and_errors(
                 log_files['stdout'], output['stdout'],
                 log_files['stderr'], output['stderr'])
