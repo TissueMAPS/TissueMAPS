@@ -3,7 +3,7 @@ import json
 from collections import defaultdict
 from abc import ABCMeta
 from abc import abstractmethod
-from ..args import VariableArgs
+from .args import VariableArgs
 from ..errors import WorkflowDescriptionError
 from ..import_utils import load_method_args
 from ..import_utils import load_var_method_args

@@ -12,9 +12,9 @@ from gc3libs.workflow import AbortOnError
 from .description import WorkflowDescription
 from .description import WorkflowStageDescription
 from ..errors import WorkflowTransitionError
-from ..jobs import CollectJob
-from ..jobs import RunJobCollection
-from ..jobs import MultiRunJobCollection
+from .jobs import CollectJob
+from .jobs import RunJobCollection
+from .jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
 
