@@ -1,24 +1,52 @@
 records:
-    - class: User
+    - class: tmaps.tool.Tool
+      args:
+          name: ClusterTool
+          description: K-means clustering tool.
+          icon: CLU
+          full_class_path: tools.cluster.ClusterTool
+    - class: tmaps.user.User
       args:
           name: testuser
           email: testuser@something.com
-          location: /some/location/on/disk
           password: '123'
-    - class: User
+    - class: tmaps.user.User
       args:
           name: testuser2
           email: testuser2@something.com
-          location: /some/location/on/disk
           password: '123'
-    - class: Experiment
+    - class: tmaps.experiment.Experiment
       args:
-          name: 150316-30min-PBS
+          name: 150820-Testset-CV
           description: Very nice exp
-          owner:
-              class: User
+          user:
+              class: tmaps.user.User
               lookup_props:
                   name: testuser
-          location: /Users/robin/Dev/TissueMAPS/expdata/150316-30min-PBS
           microscope_type: visiview
           plate_format: 96
+          root_directory: /Users/robin/Dev/TissueMAPS/expdata/
+          plate_acquisition_mode: multiplexing
+    - class: tmaps.experiment.Channel
+      args:
+          name: channel_01
+          experiment:
+              class: tmaps.experiment.Experiment
+              lookup_props:
+                  id: 1
+    - class: tmaps.experiment.ChannelLayer
+      args:
+          channel:
+              class: tmaps.experiment.Channel
+              lookup_props:
+                  name: channel_01
+          zplane: 0
+          tpoint: 0
+    - class: tmaps.experiment.ChannelLayer
+      args:
+          channel:
+              class: tmaps.experiment.Channel
+              lookup_props:
+                  name: channel_01
+          zplane: 1
+          tpoint: 0
