@@ -17,8 +17,21 @@
         "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
         "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
 
+        "app/src/auth/constants/AUTH_EVENTS.ts",
+        "app/src/auth/constants/USER_ROLES.ts",
+        "app/src/auth/controllers/LoginCtrl.ts",
+        "app/src/auth/controllers/LoginDialogCtrl.ts",
+        "app/src/auth/services/authInterceptor.ts",
+        "app/src/auth/services/authService.ts",
+        "app/src/auth/services/jwtUtil.ts",
+        "app/src/auth/services/loginDialogService.ts",
+        "app/src/auth/services/session.ts",
+        "app/src/auth/services/User.ts",
+        "app/src/auth/tmInlineLoginForm.ts",
+
         "app/src/util/uuid.ts",
         "app/src/util/pad.ts",
+        "app/src/util/moment.ts",
 
         "app/src/core/util/Color.ts",
         "app/src/core/util/Size.ts",
@@ -70,6 +83,9 @@
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
 
+        "app/src/viewer/misc/tmAttachToParent.ts",
+        "app/src/viewer/misc/uiComponents.ts",
+
         "app/src/viewer/tmViewerWindow.ts",
         "app/src/viewer/tmViewersTabbar.ts",
         "app/src/viewer/tmViewport.ts",
@@ -86,6 +102,8 @@
         "app/src/viewer/toolui/toolbar/tmToolbar.ts",
         "app/src/viewer/toolui/toolbar/ToolbarCtrl.ts",
 
+        "app/src/viewer/sidebar/tmViewerSidebar.ts",
+
         "app/src/viewer/sidebar/channels/ChannelControlsCtrl.ts",
         "app/src/viewer/sidebar/channels/ChannelCtrl.ts",
         "app/src/viewer/sidebar/channels/tmChannelSettings.ts",
@@ -98,12 +116,20 @@
 
         "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",
         "app/src/viewer/sidebar/selections/SelectionControlsCtrl.ts",
+        "app/src/viewer/sidebar/selections/tmSelectionSettings.ts",
 
         "app/src/viewer/sidebar/results/CurrentResultCtrl.ts",
         "app/src/viewer/sidebar/results/ResultsControlsCtrl.ts",
         "app/src/viewer/sidebar/results/ResultsSettingsCtrl.ts",
         "app/src/viewer/sidebar/results/ResultCtrl.ts",
         "app/src/viewer/sidebar/results/tmResultsSettings.ts",
+
+        "app/src/viewer/sidebar/tmMultiSelectionBox.ts",
+        "app/src/viewer/sidebar/MultiSelectionBoxCtrl.ts",
+        "app/src/viewer/sidebar/SelectableTabCtrl.ts",
+        "app/src/viewer/sidebar/removeLayerService.ts",
+
+        "app/src/viewer/sidebar/tmResizeHandle.ts",
 
         "app/src/userpanel/UserpanelWindowCtrl.ts",
 
