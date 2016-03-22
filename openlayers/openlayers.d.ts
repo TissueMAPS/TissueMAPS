@@ -1026,6 +1026,41 @@ declare module olx {
  */
 declare module ol {
 
+    var has: {
+        /**
+         * True if both the library and browser support Canvas.
+         * Always false if ol.ENABLE_CANVAS is set to false at compile time.
+         */
+        CANVAS: boolean;
+
+        /**
+         * True if both OpenLayers and browser support WebGL.
+         * Always false if ol.ENABLE_WEBGL is set to false at compile time.
+         */
+        WEBGL: boolean;
+
+        /**
+         * Indicates if DeviceOrientation is supported in the user's browser.
+         */
+        DEVICE_ORIENTATION: boolean;
+
+        /**
+         * The ratio between physical pixels and device-independent
+         * pixels (dips) on the device (window.devicePixelRatio).
+         */
+        DEVICE_PIXEL_RATIO: number;
+
+        /**
+         * Is HTML5 geolocation supported in the current browser?
+         */
+        GEOLOCATION: boolean;
+
+        /**
+         * True if browser supports touch events.
+         */
+        TOUCH: boolean;
+    }
+
     interface TileLoadFunctionType{ (image: ol.Image, url: string): void }
 
     interface ImageLoadFunctionType{ (image: ol.Image, url: string): void }
