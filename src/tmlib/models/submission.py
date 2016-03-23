@@ -27,28 +27,19 @@ class Submission(DateMixIn, Model):
     __tablename__ = 'submissions'
 
     # Table columns
-    task_id = Column(Integer, ForeignKey('tasks.id'))
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
-    user_id = Column(Integer, ForeignKey('users.id'))
 
     # Relationships to other tables
     experiment = relationship('Experiment', backref='submissions')
-    user = relationship('User', backref='submissions')
 
-    def __init__(self, task, experiment, user):
+    def __init__(self, experiment):
         '''
         Parameters
         ----------
-        task: tmlib.models.submission.Task
-            submitted task
         experiment: tmlib.experiment.Experiment
             parent experiment to which the submission belongs
-        user: tmlib.user.User
-            parent user to which the submission belongs
         '''
-        self.task_id = task.id
         self.experiment_id = experiment.id
-        self.user_id = user.id
 
 
 class Task(Model):
@@ -75,7 +66,7 @@ class Task(Model):
     memory = Column(Integer)
     cpu_time = Column(Interval)
     data = Column(LargeBinary)
-    submission_id = Column(Integer, ForeignKey('submission.id'))
+    submission_id = Column(Integer, ForeignKey('submissions.id'))
 
     # Relationships to other tables
     submission = relationship('Submission', backref='tasks')
