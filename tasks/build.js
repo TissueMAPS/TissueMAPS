@@ -1,11 +1,13 @@
 var argv = require('yargs').argv;
 
-module.exports = function(gulp, $) {
+module.exports = function(gulp, opt) {
     'use strict';
 
     var runSequence = require('run-sequence');
 
-    // Clean old build files
+    if (opt.prod) {
+        console.log('PRODUCTION BUILD');
+    }
     gulp.task('build', function() {
         return runSequence(
             'clean',

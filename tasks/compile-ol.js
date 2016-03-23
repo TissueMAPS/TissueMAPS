@@ -1,4 +1,4 @@
-module.exports = function(gulp, $) {
+module.exports = function(gulp, opt) {
     'use strict';
 
     var exec = require('child_process').exec;

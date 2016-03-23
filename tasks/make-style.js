@@ -1,10 +1,14 @@
-module.exports = function(gulp, $) {
+module.exports = function(gulp, opt) {
     'use strict';
 
     var less = require('gulp-less');
-    var rename = require('gulp-rename');
     var concat = require('gulp-concat');
     var es = require('event-stream');
+    var livereload = require('gulp-livereload');
+    var _if = require('gulp-if');
+    var rev = require('gulp-rev');
+    var rename = require('gulp-rename');
+    var banner = require('gulp-banner');
 
     // Compile LESS files
     gulp.task('make-style', function() {
@@ -22,7 +26,16 @@ module.exports = function(gulp, $) {
 
         return es.merge(additionalStyles, appStyle)
         .pipe(concat('style.css'))
-        .pipe(gulp.dest($.cfg.destFolder));
+            // Production
+            .pipe(_if(opt.prod, rev()))
+            // .pipe(banner(opt.banner))
+        .pipe(gulp.dest(opt.destFolder))
+            // Production
+            .pipe(_if(opt.prod, rev.manifest()))
+            .pipe(_if(opt.prod, rename('rev-manifest-style.json')))
+            .pipe(gulp.dest(opt.destFolder))
+            // Development
+            .pipe(_if(opt.reload, livereload()));
     });
 
 };
