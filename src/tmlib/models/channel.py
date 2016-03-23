@@ -4,10 +4,10 @@ from xml.dom import minidom
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
-from tmlib.models.base import Model
+from tmlib.models.base import Model, DateMixIn
 from tmlib.models.utils import auto_create_directory
 from tmlib.models.utils import auto_remove_directory
-from ..utils import autocreate_directory_property
+from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 @auto_remove_directory(lambda obj: obj.location)
 @auto_create_directory(lambda obj: obj.location)
-class Channel(Model):
+class Channel(DateMixIn, Model):
 
     '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
@@ -40,11 +40,11 @@ class Channel(Model):
     #: Name of the corresponding database table
     __tablename__ = 'channels'
 
-    #: Table columns
+    # Table columns
     name = Column(String, index=True)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     experiment = relationship('Experiment', backref='channels')
 
     def __init__(self, name, experiment):
@@ -117,12 +117,12 @@ class ChannelLayer(Model):
     #: Name of the corresponding database table
     __tablename__ = 'channel_layers'
 
-    #: Table columns
+    # Table columns
     tpoint = Column(Integer)
     zplane = Column(Integer)
     channel_id = Column(Integer, ForeignKey('channels.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     channel = relationship('Channel', backref='layers')
 
     def __init__(self, tpoint, zplane, channel):

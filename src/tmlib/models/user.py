@@ -1,10 +1,10 @@
 from passlib.hash import sha256_crypt
 from sqlalchemy import Column, String
 
-from tmlib.models import Model
+from tmlib.models import Model, DateMixIn
 
 
-class User(Model):
+class User(DateMixIn, Model):
 
     '''A *user*.
 
@@ -21,7 +21,7 @@ class User(Model):
     #: Name of the corresponding database table
     __tablename__ = 'users'
 
-    #: Table columns
+    # Table columns
     name = Column(String, index=True, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)

@@ -4,12 +4,12 @@ from sqlalchemy import Column, String, Integer, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from tmlib.models.base import Model
+from tmlib.models.base import Model, DateMixIn
 
 logger = logging.getLogger(__name__)
 
 
-class MapobjectType(Model):
+class MapobjectType(DateMixIn, Model):
 
     '''A *map object type* represent a conceptual group of *map objects*
     (segmented objects) that reflect different biological entities,
@@ -31,7 +31,7 @@ class MapobjectType(Model):
     #: Name of the corresponding database table
     __tablename__ = 'mapobject_types'
 
-    #: Table columns
+    # Table columns
     name = Column(String)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
@@ -129,11 +129,11 @@ class Mapobject(Model):
     #: Name of the corresponding database table
     __tablename__ = 'mapobjects'
 
-    #: Table columns
+    # Table columns
     is_border = Column(Boolean)
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     mapobject_type = relationship('MapobjectType', backref='mapobjects')
 
     def __init__(self, is_border, mapobject_type):
@@ -173,14 +173,14 @@ class MapobjectOutline(Model):
     #: Name of the corresponding database table
     __tablename__ = 'mapobject_outlines'
 
-    #: Table columns
+    # Table columns
     tpoint = Column(Integer)
     zplane = Column(Integer)
     geom_poly = Column(Geometry('POLYGON'))
     geom_centroid = Column(Geometry('POINT'))
     mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     mapobject = relationship('Mapobject', backref='mapobject_outlines')
 
     def __init__(self, tpoint, zplane, geom_poly, geom_centroid, mapobject):
@@ -250,7 +250,7 @@ class MapobjectOutline(Model):
         )
 
 
-class Feature(Model):
+class Feature(DateMixIn, Model):
 
     '''A *feature* is a measurement that is associated with a particular
     *map object type*. For example the *feature* named "Morphology_Area"
@@ -270,11 +270,11 @@ class Feature(Model):
     #: Name of the corresponding database table
     __tablename__ = 'features'
 
-    #: Table columns
+    # Table columns
     name = Column(String)
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     mapobject_type = relationship('MapobjectType', backref='features')
 
     def __init__(self, name, mapobject_type):
@@ -312,13 +312,13 @@ class FeatureValue(Model):
     #: Name of the corresponding database table
     __tablename__ = 'feature_values'
 
-    #: Table columns
+    # Table columns
     value = Column(Float(precision=15))
     tpoint = Column(Integer)
     feature_id = Column(Integer, ForeignKey('features.id'))
     mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     feature = relationship('Feature', backref='feature_values')
     mapobject = relationship('Mapobject', backref='feature_values')
 

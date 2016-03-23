@@ -3,9 +3,9 @@ import logging
 from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
-from tmlib.models import Model
+from tmlib.models import Model, DateMixIn
 from tmlib.models.utils import auto_remove_directory
-from ..utils import autocreate_directory_property
+from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ CYCLE_LOCATION_FORMAT = 'cycle_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-class Cycle(Model):
+class Cycle(DateMixIn, Model):
 
     '''A *cycle* represents an individual image acquisition time point.
     In case of a time series experiment, *cycles* have different time point,
@@ -36,12 +36,12 @@ class Cycle(Model):
     #: Name of the corresponding database table
     __tablename__ = 'cycles'
 
-    #: Table columns
+    # Table columns
     tpoint = Column(Integer, index=True)
     status = Column(String)
     plate_id = Column(Integer, ForeignKey('plates.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     plate = relationship('Plate', backref='cycles')
 
     def __init__(self, tpoint, plate):

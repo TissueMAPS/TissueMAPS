@@ -5,10 +5,10 @@ from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
-from tmlib.models.base import Model
-from tmlib.models.utils import auto_create_directory
+from tmlib.models.base import Model, DateMixIn
 from tmlib.models.utils import auto_remove_directory
-from ..utils import autocreate_directory_property
+from tmlib.models.status import FileUploadStatus as fus
+from tmlib.utils import autocreate_directory_property
 # from ..metadata import ImageFileMapping
 # from ..readers import JsonReader
 
@@ -50,7 +50,7 @@ def determine_plate_dimensions(n_wells):
 
 
 @auto_remove_directory(lambda obj: obj.location)
-class Plate(Model):
+class Plate(DateMixIn, Model):
 
     '''A *plate* represents a container with reservoirs for biological
     samples (*wells*).
@@ -83,13 +83,12 @@ class Plate(Model):
     #: Name of the corresponding database table
     __tablename__ = 'plates'
 
-    #: Table columns
+    # Table columns
     name = Column(String, index=True)
     description = Column(Text)
-    status = Column(String)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     experiment = relationship('Experiment', backref='plates')
 
     def __init__(self, name, experiment, description=''):
@@ -107,9 +106,8 @@ class Plate(Model):
         self.name = name
         self.description = description
         self.experiment_id = experiment.id
-        self.status = 'WAITING'
 
-    @property
+    @autocreate_directory_property
     def location(self):
         '''str: location were the plate content is stored'''
         if self.id is None:
@@ -131,6 +129,19 @@ class Plate(Model):
     def cycles_location(self):
         '''str: location where cycles are stored'''
         return os.path.join(self.location, 'cycles')
+
+    @property
+    def status(self):
+        '''str: upload status based on the status of acquisitions'''
+        child_status = set([
+            f.upload_status for f in self.acquisitions
+        ])
+        if fus.UPLOADING in child_status:
+            return fus.UPLOADING
+        elif len(child_status) == 1 and fus.COMPLETE in child_status:
+            return fus.COMPLETE
+        else:
+            return fus.WAITING
 
     @property
     def n_wells(self):

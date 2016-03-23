@@ -6,12 +6,12 @@ from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
 from .. import utils
-from tmlib.models import Model
+from tmlib.models import Model, DateMixIn
 
 logger = logging.getLogger(__name__)
 
 
-class Well(Model):
+class Well(DateMixIn, Model):
 
     '''A *well* is a reservoir for biological samples and multiple *wells* are
     typically arranged as a grid on a *plate*.
@@ -33,11 +33,11 @@ class Well(Model):
     #: Name of the corresponding database table
     __tablename__ = 'wells'
 
-    #: Table columns
+    # Table columns
     name = Column(String, index=True)
     plate_id = Column(Integer, ForeignKey('plates.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     plate = relationship('Plate', backref='wells')
 
     def __init__(self, name, plate):
