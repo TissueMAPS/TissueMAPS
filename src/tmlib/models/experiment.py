@@ -3,7 +3,7 @@ import logging
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
-from tmlib.models import Model
+from tmlib.models import Model, DateMixIn
 from tmlib.models.utils import auto_remove_directory
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
@@ -17,7 +17,7 @@ EXPERIMENT_LOCATION_FORMAT = 'experiment_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-class Experiment(Model):
+class Experiment(DateMixIn, Model):
 
     '''
     An *experiment* is the main organizational unit of `TissueMAPS`.
@@ -60,7 +60,7 @@ class Experiment(Model):
     #: Name of the corresponding database table
     __tablename__ = 'experiments'
 
-    #: Table columns
+    # Table columns
     name = Column(String)
     microscope_type = Column(String)
     plate_format = Column(Integer)
@@ -70,7 +70,7 @@ class Experiment(Model):
     status = Column(String)
     user_id = Column(Integer, ForeignKey('users.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     user = relationship('User', backref='experiments')
 
     def __init__(self, name, user, microscope_type, plate_format,
@@ -129,7 +129,7 @@ class Experiment(Model):
         self.root_directory = root_directory
         self.status = 'WAITING'
 
-    @property
+    @autocreate_directory_property
     def location(self):
         '''str: location of the experiment,
         e.g. absolute path to a directory on disk

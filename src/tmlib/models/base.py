@@ -2,9 +2,24 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy import func
 
-from . import utils
+from tmlib import utils
 
 _Base = declarative_base()
+
+
+class DateMixIn(object):
+
+    '''
+    Mixin class to add datetime stamps "created_on" and "updated_on" to a
+    declarative class.
+    '''
+
+    created_on = Column(
+        DateTime, default=func.now()
+    )
+    updated_on = Column(
+        DateTime, default=func.now(), onupdate=func.now()
+    )
 
 
 class Model(_Base):
@@ -25,14 +40,8 @@ class Model(_Base):
 
     __abstract__ = True
 
-    #: Table columns
+    # Table columns
     id = Column(Integer, primary_key=True)
-    created_on = Column(
-        DateTime, default=func.now()
-    )
-    updated_on = Column(
-        DateTime, default=func.now(), onupdate=func.now()
-    )
 
     @property
     def hash(self):

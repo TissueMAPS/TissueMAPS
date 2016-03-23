@@ -3,9 +3,12 @@ import logging
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
-from tmlib.models.base import Model
+from tmlib.readers import JsonReader
+from tmlib.metadata import ImageFileMapping
+from tmlib.models.base import Model, DateMixIn
+from tmlib.models.status import FileUploadStatus as fus
 from tmlib.models.utils import auto_remove_directory
-from ..utils import autocreate_directory_property
+from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +17,7 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-class Acquisition(Model):
+class Acquisition(DateMixIn, Model):
 
     '''An *acquisition* contains all files belonging to one microscope image
     acquisition process. Note that in contrast to a *cycle*, an *acquisition*
@@ -46,13 +49,12 @@ class Acquisition(Model):
     #: Name of the corresponding database table
     __tablename__ = 'acquisitions'
 
-    #: Table columns
+    # Table columns
     name = Column(String, index=True)
     description = Column(Text)
-    status = Column(String)
     plate_id = Column(Integer, ForeignKey('plates.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     plate = relationship('Plate', backref='acquisitions')
 
     def __init__(self, name, plate, description=''):
@@ -70,7 +72,6 @@ class Acquisition(Model):
         self.name = name
         self.description = description
         self.plate_id = plate.id
-        self.status = 'WAITING'
 
     @autocreate_directory_property
     def location(self):
@@ -100,6 +101,22 @@ class Acquisition(Model):
         '''str: location where extracted OMEXML files are stored'''
         return os.path.join(self.location, 'omexml')
 
+    @property
+    def status(self):
+        '''str: upload status based on the status of microscope files'''
+        child_status = set([
+            f.upload_status for f in self.microscope_image_files
+        ])
+        child_status.union(set([
+            f.upload_status for f in self.microscope_metadata_files
+        ]))
+        if fus.UPLOADING in child_status:
+            return fus.UPLOADING
+        elif len(child_status) == 1 and fus.COMPLETE in child_status:
+            return fus.COMPLETE
+        else:
+            return fus.WAITING
+
     def as_dict(self):
         '''Return attributes as key-value pairs.
 
@@ -119,30 +136,22 @@ class Acquisition(Model):
     def __repr__(self):
         return '<Acquisition(id=%r, name=%r)>' % (self.id, self.name)
 
-    # @property
-    # def image_mapping_file(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     str
-    #         name of the file that contains key-value pairs for mapping
-    #         the images stored in the original image files to the
-    #         the OME *Image* elements in `image_metadata`
-    #     '''
-    #     return os.path.join(self.location, 'image_file_mapping.json')
+    @property
+    def image_mapping_file(self):
+        '''str: name of the file that contains a mapping of
+        images stored in the microscope image files to OME *Image* elements
+        '''
+        return os.path.join(self.location, 'image_file_mapping.json')
 
-    # @property
-    # def image_mapping(self):
-    #     '''
-    #     Returns
-    #     -------
-    #     List[tmlib.metadata.ImageFileMapping]
-    #         key-value pairs to map the location of individual planes within the
-    #         original files to the *Image* elements in the OMEXML
-    #     '''
-    #     image_mapping = list()
-    #     with JsonReader() as reader:
-    #         hashmap = reader.read(self.image_mapping_file)
-    #     for element in hashmap:
-    #         image_mapping.append(ImageFileMapping(**element))
-    #     return image_mapping
+    @property
+    def image_mapping(self):
+        '''List[tmlib.metadata.ImageFileMapping]: key-value pairs to map the
+        location of individual 2D pixel planes within the source microscope
+        image files to destination image images.
+        '''
+        image_mapping = list()
+        with JsonReader() as reader:
+            hashmap = reader.read(self.image_mapping_file)
+        for element in hashmap:
+            image_mapping.append(ImageFileMapping(**element))
+        return image_mapping

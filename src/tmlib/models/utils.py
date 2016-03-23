@@ -10,6 +10,18 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
+#: URI for the TissueMAPS database
+DATABASE_URI = os.path.expandvars('$TMAPS_DB_URI')
+
+
+def create_db_engine():
+    '''
+    Returns
+    -------
+    sqlalchemy.engine.base.Engine
+    '''
+    return create_engine(DATABASE_URI)
+
 
 def auto_remove_directory(get_location_func):
     """
@@ -65,24 +77,10 @@ def exec_func_after_insert(func):
     return class_decorator
 
 
-def create_tmaps_database_engine():
-    '''
-    Create an engine for the `TissueMAPS` database.
-
-    Returns
-    -------
-    sqlalchemy.engine.base.Engine
-    '''
-    url = 'postgresql://{user}:{password}@{host}:{port}/tissuemaps'.format(
-        user='markus', password=123, host='localhost', port=5432
-    )
-    return create_engine(url)
-
-
 class Session(object):
 
     '''
-    Class for creating a session scope for interaction with the database.
+    Create a session scope for interaction with the database.
     All changes get automatically committed at the end of the interaction.
     In case an error occurs, a rollback is issued.
 
@@ -90,20 +88,33 @@ class Session(object):
     --------
     >>>with Session() as session:
            session.query()
+
+    Note
+    ----
+    The engine is cached and reused in case of a reconnection within the same
+    Python process.
+    
+    Warining
+    --------
+    This is *not* thread-safe!
     '''
+    _engine = None
+    _session_factory = None
 
     def __enter__(self):
-        engine = create_tmaps_database_engine()
-        Session = sessionmaker(bind=engine)
-        self.session = Session()
-        return self.session
+        if Session._engine is None:
+            Session._engine = create_db_engine()
+        if Session._session_factory is None:
+            Session._session_factory = sessionmaker(bind=self._engine)
+        self.active_session = Session._session_factory()
+        return self.active_session
 
     def __exit__(self, except_type, except_value, except_trace):
         if except_value:
-            self.session.rollback()
+            self.active_session.rollback()
         else:
-            self.session.commit()
-        self.session.close()
+            self.active_session.commit()
+        self.active_session.close()
 
 
 def decode_pk(key):

@@ -1,10 +1,10 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, ForeignKey
+from sqlalchemy import Column, Integer, String, LargeBinary, Interval, ForeignKey
 from sqlalchemy.orm import relationship
 
-from tmlib.models import Model
+from tmlib.models import Model, DateMixIn
 
 
-class Submission(Model):
+class Submission(DateMixIn, Model):
 
     '''A *submission* handles the processing of a computational *task*
     on a cluster.
@@ -26,12 +26,12 @@ class Submission(Model):
     #: Name of the corresponding database table
     __tablename__ = 'submissions'
 
-    #: Table columns
+    # Table columns
     task_id = Column(Integer, ForeignKey('tasks.id'))
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     experiment = relationship('Experiment', backref='submissions')
     user = relationship('User', backref='submissions')
 
@@ -39,7 +39,7 @@ class Submission(Model):
         '''
         Parameters
         ----------
-        task: gc3libs.Task
+        task: tmlib.models.submission.Task
             submitted task
         experiment: tmlib.experiment.Experiment
             parent experiment to which the submission belongs
@@ -67,8 +67,42 @@ class Task(Model):
     #: Name of the corresponding database table
     __tablename__ = 'tasks'
 
-    #: Table columns
-    state = Column(String(128))
+    # Table columns
+    state = Column(String)
+    name = Column(String)
+    exitcode = Column(Integer)
+    time = Column(Interval)
+    memory = Column(Integer)
+    cpu_time = Column(Interval)
+    data = Column(LargeBinary)
+    submission_id = Column(Integer, ForeignKey('submission.id'))
 
-    #: Store for pickled Python task objects
-    data = LargeBinary()
+    # Relationships to other tables
+    submission = relationship('Submission', backref='tasks')
+
+    def __init__(self, state, name, exitcode, time, memory, cpu_time, data):
+        '''
+        Parameters
+        ----------
+        state: gc3libs.Run.State
+            processing state of the task
+        name: str
+            name of the task
+        exitcode: int
+            return value of the submitted program
+        time: datetime.timedelta
+            duration of the task
+        memory: int
+            memory used by the task in GB
+        cpu_time: datetime.timedelta
+            used cpu time of the task
+        data: gc3libs.Task
+            task object (will get pickled)
+        '''
+        self.state = state
+        self.name = name
+        self.exitcode = exitcode
+        self.time = time
+        self.memory = memory
+        self.cpu_time = cpu_time
+        self.data = data

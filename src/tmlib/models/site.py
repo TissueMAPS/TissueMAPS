@@ -2,12 +2,12 @@ import logging
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
-from tmlib.models import Model
+from tmlib.models import Model, DateMixIn
 
 logger = logging.getLogger(__name__)
 
 
-class Site(Model):
+class Site(DateMixIn, Model):
 
     '''A *site* is a unique `y`, `x` position projected onto the
     *plate* bottom plane that was scanned by the microscope.
@@ -27,12 +27,12 @@ class Site(Model):
     #: Name of the corresponding database table
     __tablename__ = 'sites'
 
-    #: Table columns
+    # Table columns
     well_position_y = Column(Integer, index=True)
     well_position_x = Column(Integer, index=True)
     well_id = Column(Integer, ForeignKey('wells.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     well = relationship('Well', backref='sites')
 
     def __init__(self, well_position_y, well_position_x, well):
@@ -99,7 +99,7 @@ class SiteAlignment(Model):
     #: Name of the corresponding database table
     __tablename__ = 'site_alignments'
 
-    #: Table columns
+    # Table columns
     y_shift = Column(Integer)
     x_shift = Column(Integer)
     upper_overhang = Column(Integer)
@@ -109,7 +109,7 @@ class SiteAlignment(Model):
     site_id = Column(Integer, ForeignKey('sites.id'))
     cycle_id = Column(Integer, ForeignKey('cycles.id'))
 
-    #: Relationships to other tables
+    # Relationships to other tables
     site = relationship('Site', backref='alignments')
     cycle = relationship('Cycle', backref='site_alignments')
 
