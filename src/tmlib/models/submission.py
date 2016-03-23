@@ -75,7 +75,7 @@ class Task(Model):
     memory = Column(Integer)
     cpu_time = Column(Interval)
     data = Column(LargeBinary)
-    submission_id = Column(Integer, ForeignKey('submission.id'))
+    submission_id = Column(Integer, ForeignKey('submissions.id'))
 
     # Relationships to other tables
     submission = relationship('Submission', backref='tasks')
