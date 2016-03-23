@@ -296,8 +296,7 @@ class Feature(Model):
         self.mapobject_type_id = mapobject_type.id
 
     def __repr__(self):
-        return '<Feature(id=%r, name=%r, mapobject_type=%r)>' % (
-            self.id, self.name, self.mapobject_type.name)
+        return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
 
 class FeatureValue(Model):
