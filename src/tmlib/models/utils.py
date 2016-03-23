@@ -33,8 +33,9 @@ def auto_remove_directory(get_location_func):
     def class_decorator(cls):
         def after_delete_callback(mapper, connection, target):
             loc = get_location_func(target)
-            logger.info('remove location: %s', loc)
-            shutil.rmtree(loc)
+            if os.path.exists(loc):
+                logger.info('remove location: %s', loc)
+                shutil.rmtree(loc)
 
         event.listen(cls, 'after_delete', after_delete_callback)
         return cls
