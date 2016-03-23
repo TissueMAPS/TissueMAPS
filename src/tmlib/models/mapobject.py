@@ -107,6 +107,9 @@ class MapobjectType(DateMixIn, Model):
 
         return outlines
 
+    def __repr__(self):
+        return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
+
 
 class Mapobject(Model):
 
@@ -148,6 +151,9 @@ class Mapobject(Model):
         '''
         self.is_border = is_border
         self.mapobject_type_id = mapobject_type.id
+
+    def __repr__(self):
+        return '<Mapobject(id=%d)>' % (self.id, self.name)
 
 
 class MapobjectOutline(Model):
@@ -289,6 +295,9 @@ class Feature(DateMixIn, Model):
         self.name = name
         self.mapobject_type_id = mapobject_type.id
 
+    def __repr__(self):
+        return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
+
 
 class FeatureValue(Model):
 
@@ -339,3 +348,7 @@ class FeatureValue(Model):
         self.tpoint = tpoint
         self.feature_id = feature.id
         self.mapobject_id = mapobject.id
+
+    def __repr__(self):
+        return '<FeatureValue(id=%d, tpoint=%d, feature_name=%r, value=%f)>' % (
+            self.id, self.tpoint, self.feature.name, self.value)

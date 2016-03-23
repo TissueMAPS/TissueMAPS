@@ -114,8 +114,8 @@ class Experiment(DateMixIn, Model):
 
         if plate_format not in SUPPORTED_PLATE_FORMATS:
             raise ValueError(
-                'Unsupported plate format! Supported are: %d'
-                % ', '.join(SUPPORTED_PLATE_FORMATS)
+                'Unsupported plate format! Supported are: %s'
+                % ', '.join(map(str, SUPPORTED_PLATE_FORMATS))
             )
         self.plate_format = plate_format
 
