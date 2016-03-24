@@ -132,9 +132,13 @@ def readme():
 
 def get_version():
     src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'src')
-    sys.path = [src_path] + sys.path
-    import tmlib.version
-    return tmlib.version.__version__
+    code_lines = open(os.path.join(src_path, 'tmlib', '__init__.py'))
+    for line in code_lines:
+        if '__version__' in line:
+            matches = re.match('__version__\s+=\s+\'(\S+)\'', line)
+            return matches.group(1)
+    raise Exception('Failed to find __version__ in tmlib.__init__.py!')
+
 
 
 def get_requirements():
