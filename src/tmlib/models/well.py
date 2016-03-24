@@ -11,7 +11,7 @@ from tmlib.models import Model, DateMixIn
 logger = logging.getLogger(__name__)
 
 
-class Well(DateMixIn, Model):
+class Well(Model, DateMixIn):
 
     '''A *well* is a reservoir for biological samples and multiple *wells* are
     typically arranged as a grid on a *plate*.
@@ -40,18 +40,18 @@ class Well(DateMixIn, Model):
     # Relationships to other tables
     plate = relationship('Plate', backref='wells')
 
-    def __init__(self, name, plate):
+    def __init__(self, name, plate_id):
         '''
         Parameters
         ----------
         name: str
             name of the well
-        plate: tmlib.models.Plate
-            parent plate to which the well belongs
+        plate_id: int
+            ID of the parent plate
         '''
         # TODO: ensure that name is unique within plate
         self.name = name
-        self.plate_id = plate.id
+        self.plate_id = plate_id
 
     @property
     def plate_coordinate(self):

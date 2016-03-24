@@ -9,7 +9,7 @@ from tmlib.models.base import Model, DateMixIn
 logger = logging.getLogger(__name__)
 
 
-class MapobjectType(DateMixIn, Model):
+class MapobjectType(Model, DateMixIn):
 
     '''A *map object type* represent a conceptual group of *map objects*
     (segmented objects) that reflect different biological entities,
@@ -26,30 +26,32 @@ class MapobjectType(DateMixIn, Model):
         ID of the parent experiment
     experiment: tmlib.models.Experiment
         parent experiment to which map objects belong
+    mapobjects: List[tmlib.models.Mapobject]
+        mapobjects that belong to the mapobject type
     '''
 
     #: Name of the corresponding database table
     __tablename__ = 'mapobject_types'
 
     # Table columns
-    name = Column(String)
+    name = Column(String, index=True)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     #: Relationship to other tables
     experiment = relationship('Experiment', backref='mapobject_types')
 
-    def __init__(self, name, experiment):
+    def __init__(self, name, experiment_id):
         '''
         Parameters
         ----------
         name: str
             name of the map objects type, e.g. "cells"
-        experiment: tmlib.models.Experiment
-            parent experiment to which map objects belong
+        experiment_id: int
+            ID of the parent experiment
         '''
         self.name = name
-        self.experiment_id = experiment.id
+        self.experiment_id = experiment_id
 
     @hybrid_property
     def min_poly_zoom(self):
@@ -127,30 +129,34 @@ class Mapobject(Model):
         ID of the parent mapobject
     mapobject_type: tmlib.models.MapobjectType
         parent mapobject type to which map objects belong
+    outlines: List[tmlib.models.MapobjectOutlines]
+        outlines that belong to the mapobject
+    feature_values: List[tmlib.models.FeatureValues]
+        feature values that belong to the mapobject
     '''
 
     #: Name of the corresponding database table
     __tablename__ = 'mapobjects'
 
     # Table columns
-    is_border = Column(Boolean)
+    is_border = Column(Boolean, index=True)
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
     # Relationships to other tables
     mapobject_type = relationship('MapobjectType', backref='mapobjects')
 
-    def __init__(self, is_border, mapobject_type):
+    def __init__(self, is_border, mapobject_type_id):
         '''
         Parameters
         ----------
         is_border: bool
             whether the object touches at the border of a *site* and is
             therefore only partially represented on the corresponding image
-        mapobject_type: tmlib.models.MapobjectType
-            parent map object type to which map objects belong
+        mapobject_type_id: int
+            ID of the parent mapobject
         '''
         self.is_border = is_border
-        self.mapobject_type_id = mapobject_type.id
+        self.mapobject_type_id = mapobject_type_id
 
     def __repr__(self):
         return '<Mapobject(id=%d)>' % (self.id, self.name)
@@ -180,16 +186,16 @@ class MapobjectOutline(Model):
     __tablename__ = 'mapobject_outlines'
 
     # Table columns
-    tpoint = Column(Integer)
-    zplane = Column(Integer)
+    tpoint = Column(Integer, index=True)
+    zplane = Column(Integer, index=True)
     geom_poly = Column(Geometry('POLYGON'))
     geom_centroid = Column(Geometry('POINT'))
     mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
 
     # Relationships to other tables
-    mapobject = relationship('Mapobject', backref='mapobject_outlines')
+    mapobject = relationship('Mapobject', backref='outlines')
 
-    def __init__(self, tpoint, zplane, geom_poly, geom_centroid, mapobject):
+    def __init__(self, tpoint, zplane, geom_poly, geom_centroid, mapobject_id):
         '''
         Parameters
         ----------
@@ -201,14 +207,14 @@ class MapobjectOutline(Model):
             EWKT polygon geometry
         geom_centroid: str
             EWKT point geometry
-        mapobject: tmlib.models.Mapobject
-            parent map object to which the outline belongs
+        mapobject_id: int
+            ID of parent mapobject
         '''
         self.tpoint = tpoint
         self.zplane = zplane
         self.geom_poly = geom_poly
         self.geom_centroid = geom_centroid
-        self.mapobject_id = mapobject.id
+        self.mapobject_id = mapobject_id
 
     @staticmethod
     def intersection_filter(x, y, z):
@@ -256,7 +262,7 @@ class MapobjectOutline(Model):
         )
 
 
-class Feature(DateMixIn, Model):
+class Feature(Model, DateMixIn):
 
     '''A *feature* is a measurement that is associated with a particular
     *map object type*. For example the *feature* named "Morphology_Area"
@@ -271,29 +277,31 @@ class Feature(DateMixIn, Model):
         ID of parent mapobject type
     mapobject_type: tmlib.models.MapobjectType
         parent map object type to which the feature belongs
+    values: List[tmlib.models.FeatureValues]
+        values that belong to the feature
     '''
 
     #: Name of the corresponding database table
     __tablename__ = 'features'
 
     # Table columns
-    name = Column(String)
+    name = Column(String, index=True)
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
     # Relationships to other tables
     mapobject_type = relationship('MapobjectType', backref='features')
 
-    def __init__(self, name, mapobject_type):
+    def __init__(self, name, mapobject_type_id):
         '''
         Parameters
         ----------
         name: str
             name of the feature
-        mapobject_type: tmlib.models.MapobjectType
-            parent map object type to which the feature belongs
+        mapobject_type_id: int
+            ID of parent mapobject type
         '''
         self.name = name
-        self.mapobject_type_id = mapobject_type.id
+        self.mapobject_type_id = mapobject_type_id
 
     def __repr__(self):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
@@ -328,10 +336,10 @@ class FeatureValue(Model):
     mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
 
     # Relationships to other tables
-    feature = relationship('Feature', backref='feature_values')
+    feature = relationship('Feature', backref='values')
     mapobject = relationship('Mapobject', backref='feature_values')
 
-    def __init__(self, value, tpoint, feature, mapobject):
+    def __init__(self, value, tpoint, feature, mapobject_id):
         '''
         Parameters
         ----------
@@ -341,14 +349,16 @@ class FeatureValue(Model):
             time point index
         feature: tmlib.models.Feature
             parent feature to which the feature belongs
-        mapobject: tmlib.models.MapobjectType
-            parent map object to which the feature belongs
+        mapobject_id: int
+            ID of the parent mapobject
         '''
         self.value = value
         self.tpoint = tpoint
         self.feature_id = feature.id
-        self.mapobject_id = mapobject.id
+        self.mapobject_id = mapobject_id
 
     def __repr__(self):
-        return '<FeatureValue(id=%d, tpoint=%d, feature_name=%r, value=%f)>' % (
-            self.id, self.tpoint, self.feature.name, self.value)
+        return (
+            '<FeatureValue(id=%d, tpoint=%d, feature_name=%r, value=%f)>'
+            % (self.id, self.tpoint, self.feature.name, self.value)
+        )

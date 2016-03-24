@@ -50,7 +50,7 @@ def determine_plate_dimensions(n_wells):
 
 
 @auto_remove_directory(lambda obj: obj.location)
-class Plate(DateMixIn, Model):
+class Plate(Model, DateMixIn):
 
     '''A *plate* represents a container with reservoirs for biological
     samples (*wells*).
@@ -78,6 +78,12 @@ class Plate(DateMixIn, Model):
         ID of the parent experiment
     experiment: tmlib.experiment.Experiment
         parent experiment to which the plate belongs
+    cycles: List[tmlib.model.Cycle]
+        cycles that belong to the plate
+    acquisitions: List[tmlib.model.Acqusition]
+        acquisitions that belong to the plate
+    wells: List[tmlib.model.Well]
+        wells that belong to the plate
     '''
 
     #: Name of the corresponding database table
@@ -91,21 +97,21 @@ class Plate(DateMixIn, Model):
     # Relationships to other tables
     experiment = relationship('Experiment', backref='plates')
 
-    def __init__(self, name, experiment, description=''):
+    def __init__(self, name, experiment_id, description=''):
         '''
         Parameters
         ----------
         name: str
             name of the plate
-        experiment: tmlib.experiment.Experiment
-            parent experiment to which the plate belongs
+        experiment_id: int
+            ID of the parent experiment
         description: str, optional
             description of the plate
         '''
         # TODO: ensure that name is unique within experiment
         self.name = name
         self.description = description
-        self.experiment_id = experiment.id
+        self.experiment_id = experiment_id
 
     @autocreate_directory_property
     def location(self):

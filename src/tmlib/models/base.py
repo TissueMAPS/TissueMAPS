@@ -9,9 +9,14 @@ _Base = declarative_base()
 
 class DateMixIn(object):
 
-    '''
-    Mixin class to add datetime stamps "created_on" and "updated_on" to a
-    declarative class.
+    '''Mixin class to add datetime stamps to a declarative class.
+
+    Attributes
+    ----------
+    created_on: datetime.datetime
+        date and time when the row was inserted into the column
+    updated_on: datetime.datetime
+        date and time when the row was last updated
     '''
 
     created_on = Column(
@@ -24,18 +29,14 @@ class DateMixIn(object):
 
 class Model(_Base):
 
-    '''Abstract base class for a `TissueMAPS` model.
+    '''Abstract base class for a `TissueMAPS` database model.
     
-    It maps Python classes to relational database tables.
+    It maps Python classes to relational tables.
 
     Attributes
     ----------
     id: int
-        unique global identifier
-    created_on: datetime.datetime
-        datetime of creation
-    updated_on: datetime.datetime
-        datetime of last modification
+        unique identifier number
     '''
 
     __abstract__ = True

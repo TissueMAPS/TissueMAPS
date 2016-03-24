@@ -5,7 +5,6 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 from tmlib.models.base import Model, DateMixIn
-from tmlib.models.utils import auto_create_directory
 from tmlib.models.utils import auto_remove_directory
 from tmlib.utils import autocreate_directory_property
 
@@ -20,8 +19,7 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-@auto_create_directory(lambda obj: obj.location)
-class Channel(DateMixIn, Model):
+class Channel(Model, DateMixIn):
 
     '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
@@ -35,6 +33,8 @@ class Channel(DateMixIn, Model):
         ID of the parent experiment
     experiment: tmlib.models.Experiment
         parent experiment to which the plate belongs
+    layers: List[tmlib.models.ChannelLayer]
+        layers belonging to the channel
     '''
 
     #: Name of the corresponding database table
@@ -42,25 +42,28 @@ class Channel(DateMixIn, Model):
 
     # Table columns
     name = Column(String, index=True)
+    index = Column(Integer, index=True)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     # Relationships to other tables
     experiment = relationship('Experiment', backref='channels')
 
-    def __init__(self, name, experiment):
+    def __init__(self, name, index, experiment_id):
         '''
         Parameters
         ----------
         name: str
-            name of the plate
-        experiment: tmlib.models.Experiment
-            parent experiment to which the plate belongs
+            name of the channel
+        index: int
+            zero-based channel index
+        experiment_id: int
+            ID of the parent experiment
         '''
         self.name = name
-        self.experiment = experiment
-        self.experiment_id = experiment.id
+        self.index = index
+        self.experiment_id = experiment_id
 
-    @property
+    @autocreate_directory_property
     def location(self):
         '''str: location were the channel content is stored'''
         if self.id is None:
@@ -125,7 +128,7 @@ class ChannelLayer(Model):
     # Relationships to other tables
     channel = relationship('Channel', backref='layers')
 
-    def __init__(self, tpoint, zplane, channel):
+    def __init__(self, tpoint, zplane, channel_id):
         '''
         Parameters
         ----------
@@ -133,12 +136,12 @@ class ChannelLayer(Model):
             time point index
         zplane: int
             z-plane index
-        channel: tmlib.models.Channel
-            channel object to which the plate belongs
+        channel_id: int
+            ID of the parent channel
         '''
         self.tpoint = tpoint
         self.zplane = zplane
-        self.channel_id = channel.id
+        self.channel_id = channel_id
 
     @property
     def location(self):

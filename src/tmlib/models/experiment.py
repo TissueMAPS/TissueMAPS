@@ -17,10 +17,9 @@ EXPERIMENT_LOCATION_FORMAT = 'experiment_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-class Experiment(DateMixIn, Model):
+class Experiment(Model, DateMixIn):
 
-    '''
-    An *experiment* is the main organizational unit of `TissueMAPS`.
+    '''An *experiment* is the main organizational unit of `TissueMAPS`.
     It represents a set of images and associated data.
 
     Images are grouped by *plates* and *cycles*. A *plate* represents a
@@ -49,7 +48,15 @@ class Experiment(DateMixIn, Model):
     user_id: int
         ID of the owner
     user: tmlib.models.User
-        the `TissueMAPS` user who owns the experiment
+        the user who owns the experiment
+    plates: List[tmlib.models.Plate]
+        plates that belong to the experiment
+    channels: List[tmlib.models.Channel]
+        channels that belong to the experiment
+    mapobject_types: List[tmlib.models.MapobjectType]
+        mapobject types that belong to the experiment
+    submissions: List[tmlib.models.Submission]
+        submissions that belong to the experiment
 
     See also
     --------
@@ -73,22 +80,22 @@ class Experiment(DateMixIn, Model):
     # Relationships to other tables
     user = relationship('User', backref='experiments')
 
-    def __init__(self, name, user, microscope_type, plate_format,
-                 plate_acquisition_mode, root_directory='$TMAPS_STORAGE',
-                 description=''):
+    def __init__(self, name, microscope_type, plate_format,
+                 plate_acquisition_mode, user_id,
+                 root_directory='$TMAPS_STORAGE', description=''):
         '''
         Parameters
         ----------
         name: str
             name of the experiment
-        user: tmlib.models.User
-            the `TissueMAPS` user who owns the experiment
         microscope_type: str
             microscope that was used to acquire the images
         plate_format: int
             number of wells in the plate, e.g. 384
         plate_acquisition_mode: str
             the way plates were acquired with the microscope
+        user_id: int
+            ID of the owner
         root_directory: str, optional
             absolute path to root directory where experiment directory
             should be created in (default: `$TMAPS_STORAGE`)
@@ -102,7 +109,7 @@ class Experiment(DateMixIn, Model):
         :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
         '''
         self.name = name
-        self.user_id = user.id
+        self.user_id = user_id
         self.description = description
 
         if microscope_type not in SUPPORTED_MICROSCOPE_TYPES:

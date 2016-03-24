@@ -7,59 +7,60 @@ from tmlib.models import Model, DateMixIn
 logger = logging.getLogger(__name__)
 
 
-class Site(DateMixIn, Model):
+class Site(Model, DateMixIn):
 
     '''A *site* is a unique `y`, `x` position projected onto the
     *plate* bottom plane that was scanned by the microscope.
 
     Attributes
     ----------
-    well_position_y: int
+    y: int
         zero-based row index of the image within the well
-    well_position_x: int
+    x: int
         zero-based column index of the image within the well
     well_id: int
         ID of the parent well
     well: tmlib.well.Well
         parent well to which the site belongs
+    alignment: tmlib.well.SiteAlignments
+        alignment that belongs to the site
     '''
 
     #: Name of the corresponding database table
     __tablename__ = 'sites'
 
     # Table columns
-    well_position_y = Column(Integer, index=True)
-    well_position_x = Column(Integer, index=True)
+    y = Column(Integer, index=True)
+    x = Column(Integer, index=True)
     well_id = Column(Integer, ForeignKey('wells.id'))
 
     # Relationships to other tables
     well = relationship('Well', backref='sites')
 
-    def __init__(self, well_position_y, well_position_x, well):
+    def __init__(self, y, x, well_id):
         '''
         Parameters
         ----------
-        well_position_y: int
+        y: int
             zero-based row index of the image within the well
-        well_position_x: int
+        x: int
             zero-based column index of the image within the well
-        well: tmlib.well.Well
-            parent well to which the site belongs
+        well_id: int
+            ID of the parent well
         '''
-        self.well_position_y = well_position_y
-        self.well_position_x = well_position_x
-        self.well = well
-        self.well_id = well.id
+        self.y = y
+        self.x = x
+        self.well_id = well_id
 
     @property
     def well_coordinate(self):
         '''Tuple[int]: row, column coordinate of the site within the well'''
-        return (self.well_position_y, self.well_position_x)
+        return (self.y, self.x)
 
     def __repr__(self):
         return (
-            '<Site(id=%r, well_name=%r, well_position_y=%r, well_position_x=%r)>'
-            % (self.id, self.well.name, self.well_position_y, self.well_position_x)
+            '<Site(id=%r, well=%r, y=%r, x=%r)>'
+            % (self.id, self.well.name, self.y, self.x)
         )
 
 
@@ -110,11 +111,11 @@ class SiteAlignment(Model):
     cycle_id = Column(Integer, ForeignKey('cycles.id'))
 
     # Relationships to other tables
-    site = relationship('Site', backref='alignments')
+    site = relationship('Site', backref='alignment')  # one-to-one
     cycle = relationship('Cycle', backref='site_alignments')
 
     def __init__(self, x_shift, y_shift, upper_overhang, lower_overhang,
-                 right_overhang, left_overhang, site, cycle):
+                 right_overhang, left_overhang, site_id, cycle_id):
         '''
         Parameters
         ----------
@@ -134,10 +135,12 @@ class SiteAlignment(Model):
             overhanging pixels at the right side
         left_overhang: int
             overhanging pixels at the left side
+        site_id: int
+            ID of the parent site
         site: tmlib.models.Site
             parent site to which the site belongs
-        cycle: tmlib.models.Cycle
-            parent cycle to which the site belongs
+        cycle_id: int
+            ID of the parent cycle
         '''
         self.x_shift = x_shift
         self.y_shift = y_shift
@@ -145,5 +148,5 @@ class SiteAlignment(Model):
         self.lower_overhang = lower_overhang
         self.right_overhang = right_overhang
         self.left_overhang = left_overhang
-        self.site_id = site.id
-        self.cycle_id = cycle.id
+        self.site_id = site_id
+        self.cycle_id = cycle_id

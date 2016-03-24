@@ -4,6 +4,7 @@ import logging
 import base64
 import yaml
 import simplecrypt
+import sqlalchemy
 from sqlalchemy import event
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -20,7 +21,7 @@ def create_db_engine():
     -------
     sqlalchemy.engine.base.Engine
     '''
-    return create_engine(DATABASE_URI)
+    return sqlalchemy.create_engine(DATABASE_URI)
 
 
 def auto_remove_directory(get_location_func):
@@ -37,7 +38,7 @@ def auto_remove_directory(get_location_func):
                 logger.info('remove location: %s', loc)
                 shutil.rmtree(loc)
 
-        event.listen(cls, 'after_delete', after_delete_callback)
+        sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
         return cls
     return class_decorator
 
@@ -105,16 +106,79 @@ class Session(object):
         if Session._engine is None:
             Session._engine = create_db_engine()
         if Session._session_factory is None:
-            Session._session_factory = sessionmaker(bind=self._engine)
-        self.active_session = Session._session_factory()
-        return self.active_session
+            Session._session_factory = sqlalchemy.orm.sessionmaker(
+                bind=self._engine
+            )
+        self._sqla_session = Session._session_factory()
+        return self
 
     def __exit__(self, except_type, except_value, except_trace):
         if except_value:
-            self.active_session.rollback()
+            self._sqla_session.rollback()
         else:
-            self.active_session.commit()
-        self.active_session.close()
+            self._sqla_session.commit()
+        self._sqla_session.close()
+
+    def query(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.query`'''
+        return self._sqla_session.query(*args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.get`'''
+        return self._sqla_session.get(*args, **kwargs)
+
+    def add(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add`'''
+        return self._sqla_session.add(*args, **kwargs)
+
+    def add_all(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add_all`'''
+        return self._sqla_session.add_all(*args, **kwargs)
+
+    def flush(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.flush`'''
+        return self._sqla_session.flush(*args, **kwargs)
+
+    def commit(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.commit`'''
+        return self._sqla_session.commit(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.delete`'''
+        return self._sqla_session.delete(*args, **kwargs)
+
+    def get_or_create(self, model, **kwargs):
+        '''Get a particular instance of a model class if it already exists and
+        create it otherwise.
+
+        Parameters
+        ----------
+        model: type
+            an implementation of the :py:class:`tmlib.models.Model`
+            abstract base class
+        kwargs: dict
+            keyword arguments for the constructor of the model class
+
+        Returns
+        -------
+        tmlib.models.Model
+            an instance of `model`
+        '''
+        try:
+            inst = self.query(model).filter_by(**kwargs).one()
+            logger.debug('got existing instance: %r', inst)
+        except sqlalchemy.orm.exc.NoResultFound:
+            inst = model(**kwargs)
+            self._sqla_session.add(inst)
+            self._sqla_session.flush()
+            logger.debug('created new instance: %r', inst)
+        except sqlalchemy.exc.IntegrityError:
+            self._sqla_session.rollback()
+            inst = self.query(model).filter_by(**kwargs).one()
+            logger.debug('got existing instance: %r', inst)
+        except:
+            raise
+        return inst
 
 
 def decode_pk(key):

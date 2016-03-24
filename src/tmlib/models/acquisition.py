@@ -17,7 +17,7 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
-class Acquisition(DateMixIn, Model):
+class Acquisition(Model, DateMixIn):
 
     '''An *acquisition* contains all files belonging to one microscope image
     acquisition process. Note that in contrast to a *cycle*, an *acquisition*
@@ -57,21 +57,21 @@ class Acquisition(DateMixIn, Model):
     # Relationships to other tables
     plate = relationship('Plate', backref='acquisitions')
 
-    def __init__(self, name, plate, description=''):
+    def __init__(self, name, plate_id, description=''):
         '''
         Parameters
         ----------
         name: str
             name of the acquisition
-        plate: tmlib.models.Plate
-            parent plate to which the acquisition belongs
+        plate_id: int
+            ID of the parent plate
         description: str, optional
             description of the acquisition
         '''
         # TODO: ensure that name is unique within plate
         self.name = name
         self.description = description
-        self.plate_id = plate.id
+        self.plate_id = plate_id
 
     @autocreate_directory_property
     def location(self):
