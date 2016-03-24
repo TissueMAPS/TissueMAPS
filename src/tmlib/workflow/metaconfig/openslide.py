@@ -1,8 +1,8 @@
 import sys
 import traceback
 import openslide
-from ..readers import MetadataReader
-from ..errors import NotSupportedError
+from tmlib.readers import MetadataReader
+from tmlib.errors import NotSupportedError
 
 
 class OpenslideMetadataReader(MetadataReader):

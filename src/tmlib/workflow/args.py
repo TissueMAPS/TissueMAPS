@@ -91,7 +91,7 @@ class Args(object):
                 # Arguments "experiment_dir" and "verbosity" get special
                 # treatment because they are arguments of the main parser and
                 # shared across all command line interfaces.
-                if attr == 'key_file':
+                if attr == 'experiment_id':
                     # Positional arguments cannot have "required" argument
                     del kwargs['required']
                     parser.add_argument(attr, **kwargs)
@@ -165,31 +165,31 @@ class GeneralArgs(Args):
 
     @property
     def _persistent_attrs(self):
-        return {'key_file', 'verbosity'}
+        return {'experiment_id', 'verbosity'}
 
     @property
-    def key_file(self):
+    def experiment_id(self):
         '''
         Returns
         -------
         str
             path to the key file
         '''
-        return self._key_file
+        return self._experiment_id
 
-    @key_file.setter
-    def key_file(self, value):
-        if not isinstance(value, self._key_file_params['type']):
+    @experiment_id.setter
+    def experiment_id(self, value):
+        if not isinstance(value, self._experiment_id_params['type']):
             raise TypeError('Attribute "backup" must have type %s.'
-                            % self._key_file_params['type'].__name__)
-        self._key_file = value
+                            % self._experiment_id_params['type'].__name__)
+        self._experiment_id = value
 
     @property
-    def _key_file_params(self):
+    def _experiment_id_params(self):
         return {
-            'type': str,
+            'type': int,
             'required': True,
-            'help': 'path to key file'
+            'help': 'ID of the experiment that should be processed'
         }
 
     @property
@@ -368,15 +368,13 @@ class SubmitArgs(GeneralArgs):
         self.cores = self._cores_params['default']
         self.phase = self._phase_params['default']
         self.jobs = self._jobs_params['default']
-        self.backup = self._backup_params['default']
         super(SubmitArgs, self).__init__(**kwargs)
 
     @property
     def _persistent_attrs(self):
         return {
             'interval', 'phase', 'jobs', 'depth',
-            'memory', 'duration', 'cores',
-            'backup'
+            'memory', 'duration', 'cores'
         }
 
     @property
@@ -595,34 +593,6 @@ class SubmitArgs(GeneralArgs):
             '''
         }
 
-    @property
-    def backup(self):
-        '''
-        Returns
-        -------
-        bool
-            indicator that the session of a previous submission should be
-            backed up (default: ``False``)
-        '''
-        return self._backup
-
-    @backup.setter
-    def backup(self, value):
-        if not isinstance(value, self._backup_params['type']):
-            raise TypeError('Attribute "backup" must have type %s.'
-                            % self._backup_params['type'].__name__)
-        self._backup = value
-
-    @property
-    def _backup_params(self):
-        return {
-            'default': False,
-            'type': bool,
-            'help': '''
-                backup the session of a previous submission
-            '''
-        }
-
 
 class ResubmitArgs(GeneralArgs):
 
@@ -640,85 +610,12 @@ class ResubmitArgs(GeneralArgs):
         self.duration = self._duration_params['default']
         self.memory = self._memory_params['default']
         self.cores = self._cores_params['default']
-        self.phase = self._phase_params['default']
-        self.jobs = self._jobs_params['default']
         super(ResubmitArgs, self).__init__(**kwargs)
 
     @property
     def _persistent_attrs(self):
         return {
-            'interval', 'phase', 'jobs', 'depth',
-            'memory', 'duration', 'cores',
-            'backup',
-        }
-
-    @property
-    def jobs(self):
-        '''
-        Returns
-        -------
-        List[int]
-            ids of *run* jobs that should be resubmitted (default: ``None``)
-
-        Note
-        ----
-        Can only be set if value of attribute `phase` is ``"run"``.
-        '''
-        return self._jobs
-
-    @jobs.setter
-    def jobs(self, value):
-        if not(isinstance(value, list) or value is None):
-            raise TypeError('Attribute "jobs" must have type list')
-        if value is None:
-            self._jobs = value
-            return
-        if any([not isinstance(e, self._jobs_params['type'].__name__) for e in value]):
-            raise TypeError(
-                    'Elements of attribute "jobs" must have type %s.'
-                    % self._jobs_params['type'].__name__)
-        self._jobs = value
-
-    @property
-    def _jobs_params(self):
-        return {
-            'type': int,
-            'nargs': '+',
-            'default': None,
-            'help': '''
-                one-based indices of jobs that should be resubmitted
-                (requires argument "phase" to be set to "run")
-            '''
-        }
-
-    @property
-    def phase(self):
-        '''
-        Returns
-        -------
-        List[int]
-            phase for which jobs should be resubmitted
-            (options: ``"run"`` or ``"collect"``; default: ``None``)
-        '''
-        return self._phase
-
-    @phase.setter
-    def phase(self, value):
-        if not(isinstance(value, self._phase_params['type']) or value is None):
-            raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'].__name__)
-        self._phase = value
-
-    @property
-    def _phase_params(self):
-        return {
-            'type': str,
-            'default': None,
-            'required': True,
-            'choices': {'run', 'collect'},
-            'help': '''
-                phase for which jobs should be resubmitted
-            '''
+            'interval', 'depth', 'memory', 'duration', 'cores'
         }
 
     @property
@@ -1094,276 +991,6 @@ class InfoArgs(GeneralArgs):
             'help': '''
                 one-based index of *run* job
                 (requires argument "phase" to be set to "run")
-            '''
-        }
-
-
-class ApplyArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class ApplyArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        self.plates = self._plates_params['default']
-        self.wells = self._wells_params['default']
-        self.channels = self._channels_params['default']
-        self.zplanes = self._zplanes_params['default']
-        self.tpoints = self._tpoints_params['default']
-        self.sites = self._sites_params['default']
-        super(ApplyArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {
-            'plates', 'wells', 'channels', 'tpoints', 'zplanes', 'sites',
-            'output_dir'
-        }
-
-    @property
-    def output_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to the output directory
-        '''
-        return self._output_dir
-
-    @output_dir.setter
-    def output_dir(self, value):
-        if not isinstance(value, self._output_dir_params['type']):
-            raise TypeError('Attribute "output_dir" must have type %s',
-                            self._output_dir_params['type'].__name__)
-        self._output_dir = str(value)
-
-    @property
-    def _output_dir_params(self):
-        return {
-            'type': str,
-            'required': True,
-            'help': '''
-                path to the output directory
-            '''
-        }
-
-    @property
-    def plates(self):
-        '''
-        Returns
-        -------
-        str
-            plate indices
-        '''
-        return self._plates
-
-    @plates.setter
-    def plates(self, value):
-        if value is not None:
-            if not isinstance(value, list):
-                raise TypeError('Attribute "plates" must have type list')
-            if not(all([
-                        isinstance(v, self._plates_params['type'].__name__)
-                        for v in value
-                    ])):
-                raise TypeError(
-                        'Elements of attribute "plates" must have type %s'
-                        % self._plates_params['type'].__name__)
-        self._plates = value
-
-    @property
-    def _plates_params(self):
-        return {
-            'type': int,
-            'default': None,
-            'nargs': '+',
-            'metavar': 'P',
-            'help': '''
-                plate indices
-            '''
-        }
-
-    @property
-    def wells(self):
-        '''
-        Returns
-        -------
-        str
-            wells names
-        '''
-        return self._wells
-
-    @wells.setter
-    def wells(self, value):
-        if value is not None:
-            if not isinstance(value, list):
-                raise TypeError('Attribute "wells" must have type list')
-            if not(all([
-                        isinstance(v, self._wells_params['type'].__name__)
-                        for v in value
-                    ])):
-                raise TypeError(
-                        'Elements of attribute "wells" must have type %s'
-                        % self._wells_params['type'].__name__)
-        self._wells = value
-
-    @property
-    def _wells_params(self):
-        return {
-            'type': str,
-            'nargs': '+',
-            'default': None,
-            'metavar': 'W',
-            'help': '''
-                well names
-            '''
-        }
-
-    @property
-    def channels(self):
-        '''
-        Returns
-        -------
-        str
-            channel indices
-        '''
-        return self._channels
-
-    @channels.setter
-    def channels(self, value):
-        if value is not None:
-            if not isinstance(value, list):
-                raise TypeError('Attribute "channels" must have type list')
-            if not(all([
-                        isinstance(v, self._channels_params['type'].__name__)
-                        for v in value
-                    ])):
-                raise TypeError(
-                        'Elements of attribute "channels" must have type %s'
-                        % self._channels_params['type'].__name__)
-        self._channels = value
-
-    @property
-    def _channels_params(self):
-        return {
-            'type': int,
-            'nargs': '+',
-            'default': None,
-            'metavar': 'C',
-            'help': '''
-                channel indices
-            '''
-        }
-
-    @property
-    def zplanes(self):
-        '''
-        Returns
-        -------
-        str
-            z-plane indices
-        '''
-        return self._zplanes
-
-    @zplanes.setter
-    def zplanes(self, value):
-        if value is not None:
-            if not isinstance(value, list):
-                raise TypeError('Attribute "zplanes" must have type list')
-            if not(all([
-                        isinstance(v, self._zplanes_params['type'].__name__)
-                        for v in value
-                    ])):
-                raise TypeError(
-                        'Elements of attribute "zplanes" must have type %s'
-                        % self._zplanes_params['type'].__name__)
-        self._zplanes = value
-
-    @property
-    def _zplanes_params(self):
-        return {
-            'type': int,
-            'nargs': '+',
-            'default': None,
-            'metavar': 'Z',
-            'help': '''
-                z-plane indices
-            '''
-        }
-
-    @property
-    def tpoints(self):
-        '''
-        Returns
-        -------
-        str
-            time point indices
-        '''
-        return self._tpoints
-
-    @tpoints.setter
-    def tpoints(self, value):
-        if value is not None:
-            if not isinstance(value, list):
-                raise TypeError('Attribute "tpoints" must have type list')
-            if not(all([
-                        isinstance(v, self._tpoints_params['type'].__name__)
-                        for v in value
-                    ])):
-                raise TypeError(
-                        'Elements of attribute "tpoints" must have type %s'
-                        % self._tpoints_params['type'].__name__)
-        self._tpoints = value
-
-    @property
-    def _tpoints_params(self):
-        return {
-            'type': int,
-            'nargs': '+',
-            'default': None,
-            'metavar': 'T',
-            'help': '''
-                time point indices
-            '''
-        }
-
-    @property
-    def sites(self):
-        '''
-        Returns
-        -------
-        str
-            acquisition site indices
-        '''
-        return self._sites
-
-    @sites.setter
-    def sites(self, value):
-        if value is not None:
-            if not(isinstance(value, list)):
-                raise TypeError('Attribute "sites" must have type list')
-            if not(all([
-                        isinstance(v, self._sites_params['type'].__name__)
-                        for v in value
-                    ])):
-                raise TypeError(
-                        'Elements of attribute "sites" must have type %s'
-                        % self._sites_params['type'].__name__)
-        self._sites = value
-
-    @property
-    def _sites_params(self):
-        return {
-            'type': int,
-            'nargs': '+',
-            'default': None,
-            'metavar': 'S',
-            'help': '''
-                acquisition site indices
             '''
         }
 

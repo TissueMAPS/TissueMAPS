@@ -9,12 +9,12 @@ import gc3libs
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import AbortOnError
-from .description import WorkflowDescription
-from .description import WorkflowStageDescription
-from ..errors import WorkflowTransitionError
-from .jobs import CollectJob
-from .jobs import RunJobCollection
-from .jobs import MultiRunJobCollection
+from tmlib.workflow.description import WorkflowDescription
+from tmlib.workflow.description import WorkflowStageDescription
+from tmlib.errors import WorkflowTransitionError
+from tmlib.workflow.jobs import CollectJob
+from tmlib.workflow.jobs import RunJobCollection
+from tmlib.workflow.jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection):
     Fixed means that the number of jobs and the arguments are known in advance.
     '''
 
-    def __init__(self, name, run_jobs=None, collect_job=None):
+    def __init__(self, name, submission_id, run_jobs=None, collect_job=None):
         '''
         Initialize an instance of class WorkflowStep.
 
@@ -67,6 +67,8 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection):
         ----------
         name: str
             name of the step
+        submission_id: int
+            ID of the corresponding submission
         run_jobs: tmlib.jobs.RunJobCollection, optional
             jobs for the *run* phase that should be processed in parallel
             (default: ``None``)
@@ -75,20 +77,23 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection):
             `run_jobs` have terminated successfully (default: ``None``)
         '''
         self.name = name
+        self.submission_id = submission_id
         tasks = list()
         if run_jobs is not None:
             if not(isinstance(run_jobs, RunJobCollection) or
                     isinstance(run_jobs, MultiRunJobCollection)):
                 raise TypeError(
-                            'Argument "run_jobs" must have type '
-                            'tmlib.jobs.RunJobCollection or '
-                            'tmlib.jobs.MultiRunJobCollection')
+                    'Argument "run_jobs" must have type '
+                    'tmlib.workflow.jobs.RunJobCollection or '
+                    'tmlib.workflow.jobs.MultiRunJobCollection'
+                )
             tasks.append(run_jobs)
         if collect_job is not None:
             if not isinstance(collect_job, CollectJob):
                 raise TypeError(
-                            'Argument "collect_job" must have type '
-                            'tmlib.jobs.CollectJob')
+                    'Argument "collect_job" must have type '
+                    'tmlib.workflow.jobs.CollectJob'
+                )
             tasks.append(collect_job)
         super(WorkflowStep, self).__init__(tasks=tasks, jobname=name)
 

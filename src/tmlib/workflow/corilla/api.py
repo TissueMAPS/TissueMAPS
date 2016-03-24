@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 import numpy as np
 from .. import utils
@@ -47,7 +46,7 @@ class IllumstatsGenerator(ClusterRoutines):
         '''
         return self.experiment.plates[0].cycles[0].STATS_FILE_FORMAT
 
-    def create_job_descriptions(self, args):
+    def create_batches(self, args):
         '''
         Create job descriptions for parallel computing.
 
@@ -129,69 +128,6 @@ class IllumstatsGenerator(ClusterRoutines):
             writer.write('/metadata/cycle', data=batch['cycle'])
             writer.write('/metadata/tpoint', data=batch['tpoint'])
             writer.write('/metadata/channel', data=batch['channel'])
-
-    def apply_statistics(self, output_dir, plates, wells, sites, channels,
-                         tpoints, zplanes, **kwargs):
-        '''
-        Apply the calculated statistics to images in order to correct them for
-        illumination artifacts.
-
-        Parameters
-        ----------
-        output_dir: str
-            absolute path to directory where the processed images should be
-            stored
-        plates: List[str]
-            plate names
-        wells: List[str]
-            well identifiers
-        sites: List[int]
-            site indices
-        channels: List[int]
-            channel indices
-        tpoints: List[int]
-            time point (cycle) indices
-        zplanes: List[int]
-            z-plane indices
-        **kwargs: dict
-            no additional arguments used
-        '''
-        logger.info('correct images for illumination artifacts')
-        for plate in self.experiment.plates:
-            if plates:
-                if plate.name not in plates:
-                    continue
-            for cycle in plate.cycles:
-                if tpoints:
-                    if cycle.tpoint not in tpoints:
-                        continue
-                md = cycle.image_metadata
-                sld = md.copy()
-                if sites:
-                    sld = sld[sld['site'].isin(sites)]
-                if wells:
-                    sld = sld[sld['well_name'].isin(wells)]
-                if channels:
-                    sld = sld[sld['channel'].isin(channels)]
-                if zplanes:
-                    sld = sld[sld['zplane'].isin(zplanes)]
-                selected_channels = list(set(sld['channel'].tolist()))
-                for c in selected_channels:
-                    stats = cycle.illumstats_images[c]
-                    sld = sld[sld['channel'] == c]
-                    image_indices = sld['name'].index
-                    for i in image_indices:
-                        image = cycle.images[i]
-                        filename = image.metadata.name
-                        logger.info('correct image: %s', filename)
-                        corrected_image = image.correct(stats)
-                        suffix = os.path.splitext(image.metadata.name)[1]
-                        output_filename = re.sub(
-                            r'\%s$' % suffix, '_corrected%s' % suffix,
-                            filename)
-                        output_filename = os.path.join(
-                            output_dir, output_filename)
-                        corrected_image.save(output_filename)
 
     @utils.notimplemented
     def collect_job_output(self, batch):

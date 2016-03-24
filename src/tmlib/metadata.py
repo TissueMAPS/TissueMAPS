@@ -445,7 +445,7 @@ class ImageFileMapping(object):
     '''
 
     _PERSISTENT_ATTRS = {
-        'files', 'series', 'planes', 'ref_index', 'ref_file'
+        'files', 'series', 'planes'
     }
 
     def __init__(self, **kwargs):
@@ -457,8 +457,7 @@ class ImageFileMapping(object):
         '''
         if kwargs:
             for key, value in kwargs.iteritems():
-                if key in self._PERSISTENT_ATTRS:
-                    setattr(self, key, value)
+                setattr(self, key, value)
 
     @property
     def files(self):
@@ -532,22 +531,6 @@ class ImageFileMapping(object):
             raise TypeError('Attribute "ref_index" must have type int')
         self._ref_index = value
 
-    @property
-    def ref_file(self):
-        '''
-        Returns
-        -------
-        List[str]
-            absolute path to the final image file
-        '''
-        return self._ref_file
-
-    @ref_file.setter
-    def ref_file(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "ref_file" must have type str')
-        self._ref_file = value
-
     def __iter__(self):
         '''
         Returns
@@ -562,11 +545,8 @@ class ImageFileMapping(object):
         >>>obj.series = [0, 0]
         >>>obj.planes = [0, 1]
         >>>obj.files = ["a", "b"]
-        >>>obj.ref_index = 0
-        >>>obj.ref_file = "c"
-        >>>obj.ref_id = "Image:0"
         >>>dict(obj)
-        {'series': [0, 0], 'planes': [0, 1], 'ref_id': 'Image:0', 'ref_index': 0, 'filenames': ['a', 'b'], 'ref_name': 'c'}
+        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b']}
         '''
         for attr in dir(self):
             if attr not in self._PERSISTENT_ATTRS:
@@ -761,7 +741,7 @@ class ChannelMetadata(object):
 
     See also
     --------
-    :py:method:`tmlib.jterator.api.ImageAnalysisPipeline.create_job_descriptions`
+    :py:method:`tmlib.jterator.api.ImageAnalysisPipeline.create_batches`
     '''
 
     def __init__(self):

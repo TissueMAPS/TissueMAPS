@@ -30,16 +30,6 @@ class Illuminati(CommandLineInterface):
         print logo % {'version': __version__}
 
     @property
-    def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the command line program
-        '''
-        return self.__class__.__name__.lower()
-
-    @property
     def _api_instance(self, **kwargs):
         return PyramidBuilder(
                     self.experiment, self.name, self.verbosity)

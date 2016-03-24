@@ -29,7 +29,7 @@ class WorkflowClusterRoutines(BasicClusterRoutines):
         self.verbosity = verbosity
 
     @utils.auto_create_directory_property
-    def project_location(self):
+    def step_location(self):
         '''
         Returns
         -------

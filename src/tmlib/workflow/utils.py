@@ -1,12 +1,12 @@
 import gc3libs
 from prettytable import PrettyTable
-from .tmaps.workflow import Workflow
-from .tmaps.workflow import ParallelWorkflowStage
-from .tmaps.workflow import SequentialWorkflowStage
-from .tmaps.workflow import WorkflowStep
-from .jobs import RunJobCollection
-from .jobs import MultiRunJobCollection
-from .jobs import CollectJob
+from tmlib.workflow import Workflow
+from tmlib.workflow import ParallelWorkflowStage
+from tmlib.workflow import SequentialWorkflowStage
+from tmlib.workflow import WorkflowStep
+from tmlib.workflow.jobs import RunJobCollection
+from tmlib.workflow.jobs import MultiRunJobCollection
+from tmlib.workflow.jobs import CollectJob
 
 
 def format_stats_data(stats):

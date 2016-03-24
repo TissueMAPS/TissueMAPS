@@ -208,7 +208,6 @@ def calc_grid_coordinates_from_positions(stage_positions,
     '''
     # The stage positions may not be identical between different
     # channels acquired at the same site, so we round them.
-    import ipdb; ipdb.set_trace()
     rounded_positions = [(int(p[0]/10), int(p[1]/10)) for p in stage_positions]
 
     # Determine unique stage positions.

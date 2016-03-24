@@ -4,11 +4,11 @@ import bioformats
 from collections import defaultdict
 from cached_property import cached_property
 from lxml import etree
-from .ome_xml import XML_DECLARATION
-from .default import MetadataHandler
-from ... import utils
-from ...readers import MetadataReader
-from ..illuminati import stitch
+from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
+from tmlib.workflow.metaconfig.default import MetadataHandler
+from tmlib import utils
+from tmlib.readers import MetadataReader
+from tmlib.workflow.illuminati import stitch
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,9 @@ class CellvoyagerMetadataReader(MetadataReader):
         metadata.image_count = len(mlf_elements)
         lookup = defaultdict(list)
         r = re.compile(IMAGE_FILE_REGEX_PATTERN)
+
+        y = list()
+        x = list()
         for i, e in enumerate(mlf_elements):
             img = metadata.image(i)
             # A name has to be set as a flag for the handler to update
@@ -97,6 +100,9 @@ class CellvoyagerMetadataReader(MetadataReader):
                 img.Pixels.Channel(0).Name = None
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
+  
+            x.append(img.Pixels.Plane(0).PositionX)
+            y.append(img.Pixels.Plane(0).PositionY)
 
             matches = r.search(img.Name)
             captures = matches.groupdict()
@@ -140,8 +146,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     microscope.
     '''
 
-    def __init__(self, image_files, additional_files, omexml_files,
-                 plate):
+    def __init__(self, image_files, additional_files, omexml_files):
         '''
         Initialize an instance of class CellvoyagerMetadataHandler.
 
@@ -153,16 +158,13 @@ class CellvoyagerMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate: int
-            index of the corresponding plate within the experiment
         '''
         super(CellvoyagerMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate
+            image_files, additional_files, omexml_files
         )
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        self.plate = plate
 
     @cached_property
     def ome_additional_metadata(self):

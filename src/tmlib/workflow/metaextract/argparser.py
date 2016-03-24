@@ -2,8 +2,8 @@
 Parse arguments from the command line.
 '''
 
-from .cli import Metaextract
-from .args import MetaextractInitArgs
+from tmlib.workflow.metaextract.cli import Metaextract
+from tmlib.workflow.metaextract.args import MetaextractInitArgs
 
 
 parser, subparsers = Metaextract.get_parser_and_subparsers(

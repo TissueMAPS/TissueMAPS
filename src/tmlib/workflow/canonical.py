@@ -12,11 +12,11 @@ described workflow in the first place.
 '''
 from collections import OrderedDict
 
-from ..workflow import WorkflowDescription
-from ..workflow import WorkflowStageDescription
-from ..workflow import WorkflowStepDescription
-from ..errors import WorkflowDescriptionError
-from .. import utils
+from tmlib.workflow import WorkflowDescription
+from tmlib.workflow import WorkflowStageDescription
+from tmlib.workflow import WorkflowStepDescription
+from tmlib.errors import WorkflowDescriptionError
+from tmlib import utils
 
 import logging
 

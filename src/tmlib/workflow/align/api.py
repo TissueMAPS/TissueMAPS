@@ -52,7 +52,7 @@ class ImageRegistration(ClusterRoutines):
             absolute path to the folder holding the calculated shift values
             of the image registration step
         '''
-        self._registration_dir = os.path.join(self.project_location, 'registration')
+        self._registration_dir = os.path.join(self.step_location, 'registration')
         if not os.path.exists(self._registration_dir):
             os.mkdir(self._registration_dir)
         return self._registration_dir
@@ -69,7 +69,7 @@ class ImageRegistration(ClusterRoutines):
         self._reg_file_format_string = '{experiment}_{job}.reg.h5'
         return self._reg_file_format_string
 
-    def create_job_descriptions(self, args):
+    def create_batches(self, args):
         '''
         Create job descriptions for parallel computing.
 
@@ -108,8 +108,7 @@ class ImageRegistration(ClusterRoutines):
             },
             'outputs': {
                 'metadata_files': list()
-            },
-            'removals': ['registration_files']
+            }
         }
         for plate in self.experiment.plates:
             if len(plate.cycles) == 1:
@@ -280,73 +279,3 @@ class ImageRegistration(ClusterRoutines):
             reg_dir = os.path.dirname(reg_files[0])
             logger.debug('remove directory: %s', reg_dir)
             shutil.rmtree(reg_dir)
-
-    def apply_statistics(self, output_dir, plates, wells, sites, channels,
-                         tpoints, zplanes, **kwargs):
-        '''
-        Apply calculated statistics (shift and overhang values) to images
-        in order to align them between cycles.
-
-        Parameters
-        ----------
-        output_dir: str
-            absolute path to directory where the processed images should be
-            stored
-        plates: List[int]
-            plate indices
-        wells: List[str]
-            well identifiers
-        sites: List[int]
-            site indices
-        tpoints: List[int]
-            time point indices
-        channels: List[int]
-            channel indices
-        zplanes: List[int]
-            z-plane indices
-        **kwargs: dict
-            additional arguments as key-value pairs:
-                * "illumcorr": to correct for illumination artifacts (*bool*)
-        '''
-        logger.info('align images between cycles')
-        for plate in self.experiment.plates:
-            if plates:
-                if plate.index not in plates:
-                    continue
-            for cycle in plate.cycles:
-                if tpoints:
-                    if cycle.tpoint not in tpoints:
-                        continue
-                md = cycle.image_metadata
-                sld = md.copy()
-                if sites:
-                    sld = sld[sld['site'].isin(sites)]
-                if wells:
-                    sld = sld[sld['well_name'].isin(wells)]
-                if channels:
-                    sld = sld[sld['channel'].isin(channels)]
-                if zplanes:
-                    sld = sld[sld['zplane'].isin(zplanes)]
-                selected_channels = list(set(sld['channel'].tolist()))
-                for c in selected_channels:
-                    if kwargs['illumcorr']:
-                        stats = cycle.illumstats_images[c]
-                    sld = sld[sld['channel'] == c]
-                    image_indices = sld['name'].index
-                    for i in image_indices:
-                        image = cycle.images[i]
-                        filename = image.metadata.name
-                        logger.info('align image: %s', filename)
-                        suffix = os.path.splitext(image.metadata.name)[1]
-                        if kwargs['illumcorr']:
-                            image = image.correct(stats)
-                            filename = re.sub(
-                                r'\%s$' % suffix, '_corrected%s' % suffix,
-                                filename)
-                        aligned_image = image.align()
-                        output_filename = re.sub(
-                            r'\%s$' % suffix, '_aligned%s' % suffix,
-                            filename)
-                        output_filename = os.path.join(
-                            output_dir, output_filename)
-                        aligned_image.save(output_filename)

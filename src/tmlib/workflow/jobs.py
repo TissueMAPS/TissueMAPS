@@ -1,14 +1,14 @@
 import logging
-from gc3libs.workflow import AbortOnError
 from abc import ABCMeta
 from abc import abstractproperty
 import gc3libs
 # from abc import abstractmethod
 # from gc3libs.workflow import RetryableTask
+from gc3libs.workflow import AbortOnError
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 
-from ..utils import create_datetimestamp
+from tmlib.utils import create_datetimestamp
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class Job(gc3libs.Application):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, step_name, arguments, output_dir):
+    def __init__(self, step_name, arguments, output_dir, submission_id):
         '''
         Initialize an instance of class Job.
 
@@ -52,9 +52,16 @@ class Job(gc3libs.Application):
         output_dir: str
             absolute path to the output directory, where log reports will
             be stored
+        submission_id: int
+            ID of the corresponding submission
+
+        See also
+        --------
+        :py:class:`tmlib.models.Submission`
         '''
         t = create_datetimestamp()
         self.step_name = step_name
+        self.submission_id = submission_id
         super(Job, self).__init__(
             jobname=self.name,
             arguments=arguments,
@@ -144,7 +151,8 @@ class RunJob(Job):
     Class for TissueMAPS run jobs, which can be processed in parallel.
     '''
 
-    def __init__(self, step_name, arguments, output_dir, job_id, index=None):
+    def __init__(self, step_name, arguments, output_dir, job_id,
+                 submission_id, index=None):
         '''
         Initialize an instance of class RunJob.
 
@@ -159,6 +167,8 @@ class RunJob(Job):
             be stored
         job_id: int
             one-based job identifier number
+        submission_id: int
+            ID of the corresponding submission
         index: int, optional
             index of the *run* job collection in case the step has multiple
             *run* phases
@@ -170,7 +180,9 @@ class RunJob(Job):
         super(RunJob, self).__init__(
             step_name=step_name,
             arguments=arguments,
-            output_dir=output_dir)
+            output_dir=output_dir,
+            submission_id=submission_id
+        )
 
     @property
     def name(self):
@@ -183,24 +195,31 @@ class RunJob(Job):
         if self.index is None:
             return '%s_run_%.6d' % (self.step_name, self.job_id)
         else:
-            return '%s_run-%.2d_%.6d' % (self.step_name, self.index, self.job_id)
+            return (
+                '%s_run-%.2d_%.6d' % (self.step_name, self.index, self.job_id)
+            )
+
+    def __repr__(self):
+        return (
+            '<RunJob(name=%r, submission_id=%r)>'
+            % (self.name, self.submission_id)
+        )
 
 
 class RunJobCollection(ParallelTaskCollection):
 
-    '''
-    Class for TissueMAPS run jobs based on a
+    '''Class for TissueMAPS run jobs based on a
     `gc3libs.workflow.ParallelTaskCollection`.
     '''
 
-    def __init__(self, step_name, jobs=None, index=None):
+    def __init__(self, step_name, submission_id, jobs=None, index=None):
         '''
-        Initialize an instance of class RunJobCollection.
-
         Parameters
         ----------
         step_name: str
             name of the corresponding TissueMAPS workflow step
+        submission_id: int
+            ID of the corresponding submission
         jobs: List[tmlibs.tmaps.workflow.RunJob], optional
             list of jobs that should be processed (default: ``None``)
         index: int, optional
@@ -216,16 +235,16 @@ class RunJobCollection(ParallelTaskCollection):
                         'Elements of argument "jobs" must have type '
                         'tmlib.jobs.RunJob')
         if index is None:
-            name = '%s_run' % self.step_name
+            self.name = '%s_run' % self.step_name
         else:
             if not isinstance(index, int):
                 raise TypeError('Argument "index" must have type int.')
-            name = '%s_run-%.2d' % (self.step_name, index)
-        super(RunJobCollection, self).__init__(jobname=name, tasks=jobs)
+            self.name = '%s_run-%.2d' % (self.step_name, index)
+        self.submission_id = submission_id
+        super(RunJobCollection, self).__init__(jobname=self.name, tasks=jobs)
 
     def add(self, job):
-        '''
-        Add a job.
+        '''Add a job to the collection.
 
         Parameters
         ----------
@@ -243,28 +262,36 @@ class RunJobCollection(ParallelTaskCollection):
                         'tmlib.jobs.RunJob')
         super(RunJobCollection, self).add(job)
 
+    def __repr__(self):
+        return (
+            '<RunJobCollection(name=%r, n=%r, submission_id=%r)>'
+            % (self.name, len(self.tasks), self.submission_id)
+        )
+
 
 class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
 
-    def __init__(self, step_name, run_job_collections=None):
+    def __init__(self, step_name, submission_id, run_job_collections=None):
         '''
-        Initialize an instance of class WorkflowStep.
-
         Parameters
         ----------
         step_name: str
             name of the corresponding TissueMAPS workflow step
+        submission_id: int
+            ID of the corresponding submission
         run_job_collections: List[tmlib.jobs.RunJobCollection], optional
             collections of run jobs that should be processed one after another
         '''
+        self.name = '%s_multirun' % step_name
         self.step_name = step_name
+        self.submission_id = submission_id
         super(MultiRunJobCollection, self).__init__(
-                    tasks=run_job_collections,
-                    jobname='%s_multirun' % step_name)
+            tasks=run_job_collections,
+            jobname=self.name
+        )
 
     def add(self, run_job_collection):
-        '''
-        Add a collection of run jobs.
+        '''Add a collection of run jobs.
 
         Parameters
         ----------
@@ -282,18 +309,21 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
                         'tmlib.jobs.RunJobCollection')
         super(MultiRunJobCollection, self).add(run_job_collection)
 
+    def __repr__(self):
+        return (
+            '<MultiRunJobCollection(name=%r, n=%r, submission_id=%r)>'
+            % (self.name, len(self.tasks), self.submission_id)
+        )
+
 
 class CollectJob(Job):
 
-    '''
-    Class for TissueMAPS collect jobs, which can be processed once all
+    '''Class for TissueMAPS collect jobs, which can be processed once all
     parallel jobs are successfully completed.
     '''
 
-    def __init__(self, step_name, arguments, output_dir):
+    def __init__(self, step_name, arguments, output_dir, submission_id):
         '''
-        Initialize an instance of class CollectJob.
-
         Parameters
         ----------
         step_name: str
@@ -303,11 +333,15 @@ class CollectJob(Job):
         output_dir: str
             absolute path to the output directory, where log reports will
             be stored
+        submission_id: int
+            ID of the corresponding submission
         '''
         super(CollectJob, self).__init__(
-                    step_name=step_name,
-                    arguments=arguments,
-                    output_dir=output_dir)
+            step_name=step_name,
+            arguments=arguments,
+            output_dir=output_dir,
+            submission_id=submission_id
+        )
 
     @property
     def name(self):
@@ -318,3 +352,9 @@ class CollectJob(Job):
             name of the job
         '''
         return '%s_collect' % self.step_name
+
+    def __repr__(self):
+        return (
+            '<CollectJob(name=%r, submission_id=%r)>'
+            % (self.name, self.submission_id)
+        )

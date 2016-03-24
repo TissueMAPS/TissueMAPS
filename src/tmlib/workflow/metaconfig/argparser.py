@@ -2,8 +2,8 @@
 Parse arguments from the command line.
 '''
 
-from .cli import Metaconfig
-from .args import MetaconfigInitArgs
+from tmlib.workflow.metaconfig.cli import Metaconfig
+from tmlib.workflow.metaconfig.args import MetaconfigInitArgs
 
 
 parser, subparsers = Metaconfig.get_parser_and_subparsers()

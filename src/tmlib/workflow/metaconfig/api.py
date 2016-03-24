@@ -2,25 +2,18 @@ import os
 import logging
 import numpy as np
 import pandas as pd
-from . import metadata_handler_factory
-from .. import utils
-from .. import cfg
-from ..api import ClusterRoutines
-from ..models.plate import determine_plate_dimensions
-from ...metadata import ImageFileMapping
-from ...writers import JsonWriter
-from ...writers import DataTableWriter
-from ...errors import NotSupportedError
-from ...errors import MetadataError
-from ...formats import Formats
+import tmlib.models
+from tmlib.workflow.metaconfig import metadata_handler_factory
+from tmlib.workflow.api import ClusterRoutines
+from tmlib.models.plate import determine_plate_dimensions
+from tmlib.errors import MetadataError
 
 logger = logging.getLogger(__name__)
 
 
 class MetadataConfigurator(ClusterRoutines):
 
-    '''
-    Abstract base class for the handling of image metadata.
+    '''Class for configuration of microscope image metadata.
 
     It provides methods for conversion of metadata extracted from heterogeneous
     microscope file formats using the
@@ -37,42 +30,30 @@ class MetadataConfigurator(ClusterRoutines):
     separate JSON file.
     '''
 
-    def __init__(self, experiment, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
         '''
-        Initialize an instance of class MetadataConfigurator.
-
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment_id: int
+            ID of the processed experiment
         step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
         kwargs: dict
-            mapping of additional key-value pairs that are ignored
+            ignored keyword arguments
         '''
         super(MetadataConfigurator, self).__init__(
-                experiment, step_name, verbosity)
+            experiment_id, step_name, verbosity
+        )
 
-    @property
-    def image_file_format_string(self):
-        '''
-        Returns
-        -------
-        image_file_format_string: str
-            format string that specifies how the names of the final image
-            files should be formatted
-        '''
-        return cfg.IMAGE_NAME_FORMAT
-
-    def create_job_descriptions(self, args):
+    def create_batches(self, args):
         '''
         Create job descriptions for parallel computing.
 
         Parameters
         ----------
-        args: tmlib.metaconfig.args.MetaconfigInitArgs
+        args: tmlib.workflow.metaconfig.args.MetaconfigInitArgs
             step-specific arguments
 
         Returns
@@ -80,48 +61,50 @@ class MetadataConfigurator(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        if args.file_format != 'default':
-            if args.file_format not in Formats.SUPPORT_FOR_ADDITIONAL_FILES:
-                raise NotSupportedError(
-                        'The specified format is not supported.\n'
-                        'Possible options are: "%s"'.format(
-                            '", "'.join(Formats.SUPPORT_FOR_ADDITIONAL_FILES)))
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
-        for source in self.experiment.sources:
-            for acquisition in source.acquisitions:
+        with tmlib.models.utils.Session() as session:
+            acquisitions = session.query(tmlib.models.Acquisition).\
+                join(tmlib.models.Plate).\
+                join(tmlib.models.Experiment).\
+                filter(tmlib.models.Experiment.id == self.experiment_id).\
+                all()
+            for acq in acquisitions:
                 job_count += 1
                 description = {
                     'id': job_count,
                     'inputs': {
-                        'uploaded_image_files': [
-                            os.path.join(acquisition.image_dir, f)
-                            for f in acquisition.image_files
+                        'microscope_image_files': [
+                            os.path.join(
+                                acq.microscope_images_location, f.name
+                            )
+                            for f in acq.microscope_image_files
                         ],
-                        'uploaded_additional_files': [
-                            os.path.join(acquisition.metadata_dir, f)
-                            for f in acquisition.additional_files
+                        'microscope_metadata_files': [
+                            os.path.join(
+                                acq.microscope_metadata_location, f.name
+                            )
+                            for f in acq.microscope_metadata_files
                         ],
                         'omexml_files': [
-                            os.path.join(acquisition.omexml_dir, f)
-                            for f in acquisition.omexml_files
+                            os.path.join(
+                                acq.omexml_location, f.name
+                            )
+                            for f in acq.omexml_files
                         ]
                     },
                     'outputs': {
-                        'metadata_files': [
-                            os.path.join(acquisition.dir,
-                                         acquisition.metadata_file)
-                        ],
                         'mapper_files': [
-                            os.path.join(acquisition.dir,
-                                         acquisition.image_mapping_file)
+                            os.path.join(
+                                acq.location, acq.image_mapping_file
+                            )
                         ]
                     },
-                    'file_format': args.file_format,
-                    'keep_z_stacks': args.keep_z_stacks,
-                    'plate': source.index,
+                    'microscope_type': acq.plate.experiment.microscope_type,
+                    'keep_zplanes': args.keep_zplanes,
                     'regex': args.regex,
+                    'acquisition_id': acq.id,
                     'stitch_major_axis': args.stitch_major_axis,
                     'n_vertical': args.n_vertical,
                     'n_horizontal': args.n_horizontal,
@@ -129,47 +112,31 @@ class MetadataConfigurator(ClusterRoutines):
                 }
                 job_descriptions['run'].append(description)
 
-        job_descriptions['collect'] = {
-            'inputs': {
-                'metadata_files': [
-                    os.path.join(acquisition.dir,
-                                 acquisition.metadata_file)
-                    for source in self.experiment.sources
-                    for acquisition in source.acquisitions
-                ],
-                'mapper_files': [
-                    os.path.join(acquisition.dir,
-                                 acquisition.image_mapping_file)
-                    for source in self.experiment.sources
-                    for acquisition in source.acquisitions
-                ]
-            },
-            'outputs': {
-                # Plates should be cleaned up upon reconfiguration.
-                'plates_dir': [
-                    self.experiment.plates_dir
-                ],
-                'mapper_files': [
-                    os.path.join(source.dir,
-                                 source.image_mapping_file)
-                    for source in self.experiment.sources
-                ]
-            },
-            'removals': ['mapper_files']
-        }
+            job_descriptions['collect'] = {
+                'inputs': {
+                    'mapper_files': [
+                        os.path.join(
+                            acq.location,
+                            acq.image_mapping_file
+                        )
+                        for acq in acquisitions
+                    ]
+                },
+                'outputs': dict()
+            }
 
         return job_descriptions
 
     def run_job(self, batch):
-        '''
-        Format the OMEXML metadata extracted from image files, complement it
-        with metadata retrieved from additional files and/or user input
-        and write the formatted metadata to a JSON file.
+        '''Format OMEXML metadata extracted from microscope image files and
+        complement it with metadata retrieved from additional microscope
+        metadata files and/or user input.
 
-        The actual processing is done by `MetadataHandler` classes. Some file
-        formats require additional customization, either because Bio-Formats
-        does not fully support them or because the microscopes provides
-        insufficient information in the image files.
+        The actual processing is done by an implementation of the
+        :py:class:`tmlib.workflow.metaconfig.default.MetadataHandler` abstract
+        base class. Some file formats require additional customization,
+        either because the `Bio-Formats` library does not fully support them or
+        because the microscopes provides insufficient information in the files.
         To overcome these limitations, one can create a custom subclass
         of the `MetaHandler` abstract base class and overwrite its
         *ome_additional_metadata* property. Custom handlers already exists for
@@ -177,52 +144,51 @@ class MetadataConfigurator(ClusterRoutines):
         and Visitron microscopes ("visiview"). The list of custom
         handlers can be further extended by creating a new module in the
         `metaconfig` package with the same name as the corresponding file
-        format. The module must contain the custom `MetaHandler` subclass,
+        format. The module must contain a custom implementation of
+        :py:class:`tmlib.workflow.metaconfig.default.MetadataHandler`,
         whose name has to be pretended with the capitalized name of the file
-        format. For example, given a file format called "NewMicroscope" one
-        would need to create the module "tmlib.metaconfig.newmicroscope", which
-        would contain a class named "NewmicroscopeMetadataHandler"
-        that inherits from `MetadataHandler` and overwrites the abstract
-        methods. The new handler class would then be automatically picked up
-        and used when the value of the "format" argument is "newmicroscope".
+        format.
 
         See also
         --------
-        :py:mod:`tmlib.metaconfig.default`
-        :py:mod:`tmlib.metaconfig.cellvoyager`
-        :py:mod:`tmlib.metaconfig.visiview`
+        :py:mod:`tmlib.workflow.metaconfig.default`
+        :py:mod:`tmlib.workflow.metaconfig.cellvoyager`
+        :py:mod:`tmlib.workflow.metaconfig.visiview`
         '''
         handler_module, handler_class = metadata_handler_factory(
-            batch['file_format']
+            batch['microscope_type']
         )
         handler = handler_class(
-            batch['inputs']['uploaded_image_files'],
-            batch['inputs']['uploaded_additional_files'],
-            batch['inputs']['omexml_files'],
-            batch['plate']
+            batch['inputs']['microscope_image_files'],
+            batch['inputs']['microscope_metadata_files'],
+            batch['inputs']['omexml_files']
         )
+        if batch['regex'] is None:
+            batch['regex'] = handler_module.IMAGE_FILE_REGEX_PATTERN
 
         handler.configure_ome_metadata_from_image_files()
-        handler.configure_ome_metadata_from_additional_files()
+        handler.configure_ome_metadata_from_additional_files(batch['regex'])
         missing_md = handler.determine_missing_metadata()
         if missing_md:
-            if batch['regex'] or handler_module.IMAGE_FILE_REGEX_PATTERN:
+            if batch['regex']:
                 logger.warning('required metadata information is missing')
                 logger.info(
                     'try to retrieve missing metadata from filenames '
                     'using regular expression'
                 )
-                n_wells = self.experiment.user_cfg.plate_format
+                n_wells = self.experiment.plate_format
                 plate_dimensions = determine_plate_dimensions(n_wells)
                 handler.configure_metadata_from_filenames(
-                    plate_dimensions=plate_dimensions, regex=batch['regex']
+                    plate_dimensions=plate_dimensions,
+                    regex=batch['regex']
                 )
             else:
                 raise MetadataError(
                     'The following metadata information is missing:\n"%s"\n'
                     'You can provide a regular expression in order to '
                     'retrieve the missing information from filenames '
-                    % '", "'.join(missing_md))
+                    % '", "'.join(missing_md)
+                )
         missing_md = handler.determine_missing_metadata()
         if missing_md:
             raise MetadataError(
@@ -252,7 +218,7 @@ class MetadataConfigurator(ClusterRoutines):
                 stitch_dimensions=(batch['n_vertical'], batch['n_horizontal'])
             )
 
-        if not batch['keep_z_stacks']:
+        if not batch['keep_zplanes']:
             logger.info('project focal planes to 2D')
             handler.reconfigure_ome_metadata_for_projection()
         else:
@@ -262,190 +228,112 @@ class MetadataConfigurator(ClusterRoutines):
         # (some microscopes use one-based indexing)
         handler.update_channel()
         handler.update_zplane()
-        handler.build_image_filenames(self.image_file_format_string)
         handler.assign_acquisition_site_indices()
         md = handler.remove_redundant_columns()
-        fmap = handler.create_image_file_mapper()
-        self._write_metadata_to_file(batch['outputs']['metadata_files'][0], md)
-        self._write_mapper_to_file(batch['outputs']['mapper_files'][0], fmap)
+        fmap = handler.create_image_file_mapping()
+        with tmlib.models.utils.Session() as session:
+            acquisition = session.query(tmlib.models.Acquisition).\
+                get(batch['acquisition_id'])
 
-    @staticmethod
-    def _write_metadata_to_file(filename, metadata):
-        store = pd.HDFStore(filename, 'w')  # truncate file!
-        store.put(
-            'image_metadata', metadata, format='table', data_columns=True
-        )
-        store.close()
+            for w in np.unique(md.well_name):
+                w_index = np.where(md.well_name == w)[0]
+                well = session.get_or_create(
+                    tmlib.models.Well,
+                    plate_id=acquisition.plate.id, name=w
+                )
 
-    @staticmethod
-    def _write_mapper_to_file(filename, hashmap):
-        with JsonWriter() as writer:
-            logger.info('write file mapper to file')
-            writer.write(filename, hashmap)
+                for s in np.unique(md.loc[w_index, 'site']):
+                    s_index = np.where(md.site == s)[0]
+                    y = md.loc[s_index, 'well_position_y'].values[0]
+                    x = md.loc[s_index, 'well_position_x'].values[0]
+                    site = session.get_or_create(
+                        tmlib.models.Site,
+                        y=y, x=x, well_id=well.id
+                    )
+
+                    for index, i in md.ix[s_index].iterrows():
+                        session.get_or_create(
+                            tmlib.models.ChannelImageFile,
+                            tpoint=i.tpoint, zplane=i.zplane,
+                            site_id=site.id, file_map=fmap[index],
+                            wavelength=i.channel_name,
+                            acquisition_id=acquisition.id
+                        )
 
     def collect_job_output(self, batch):
-        '''
-        Collect the configured image metadata from different sources and
-        assign them to separate *cycles*. If a source contains images from
-        more than one time points, a separate *cycle* is created for each time
+        '''Assign registered image files from different acquisitions to
+        separate *cycles*. If an acquisition includes images of
+        different time points, a separate *cycle* is created for each time
         point. The mapping from *acquisitions* to *cycles* is consequently
         1 -> n, where n is the number of time points per acquisition (n >= 1).
 
-        The file mappings created for each source are also collected and fused.
-        They final mapping contains all the information required for the
-        extraction of images from the original source image files in the
-        `imextract` step.
+        Whether acquisition time points will be interpreted as actual
+        time points in a time series depends on the value of
+        :py:attribute:`tmlib.models.Experiment.plate_acquisition_mode`.
 
         Parameters
         ----------
         batch: dict
             description of the *collect* job
         '''
-        file_mapper = list()
-        for i, source in enumerate(self.experiment.sources):
-            try:
-                plate = self.experiment.plates[i]
-            except IndexError:
-                plate = self.experiment.add_plate()
-            cycle_count = 0
-            for acquisition in source.acquisitions:
-
-                # TODO: Why is this fast in the first cycle, but takes long
-                # in subsequent cycles?
-
-                metadata = acquisition.image_metadata
-
-                tpoints = np.unique(metadata.tpoint)
-                if source.acquisition_mode == 'multiplexing':
-                    logger.info(
-                        '%d multiplexing iteration found in source # %d',
-                        len(tpoints), acquisition.index
-                    )
-                else:
-                    logger.info(
-                        '%d time points found in source # %d',
-                        len(tpoints), acquisition.index
-                    )
-
-                # Create a cycle for each acquired time point
+        t_index = 0
+        w_index = 0
+        c_index = 0
+        with tmlib.models.utils.Session() as session:
+            for acq in session.query(tmlib.models.Acquisition).\
+                    join(tmlib.models.Plate).\
+                    join(tmlib.models.Experiment).\
+                    filter(tmlib.models.Experiment.id == self.experiment_id):
+                is_time_series_experiment = \
+                    acq.plate.experiment.plate_acquisition_mode == 'series'
+                is_multiplexing_experiment = \
+                    acq.plate.experiment.plate_acquisition_mode == 'multiplexing'
+                df = pd.DataFrame(
+                    session.query(
+                        tmlib.models.ChannelImageFile.tpoint,
+                        tmlib.models.ChannelImageFile.wavelength,
+                        tmlib.models.ChannelImageFile.zplane).
+                        filter(tmlib.models.ChannelImageFile.acquisition_id == acq.id).
+                        all()
+                )
+                tpoints = np.unique(df.tpoint)
+                wavelengths = np.unique(df.wavelength)
+                zplanes = np.unique(df.zplane)
                 for t in tpoints:
-
-                    logger.info(
-                        'update metadata information for cycle #%d',
-                        cycle_count
-                    )
-                    try:
-                        cycle = plate.cycles[cycle_count]
-                    except IndexError:
-                        cycle = plate.add_cycle()
-
-                    # Create a metadata subset that only contains information
-                    # about image elements belonging to the currently processed
-                    # cycle (time point)
-                    md = metadata[metadata.tpoint == t]
-                    for ix in md.index:
-                        # In case images were acquired as part of a
-                        # "multiplexing" experiment, don't increment the "time"
-                        # but rather the "channel" index, since cycles
-                        # are not acquisitions of the same stains at different
-                        # time points, but rather acquisitions of different
-                        # markers, which are interpreted as different channels.
-                        # The "channel_name" attribute remains unchanged.
-                        if source.acquisition_mode == 'multiplexing':
-                            md.at[ix, 'tpoint'] = 0
-                            if cycle.index > 0:
-                                pre_cycle = self.experiment.plates[i].cycles[
-                                                cycle.index - 1
-                                ]
-                                pre_md = pre_cycle.image_metadata
-                                max_index = np.max(pre_md['channel'])
-                                md.at[ix, 'channel'] += max_index + 1
-                        else:
-                            md.at[ix, 'tpoint'] = t
-                        fieldnames = {
-                            'p': md.at[ix, 'plate'],
-                            'w': md.at[ix, 'well_name'],
-                            'y': md.at[ix, 'well_position_y'],
-                            'x': md.at[ix, 'well_position_x'],
-                            'c': md.at[ix, 'channel'],
-                            'z': md.at[ix, 'zplane'],
-                            't': md.at[ix, 'tpoint'],
-                        }
-                        md.at[ix, 'name'] = cfg.IMAGE_NAME_FORMAT.format(
-                                                        **fieldnames)
-
-                    # Add the corresponding plate index
-                    md.plate = pd.Series(
-                        np.repeat(source.index, md.shape[0])
+                    cycle = session.get_or_create(
+                        tmlib.models.Cycle,
+                        index=c_index, tpoint=t_index, plate_id=acq.plate.id
                     )
 
-                    # Update "ref_index" and "name" in the file mapper with the
-                    # path to the final image file relative to the experiment
-                    # root directory
-                    for element in acquisition.image_mapping:
-                        new_element = ImageFileMapping()
-                        new_element.series = element.series
-                        new_element.planes = element.planes
-                        # Since we assigned new indices, we have to map the
-                        # the reference back
-                        ref_md = metadata.iloc[element.ref_index]
-                        ix = np.where(
-                            (md.well_name == ref_md.well_name) &
-                            (md.well_position_y == ref_md.well_position_y) &
-                            (md.well_position_x == ref_md.well_position_x) &
-                            (md.channel_name == ref_md.channel_name) &
-                            (md.zplane == ref_md.zplane)
-                        )[0]
-                        if len(ix) > 1:
-                            raise ValueError('More than one reference found.')
-                        new_element.ref_index = ix[0]
-                        # Update name in the file mapper and make path relative
-                        new_element.ref_file = os.path.relpath(
-                            os.path.join(
-                                cycle.image_dir,
-                                md.at[new_element.ref_index, 'name']
-                            ),
-                            self.experiment.plates_dir
+                    for w in wavelengths:
+                        if is_multiplexing_experiment:
+                            name = 'cycle-%d_wavelength-%s' % (c_index, w)
+                        channel = session.get_or_create(
+                            tmlib.models.Channel,
+                            name=name, index=w_index,
+                            experiment_id=acq.plate.experiment.id
                         )
-                        # Make path to source files relative
-                        new_element.files = [
-                            os.path.relpath(
-                                os.path.join(acquisition.image_dir, f),
-                                self.experiment.sources_dir)
-                            for f in element.files
-                        ]
-                        file_mapper.append(dict(new_element))
 
-                    # Images are sorted by filename. To make indexing easier
-                    # sort metadata according to name and reset indices.
-                    md = md.sort_values('name')
-                    md.index = range(md.shape[0])
-                    md['cycle'] = np.repeat(cycle.index, md.shape[0])
+                        for z in zplanes:
+                            channel_layer = session.get_or_create(
+                                tmlib.models.ChannelLayer,
+                                tpoint=t_index, zplane=z, channel_id=channel.id
+                            )
 
-                    # Store the updated metadata in an HDF5 file
-                    filename = os.path.join(
-                        cycle.dir, cycle.metadata_file
-                    )
-                    with DataTableWriter(filename, truncate=True) as writer:
-                        writer.write('image_metadata', md)
+                            for im_file in session.query(tmlib.models.ChannelImageFile).\
+                                    filter_by(acquisition_id=acq.id).\
+                                    filter_by(tpoint=t).\
+                                    filter_by(zplane=z).\
+                                    filter_by(wavelength=w):
+                                im_file.tpoint = t_index
+                                im_file.channel_layer_id = channel_layer.id
+                                im_file.cycle_id = cycle.id
+                                im_file.name
 
-                    # Remove the intermediate cycle-specific mapper file
-                    # since it is no no longer needed
-                    os.remove(
-                        os.path.join(
-                            acquisition.dir, acquisition.image_mapping_file
-                        )
-                    )
+                        if is_multiplexing_experiment:
+                            w_index += 1
 
-                    cycle_count += 1
+                    if is_time_series_experiment:
+                        t_index += 1
 
-                logger.info('write metadata to disk')
-
-                with JsonWriter() as writer:
-                    filename = batch['outputs']['mapper_files'][i]
-                    writer.write(filename, file_mapper)
-
-    @utils.notimplemented
-    def apply_statistics(self, output_dir, plates, wells, sites, channels,
-                         tpoints, zplanes, **kwargs):
-        pass
+                    c_index += 1

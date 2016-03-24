@@ -1,6 +1,10 @@
 import os
 import re
-from ..api import ClusterRoutines
+
+import tmlib.models
+from tmlib.utils import flatten
+from tmlib.workflow.api import ClusterRoutines
+from tmlib.errors import WorkflowError
 
 
 class MetadataExtractor(ClusterRoutines):
@@ -13,14 +17,14 @@ class MetadataExtractor(ClusterRoutines):
     and written to XML files.
     '''
 
-    def __init__(self, experiment, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class MetadataExtractor.
 
         Parameters
         ----------
-        experiment: tmlib.models.Experiment
-            experiment that should be processed
+        experiment_id: int
+            ID of the processed experiment
         step_name: str
             name of the corresponding step
         verbosity: int
@@ -29,7 +33,8 @@ class MetadataExtractor(ClusterRoutines):
             ignored keyword arguments
         '''
         super(MetadataExtractor, self).__init__(
-                experiment, step_name, verbosity)
+            experiment_id, step_name, verbosity
+        )
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):
@@ -38,7 +43,7 @@ class MetadataExtractor(ClusterRoutines):
             '.ome.xml', image_filename
         )
 
-    def create_job_descriptions(self, args):
+    def create_batches(self, args):
         '''
         Create job descriptions for parallel computing.
 
@@ -54,23 +59,33 @@ class MetadataExtractor(ClusterRoutines):
         '''
         job_descriptions = dict()
         job_descriptions['run'] = list()
+        job_descriptions['collect'] = {
+            'inputs': {
+                'omexml_files': list()
+            },
+            'outputs': dict(),
+        }
         count = 0
-        for plate in self.experiment.plates:
-            for acquisition in plate.acquisitions:
+        with tmlib.models.utils.Session() as session:
+            for acq in session.query(tmlib.models.Acquisition).\
+                    join(tmlib.models.Plate).\
+                    join(tmlib.models.Experiment).\
+                    filter(tmlib.models.Experiment.id == self.experiment_id):
 
                 batches = self._create_batches(
-                    acquisition.microscope_image_files, args.batch_size
+                    acq.microscope_image_files, args.batch_size
                 )
 
+                job_indices = list()
                 for j, files in enumerate(batches):
                     count += 1
+                    job_indices.append(count-1)
                     job_descriptions['run'].append({
                         'id': count,
                         'inputs': {
                             'image_files': [
                                 os.path.join(
-                                    acquisition.microscope_images_location,
-                                    f.name
+                                    acq.microscope_images_location, f.name
                                 )
                                 for f in files
                             ]
@@ -78,13 +93,20 @@ class MetadataExtractor(ClusterRoutines):
                         'outputs': {
                             'omexml_files': [
                                 os.path.join(
-                                    acquisition.omexml_location,
+                                    acq.omexml_location,
                                     self._get_ome_xml_filename(f.name)
                                 )
                                 for f in files
                             ]
                         }
                     })
+
+                job_descriptions['collect']['inputs']['omexml_files'].append(
+                    flatten([
+                        job_descriptions['run'][j]['outputs']['omexml_files']
+                        for j in job_indices
+                    ])
+                )
 
         return job_descriptions
 
@@ -105,28 +127,43 @@ class MetadataExtractor(ClusterRoutines):
         Not implemented.
 
         The class doesn't implement a :py:meth:`run_job` method because the
-        actual processing is done in Java. Specifically, we use the
+        actual processing is done via the
        `showinf <http://www.openmicroscopy.org/site/support/bio-formats5.1/users/comlinetools/display.html>`_
-        Bioformats command line tool to extract metadata from image files
-        in `OMEXML` format.
+        Bioformats command line tool.
         '''
         raise NotImplementedError(
-                '"%s" object has no "run_job" method'
-                % self.step_name)
+            '"%s" object has no "run_job" method' % self.step_name
+        )
 
     def collect_job_output(self, batch):
         '''
-        Not implemented.
-        '''
-        raise NotImplementedError(
-                    'Abstract method "collect_job_output" is '
-                    'not implemented for class "%s"' % self.__class__.__name__)
+        Register the created files in the database.
 
-    def apply_statistics(self, output_dir, plates, wells, sites, channels,
-                         tpoints, zplanes, **kwargs):
+        Parameters
+        ----------
+        batch: dict
+            job description
+
+        Raises
+        ------
+        :py:class:`tmlib.errors.WorkflowError`
+            when an expected file does not exist, i.e. was not created
         '''
-        Not implemented.
-        '''
-        raise NotImplementedError(
-                    'Abstract method "apply_statistics" is '
-                    'not implemented for class "%s"' % self.__class__.__name__)
+        with tmlib.models.utils.Session() as session:
+            acquisitions = session.query(tmlib.models.Acquisition).\
+                join(tmlib.models.Plate).\
+                join(tmlib.models.Experiment).\
+                filter(tmlib.models.Experiment.id == self.experiment_id).\
+                all()
+            for i, acq in enumerate(acquisitions):
+                for f in batch['inputs']['omexml_files'][i]:
+                    filename = os.path.basename(f)
+                    if not os.path.exists(f):
+                        raise WorkflowError(
+                            'OMEXML file "%s" was not created!' % filename
+                        )
+
+                    session.get_or_create(
+                        tmlib.models.OmeXmlFile,
+                        name=filename, acquisition_id=acq.id
+                    )

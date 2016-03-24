@@ -10,13 +10,13 @@ from collections import OrderedDict
 from cached_property import cached_property
 from abc import ABCMeta
 from abc import abstractproperty
-from .ome_xml import XML_DECLARATION
-from ...metadata import ImageFileMapping
-from ..illuminati import stitch
-from ...errors import MetadataError
-from ...errors import RegexError
-from ...errors import NotSupportedError
-from ...readers import MetadataReader
+from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
+from tmlib.metadata import ImageFileMapping
+from tmlib.workflow.illuminati import stitch
+from tmlib.errors import MetadataError
+from tmlib.errors import RegexError
+from tmlib.errors import NotSupportedError
+from tmlib.readers import MetadataReader
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class MetadataHandler(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, image_files, additional_files, omexml_files, plate):
+    def __init__(self, image_files, additional_files, omexml_files):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -55,15 +55,10 @@ class MetadataHandler(object):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate: int
-            index of the corresponding plate within the experiment
         '''
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        if not isinstance(plate, int):
-            raise TypeError('Argument "plate" must have type int')
-        self.plate = plate
         self.file_mapper_list = list()
         self.file_mapper_lookup = defaultdict(list)
         self.wells = dict()
@@ -227,7 +222,6 @@ class MetadataHandler(object):
         self.metadata['well_position_y'] = np.empty((length, ), dtype=int)
         self.metadata['well_position_x'] = np.empty((length, ), dtype=int)
         self.metadata['site'] = np.empty((length, ), dtype=int)
-        self.metadata['plate'] = np.repeat(self.plate, length)
 
         return self.metadata
 
@@ -242,13 +236,18 @@ class MetadataHandler(object):
         '''
         pass
 
-    def configure_ome_metadata_from_additional_files(self):
+    def configure_ome_metadata_from_additional_files(self, regex):
         '''
         Use the *OMEXML* metadata retrieved form additional microscope-specific
         metadata files to complement metadata retrieved from image files.
 
         Additional metadata files contain information that is not available
         from individual image files, for example information about wells.
+
+        Parameters
+        ----------
+        regex: str
+            named regular expression
 
         Returns
         -------
@@ -321,7 +320,7 @@ class MetadataHandler(object):
 
             return self.metadata
 
-        if not IMAGE_FILE_REGEX_PATTERN:
+        if not regex:
             raise RegexError('No regular expression available.')
 
         logger.info('configure OMEXML provided by additional files')
@@ -335,7 +334,7 @@ class MetadataHandler(object):
         md = self.metadata
 
         lookup = dict()
-        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
+        r = re.compile(regex)
         for i in xrange(n_images):
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
@@ -349,7 +348,8 @@ class MetadataHandler(object):
             match = r.search(filename)
             if not match:
                 raise RegexError(
-                        'Incorrect reference to image files in plate element.')
+                    'Incorrect reference to image files in plate element.'
+                )
             captures = match.groupdict()
             if 'z' not in captures.keys():
                 captures['z'] = md.at[i, 'zplane']
@@ -366,7 +366,8 @@ class MetadataHandler(object):
 
             if pixels.channel_count > 1:
                 raise NotSupportedError(
-                        'Only image elements with one channel are supported.')
+                    'Only image elements with one channel are supported.'
+                )
 
             for ix in matched_indices:
 
@@ -465,8 +466,9 @@ class MetadataHandler(object):
         ])))
         if md.shape[0] != len(filenames):
             raise MetadataError(
-                    'Configuration of metadata based on filenames '
-                    'works only when each image file contains a single plane.')
+                'Configuration of metadata based on filenames '
+                'works only when each image file contains a single plane.'
+            )
 
         if not regex:
             regex = IMAGE_FILE_REGEX_PATTERN
@@ -478,14 +480,16 @@ class MetadataHandler(object):
         for name in provided_names:
             if name not in required_names:
                 raise RegexError(
-                        '"%s" is not a supported group name.\n'
-                        'Supported are "%s"'
-                        % (name, '", "'.join(required_names)))
+                    '"%s" is not a supported group name.\n'
+                    'Supported are "%s"'
+                    % (name, '", "'.join(required_names))
+                )
 
         for name in required_names:
             if name not in provided_names:
                 raise RegexError(
-                        'Expression must contain group name "%s"', name)
+                    'Expression must contain group name "%s"', name
+                )
 
         logger.info('retrieve metadata from filenames via regular expression')
         logger.debug('expression: %s', regex)
@@ -497,8 +501,9 @@ class MetadataHandler(object):
             match = r.search(f)
             if not match:
                 raise RegexError(
-                        'Metadata could not be retrieved from filename "%s" '
-                        'using regular expression "%s"' % (f, regex))
+                    'Metadata could not be retrieved from filename "%s" '
+                    'using regular expression "%s"' % (f, regex)
+                )
             capture = match.groupdict()
             md.at[i, 'channel_name'] = str(capture['c'])
             md.at[i, 'zplane'] = int(capture['z'])
@@ -537,16 +542,19 @@ class MetadataHandler(object):
         if (any(md.stage_position_y.isnull()) or
                 any(md.stage_position_x.isnull())):
                 raise MetadataError(
-                    'Stage position information is not available.')
+                    'Stage position information is not available.'
+                )
 
-        logger.info('translate absolute microscope stage positions into '
-                    'relative acquisition grid coordinates')
+        logger.info(
+            'translate absolute microscope stage positions into '
+            'relative acquisition grid coordinates'
+        )
 
         for well_name in np.unique(md.well_name):
 
             ix = np.where(md.well_name == well_name)[0]
-            positions = zip(md.loc[ix, 'stage_position_y'],
-                            md.loc[ix, 'stage_position_x'])
+            positions = zip(
+                md.loc[ix, 'stage_position_y'], md.loc[ix, 'stage_position_x'])
 
             coordinates = self._calculate_coordinates(positions)
 
@@ -600,7 +608,8 @@ class MetadataHandler(object):
 
         if len(np.unique(n_acquisitions_per_well)) > 1:
             raise MetadataError(
-                    'Each well must have the same number of acquisition sites.')
+                'Each well must have the same number of acquisition sites.'
+            )
 
         n_sites = n_acquisitions_per_well[0]
 
@@ -645,10 +654,10 @@ class MetadataHandler(object):
         logger.info('reconfigure metadata for intensity projection')
 
         # Remove all z-plane image entries except for the first
-        projected_md = md.drop_duplicates([
+        projected_md = md.drop_duplicates(subset=[
             'well_name', 'well_position_x', 'well_position_y',
             'channel_name', 'tpoint'
-        ])
+        ]).copy()
         projected_md.index = range(projected_md.shape[0])
         # Update z-plane index for the projected image entries
         projected_md.loc[:, 'zplane'] = 0
@@ -736,45 +745,6 @@ class MetadataHandler(object):
             md.loc[(md.zplane == z), 'zplane'] = i
         return self.metadata
 
-    def build_image_filenames(self, image_file_format_string):
-        '''
-        Build unique filenames for extracted images.
-
-        Since the number of extracted images may be different than the number
-        of image source files (because each image file can contain multiple
-        planes), new names have to be build for the target files.
-
-        Parameters
-        ----------
-        image_file_format_string: str
-            Python format string with the following fieldnames:
-            "p", "w", x", "y", "c", "z", "t"
-
-        Returns
-        -------
-        pandas.DataFrame
-            metadata for each 2D *Plane* element
-        '''
-        logger.info('build names for final image files')
-        md = self.metadata
-        for i in md.index:
-            fieldnames = {
-                'p': self.plate,
-                'w': md.at[i, 'well_name'],
-                'y': md.at[i, 'well_position_y'],
-                'x': md.at[i, 'well_position_x'],
-                'c': md.at[i, 'channel'],
-                'z': md.at[i, 'zplane'],
-                't': md.at[i, 'tpoint'],
-            }
-            md.at[i, 'name'] = image_file_format_string.format(**fieldnames)
-
-        # # Sort metadata according to image name and assign continuous index
-        # self.metadata = md.sort_values(by='name')
-        # self.metadata.index = range(md.shape[0])
-
-        return self.metadata
-
     def assign_acquisition_site_indices(self):
         '''
         Give each acquisition site a globally (plate-wide) unique index.
@@ -792,7 +762,6 @@ class MetadataHandler(object):
         site_indices = sorted(sites.groups.values())
         for i, indices in enumerate(site_indices):
             md.loc[indices, 'site'] = i
-
         md.site = md.site.astype(int)
 
         return self.metadata
@@ -814,43 +783,38 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def create_image_file_mapper(self):
+    def create_image_file_mapping(self):
         '''
-        Create a hashmap for the extraction of individual planes from the
-        original image files.
+        Create a file map for the extraction of individual planes from the
+        microscopy image files.
 
         Returns
         -------
         Dict[str, Dict[str, List[str]]]
-            key-value pairs to map the original image filename to the
-            *name* of each extracted image and the *series* and *plane*,
-            which specify the location in the original file, from where the
-            image plane should be extracted
+            a mapping of each plane to the corresponding microscope image files
+            and the location within the files (*series* and *plane* index)
         '''
-        logger.info('build image file mapper')
+        logger.info('build image file map')
         md = self.metadata
-        mapper = list()
+        mapper = dict()
         if len(self.file_mapper_list[0].files) > 1:
             # In this case individual focal planes that should be projected
             # to the final 2D plane are distributed across several files.
             # These files have to be loaded on the same node in order to be
             # able to perform the projection.
             for i in xrange(md.shape[0]):
-                ref_ix = self.file_mapper_list[i].ref_index
+                ref_index = self.file_mapper_list[i].ref_index
                 element = ImageFileMapping()
-                element.ref_index = ref_ix
-                element.ref_file = md.at[ref_ix, 'name']
+                element.ref_index = ref_index
+                # element.ref_file = md.at[ref_ix, 'name']
                 element.files = self.file_mapper_list[i].files
                 element.series = self.file_mapper_list[i].series
                 element.planes = self.file_mapper_list[i].planes
-                mapper.append(dict(element))
+                mapper[ref_index] = dict(element)
         else:
             # In this case images files contain one or multiple planes
-            for item in self.file_mapper_list:
-                # Update image names
-                ref_ix = item.ref_index
-                item.ref_file = md.at[ref_ix, 'name']
-                mapper.append(dict(item))
+            for i, item in enumerate(self.file_mapper_list):
+                mapper[i] = dict(item)
 
         return mapper
 
@@ -862,7 +826,7 @@ class DefaultMetadataHandler(MetadataHandler):
     metadata files are not required or not available.
     '''
 
-    def __init__(self, image_files, additional_files, omexml_files, plate):
+    def __init__(self, image_files, additional_files, omexml_files):
         '''
         Initialize an instance of class MetadataHandler.
 
@@ -874,19 +838,17 @@ class DefaultMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate: int
-            index of the corresponding plate within the experiment
 
         Returns
         -------
         tmlib.metaconfig.default.DefaultMetadataHandler
         '''
         super(DefaultMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate)
+            image_files, additional_files, omexml_files
+        )
         self.image_files = image_files
         self.additional_files = additional_files
         self.omexml_files = omexml_files
-        self.plate = plate
 
     @property
     def ome_additional_metadata(self):

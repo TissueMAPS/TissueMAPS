@@ -1,5 +1,4 @@
-from ..args import VariableArgs
-from ..formats import Formats
+from tmlib.workflow.args import VariableArgs
 
 
 class MetaconfigInitArgs(VariableArgs):
@@ -13,8 +12,7 @@ class MetaconfigInitArgs(VariableArgs):
         **kwargs: dict
             arguments as key-value pairs
         '''
-        self.file_format = self._file_format_params['default']
-        self.keep_z_stacks = self._keep_z_stacks_params['default']
+        self.keep_zplanes = self._keep_zplanes_params['default']
         self.regex = self._regex_params['default']
         self.stitch_layout = self._stitch_layout_params['default']
         self.stitch_major_axis = self._stitch_major_axis_params['default']
@@ -29,47 +27,12 @@ class MetaconfigInitArgs(VariableArgs):
     @property
     def _persistent_attrs(self):
         return {
-            'file_format', 'keep_z_stacks', 'regex', 'stitch_layout',
+            'keep_zplanes', 'regex', 'stitch_layout',
             'stitch_major_axis', 'n_vertical', 'n_horizontal'
         }
 
     @property
-    def file_format(self):
-        '''
-        Returns
-        -------
-        str
-            microscope-specific file format for which a custom
-            reader and handler is available (default: ``"default"``)
-        '''
-        return self._file_format
-
-    @file_format.setter
-    def file_format(self, value):
-        if not isinstance(value, self._file_format_params['type']):
-            raise TypeError('Attribute "file_format" must have type %s'
-                            % self._file_format_params['type'].__name__)
-        options = set(self._file_format_params['choices'])
-        options.add(self._file_format_params['default'])
-        if value not in options:
-            raise ValueError('Attribute of "file_format" must be "%s"'
-                             % '" or "'.join(options))
-        self._file_format = value
-
-    @property
-    def _file_format_params(self):
-        return {
-            'type': str,
-            'choices': Formats.SUPPORT_FOR_ADDITIONAL_FILES,
-            'default': 'default',
-            'help': '''
-                microscope-specific file format for which a custom
-                reader and handler is available (default: "default")
-            '''
-        }
-
-    @property
-    def keep_z_stacks(self):
+    def keep_zplanes(self):
         '''
         Returns
         -------
@@ -77,17 +40,17 @@ class MetaconfigInitArgs(VariableArgs):
             if individual focal planes should be kept,
             i.e. no intensity projection performed (default: ``False``)
         '''
-        return self._keep_z_stacks
+        return self._keep_zplanes
 
-    @keep_z_stacks.setter
-    def keep_z_stacks(self, value):
-        if not isinstance(value, self._keep_z_stacks_params['type']):
-            raise TypeError('Attribute "keep_z_stacks" must have type %s.'
-                            % self._keep_z_stacks_params['type'].__name__)
-        self._keep_z_stacks = value
+    @keep_zplanes.setter
+    def keep_zplanes(self, value):
+        if not isinstance(value, self._keep_zplanes_params['type']):
+            raise TypeError('Attribute "keep_zplanes" must have type %s.'
+                            % self._keep_zplanes_params['type'].__name__)
+        self._keep_zplanes = value
 
     @property
-    def _keep_z_stacks_params(self):
+    def _keep_zplanes_params(self):
         return {
             'type': bool,
             'default': False,

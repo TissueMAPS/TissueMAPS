@@ -41,7 +41,7 @@ class ImageExtractor(ClusterRoutines):
             if not os.path.exists(cycle.image_dir):
                 os.mkdir(cycle.image_dir)
 
-    def create_job_descriptions(self, args):
+    def create_batches(self, args):
         '''
         Create a list of information required for the creation and processing
         of individual jobs.

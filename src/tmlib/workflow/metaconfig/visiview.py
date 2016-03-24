@@ -4,11 +4,11 @@ import logging
 import bioformats
 from collections import defaultdict
 from cached_property import cached_property
-from .ome_xml import XML_DECLARATION
-from .default import MetadataHandler
-from ... import utils
-from ...errors import RegexError
-from ...readers import MetadataReader
+from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
+from tmlib.workflow.metaconfig.default import MetadataHandler
+from tmlib import utils
+from tmlib.errors import RegexError
+from tmlib.readers import MetadataReader
 
 logger = logging.getLogger(__name__)
 
@@ -245,8 +245,7 @@ class VisiviewMetadataHandler(MetadataHandler):
     i.e. placed in another folder.
     '''
 
-    def __init__(self, image_files, additional_files, omexml_files,
-                 plate):
+    def __init__(self, image_files, additional_files, omexml_files):
         '''
         Initialize an instance of class VisiviewMetadataHandler.
 
@@ -258,15 +257,13 @@ class VisiviewMetadataHandler(MetadataHandler):
             full paths to additional microscope-specific metadata files
         omexml_files: List[str]
             full paths to the XML files that contain the extracted OMEXML data
-        plate_name: int
-            index of the corresponding plate within the experiment
         '''
         super(VisiviewMetadataHandler, self).__init__(
-                image_files, additional_files, omexml_files, plate)
+            image_files, additional_files, omexml_files
+        )
         self.image_files = image_files
         self.omexml_files = omexml_files
         self.additional_files = additional_files
-        self.plate = plate
 
     @cached_property
     def ome_additional_metadata(self):

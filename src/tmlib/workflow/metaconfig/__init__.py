@@ -1,6 +1,5 @@
-import re
 import importlib
-from ... import __version__
+from tmlib import __version__
 
 logo = '''
             _                     __ _

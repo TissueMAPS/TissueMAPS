@@ -65,7 +65,7 @@ class PyramidBuilder(ClusterRoutines):
                 files.extend(run_files)
         return files
 
-    def create_job_descriptions(self, args):
+    def create_batches(self, args):
         '''
         Create job descriptions for parallel computing.
 

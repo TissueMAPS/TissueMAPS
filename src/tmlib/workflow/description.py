@@ -3,10 +3,10 @@ import json
 from collections import defaultdict
 from abc import ABCMeta
 from abc import abstractmethod
-from .args import VariableArgs
-from ..errors import WorkflowDescriptionError
-from ..import_utils import load_method_args
-from ..import_utils import load_var_method_args
+
+import tmlib.workflow
+from tmlib.workflow.args import VariableArgs
+from tmlib.errors import WorkflowDescriptionError
 
 
 class WorkflowDescription(object):
@@ -289,11 +289,11 @@ class WorkflowStepDescription(object):
         if not(isinstance(args, dict) or args is None):
             raise TypeError('Argument "args" must have type dict.')
         try:
-            variable_args_handler = load_var_method_args(self.name, 'init')
+            variable_args_handler = tmlib.workflow.load_var_method_args(self.name, 'init')
         except ImportError:
             raise WorkflowDescriptionError(
                     '"%s" is not a valid step name.' % self.name)
-        init_args_handler = load_method_args('init')
+        init_args_handler = tmlib.workflow.load_method_args('init')
         self._args = init_args_handler()
         if args:
             self.args = variable_args_handler(**args)
@@ -304,7 +304,7 @@ class WorkflowStepDescription(object):
                             % (a, self.name))
         else:
             self.args = variable_args_handler()
-        submit_args_handler = load_method_args('submit')
+        submit_args_handler = tmlib.workflow.load_method_args('submit')
         submit_args = submit_args_handler(**kwargs)
         self.duration = submit_args.duration
         self.memory = submit_args.memory
