@@ -20,7 +20,7 @@ def add_acquisition(experiment_name, plate_name, acquisition_name):
         except:
             raise
         acquisition = tmlib.models.Acquisition(
-            name=acquisition_name, plate=plate
+            name=acquisition_name, plate_id=plate.id
         )
         session.add(acquisition)
 

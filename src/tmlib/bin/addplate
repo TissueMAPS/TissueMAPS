@@ -17,7 +17,9 @@ def add_plate(plate_name, experiment_name):
             )
         except:
             raise
-        plate = tmlib.models.Plate(name=plate_name, experiment=experiment)
+        plate = tmlib.models.Plate(
+            name=plate_name, experiment_id=experiment.id
+        )
         session.add(plate)
 
 

@@ -5,7 +5,7 @@ import tmlib.models
 
 
 def create_tables():
-    engine = tmlib.models.utils.create_tmaps_database_engine()
+    engine = tmlib.models.utils.create_db_engine()
     # Create all tables defined by declarative classes in tmlib.models
     tmlib.models.Model.metadata.create_all(engine)
 

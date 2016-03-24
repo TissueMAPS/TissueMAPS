@@ -28,12 +28,13 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
         except:
             raise
         experiment = tmlib.models.Experiment(
-            name=experiment_name, user=user,
+            name=experiment_name, user_id=user.id,
             microscope_type=microscope_type,
             plate_format=plate_format,
             plate_acquisition_mode=plate_acquisition_mode
         )
         session.add(experiment)
+        session.flush()
         return experiment.id
 
 

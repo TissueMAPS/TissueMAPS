@@ -1,0 +1,6 @@
+#!/bin/bash
+
+dropdb tissuemaps
+createdb tissuemaps
+echo 'CREATE EXTENSION postgis;' | psql -d tissuemaps
+createtables

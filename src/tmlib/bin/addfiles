@@ -7,7 +7,8 @@ import paramiko
 import sqlalchemy.orm.exc
 
 import tmlib.models
-from tmlib.steps.metaconfig import metadata_handler_factory
+from tmlib.models.status import FileUploadStatus
+from tmlib.workflow.metaconfig import metadata_handler_factory
 
 
 class RemoteFileCopy(object):
@@ -114,7 +115,7 @@ if __name__ == '__main__':
                 if name not in image_file_names:
                     print 'register image file "%s"' % name
                     file = tmlib.models.MicroscopeImageFile(
-                        name=name, acquisition=acquisition
+                        name=name, acquisition_id=acquisition.id
                     )
                     session.add(file)
                     session.flush()
@@ -123,45 +124,38 @@ if __name__ == '__main__':
                 if name not in metdata_file_names:
                     print 'register metadata file "%s"' % name
                     file = tmlib.models.MicroscopeMetadataFile(
-                        name=name, acquisition=acquisition
+                        name=name, acquisition_id=acquisition.id
                     )
                     session.add(file)
                     session.flush()
 
         session.commit()
 
-        acquisition.status = 'UPLOADING'
-        session.add(acquisition)
-        session.commit()
-
         with LocalFileCopy() as c:
 
             # Copy ("upload") the files and update their upload_status.
             for f in acquisition.microscope_image_files:
-                if f.upload_status != 'UPLOAD_COMPLETE':
+                if f.upload_status != FileUploadStatus.COMPLETE:
                     print 'copy image file "%s"' % f.name
                     src = os.path.join(args.source_directory, f.name)
                     dst = f.location
-                    f.upload_status = 'UPLOADING'
+                    f.upload_status = FileUploadStatus.UPLOADING
                     session.add(f)
-                    session.commmit()
+                    session.commit()
                     c.copy(src, dst)
-                    f.upload_status = 'UPLOAD_COMPLETE'
+                    f.upload_status = FileUploadStatus.COMPLETE
                     session.add(f)
-                    session.commmit()
+                    session.commit()
 
             for f in acquisition.microscope_metadata_files:
-                if f.upload_status != 'UPLOAD_COMPLETE':
+                if f.upload_status != FileUploadStatus.COMPLETE:
                     print 'copy metadata file "%s"' % f.name
                     src = os.path.join(args.source_directory, f.name)
                     dst = f.location
-                    f.upload_status = 'UPLOADING'
+                    f.upload_status = FileUploadStatus.UPLOADING
                     session.add(f)
-                    session.commmit()
+                    session.commit()
                     c.copy(src, dst)
-                    f.upload_status = 'UPLOAD_COMPLETE'
+                    f.upload_status = FileUploadStatus.COMPLETE
                     session.add(f)
-                    session.commmit()
-
-        acquisition.status = 'UPLOAD_COMPLETE'
-        session.add(acquisition)
+                    session.commit()
