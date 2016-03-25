@@ -1,50 +1,37 @@
 import os
 import logging
-import numpy as np
-from .. import utils
-from .stats import OnlineStatistics
-from .stats import OnlinePercentile
-from ..writers import DatasetWriter
-from ..readers import ImageReader
-from ..api import ClusterRoutines
+
+import tmlib.models
+from tmlib.utils import notimplemented
+from tmlib.writers import DatasetWriter
+from tmlib.readers import ImageReader
+from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.corilla.stats import OnlineStatistics
+from tmlib.workflow.corilla.stats import OnlinePercentile
 
 logger = logging.getLogger(__name__)
 
 
 class IllumstatsGenerator(ClusterRoutines):
 
-    '''
-    Class for calculating illumination statistics.
-    '''
+    '''Class for calculating illumination statistics.'''
 
-    def __init__(self, experiment, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
         '''
-        Initialize an instance of class IllumstatsGenerator.
-
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment_id: int
+            ID of parent experiment
         step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        kwargs: dict
-            mapping of additional key-value pairs that are ignored
+        **kwargs: dict
+            ignored keyword arguments
         '''
         super(IllumstatsGenerator, self).__init__(
-                experiment, step_name, verbosity)
-
-    @property
-    def stats_file_format_string(self):
-        '''
-        Returns
-        -------
-        image_file_format_string: str
-            format string that specifies how the names of the statistics files
-            should be formatted
-        '''
-        return self.experiment.plates[0].cycles[0].STATS_FILE_FORMAT
+            experiment_id, step_name, verbosity
+        )
 
     def create_batches(self, args):
         '''
@@ -63,38 +50,59 @@ class IllumstatsGenerator(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         count = 0
-        for plate in self.experiment.plates:
-            for cycle in plate.cycles:
-                md = cycle.image_metadata
 
-                # Group image files per channel
-                channels = np.unique(md.channel)
-                img_batches = list()
-                for c in channels:
-                    files = md[(md.channel == c)].name
-                    img_batches.append(files)
+        with tmlib.models.utils.Session() as session:
 
-                for i, batch in enumerate(img_batches):
+            channels = session.query(tmlib.models.Channel).\
+                filter_by(experiment_id=self.experiment_id).\
+                all()
+
+            # NOTE: Illumination statistics are calculated for each cycle
+            # separately. This should be safer, since imaging condition might
+            # differ between cycles. 
+
+            # TODO: Enable pooling image files across cycles, which may be
+            # necessary to get enough images for robust statistics in case
+            # each cycle has only a few images.
+            for cycle in session.query(tmlib.models.Cycle).\
+                    join(tmlib.models.Plate).\
+                    join(tmlib.models.Experiment).\
+                    filter(tmlib.models.Experiment.id == self.experiment_id):
+
+                for channel in channels:
+
+                    files = [
+                        f for f in cycle.channel_image_files
+                        if f.channel_layer.channel.id == channel.id
+                    ]
+
+                    if not files:
+                        continue
+
                     count += 1
                     job_descriptions['run'].append({
                         'id': count,
                         'inputs': {
-                            'image_files': [
-                                os.path.join(cycle.image_dir, f) for f in batch
+                            'channel_image_files': [
+                                f.location for f in files
                             ]
                         },
                         'outputs': {
-                            'stats_files': [
+                            'illumstats_files': [
                                 os.path.join(
-                                    cycle.stats_dir,
-                                    self.stats_file_format_string.format(
-                                        channel=channels[i])
+                                    cycle.illumstats_location,
+                                    tmlib.models.IllumStatsFile.
+                                    FILENAME_FORMAT.format(
+                                        channel_id=channel.id
+                                    )
                                 )
                             ]
                         },
-                        'channel': channels[i],
-                        'cycle': cycle.index,
-                        'tpoint': cycle.tpoint
+                        'channel_image_files_ids': [
+                            f.id for f in files
+                        ],
+                        'channel_id': channel.id,
+                        'cycle_id': cycle.id
                     })
         return job_descriptions
 
@@ -107,28 +115,37 @@ class IllumstatsGenerator(ClusterRoutines):
         batch: dict
             job_descriptions element
         '''
-        image_files = batch['inputs']['image_files']
+        file_ids = batch['channel_image_files_ids']
         logger.info('calculate illumination statistics')
-        with ImageReader() as reader:
-            img = reader.read(image_files[0])
-            stats = OnlineStatistics(image_dimensions=img.shape)
-            pctl = OnlinePercentile()
-            for f in image_files:
-                logger.debug('update statistics for image: %s',
-                             os.path.basename(f))
-                img = reader.read(f)
-                stats.update(img)
-                pctl.update(img)
-        stats_file = batch['outputs']['stats_files'][0]
-        logger.info('write calculated statistics to file')
-        with DatasetWriter(stats_file, truncate=True) as writer:
-            writer.write('/stats/mean', data=stats.mean)
-            writer.write('/stats/std', data=stats.std)
-            writer.write('/stats/percentile', data=pctl.percentile)
-            writer.write('/metadata/cycle', data=batch['cycle'])
-            writer.write('/metadata/tpoint', data=batch['tpoint'])
-            writer.write('/metadata/channel', data=batch['channel'])
+        with tmlib.models.utils.Session() as session:
+            file = session.query(tmlib.models.ChannelImageFile).get(file_ids[0])
+            img = file.get()
+        stats = OnlineStatistics(image_dimensions=img.dimensions)
+        pctl = OnlinePercentile()
+        for fid in file_ids:
+            with tmlib.models.utils.Session() as session:
+                file = session.query(tmlib.models.ChannelImageFile).get(fid)
+                img = file.get()
+                logger.info('update statistics for image: %s', file.name)
+            stats.update(img.pixels)
+            pctl.update(img.pixels)
 
-    @utils.notimplemented
+        with tmlib.models.utils.Session() as session:
+            stats_file = session.get_or_create(
+                tmlib.models.IllumStatsFile,
+                channel_id=batch['channel_id'], cycle_id=batch['cycle_id']
+            )
+            logger.info('write calculated statistics to file')
+            with DatasetWriter(stats_file.location, truncate=True) as writer:
+                writer.write('/mean', data=stats.mean)
+                writer.write('/std', data=stats.std)
+                writer.write(
+                    '/percentiles/values', data=pctl.percentiles.values()
+                )
+                writer.write(
+                    '/percentiles/keys', data=pctl.percentiles.keys()
+                )
+
+    @notimplemented
     def collect_job_output(self, batch):
         pass

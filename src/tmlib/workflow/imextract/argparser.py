@@ -2,8 +2,8 @@
 Parse arguments from the command line.
 '''
 
-from .cli import Imextract
-from .args import ImextractInitArgs
+from tmlib.workflow.imextract.cli import Imextract
+from tmlib.workflow.imextract.args import ImextractInitArgs
 
 
 parser, subparsers = Imextract.get_parser_and_subparsers(

@@ -2,8 +2,8 @@
 Parse arguments from the command line.
 '''
 
-from .cli import Corilla
-from .args import CorillaInitArgs
+from tmlib.workflow.corilla.cli import Corilla
+from tmlib.workflow.corilla.args import CorillaInitArgs
 
 parser, subparsers = Corilla.get_parser_and_subparsers(
     methods={'init', 'run', 'submit', 'resubmit', 'cleanup', 'log', 'info'})

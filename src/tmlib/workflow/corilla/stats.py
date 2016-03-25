@@ -14,8 +14,7 @@ import numpy as np
 
 class OnlineStatistics(object):
 
-    '''
-    Class for calculating online statistics (mean and variance)
+    '''Class for calculating online statistics (mean and variance)
     element-by-element on a series of numpy arrays based on
     Welford's method [1]_ . For more information see Wikipedia article
     "Algorithms for calculating variance" [2]_ .
@@ -27,10 +26,8 @@ class OnlineStatistics(object):
     .. [2] https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
     '''
 
-    def __init__(self, image_dimensions, percentiles=(0.1, 0.99)):
+    def __init__(self, image_dimensions):
         '''
-        Initialize an instance of class OnlineStatistics.
-
         Parameters
         ----------
         image_dimensions: Tuple[int]
@@ -42,12 +39,11 @@ class OnlineStatistics(object):
         self._M2 = np.zeros(image_dimensions, dtype=float)
 
     def update(self, image, log_transform=True):
-        '''
-        Update statistics with additional image.
+        '''Update statistics with additional image.
 
         Parameters
         ----------
-        image: numpy.ndarray[float]
+        image: numpy.ndarray[numpy.uint16]
             additional image
         log_transform: bool, optional
             log10 transform image (default: ``True``)
@@ -69,12 +65,7 @@ class OnlineStatistics(object):
 
     @property
     def var(self):
-        '''
-        Returns
-        -------
-        numpy.ndarray[float]
-            variance
-        '''
+        '''numpy.ndarray[float]: variance'''
         if self.n < 2:
             self._var = np.zeros(self.image_dimensions, dtype=float)
             self._var[:] = np.nan
@@ -84,57 +75,41 @@ class OnlineStatistics(object):
 
     @property
     def std(self):
-        '''
-        Returns
-        -------
-        numpy.ndarray[float]
-            standard deviation
-        '''
+        '''numpy.ndarray[float]: standard deviation'''
         self._std = np.sqrt(self.var)
         return self._std
 
 
 class OnlinePercentile(object):
 
-    '''
-    Class for calculating online percentiles on a series of numpy arrays.
+    '''Class for calculating online percentiles on a series of numpy arrays.
 
     The calculated percentiles can be used to rescale intensity values of
-    images for better display.
+    images for better display, for example.
     '''
 
-    def __init__(self, q=99.999):
+    def __init__(self, decimals=3):
         '''
-        Initialize an instance of class OnlinePercentiles.
-
         Parameters
         ----------
-        q: float
-            percentile to compute; value in the range between 0 and 100
-            (default: ``99.999``)
-
-        Raises
-        ------
-        TypeError
-            when `q` doesn't have type `float`
-        ValueError
-            when value of `q` lies outside the range [0, 100] 
+        decimals: int
+            precision after the comma that determines the number of percentiles
+            that will be calculated
         '''
-        if not isinstance(q, float):
-            raise TypeError('Argument "q" must have type float.')
-        if q <= 0 or q >= 100:
-            raise ValueError('Value of "q" must be in the range [0, 100]')
-        self.q = q
+        if not(0 <= decimals <= 3):
+            raise ValueError('Argument "decimals" must lie in range [0, 3].')
+        precision = 10**(decimals+2)
         self.n = 0
-        self._percentile = float(0)
+        self.q = np.linspace(0, 100, precision)
+        self._percentiles = np.empty((precision, ), dtype=np.float)
+        self._keys = [round(x, 3) for x in self.q]
 
     def update(self, image):
-        '''
-        Update percentile with additional image.
+        '''Update percentile with additional image.
 
         Parameters
         ----------
-        image: numpy.ndarray[float]
+        image: numpy.ndarray[numpy.uint16]
             additional image
 
         Raises
@@ -145,14 +120,17 @@ class OnlinePercentile(object):
         if not isinstance(image, np.ndarray):
             raise TypeError('Image must be a numpy array.')
         self.n += 1
-        self._percentile += np.percentile(image, self.q)
+        self._percentiles += np.percentile(image, self.q)
 
     @property
-    def percentile(self):
+    def percentiles(self):
         '''
         Returns
         -------
         int
-            calculated percentile (rounded to integer value)
+            calculated percentiles (rounded to integer values)
         '''
-        return int(self._percentile / self.n)
+        return {
+            self._keys[i]: int(x/self.n)
+            for i, x in enumerate(self._percentiles)
+        }

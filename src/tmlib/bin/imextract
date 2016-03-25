@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from tmlib.imextract.cli import Imextract
-from tmlib.imextract.argparser import parser
+from tmlib.workflow.imextract.cli import Imextract
+from tmlib.workflow.imextract.argparser import parser
 
 
 if __name__ == '__main__':

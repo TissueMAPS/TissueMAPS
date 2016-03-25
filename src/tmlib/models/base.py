@@ -1,5 +1,8 @@
+'''Abstract base and mixin classes for database models.
+'''
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, DateTime, Integer
+from sqlalchemy_imageattach.entity import Image
 from sqlalchemy import func
 
 from tmlib import utils
@@ -9,7 +12,7 @@ _Base = declarative_base()
 
 class DateMixIn(object):
 
-    '''Mixin class to add datetime stamps to a declarative class.
+    '''Mixin class to add datetime stamps.
 
     Attributes
     ----------
@@ -25,6 +28,15 @@ class DateMixIn(object):
     updated_on = Column(
         DateTime, default=func.now(), onupdate=func.now()
     )
+
+
+class Pixels(_Base, Image):
+
+    '''Abstract base class for *pixels*, which represent the actual binary data
+    in an image file.
+    '''
+
+    __abstract__ = True
 
 
 class Model(_Base):

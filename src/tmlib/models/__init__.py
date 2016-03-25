@@ -2,7 +2,7 @@
 Database models.
 '''
 
-from base import Model, DateMixIn
+from base import Model, DateMixIn, Pixels
 from user import User
 from experiment import Experiment
 from well import Well
@@ -14,4 +14,5 @@ from cycle import Cycle
 from submission import Submission, Task
 from site import Site
 from file import MicroscopeImageFile, MicroscopeMetadataFile, OmeXmlFile, ChannelImageFile, ProbabilityImageFile, IllumStatsFile
+from pixels import ChannelImagePixels
 

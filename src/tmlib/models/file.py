@@ -1,10 +1,19 @@
 import os
+import cv2
 import logging
+import numpy as np
+from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
 from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy_imageattach.entity import image_attachment
+from sqlalchemy_imageattach.stores.fs import FileSystemStore
+from sqlalchemy_imageattach.context import store_context
 
+from tmlib.utils import assert_type
+from tmlib.image import ChannelImage
+from tmlib.metadata import ChannelImageMetadata
 from tmlib.models import Model, DateMixIn
 from tmlib.models.status import FileUploadStatus
 
@@ -13,8 +22,6 @@ logger = logging.getLogger(__name__)
 #: Format string for image filenames
 CHANNEL_IMAGE_FILENAME_FORMAT = 'channel_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.tif'
 
-#: Format string for illumination statistics filenames
-ILLUMSTATS_FILENAME_FORMAT = 'illumstats_{channel}.h5'
 
 PROBABILITY_IMAGE_FILENAME_FORMAT = 'probability_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_m{m:0>3}_z{z:0>3}.tif'
 
@@ -249,6 +256,8 @@ class ChannelImageFile(Model, DateMixIn):
         ID of the parent channel layer
     channel_layer: tmlib.models.ChannelLayer
         parent layer to which the image file belongs
+    pixels: tmlib.models.ChannelImagePixels
+        the actual binary pixel data
     '''
 
     #: Name of the corresponding database table
@@ -261,6 +270,7 @@ class ChannelImageFile(Model, DateMixIn):
     wavelength = Column(String, index=True)
     is_empty = Column(Boolean, index=True)
     file_map = Column(JSONB)
+    pixels = image_attachment('ChannelImagePixels')
     cycle_id = Column(Integer, ForeignKey('cycles.id'))
     site_id = Column(Integer, ForeignKey('sites.id'))
     channel_layer_id = Column(Integer, ForeignKey('channel_layers.id'))
@@ -269,7 +279,7 @@ class ChannelImageFile(Model, DateMixIn):
     # Relationships to other tables
     cycle = relationship('Cycle', backref='channel_image_files')
     site = relationship('Site', backref='channel_image_files')
-    channel_layer = relationship('ChannelLayer', backref='channel_image_files')
+    channel_layer = relationship('ChannelLayer', backref='image_files')
     acquisition = relationship('Acquisition', backref='channel_image_files')
 
     def __init__(self, tpoint, zplane, wavelength, file_map, site_id,
@@ -319,6 +329,60 @@ class ChannelImageFile(Model, DateMixIn):
         self.cycle_id = cycle_id
         self.channel_layer_id = channel_layer_id
 
+    @cached_property
+    def store(self):
+        '''sqlalchemy_imageattach.store.Store: storage backend'''
+        return FileSystemStore(
+            path=os.path.join(self.cycle.channel_images_location, self.name),
+            base_url=''
+        )
+
+    def get(self):
+        '''Get image from store.
+
+        Returns
+        -------
+        tmlib.image.ChannelImage
+            image stored in the file
+        '''
+        with store_context(self.store):
+            with self.pixels.open_file() as f:
+                arr = np.fromstring(f.read(), np.uint16)
+                pixels = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+            metadata = ChannelImageMetadata(
+                name=self.name,
+                tpoint=self.tpoint,
+                zplane=self.zplane,
+                channel=self.channel_layer.channel.name,
+                well=self.site.well.name,
+                well_position_y=self.site.y,
+                well_position_x=self.site.x
+            )
+            if self.site.alignment:
+                metadata.y_shift = self.site.alignment.y_shift
+                metadata.x_shift = self.site.alignment.x_shift
+                metadata.upper_overhang = self.site.alignment.upper_overhang
+                metadata.lower_overhang = self.site.alignment.lower_overhang
+                metadata.right_overhang = self.site.alignment.right_overhang
+                metadata.left_overhang = self.site.alignment.left_overhang
+            return ChannelImage(pixels, metadata)
+
+    @assert_type(image='tmlib.image.ChannelImage')
+    def put(self, image, session):
+        '''Put image to store.
+
+        Parameters
+        ----------
+        image: tmlib.image.ChannelImage
+            image that should be stored in the file
+        session: tmlib.models.utils.Session
+            active database session
+        '''
+        f = cv2.imencode(os.path.splitext(self.name)[1], image.pixels)[1]
+        with store_context(self.store):
+            self.pixels.from_blob(f)
+            session.flush()
+
     @hybrid_property
     def name(self):
         '''str: name of the file'''
@@ -335,12 +399,15 @@ class ChannelImageFile(Model, DateMixIn):
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(self.cycle.images_location, self.name)
+        return self.store.path
 
     def __repr__(self):
         return (
-            '<ChannelImageFile(id=%r, tpoint=%r, zplane=%r, site=%r, channel_layer=%r)>'
-            % (self.id, self.tpoint, self.zplane, self.site_id, self.channel_layer.channel.id)
+            '<ChannelImageFile(id=%r, tpoint=%r, zplane=%r, channel=%r, '
+                              'well=%r, y=%r, x=%r)>'
+            % (self.id, self.tpoint, self.zplane,
+               self.channel_layer.channel.index, self.site.well.name,
+               self.site.y, self.site.x)
         )
 
 
@@ -441,6 +508,9 @@ class IllumStatsFile(Model, DateMixIn):
         parent cycle to which the image file belongs
     '''
 
+    #: str: format string to build filename
+    FILENAME_FORMAT = 'illumstats_{channel_id}.h5'
+
     #: Name of the corresponding database table
     __tablename__ = 'illumstats_files'
 
@@ -470,7 +540,9 @@ class IllumStatsFile(Model, DateMixIn):
         '''
         self.channel_id = channel_id
         self.cycle_id = cycle_id
-        self.name = ILLUMSTATS_FILENAME_FORMAT.format(channel=self.channel)
+        self.name = self.FILENAME_FORMAT.format(
+            channel_id=self.channel_id
+        )
 
     @property
     def location(self):

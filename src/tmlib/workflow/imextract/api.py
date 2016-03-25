@@ -2,10 +2,12 @@ import os
 import numpy as np
 import logging
 import collections
-from .. import utils
-from ..readers import BFImageReader
-from ..api import ClusterRoutines
-from ..writers import ImageWriter
+
+import tmlib.models
+from tmlib.utils import notimplemented
+from tmlib.readers import BFImageReader
+from tmlib.image import ChannelImage
+from tmlib.workflow.api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
 
@@ -18,28 +20,24 @@ class ImageExtractor(ClusterRoutines):
     The extracted arrays are written to PNG files.
     '''
 
-    def __init__(self, experiment, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
         '''
         Initialize an instance of class ImageExtractor.
 
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment_id: int
+            ID of the processed experiment
         step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
         kwargs: dict
-            mapping of additional key-value pairs that are ignored
+            ignored keyword arguments
         '''
         super(ImageExtractor, self).__init__(
-                experiment, step_name, verbosity)
-
-    def _create_output_dirs(self):
-        for cycle in self.cycles:
-            if not os.path.exists(cycle.image_dir):
-                os.mkdir(cycle.image_dir)
+            experiment_id, step_name, verbosity
+        )
 
     def create_batches(self, args):
         '''
@@ -58,37 +56,51 @@ class ImageExtractor(ClusterRoutines):
         '''
         job_count = 0
         job_descriptions = collections.defaultdict(list)
-        for source in self.experiment.sources:
-            mapper = source.image_mapping
-            ix_batches = self._create_batches(range(len(mapper)),
-                                              args.batch_size)
+        with tmlib.models.utils.Session() as session:
+            image_files = session.query(tmlib.models.ChannelImageFile).\
+                join(tmlib.models.Acquisition).\
+                join(tmlib.models.Plate).\
+                join(tmlib.models.Experiment).\
+                filter(tmlib.models.Experiment.id == self.experiment_id).\
+                all()
 
-            for indices in ix_batches:
+            batches = self._create_batches(image_files, args.batch_size)
+            for image_file_subset in batches:
                 job_count += 1
                 job_descriptions['run'].append({
                     'id': job_count,
                     'inputs': {
-                        'image_files': [
+                        'microscope_image_files': [
                             [
-                                os.path.join(self.experiment.sources_dir, f)
-                                for f in mapper[ix].files
+                                os.path.join(
+                                    im_file.acquisition.microscope_images_location,
+                                    f
+                                )
+                                for f in im_file.file_map['files']
                             ]
-                            for ix in indices
+                            for im_file in image_file_subset
                         ]
                     },
                     'outputs': {
-                        'image_files': [
+                        'channel_image_files': [
                             os.path.join(
-                                self.experiment.plates_dir,
-                                mapper[ix].ref_file)
-                            for ix in indices
+                                im_file.cycle.channel_images_location,
+                                im_file.name
+                            )
+                            for im_file in image_file_subset
                         ]
                     },
                     'series': [
-                        mapper[ix].series for ix in indices
+                        im_file.file_map['series']
+                        for im_file in image_file_subset
                     ],
                     'planes': [
-                        mapper[ix].planes for ix in indices
+                        im_file.file_map['planes']
+                        for im_file in image_file_subset
+                    ],
+                    'channel_image_files_ids': [
+                        im_file.id
+                        for im_file in image_file_subset
                     ]
                 })
 
@@ -105,37 +117,40 @@ class ImageExtractor(ClusterRoutines):
             joblist element, i.e. description of a single job
         '''
         with BFImageReader() as reader:
-            for i, filenames in enumerate(batch['inputs']['image_files']):
-                planes = list()
-                for j, f in enumerate(filenames):
-                    logger.info('extract image from file: %s',
-                                os.path.basename(f))
-                    plane_ix = batch['planes'][i][j]
-                    series_ix = batch['series'][i][j]
-                    planes.append(reader.read_subset(
-                            f, plane=plane_ix, series=series_ix))
+            with tmlib.models.utils.Session() as session:
+                for i, filenames in enumerate(batch['inputs']['microscope_image_files']):
+                    planes = list()
+                    for j, f in enumerate(filenames):
+                        logger.info(
+                            'extract image from file: %s',
+                            os.path.basename(f)
+                        )
+                        plane_ix = batch['planes'][i][j]
+                        series_ix = batch['series'][i][j]
+                        planes.append(
+                            reader.read_subset(
+                                f, plane=plane_ix, series=series_ix
+                            )
+                        )
 
-                dtype = planes[0].dtype
-                dims = planes[0].shape
-                stack = np.zeros((len(planes), dims[0], dims[1]), dtype=dtype)
-                # If intensity projection should be performed there will
-                # be multiple planes per output filename and the stack will
-                # be multi-dimensional, i.e. stack.shape[0] > 1
-                for z in xrange(len(planes)):
-                    stack[z, :, :] = planes[z]
-                img = np.max(stack, axis=0)
-                # Write plane (2D single-channel image) to file
-                output_filename = batch['outputs']['image_files'][i]
-                logger.info('extracted image: %s',
-                            os.path.basename(output_filename))
-                with ImageWriter() as writer:
-                    writer.write(output_filename, img)
+                    dtype = planes[0].dtype
+                    dims = planes[0].shape
+                    stack = np.zeros(
+                        (len(planes), dims[0], dims[1]), dtype=dtype
+                    )
+                    # If intensity projection should be performed there will
+                    # be multiple planes per output filename and the stack will
+                    # be multi-dimensional, i.e. stack.shape[0] > 1
+                    for z in xrange(len(planes)):
+                        stack[z, :, :] = planes[z]
+                    img = ChannelImage(np.max(stack, axis=0))
+                    # Write plane (2D single-channel image) to file
+                    output_file = session.query(tmlib.models.ChannelImageFile).\
+                        get(batch['channel_image_files_ids'][i])
+                    logger.info('extracted image: %s', output_file.name)
+                    output_file.put_pixels(img, session)
+                    session.flush()
 
-    @utils.notimplemented
+    @notimplemented
     def collect_job_output(self, batch):
-        pass
-
-    @utils.notimplemented
-    def apply_statistics(self, output_dir, plates, wells, sites, channels,
-                         tpoints, zplanes, **kwargs):
         pass

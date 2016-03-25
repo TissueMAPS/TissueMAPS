@@ -9,8 +9,7 @@ from tmlib.errors import WorkflowError
 
 class MetadataExtractor(ClusterRoutines):
 
-    '''
-    Class for extraction of metadata from microscopic image files.
+    '''Class for extraction of metadata from microscopic image files.
 
     Extracted metadata is formatted according to the
     `Open Microscopy Environment (OME) schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_
@@ -19,8 +18,6 @@ class MetadataExtractor(ClusterRoutines):
 
     def __init__(self, experiment_id, step_name, verbosity, **kwargs):
         '''
-        Initialize an instance of class MetadataExtractor.
-
         Parameters
         ----------
         experiment_id: int

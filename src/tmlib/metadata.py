@@ -14,8 +14,8 @@ class ImageMetadata(object):
     __metaclass__ = ABCMeta
 
     _PERSISTENT_ATTRS = {
-        'id', 'name', 'zplane', 'tpoint', 'site',
-        'plate', 'well_name', 'well_position_x', 'well_position_y',
+        'name', 'zplane', 'tpoint',
+        'well', 'well_position_x', 'well_position_y',
         'x_shift', 'y_shift',
         'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
         'is_aligned', 'is_omitted'
@@ -23,19 +23,10 @@ class ImageMetadata(object):
 
     def __init__(self):
         '''
-        Initialize an instance of class ImageMetadata.
-
-        Returns
-        -------
-        tmlib.metadata.ImageMetadata
-
         Note
         ----
-        Values of shift and overhang attributes are set to zero.
-
-        See also
-        --------
-        :mod:`tmlib.align.description.AlignmentDescription`
+        Values of shift and overhang attributes are set to zero if not
+        provided.
         '''
         self.is_aligned = False
         self.is_omitted = False
@@ -47,29 +38,12 @@ class ImageMetadata(object):
         self.y_shift = 0
 
     @property
-    def id(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based unique image identifier number
-        '''
-        return self._id
-
-    @id.setter
-    def id(self, value):
-        if not(isinstance(value, int)):
-            raise TypeError('Attribute "id" must have type int')
-        self._id = value
-
-    @property
     def name(self):
         '''
         Returns
         -------
         str
-            name of the image (the same as the name of the corresponding file
-            on disk)
+            name of the image (the same as that of the corresponding file)
         '''
         return self._name
 
@@ -94,28 +68,6 @@ class ImageMetadata(object):
         if not(isinstance(value, int)):
             raise TypeError('Attribute "plate" must have type int')
         self._plate = value
-
-    @property
-    def site(self):
-        '''
-        Returns
-        -------
-        int
-            zero-based global (plate-wide) acquisition-site index
-
-        Note
-        ----
-        The index doesn't follow any particular order, it just indicates which
-        images where acquired at the same "site", i.e. microscope stage
-        position.
-        '''
-        return self._site
-
-    @site.setter
-    def site(self, value):
-        if not(isinstance(value, int)):
-            raise TypeError('Attribute "site" must have type int')
-        self._site = value
 
     @property
     def well_position_y(self):
@@ -150,20 +102,20 @@ class ImageMetadata(object):
         self._well_position_x = int(value)
 
     @property
-    def well_name(self):
+    def well(self):
         '''
         Returns
         -------
         str
-            well identifier string, e.g. "A01"
+            name of the corresponding well, e.g. "A01"
         '''
-        return self._well_name
+        return self._well
 
-    @well_name.setter
-    def well_name(self, value):
+    @well.setter
+    def well(self, value):
         if not(isinstance(value, basestring)):
-            raise TypeError('Attribute "well_name" must have type str')
-        self._well_name = str(value)
+            raise TypeError('Attribute "well" must have type str')
+        self._well = str(value)
 
     @property
     def zplane(self):
@@ -353,27 +305,19 @@ class ImageMetadata(object):
 
 class ChannelImageMetadata(ImageMetadata):
 
-    '''
-    Class for metadata specific to channel images, e.g. images acquired with
-    a fluorescence microscope.
+    '''Class for metadata specific to channel images.
     '''
 
     _PERSISTENT_ATTRS = ImageMetadata._PERSISTENT_ATTRS.union({
-        'channel_name', 'is_corrected', 'channel'
+        'is_corrected', 'channel'
     })
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class ChannelImageMetadata.
-
         Parameters
         ----------
         **kwargs: dict, optional
-            metadata attributes as key-value pairs
-
-        Returns
-        -------
-        :py:class:`tmlib.metadata.ChannelImageMetadata`
+            metadata attributes as keyword arguments
         '''
         super(ChannelImageMetadata, self).__init__()
         self.is_corrected = False
@@ -388,35 +332,19 @@ class ChannelImageMetadata(ImageMetadata):
                     logger.warning('attribute "%s" is not set', key)
 
     @property
-    def channel_name(self):
-        '''
-        Returns
-        -------
-        str
-            name given to the channel
-        '''
-        return self._channel_name
-
-    @channel_name.setter
-    def channel_name(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "channel_name" must have type str')
-        self._channel_name = str(value)
-
-    @property
     def channel(self):
         '''
         Returns
         -------
-        int
-            zero-based channel identifier number
+        str
+            name of the channel
         '''
         return self._channel
 
     @channel.setter
     def channel(self, value):
-        if not isinstance(value, int):
-            raise TypeError('Attribute "channel" must have type int')
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "channel" must have type str')
         self._channel = value
 
     @property

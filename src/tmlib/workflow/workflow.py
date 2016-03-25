@@ -169,7 +169,8 @@ class WorkflowStage(object):
     Base class for `TissueMAPS` workflow stages.
     '''
 
-    def __init__(self, name, experiment, verbosity, description=None):
+    def __init__(self, name, experiment, verbosity, submission_id,
+                 description=None):
         '''
         Initialize an instance of class WorkflowStage.
 
@@ -181,6 +182,8 @@ class WorkflowStage(object):
             configured experiment object
         verbosity: int
             logging verbosity index
+        submission_id: int
+            ID of the corresponding submission
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
 
@@ -205,6 +208,7 @@ class WorkflowStage(object):
         self.name = name
         self.experiment = experiment
         self.verbosity = verbosity
+        self.submission_id = submission_id
         if description is not None:
             if not isinstance(description, WorkflowStageDescription):
                 raise TypeError(
@@ -244,8 +248,10 @@ class WorkflowStage(object):
         # TODO: The only exception is the "jterator" step, where we need to
         # parse the "pipeline" argument. This should be implemented more
         # elegantly at some point.
-        prog_instance = prog(self.experiment, self.verbosity,
-                             **dict(step_description.args.variable_args))
+        prog_instance = prog(
+            self.experiment, self.verbosity,
+            **dict(step_description.args.variable_args)
+        )
 
         logger.debug('call "init" method with configured arguments')
         prog_instance.init(step_description.args)
@@ -256,8 +262,9 @@ class WorkflowStage(object):
                 ]):
             logger.error('required inputs were not generated')
             raise WorkflowTransitionError(
-                        'inputs for step "%s" do not exist'
-                        % step_description.name)
+                'inputs for step "%s" do not exist'
+                % step_description.name
+            )
 
         # # Store the expected outputs to be later able to check whether they
         # # were actually generated
@@ -268,9 +275,10 @@ class WorkflowStage(object):
         logger.info('allocated memory: %d GB', step_description.memory)
         logger.info('allocated cores: %d', step_description.cores)
         jobs = prog_instance.create_jobs(
-                        duration=step_description.duration,
-                        memory=step_description.memory,
-                        cores=step_description.cores)
+            duration=step_description.duration,
+            memory=step_description.memory,
+            cores=step_description.cores
+        )
         return jobs
 
     @property
@@ -335,7 +343,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
     dynamically upon transition from one step to the next.
     '''
 
-    def __init__(self, name, experiment, verbosity, description=None,
+    def __init__(self, name, experiment, verbosity,
+                 submission_id, description=None,
                  start_step=None, waiting_time=0):
         '''
         Initialize an instance of class SequentialWorkflowStage.
@@ -348,6 +357,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
             configured experiment object
         verbosity: int
             logging verbosity index
+        submission_id: int
+            ID of the corresponding submission
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
         start_step: str or int, optional
@@ -359,7 +370,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage):
             (default: ``0``)
         '''
         WorkflowStage.__init__(
-                self, name=name, experiment=experiment, verbosity=verbosity)
+                self, name=name, experiment=experiment, verbosity=verbosity,
+                submission_id=submission_id)
         SequentialTaskCollection.__init__(
                 self, tasks=None, jobname='%s' % name)
         self.start_step = start_step
@@ -480,7 +492,8 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
     The number of jobs must be known for each step in advance.
     '''
 
-    def __init__(self, name, experiment, verbosity, description=None):
+    def __init__(self, name, experiment, verbosity, submission_id,
+                 description=None):
         '''
         Initialize an instance of class ParallelWorkflowStage.
 
@@ -492,11 +505,14 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
             configured experiment object
         verbosity: int
             logging verbosity index
+        submission_id: int
+            ID of the corresponding submission
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
         '''
         WorkflowStage.__init__(
-                self, name=name, experiment=experiment, verbosity=verbosity)
+                self, name=name, experiment=experiment, verbosity=verbosity,
+                submission_id=submission_id)
         ParallelTaskCollection.__init__(
                 self, tasks=None, jobname='%s' % name)
         self._build_tasks()
@@ -529,8 +545,9 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection):
 
 class Workflow(SequentialTaskCollection):
 
-    def __init__(self, experiment, verbosity, description=None,
-                 start_stage=None, start_step=None, waiting_time=0):
+    def __init__(self, experiment, verbosity, submission_id,
+                 description=None, start_stage=None, start_step=None,
+                 waiting_time=0):
         '''
         Initialize an instance of class Workflow.
 
@@ -540,6 +557,8 @@ class Workflow(SequentialTaskCollection):
             configured experiment object
         verbosity: int
             logging verbosity index
+        submission_id: int
+            ID of the corresponding submission
         description: tmlib.tmaps.description.WorkflowDescription, optional
             description of the workflow (default: ``None``)
         start_stage: str or int, optional
@@ -573,6 +592,7 @@ class Workflow(SequentialTaskCollection):
        '''
         # TODO: consider pre-building tasks and then later adding subtasks
         # (individual jobs)
+        self.submission_id
         super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
         self.experiment = experiment
         self.verbosity = verbosity
@@ -695,6 +715,7 @@ class Workflow(SequentialTaskCollection):
                         name=stage.name,
                         experiment=self.experiment,
                         verbosity=self.verbosity,
+                        submission_id=self.submission_id,
                         description=stage,
                         start_step=start_step,
                         waiting_time=self.waiting_time)
@@ -704,6 +725,7 @@ class Workflow(SequentialTaskCollection):
                         name=stage.name,
                         experiment=self.experiment,
                         verbosity=self.verbosity,
+                        submission_id=self.submission_id,
                         description=stage)
         logger.debug('add stage to the workflow task list')
         self.tasks.append(task)

@@ -40,7 +40,7 @@ class MetadataConfigurator(ClusterRoutines):
             name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        kwargs: dict
+        **kwargs: dict
             ignored keyword arguments
         '''
         super(MetadataConfigurator, self).__init__(
@@ -262,9 +262,9 @@ class MetadataConfigurator(ClusterRoutines):
 
     def collect_job_output(self, batch):
         '''Assign registered image files from different acquisitions to
-        separate *cycles*. If an acquisition includes images of
-        different time points, a separate *cycle* is created for each time
-        point. The mapping from *acquisitions* to *cycles* is consequently
+        separate *cycles*. If an acquisition includes multiple time points,
+        a separate *cycle* is created for each time point.
+        The mapping from *acquisitions* to *cycles* is consequently
         1 -> n, where n is the number of time points per acquisition (n >= 1).
 
         Whether acquisition time points will be interpreted as actual
@@ -320,11 +320,13 @@ class MetadataConfigurator(ClusterRoutines):
                                 tpoint=t_index, zplane=z, channel_id=channel.id
                             )
 
-                            for im_file in session.query(tmlib.models.ChannelImageFile).\
-                                    filter_by(acquisition_id=acq.id).\
-                                    filter_by(tpoint=t).\
-                                    filter_by(zplane=z).\
-                                    filter_by(wavelength=w):
+                            for im_file in session.query(
+                                    tmlib.models.ChannelImageFile).\
+                                    filter_by(
+                                        acquisition_id=acq.id,
+                                        tpoint=t,
+                                        zplane=z,
+                                        wavelength=w):
                                 im_file.tpoint = t_index
                                 im_file.channel_layer_id = channel_layer.id
                                 im_file.cycle_id = cycle.id

@@ -1,4 +1,5 @@
 import logging
+
 from tmlib.utils import same_docstring_as
 from tmlib.workflow.metaextract import logo
 from tmlib.workflow.metaextract.api import MetadataExtractor

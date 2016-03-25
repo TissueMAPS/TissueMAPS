@@ -2,12 +2,7 @@ import os
 import shutil
 import logging
 import base64
-import yaml
-import simplecrypt
 import sqlalchemy
-from sqlalchemy import event
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +53,7 @@ def auto_create_directory(get_location_func):
                 os.mkdir(loc)
             else:
                 logger.warn('location already exists: %s', loc)
-        event.listen(cls, 'after_insert', after_insert_callback)
+        sqlalchemy.event.listen(cls, 'after_insert', after_insert_callback)
         return cls
     return class_decorator
 
@@ -73,15 +68,14 @@ def exec_func_after_insert(func):
     def class_decorator(cls):
         def after_insert_callback(mapper, connection, target):
             func(mapper, connection, target)
-        event.listen(cls, 'after_insert', after_insert_callback)
+        sqlalchemy.event.listen(cls, 'after_insert', after_insert_callback)
         return cls
     return class_decorator
 
 
 class Session(object):
 
-    '''
-    Create a session scope for interaction with the database.
+    '''Create a session scope for interaction with the database.
     All changes get automatically committed at the end of the interaction.
     In case an error occurs, a rollback is issued.
 
@@ -95,8 +89,8 @@ class Session(object):
     The engine is cached and reused in case of a reconnection within the same
     Python process.
     
-    Warining
-    --------
+    Warning
+    -------
     This is *not* thread-safe!
     '''
     _engine = None
@@ -143,6 +137,10 @@ class Session(object):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.commit`'''
         return self._sqla_session.commit(*args, **kwargs)
 
+    def rollback(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.rollback`'''
+        return self._sqla_session.rollback(*args, **kwargs)
+
     def delete(self, *args, **kwargs):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.delete`'''
         return self._sqla_session.delete(*args, **kwargs)
@@ -165,20 +163,20 @@ class Session(object):
             an instance of `model`
         '''
         try:
-            inst = self.query(model).filter_by(**kwargs).one()
-            logger.debug('got existing instance: %r', inst)
+            instance = self.query(model).filter_by(**kwargs).one()
+            logger.debug('found existing instance: %r', instance)
         except sqlalchemy.orm.exc.NoResultFound:
-            inst = model(**kwargs)
-            self._sqla_session.add(inst)
+            instance = model(**kwargs)
+            self._sqla_session.add(instance)
             self._sqla_session.flush()
-            logger.debug('created new instance: %r', inst)
+            logger.debug('created new instance: %r', instance)
         except sqlalchemy.exc.IntegrityError:
             self._sqla_session.rollback()
-            inst = self.query(model).filter_by(**kwargs).one()
-            logger.debug('got existing instance: %r', inst)
+            instance = self.query(model).filter_by(**kwargs).one()
+            logger.debug('found existing instance: %r', instance)
         except:
             raise
-        return inst
+        return instance
 
 
 def decode_pk(key):
@@ -213,43 +211,4 @@ def encode_pk(string):
         encode public key
     '''
     return base64.urlsafe_b64encode('tmaps' + str(string))
-
-
-def decrypt_pk(key, name):
-    '''
-    Decode key for access to experiments via the command line interface.
-
-    Parameters
-    ----------
-    key: str
-        encoded mapping
-    name: str
-        key name
-
-    Returns
-    -------
-    dict
-        decoded access information
-    '''
-    return yaml.safe_load(simplecrypt.decrypt(str(name), key))
-
-
-def encrypt_pk(mapping, name):
-    '''
-    Encode mapping that provides access information to an experiment for use
-    via the command line interface.
-
-    Parameters
-    ----------
-    mapping: dict
-        access information
-    name: str
-        key name
-
-    Returns
-    -------
-    str
-        encoded access information
-    '''
-    return simplecrypt.encrypt(str(name), yaml.safe_dump(mapping))
 

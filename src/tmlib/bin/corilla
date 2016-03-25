@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from tmlib.corilla.cli import Corilla
-from tmlib.corilla.argparser import parser
+from tmlib.workflow.corilla.cli import Corilla
+from tmlib.workflow.corilla.argparser import parser
 
 
 if __name__ == '__main__':
