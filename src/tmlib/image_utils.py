@@ -2,7 +2,6 @@
 
 import numpy as np
 import logging
-from skimage.exposure import rescale_intensity
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +186,31 @@ def map_to_uint8(img, lower_bound=None, upper_bound=None):
         np.ones(2**16 - upper_bound, dtype=np.uint16) * 255
     ])
     return lut[img].astype(np.uint8)
+
+
+def mip(zplanes):
+    '''Perform maximum intensity projection.
+
+    Parameters
+    ----------
+    zplanes: List[numpy.ndarray[numpy.uint16]]
+        2D pixel planes acquired at different z resolution levels
+
+    Returns
+    -------
+    numpy.ndarray[numpy.uint16]
+        projected image
+
+    Note
+    ----
+    It's assumed that all `zplanes` have same data type and dimensions.
+    '''
+    dims = zplanes[0].shape
+    dtype = zplanes[0].dtype
+    stack = np.zeros((len(zplanes), dims[0], dims[1]), dtype=dtype)
+    for z in xrange(len(zplanes)):
+        stack[z, :, :] = zplanes[z]
+    return np.max(stack, axis=0)
 
 
 def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):

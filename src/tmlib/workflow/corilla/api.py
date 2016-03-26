@@ -4,7 +4,6 @@ import logging
 import tmlib.models
 from tmlib.utils import notimplemented
 from tmlib.writers import DatasetWriter
-from tmlib.readers import ImageReader
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.corilla.stats import OnlineStatistics
 from tmlib.workflow.corilla.stats import OnlinePercentile

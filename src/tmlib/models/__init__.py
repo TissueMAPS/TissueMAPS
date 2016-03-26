@@ -12,7 +12,7 @@ from plate import Plate
 from acquisition import Acquisition
 from cycle import Cycle
 from submission import Submission, Task
-from site import Site
+from site import Site, SiteShift, SiteIntersection
 from file import MicroscopeImageFile, MicroscopeMetadataFile, OmeXmlFile, ChannelImageFile, ProbabilityImageFile, IllumStatsFile
 from pixels import ChannelImagePixels
 

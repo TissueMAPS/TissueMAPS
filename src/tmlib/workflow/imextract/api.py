@@ -148,7 +148,7 @@ class ImageExtractor(ClusterRoutines):
                     output_file = session.query(tmlib.models.ChannelImageFile).\
                         get(batch['channel_image_files_ids'][i])
                     logger.info('extracted image: %s', output_file.name)
-                    output_file.put_pixels(img, session)
+                    output_file.put(img, session)
                     session.flush()
 
     @notimplemented

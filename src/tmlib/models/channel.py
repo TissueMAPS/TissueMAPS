@@ -115,6 +115,8 @@ class ChannelLayer(Model):
         ID of the parent channel
     channel: tmlib.models.Channel
         parent channel to which the plate belongs
+    image_files: List[tmlib.models.ChannelImageFile]
+        image files that belong to the channel layer
     '''
 
     #: Name of the corresponding database table

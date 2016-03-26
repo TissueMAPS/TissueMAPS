@@ -10,14 +10,20 @@ logger = logging.getLogger(__name__)
 
 class Corilla(CommandLineInterface):
 
+    '''Command line interface for calculating illumination statistics
+    across all images of the same channel.
+
+
+    These statistics can then be used to correct channel images for
+    illumination artifacts.
+    '''
+
     def __init__(self, api_instance, verbosity, **kwargs):
         '''
-        Initialize an instance of class Corilla.
-
         Parameters
         ----------
-        api_instance: tmlib.experiment.Experiment
-            configured experiment object
+        api_instance: tmlib.workflow.corilla.IllumstatsGenerator
+            instance of API class to which processing is delegated
         verbosity: int
             logging level
         kwargs: dict

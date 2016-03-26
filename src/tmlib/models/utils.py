@@ -166,14 +166,19 @@ class Session(object):
             instance = self.query(model).filter_by(**kwargs).one()
             logger.debug('found existing instance: %r', instance)
         except sqlalchemy.orm.exc.NoResultFound:
-            instance = model(**kwargs)
-            self._sqla_session.add(instance)
-            self._sqla_session.flush()
-            logger.debug('created new instance: %r', instance)
-        except sqlalchemy.exc.IntegrityError:
-            self._sqla_session.rollback()
-            instance = self.query(model).filter_by(**kwargs).one()
-            logger.debug('found existing instance: %r', instance)
+            # We have to protect against race conditions when several worker
+            # nodes are trying to insert the same row simultaneously.
+            try:
+                instance = model(**kwargs)
+                self._sqla_session.add(instance)
+                self._sqla_session.commit()  # flush() is not sufficient
+                logger.debug('created new instance: %r', instance)
+            except sqlalchemy.exc.IntegrityError:
+                self._sqla_session.rollback()
+                instance = self.query(model).filter_by(**kwargs).one()
+                logger.debug('found existing instance: %r', instance)
+            except:
+                raise
         except:
             raise
         return instance

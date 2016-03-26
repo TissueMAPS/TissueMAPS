@@ -80,7 +80,7 @@ class MetadataExtractor(ClusterRoutines):
                     job_descriptions['run'].append({
                         'id': count,
                         'inputs': {
-                            'image_files': [
+                            'microscope_image_files': [
                                 os.path.join(
                                     acq.microscope_images_location, f.name
                                 )
@@ -111,7 +111,7 @@ class MetadataExtractor(ClusterRoutines):
         # TODO: This approach could become problematic when the batch_size is
         # too big because the number of characters that can be parsed via
         # the command line is limited.
-        input_filenames = ','.join(batch['inputs']['image_files'])
+        input_filenames = ','.join(batch['inputs']['microscope_image_files'])
         output_filenames = ','.join(batch['outputs']['omexml_files'])
         command = [
             'extract_omexml',

@@ -86,13 +86,5 @@ if __name__ == '__main__':
         args.plate_format, args.plate_acquisition_mode
     )
 
-    key = tmlib.models.utils.encode_pk(experiment_id)
-    key_file = os.path.join(args.output_dir, '%s.key' % args.experiment_name)
-    with open(key_file, 'w') as f:
-        f.write(key)
-
-    print 'KEY FILE: %s\n' % key_file
-    print (
-        'Please store the generated key file. '
-        'You will need it to process the experiment via the command line.'
-    )
+    print 'EXPERIMENT ID: %d\n' % experiment_id
+    print 'You will need it to process the experiment via the command line.'

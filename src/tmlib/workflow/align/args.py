@@ -1,4 +1,4 @@
-from ..args import VariableArgs
+from tmlib.workflow.args import VariableArgs
 
 
 class AlignInitArgs(VariableArgs):
@@ -14,13 +14,13 @@ class AlignInitArgs(VariableArgs):
         '''
         self.ref_cycle = self._ref_cycle_params['default']
         self.batch_size = self._batch_size_params['default']
-        self.limit = self._limit_params['default']
+        self.shift_limit = self._shift_limit_params['default']
         super(AlignInitArgs, self).__init__(**kwargs)
 
     @property
     def _persistent_attrs(self):
         return {
-            'batch_size', 'ref_cycle', 'ref_channel', 'limit',
+            'batch_size', 'ref_cycle', 'ref_wavelength', 'shift_limit',
         }
 
     @property
@@ -37,8 +37,10 @@ class AlignInitArgs(VariableArgs):
     @batch_size.setter
     def batch_size(self, value):
         if not isinstance(value, self._batch_size_params['type']):
-            raise TypeError('Attribute "batch_size" must have type %s'
-                            % self._batch_size_params['type'].__name__)
+            raise TypeError(
+                'Attribute "batch_size" must have type %s'
+                % self._batch_size_params['type'].__name__
+            )
         self._batch_size = value
 
     @property
@@ -65,8 +67,10 @@ class AlignInitArgs(VariableArgs):
     @ref_cycle.setter
     def ref_cycle(self, value):
         if not isinstance(value, self._ref_cycle_params['type']):
-            raise TypeError('Attribute "ref_cycle" must have type %s'
-                            % self._ref_cycle_params['type'].__name__)
+            raise TypeError(
+                'Attribute "ref_cycle" must have type %s'
+                % self._ref_cycle_params['type'].__name__
+            )
         self._ref_cycle = value
 
     @property
@@ -80,66 +84,66 @@ class AlignInitArgs(VariableArgs):
         }
 
     @property
-    def ref_channel(self):
+    def ref_wavelength(self):
         '''
         Returns
         -------
-        int
-            name of the reference channel
+        str
+            name of the reference wavelength
 
         Note
         ----
-        The `ref_channel` name must exist in all cycles.
+        The wavelength must exist across all cycles.
         '''
-        return self._ref_channel
+        return self._ref_wavelength
 
-    @ref_channel.setter
-    def ref_channel(self, value):
-        if not isinstance(value, self._ref_channel_params['type']):
-            raise TypeError('Attribute "ref_channel" must have type %s'
-                            % self._ref_channel_params['type'].__name__)
-        self._ref_channel = value
+    @ref_wavelength.setter
+    def ref_wavelength(self, value):
+        if not isinstance(value, self._ref_wavelength_params['type']):
+            raise TypeError(
+                'Attribute "ref_wavelength" must have type %s'
+                % self._ref_wavelength_params['type'].__name__
+            )
+        self._ref_wavelength = value
 
     @property
-    def _ref_channel_params(self):
+    def _ref_wavelength_params(self):
         return {
             'type': str,
             'required': True,
             'help': '''
-                name of the reference channel
+                name of the reference wavelength
             '''
         }
 
     @property
-    def limit(self):
+    def shift_limit(self):
         '''
         Returns
         -------
         int
-            shift limit, i.e. maximally tolerated shift value in pixels unit
-            (default: ``300``)
+            maximally tolerated shift value in pixels unit (default: ``300``)
 
         Warning
         -------
-        If the calculated shift exceeds the `limit` the site will be omitted
-        from further analysis.
+        If the calculated shift exceeds the `shift_limit` the site will be
+        omitted from further analysis.
         '''
-        return self._limit
+        return self._shift_limit
 
-    @limit.setter
-    def limit(self, value):
-        if not isinstance(value, self._limit_params['type']):
-            raise TypeError('Attribute "limit" must have type %s'
-                            % self._limit_params['type'].__name__)
-        self._limit = value
+    @shift_limit.setter
+    def shift_limit(self, value):
+        if not isinstance(value, self._shift_limit_params['type']):
+            raise TypeError('Attribute "shift_limit" must have type %s'
+                            % self._shift_limit_params['type'].__name__)
+        self._shift_limit = value
 
     @property
-    def _limit_params(self):
+    def _shift_limit_params(self):
         return {
             'type': int,
             'default': 300,
             'help': '''
-                shift limit, i.e. maximally allowed shift in pixels
-                (default: 300)
+                maximally allowed shift in pixels (default: 300)
             '''
         }

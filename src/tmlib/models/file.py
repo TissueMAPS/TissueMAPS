@@ -237,7 +237,7 @@ class ChannelImageFile(Model, DateMixIn):
     file_map: str
         binary JSON string encoding a mapping of the channel image file
         to its source microscope image file
-    is_empty: bool
+    omitted: bool
         whether the image file is considered empty, i.e. consisting only of
         background pixels without having biologically relevant information
     acquisition_id: int
@@ -268,7 +268,7 @@ class ChannelImageFile(Model, DateMixIn):
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
     wavelength = Column(String, index=True)
-    is_empty = Column(Boolean, index=True)
+    omitted = Column(Boolean, index=True)
     file_map = Column(JSONB)
     pixels = image_attachment('ChannelImagePixels')
     cycle_id = Column(Integer, ForeignKey('cycles.id'))
@@ -284,7 +284,7 @@ class ChannelImageFile(Model, DateMixIn):
 
     def __init__(self, tpoint, zplane, wavelength, file_map, site_id,
                  acquisition_id, channel_layer_id=None, cycle_id=None,
-                 is_empty=False):
+                 omitted=False):
         '''
         Parameters
         ----------
@@ -308,7 +308,7 @@ class ChannelImageFile(Model, DateMixIn):
             ID of the parent cycle
         channel_layer_id: int
             ID of the parent channel layer
-        is_empty: bool, optional
+        omitted: bool, optional
             whether the image file is considered empty, i.e. consisting only of
             background pixels without having biologically relevant information
             (default: ``False``)
@@ -323,7 +323,7 @@ class ChannelImageFile(Model, DateMixIn):
         self.zplane = zplane
         self.wavelength = wavelength
         self.site_id = site_id
-        self.is_empty = is_empty
+        self.omitted = omitted
         self.file_map = file_map
         self.acquisition_id = acquisition_id
         self.cycle_id = cycle_id
@@ -358,13 +358,14 @@ class ChannelImageFile(Model, DateMixIn):
                 well_position_y=self.site.y,
                 well_position_x=self.site.x
             )
-            if self.site.alignment:
-                metadata.y_shift = self.site.alignment.y_shift
-                metadata.x_shift = self.site.alignment.x_shift
-                metadata.upper_overhang = self.site.alignment.upper_overhang
-                metadata.lower_overhang = self.site.alignment.lower_overhang
-                metadata.right_overhang = self.site.alignment.right_overhang
-                metadata.left_overhang = self.site.alignment.left_overhang
+            # if self.site.shifts:
+            #     # TODO: how to figure out
+            #     metadata.y_shift = self.site.shifts.y_shift
+            #     metadata.x_shift = self.site.shifts.x_shift
+            #     metadata.upper_overhang = self.site.intersection.upper_overhang
+            #     metadata.lower_overhang = self.site.intersection.lower_overhang
+            #     metadata.right_overhang = self.site.intersection.right_overhang
+            #     metadata.left_overhang = self.site.intersection.left_overhang
             return ChannelImage(pixels, metadata)
 
     @assert_type(image='tmlib.image.ChannelImage')
@@ -402,13 +403,25 @@ class ChannelImageFile(Model, DateMixIn):
         return self.store.path
 
     def __repr__(self):
-        return (
-            '<ChannelImageFile(id=%r, tpoint=%r, zplane=%r, channel=%r, '
-                              'well=%r, y=%r, x=%r)>'
-            % (self.id, self.tpoint, self.zplane,
-               self.channel_layer.channel.index, self.site.well.name,
-               self.site.y, self.site.x)
-        )
+        if self.channel_layer is None:
+            return (
+                '<ChannelImageFile('
+                    'id=%r, tpoint=%r, zplane=%r, wavelength=%r, '
+                    'well=%r, y=%r, x=%r'
+                ')>'
+                % (self.id, self.tpoint, self.zplane, self.wavelength,
+                   self.site.well.name, self.site.y, self.site.x)
+            )
+        else:
+            return (
+                '<ChannelImageFile('
+                    'id=%r, tpoint=%r, zplane=%r, channel=%r, wavelength=%r, '
+                    'well=%r, y=%r, x=%r'
+                ')>'
+                % (self.id, self.tpoint, self.zplane,
+                   self.channel_layer.channel.name, self.wavelength,
+                   self.site.well.name, self.site.y, self.site.x)
+            )
 
 
 class ProbabilityImageFile(Model, DateMixIn):

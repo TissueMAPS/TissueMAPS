@@ -3,7 +3,6 @@ import yaml
 import glob
 import time
 import logging
-import shutil
 from natsort import natsorted
 from abc import ABCMeta
 from abc import abstractmethod
@@ -193,7 +192,7 @@ class BasicClusterRoutines(object):
             t_elapsed = time.time() - t_submitted
             logger.info('duration: %s', format_timestamp(t_elapsed))
 
-            logger.info('progress tmlib..')
+            logger.info('progress...')
             engine.progress()
 
             status_data = get_task_data(jobs)

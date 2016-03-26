@@ -2,8 +2,8 @@
 Parse arguments from the command line.
 '''
 
-from .cli import Align
-from .args import AlignInitArgs
+from tmlib.workflow.align.cli import Align
+from tmlib.workflow.align.args import AlignInitArgs
 
 parser, subparsers = Align.get_parser_and_subparsers()
 
