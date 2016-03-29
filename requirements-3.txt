@@ -32,3 +32,4 @@ sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12
 tables>=3.2.2
 ruamel.yaml>=0.10.11
+sqlalchemy_imageattach==0.9.0
