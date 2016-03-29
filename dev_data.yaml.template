@@ -19,10 +19,7 @@ records:
       args:
           name: 150820-Testset-CV
           description: Very nice exp
-          user:
-              class: tmaps.user.User
-              lookup_props:
-                  name: testuser
+          user_id: //tmaps.user.User[name="testuser"]@id
           microscope_type: visiview
           plate_format: 96
           root_directory: /Users/robin/Dev/TissueMAPS/expdata/
@@ -30,23 +27,15 @@ records:
     - class: tmaps.experiment.Channel
       args:
           name: channel_01
-          experiment:
-              class: tmaps.experiment.Experiment
-              lookup_props:
-                  id: 1
+          index: 1
+          experiment_id: //tmaps.experiment.Experiment[id=1]@id
     - class: tmaps.experiment.ChannelLayer
       args:
-          channel:
-              class: tmaps.experiment.Channel
-              lookup_props:
-                  name: channel_01
+          channel_id: //tmaps.experiment.Channel[name="channel_01"]@id
           zplane: 0
           tpoint: 0
     - class: tmaps.experiment.ChannelLayer
       args:
-          channel:
-              class: tmaps.experiment.Channel
-              lookup_props:
-                  name: channel_01
+          channel_id: //tmaps.experiment.Channel[name="channel_01"]@id
           zplane: 1
           tpoint: 0

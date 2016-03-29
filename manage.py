@@ -3,6 +3,7 @@
 import yaml
 import os.path as p
 from subprocess import call
+import re
 
 import sqlalchemy
 import flask
@@ -95,6 +96,31 @@ def insert_data(yaml_file):
         print 'No yaml_file supplied, will not insert any data. '
         return
 
+
+    def get_value_for_query_string(query, session):
+        """Interpret strings of the form:
+
+            //tmaps.experiment.Channel[name="channel_01"]@id
+
+        """
+        m = re.match(r'//(?P<model>.*)\[(?P<lookup>.*)\](@(?P<property>\w+))?', query)
+        model = import_from_str(m.group('model'))
+        lookup = m.group('lookup')
+        lookup_props = {}
+        for k, v in re.findall(r'(?P<key>\w+)=(?P<value>"\w+"|\d+)', lookup):
+            valmatch = re.match('"(\w+)"', v)
+            if valmatch:
+                lookup_props[k] = valmatch.group(1)
+            else:
+                lookup_props[k] = int(v)
+        obj = session.query(model).filter_by(**lookup_props).first()
+        prop = m.group('property')
+        if prop:
+            return getattr(obj, prop)
+        else:
+            return obj
+
+
     with open(yaml_file, 'r') as f:
         sample_data = yaml.load(f)
 
@@ -107,13 +133,11 @@ def insert_data(yaml_file):
                 # Check if there are objects that have to be looked up in the 
                 # database before creating new database records.
                 for k, v in constr_args.items():
-                    if type(v) is dict:
-                        obj_class = v['class']
-                        obj_model = import_from_str(obj_class)
-                        lookup_properties = v['lookup_props']
-                        arg_obj = db.session.query(obj_model).filter_by(**lookup_properties).first()
-                        constr_args[k] = arg_obj
-
+                    if type(v) is str and v.startswith('//'):
+                        val = get_value_for_query_string(v, db.session)
+                        constr_args[k] = val
+                    else:
+                        constr_args[k] = v
                 obj = model_constr(**constr_args)
 
                 print '* Inserting new object of class "%s" with properties:' % class_name
