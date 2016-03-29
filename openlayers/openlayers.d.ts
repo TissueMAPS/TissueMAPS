@@ -2385,7 +2385,7 @@ declare module ol {
         }
 
         class Control {
-            constructor(opt_options: any);
+            constructor(opt_options?: any);
 
             /**
              * Get the map associated with this control.
@@ -2393,14 +2393,13 @@ declare module ol {
             getMap(): ol.Map;
         }
 
-        class FullScreen {
+        class FullScreen extends ol.control.Control {
         }
 
         class MousePosition {
         }
 
-        class OverviewMap {
-            constructor(opt_options: any);
+        class OverviewMap extends ol.control.Control {
         }
 
         class Rotate {
@@ -2409,13 +2408,13 @@ declare module ol {
         class ScaleLine {
         }
 
-        class Zoom {
+        class Zoom extends ol.control.Control {
         }
 
-        class ZoomSlider {
+        class ZoomSlider extends ol.control.Control {
         }
 
-        class ZoomToExtent {
+        class ZoomToExtent extends ol.control.Control {
         }
     }
 
