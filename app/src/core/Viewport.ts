@@ -20,6 +20,31 @@ interface ViewportElementScope extends ng.IScope {
     appInstance: AppInstance;
 }
 
+class ResetViewControl extends ol.control.Control {
+    constructor(args?: any) {
+        args = args || {};
+        var button = document.createElement('button');
+        button.innerHTML = '<i class="fa fa-bullseye"></i>';
+        button.addEventListener('click', (ev) => {
+            var map = this.getMap();
+            var view = map.getView();
+            var mapSize = map.getSize();
+            var ext = map.getView().getProjection().getExtent();
+            var width = ext[2];
+            var height = ext[3];
+            view.setCenter([width / 2, -height / 2]);
+            view.setZoom(0);
+        });
+        var element = document.createElement('div');
+        element.className = 'reset-view-control ol-unselectable ol-control';
+        element.appendChild(button);
+        super({
+            element: element,
+            target: args.target
+        });
+    }
+}
+
 
 class Viewport implements Serializable<Viewport> {
 
@@ -36,7 +61,14 @@ class Viewport implements Serializable<Viewport> {
 
         this.map = new ol.Map({
             layers: [],
-            controls: [],
+            controls: ol.control.defaults().extend(<ol.control.Control[]>[
+                new ol.control.OverviewMap({
+                    collapsed: true
+                }),
+                new ResetViewControl()
+                // new ol.control.ScaleLine(),
+                // new ol.control.ZoomToExtent()
+            ]),
             renderer: 'webgl',
             logo: false
         });

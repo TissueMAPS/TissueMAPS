@@ -1,0 +1,32 @@
+@import "../variables.less";
+
+.viewer .ol-control {
+    border-radius: 2px;  // down from 4px
+}
+
+.viewer .ol-overviewmap:not(.ol-collapsed) {
+    background: rgba(255,255,255,0.4);
+}
+
+.viewer .ol-overviewmap-box {
+    border: 2px dotted orange;
+}
+
+.viewer .ol-control button {
+    outline: none;
+    background-color: @panel-bg-color;
+
+    &:hover, &:focus {
+        background-color: lighten(@panel-bg-color, 10%);
+    }
+}
+
+.viewer .ol-overviewmap .ol-overviewmap-map {
+    border: 1px solid @panel-fg;
+}
+
+// Custom controls
+.reset-view-control {
+    left: 0.5em;
+    top: 60px;
+}
