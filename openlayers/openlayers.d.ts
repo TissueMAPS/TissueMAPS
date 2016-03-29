@@ -2385,6 +2385,12 @@ declare module ol {
         }
 
         class Control {
+            constructor(opt_options: any);
+
+            /**
+             * Get the map associated with this control.
+             */
+            getMap(): ol.Map;
         }
 
         class FullScreen {
@@ -2394,6 +2400,7 @@ declare module ol {
         }
 
         class OverviewMap {
+            constructor(opt_options: any);
         }
 
         class Rotate {
