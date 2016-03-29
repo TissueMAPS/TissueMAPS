@@ -4,6 +4,11 @@ module.exports = function(gulp, opt) {
     var es = require('event-stream');
     var revReplace = require('gulp-rev-replace');
 
+    gulp.task('copy-src', function() {
+        return gulp.src('./app/src/**/*.ts', {base: './app/src'})
+            .pipe(gulp.dest(opt.destFolder + '/source'));
+    });
+
     gulp.task('copy', function() {
         // Copy all angular templates 
         var s1 = gulp.src('./app/src/**/*.html', {base: './app'})

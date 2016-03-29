@@ -17,6 +17,12 @@ module.exports = function(gulp, opt) {
      * Compile all TypeScript code and concatenate all library code.
      */
     gulp.task('make-script', function() {
+        var copy;
+        if (opt.dev) {
+            copy = gulp.src('./app/src/**/*.ts', {base: './app'})
+                .pipe(gulp.dest(opt.destFolder));
+        }
+
         var src = tsProject.src()
             .pipe(sourcemaps.init())
             .pipe(typescript({
@@ -34,8 +40,13 @@ module.exports = function(gulp, opt) {
                 })
             ))
             .pipe(_if(opt.prod, rev()))
-            .pipe(banner(opt.banner))
-            .pipe(sourcemaps.write('.'))
+            .pipe(_if(opt.prod, banner(opt.banner)))
+            // Produce source maps (won't work with banner)
+            .pipe(_if(opt.dev, 
+                sourcemaps.write('.', {
+                    sourceRoot: '/src/'
+                })
+            ))
             .pipe(gulp.dest(opt.destFolder))
             .pipe(_if(opt.prod, rev.manifest()))
             .pipe(_if(opt.prod, rename('rev-manifest-script.json')))
@@ -65,6 +76,10 @@ module.exports = function(gulp, opt) {
                 .pipe(gulp.dest(opt.destFolder));
         }
 
-        return es.merge(src, libs);
+        if (opt.dev) {
+            return es.merge(copy, src, libs);
+        } else {
+            return es.merge(src, libs);
+        }
     });
 };
