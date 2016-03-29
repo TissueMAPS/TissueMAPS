@@ -1,9 +1,9 @@
 from sqlalchemy import Integer, ForeignKey, Column
 from sqlalchemy.orm import relationship
-from tmaps.model import CRUDMixin, Model
+from tmaps.model import Model
 
 
-class ExperimentShare(Model, CRUDMixin):
+class ExperimentShare(Model):
     __tablename__ = 'experiment_shares'
 
     recipient_user_id = Column(

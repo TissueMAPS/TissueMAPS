@@ -4,50 +4,51 @@ import pytest
 import numpy as np
 import mock
 import json
-from tmaps.models import User
+import tmaps
+from tmaps.experiment import Experiment
 
 
+@pytest.fixture
+def testexp(testexps):
+    """Choose a single experiment for the experiment rest API unit tests."""
+    return testexps['cellvoyager_384_1plate_2acquisitions_multiplexing']
 
-def test_get_experiments_without_login(client):
-    resp = client.get('/api/experiments')
+
+def test_get_experiments_without_login(anybody):
+    resp = anybody.get('/api/experiments')
     assert resp.status_code == 401
 
-def test_get_experiments_with_login(authclient):
-    resp = authclient.get('/api/experiments')
+
+def test_get_experiments_with_login(rr):
+    resp = rr.browser.get('/api/experiments')
     assert resp.status_code == 200
     data = json.loads(resp.data)
-    assert 'owned' in data
-    assert 'shared' in data
-    assert type(data['owned']) == list
-    assert type(data['shared']) == list
+    assert 'experiments' in data
+
 
 @pytest.mark.skipif(True, reason='Not implemented')
-def test_experiment_shares(authclient):
+def test_experiment_shares(rr):
     pass
 
 
+def test_get_single_experiment_without_login(anybody, testexp):
 
-def test_get_single_experiment_without_login(client, testexp):
-    resp = client.get('/api/experiments/' + testexp.hash)
+    resp = anybody.get('/api/experiments/' + testexp.hash)
     assert resp.status_code == 401, \
         'An experiment should only be requestable by logged in users'
 
-def test_get_single_experiment_with_login(authclient, authclient2, testexp):
+
+def test_get_single_experiment_with_login(rr, rm, testexp):
     # Test the case where the user has access to the experiment
-    resp = authclient.get('/api/experiments/' + testexp.hash)
+    resp = rr.browser.get('/api/experiments/' + testexp.hash)
     assert resp.status_code == 200, \
         'A user should be able to GET his own experiments.'
 
-    serialized_exp = json.loads(resp.data)
-    assert serialized_exp == testexp.as_dict(), \
-        'The returned experiment should be created by as_dict'
-
-
-    resp = authclient.get('/api/experiments/' + 'bogus_hash')
+    resp = rr.browser.get('/api/experiments/' + 'bogus_hash')
     assert resp.status_code == 404, \
         'If no experiment can be found, a 404 response should be sent'
 
-    resp = authclient2.get('/api/experiments/' + testexp.hash)
+    resp = rm.browser.get('/api/experiments/' + testexp.hash)
     assert resp.status_code == 401, \
         'An experiment should only be accessable its owner'
 
@@ -56,53 +57,54 @@ experiment_request = {
     'name': 'Some experiment',
     'description': 'Some desc',
     'microscope_type': 'visiview',
+    'plate_acquisition_mode': 'multiplexing',
     'plate_format': 96
 }
 experiment_request_json = json.dumps(experiment_request)
 
-def test_create_experiment_without_login(client):
-    resp = client.post(
+
+def test_create_experiment_without_login(anybody):
+    resp = anybody.post(
         '/api/experiments',
         data=experiment_request_json
     )
     assert resp.status_code == 401
 
-def test_create_experiment_with_login(authclient, testuser, db):
-    resp = authclient.post(
+
+def test_create_experiment_with_login(rr, db, monkeypatch):
+    resp = rr.browser.post(
         '/api/experiments',
         data=experiment_request_json
     )
     assert resp.status_code == 200
 
     # Check return value
-    serialized_exp = json.loads(resp.data)
-    assert serialized_exp['name'] == 'Some experiment'
-    assert serialized_exp['description'] == 'Some desc'
-    assert type(serialized_exp['id']) == unicode
-    assert serialized_exp['microscope_type'] == 'visiview'
-    assert serialized_exp['plate_format'] == 96
-    assert 'layers' in serialized_exp
-    assert 'plates' in serialized_exp
-    assert 'plate_sources' in serialized_exp
+    resp = json.loads(resp.data)
+    assert 'experiment' in resp
+    serialized_exp = resp['experiment']
 
     # Check if the experiment was added to the db correctly
-    assert len(testuser.experiments) == 1
-    exp = testuser.experiments[0]
-    assert exp.name == experiment_request['name']
+    assert rr.user.experiments[0].name == experiment_request['name']
+
+    # Check if the returned experiment is the same as the added one
+    e = db.session.query(Experiment).get_with_hash(serialized_exp['id'])
+    assert e.hash == serialized_exp['id']
 
     # Delete the exp again
-    exp.delete()
+    db.session.delete(e)
+    db.session.commit()
 
 
-def test_delete_experiment(authclient, testuser, testexp, monkeypatch):
-    fake_delete = mock.Mock()
-    monkeypatch.setattr(testexp, 'delete', fake_delete)
-    authclient.delete('/api/experiments/%s' % testexp.hash)
-    fake_delete.assert_called_with()
+# def test_delete_experiment(db, rr, testexp, monkeypatch):
+#     fake_delete = mock.Mock()
+#     monkeypatch.setattr(db.session, 'delete', fake_delete)
+#     rr.browser.delete('/api/experiments/%s' % testexp.hash)
+#     fake_delete.assert_called_with()
 
 
-def test_db(testuser):
-    assert len(testuser.experiments) == 0
+def test_db(rr):
+    assert len(rr.user.experiments) == 0
+
 
 @pytest.mark.skipif(True, reason='Not implemented')
 def test_create_layers():
@@ -110,89 +112,91 @@ def test_create_layers():
 
 
 @pytest.mark.skipif(True, reason='Not implemented')
-def test_expdata_file_without_login(client):
+def test_expdata_file_without_login(anybody):
     pass
 
 
 @pytest.mark.skipif(True, reason='Not implemented')
-def test_get_features_without_login(client):
+def test_get_features_without_login(anybody):
     pass
 
 
 @pytest.mark.skipif(True, reason='Not implemented')
-def test_get_features(authclient):
+def test_get_features(rr):
     pass
 
 
-def test_get_objects(authclient, testexp):
+# @pytest.mark.skipif(True, reason='Not implemented')
+# def test_get_objects(rr, testexp):
 
-    def create_object(typenames):
-        import h5py
-        filename = p.join(testexp.location, 'data.h5')
-        f = h5py.File(filename, 'w')
-        for t in typenames:
-            g = f.create_group('/objects/%s' % t)
-            g.attrs['visual_type'] = 'polygon'
+#     def create_object(typenames):
+#         import h5py
+#         filename = p.join(cellvoyager_384_1plate_2acquisitions_multiplexing.location, 'data.h5')
+#         f = h5py.File(filename, 'w')
+#         for t in typenames:
+#             g = f.create_group('/objects/%s' % t)
+#             g.attrs['visual_type'] = 'polygon'
 
-            g['ids'] = np.array([1, 2])
-            g['map_data/coordinates/1'] = np.array([[0, 0], [0, 1]])
-            g['map_data/coordinates/2'] = np.array([[0, 0], [0, 1]])
-        f.close()
-        return filename
+#             g['ids'] = np.array([1, 2])
+#             g['map_data/coordinates/1'] = np.array([[0, 0], [0, 1]])
+#             g['map_data/coordinates/2'] = np.array([[0, 0], [0, 1]])
+#         f.close()
+#         return filename
 
-    filename = create_object(['cells', 'nuclei'])
+#     filename = create_object(['cells', 'nuclei'])
 
-    resp = authclient.get('/api/experiments/%s/objects' % testexp.hash)
-    data = json.loads(resp.data)
+#     resp = rr.browser.get('/api/experiments/%s/objects' % cellvoyager_384_1plate_2acquisitions_multiplexing.hash)
+#     data = json.loads(resp.data)
 
-    assert 'cells' in data['objects']
-    assert 'nuclei' in data['objects']
-    assert data['objects']['cells']['map_data']['coordinates']['1'] == [[0, 0], [0, 1]]
+#     assert 'cells' in data['objects']
+#     assert 'nuclei' in data['objects']
+#     assert data['objects']['cells']['map_data']['coordinates']['1'] == [[0, 0], [0, 1]]
 
-    os.remove(filename)
+#     os.remove(filename)
 
 
-@pytest.mark.skipif(True, reason='Throws error')
-def test_convert_images_api(authclient, testexp, authclient2, client):
-    options = {
-        'metaconfig': {
-            'file_format': 'default',
-            'z_stacks': False,
-            'regex': 'asf',
-            'stitch_layout': 'zigzag_horizontal',
-            'stitch_major_axis': 'vertical',
-            'stitch_horizontal': 10,
-            'stitch_vertical': 10
-        },
-        'imextract': {
-            'batch_size': 10
-        }
-    }
+# @pytest.mark.skipif(True, reason='Throws error')
+# def test_convert_images_api(rr.browser,
+#         cellvoyager_384_1plate_2acquisitions_multiplexing, rm.browser, anybody):
+#     options = {
+#         'metaconfig': {
+#             'file_format': 'default',
+#             'z_stacks': False,
+#             'regex': 'asf',
+#             'stitch_layout': 'zigzag_horizontal',
+#             'stitch_major_axis': 'vertical',
+#             'stitch_horizontal': 10,
+#             'stitch_vertical': 10
+#         },
+#         'imextract': {
+#             'batch_size': 10
+#         }
+#     }
 
-    def request(cl, expid, options=options):
-        rv = cl.post(
-            '/api/experiments/%s/convert-images' % expid,
-            data=json.dumps(options))
-        return rv
+#     def request(cl, expid, options=options):
+#         rv = cl.post(
+#             '/api/experiments/%s/convert-images' % expid,
+#             data=json.dumps(options))
+#         return rv
 
-    rv = request(authclient, 'bogus_expid')
-    assert rv.status_code == 404
+#     rv = request(rr.browser, 'bogus_expid')
+#     assert rv.status_code == 404
 
-    rv = request(authclient2, testexp.hash)
-    assert rv.status_code == 401
+#     rv = request(rm.browser, cellvoyager_384_1plate_2acquisitions_multiplexing.hash)
+#     assert rv.status_code == 401
 
-    rv = request(client, 'bogus_expid')
-    assert rv.status_code == 401
+#     rv = request(anybody, 'bogus_expid')
+#     assert rv.status_code == 401
 
-    # rv = request(authclient, testexp.hash)
-    # assert rv.status_code == 400
+#     # rv = request(rr.browser, cellvoyager_384_1plate_2acquisitions_multiplexing.hash)
+#     # assert rv.status_code == 400
 
-    testexp.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
-    rv = request(authclient, testexp.hash)
-    assert rv.status_code == 200
-    assert rv.content_type == 'application/json'
+#     cellvoyager_384_1plate_2acquisitions_multiplexing.update(creation_stage='WAITING_FOR_IMAGE_CONVERSION')
+#     rv = request(rr.browser, cellvoyager_384_1plate_2acquisitions_multiplexing.hash)
+#     assert rv.status_code == 200
+#     assert rv.content_type == 'application/json'
 
-    data = json.loads(resp.data)
+#     data = json.loads(resp.data)
 
 
 

@@ -27,16 +27,10 @@ def get_image_tile(channel_layer_id, filename):
     if ch is None:
         return RESOURCE_NOT_FOUND_RESPONSE
 
-    # TODO: Check if experiment belongs to user
-    is_authorized = True
-    if not is_authorized:
-        return NOT_AUTHORIZED_RESPONSE
-
     filepath = p.join(ch.location, filename)
     return send_file(filepath)
 
 
-# TODO: Make auth required. tools subapp should receive token
 @api.route('/experiments/<experiment_id>/features', methods=['GET'])
 @jwt_required()
 def get_features(experiment_id):
@@ -46,12 +40,15 @@ def get_features(experiment_id):
     Response:
 
     {
-        "features": [
-            {
-                "name": string 
-            },
+        "featuers": {
+            mapobject_type_name: [
+                {
+                    "name": string 
+                },
+                ...
+            ],
             ...
-        ]
+        }
     }
 
     """
@@ -64,16 +61,8 @@ def get_features(experiment_id):
         return NOT_AUTHORIZED_RESPONSE
 
     features = {}
-
-    if ex.has_dataset:
-        with ex.dataset as data:
-            types = data['/objects'].keys()
-            for t in types:
-                if 'features' in data['/objects/%s' % t]:
-                    feature_names = data['/objects/%s/features' % t].keys()
-                    features[t] = [{'name': f} for f in feature_names]
-                else:
-                    features[t] = []
+    for t in ex.mapobject_types:
+        features[t.name] = [{'name': f.name} for f in t.features]
 
     return jsonify({
         'features': features
@@ -193,19 +182,27 @@ def create_experiment():
     description = data.get('description', '')
     microscope_type = data.get('microscope_type')
     plate_format = data.get('plate_format')
+    plate_acquisition_mode = data.get('plate_acquisition_mode')
 
-    if any([var is None for var in [name, microscope_type, plate_format]]):
+    if any([var is None for var in [name, microscope_type, plate_format,
+                                    plate_acquisition_mode]]):
         return MALFORMED_REQUEST_RESPONSE
 
-    exp = Experiment.create(
+    e = Experiment(
         name=name,
         description=description,
-        owner=current_identity,
+        user_id=current_identity.id,
         microscope_type=microscope_type,
-        plate_format=plate_format
+        plate_format=plate_format,
+        root_directory=current_app.config['TMAPS_STORAGE'],
+        plate_acquisition_mode=plate_acquisition_mode
     )
+    db.session.add(e)
+    db.session.commit()
 
-    return jsonify(exp)
+    return jsonify({
+        'experiment': e
+    })
 
 
 @api.route('/experiments/<experiment_id>', methods=['DELETE'])

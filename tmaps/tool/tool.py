@@ -1,10 +1,9 @@
 from sqlalchemy import Column, String, Text
 
-from tmaps.model import CRUDMixin
 from tmaps.model import Model
 
 
-class Tool(Model, CRUDMixin):
+class Tool(Model):
     __tablename__ = 'tools'
 
     name = Column(String(120))

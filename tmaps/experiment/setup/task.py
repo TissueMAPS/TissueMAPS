@@ -1,8 +1,8 @@
-from tmaps.model import Model, CRUDMixin
+from tmaps.model import Model
 from tmaps.extensions import db
 
 
-class TaskSubmission(Model, CRUDMixin):
+class TaskSubmission(Model):
     experiment_id = db.Column(
         db.Integer, db.ForeignKey('experiment.id'), primary_key=True)
 

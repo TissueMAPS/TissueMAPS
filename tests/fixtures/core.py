@@ -5,9 +5,17 @@ import flask
 import pytest
 
 import tmaps
-from tmaps.user import User
 from tmaps.appfactory import create_app
 from tmaps.extensions import db as _db
+from tmaps.model import Model
+
+
+class Client(object):
+    """Simple container for a user object and a Werkzeug test client
+    whose requests are authenticated with the user's credentials."""
+    def __init__(self, user, browser):
+        self.user = user
+        self.browser = browser
 
 
 @pytest.fixture(scope='session')
@@ -16,7 +24,11 @@ def app(request, tmpdir_factory):
 
     cfg = flask.Config(p.join(p.dirname(tmaps.__file__), p.pardir))
     cfg.from_envvar('TMAPS_SETTINGS_TEST')
+
+
     cfg['GC3PIE_SESSION_DIR'] = str(tmpdir_factory.mktemp('gc3pie'))
+    cfg['TMAPS_STORAGE'] = str(tmpdir_factory.mktemp('experiments'))
+
     app = create_app(cfg)
 
     # Establish an application context before running the tests.
@@ -32,27 +44,38 @@ def app(request, tmpdir_factory):
 
 
 @pytest.fixture(scope='session', autouse=True)
-def db(app, tmpdir_factory, request):
+def db(app, request):
+    """The Flask-SQLAlchemy database fixture.
+
+    This fixture will be created once for the whole test session.
+    On the first use it will create the database schema of tmlib and tmserver.
+
+    """
     # Initialize testing database
     _db.app = app
     # Commit before dropping, otherwise pytest might hang!
-    _db.session.commit()
-    _db.drop_all()
+    _db.session.close()
+    Model.metadata.drop_all(_db.engine)
     _db.create_all()
+
+    Model.metadata.create_all(_db.engine)
 
     def teardown():
         # Commit before dropping, otherwise pytest will hang!
-        # _db.session.commit()
-        # _db.drop_all()
-        pass
+        _db.session.close()
+        Model.metadata.drop_all(_db.engine)
+
     request.addfinalizer(teardown)
 
     return _db
 
 
 def make_test_client(app, user, password):
-    client = app.test_client()
+    """Helper function to create a werkzeug test client.
+    The test client is monkey patched in such a way that it will send
+    the authentication header with each request."""
 
+    client = app.test_client()
     rv = client.post(
         '/auth',
         headers={'content-type': 'application/json'},
@@ -80,18 +103,21 @@ def make_test_client(app, user, password):
 
 
 @pytest.fixture(scope='module')
-def authclient(app, testuser):
-    cl = make_test_client(app, testuser, '123')
-    return cl
+def rr(app, roborobin):
+    """An object of type Client that contains a test client authenticated
+    with the credentials of user Robo Robin."""
+    browser = make_test_client(app, roborobin, '123')
+    return Client(user=roborobin, browser=browser)
 
 
 @pytest.fixture(scope='module')
-def authclient2(app, testuser2):
-    cl = make_test_client(app, testuser2, '123')
-    return cl
-
+def rm(app, robomarkus):
+    """An object of type Client that contains a test client authenticated
+    with the credentials of user Robo Markus."""
+    browser = make_test_client(app, robomarkus, '123')
+    return Client(user=robomarkus, browser=browser)
 
 @pytest.fixture(scope='module')
-def client(app):
-    # m = LoginMiddleware(app)
+def anybody(app):
+    """A non-authenticated test client"""
     return app.test_client()

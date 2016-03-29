@@ -1,11 +1,11 @@
 from sqlalchemy import Integer, ForeignKey, Column, Float
 from sqlalchemy.orm import relationship
 
-from tmaps.model import CRUDMixin, Model
+from tmaps.model import Model
 from tmaps.mapobject import Mapobject
 
 
-class LabelResult(Model, CRUDMixin):
+class LabelResult(Model):
     __tablename__ = 'label_results'
 
     tool_session_id = \
@@ -46,7 +46,7 @@ class LabelResult(Model, CRUDMixin):
              if l.mapobject_id in set(mapobject_ids)])
 
 
-class LabelResultLabel(Model, CRUDMixin):
+class LabelResultLabel(Model):
     __tablename__ = 'label_result_labels'
 
     mapobject_id = Column(

@@ -1,10 +1,10 @@
 from sqlalchemy.orm import relationship
 from sqlalchemy import Integer, ForeignKey, Column, String
 
-from tmaps.model import CRUDMixin, Model
+from tmaps.model import Model
 
 
-class ToolSession(Model, CRUDMixin):
+class ToolSession(Model):
     __tablename__ = 'tool_sessions'
 
     uuid = Column(String(50), index=True, unique=True)
