@@ -21,7 +21,8 @@ module.exports = function(gulp, opt) {
             'app/assets/libs/unmanaged/ng-color-picker/color-picker.css',
             'app/assets/libs/bower_components/perfect-scrollbar/css/perfect-scrollbar.css',
             'app/assets/libs/bower_components/fontawesome/css/font-awesome.css',
-            'app/assets/css/jquery-ui.css'
+            'app/assets/css/jquery-ui.css',
+            'app/assets/css/ol.css'
         ]);
 
         return es.merge(additionalStyles, appStyle)
