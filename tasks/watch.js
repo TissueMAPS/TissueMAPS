@@ -24,9 +24,7 @@ module.exports = function (gulp, opt) {
         // Watch the two template directories for changes in html
         gulp.watch('app/src/**/*.+(html)', ['copy']);
         gulp.watch('app/templates/**/*.+(html)', ['copy']);
-        // The index has to be watched separately since it needsto be
-        // rev-replaced. This will also take care of the copying.
-        gulp.watch('app/index.html', ['rev-replace-index']);
+        gulp.watch('app/index.html', ['copy']);
     });
 
 };
