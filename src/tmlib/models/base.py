@@ -55,8 +55,3 @@ class Model(_Base):
 
     # Table columns
     id = Column(Integer, primary_key=True)
-
-    @property
-    def hash(self):
-        '''str: encoded `id`'''
-        return utils.encode_pk(self.id)
