@@ -294,6 +294,7 @@ class ChannelImageFile(File, DateMixIn):
         tmlib.image.ChannelImage
             image stored in the file
         '''
+        logger.debug('get data from channel image file: %s', self.name)
         with ImageReader(self.location) as f:
             pixels = f.read()
         metadata = ChannelImageMetadata(
@@ -329,6 +330,7 @@ class ChannelImageFile(File, DateMixIn):
         data: tmlib.image.ChannelImage
             data that should be stored in the image file
         '''
+        logger.debug('put data to channel image file: %s', self.name)
         with ImageWriter(self.location) as f:
             f.write(data.pixels)
 
@@ -449,6 +451,7 @@ class ProbabilityImageFile(File, DateMixIn):
         tmlib.image.ProbabilityImage
             image stored in the file
         '''
+        logger.debug('get data from probability image file: %s', self.name)
         with ImageReader(self.location) as f:
             pixels = f.read()
         # metadata = ProbabilityImageMetadata(
@@ -470,6 +473,7 @@ class ProbabilityImageFile(File, DateMixIn):
         data: tmlib.image.ProbabilityImage
             data that should be stored in the image file
         '''
+        logger.debug('put data to probability image file: %s', self.name)
         with ImageWriter(self.location) as f:
             f.write(data.pixels)
 
@@ -481,7 +485,7 @@ class ProbabilityImageFile(File, DateMixIn):
     def __repr__(self):
         return (
             '<ProbabilityImageFile('
-                'id=%r, tpoint=%r, zplane=%r, mapobject_type=%r'
+                'id=%r, tpoint=%r, zplane=%r, mapobject_type=%r, '
                 'well=%r, y=%r, x=%r'
             ')>'
             % (self.id, self.tpoint, self.zplane, self.mapobject_type.name,
@@ -557,6 +561,7 @@ class PyramidTileFile(File):
         tmlib.image.PyramidTile
             tile stored in the file
         '''
+        logger.debug('get data from pyramid tile file: %s', self.name)
         with ImageReader(self.location) as f:
             pixels = f.read(dtype=np.uint8)
         metadata = PyramidTileMetadata(
@@ -566,7 +571,7 @@ class PyramidTileFile(File):
             row=self.row,
             column=self.column,
             tpoint=self.channel_layer.tpoint,
-            zplane=self.channel_layer.tpoint
+            zplane=self.channel_layer.zplane
         )
         return PyramidTile(pixels, metadata)
 
@@ -579,6 +584,7 @@ class PyramidTileFile(File):
         data: tmlib.image.PyramidTile
             data that should be stored in the file
         '''
+        logger.debug('put data to pyramid tile file: %s', self.name)
         with ImageWriter(self.location) as f:
             f.write(data.pixels)
 
@@ -592,7 +598,7 @@ class PyramidTileFile(File):
     def __repr__(self):
         return (
             '<PyramidTile('
-                'id=%r, channel=%r, tpoint=%r, zplane=%r'
+                'id=%r, channel=%r, tpoint=%r, zplane=%r, '
                 'row=%r, column=%r, level=%r'
             ')>'
             % (self.id, self.channel_layer.channel.index,
@@ -665,6 +671,7 @@ class IllumstatsFile(File, DateMixIn):
         Illumstats
             illumination statistics images
         '''
+        logger.debug('get data from illumination statistics file: %s', self.name)
         metadata = IllumstatsImageMetadata(
             channel=self.channel.index,
             cycle=self.cycle.index
@@ -686,6 +693,7 @@ class IllumstatsFile(File, DateMixIn):
         data: IllumstatsContainer
             illumination statistics
         '''
+        logger.debug('put data to illumination statistics file: %s', self.name)
         with DatasetWriter(self.location, truncate=True) as f:
             f.write('mean', data.mean.pixels)
             f.write('std', data.std.pixels)

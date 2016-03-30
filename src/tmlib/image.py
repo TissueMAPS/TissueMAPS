@@ -140,8 +140,8 @@ class Image(object):
         return self.__class__(pxls, self.metadata)
 
     @assert_type(image='tmlib.image.Image')
-    def insert(self, image, y_offset, x_offset):
-        '''Insert a continuous, rectangular area of pixels into the image.
+    def insert(self, image, y_offset, x_offset, inplace=True):
+        '''Insert a continuous, rectangular area of pixels into an image.
 
         Parameters
         ----------
@@ -151,6 +151,9 @@ class Image(object):
             index of the top, left point of the rectangle on the *y* axis
         x_offset: int
             index of the top, left point of the rectangle on the *x* axis
+        inplace: bool, optional
+            insert pixels into the existing image rather than into a copy
+            (default: ``True``)
 
         Returns
         -------
@@ -160,13 +163,58 @@ class Image(object):
         if (image.dimensions[0] + y_offset > self.dimensions[0] or
                 image.dimensions[1] + x_offset > self.dimensions[1]):
             raise ValueError('Image doesn\'t fit.')
-        new_pixels = self.pixels.copy()
-        new_pixels[
-            y_offset:(y_offset+image.dimensions[0]),
-            x_offset:(x_offset+image.dimensions[1])
-        ] = image.pixels
-        return self.__class__(new_pixels, self.metadata)
+        if inplace:
+            pxls = self.pixels
+        else:
+            pxls = self.pixels.copy()
+        h, w = image.dimensions
+        pxls[y_offset:(y_offset+h), x_offset:(x_offset+w)] = image.pixels
+        if inplace:
+            return self
+        else:
+            return self.__class__(pxls, self.metadata)
 
+    @assert_type(image='tmlib.image.Image')
+    def merge(self, image, direction, offset, inplace=True):
+        '''Merge pixels arrays of two images into one.
+
+        Parameters
+        ----------
+        image: tmlib.image.Image
+            image object whose pixels should used for merging
+        direction: str
+            direction along which the two pixels arrays should be merged,
+            either ``"horizontal"`` or ``"vertical"``
+        offset: int
+            offset for `image` in the existing object
+        inplace: bool, optional
+            merge pixels into the existing image rather than into a copy
+            (default: ``True``)
+
+        Parameters
+        ----------
+        tmlib.image.Image
+            image with rescaled pixels
+        '''
+        if inplace:
+            pxls = self.pixels
+        else:
+            pxls = self.pixels.copy()
+        if direction == 'vertical':
+            pxls[offset:, :] = image.pixels[offset:, :]
+        elif direction == 'horizontal':
+            pxls[:, offset:] = image.pixels[:, offset:]
+        else:
+            raise ValueError(
+                'Argument "direction" must be either '
+                '"horizontal" or "vertical"'
+            )
+        if inplace:
+            return self
+        else:
+            return self.__class__(pxls, self.metadata)
+
+    @assert_type(image='tmlib.image.Image')
     def join(self, image, direction):
         '''Join two pixels arrays.
 
@@ -187,36 +235,6 @@ class Image(object):
             pxls = np.vstack([self.pixels, image.pixels])
         elif direction == 'horizontal':
             pxls = np.hstack([self.pixels, image.pixels])
-        else:
-            raise ValueError(
-                'Argument "direction" must be either '
-                '"horizontal" or "vertical"'
-            )
-        return self.__class__(pxls, self.metadata)
-
-    def merge(self, image, direction, offset):
-        '''Merge pixels arrays of two images into one.
-
-        Parameters
-        ----------
-        image: tmlib.image.Image
-            image object whose pixels should used for merging
-        direction: str
-            direction along which the two pixels arrays should be merged,
-            either ``"horizontal"`` or ``"vertical"``
-        offset: int
-            offset for `image` in the existing object
-
-        Parameters
-        ----------
-        tmlib.image.Image
-            image with rescaled pixels
-        '''
-        pxls = self.pixels.copy()
-        if direction == 'vertical':
-            pxls[offset:, :] = image.pixels[offset:, :]
-        elif direction == 'horizontal':
-            pxls[:, offset:] = image.pixels[:, offset:]
         else:
             raise ValueError(
                 'Argument "direction" must be either '
@@ -527,7 +545,7 @@ class PyramidTile(Image):
             pxls = np.random.normal(mu, sigma, 256 * 256).astype(np.uint8)
         else:
             pxls = np.zeros((256, 256), dtype=np.uint8)
-        return ChannelImage(pxls, metadata)
+        return PyramidTile(pxls, metadata)
 
 
 class LabelImage(Image):
@@ -773,12 +791,8 @@ class IllumstatsContainer(object):
         ----
         `mean` and `std` are modified in place.
         '''
-        self.mean = IllumstatsImage(
-            pixels=self.mean.smooth(sigma).pixels, metadata=self.metadata
-        )
+        self.mean.pixels = self.mean.smooth(sigma).pixels
         self.mean.metadata.is_smoothed = True
-        self.std = IllumstatsImage(
-            pixels=self.std.smooth(sigma).pixels, metadata=self.metadata
-        )
+        self.std.pixels = self.std.smooth(sigma).pixels
         self.std.metadata.is_smoothed = True
         return self

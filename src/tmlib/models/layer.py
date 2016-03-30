@@ -5,6 +5,7 @@ import logging
 import itertools
 import lxml
 from xml.dom import minidom
+import collections
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from cached_property import cached_property
@@ -73,6 +74,11 @@ class ChannelLayer(Model):
         '''int: maximal number of pixels along an axis of a tile
         '''
         return 256
+
+    @cached_property
+    def zoom_factor(self):
+        '''int: factor by which resolution increases per pyramid level'''
+        return self.channel.experiment.zoom_factor
 
     @autocreate_directory_property
     def location(self):
@@ -244,9 +250,6 @@ class ChannelLayer(Model):
         end_diff = end_index - end_fraction
         end_offset = int(self.tile_size * end_diff)
 
-        # TODO: only assign the overlapping tiles at the upper, left border
-        # to the image!
-
         indices = range(start_index, end_index)
 
         return {
@@ -297,50 +300,76 @@ class ChannelLayer(Model):
                 })
         return mappings
 
-    def map_base_tile_to_intersecting_images(self, image_file, y, x):
-        '''Map a pyramid base tile to all images intersecting with it.
+    def _calc_tile_indices(self, position, length, displacement):
+        start_fraction = (
+            np.float(position) /
+            np.float(self.tile_size)
+        )
+        start_index = int(np.floor(start_fraction))
+
+        end_fraction = (
+            np.float(position + length - displacement) /
+            np.float(self.tile_size)
+        )
+        end_index = int(np.ceil(end_fraction))
+
+        return range(start_index, end_index)
+
+    @cached_property
+    def maxzoom_tile_coordinate_to_image_file_map(self):
+        '''Dict[Tuple[int], List[tmlib.models.ChannelImageFile]]: maps
+        coordinates of tiles at the highest zoom level
+        to the corresponding image files which overlap with each tile
+        '''
+        mapping = collections.defaultdict(list)
+        experiment = self.channel.experiment
+        for file in self.image_files:
+            y_offset_site, x_offset_site = self.calc_site_offset(file.site)
+            row_indices = self._calc_tile_indices(
+                y_offset_site, file.site.image_size[0],
+                experiment.vertical_site_displacement
+            )
+            col_indices = self._calc_tile_indices(
+                x_offset_site, file.site.image_size[1],
+                experiment.horizontal_site_displacement
+            )
+            for row, col in itertools.product(row_indices, col_indices):
+                mapping[(row, col)].append(file)
+        return mapping
+
+    def calc_coordinates_of_next_higher_level(self, level, row, column):
+        '''Calculate for a given tile the coordinates of the 4 tiles at the
+        next higher zoom level that represent the tile at the current level.
 
         Parameters
         ----------
-        image_file: tmlib.models.ChannelImageFile
-            one of the intersecting image files
-        y: int
-            offset of the tile of interest relative to `image_file` along the
-            vertical axis
-        x: int
-            offset of the tile of interest relative to `image_file` along the
-            horizontal axis
+        level: int
+            zero-based index of the current zoom level
+        row: int
+            zero-based index of the current row
+        column: int
+            zero-based index of the current column
 
         Returns
         -------
-        List[tmlib.models.ChannelImageFile]
-            all neighboring images of `image_file` which intersect with the
-            tile of interest
+        List[Tuple[int]]
+            row, column coordinate at the next higher zoom level
         '''
-        site = image_file.site
-        size = image_file.site.image_size[0]
-        intersecting_image_files = [image_file]
-        if 0 <= y <= size[0] & 0 <= x <= size[1]:
-            return intersecting_image_files
-        elif y < 0 & x >= 0 & site.y > 0:
-            y_indices = {site.y - 1}
-            x_indices = {site.x}
-        elif y < 0 & x < 0 & site.y > 0 & site.x > 0:
-            y_indices = {site.y - 1}
-            x_indices = {site.x - 1, site.x}
-        elif y >= 0 & x < 0 & site.x > 0:
-            y_indices = {site.y}
-            x_indices = {site.x - 1}
-        else:
-            raise ValueError('Offsets exceed image dimensions.')
-        # TODO: This can be done smarter.
-        return intersecting_image_files.extend([
-            f
-            for s in site.well.sites
-            if s.y in y_indices & s.x in x_indices
-            for f in s.channel_image_files
-            if f.channel_layer.channel_id == image_file.channel_layer.channel_id
-        ])
+        coordinates = list()
+        experiment = self.channel.experiment
+        max_row, max_column = self.dimensions[level+1]
+        rows = range(
+            row * experiment.zoom_factor,
+            (row * experiment.zoom_factor + experiment.zoom_factor - 1) + 1
+        )
+        cols = range(
+            column * experiment.zoom_factor,
+            (column * experiment.zoom_factor + experiment.zoom_factor - 1) + 1
+        )
+        for r, c in itertools.product(rows, cols):
+            if r < max_row and c < max_column:
+                coordinates.append((r, c))
+        return coordinates
 
     def calc_site_offset(self, site):
         '''Calculate offset of a `site` within the layer.
@@ -354,8 +383,7 @@ class ChannelLayer(Model):
         -------
         Tuple[int]
             y, x coordinate of the top, left corner of the site relative to
-            the layer overview at the pyramid base level, i.e. highest
-            resolution level
+            the layer overview at the maximum zoom level
         '''
         well = site.well
         plate = well.plate
@@ -466,7 +494,7 @@ class ChannelLayer(Model):
         '''
         return '{level}-{col}-{row}.jpg'.format(level=level, col=col, row=row)
 
-    def get_level_and_coordinate_from_filename(self, filename):
+    def get_coordinate_from_name(self, filename):
         '''Determine "level", "row", and "column" index of a tile from its
         filename.
 
@@ -509,7 +537,7 @@ class ChannelLayer(Model):
                 logger.debug('create tile directory: %s', tile_group_dir)
                 os.mkdir(tile_group_dir)
 
-    def get_tiles_of_next_higher_level(self, filename):
+    def get_coordinates_of_next_higher_level(self, filename):
         '''Get tiles of the next higher resolution level that make up the given
         tile.
 
@@ -524,23 +552,9 @@ class ChannelLayer(Model):
             row, column coordinates for the tiles of the next higher resolution
             level for a given a tile
         '''
-        # TODO: database lookup
         logger.debug('map tile %s to tiles of next higher level', filename)
-        level, row, col = self.get_level_and_coordinate_from_filename(filename)
-        coordinates = list()
-        existing_coordinates = self.tile_files[level + 1].keys()  # TODO
-        row_range = range(
-            row * self.zoom_factor,
-            (row * self.zoom_factor + self.zoom_factor - 1) + 1
-        )
-        col_range = range(
-            col * self.zoom_factor,
-            (col * self.zoom_factor + self.zoom_factor - 1) + 1
-        )
-        for r, c in itertools.product(row_range, col_range):
-            if (r, c) in existing_coordinates:
-                coordinates.append((level-1, r, c))
-        return coordinates
+        level, row, col = self.get_coordinate_from_name(filename)
+        return self.calc_coordinates_of_next_higher_level(level, row, col)
 
     def extract_tile_from_image(self, image, y_offset, x_offset):
         '''Extract a subset of pixels for a tile from an image. In case the

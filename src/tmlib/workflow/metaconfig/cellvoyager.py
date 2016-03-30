@@ -8,7 +8,7 @@ from tmlib import utils
 from tmlib.workflow.illuminati import stitch
 from tmlib.workflow.metaconfig.base import MetadataReader
 from tmlib.workflow.metaconfig.base import MetadataHandler
-from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
+from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 
 logger = logging.getLogger(__name__)
 

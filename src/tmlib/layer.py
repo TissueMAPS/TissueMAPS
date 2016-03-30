@@ -533,7 +533,7 @@ class ChannelLayer(Layer):
     def create_empty_base_tiles(self):
         '''
         Create empty tiles for the highest resolution level that do not map
-        that do not map to an image.
+        to an image.
         '''
         logger.debug('create empty tiles for level %d', self.base_level_index)
         tile_coords = self.base_tile_mappings['tile_to_images'].keys()

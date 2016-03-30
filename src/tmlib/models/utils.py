@@ -1,7 +1,6 @@
 import os
 import shutil
 import logging
-import base64
 import sqlalchemy
 
 logger = logging.getLogger(__name__)

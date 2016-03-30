@@ -9,10 +9,7 @@ from gc3libs.quantity import Memory
 import tmlib.models
 from tmlib import utils
 from tmlib.image import PyramidTile
-from tmlib.image import IllumstatsImage
-from tmlib.image import IllumstatsContainer
-from tmlib.readers import DatasetReader
-from tmlib.metadata import IllumstatsImageMetadata
+from tmlib.image import ChannelImage
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
@@ -252,48 +249,71 @@ class PyramidBuilder(ClusterRoutines):
         '''
         logger.info('create workflow step')
 
-        logger.info('create jobs for "run" phase')
-        multi_run_jobs = collections.defaultdict(list)
-        for i, batch in enumerate(job_descriptions['run']):
+        with tmlib.models.utils.Session() as session:
+            experiment = session.query(tmlib.models.Experiment).\
+                get(self.experiment_id)
+            submission = tmlib.models.Submission(experiment_id=experiment.id)
+            session.add(submission)
+            session.flush()
 
-            job = RunJob(
+            logger.info('create jobs for "run" phase')
+            multi_run_jobs = collections.defaultdict(list)
+            for i, batch in enumerate(job_descriptions['run']):
+
+                job = RunJob(
                     step_name=self.step_name,
                     arguments=self._build_run_command(batch),
                     output_dir=self.log_location,
                     job_id=batch['id'],
-                    index=batch['index']
+                    index=batch['index'],
+                    submission_id=submission.id
+                )
+                if duration:
+                    job.requested_walltime = Duration(duration)
+                if memory:
+                    job.requested_memory = Memory(memory, Memory.GB)
+                if cores:
+                    if not isinstance(cores, int):
+                        raise TypeError(
+                                'Argument "cores" must have type int.')
+                    if not cores > 0:
+                        raise ValueError(
+                                'The value of "cores" must be positive.')
+                    job.requested_cores = cores
+
+                multi_run_jobs[batch['index']].append(job)
+
+            run_jobs = MultiRunJobCollection(
+                step_name=self.step_name,
+                submission_id=submission.id
             )
-            if duration:
-                job.requested_walltime = Duration(duration)
-            if memory:
-                job.requested_memory = Memory(memory, Memory.GB)
-            if cores:
-                if not isinstance(cores, int):
-                    raise TypeError(
-                            'Argument "cores" must have type int.')
-                if not cores > 0:
-                    raise ValueError(
-                            'The value of "cores" must be positive.')
-                job.requested_cores = cores
+            for index, jobs in multi_run_jobs.iteritems():
+                run_jobs.add(
+                    RunJobCollection(
+                        step_name=self.step_name,
+                        jobs=jobs,
+                        index=index,
+                        submission_id=submission.id
+                    )
+                )
 
-            multi_run_jobs[batch['index']].append(job)
+            return WorkflowStep(
+                name=self.step_name,
+                run_jobs=run_jobs,
+                submission_id=submission.id
+            )
 
-        run_jobs = MultiRunJobCollection(self.step_name)
-        for index, jobs in multi_run_jobs.iteritems():
-            run_jobs.add(
-                RunJobCollection(self.step_name, jobs, index=index))
-
-        return WorkflowStep(name=self.step_name, run_jobs=run_jobs)
-
-    def _create_nonempty_base_level_tiles(self, batch):
+    def _create_nonempty_maxzoom_level_tiles(self, batch):
         with tmlib.models.utils.Session() as session:
             layer = session.query(tmlib.models.ChannelLayer).\
                 get(batch['layer_id'])
-
             logger.info(
-                'create base level pyramid tiles for layer with '
-                'time point %d, channel %s, z-plane %d',
-                layer.tpoint, layer.channel.name, layer.zplane
+                'processing layer: channel %d, time point %d, z-plane %d',
+                layer.channel.index, layer.tpoint, layer.zplane
+            )
+            logger.info(
+                'creating non-empty tiles at maximum zoom level %d',
+                batch['level']
             )
 
             if batch['illumcorr'] or (batch['clip'] and not batch['clip_value']):
@@ -309,22 +329,23 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('clip intensity values')
                 if batch['clip_value'] is None:
                     clip_value = stats.percentiles[99.999]
-                    logger.info('use default clip value: %d', clip_value)
+                    logger.info('using default clip value: %d', clip_value)
                 else:
                     clip_value = batch['clip_value']
-                    logger.info('use provided clip value: %d', clip_value)
+                    logger.info('using provided clip value: %d', clip_value)
             else:
                 clip_value = 2**16  # channel images are 16-bit
 
             if batch['illumcorr']:
-                logger.info('correct images for illumination artifacts')
+                logger.info('correcting images for illumination artifacts')
             if batch['align']:
-                logger.info('align images between cycles')
+                logger.info('aligning images between cycles')
 
         for fid in batch['image_file_ids']:
             with tmlib.models.utils.Session() as session:
 
                 file = session.query(tmlib.models.ChannelImageFile).get(fid)
+                logger.info('process image "%s"', file.name)
                 mapped_tiles = file.channel_layer.map_image_to_base_tiles(file)
                 image_store = dict()
                 image = file.get()
@@ -348,30 +369,22 @@ class PyramidBuilder(ClusterRoutines):
                         column=t['column'], level=batch['level'],
                         channel_layer_id=file.channel_layer_id
                     )
+                    logger.info('creating tile: %s', tile_file.name)
                     tile = file.channel_layer.extract_tile_from_image(
                         image, t['y_offset'], t['x_offset']
                     )
 
-                    # Tiles that overlap with other images.
-                    if t['y_offset'] < 0 and t['x_offset'] >= 0:
-                        logger.debug(
-                            'tile "%s" overlaps 2 images vertically'
-                            % tile_file.name
-                        )
-                        # above
-                        extra_file = session.query(
-                                tmlib.models.ChannelImageFile
-                            ).\
-                            join(tmlib.models.Site).\
-                            filter(tmlib.models.ChannelImageFile.channel_layer_id == file.channel_layer_id).\
-                            filter(tmlib.models.Site.y == file.site.y-1).\
-                            filter(tmlib.models.Site.x == file.site.x).\
-                            filter(tmlib.models.Site.well_id == file.site.well_id).\
-                            one()
-                        y = file.site.image_size[0] - abs(t['y_offset'])
-                        x = t['x_offset']
-                        height = abs(t['y_offset'])
-                        width = tile.dimensions[1]
+                    file_coordinate = np.array((file.site.y, file.site.x))
+                    # TODO: calculate this only for the local neighborhood
+                    # of the file rather than for all files!
+                    extra_files = file.channel_layer.\
+                        maxzoom_tile_coordinate_to_image_file_map[
+                            (tile_file.row, tile_file.column)
+                        ]
+                    extra_files.remove(file)  # remove the current file
+                    if len(extra_files) > 0:
+                        logger.info('tile overlaps multiple images')
+                    for extra_file in extra_files:
                         if extra_file.name not in image_store:
                             image = extra_file.get()
                             if batch['illumcorr']:
@@ -383,147 +396,164 @@ class PyramidBuilder(ClusterRoutines):
                             image_store[extra_file.name] = image
                         else:
                             image = image_store[extra_file.name]
-                        subtile = PyramidTile(
-                            image.extract(y, x, height, width).pixels
-                        )
-                        tile = tile.insert(subtile, 0, 0)
-                    elif t['y_offset'] >= 0 and t['x_offset'] < 0:
-                        logger.debug(
-                            'tile "%s" overlaps 2 images horizontally'
-                            % tile_file.name
-                        )
-                        # to the left
-                        extra_file = session.query(
-                                tmlib.models.ChannelImageFile
-                            ).\
-                            join(tmlib.models.Site).\
-                            filter(tmlib.models.ChannelImageFile.channel_layer_id == file.channel_layer_id).\
-                            filter(tmlib.models.Site.y == file.site.y).\
-                            filter(tmlib.models.Site.x == file.site.x-1).\
-                            filter(tmlib.models.Site.well_id == file.site.well_id).\
-                            one()
-                        y = t['y_offset']
-                        x = file.site.image_size[1] - abs(t['x_offset'])
-                        height = tile.dimensions[0]
-                        width = abs(t['x_offset'])
-                        if extra_file.name not in image_store:
-                            image = extra_file.get()
-                            if batch['illumcorr']:
-                                image = image.correct(stats)
-                            if batch['align']:
-                                image = image.align(crop=False)
-                            image = image.clip(clip_value)
-                            image = image.scale(clip_value)
-                            image_store[extra_file.name] = image
-                        else:
-                            image = image_store[image.name]
-                        subtile = PyramidTile(
-                            image.extract(image, y, x, height, width).pixels
-                        )
-                        tile = tile.insert(subtile, 0, 0)
-                    elif t['y_offset'] < 0 and t['x_offset'] < 0:
-                        logger.debug(
-                            'tile "%s" overlaps 4 images' % tile_file.name
-                        )
-                        # above
-                        extra_file = session.query(
-                                tmlib.models.ChannelImageFile
-                            ).\
-                            join(tmlib.models.Site).\
-                            filter(tmlib.models.ChannelImageFile.channel_layer_id == file.channel_layer_id).\
-                            filter(tmlib.models.Site.y == file.site.y-1).\
-                            filter(tmlib.models.Site.x == file.site.x).\
-                            filter(tmlib.models.Site.well_id == file.site.well_id).\
-                            one()
-                        y = file.site.image_size[0] - abs(t['y_offset'])
-                        x = 0
-                        height = abs(t['y_offset'])
-                        width = tile.dimensions[1] - abs(t['x_offset'])
-                        if extra_file.name not in image_store:
-                            image = extra_file.get()
-                            if batch['illumcorr']:
-                                image = image.correct(stats)
-                            if batch['align']:
-                                image = image.align(crop=False)
-                            image = image.clip(clip_value)
-                            image = image.scale(clip_value)
-                            image_store[extra_file.name] = image
-                        else:
-                            image = image_store[extra_file.name]
-                        subtile = PyramidTile(
-                            image.extract(image, y, x, height, width).pixels
-                        )
-                        tile = tile.insert(subtile, 0, abs(t['x_offset']))
-                        # to the left
-                        extra_file = session.query(
-                                tmlib.models.ChannelImageFile
-                            ).\
-                            join(tmlib.models.Site).\
-                            filter(tmlib.models.ChannelImageFile.channel_layer_id == file.channel_layer_id).\
-                            filter(tmlib.models.Site.y == file.site.y).\
-                            filter(tmlib.models.Site.x == file.site.x-1).\
-                            filter(tmlib.models.Site.well_id == file.site.well_id).\
-                            one()
-                        y = 0
-                        x = file.site.image_size[1] - abs(t['x_offset'])
-                        height = tile.dimensions[0] - abs(t['y_offset'])
-                        width = abs(t['x_offset'])
-                        if extra_file.name not in image_store:
-                            image = extra_file.get()
-                            if batch['illumcorr']:
-                                image = image.correct(stats)
-                            if batch['align']:
-                                image = image.align(crop=False)
-                            image = image.clip(clip_value)
-                            image = image.scale(clip_value)
-                            image_store[extra_file.name] = image
-                        else:
-                            image = image_store[extra_file.name]
-                        subtile = PyramidTile(
-                            image.extract(image, y, x, height, width).pixels
-                        )
-                        tile = tile.insert(subtile, abs(t['x_offset']), 0)
-                        # to the top left
-                        extra_file = session.query(
-                                tmlib.models.ChannelImageFile
-                            ).\
-                            join(tmlib.models.Site).\
-                            filter(tmlib.models.ChannelImageFile.channel_layer_id == file.channel_layer_id).\
-                            filter(tmlib.models.Site.y == file.site.y-1).\
-                            filter(tmlib.models.Site.x == file.site.x-1).\
-                            filter(tmlib.models.Site.well_id == file.site.well_id).\
-                            one()
-                        y = file.site.image_size[0] - abs(t['y_offset'])
-                        x = file.site.image_size[1] - abs(t['x_offset'])
-                        height = abs(t['y_offset'])
-                        width = abs(t['x_offset'])
-                        if extra_file.name not in image_store:
-                            image = extra_file.get()
-                            if batch['illumcorr']:
-                                image = image.correct(stats)
-                            if batch['align']:
-                                image = image.align(crop=False)
-                            image = image.clip(clip_value)
-                            image = image.scale(clip_value)
-                            image_store[extra_file.name] = image
-                        else:
-                            image = image_store[extra_file.name]
-                        subtile = PyramidTile(
-                            image.extract(image, y, x, height, width).pixels
-                        )
-                        tile = tile.insert(subtile, 0, 0)
 
-                    # TODO: store ids of images that intersect with the tile
-                    # as postgis polygons???
+                        extra_file_coordinate = np.array((
+                            extra_file.site.y, extra_file.site.x
+                        ))
+                        condition = file_coordinate > extra_file_coordinate
+                        if all(condition):
+                            logger.debug('insert pixels from top left image')
+                            y = file.site.image_size[0] - abs(t['y_offset'])
+                            x = file.site.image_size[1] - abs(t['x_offset'])
+                            height = abs(t['y_offset'])
+                            width = abs(t['x_offset'])
+                            subtile = PyramidTile(
+                                image.extract(y, x, height, width).pixels
+                            )
+                            tile.insert(subtile, 0, 0)
+                        elif condition[0] and not condition[1]:
+                            logger.debug('insert pixels from top image')
+                            y = file.site.image_size[0] - abs(t['y_offset'])
+                            height = abs(t['y_offset'])
+                            if t['x_offset'] < 0:
+                                x = 0
+                                width = tile.dimensions[1] - abs(t['x_offset'])
+                                x_offset = abs(t['x_offset'])
+                            else:
+                                x = t['x_offset']
+                                width = tile.dimensions[1]
+                                x_offset = 0
+                            subtile = PyramidTile(
+                                image.extract(y, x, height, width).pixels
+                            )
+                            tile.insert(subtile, 0, x_offset)
+                        elif not condition[0] and condition[1]:
+                            logger.debug('insert pixels from left image')
+                            x = file.site.image_size[1] - abs(t['x_offset'])
+                            width = abs(t['x_offset'])
+                            if t['y_offset'] < 0:
+                                y = 0
+                                height = tile.dimensions[0] - abs(t['y_offset'])
+                                y_offset = abs(t['y_offset'])
+                            else:
+                                y = t['y_offset']
+                                height = tile.dimensions[0]
+                                y_offset = 0
+                            subtile = PyramidTile(
+                                image.extract(y, x, height, width).pixels
+                            )
+                            tile.insert(subtile, y_offset, 0)
+                        else:
+                            # Each job processes only the overlapping tiles
+                            # at the upper and/or left border of the image.
+                            # This prevents that tiles are created twice, which
+                            # may cause problems with file locking and so on.
+                            # The database entry was already created here, but
+                            # we just leave it for the other job that will
+                            # eventually (hopefully) process the tile.
+                            continue
 
-                    # Store tile file
-                    tile_file.put(tile, session)
+                    tile_file.put(tile)
 
-    def _create_empty_base_level_tiles(self, batch):
-        pass
+    def _create_empty_maxzoom_level_tiles(self, batch):
+        with tmlib.models.utils.Session() as session:
 
-    def _create_higher_level_tiles(self, batch):
-        pass
+            layer = session.query(tmlib.models.ChannelLayer).\
+                get(batch['layer_id'])
+
+            logger.info(
+                'processing layer: channel %d, time point %d, z-plane %d',
+                layer.channel.index, layer.tpoint, layer.zplane
+            )
+            logger.info(
+                'creating empty tiles at maximum zoom level %d', batch['level']
+            )
+
+            tile_coords = layer.maxzoom_tile_coordinate_to_image_file_map.keys()
+            rows = range(layer.dimensions[-1][0])
+            cols = range(layer.dimensions[-1][1])
+            all_tile_coords = list(itertools.product(rows, cols))
+            missing_tile_coords = set(all_tile_coords) - set(tile_coords)
+            for t in missing_tile_coords:
+                name = layer.build_tile_file_name(
+                    batch['level'], t[0], t[1]
+                )
+                group = layer.tile_coordinate_group_map[
+                    batch['level'], t[0], t[1]
+                ]
+                tile_file = session.get_or_create(
+                    tmlib.models.PyramidTileFile,
+                    name=name, group=group, row=t[0],
+                    column=t[1], level=batch['level'],
+                    channel_layer_id=layer.id
+                )
+                logger.info('create tile: %s', tile_file.name)
+                tile = PyramidTile.create_as_background()
+                tile_file.put(tile)
+
+    def _create_lower_zoom_level_tiles(self, batch):
+        with tmlib.models.utils.Session() as session:
+            layer = session.query(tmlib.models.ChannelLayer).\
+                get(batch['layer_id'])
+            logger.info(
+                'processing layer: channel %d, time point %d, z-plane %d',
+                layer.channel.index, layer.tpoint, layer.zplane
+            )
+            logger.info('creating tiles at zoom level %d', batch['level'])
+
+        for f in batch['outputs']['image_files']:
+            with tmlib.models.utils.Session() as session:
+                layer = session.query(tmlib.models.ChannelLayer).\
+                    get(batch['layer_id'])
+                name = os.path.basename(f)
+                level, row, column = layer.get_coordinate_from_name(name)
+                if level != batch['level']:
+                    raise ValueError('Level doesn\'t match!')
+                coordinates = layer.calc_coordinates_of_next_higher_level(
+                    level, row, column
+                )
+                group = layer.tile_coordinate_group_map[
+                    level, row, column
+                ]
+                tile_file = session.get_or_create(
+                    tmlib.models.PyramidTileFile,
+                    name=name, group=group, row=row,
+                    column=column, level=level,
+                    channel_layer_id=layer.id
+                )
+                logger.info('creating tile: %s', tile_file.name)
+                rows = np.unique([c[0] for c in coordinates])
+                cols = np.unique([c[1] for c in coordinates])
+                # Build the mosaic by loading required higher level tiles
+                # (created in a previous run) and stitching them together
+
+                for i, r in enumerate(rows):
+                    for j, c in enumerate(cols):
+                        pre_tile_file = session.query(
+                                tmlib.models.PyramidTileFile
+                            ).\
+                            filter_by(
+                                row=r, column=c, level=batch['level']+1,
+                                channel_layer_id=layer.id
+                            ).\
+                            one()
+                        # We have to temporally treat it as an "image",
+                        # since a tile can per definition not be larger
+                        # than 256x256 pixels.
+                        img = ChannelImage(pre_tile_file.get().pixels)
+                        if j == 0:
+                            row_img = img
+                        else:
+                            row_img = row_img.join(img, 'horizontal')
+                    if i == 0:
+                        mosaic_img = row_img
+                    else:
+                        mosaic_img = mosaic_img.join(row_img, 'vertical')
+                # Create the tile at the current level by downsampling the
+                # mosaic image, which is composed of the 4 tiles of the next
+                # higher zoom level
+                tile = PyramidTile(mosaic_img.shrink(layer.zoom_factor).pixels)
+                tile_file.put(tile)
 
     def run_job(self, batch):
         '''Create 8-bit grayscale JPEG pyramid tiles.
@@ -534,15 +564,12 @@ class PyramidBuilder(ClusterRoutines):
             job_descriptions element
         '''
         if batch['index'] == 0:
-            if batch['image_file_ids']:
-                self._create_nonempty_base_level_tiles(batch)
+            if batch.get('image_file_ids', None):
+                self._create_nonempty_maxzoom_level_tiles(batch)
             else:
-                self._create_empty_base_level_tiles()
-        
+                self._create_empty_maxzoom_level_tiles(batch)
         else:
-            # NOTE: Here we pass the "output" files to the function!
-            self._create_higher_level_tiles(
-                    batch['level'], filenames=batch['outputs']['image_files'])
+            self._create_lower_zoom_level_tiles(batch)
 
     @utils.notimplemented
     def collect_job_output(self, batch):
