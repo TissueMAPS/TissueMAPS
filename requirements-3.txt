@@ -22,7 +22,7 @@ prettytable>=0.7.2
 pyparsing==2.0.3
 pypng==0.0.17
 python-dateutil==2.4.2
-pytest==2.8.2
+pytest>=7.1.0
 pytz==2015.4
 PyYAML>=3.11
 rpy2>=2.7.4
@@ -33,3 +33,4 @@ sphinx-pyreverse==0.0.12
 sqlalchemy>=0.9
 tables>=3.2.2
 ruamel.yaml>=0.10.11
+sqlalchemy_imageattach==0.9.0
