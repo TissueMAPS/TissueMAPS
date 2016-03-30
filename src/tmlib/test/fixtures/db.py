@@ -1,3 +1,5 @@
+import os
+
 import sqlalchemy
 import pytest
 
@@ -12,10 +14,13 @@ def config(tmpdir_factory):
     cfg = {}
     cfg['GC3PIE_SESSION_DIR'] = str(tmpdir_factory.mktemp('gc3pie'))
     cfg['TMAPS_STORAGE'] = str(tmpdir_factory.mktemp('experiments'))
-    cfg['POSTGRES_DATABASE_URI'] = \
-        'postgresql://{user}:{passw}@{host}:{port}/{dbname}'.format(
-            user='robin', passw='phelot95', host='localhost',
-            port=5432, dbname='tissuemaps_test')
+    if 'TMAPS_DB_URI' not in os.environ:
+        raise Exception(
+            'No URI to the testing db found in the environment. '
+            'To set it issue the command:\n'
+            '    $ export TMAPS_DB_URI=postgresql://{user}:{password}@{host}:5432/tissuemaps_test')
+    else:
+        cfg['POSTGRES_DATABASE_URI'] = os.environ['TMAPS_DB_URI']
 
     return cfg
 
