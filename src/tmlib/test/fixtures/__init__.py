@@ -1,4 +1,3 @@
-import db
-import experiment
-import user
-
+from db import *
+from user import *
+from experiment import *
