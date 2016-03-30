@@ -25,19 +25,19 @@ def config(tmpdir_factory):
     return cfg
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.yield_fixture(scope='session', autouse=True)
 def engine(config, request):
 
     engine = sqlalchemy.create_engine(config['POSTGRES_DATABASE_URI'])
+
+    Model.metadata.drop_all(engine)
     Model.metadata.create_all(engine)
 
-    def teardown():
-        # Commit before dropping, otherwise pytest will hang!
+    try:
+        yield engine
+    finally:
         Model.metadata.drop_all(engine)
-
-    request.addfinalizer(teardown)
-
-    return engine
+        engine.dispose()
 
 
 @pytest.fixture(scope='session')
@@ -45,10 +45,21 @@ def Session(engine):
     return sessionmaker(bind=engine)
 
 
-@pytest.yield_fixture
+@pytest.yield_fixture(scope='function')
 def session(Session):
     session = Session()
     session.begin_nested()
+
+    try:
+        yield session
+    finally:
+        session.rollback()
+
+
+@pytest.yield_fixture(scope='session')
+def persistent_session(Session, request):
+    session = Session()
+
     try:
         yield session
     finally:
