@@ -1,5 +1,5 @@
 import pytest
-from tmaps.user import User
+from tmlib.models import User
 
 
 def _teardown_func(session, user):

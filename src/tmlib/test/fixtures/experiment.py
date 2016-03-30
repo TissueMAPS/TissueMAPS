@@ -1,5 +1,5 @@
 import pytest
-from tmaps.experiment import Experiment
+from tmlib.models import Experiment
 
 
 def _create_testexperiment(session, request, app, user,

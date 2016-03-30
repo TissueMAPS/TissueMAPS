@@ -3,7 +3,7 @@ import os.path as p
 
 import mock
 
-from tmaps.experiment import Experiment
+from tmlib.models.experiment import Experiment
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
