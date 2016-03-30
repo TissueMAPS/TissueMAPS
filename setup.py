@@ -162,14 +162,15 @@ scripts = []
 
 packages = [
     'tmlib',
-    'tmlib.imextract',
-    'tmlib.jterator',
-    'tmlib.metaextract',
-    'tmlib.illuminati',
-    'tmlib.corilla',
-    'tmlib.metaconfig',
-    'tmlib.tmaps',
-    'tmlib.align',
+    'tmlib.models.'
+    'tmlib.workflow.imextract',
+    'tmlib.workflow.jterator',
+    'tmlib.workflow.metaextract',
+    'tmlib.workflow.illuminati',
+    'tmlib.workflow.corilla',
+    'tmlib.workflow.metaconfig',
+    'tmlib.workflow.tmaps',
+    'tmlib.workflow.align',
 ]
 
 package_data = {'': ['*.html', '*.svg', '*.js']}
