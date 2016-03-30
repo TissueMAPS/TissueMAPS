@@ -102,10 +102,6 @@ def test_create_experiment_with_login(rr, db, monkeypatch):
 #     fake_delete.assert_called_with()
 
 
-def test_db(rr):
-    assert len(rr.user.experiments) == 0
-
-
 @pytest.mark.skipif(True, reason='Not implemented')
 def test_create_layers():
     assert False

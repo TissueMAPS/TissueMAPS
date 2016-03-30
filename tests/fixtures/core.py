@@ -25,7 +25,6 @@ def app(request, tmpdir_factory):
     cfg = flask.Config(p.join(p.dirname(tmaps.__file__), p.pardir))
     cfg.from_envvar('TMAPS_SETTINGS_TEST')
 
-
     cfg['GC3PIE_SESSION_DIR'] = str(tmpdir_factory.mktemp('gc3pie'))
     cfg['TMAPS_STORAGE'] = str(tmpdir_factory.mktemp('experiments'))
 
@@ -43,8 +42,8 @@ def app(request, tmpdir_factory):
     return app
 
 
-@pytest.fixture(scope='session', autouse=True)
-def db(app, request):
+@pytest.yield_fixture(scope='session', autouse=True)
+def db(app, engine, request):
     """The Flask-SQLAlchemy database fixture.
 
     This fixture will be created once for the whole test session.
@@ -53,21 +52,16 @@ def db(app, request):
     """
     # Initialize testing database
     _db.app = app
-    # Commit before dropping, otherwise pytest might hang!
+    # Close before dropping, otherwise pytest might hang!
     _db.session.close()
-    Model.metadata.drop_all(_db.engine)
-    _db.create_all()
+    Model.metadata.drop_all(engine)
+    Model.metadata.create_all(engine)
 
-    Model.metadata.create_all(_db.engine)
+    yield _db
 
-    def teardown():
-        # Commit before dropping, otherwise pytest will hang!
-        _db.session.close()
-        Model.metadata.drop_all(_db.engine)
-
-    request.addfinalizer(teardown)
-
-    return _db
+    # Close before dropping, otherwise pytest might hang!
+    _db.session.close()
+    Model.metadata.drop_all(engine)
 
 
 def make_test_client(app, user, password):
@@ -102,7 +96,7 @@ def make_test_client(app, user, password):
     return client
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 def rr(app, roborobin):
     """An object of type Client that contains a test client authenticated
     with the credentials of user Robo Robin."""
@@ -110,12 +104,13 @@ def rr(app, roborobin):
     return Client(user=roborobin, browser=browser)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='session')
 def rm(app, robomarkus):
     """An object of type Client that contains a test client authenticated
     with the credentials of user Robo Markus."""
     browser = make_test_client(app, robomarkus, '123')
     return Client(user=robomarkus, browser=browser)
+
 
 @pytest.fixture(scope='module')
 def anybody(app):

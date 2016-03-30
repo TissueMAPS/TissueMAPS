@@ -11,33 +11,25 @@ class ToolSession(Model):
 
     experiment_id = \
         Column(Integer, ForeignKey('experiments.id'))
-    user_id = Column(Integer, ForeignKey('users.id'))
+
     tool_id = Column(Integer, ForeignKey('tools.id'))
-    appstate_id = Column(Integer, ForeignKey('appstates.id'))
+    # appstate_id = Column(Integer, ForeignKey('appstates.id'))
 
     # appstate = relationship(
     #     'AppStateBase', uselist=False, backref=backref(
     #         'tool_instances', cascade='all, delete-orphan'))
 
-    experiment = relationship('Experiment', uselist=False)
-    user = relationship('User', uselist=False)
+    experiment = relationship(
+        'Experiment', uselist=False, cascade='all, delete-orphan',
+        single_parent=True, backref='tool_sessions')
+
+    tool = relationship(
+        'Tool', uselist=False, cascade='all, delete-orphan',
+        single_parent=True, backref='sessions')
 
     def set(key, value):
         pass
 
     def get(key):
         pass
-
-#     def __repr__(self):
-#         return '<ToolInstance %s : %d>' % (self.tool_id, self.id)
-
-#     def as_dict(self):
-#         return {
-#             'id': self.id,
-#             'tool_id': self.tool_id,
-#             'appstate_id': self.appstate_id,
-#             'experiment_id': self.experiment_id,
-#             'user_id': self.user_id
-#         }
-
 
