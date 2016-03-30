@@ -182,38 +182,3 @@ class Session(object):
         except:
             raise
         return instance
-
-
-def decode_pk(key):
-    '''
-    Decode public key.
-
-    Parameters
-    ----------
-    key: str
-        encoded public key
-
-    Returns
-    -------
-    int
-        decoded public key
-    '''
-    return int(base64.urlsafe_b64decode(str(key))[5:])
-
-
-def encode_pk(string):
-    '''
-    Encode public key.
-
-    Parameters
-    ----------
-    string: int
-        public key
-
-    Returns
-    -------
-    str
-        encode public key
-    '''
-    return base64.urlsafe_b64encode('tmaps' + str(string))
-
