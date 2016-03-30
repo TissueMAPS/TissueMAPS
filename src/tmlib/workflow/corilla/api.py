@@ -3,10 +3,9 @@ import logging
 
 import tmlib.models
 from tmlib.utils import notimplemented
-from tmlib.writers import DatasetWriter
+from tmlib.image import IllumstatsContainer
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.corilla.stats import OnlineStatistics
-from tmlib.workflow.corilla.stats import OnlinePercentile
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +89,7 @@ class IllumstatsGenerator(ClusterRoutines):
                             'illumstats_files': [
                                 os.path.join(
                                     cycle.illumstats_location,
-                                    tmlib.models.IllumStatsFile.
+                                    tmlib.models.IllumstatsFile.
                                     FILENAME_FORMAT.format(
                                         channel_id=channel.id
                                     )
@@ -117,33 +116,27 @@ class IllumstatsGenerator(ClusterRoutines):
         file_ids = batch['channel_image_files_ids']
         logger.info('calculate illumination statistics')
         with tmlib.models.utils.Session() as session:
-            file = session.query(tmlib.models.ChannelImageFile).get(file_ids[0])
+            file = session.query(tmlib.models.ChannelImageFile).\
+                get(file_ids[0])
             img = file.get()
         stats = OnlineStatistics(image_dimensions=img.dimensions)
-        pctl = OnlinePercentile()
         for fid in file_ids:
             with tmlib.models.utils.Session() as session:
                 file = session.query(tmlib.models.ChannelImageFile).get(fid)
                 img = file.get()
                 logger.info('update statistics for image: %s', file.name)
-            stats.update(img.pixels)
-            pctl.update(img.pixels)
+            stats.update(img)
 
         with tmlib.models.utils.Session() as session:
             stats_file = session.get_or_create(
-                tmlib.models.IllumStatsFile,
+                tmlib.models.IllumstatsFile,
                 channel_id=batch['channel_id'], cycle_id=batch['cycle_id']
             )
             logger.info('write calculated statistics to file')
-            with DatasetWriter(stats_file.location, truncate=True) as writer:
-                writer.write('/mean', data=stats.mean)
-                writer.write('/std', data=stats.std)
-                writer.write(
-                    '/percentiles/values', data=pctl.percentiles.values()
-                )
-                writer.write(
-                    '/percentiles/keys', data=pctl.percentiles.keys()
-                )
+            illumstats = IllumstatsContainer(
+                stats.mean, stats.std, stats.percentiles
+            )
+            stats_file.put(illumstats)
 
     @notimplemented
     def collect_job_output(self, batch):

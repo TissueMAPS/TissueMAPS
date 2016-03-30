@@ -182,10 +182,10 @@ class JtProject(object):
 
     def _create_pipe(self):
         pipe_file = self._get_pipe_file()
-        with YamlReader() as reader:
+        with YamlReader(pipe_file) as f:
             pipe = {
                 'name': self._get_descriptor_name(pipe_file),
-                'description': reader.read(pipe_file)
+                'description': f.read()
             }
         if pipe['description']['pipeline']:
             # Add module 'name' to pipeline for display in the interface
@@ -206,18 +206,18 @@ class JtProject(object):
     def _create_handles(self):
         handles = list()
         handles_files = self._get_handles_files()
-        with YamlReader() as reader:
-            if handles_files:
-                for f in handles_files:
-                    if not os.path.isabs(f):
-                        f = os.path.join(self.step_location, f)
-                    if not os.path.exists(f):
-                        raise PipelineOSError(
-                            'Handles file does not exist: "%s"' % f
-                        )
+        if handles_files:
+            for h_file in handles_files:
+                if not os.path.isabs(h_file):
+                    h_file = os.path.join(self.step_location, h_file)
+                if not os.path.exists(h_file):
+                    raise PipelineOSError(
+                        'Handles file does not exist: "%s"' % f
+                    )
+                with YamlReader(h_file) as f:
                     handles.append({
                         'name': self._get_descriptor_name(f),
-                        'description': reader.read(f)
+                        'description': f.read()
                     })
         # Sort handles information according to order of modules in the pipeline
         names = [h['name'] for h in handles]
@@ -259,13 +259,13 @@ class JtProject(object):
         if not repo_dir:
             shutil.copy(pipe_file, self.step_location)
         else:
-            with YamlReader() as reader:
-                pipe_content = reader.read(pipe_file, use_ruamel=True)
+            with YamlReader(pipe_file) as f:
+                pipe_content = f.read()
             new_pipe_file = os.path.join(
                 self.step_location, '%s%s' % (self.pipe_name, PIPE_SUFFIX)
             )
-            with YamlWriter() as writer:
-                writer.write(new_pipe_file, pipe_content, use_ruamel=True)
+            with YamlWriter(new_pipe_file) as f:
+                f.write(pipe_content)
         shutil.copytree(
             os.path.join(skel_dir, 'handles'),
             os.path.join(self.step_location, 'handles')
@@ -283,9 +283,8 @@ class JtProject(object):
 
     def _modify_pipe(self):
         pipe_file = self._get_pipe_file()
-        with YamlReader() as reader:
-            # Use ruamel.yaml to preserve comments in the pipe file
-            old_pipe_content = reader.read(pipe_file, use_ruamel=True)
+        with YamlReader(pipe_file) as f:
+            old_pipe_content = f.read()
         new_pipe_content = self.pipe['description']
         # Remove module 'name' from pipeline (only used internally)
         for i, module in enumerate(new_pipe_content['pipeline']):
@@ -293,8 +292,8 @@ class JtProject(object):
         mod_pipe_content = self._replace_values(
             old_pipe_content, new_pipe_content
         )
-        with YamlWriter() as writer:
-            writer.write(pipe_file, mod_pipe_content, use_ruamel=True)
+        with YamlWriter(pipe_file) as writer:
+            writer.write(mod_pipe_content)
 
     def _modify_handles(self):
         handles_files = []
@@ -305,11 +304,11 @@ class JtProject(object):
                 '%s%s' % (h['name'], HANDLES_SUFFIX)
             )
             handles_files.append(filename)
-        with YamlReader() as reader:
             for i, handles_file in enumerate(handles_files):
                 # If file already exists, modify its content
                 if os.path.exists(handles_file):
-                    old_handles_content = reader.read(handles_file)
+                    with YamlReader(handles_file) as f:
+                        old_handles_content = f.read()
                     new_handles_content = self.handles[i]['description']
                     mod_handles_content = self._replace_values(
                         old_handles_content, new_handles_content
@@ -537,16 +536,10 @@ class JtAvailableModules(object):
         List[dict]
             name and description for each handles file
         '''
-        with YamlReader() as reader:
-            handles = [
-                {
-                    'name': name,
-                    'description': reader.read(
-                        self._get_corresponding_handles_file(name)
-                    )
-                }
-                for name in self.module_names
-            ]
+        handles = list()
+        for name in self.module_names:
+            with YamlReader(self._get_corresponding_handles_file(name)) as f:
+                handles.append({'name': name, 'description': f.read()})
         return handles
 
     @property

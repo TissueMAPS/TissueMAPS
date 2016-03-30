@@ -23,8 +23,7 @@ def get_image_ix(image_id):
     return int(match.group(1))
 
 
-'''
-OMEXML declaration configuration.
+'''OMEXML declaration configuration.
 For details see `OME model <http://www.openmicroscopy.org/site/support/ome-model/>`_
 '''
 

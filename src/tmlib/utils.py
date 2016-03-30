@@ -5,7 +5,7 @@ import datetime
 import re
 import os
 import inspect
-import types  # require for type checks
+# import types  # require for type checks
 from types import *
 import logging
 
@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_datetimestamp():
-    '''
-    Create a datetimestamp in the form "year-month-day_hour:minute:second".
+    '''Create a datetimestamp in the form "year-month-day_hour-minute-second".
     
     Returns
     -------
@@ -26,8 +25,7 @@ def create_datetimestamp():
 
 
 def create_timestamp():
-    '''
-    Create a timestamp in the form "hour:minute:second".
+    '''Create a timestamp in the form "hour-minute-second".
 
     Returns
     -------
@@ -39,8 +37,7 @@ def create_timestamp():
 
 
 def regex_from_format_string(format_string):
-    '''
-    Convert a format string with keywords into a regular expression object.
+    '''Convert a format string with keywords into a named regular expression.
 
     Parameters
     ----------
@@ -74,8 +71,7 @@ def regex_from_format_string(format_string):
 
 
 def indices(data, item):
-    '''
-    Determine all indices of an item in a list.
+    '''Determine all indices of an item in a list.
 
     Parameters
     ----------
@@ -102,8 +98,7 @@ def indices(data, item):
 
 
 def flatten(data):
-    '''
-    Transform a list of lists into a flat list.
+    '''Transform a list of lists into a flat list.
 
     Parameters
     ----------
@@ -117,8 +112,7 @@ def flatten(data):
 
 
 def common_substring(data):
-    '''
-    Find longest common substring across a collection of strings.
+    '''Find longest common substring across a collection of strings.
 
     Parameters
     ----------
@@ -139,8 +133,7 @@ def common_substring(data):
 
 
 def list_directory_tree(start_dir):
-    '''
-    Capture the whole directory tree downstream of `start_dir`.
+    '''Capture the whole directory tree downstream of `start_dir`.
 
     Parameters
     ----------
@@ -150,12 +143,11 @@ def list_directory_tree(start_dir):
     for root, dirs, files in os.walk(start_dir):
         level = root.replace(start_dir, '').count(os.sep)
         indent = ' ' * 4 * (level)
-        print('{}{}/'.format(indent, os.path.basename(root)))
+        print '{}{}/'.format(indent, os.path.basename(root))
 
 
 def is_number(s):
-    '''
-    Check whether a string can be represented by a number.
+    '''Check whether a string can be represented by a number.
 
     Parameters
     ----------
@@ -181,8 +173,7 @@ def is_number(s):
 
 
 def map_letter_to_number(letter):
-    '''
-    Map capital letter to number.
+    '''Map capital letter to number.
 
     Parameters
     ----------
@@ -203,8 +194,7 @@ def map_letter_to_number(letter):
 
 
 def map_number_to_letter(number):
-    '''
-    Map number to capital letter.
+    '''Map number to capital letter.
 
     Parameters
     ----------
@@ -225,8 +215,7 @@ def map_number_to_letter(number):
 
 
 def missing_elements(data, start=None, end=None):
-    '''
-    Determine missing elements in a sequence of integers.
+    '''Determine missing elements in a sequence of integers.
 
     Parameters
     ----------
@@ -271,8 +260,7 @@ def missing_elements(data, start=None, end=None):
 
 
 def assert_type(**expected):
-    '''
-    Decorator function that asserts that the type of function arguments.
+    '''Decorator function that asserts that the type of function arguments.
 
     Parameters
     ----------
@@ -354,17 +342,21 @@ def assert_type(**expected):
                             ett = getattr(module, path_parts[-1])
                         except ImportError:
                             raise ImportError(
-                                'Import of custom type "%s" failed.' % ets)
+                                'Import of custom type "%s" failed.' % ets
+                            )
                     if not isinstance(ett, type):
                         raise TypeError(
-                                'Type of "%s" could not be determined' % ett)
+                            'Type of "%s" could not be determined' % ett
+                        )
                     et_types.append(ett)
 
                 # No we have a type object that we can use for the check
                 if not any([isinstance(args[index], ett) for ett in et_types]):
                     options = ' or '.join([ets for ets in et_strings])
-                    raise TypeError('Argument "%s" must have type %s.' %
-                                    (expected_name, options))
+                    raise TypeError(
+                        'Argument "%s" must have type %s.'
+                        % (expected_name, options)
+                    )
             return func(*args, **kwargs)
 
         wrapper.__name__ = func.__name__

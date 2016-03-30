@@ -1,8 +1,5 @@
-import os
-import numpy as np
 import logging
 import image_registration
-from tmlib.readers import DatasetReader
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +26,7 @@ def calculate_shift(target_image, reference_image):
 
 def calculate_overhang(y_shifts, x_shifts):
     '''
-    Calculates the overhang of images at one acquisition site
+    Calculates the overhang of images acquired at the same site
     across different acquisition cycles.
 
     Parameters

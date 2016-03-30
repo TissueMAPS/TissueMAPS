@@ -24,7 +24,7 @@ class Submission(Model, DateMixIn):
         parent user to which the submission belongs
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'submissions'
 
     # Table columns
@@ -67,7 +67,7 @@ class Batch(Model):
         parent submission to which the batch belongs
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'batches'
 
     # Table columns
@@ -130,7 +130,7 @@ class Task(Model):
         parent submission to which the batch belongs
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'tasks'
 
     # Table columns

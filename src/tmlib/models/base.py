@@ -1,13 +1,22 @@
 '''Abstract base and mixin classes for database models.
 '''
-from sqlalchemy.ext.declarative import declarative_base
+import os
+from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import Column, DateTime, Integer
-from sqlalchemy_imageattach.entity import Image
 from sqlalchemy import func
+from abc import ABCMeta
+from abc import abstractmethod
+from abc import abstractproperty
 
 from tmlib import utils
 
-_Base = declarative_base()
+
+class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
+
+    '''Metaclass for abstract declarative base classes.'''
+
+
+_Base = declarative_base(metaclass=_DeclarativeABCMeta)
 
 
 class DateMixIn(object):
@@ -16,27 +25,18 @@ class DateMixIn(object):
 
     Attributes
     ----------
-    created_on: datetime.datetime
+    created_at: datetime.datetime
         date and time when the row was inserted into the column
-    updated_on: datetime.datetime
+    updated_at: datetime.datetime
         date and time when the row was last updated
     '''
 
-    created_on = Column(
+    created_at = Column(
         DateTime, default=func.now()
     )
-    updated_on = Column(
+    updated_at = Column(
         DateTime, default=func.now(), onupdate=func.now()
     )
-
-
-class Pixels(_Base, Image):
-
-    '''Abstract base class for *pixels*, which represent the actual binary data
-    in an image file.
-    '''
-
-    __abstract__ = True
 
 
 class Model(_Base):
@@ -60,3 +60,30 @@ class Model(_Base):
     def hash(self):
         '''str: encoded `id`'''
         return utils.encode_pk(self.id)
+
+
+class File(Model):
+
+    '''Abstract base class for *files*, which have data attached that are
+    stored outside of the database, for example on a file system or an
+    object store.
+    '''
+
+    __abstract__ = True
+
+    @property
+    def format(self):
+        '''str: file extension, e.g. ".tif" or ".jpg"'''
+        return os.path.splitext(self.name)[1]
+
+    @abstractproperty
+    def location(self):
+        pass
+
+    @abstractmethod
+    def get(self):
+        pass
+
+    @abstractmethod
+    def put(self, data):
+        pass

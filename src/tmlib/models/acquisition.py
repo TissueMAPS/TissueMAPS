@@ -46,7 +46,7 @@ class Acquisition(Model, DateMixIn):
         OMEXML files extracted from microscope image files
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'acquisitions'
 
     # Table columns
@@ -150,8 +150,8 @@ class Acquisition(Model, DateMixIn):
         image files to destination image images.
         '''
         image_mapping = list()
-        with JsonReader() as reader:
-            hashmap = reader.read(self.image_mapping_file)
+        with JsonReader(self.image_mapping_file) as f:
+            hashmap = f.read()
         for element in hashmap:
             image_mapping.append(ImageFileMapping(**element))
         return image_mapping

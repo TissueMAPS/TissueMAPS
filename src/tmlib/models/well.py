@@ -30,7 +30,7 @@ class Well(Model, DateMixIn):
         parent plate to which the well belongs
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'wells'
 
     # Table columns
@@ -54,27 +54,48 @@ class Well(Model, DateMixIn):
         self.plate_id = plate_id
 
     @property
-    def plate_coordinate(self):
+    def coordinate(self):
         '''Tuple[int]: row, column coordinate of the well within the plate'''
-        return self.map_name_to_plate_coordinate(self.name)
+        return self.map_name_to_coordinate(self.name)
+
+    @cached_property
+    def site_grid(self):
+        '''numpy.ndarray[int]: IDs of sites arranged according to their
+        relative position within the well
+        '''
+        cooridinates = [s.cooridinate for s in self.sites]
+        height, width = self.dimensions
+        grid = np.zeros((height, width), dtype=int)
+        for i, c in enumerate(cooridinates):
+            grid[c[0], c[1]] = self.sites[i].id
+        return grid
 
     @cached_property
     def dimensions(self):
         '''Tuple[int]: number of sites in the well along the vertical and
         horizontal axis, i.e. the number of rows and columns
         '''
-        return tuple(np.sum(
-            np.array(
-                [(s.well_position_y, s.well_position_x) for s in self.sites]
-            ),
-            axis=0
-        ))
+        return tuple(
+            np.amax(np.array([(s.y, s.x) for s in self.sites]), axis=0) + 1
+        )
+
+    @cached_property
+    def image_size(self):
+        '''Tuple[int]: number of pixels along the vertical and horizontal axis
+        '''
+        vertical_offset = self.plate.experiment.vertical_site_displacement
+        horizontal_offset = self.plate.experiment.horizontal_site_displacement
+        rows, cols = self.dimensions
+        site_dims = self.sites[0].image_size
+        return (
+            rows * site_dims[0] + vertical_offset * (rows - 1),
+            cols * site_dims[1] + horizontal_offset * (cols - 1)
+        )
 
     @staticmethod
-    def map_name_to_plate_coordinate(name):
-        '''
-        Mapping of the identifier string representation to the
-        one-based index position, e.g. "A02" -> (1, 2)
+    def map_name_to_coordinate(name):
+        '''Map the identifier string representation to the coordinate, i.e.
+        zero-based index position.
 
         Parameters
         ----------
@@ -88,7 +109,7 @@ class Well(Model, DateMixIn):
 
         Examples
         --------
-        >>>Well.map_name_to_plate_coordinate("A02")
+        >>>Well.map_name_to_coordinate("A02")
         (0, 1)
         '''
         row_name, col_name = re.match(r'([A-Z])(\d{2})', name).group(1, 2)
@@ -97,9 +118,8 @@ class Well(Model, DateMixIn):
         return (row_index, col_index)
 
     @staticmethod
-    def map_plate_coordinate_to_name(coordinate):
-        '''
-        Mapping of the one-based index position to the identifier string
+    def map_coordinate_to_name(coordinate):
+        '''Map the zero-based index position to the identifier string
         representation.
 
         Parameters
@@ -114,7 +134,7 @@ class Well(Model, DateMixIn):
 
         Examples
         --------
-        >>>Well.map_plate_coordinate_to_name((0, 1))
+        >>>Well.map_coordinate_to_name((0, 1))
         "A02"
         '''
         row_index, col_index = coordinate[0], coordinate[1]

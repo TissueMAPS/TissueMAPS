@@ -2,8 +2,8 @@
 Parse arguments from the command line.
 '''
 
-from .cli import Illuminati
-from .args import IlluminatiInitArgs
+from tmlib.workflow.illuminati.cli import Illuminati
+from tmlib.workflow.illuminati.args import IlluminatiInitArgs
 
 
 parser, subparsers = Illuminati.get_parser_and_subparsers(

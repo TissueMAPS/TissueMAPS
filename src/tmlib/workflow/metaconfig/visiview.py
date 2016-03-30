@@ -3,12 +3,11 @@ import re
 import logging
 import bioformats
 from collections import defaultdict
-from cached_property import cached_property
-from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
-from tmlib.workflow.metaconfig.default import MetadataHandler
+
 from tmlib import utils
-from tmlib.errors import RegexError
-from tmlib.readers import MetadataReader
+from tmlib.workflow.metaconfig.base import MetadataReader
+from tmlib.workflow.metaconfig.base import MetadataHandler
+from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +18,39 @@ IMAGE_FILE_REGEX_PATTERN = '.+_?(?P<w>[A-Z]\d{2})?_(?P<c>\w+)_s(?P<s>\d+)_?t?(?P
 METADATA_FILE_REGEX_PATTERN = '\.nd$'
 
 
-def read_nd_file(filename):
+class VisiviewMetadataHandler(MetadataHandler):
+
+    '''Class for handling metadata specific to microscopes equipped with
+    Visitron software.
+
+    Warning
+    -------
+    The *.stk* file format is in principle supported by BioFormats.
+    However, if the *.nd* file is provided in the same folder, then the
+    metadata of all files are read for each individual *.stk* file.
+    To prevent this, the *.nd* file has to be separated from the *.stk* files,
+    i.e. placed in another folder.
     '''
-    Read the lines of the *.nd* file as key-value pairs, and format the
+
+    #: Regular expression pattern to identify image files
+    IMAGE_FILE_REGEX_PATTERN = IMAGE_FILE_REGEX_PATTERN
+
+    def __init__(self, omexml_images, omexml_metadata=None):
+        '''
+        Parameters
+        ----------
+        omexml_images: Dict[str, bioformats.omexml.OMEXML]
+            metadata extracted from microscope image files
+        omexml_metadata: bioformats.omexml.OMEXML
+            metadata extracted from microscope metadata files 
+        '''
+        super(VisiviewMetadataHandler, self).__init__(
+            omexml_images, omexml_metadata
+        )
+
+
+def read_nd_file(filename):
+    '''Read the lines of the *.nd* file as key-value pairs, and format the
     values, i.e. translate them into Python syntax.
 
     The formatted content will have the following layout
@@ -113,8 +142,7 @@ def read_nd_file(filename):
 
 class VisiviewMetadataReader(MetadataReader):
 
-    '''
-    Class for reading metadata from files formats specific to microscopes
+    '''Class for reading metadata from files formats specific to microscopes
     equipped with the
     `VisiView software <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_.
 
@@ -137,20 +165,29 @@ class VisiviewMetadataReader(MetadataReader):
     we can use regular expressions to map image files to wells.
     '''
 
-    def read(self, nd_filename, image_filenames):
-        '''
-        Read metadata from vendor specific file on disk.
+    def read(self, microscope_metadata_files, microscope_image_files):
+        '''Read metadata from "nd" metadata file.
 
         Parameters
         ----------
-        nd_filename: str
-            absolute path to the *.nd* file
+        microscope_metadata_files: List[str]
+            absolute path to the microscope metadata files
+        microscope_image_files: List[str]
+            absolute path to the microscope image files
 
         Returns
         -------
         bioformats.omexml.OMEXML
-            plate metadata
+            OMEXML image metadata
+
+        Raises
+        ------
+        ValueError
+            when `microscope_metadata_files` doesn't have length one
         '''
+        if len(microscope_metadata_files) != 1:
+            raise ValueError('Expected one microscope metadata file.')
+        nd_filename = microscope_metadata_files[0]
         metadata = bioformats.OMEXML(XML_DECLARATION)
         # 1) Obtain the general experiment information and well plate format
         #    specifications from the ".nd" file:
@@ -201,8 +238,8 @@ class VisiviewMetadataReader(MetadataReader):
             for i in xrange(len(sites))
         ]
         lut = defaultdict(list)
-        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
-        for f in image_filenames:
+        r = re.compile(VisiviewMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
+        for f in microscope_image_files:
             matches = r.search(f)
             # NOTE: We assume that the "site" id is global per plate
             captures = matches.groupdict()
@@ -228,63 +265,3 @@ class VisiviewMetadataReader(MetadataReader):
                 well_samples[i].ImageRef = reference
 
         return metadata
-
-
-class VisiviewMetadataHandler(MetadataHandler):
-
-    '''
-    Class for reading metadata files specific to microscopes equipped with
-    Metamorph or Visitron software.
-
-    Warning
-    -------
-    The *.stk* file format is in principle supported by Bio-Formats.
-    However, if the *.nd* file is provided in the same folder, then the
-    metadata of all files are read for each individual *.stk* file.
-    To prevent this, the *.nd* file has to be separated from the *.stk* files,
-    i.e. placed in another folder.
-    '''
-
-    def __init__(self, image_files, additional_files, omexml_files):
-        '''
-        Initialize an instance of class VisiviewMetadataHandler.
-
-        Parameters
-        ----------
-        image_files: List[str]
-            full paths to image files
-        additional_files: List[str]
-            full paths to additional microscope-specific metadata files
-        omexml_files: List[str]
-            full paths to the XML files that contain the extracted OMEXML data
-        '''
-        super(VisiviewMetadataHandler, self).__init__(
-            image_files, additional_files, omexml_files
-        )
-        self.image_files = image_files
-        self.omexml_files = omexml_files
-        self.additional_files = additional_files
-
-    @cached_property
-    def ome_additional_metadata(self):
-        '''
-        Returns
-        -------
-        bioformats.omexml.OMEXML
-            metadata retrieved from Visitron microscope-specific files
-
-        See also
-        --------
-        :py:class:`tmlib.metaconfig.visiview.VisiviewMetadataHandler`
-        '''
-        r = re.compile(METADATA_FILE_REGEX_PATTERN)
-        files = [f for f in self.additional_files if r.search(f)]
-        if not files:
-            raise RegexError('Mircoscope metadata files were not found.')
-        nd_file = files[0]
-        logger.info('read metadata from provided files')
-        with VisiviewMetadataReader() as reader:
-            self._ome_additional_metadata = reader.read(
-                nd_file, self.image_files
-            )
-        return self._ome_additional_metadata

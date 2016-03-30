@@ -38,8 +38,8 @@ class Formats(object):
         Dict[str, List[str]]
             names and file extensions of supported formats as key-value pairs
         '''
-        with JsonReader() as reader:
-            supported_formats = reader.read(self._filename)
+        with JsonReader(self._filename) as f:
+            supported_formats = f.read()
         supported_formats.update({u'Visiview': [u'.tiff']})
         supported_formats.update({u'Visiview (STK)': [u'.stk', u'.nd']})
         return supported_formats

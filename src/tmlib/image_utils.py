@@ -168,7 +168,7 @@ def map_to_uint8(img, lower_bound=None, upper_bound=None):
     numpy.ndarray[uint8]
         mapped image
     '''
-    if not img.dtype != np.uint16:
+    if img.dtype != np.uint16:
         raise TypeError('"img" must have 16-bit unsigned integer type.')
     if not(0 <= lower_bound < 2**16) and lower_bound is not None:
             raise ValueError('"lower_bound" must be in the range [0, 65535]')

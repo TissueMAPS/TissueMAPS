@@ -2,17 +2,18 @@
 Database models.
 '''
 
-from base import Model, DateMixIn, Pixels
+from base import Model, DateMixIn, File
 from user import User
 from experiment import Experiment
 from well import Well
-from channel import Channel, ChannelLayer
+from channel import Channel
+from layer import ChannelLayer
 from mapobject import MapobjectType, Mapobject, MapobjectOutline, Feature, FeatureValue
 from plate import Plate
 from acquisition import Acquisition
 from cycle import Cycle
 from submission import Submission, Task
-from site import Site, SiteShift, SiteIntersection
-from file import MicroscopeImageFile, MicroscopeMetadataFile, OmeXmlFile, ChannelImageFile, ProbabilityImageFile, IllumStatsFile
-from pixels import ChannelImagePixels
+from site import Site
+from alignment import SiteShift, SiteIntersection
+from file import MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile, ProbabilityImageFile, IllumstatsFile, PyramidTileFile
 

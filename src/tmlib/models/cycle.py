@@ -35,9 +35,11 @@ class Cycle(Model, DateMixIn):
         parent plate to which the cycle belongs
     channel_image_files: List[tmlib.models.ChannelImageFile]
         channel image files that belong to the cycle
+    site_shifts: List[tmlib.models.SiteShift]
+        shifts that belong to the cycle
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'cycles'
 
     # Table columns

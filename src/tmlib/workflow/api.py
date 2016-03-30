@@ -214,8 +214,7 @@ class BasicClusterRoutines(object):
 
 class ClusterRoutines(BasicClusterRoutines):
 
-    '''
-    Abstract base class for API classes, which provide methods for 
+    '''Abstract base class for API classes, which provide methods for 
     cluster routines, such as creation, submission, and monitoring of jobs.
     '''
 
@@ -264,21 +263,11 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @utils.autocreate_directory_property
     def job_descriptions_location(self):
-        '''
-        Returns
-        -------
-        str
-            location where job description files are stored
-
-        Note
-        ----
-        Directory is autocreated if it doesn't exist.
-        '''
+        '''str: location where job description files are stored'''
         return os.path.join(self.step_location, 'job_descriptions')
 
     def get_job_descriptions_from_files(self):
-        '''
-        Get job descriptions from files and combine them into
+        '''Get job descriptions from files and combine them into
         the format required by the `create_jobs()` method.
 
         Returns
@@ -312,8 +301,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return job_descriptions
 
     def get_log_output_from_files(self, job_id):
-        '''
-        Get log outputs (standard output and error) from files.
+        '''Get log outputs (standard output and error) from files.
 
         Parameters
         ----------
@@ -357,8 +345,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return log
 
     def list_output_files(self, job_descriptions):
-        '''
-        Provide a list of all output files that should be created by the step.
+        '''List all output files that should be created by the step.
 
         Parameters
         ----------
@@ -390,8 +377,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return files
 
     def list_input_files(self, job_descriptions):
-        '''
-        Provide a list of all input files that are required by the step.
+        '''Provide a list of all input files that are required by the step.
 
         Parameters
         ----------
@@ -509,8 +495,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return batch
 
     def read_job_file(self, filename):
-        '''
-        Read job description from JSON file.
+        '''Read job description from JSON file.
 
         Parameters
         ----------
@@ -538,8 +523,8 @@ class ClusterRoutines(BasicClusterRoutines):
                 'Initialize the step first by calling the "init" method.'
                 % filename
             )
-        with JsonReader() as reader:
-            batch = reader.read(filename)
+        with JsonReader(filename) as f:
+            batch = f.read()
             return self._make_paths_absolute(batch)
 
     @staticmethod
@@ -628,8 +613,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return batch
 
     def write_job_files(self, job_descriptions):
-        '''
-        Write job descriptions to files as JSON.
+        '''Write job descriptions to files as JSON.
 
         Parameters
         ----------
@@ -646,16 +630,17 @@ class ClusterRoutines(BasicClusterRoutines):
             os.makedirs(self.job_descriptions_location)
         self._check_io_description(job_descriptions)
 
-        with JsonWriter() as writer:
-            for batch in job_descriptions['run']:
-                logger.debug('make paths relative to experiment directory')
-                batch = self._make_paths_relative(batch)
-                job_file = self.build_run_job_filename(batch['id'])
-                writer.write(job_file, batch)
-            if 'collect' in job_descriptions.keys():
-                batch = self._make_paths_relative(job_descriptions['collect'])
-                job_file = self.build_collect_job_filename()
-                writer.write(job_file, batch)
+        for batch in job_descriptions['run']:
+            logger.debug('make paths relative to experiment directory')
+            batch = self._make_paths_relative(batch)
+            job_file = self.build_run_job_filename(batch['id'])
+            with JsonWriter(job_file) as f:
+                f.write(batch)
+        if 'collect' in job_descriptions.keys():
+            batch = self._make_paths_relative(job_descriptions['collect'])
+            job_file = self.build_collect_job_filename()
+            with JsonWriter(job_file) as f:
+                f.write(batch)
 
     def _build_run_command(self, batch):
         command = [self.step_name]
@@ -673,8 +658,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @abstractmethod
     def run_job(self, batch):
-        '''
-        Run an individual job.
+        '''Run an individual job.
 
         Parameters
         ----------
@@ -685,8 +669,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @abstractmethod
     def collect_job_output(self, batch):
-        '''
-        Collect the output of jobs and fuse them if necessary.
+        '''Collect the output of jobs and fuse them if necessary.
 
         Parameters
         ----------
@@ -699,9 +682,8 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @abstractmethod
     def create_batches(self, args):
-        '''
-        Create job descriptions with information required for the creation and
-        processing of individual jobs.
+        '''Create job descriptions with information required for the creation
+        and processing of individual jobs.
 
         Parameters
         ----------

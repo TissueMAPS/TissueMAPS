@@ -6,8 +6,7 @@ from tmlib.workflow.metaextract.cli import Metaextract
 from tmlib.workflow.metaextract.args import MetaextractInitArgs
 
 
-parser, subparsers = Metaextract.get_parser_and_subparsers(
-    methods={'init', 'submit', 'resubmit', 'collect', 'cleanup', 'log', 'info'})
+parser, subparsers = Metaextract.get_parser_and_subparsers()
 
 parser.description = '''
         Extract OMEXML metadata from heterogeneous microscopic image file

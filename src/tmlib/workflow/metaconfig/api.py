@@ -2,8 +2,11 @@ import os
 import logging
 import numpy as np
 import pandas as pd
+import bioformats
+
 import tmlib.models
 from tmlib.workflow.metaconfig import metadata_handler_factory
+from tmlib.workflow.metaconfig import metadata_reader_factory
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.models.plate import determine_plate_dimensions
 from tmlib.errors import MetadataError
@@ -75,32 +78,17 @@ class MetadataConfigurator(ClusterRoutines):
                 description = {
                     'id': job_count,
                     'inputs': {
-                        'microscope_image_files': [
-                            os.path.join(
-                                acq.microscope_images_location, f.name
-                            )
-                            for f in acq.microscope_image_files
-                        ],
                         'microscope_metadata_files': [
                             os.path.join(
                                 acq.microscope_metadata_location, f.name
                             )
                             for f in acq.microscope_metadata_files
-                        ],
-                        'omexml_files': [
-                            os.path.join(
-                                acq.omexml_location, f.name
-                            )
-                            for f in acq.omexml_files
                         ]
                     },
-                    'outputs': {
-                        'mapper_files': [
-                            os.path.join(
-                                acq.location, acq.image_mapping_file
-                            )
-                        ]
-                    },
+                    'outputs': dict(),
+                    'microscope_image_file_ids': [
+                        f.id for f in acq.microscope_image_files
+                    ],
                     'microscope_type': acq.plate.experiment.microscope_type,
                     'keep_zplanes': args.keep_zplanes,
                     'regex': args.regex,
@@ -155,21 +143,35 @@ class MetadataConfigurator(ClusterRoutines):
         :py:mod:`tmlib.workflow.metaconfig.cellvoyager`
         :py:mod:`tmlib.workflow.metaconfig.visiview`
         '''
-        handler_module, handler_class = metadata_handler_factory(
+        reader_class = metadata_reader_factory(
             batch['microscope_type']
         )
-        handler = handler_class(
-            batch['inputs']['microscope_image_files'],
-            batch['inputs']['microscope_metadata_files'],
-            batch['inputs']['omexml_files']
-        )
-        if batch['regex'] is None:
-            batch['regex'] = handler_module.IMAGE_FILE_REGEX_PATTERN
 
-        handler.configure_ome_metadata_from_image_files()
-        handler.configure_ome_metadata_from_additional_files(batch['regex'])
-        missing_md = handler.determine_missing_metadata()
-        if missing_md:
+        with tmlib.models.utils.Session() as session:
+            acquisition = session.query(tmlib.models.Acquisition).\
+                get(batch['acquisition_id'])
+            metadata_filenames = [
+                f.location for f in acquisition.microscope_metadata_files
+            ]
+            omexml_images = {
+                f.name: bioformats.OMEXML(f.omexml)
+                for f in acquisition.microscope_image_files
+            }
+
+        with reader_class() as reader:
+            omexml_metadata = reader.read(
+                metadata_filenames, omexml_images.keys()
+            )
+
+        handler_class = metadata_handler_factory(
+            batch['microscope_type']
+        )
+
+        mdhandler = handler_class(omexml_images, omexml_metadata)
+        mdhandler.configure_omexml_from_image_files()
+        mdhandler.configure_omexml_from_metadata_files(batch['regex'])
+        missing = mdhandler.determine_missing_metadata()
+        if missing:
             if batch['regex']:
                 logger.warning('required metadata information is missing')
                 logger.info(
@@ -178,7 +180,7 @@ class MetadataConfigurator(ClusterRoutines):
                 )
                 n_wells = self.experiment.plate_format
                 plate_dimensions = determine_plate_dimensions(n_wells)
-                handler.configure_metadata_from_filenames(
+                mdhandler.configure_metadata_from_filenames(
                     plate_dimensions=plate_dimensions,
                     regex=batch['regex']
                 )
@@ -187,13 +189,13 @@ class MetadataConfigurator(ClusterRoutines):
                     'The following metadata information is missing:\n"%s"\n'
                     'You can provide a regular expression in order to '
                     'retrieve the missing information from filenames '
-                    % '", "'.join(missing_md)
+                    % '", "'.join(missing)
                 )
-        missing_md = handler.determine_missing_metadata()
-        if missing_md:
+        missing = mdhandler.determine_missing_metadata()
+        if missing:
             raise MetadataError(
-                    'The following metadata information is missing:\n"%s"\n'
-                    % '", "'.join(missing_md)
+                'The following metadata information is missing:\n"%s"\n'
+                % '", "'.join(missing)
             )
         # Once we have collected basic metadata such as information about
         # channels and focal planes, we try to determine the relative position
@@ -203,7 +205,7 @@ class MetadataConfigurator(ClusterRoutines):
                 'try to determine grid coordinates from microscope '
                 'stage positions'
             )
-            handler.determine_grid_coordinates_from_stage_positions()
+            mdhandler.determine_grid_coordinates_from_stage_positions()
         except MetadataError as error:
             logger.warning(
                 'microscope stage positions are not available: "%s"'
@@ -212,7 +214,7 @@ class MetadataConfigurator(ClusterRoutines):
             logger.info(
                 'try to determine grid coordinates from provided stitch layout'
             )
-            handler.determine_grid_coordinates_from_layout(
+            mdhandler.determine_grid_coordinates_from_layout(
                 stitch_layout=batch['stitch_layout'],
                 stitch_major_axis=batch['stitch_major_axis'],
                 stitch_dimensions=(batch['n_vertical'], batch['n_horizontal'])
@@ -220,17 +222,17 @@ class MetadataConfigurator(ClusterRoutines):
 
         if not batch['keep_zplanes']:
             logger.info('project focal planes to 2D')
-            handler.reconfigure_ome_metadata_for_projection()
+            mdhandler.reconfigure_ome_metadata_for_projection()
         else:
             logger.info('keep individual focal planes')
 
         # Create consistent zero-based ids
         # (some microscopes use one-based indexing)
-        handler.update_channel()
-        handler.update_zplane()
-        handler.assign_acquisition_site_indices()
-        md = handler.remove_redundant_columns()
-        fmap = handler.create_image_file_mapping()
+        mdhandler.update_channel()
+        mdhandler.update_zplane()
+        mdhandler.assign_acquisition_site_indices()
+        md = mdhandler.remove_redundant_columns()
+        fmap = mdhandler.create_image_file_mapping()
         with tmlib.models.utils.Session() as session:
             acquisition = session.query(tmlib.models.Acquisition).\
                 get(batch['acquisition_id'])
@@ -246,9 +248,11 @@ class MetadataConfigurator(ClusterRoutines):
                     s_index = np.where(md.site == s)[0]
                     y = md.loc[s_index, 'well_position_y'].values[0]
                     x = md.loc[s_index, 'well_position_x'].values[0]
+                    height = md.loc[s_index, 'height'].values[0]
+                    width = md.loc[s_index, 'width'].values[0]
                     site = session.get_or_create(
                         tmlib.models.Site,
-                        y=y, x=x, well_id=well.id
+                        y=y, x=x, height=height, width=width, well_id=well.id
                     )
 
                     for index, i in md.ix[s_index].iterrows():

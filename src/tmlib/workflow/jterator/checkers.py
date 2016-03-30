@@ -280,60 +280,61 @@ class PipelineChecker(object):
         upstream in the pipeline.
         '''
         upstream_outputs = list()
-        with YamlReader() as reader:
-            for i, module in enumerate(self.pipe_description['pipeline']):
-                handles_path = path_utils.complete_path(
-                                module['handles'], self.step_location)
+        for i, module in enumerate(self.pipe_description['pipeline']):
+            handles_path = path_utils.complete_path(
+                module['handles'], self.step_location
+            )
+            with YamlReader(handles_path) as f:
                 if self.handles_descriptions is None:
-                    handles = reader.read(handles_path)
+                    handles = f.read()
                 else:
                     handles = self.handles_descriptions[i]
 
-                # Ensure that names of piped arguments are unique
-                n = Counter([arg['name'] for arg in handles['input']])
-                repeated = [x for x in n.values() if x > 1]
-                if repeated:
-                    raise PipelineDescriptionError(
-                            'Names of input items in handles file "%s" '
-                            'must be unique.' % handles_path)
+            # Ensure that names of piped arguments are unique
+            n = Counter([arg['name'] for arg in handles['input']])
+            repeated = [x for x in n.values() if x > 1]
+            if repeated:
+                raise PipelineDescriptionError(
+                        'Names of input items in handles file "%s" '
+                        'must be unique.' % handles_path)
 
-                if not handles['output']:
+            if not handles['output']:
+                continue
+            n = Counter([arg['name'] for arg in handles['output']])
+            repeated = [x for x in n.values() if x > 1]
+            if repeated:
+                raise PipelineDescriptionError(
+                        'Names of output items in handles file "%s" '
+                        'must be unique.' % handles_path)
+
+            for j, input_item in enumerate(handles['input']):
+                input_handle = create_handle(**input_item)
+                if not isinstance(handles, PipeHandle):
+                    # We only check piped arguments
                     continue
-                n = Counter([arg['name'] for arg in handles['output']])
-                repeated = [x for x in n.values() if x > 1]
-                if repeated:
-                    raise PipelineDescriptionError(
-                            'Names of output items in handles file "%s" '
-                            'must be unique.' % handles_path)
-
-                for j, input_item in enumerate(handles['input']):
-                    input_handle = create_handle(**input_item)
-                    if not isinstance(handles, PipeHandle):
-                        # We only check piped arguments
+                channels = self.pipe_description['input']['channels']
+                if channels:
+                    layer_names = [ch['name'] for ch in channels]
+                    if input_handle.key in layer_names:
+                        # Only check piped data
                         continue
-                    channels = self.pipe_description['input']['channels']
-                    if channels:
-                        layer_names = [ch['name'] for ch in channels]
-                        if input_handle.key in layer_names:
-                            # Only check piped data
-                            continue
-                        if not module['active']:
-                            # Don't check inactive modules
-                            continue
-                        if input_handle.key not in upstream_outputs:
-                            raise PipelineDescriptionError(
-                                    'The value of "key" of input item #%d '
-                                    'with name "%s" in handles file "%s" '
-                                    'is not created upstream in the pipeline: '
-                                    '\n"%s"'
-                                    % (j, input_handle.name, handles_path,
-                                       input_handle.key))
+                    if not module['active']:
+                        # Don't check inactive modules
+                        continue
+                    if input_handle.key not in upstream_outputs:
+                        raise PipelineDescriptionError(
+                                'The value of "key" of input item #%d '
+                                'with name "%s" in handles file "%s" '
+                                'is not created upstream in the pipeline: '
+                                '\n"%s"'
+                                % (j, input_handle.name, handles_path,
+                                   input_handle.key))
 
-                # Store all upstream output items
-                for output_item in handles['output']:
-                    if 'key' in output_item:
-                        output = output_item['key']
-                        upstream_outputs.append(output)
+            # Store all upstream output items
+            for output_item in handles['output']:
+                if 'key' in output_item:
+                    output = output_item['key']
+                    upstream_outputs.append(output)
         logger.info('pipeline IO check successful')
 
     def check_all(self):

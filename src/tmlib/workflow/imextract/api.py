@@ -122,8 +122,7 @@ class ImageExtractor(ClusterRoutines):
                     planes = list()
                     for j, f in enumerate(filenames):
                         logger.info(
-                            'extract image from file: %s',
-                            os.path.basename(f)
+                            'extract image from file: %s', os.path.basename(f)
                         )
                         plane_ix = batch['planes'][i][j]
                         series_ix = batch['series'][i][j]
@@ -148,7 +147,7 @@ class ImageExtractor(ClusterRoutines):
                     output_file = session.query(tmlib.models.ChannelImageFile).\
                         get(batch['channel_image_files_ids'][i])
                     logger.info('extracted image: %s', output_file.name)
-                    output_file.put(img, session)
+                    output_file.put(img)
                     session.flush()
 
     @notimplemented

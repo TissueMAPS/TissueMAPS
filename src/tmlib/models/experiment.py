@@ -57,6 +57,16 @@ class Experiment(Model, DateMixIn):
         mapobject types that belong to the experiment
     submissions: List[tmlib.models.Submission]
         submissions that belong to the experiment
+    zoom_factor: int
+        zoom factor between pyramid levels
+    vertical_site_displacement: int, optional
+        displacement of neighboring sites within a well along the
+        vertical axis
+    horizontal_site_displacement: int
+        displacement of neighboring sites within a well along the
+        horizontal axis
+    well_spacer_size: int
+        gab between neighboring wells in pixels
 
     See also
     --------
@@ -64,7 +74,7 @@ class Experiment(Model, DateMixIn):
     :py:class:`tmlib.models.Cycle`
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'experiments'
 
     # Table columns
@@ -75,6 +85,10 @@ class Experiment(Model, DateMixIn):
     description = Column(Text)
     root_directory = Column(String)
     status = Column(String)
+    zoom_factor = Column(Integer)
+    vertical_site_displacement = Column(Integer)
+    horizontal_site_displacement = Column(Integer)
+    well_spacer_size = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id'))
 
     # Relationships to other tables
@@ -82,7 +96,9 @@ class Experiment(Model, DateMixIn):
 
     def __init__(self, name, microscope_type, plate_format,
                  plate_acquisition_mode, user_id,
-                 root_directory='$TMAPS_STORAGE', description=''):
+                 root_directory='$TMAPS_STORAGE', description='',
+                 zoom_factor=2, well_spacer_size=500,
+                 vertical_site_displacement=0, horizontal_site_displacement=0):
         '''
         Parameters
         ----------
@@ -101,6 +117,16 @@ class Experiment(Model, DateMixIn):
             should be created in (default: `$TMAPS_STORAGE`)
         description: str, optional
             description of the experimental setup
+        zoom_factor: int, optional
+            zoom factor between pyramid levels (default: ``2``)
+        well_spacer_size: int
+            gab between neighboring wells in pixels (default: ``500``)
+        vertical_site_displacement: int, optional
+            displacement of neighboring sites within a well along the
+            vertical axis (default: ``0``)
+        horizontal_site_displacement: int, optional
+            displacement of neighboring sites within a well along the
+            horizontal axis (default: ``0``)
 
         See also
         --------
@@ -135,6 +161,11 @@ class Experiment(Model, DateMixIn):
 
         self.root_directory = root_directory
         self.status = 'WAITING'
+        self.zoom_factor = zoom_factor
+        self.well_spacer_size = well_spacer_size
+        # TODO: we may be able to calculate this automatically from OMEXML
+        self.vertical_site_displacement = vertical_site_displacement
+        self.horizontal_site_displacement = horizontal_site_displacement
 
     @autocreate_directory_property
     def location(self):
@@ -153,13 +184,18 @@ class Experiment(Model, DateMixIn):
 
     @autocreate_directory_property
     def plates_location(self):
-        '''str: location where plates are stored'''
+        '''str: location where plates data are stored'''
         return os.path.join(self.location, 'plates')
 
     @autocreate_directory_property
     def channels_location(self):
-        '''str: location where channels are stored'''
+        '''str: location where channels data are stored'''
         return os.path.join(self.location, 'channels')
+
+    @autocreate_directory_property
+    def mapobject_types_location(self):
+        '''str: location where mapobject type data are stored'''
+        return os.path.join(self.location, 'mapobject_types')
 
     def belongs_to(self, user):
         '''

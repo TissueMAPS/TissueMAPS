@@ -18,7 +18,7 @@ class User(DateMixIn, Model):
         password
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'users'
 
     # Table columns

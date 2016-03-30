@@ -30,12 +30,6 @@ class Metaextract(CommandLineInterface):
     def _print_logo():
         print logo
 
-    def run(self, args):
-        raise AttributeError(
-            '"%s" object doesn\'t have a "run" method'
-            % self.__class__.__name__
-        )
-
     @staticmethod
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):

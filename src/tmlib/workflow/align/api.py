@@ -50,7 +50,7 @@ class ImageRegistration(ClusterRoutines):
         ------
         tmlib.errors.NotSupportedError
             when a plate contains only one cycle
-        ValueError  
+        ValueError
             when `args.ref_wavelength` does not exist across all cycles
         '''
         job_count = 0
@@ -96,6 +96,12 @@ class ImageRegistration(ClusterRoutines):
                                     wavelength=args.ref_wavelength
                                 ).\
                                 all()
+
+                            if not files:
+                                raise ValueError(
+                                    'No channel image files found for site %d '
+                                    'and cycle %d.' % (s, cycle.id)
+                                )
 
                             ids = [f.id for f in files]
                             if cycle.index == args.ref_cycle:

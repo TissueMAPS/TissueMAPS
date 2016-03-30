@@ -1,6 +1,5 @@
 import os
 import logging
-from xml.dom import minidom
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -12,10 +11,6 @@ logger = logging.getLogger(__name__)
 
 #: Format string for channel locations
 CHANNEL_LOCATION_FORMAT = 'channel_{id}'
-
-#: Format string for channel layer locations
-# TODO: Should this be renamed to layer_XX?
-CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
 @auto_remove_directory(lambda obj: obj.location)
@@ -35,9 +30,11 @@ class Channel(Model, DateMixIn):
         parent experiment to which the plate belongs
     layers: List[tmlib.models.ChannelLayer]
         layers belonging to the channel
+    illumstats_files: List[tmlib.model.IllumstatsFile]
+        illumination statistics files that belongs to the channel
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'channels'
 
     # Table columns
@@ -97,102 +94,3 @@ class Channel(Model, DateMixIn):
             'name': self.name,
             'layers': [l.as_dict() for l in self.layers]
         }
-
-
-class ChannelLayer(Model):
-
-    '''A *channel layer* represents a pyramid with an overview of all images
-    belonging to a given *channel*, time point, and z-plane at different
-    resolution levels.
-
-    Attributes
-    ----------
-    tpoint: int
-        time point index
-    zplane: int
-        z-plane index
-    channel_id: int
-        ID of the parent channel
-    channel: tmlib.models.Channel
-        parent channel to which the plate belongs
-    image_files: List[tmlib.models.ChannelImageFile]
-        image files that belong to the channel layer
-    '''
-
-    #: Name of the corresponding database table
-    __tablename__ = 'channel_layers'
-
-    # Table columns
-    tpoint = Column(Integer)
-    zplane = Column(Integer)
-    channel_id = Column(Integer, ForeignKey('channels.id'))
-
-    # Relationships to other tables
-    channel = relationship('Channel', backref='layers')
-
-    def __init__(self, tpoint, zplane, channel_id):
-        '''
-        Parameters
-        ----------
-        tpoint: int
-            time point index
-        zplane: int
-            z-plane index
-        channel_id: int
-            ID of the parent channel
-        '''
-        self.tpoint = tpoint
-        self.zplane = zplane
-        self.channel_id = channel_id
-
-    @property
-    def location(self):
-        '''str: location were the acquisition content is stored'''
-        if self.id is None:
-            raise AttributeError(
-                'Channel layer "%s" doesn\'t have an entry in the database yet. '
-                'Therefore, its location cannot be determined.' % self.name
-            )
-        return os.path.join(
-            self.channel.layers_location,
-            CHANNEL_LAYER_LOCATION_FORMAT.format(id=self.id)
-        )
-
-    @property
-    def image_size(self):
-        '''Tuple[int]: number of pixels along the y and x axis at the highest
-        zoom level
-        '''
-        metainfo_file = os.path.join(self.location, 'ImageProperties.xml')
-        with open(metainfo_file, 'r') as f:
-            dom = minidom.parse(f)
-            width = int(dom.firstChild.getAttribute('WIDTH'))
-            height = int(dom.firstChild.getAttribute('HEIGHT'))
-        return (height, width)
-
-    # TODO: pyramid creation
-
-    def as_dict(self):
-        '''
-        Return attributes as key-value pairs.
-
-        Returns
-        -------
-        dict
-        '''
-        image_height, image_width = self.image_size
-        return {
-            'id': self.hash,
-            'zplane': self.zplane,
-            'tpoint': self.tpoint,
-            'image_size': {
-                'width': image_width,
-                'height': image_height
-            }
-        }
-
-    def __repr__(self):
-        return (
-            '<ChannelLayer(id=%r, channel=%r, tpoint=%r, zplane=%r)>'
-            % (self.id, self.channel_id, self.tpoint, self.zplane)
-        )

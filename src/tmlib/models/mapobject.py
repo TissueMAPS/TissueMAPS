@@ -1,3 +1,4 @@
+import os
 import logging
 from geoalchemy2 import Geometry
 from sqlalchemy import Column, String, Integer, Float, Boolean, ForeignKey
@@ -5,6 +6,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import Model, DateMixIn
+from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ class MapobjectType(Model, DateMixIn):
         mapobjects that belong to the mapobject type
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'mapobject_types'
 
     # Table columns
@@ -52,6 +54,11 @@ class MapobjectType(Model, DateMixIn):
         '''
         self.name = name
         self.experiment_id = experiment_id
+
+    @autocreate_directory_property
+    def location(self):
+        '''str: location where data related to the mapobject type is stored'''
+        return os.path.join(self.experiment.mapobject_types_location, self.name)
 
     @hybrid_property
     def min_poly_zoom(self):
@@ -135,7 +142,7 @@ class Mapobject(Model):
         feature values that belong to the mapobject
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'mapobjects'
 
     # Table columns
@@ -182,7 +189,7 @@ class MapobjectOutline(Model):
         parent mapobject to which the outline belongs
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'mapobject_outlines'
 
     # Table columns
@@ -281,7 +288,7 @@ class Feature(Model, DateMixIn):
         values that belong to the feature
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'features'
 
     # Table columns
@@ -326,7 +333,7 @@ class FeatureValue(Model):
         parent mapobject to which the feature belongs
     '''
 
-    #: Name of the corresponding database table
+    #: str: name of the corresponding database table
     __tablename__ = 'feature_values'
 
     # Table columns

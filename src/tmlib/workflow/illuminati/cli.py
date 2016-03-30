@@ -1,58 +1,34 @@
 import logging
-from . import logo
-from . import __version__
-from .api import PyramidBuilder
-from ..cli import CommandLineInterface
-from ..experiment import Experiment
+
+from tmlib.utils import same_docstring_as
+from tmlib.workflow.illuminati import logo
+from tmlib.workflow.illuminati.api import PyramidBuilder
+from tmlib.workflow.cli import CommandLineInterface
 
 logger = logging.getLogger(__name__)
 
 
 class Illuminati(CommandLineInterface):
 
-    def __init__(self, experiment, verbosity, **kwargs):
+    def __init__(self, api_instance, verbosity):
         '''
-        Initialize an instance of class Illuminati.
-
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        api_instance: tmlib.workflow.illuminati.PyramidBuilder
+            instance of API class to which processing is delegated
         verbosity: int
             logging level
-        kwargs: dict
-            additional key-value pairs that are ignored
         '''
-        super(Illuminati, self).__init__(experiment, verbosity)
+        super(Illuminati, self).__init__(api_instance, verbosity)
 
     @staticmethod
     def _print_logo():
-        print logo % {'version': __version__}
-
-    @property
-    def _api_instance(self, **kwargs):
-        return PyramidBuilder(
-                    self.experiment, self.name, self.verbosity)
-
-    def collect(self, args):
-        raise AttributeError('"%s" object doesn\'t have a "collect" method'
-                             % self.__class__.__name__)
+        print logo
 
     @staticmethod
-    def call(args):
-        '''
-        Initialize an instance of the cli class with the parsed command
-        line arguments and call the method matching the name of the subparser.
-
-        Parameters
-        ----------
-        args: arparse.Namespace
-            parsed command line arguments
-
-        See also
-        --------
-        :py:mod:`tmlib.illuminati.argparser`
-        '''
-        experiment = Experiment(args.experiment_dir)
-        cli = Illuminati(experiment, args.verbosity)
-        cli._call(args)
+    @same_docstring_as(CommandLineInterface.call)
+    def call(name, args):
+        api_instance = PyramidBuilder(
+            args.experiment_id, name, args.verbosity
+        )
+        Illuminati(api_instance, args.verbosity)._call(args)

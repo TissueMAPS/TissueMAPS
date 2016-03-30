@@ -10,14 +10,11 @@ logo = '''
 ''' % __version__
 
 
-SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager'}
+SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager', 'default'}
 
 
-def metadata_handler_factory(microscope_type):
-    '''
-    Return the module as well as the implementation
-    of the :py:class:`tmlib.steps.metaconfig.default.MetadataHandler`
-    abstract base class for a given microscope type.
+def import_microscope_specific_module(microscope_type):
+    '''Load the module specific to a given microscope type.
 
     Parameters
     ----------
@@ -26,7 +23,8 @@ def metadata_handler_factory(microscope_type):
 
     Returns
     -------
-    Tuple[module, tmlib.steps.metaconfig.default.MetadataHandler]
+    module
+        loaded module instance
 
     Raises
     ------
@@ -39,7 +37,42 @@ def metadata_handler_factory(microscope_type):
             'Supported are: "%s"' % '", "'.join(SUPPORTED_MICROSCOPE_TYPES)
         )
     module_name = '%s.%s' % (__name__, microscope_type)
-    module = importlib.import_module(module_name)
+    return importlib.import_module(module_name)
+
+
+def metadata_reader_factory(microscope_type):
+    '''Return a microscope-specific implementation
+    of the :py:class:`tmlib.steps.metaconfig.default.MetadataReader`
+    abstract base class.
+
+    Parameters
+    ----------
+    microscope_type: str
+        microscope type
+
+    Returns
+    -------
+    tmlib.steps.metaconfig.default.MetadataReader
+    '''
+    module = import_microscope_specific_module(microscope_type)
+    class_name = '%sMetadataReader' % microscope_type.capitalize()
+    return getattr(module, class_name)
+
+
+def metadata_handler_factory(microscope_type):
+    '''Return a microscope-specific implementation
+    of the :py:class:`tmlib.steps.metaconfig.default.MetadataHandler`
+    abstract base class.
+
+    Parameters
+    ----------
+    microscope_type: str
+        microscope type
+
+    Returns
+    -------
+    tmlib.steps.metaconfig.default.MetadataHandler
+    '''
+    module = import_microscope_specific_module(microscope_type)
     class_name = '%sMetadataHandler' % microscope_type.capitalize()
-    metaclass_instance = getattr(module, class_name)
-    return (module, metaclass_instance)
+    return getattr(module, class_name)

@@ -118,8 +118,8 @@ class Layer(object):
         # axis of the plate. Note that empty rows and columns are also
         # filled with "spacers", which has to be considered as well.
         plate = self.experiment.plates[0]
-        n_nonempty_rows = len(plate.nonempty_row_indices)
-        n_nonempty_cols = len(plate.nonempty_column_indices)
+        n_nonempty_rows = len(plate.nonempty_rows)
+        n_nonempty_cols = len(plate.nonempty_columns)
         plate_height = (
             n_nonempty_rows * self.well_dimensions[0] +
             # Spacer between wells
@@ -344,8 +344,8 @@ class ChannelLayer(Layer):
                     continue
 
                 logger.debug('map base tiles to images of well "%s"', well)
-                n_prior_wells_y = plate.nonempty_row_indices.index(i)
-                n_prior_wells_x = plate.nonempty_column_indices.index(j)
+                n_prior_wells_y = plate.nonempty_rows.index(i)
+                n_prior_wells_x = plate.nonempty_columns.index(j)
                 prior_wells = (n_prior_wells_y, n_prior_wells_x)
 
                 index = np.where(
@@ -427,7 +427,8 @@ class ChannelLayer(Layer):
         if not m:
             RegexError(
                 'Indices could not be determined from file: %s'
-                % tile_filename)
+                % tile_filename
+            )
         return {k: int(v) for k, v in m.iteritems()}
 
     def _determine_higher_level_coordinates(self, level, row, column):
@@ -494,7 +495,8 @@ class ChannelLayer(Layer):
             n_right = self.tile_size - (image.dimensions[1] - x_offset)
 
         tile = image.extract(
-                    y_offset, x_offset, y_end-y_offset, x_end-x_offset)
+            y_offset, x_offset, y_end-y_offset, x_end-x_offset
+        )
 
         if n_top is not None:
             tile = tile.pad_with_background(n_top, 'top')
@@ -1087,9 +1089,9 @@ class SegmentedObjectLayer(Layer):
                     logger.debug('image position within well: {0}'.format(
                                     well_coords))
 
-                    n_prior_well_rows = plate.nonempty_row_indices.index(
+                    n_prior_well_rows = plate.nonempty_rows.index(
                                                 plate_coords[0])
-                    n_prior_well_cols = plate.nonempty_column_indices.index(
+                    n_prior_well_cols = plate.nonempty_columns.index(
                                                 plate_coords[1])
                     n_prior_wells = (n_prior_well_rows, n_prior_well_cols)
 
@@ -1257,9 +1259,9 @@ class WellObjectLayer(Layer):
                         logger.debug('process well "%s"', well_name)
                         logger.debug('calculate object outline coordinates')
                         plate_coords = plate.map_well_id_to_coordinate(well_name)
-                        n_prior_well_rows = plate.nonempty_row_indices.index(
+                        n_prior_well_rows = plate.nonempty_rows.index(
                                                     plate_coords[0])
-                        n_prior_well_cols = plate.nonempty_column_indices.index(
+                        n_prior_well_cols = plate.nonempty_columns.index(
                                                     plate_coords[1])
                         n_prior_wells = (n_prior_well_rows, n_prior_well_cols)
 

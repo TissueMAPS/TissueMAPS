@@ -2,13 +2,13 @@ import re
 import logging
 import bioformats
 from collections import defaultdict
-from cached_property import cached_property
 from lxml import etree
-from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
-from tmlib.workflow.metaconfig.default import MetadataHandler
+
 from tmlib import utils
-from tmlib.readers import MetadataReader
 from tmlib.workflow.illuminati import stitch
+from tmlib.workflow.metaconfig.base import MetadataReader
+from tmlib.workflow.metaconfig.base import MetadataHandler
+from tmlib.workflow.metaconfig.ome_xml import XML_DECLARATION
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,40 @@ IMAGE_FILE_REGEX_PATTERN = '[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\
 METADATA_FILE_REGEX_PATTERN = '\.(mlf|mrf)$'
 
 
+class CellvoyagerMetadataHandler(MetadataHandler):
+
+    '''Class for handling metadata specific to the Yokogawa Cellvoyager 7000
+    microscope.
+    '''
+
+    #: Regular expression pattern to identify image files
+    IMAGE_FILE_REGEX_PATTERN = IMAGE_FILE_REGEX_PATTERN
+
+    def __init__(self, omexml_images, omexml_metadata=None):
+        '''
+        Parameters
+        ----------
+        omexml_images: Dict[str, bioformats.omexml.OMEXML]
+            metadata extracted from microscope image files
+        omexml_metadata: bioformats.omexml.OMEXML
+            metadata extracted from microscope metadata files 
+        '''
+        super(CellvoyagerMetadataHandler, self).__init__(
+            omexml_images, omexml_metadata
+        )
+
+    @staticmethod
+    def _calculate_coordinates(positions):
+        # y axis is inverted
+        coordinates = stitch.calc_grid_coordinates_from_positions(
+            positions, reverse_rows=True
+        )
+        return coordinates
+
+
 class CellvoyagerMetadataReader(MetadataReader):
 
-    '''
-    Class for reading metadata from files formats specific to the Yokogawa
+    '''Class for reading metadata from files formats specific to the Yokogawa
     CellVoyager 7000 microscope.
 
     Yokogawa doesn't store the position and channel information at the level
@@ -34,33 +64,35 @@ class CellvoyagerMetadataReader(MetadataReader):
     reads the XML from "MeasurementDetail.mrf" and "MeasurmentData.mlf" files,
     extracts the relevant data and stores them in an OMEXML object according to
     the Bio-Formats convention.
-
-    Examples
-    --------
-    >>> mlf_filename = '/path/to/metadata/MeasurementData.mlf'
-    >>> mrf_filename = '/path/to/metadata/MeasurementDetail.mrf'
-    >>> with CellvoyagerReader() as reader:
-    ...     metadata = reader.read(mlf_filename, mrf_filename)
-    >>> type(metadata)
-    bioformats.omexml.OMEXML
     '''
 
-    def read(self, mlf_filename, mrf_filename):
-        '''
-        Read metadata from vendor specific files on disk.
+    def read(self, microscope_metadata_files, microscope_image_files):
+        '''Read metadata from "mlf" and "mrf" metadata files.
 
         Parameters
         ----------
-        mlf_filename: str
-            absolute path to the *.mlf* file
-        mrf_filename: str
-            absolute path to the *.mrf* file
+        microscope_metadata_files: List[str]
+            absolute path to the microscope metadata files
+        microscope_image_files: List[str]
+            absolute path to the microscope image files
 
         Returns
         -------
         bioformats.omexml.OMEXML
-            image and plate metadata
+            OMEXML image metadata
+
+        Raises
+        ------
+        ValueError
+            when `microscope_metadata_files` doesn't have length two
         '''
+        if len(microscope_metadata_files) != 2:
+            raise ValueError('Expected two microscope metadata files.')
+        for f in microscope_metadata_files:
+            if f.endswith('mlf'):
+                mlf_filename = f
+            elif f.endswith('mrf'):
+                mrf_filename = f
         metadata = bioformats.OMEXML(XML_DECLARATION)
         # Obtain the positional information for each image acquisition site
         # from the ".mlf" file:
@@ -73,7 +105,7 @@ class CellvoyagerMetadataReader(MetadataReader):
 
         metadata.image_count = len(mlf_elements)
         lookup = defaultdict(list)
-        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
+        r = re.compile(CellvoyagerMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
 
         y = list()
         x = list()
@@ -100,7 +132,7 @@ class CellvoyagerMetadataReader(MetadataReader):
                 img.Pixels.Channel(0).Name = None
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
-  
+
             x.append(img.Pixels.Plane(0).PositionX)
             y.append(img.Pixels.Plane(0).PositionY)
 
@@ -137,72 +169,3 @@ class CellvoyagerMetadataReader(MetadataReader):
                 well_samples[i].ImageRef = reference
 
         return metadata
-
-
-class CellvoyagerMetadataHandler(MetadataHandler):
-
-    '''
-    Class for metadata handling specific to the Yokogawa Cellvoyager 7000
-    microscope.
-    '''
-
-    def __init__(self, image_files, additional_files, omexml_files):
-        '''
-        Initialize an instance of class CellvoyagerMetadataHandler.
-
-        Parameters
-        ----------
-        image_files: List[str]
-            full paths to image files
-        additional_files: List[str]
-            full paths to additional microscope-specific metadata files
-        omexml_files: List[str]
-            full paths to the XML files that contain the extracted OMEXML data
-        '''
-        super(CellvoyagerMetadataHandler, self).__init__(
-            image_files, additional_files, omexml_files
-        )
-        self.image_files = image_files
-        self.additional_files = additional_files
-        self.omexml_files = omexml_files
-
-    @cached_property
-    def ome_additional_metadata(self):
-        '''
-        Returns
-        -------
-        bioformats.omexml.OMEXML
-            metadata retrieved from Yokogawa microscope-specific files
-
-        See also
-        --------
-        :py:class:`tmlib.metaconfig.cellvoyager.CellvoyagerMetadataReader`
-        '''
-        r = re.compile(METADATA_FILE_REGEX_PATTERN)
-        files = [f for f in self.additional_files if r.search(f)]
-        if not files:
-            # NOTE: This microscope stores each plane in a single file and
-            # most information is encoded in the the filename. Therefore, we
-            # don't through an error in case metadata files were not found, but
-            # only issue a warning.
-            logger.warning('Microscope metadata files were not found')
-            self._ome_additional_metadata = bioformats.OMEXML(XML_DECLARATION)
-            # Add an empty *Plate* element
-            self._ome_additional_metadata.PlatesDucktype(
-                self._ome_additional_metadata.root_node
-            ).newPlate(name='default')
-        else:
-            mlf_file = [f for f in files if f.endswith('.mlf')][0]
-            mrf_file = [f for f in files if f.endswith('.mrf')][0]
-            logger.info('read metadata from provided files')
-            with CellvoyagerMetadataReader() as reader:
-                self._ome_additional_metadata = reader.read(mlf_file, mrf_file)
-        return self._ome_additional_metadata
-
-    @staticmethod
-    def _calculate_coordinates(positions):
-        # y axis is inverted
-        coordinates = stitch.calc_grid_coordinates_from_positions(
-            positions, reverse_rows=True
-        )
-        return coordinates
