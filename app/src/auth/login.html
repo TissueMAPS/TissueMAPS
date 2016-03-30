@@ -1,29 +1,41 @@
 <div class="login-view">
-  <div class="container">
-    <div class="login">
+  <div class="login-view-inner">
+    <div class="container">
+      <div class="login">
 
-      <!-- <div class="logo-container"> -->
-      <!--   <img width=80 height=80 src="/resources/img/tmaps_logo.png" alt=""/> -->
-      <!-- </div> -->
+        <!-- <div class="logo-container"> -->
+        <!--   <img width=80 height=80 src="/resources/img/tmaps_logo.png" alt=""/> -->
+        <!-- </div> -->
 
-      <form class="form-signin" name="loginForm"
-            ng-controller="LoginCtrl as login"
-            ng-submit="login.login(login.form.username, login.form.password)"
-            novalidate>
+        <form class="form-signin" name="loginForm"
+              ng-controller="LoginCtrl as login"
+              ng-submit="login.login(login.form.username, login.form.password)"
+              novalidate>
 
-        <h4 class="form-signin-heading">Please sign in</h4>
+          <h3 class="form-signin-heading">Welcome to TissueMAPS</h3>
 
-        <!-- <label for="username">Username:</label> -->
-        <input class="form-control" type="text" id="username" placeholder="Username"
-               ng-model="login.form.username">
+          <!-- <label for="username">Username:</label> -->
+          <input class="form-control" type="text" id="username" placeholder="Username"
+                 ng-model="login.form.username">
 
-        <!-- <label for="password">Password:</label> -->
-        <input class="form-control" type="password" id="password"
-               placeholder="Password"
-               ng-model="login.form.password">
+          <!-- <label for="password">Password:</label> -->
+          <input class="form-control" type="password" id="password"
+                 placeholder="Password"
+                 ng-model="login.form.password">
 
-        <button class="btn btn-lg btn-block" type="submit">Login</button>
-      </form>
+          <button class="btn btn-lg btn-block" type="submit">Login</button>
+        </form>
+      </div>
     </div>
+
+    <div class="logo-container">
+      <img width=400 height=400 src="/resources/img/tmaps_logo.png" alt=""/>
+    </div>
+
+    <!-- <div class="color-backdrop-container"> -->
+    <!--   <div class="color-backdrop color-backdrop-red"></div> -->
+    <!--   <div class="color-backdrop color-backdrop-green"></div> -->
+    <!--   <div class="color-backdrop color-backdrop-blue"></div> -->
+    <!-- </div> -->
   </div>
 </div>
