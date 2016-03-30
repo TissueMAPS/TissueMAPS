@@ -22,7 +22,7 @@ prettytable>=0.7.2
 pyparsing==2.0.3
 pypng==0.0.17
 python-dateutil==2.4.2
-pytest==2.8.2
+pytest>=7.1.0
 pytz==2015.4
 PyYAML>=3.11
 rpy2>=2.7.4
