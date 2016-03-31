@@ -158,7 +158,7 @@ class YamlWriter(Writer):
         )
 
 
-class ImageWriter(Writer):
+class PixelsWriter(Writer):
 
     '''Class for writing :py:class:`numpy.ndarray` objects to image files
     using the `OpenCV <http://docs.opencv.org>`_ library.
@@ -166,10 +166,10 @@ class ImageWriter(Writer):
 
     @same_docstring_as(Writer.__init__)
     def __init__(self, filename):
-        super(ImageWriter, self).__init__(filename)
+        super(PixelsWriter, self).__init__(filename)
 
     def write(self, data):
-        '''Write `data` to image file.
+        '''Write pixels data to image file.
 
         The format depends on the file extension:
             - *.png for PNG (8-bit and 16-bit)
@@ -179,7 +179,7 @@ class ImageWriter(Writer):
         Parameters
         ----------
         data: numpy.ndarray 
-            image that should be saved
+            pixels that should be saved
 
         Raises
         ------
@@ -188,7 +188,7 @@ class ImageWriter(Writer):
         '''
         logger.debug('write data to file: %s' % self.filename)
         if not isinstance(data, np.ndarray):
-            raise TypeError('Image must have type numpy.ndarray.')
+            raise TypeError('Data must have type numpy.ndarray.')
         binary = cv2.imencode(os.path.splitext(self.filename)[1], data)[1]
         self._stream.write(binary)
 

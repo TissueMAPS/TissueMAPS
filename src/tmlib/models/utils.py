@@ -99,8 +99,8 @@ class Session(object):
         if Session._engine is None:
             Session._engine = create_db_engine()
         if Session._session_factory is None:
-            Session._session_factory = sqlalchemy.orm.sessionmaker(
-                bind=self._engine
+            Session._session_factory = sqlalchemy.orm.scoped_session(
+                sqlalchemy.orm.sessionmaker(bind=self._engine)
             )
         self._sqla_session = Session._session_factory()
         return self
@@ -170,7 +170,7 @@ class Session(object):
             try:
                 instance = model(**kwargs)
                 self._sqla_session.add(instance)
-                self._sqla_session.commit()  # flush() is not sufficient
+                self._sqla_session.commit()  # flush() not sufficient???
                 logger.debug('created new instance: %r', instance)
             except sqlalchemy.exc.IntegrityError:
                 self._sqla_session.rollback()

@@ -598,18 +598,18 @@ class BFImageReader(object):
         return image
 
 
-class ImageReader(Reader):
+class PixelsReader(Reader):
 
-    '''Class for reading data from standard image file formats as
+    '''Class for reading pixel data from standard image file formats as
     :py:class:`numpy.ndarray` objects.
     '''
 
     @same_docstring_as(Reader.__init__)
     def __init__(self, filename):
-        super(ImageReader, self).__init__(filename)
+        super(PixelsReader, self).__init__(filename)
 
     def read(self, dtype=np.uint16):
-        '''Read an image from file.
+        '''Read pixels data from image file.
 
         Parameters
         ----------
@@ -618,8 +618,8 @@ class ImageReader(Reader):
 
         Returns
         -------
-        numpy.array
-            image pixel array
+        numpy.ndarray
+            pixels data
         '''
         logger.debug('read from file: %s', self.filename)
         arr = np.fromstring(self._stream.read(), dtype)

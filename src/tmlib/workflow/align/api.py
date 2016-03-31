@@ -89,7 +89,9 @@ class ImageRegistration(ClusterRoutines):
 
                         for s in batch:
 
-                            files = session.query(tmlib.models.ChannelImageFile).\
+                            files = session.query(
+                                    tmlib.models.ChannelImageFile
+                                ).\
                                 filter_by(
                                     site_id=s,
                                     cycle_id=cycle.id,

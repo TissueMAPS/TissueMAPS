@@ -4,6 +4,7 @@ import logging
 from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
 
 from .. import utils
 from tmlib.models import Model, DateMixIn
@@ -32,6 +33,8 @@ class Well(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'wells'
+
+    __table_args__ = (UniqueConstraint('name', 'plate_id'), )
 
     # Table columns
     name = Column(String, index=True)

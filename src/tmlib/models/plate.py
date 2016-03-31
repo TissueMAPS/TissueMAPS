@@ -4,6 +4,7 @@ import numpy as np
 from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import Model, DateMixIn
 from tmlib.models.utils import auto_remove_directory
@@ -86,6 +87,8 @@ class Plate(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'plates'
+
+    __table_args__ = (UniqueConstraint('name', 'experiment_id'), )
 
     # Table columns
     name = Column(String, index=True)

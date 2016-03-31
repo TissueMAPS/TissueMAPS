@@ -6,6 +6,7 @@ from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
 from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import UniqueConstraint
 
 from tmlib.utils import assert_type
 from tmlib.utils import notimplemented
@@ -17,9 +18,9 @@ from tmlib.metadata import ChannelImageMetadata
 from tmlib.metadata import PyramidTileMetadata
 from tmlib.metadata import IllumstatsImageMetadata
 from tmlib.readers import DatasetReader
-from tmlib.readers import ImageReader
+from tmlib.readers import PixelsReader
 from tmlib.writers import DatasetWriter
-from tmlib.writers import ImageWriter
+from tmlib.writers import PixelsWriter
 from tmlib.models import File, DateMixIn
 from tmlib.models.status import FileUploadStatus
 
@@ -45,6 +46,8 @@ class MicroscopeImageFile(File, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'microscope_image_files'
+
+    __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
     # Table columns
     name = Column(String, index=True)
@@ -118,6 +121,8 @@ class MicroscopeMetadataFile(File, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'microscope_metadata_files'
+
+    __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
     # Table columns
     name = Column(String, index=True)
@@ -218,6 +223,10 @@ class ChannelImageFile(File, DateMixIn):
     #: str: name of the corresponding database table
     __tablename__ = 'channel_image_files'
 
+    __table_args__ = (
+        UniqueConstraint('tpoint', 'zplane', 'site_id', 'cycle_id', 'wavelength'), 
+    )
+
     # Table columns
     _name = Column('name', String, index=True)
     tpoint = Column(Integer, index=True)
@@ -295,7 +304,7 @@ class ChannelImageFile(File, DateMixIn):
             image stored in the file
         '''
         logger.debug('get data from channel image file: %s', self.name)
-        with ImageReader(self.location) as f:
+        with PixelsReader(self.location) as f:
             pixels = f.read()
         metadata = ChannelImageMetadata(
             name=self.name,
@@ -331,7 +340,7 @@ class ChannelImageFile(File, DateMixIn):
             data that should be stored in the image file
         '''
         logger.debug('put data to channel image file: %s', self.name)
-        with ImageWriter(self.location) as f:
+        with PixelsWriter(self.location) as f:
             f.write(data.pixels)
 
     @hybrid_property
@@ -402,6 +411,10 @@ class ProbabilityImageFile(File, DateMixIn):
     #: str: name of the corresponding database table
     __tablename__ = 'probability_image_files'
 
+    __table_args__ = (
+        UniqueConstraint('tpoint', 'zplane', 'site_id', 'mapobject_type_id'), 
+    )
+
     # Table columns
     name = Column(String, index=True)
     tpoint = Column(Integer, index=True)
@@ -452,7 +465,7 @@ class ProbabilityImageFile(File, DateMixIn):
             image stored in the file
         '''
         logger.debug('get data from probability image file: %s', self.name)
-        with ImageReader(self.location) as f:
+        with PixelsReader(self.location) as f:
             pixels = f.read()
         # metadata = ProbabilityImageMetadata(
         #     name=self.name,
@@ -474,7 +487,7 @@ class ProbabilityImageFile(File, DateMixIn):
             data that should be stored in the image file
         '''
         logger.debug('put data to probability image file: %s', self.name)
-        with ImageWriter(self.location) as f:
+        with PixelsWriter(self.location) as f:
             f.write(data.pixels)
 
     @property
@@ -517,6 +530,10 @@ class PyramidTileFile(File):
 
     #: str: name of the corresponding database table
     __tablename__ = 'pyramid_tile_files'
+
+    __table_args__ = (
+        UniqueConstraint('level', 'row', 'column', 'channel_layer_id'), 
+    )
 
     # Table columns
     name = Column(String, index=True)
@@ -562,7 +579,7 @@ class PyramidTileFile(File):
             tile stored in the file
         '''
         logger.debug('get data from pyramid tile file: %s', self.name)
-        with ImageReader(self.location) as f:
+        with PixelsReader(self.location) as f:
             pixels = f.read(dtype=np.uint8)
         metadata = PyramidTileMetadata(
             name=self.name,
@@ -585,7 +602,7 @@ class PyramidTileFile(File):
             data that should be stored in the file
         '''
         logger.debug('put data to pyramid tile file: %s', self.name)
-        with ImageWriter(self.location) as f:
+        with PixelsWriter(self.location) as f:
             f.write(data.pixels)
 
     @property
@@ -632,6 +649,8 @@ class IllumstatsFile(File, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'illumstats_files'
+
+    __table_args__ = (UniqueConstraint('channel_id', 'cycle_id'), )
 
     # Table columns
     name = Column(String, index=True)

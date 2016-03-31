@@ -1,7 +1,8 @@
 import logging
+from cached_property import cached_property
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from cached_property import cached_property
+from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
 
@@ -37,6 +38,8 @@ class Site(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'sites'
+
+    __table_args__ = (UniqueConstraint('x', 'y', 'well_id'), )
 
     # Table columns
     y = Column(Integer, index=True)

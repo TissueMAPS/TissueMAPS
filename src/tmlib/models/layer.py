@@ -8,6 +8,7 @@ from xml.dom import minidom
 import collections
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
 from cached_property import cached_property
 
 from tmlib.models.base import Model
@@ -45,6 +46,8 @@ class ChannelLayer(Model):
 
     #: str: name of the corresponding database table
     __tablename__ = 'channel_layers'
+
+    __table_args__ = (UniqueConstraint('tpoint', 'zplane', 'channel_id'), )
 
     # Table columns
     tpoint = Column(Integer)

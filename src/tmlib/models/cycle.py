@@ -2,6 +2,7 @@ import os
 import logging
 from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
 from tmlib.models.utils import auto_remove_directory
@@ -41,6 +42,8 @@ class Cycle(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'cycles'
+
+    __table_args__ = (UniqueConstraint('tpoint', 'index', 'plate_id'), )
 
     # Table columns
     tpoint = Column(Integer, index=True)

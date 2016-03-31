@@ -7,8 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def remove_border_objects(img):
-    '''
-    Given a matrix of a site image, set all pixels with
+    '''Given a matrix of a site image, set all pixels with
     ids belonging to border objects to zero.
 
     Parameters
@@ -29,8 +28,7 @@ def remove_border_objects(img):
 
 
 def remove_objects(img, ids):
-    '''
-    Given a matrix of a site image, set all pixels whose values
+    '''Given a matrix of a site image, set all pixels whose values
     are in "ids" to zero.
 
     Parameters
@@ -53,8 +51,7 @@ def remove_objects(img, ids):
 
 
 def compute_outlines(img, keep_ids=False):
-    '''
-    Given a labeled pixels array, return an array of the outlines of encoded
+    '''Given a labeled pixels array, return an array of the outlines of encoded
     objects.
     If `keep_ids` is True, the outlines will still consist of their cell's id,
     otherwise the outlines will be ``True`` and all other pixels ``False``.
@@ -147,8 +144,7 @@ def compute_outlines(img, keep_ids=False):
 
 
 def map_to_uint8(img, lower_bound=None, upper_bound=None):
-    '''
-    Map a 16-bit image trough a lookup table to convert it to 8-bit.
+    '''Maps a 16-bit image trough a lookup table to convert it to 8-bit.
     
     Parameters
     ----------
@@ -189,7 +185,7 @@ def map_to_uint8(img, lower_bound=None, upper_bound=None):
 
 
 def mip(zplanes):
-    '''Perform maximum intensity projection.
+    '''Performs maximum intensity projection.
 
     Parameters
     ----------
@@ -214,8 +210,7 @@ def mip(zplanes):
 
 
 def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
-    '''
-    Shift and crop an image according to the calculated values shift and
+    '''Shifts and crops an image according to the calculated values shift and
     overhang values.
 
     Parameters
@@ -300,8 +295,7 @@ def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
 
 
 def find_border_objects(img):
-    '''
-    Find the objects at the border of a labeled image.
+    '''Finds the objects at the border of a labeled image.
 
     Parameters
     ----------
@@ -326,8 +320,7 @@ def find_border_objects(img):
 
 
 def correct_illumination(img, mean, std, log_transform=True):
-    '''
-    Correct fluorescence microscopy image for illumination artifacts.
+    '''Corrects fluorescence microscopy image for illumination artifacts.
 
     Parameters
     ----------

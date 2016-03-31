@@ -272,8 +272,9 @@ class Image(object):
             pxls = np.hstack([self.pixels, pxls])
         else:
             raise ValueError(
-                        'Argument "side" must be one of the following: '
-                        '"top", "bottom", "left", "right"')
+                'Argument "side" must be one of the following: '
+                '"top", "bottom", "left", "right"'
+            )
         return self.__class__(pxls, self.metadata)
 
     def shrink(self, factor):
@@ -470,19 +471,18 @@ class ChannelImage(Image):
             when channel doesn't match between illumination statistics and
             image
         '''
-        if self.metadata is None:
-            raise AttributeError(
-                'Image requires attribute "metadata" '
-                'for correction of illumination artifacts.'
-            )
-        if (stats.mean.metadata.channel != self.metadata.channel or
-                stats.std.metadata.channel != self.metadata.channel):
-            raise ValueError('Channel indices must match.')
+        if self.metadata is not None:
+            if (stats.mean.metadata.channel != self.metadata.channel or
+                    stats.std.metadata.channel != self.metadata.channel):
+                raise ValueError('Channel indices must match.')
+        else:
+            logger.warn('no image metadata provided')
         pxls = image_utils.correct_illumination(
             self.pixels, stats.mean.pixels, stats.std.pixels
         )
         new_object = ChannelImage(pxls, self.metadata)
-        new_object.metadata.is_corrected = True
+        if self.metadata is not None:
+            new_object.metadata.is_corrected = True
         return new_object
 
 

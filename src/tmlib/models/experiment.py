@@ -2,6 +2,7 @@ import os
 import logging
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
 from tmlib.models.utils import auto_remove_directory
@@ -76,6 +77,8 @@ class Experiment(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'experiments'
+
+    __table_args__ = (UniqueConstraint('name', 'user_id'), )
 
     # Table columns
     name = Column(String)

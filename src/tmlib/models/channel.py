@@ -2,6 +2,7 @@ import os
 import logging
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import Model, DateMixIn
 from tmlib.models.utils import auto_remove_directory
@@ -36,6 +37,11 @@ class Channel(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'channels'
+
+    __table_args__ = (
+        UniqueConstraint('name', 'experiment_id'),
+        UniqueConstraint('index', 'experiment_id')
+    )
 
     # Table columns
     name = Column(String, index=True)
