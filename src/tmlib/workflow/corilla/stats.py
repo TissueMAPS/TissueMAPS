@@ -60,6 +60,9 @@ class OnlineStatistics(object):
         log_transform: bool, optional
             log10 transform image (default: ``True``)
         '''
+        # Calculate percentiles with unsigned integer data type
+        self._percentiles += np.percentile(image.pixels, self._q)
+        # The other statistics require float data type
         array = image.pixels.astype(float)
         if log_transform:
             array = np.log10(array)
@@ -67,7 +70,6 @@ class OnlineStatistics(object):
         delta_mean = array - self._mean
         self._mean = self._mean + delta_mean / self.n
         self._M2 = self._M2 + delta_mean * (array - self._mean)
-        self._percentiles += np.percentile(array, self._q)
 
     @property
     def var(self):

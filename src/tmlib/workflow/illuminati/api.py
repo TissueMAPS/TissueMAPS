@@ -127,9 +127,7 @@ class PyramidBuilder(ClusterRoutines):
                             input_files = list()
                             output_files = list()
                             for f in image_files:
-                                input_files.append(
-                                    os.path.relpath(f.location, layer.location)
-                                )
+                                input_files.append(f.location)
                                 tiles = layer.map_image_to_base_tiles(f)
                                 for t in tiles:
                                     tile_file = layer.build_tile_file_name(
@@ -141,7 +139,10 @@ class PyramidBuilder(ClusterRoutines):
                                         ]
                                     )
                                     output_files.append(
-                                        os.path.join(tile_group, tile_file)
+                                        os.path.join(
+                                            layer.location,
+                                            tile_group, tile_file
+                                        )
                                     )
                         else:
                             row_range = np.arange(layer.dimensions[level+1][0])
@@ -151,6 +152,7 @@ class PyramidBuilder(ClusterRoutines):
                             )[batch]
                             input_files = [
                                 os.path.join(
+                                    layer.location,
                                     layer.build_tile_group_name(
                                         layer.tile_coordinate_group_map[
                                             level+1, c[0], c[1]
@@ -169,6 +171,7 @@ class PyramidBuilder(ClusterRoutines):
                             )[batch]
                             output_files = [
                                 os.path.join(
+                                    layer.location,
                                     layer.build_tile_group_name(
                                         layer.tile_coordinate_group_map[
                                             level, c[0], c[1]
@@ -363,6 +366,7 @@ class PyramidBuilder(ClusterRoutines):
                     group = file.channel_layer.tile_coordinate_group_map[
                         batch['level'], t['row'], t['column']
                     ]
+                    # TODO: only create if not at the lower and/or right border
                     tile_file = session.get_or_create(
                         tmlib.models.PyramidTileFile,
                         name=name, group=group, row=t['row'],

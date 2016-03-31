@@ -189,10 +189,10 @@ class ChannelLayer(Model):
                 raise ValueError('Dimensions must be the same for all plates.')
             # Introduce spacers between plates
             row_spacer_height = (
-                self.plate_grid.shape[0] * self.plate_spacer_size
+                (self.plate_grid.shape[0] - 1) * self.plate_spacer_size
             )
             column_spacer_width = (
-                self.plate_grid.shape[1] * self.plate_spacer_size
+                (self.plate_grid.shape[1] - 1) * self.plate_spacer_size
             )
             height, width = tuple(
                 np.sum(np.array(sizes.values()), axis=0) +
@@ -256,7 +256,7 @@ class ChannelLayer(Model):
             'indices': indices,
             'offsets': [
                 start_offset + i * self.tile_size
-                if (start_offset + i * self.tile_size) < end_offset
+                if i < len(indices)
                 else end_offset
                 for i in xrange(len(indices))
             ]

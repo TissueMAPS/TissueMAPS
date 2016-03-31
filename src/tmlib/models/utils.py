@@ -165,7 +165,7 @@ class Session(object):
             instance = self.query(model).filter_by(**kwargs).one()
             logger.debug('found existing instance: %r', instance)
         except sqlalchemy.orm.exc.NoResultFound:
-            # We have to protect against race conditions when several worker
+            # We have to protect against situations when several worker
             # nodes are trying to insert the same row simultaneously.
             try:
                 instance = model(**kwargs)
