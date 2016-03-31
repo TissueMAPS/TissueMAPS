@@ -36,7 +36,7 @@ AVAILABLE_METHODS = {
 
 
 def create_method_args(step_name, method_name, **kwargs):
-    '''Create the argument object required as an input argument for methods of
+    '''Creates the argument object required as an input argument for methods of
     the :py:class:`tmlib.cli.CommandLineInterface` class.
 
     Parameters
@@ -105,8 +105,6 @@ class CommandLineInterface(object):
 
     def __init__(self, api_instance, verbosity):
         '''
-        Initialize an instance of class CommandLineInterface.
-
         Parameters
         ----------
         api_instance: tmlib.api.ClusterRoutines
@@ -209,9 +207,7 @@ class CommandLineInterface(object):
 
     @abstractmethod
     def _print_logo():
-        '''
-        Prints the step-specific logo to standard output (console).
-        '''
+        '''Prints the step-specific logo to standard output (console).'''
         pass
 
     def _cleanup(self):
@@ -241,9 +237,7 @@ class CommandLineInterface(object):
             logger.debug('nothing to clean up')
 
     def cleanup(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "cleanup" subparser, which
+        '''Processes arguments provided by the "cleanup" subparser, which
         removes all output files or directories from a previous submission.
 
         Parameters
@@ -255,9 +249,7 @@ class CommandLineInterface(object):
         self._cleanup()
 
     def init(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "init" subparser, which creates
+        '''Processes arguments provided by the "init" subparser, which creates
         the job descriptor files required for submission.
 
         Parameters
@@ -305,9 +297,7 @@ class CommandLineInterface(object):
         return job_descriptions
 
     def run(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "run" subparser, which runs
+        '''Processes arguments provided by the "run" subparser, which runs
         an individual job on the local computer.
 
         Parameters
@@ -328,9 +318,7 @@ class CommandLineInterface(object):
         api.run_job(batch)
 
     def info(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "info" subparser, which prints
+        '''Processes arguments provided by the "info" subparser, which prints
         the description of an individual job to the console.
 
         Parameters
@@ -340,12 +328,14 @@ class CommandLineInterface(object):
         '''
         if args.job is not None and args.phase != 'run':
             raise AttributeError(
-                    'Argument "job" can only be set when '
-                    'value of argument "phase" is "run".')
+                'Argument "job" can only be set when '
+                'value of argument "phase" is "run".'
+            )
         if args.job is None and args.phase == 'run':
             raise AttributeError(
-                    'Argument "job" is required '
-                    'when "phase" is set to "run".')
+                'Argument "job" is required '
+                'when "phase" is set to "run".'
+            )
         api = self.api_instance
         if args.phase == 'run':
             job_file = api.build_run_job_filename(args.job)
@@ -356,10 +346,8 @@ class CommandLineInterface(object):
               % yaml.safe_dump(batch, default_flow_style=False))
 
     def log(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "log" subparser, which prints the
-        log output of an individual job to the console.
+        '''Processes arguments provided by the "log" subparser, which prints
+        the log output of an individual job to the console.
 
         Parameters
         ----------
@@ -368,12 +356,14 @@ class CommandLineInterface(object):
         '''
         if args.job is not None and args.phase != 'run':
             raise AttributeError(
-                    'Argument "job" can only be set when '
-                    'value of argument "phase" is "run".')
+                'Argument "job" can only be set when '
+                'value of argument "phase" is "run".'
+            )
         if args.job is None and args.phase == 'run':
             raise AttributeError(
-                    'Argument "job" is required '
-                    'when "phase" is set to "run".')
+                'Argument "job" is required '
+                'when "phase" is set to "run".'
+            )
         api = self.api_instance
         log = api.get_log_output_from_files(args.job)
         print('\nOUTPUT\n======\n\n%s\n\nERROR\n=====\n\n%s'
@@ -381,25 +371,15 @@ class CommandLineInterface(object):
 
     @cached_property
     def job_descriptions(self):
-        '''
-        Returns
-        -------
-        dict
-            job descriptions retrieved from files
-        '''
+        '''dict: descriptions of all jobs retrieved from files'''
         api = self.api_instance
         logger.debug('read job descriptions from files')
         return api.get_job_descriptions_from_files()
 
     @property
     def expected_outputs(self):
-        '''
-        Read the job descriptions and extract the "outputs" information.
-
-        Returns
-        -------
-        List[str]
-            absolute paths to outputs that should be generated by the program
+        '''List[str]: absolute paths to outputs that should be generated by
+        the step
         '''
         api = self.api_instance
         logger.debug('get expected outputs from job descriptions')
@@ -407,21 +387,13 @@ class CommandLineInterface(object):
 
     @property
     def required_inputs(self):
-        '''
-        Read the job descriptions and extract the "inputs" information.
-
-        Returns
-        -------
-        List[str]
-            absolute paths to inputs that are required by the program
-        '''
+        '''List[str]: absolute paths to inputs that are required by the step'''
         api = self.api_instance
         logger.debug('get required inputs from job descriptions')
         return api.list_input_files(self.job_descriptions)
 
     def create_jobs(self, duration, memory, cores, phase=None, ids=None):
-        '''
-        Create *jobs* based on previously created job descriptions.
+        '''Creates *jobs* based on previously created job descriptions.
         Job descriptions are loaded from files on disk and used to
         instantiate *job* objects. 
 
@@ -482,10 +454,8 @@ class CommandLineInterface(object):
         return jobs
 
     def submit(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "submit" subparser, which submits
-        jobs and monitors their status.
+        '''Processes arguments provided by the "submit" subparser, which
+        submits jobs to the cluster and monitors their status.
 
         Parameters
         ----------
@@ -531,11 +501,9 @@ class CommandLineInterface(object):
             raise
 
     def resubmit(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "resubmit" subparser,
-        which resubmits jobs and monitors their status
-        without creating a new session.
+        '''Processes arguments provided by the "resubmit" subparser,
+        which resubmits previously created jobs to the cluster and monitors
+        their status.
 
         Parameters
         ----------
@@ -571,10 +539,9 @@ class CommandLineInterface(object):
             raise
 
     def collect(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments of the "collect" subparser, which collects the
-        output of previously run jobs.
+        '''Processes arguments of the "collect" subparser, which collects the
+        output of previously run jobs or performs a post-processing operation
+        that cannot be parallelized. 
 
         Parameters
         ----------
@@ -596,8 +563,7 @@ class CommandLineInterface(object):
 
     @staticmethod
     def get_parser_and_subparsers(methods=None):
-        '''
-        Get an argument parser object for a subclass of
+        '''Creates an argument parser object for a subclass of
         :py:class:`tmlib.cli.CommandLineInterface` and a subparser object
         for each implemented method of the class.
         Subparsers may already have default arguments, but additional
@@ -606,16 +572,13 @@ class CommandLineInterface(object):
         Parameters
         ----------
         methods: Set[str]
-            methods for which a subparser should be returned (default: 
+            methods for which a subparser should be returned (default:
             ``{"init", "run", "submit", "collect", cleanup", "log", "info"}``)
 
         Returns
         -------
         Tuple[argparse.Argumentparser and argparse._SubParsersAction]
             parser and subparsers objects
-
-        See also
-        --------
         '''
         if methods is None:
             methods = AVAILABLE_METHODS

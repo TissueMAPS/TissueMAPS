@@ -216,7 +216,7 @@ class ChannelLayer(Model):
         return list(reversed(levels))
 
     def _calc_tile_indices_and_offsets(self, position, length, displacement):
-        '''Calculate index (row or column) and pixel offset for each tile
+        '''Calculates index (row or column) and pixel offset for each tile
         that falls within a given image along a given axis (either vertical
         or horizontal).
 
@@ -233,7 +233,8 @@ class ChannelLayer(Model):
 
         Returns
         -------
-        Dict[str, int]
+        Dict[str, List[int]]
+            indices and offsets of tiles falling within the given image axis
         '''
         start_fraction = (
             np.float(position) / np.float(self.tile_size)
@@ -263,7 +264,7 @@ class ChannelLayer(Model):
         }
 
     def map_image_to_base_tiles(self, image_file):
-        '''Map an image to the corresponding tiles that are contained in the
+        '''Maps an image to the corresponding tiles that are contained in the
         image.
 
         Parameters
@@ -301,6 +302,26 @@ class ChannelLayer(Model):
         return mappings
 
     def _calc_tile_indices(self, position, length, displacement):
+        '''Calculates row or column index for each tile
+        that maps to either the vertical or horizontal axis of the given image,
+        respectively.
+
+        Parameters
+        ----------
+        position: int
+            pixel position of the top, left corner of the image in the layer
+            on the given axis
+        length: int
+            length of the image in pixels along the given axis
+        displacement: int
+            displacement of the image to its neighboring image in pixels
+            along the given axis
+
+        Returns
+        -------
+        List[int]
+            indices of tiles that map to the given axis
+        '''
         start_fraction = (
             np.float(position) /
             np.float(self.tile_size)
