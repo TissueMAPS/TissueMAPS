@@ -7,7 +7,7 @@ from flask.ext.jwt import current_identity
 
 import numpy as np
 
-from tmlib.models import Experiment, ChannelLayer, Submission
+from tmlib.models import Experiment, ChannelLayer
 
 from tmaps.extensions import db
 from tmaps.api import api
@@ -124,15 +124,9 @@ def get_experiments():
         "experiments": list of experiment objects,
     }
 
-    where an experiment object is a dict as returned by
-    Experiment.as_dict().
-
     """
-    experiments = [e.as_dict() for e in current_identity.experiments]
-    # experiments_shared = [e.as_dict()
-    #                       for e in current_identity.received_experiments]
     return jsonify({
-        'experiments': experiments
+        'experiments': current_identity.experiments
     })
 
 
@@ -146,9 +140,6 @@ def get_experiment(experiment_id):
     {
         experiment: an experiment object serialized to json
     }
-
-    where an experiment object is a dict as returned by
-    Experiment.as_dict().
 
     """
     e = db.session.query(Experiment).get_with_hash(experiment_id)
