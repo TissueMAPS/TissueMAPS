@@ -34,7 +34,7 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
         data = h5py.File(os.path.join(e.location, 'data.h5'), 'r')
 
         mapobject_types = \
-            [MapobjectType(name=n, experiment=e)
+            [MapobjectType(name=n, experiment_id=e.id)
              for n in data['/objects'].keys()]
         print 'Add MapobjectTypes'
         session.add_all(mapobject_types)
@@ -64,7 +64,7 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
                 else:
                     is_border_obj = False
                 mapobj = Mapobject(
-                    mapobject_type=mapobject_type,
+                    mapobject_type_id=mapobject_type.id,
                     is_border=is_border_obj)
                 mapobjects_by_external_id[object_name][external_id] = mapobj
                 mapobjs.append(mapobj)
@@ -81,7 +81,7 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
             object_name = mapobject_type.name
             object_data = data['/objects/%s' % object_name]
             feature_data = object_data['features']
-            features = [Feature(name=fname, mapobject_type=mapobject_type)
+            features = [Feature(name=fname, mapobject_type_id=mapobject_type.id)
                         for fname in feature_data.keys()]
             print 'Add all %d features' % len(features)
             session.add_all(features)
@@ -95,10 +95,10 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
                     mapobj = \
                         mapobjects_by_external_id[mapobject_type.name][idx]
                     feat_val = FeatureValue(
-                        mapobject=mapobj,
+                        mapobject_id=mapobj.id,
                         value=val,
                         tpoint=0,
-                        feature=feat)
+                        feature_id=feat.id)
                     feature_values.append(feat_val)
             print 'Flush feature values'
             session.flush()
@@ -132,7 +132,7 @@ def insert_mapobject_data(experiment_id, dbuser, dbpass, dbname='tissuemaps', db
                     tpoint=tpoint, zplane=zplane,
                     geom_poly=poly_ewkt,
                     geom_centroid=centroid_ewkt,
-                    mapobject=mapobj)
+                    mapobject_id=mapobj.id)
 
                 outline_objects.append(mapobj_outline)
 
