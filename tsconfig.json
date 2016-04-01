@@ -88,6 +88,9 @@
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
 
+        "app/src/dialog/DialogCtrl.ts",
+        "app/src/dialog/dialogService.ts",
+
         "app/src/viewer/misc/tmAttachToParent.ts",
         "app/src/viewer/misc/uiComponents.ts",
 

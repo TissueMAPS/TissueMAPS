@@ -77,6 +77,7 @@ class Experiment {
         return Math.min.apply(this, zs);
     }
 
+    // TODO: error handling
     static getAll(): ng.IPromise<Experiment[]> {
         var $http = $injector.get<ng.IHttpService>('$http');
         return $http.get('/api/experiments')
@@ -94,6 +95,18 @@ class Experiment {
         return $http.get('/api/experiments/' + id)
         .then((resp: {data: {experiment: SerializedExperiment}}) => {
             return new Experiment(resp.data.experiment);
+        });
+    }
+
+    // TODO: error handling
+    static delete(id: string): ng.IPromise<boolean> {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        return $http.delete('/api/experiments/' + id)
+        .then((resp) => {
+            return true;
+        })
+        .catch((resp) => {
+            return false;
         });
     }
 
