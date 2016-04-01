@@ -214,7 +214,9 @@ def delete_experiment(experiment_id):
     if not e.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
 
-    e.delete()
+    db.session.delete(e)
+    db.session.commit()
+
     return 'Deletion ok', 200
 
 

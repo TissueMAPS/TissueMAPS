@@ -95,11 +95,14 @@ def test_create_experiment_with_login(rr, db, monkeypatch):
     db.session.commit()
 
 
-# def test_delete_experiment(db, rr, testexp, monkeypatch):
-#     fake_delete = mock.Mock()
-#     monkeypatch.setattr(db.session, 'delete', fake_delete)
-#     rr.browser.delete('/api/experiments/%s' % testexp.hash)
-#     fake_delete.assert_called_with()
+def test_delete_experiment(rr, testexp, monkeypatch, session):
+    # monkeypatch.setattr(db.session, 'delete', fake_delete)
+    assert session.query(Experiment).get(testexp.id) is not None, \
+        'Test experiment of fixture not present in database'
+    rr.browser.delete('/api/experiments/%s' % testexp.hash)
+    assert session.query(Experiment).get(testexp.id) is None, \
+        'Experiment was not successfully deleted after DELETE request'
+    # fake_delete.assert_called_with()
 
 
 @pytest.mark.skipif(True, reason='Not implemented')
