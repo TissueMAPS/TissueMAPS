@@ -6,7 +6,7 @@
         "noImplicitAny": false,
         "preserveConstEnums": true,
         "removeComments": true,
-        "out": "app/build/compiled-ts.js"
+        "out": "build/script.js"
     },
     "files": [
         "app/src/core/globals.ts",
