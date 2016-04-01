@@ -123,7 +123,9 @@ class Task(Model):
     memory: int
         memory used by the task in MB
     cpu_time: datetime.timedelta
-        used cpu time of the task
+        cpu time used by the task
+    type: str
+        type of the task (name of the Python class)
     submission_id: int
         ID of the parent submission
     submission: tmlib.models.Submission

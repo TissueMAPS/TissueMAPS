@@ -228,6 +228,7 @@ class ChannelImageFile(File, DateMixIn):
 
     # Table columns
     _name = Column('name', String, index=True)
+    name = Column(String, index=True)
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
     wavelength = Column(String, index=True)
@@ -345,10 +346,6 @@ class ChannelImageFile(File, DateMixIn):
     @hybrid_property
     def name(self):
         '''str: name of the file'''
-        if self.channel_layer_id is None:
-            raise AttributeError(
-                'Set the reference to the parent channel first!'
-            )
         self._name = self.FILENAME_FORMAT.format(
             t=self.tpoint, w=self.site.well.name, y=self.site.y, x=self.site.x,
             c=self.channel_layer.channel.index, z=self.zplane
@@ -411,7 +408,7 @@ class ProbabilityImageFile(File, DateMixIn):
     __tablename__ = 'probability_image_files'
 
     __table_args__ = (
-        UniqueConstraint('tpoint', 'zplane', 'site_id', 'mapobject_type_id'), 
+        UniqueConstraint('tpoint', 'zplane', 'site_id', 'mapobject_type_id'),
     )
 
     # Table columns
@@ -531,7 +528,7 @@ class PyramidTileFile(File):
     __tablename__ = 'pyramid_tile_files'
 
     __table_args__ = (
-        UniqueConstraint('level', 'row', 'column', 'channel_layer_id'), 
+        UniqueConstraint('level', 'row', 'column', 'channel_layer_id'),
     )
 
     # Table columns

@@ -45,7 +45,7 @@ def complete_path(input_path, step_location):
     else:
         input_path = os.path.expandvars(input_path)
         input_path = os.path.expanduser(input_path)
-        if input_path.startswith('.'):
+        if not os.path.isabs(input_path):
             input_path = os.path.join(step_location, input_path)
         return input_path
 

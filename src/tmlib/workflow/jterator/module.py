@@ -11,9 +11,11 @@ import rpy2.robjects
 import rpy2.robjects.numpy2ri
 from rpy2.robjects.packages import importr
 from cStringIO import StringIO
-from . import path_utils
-from . import handles as hdls
-from ..errors import PipelineRunError
+
+
+from tmlib.workflow.jterator.utils import determine_language
+from tmlib.workflow.jterator import handles as hdls
+from tmlib.errors import PipelineRunError
 
 logger = logging.getLogger(__name__)
 
@@ -94,8 +96,12 @@ class ImageProcessingModule(object):
         Dict[str, str]
             absolute path to files for standard output and error
         '''
-        out_file = os.path.join(log_location, '%s_%.5d.out' % (self.name, job_id))
-        err_file = os.path.join(log_location, '%s_%.5d.err' % (self.name, job_id))
+        out_file = os.path.join(
+            log_location, '%s_%.5d.out' % (self.name, job_id)
+        )
+        err_file = os.path.join(
+            log_location, '%s_%.5d.err' % (self.name, job_id)
+        )
         return {'stdout': out_file, 'stderr': err_file}
 
     def build_figure_filename(self, figures_dir, job_id):
@@ -188,7 +194,7 @@ class ImageProcessingModule(object):
         str
             language of the module (e.g. "python")
         '''
-        return path_utils.determine_language(self.source_file)
+        return determine_language(self.source_file)
 
     def _exec_m_module(self, engine):
         logger.debug('adding module to Matlab path: "%s"' % self.source_file)

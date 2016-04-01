@@ -2,6 +2,7 @@ import os
 import shutil
 import logging
 import sqlalchemy
+import sqlalchemy.orm
 
 logger = logging.getLogger(__name__)
 

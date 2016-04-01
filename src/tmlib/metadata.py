@@ -291,9 +291,7 @@ class PyramidTileMetadata(object):
 
 class IllumstatsImageMetadata(object):
 
-    '''
-    Class for metadata specific to illumination statistics images.
-    '''
+    '''Class for metadata specific to illumination statistics images.'''
 
     @assert_type(cycle='int', channel='int')
     def __init__(self, cycle, channel):
@@ -312,6 +310,7 @@ class IllumstatsImageMetadata(object):
 
     @property
     def is_smoothed(self):
+        '''bool: whether the illumination statistics image has been smoothed'''
         return self._is_smoothed
 
     @is_smoothed.setter

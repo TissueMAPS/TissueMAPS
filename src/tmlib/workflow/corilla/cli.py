@@ -18,7 +18,7 @@ class Corilla(CommandLineInterface):
     illumination artifacts.
     '''
 
-    def __init__(self, api_instance, verbosity, **kwargs):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
@@ -26,8 +26,6 @@ class Corilla(CommandLineInterface):
             instance of API class to which processing is delegated
         verbosity: int
             logging level
-        kwargs: dict
-            additional key-value pairs that are ignored
         '''
         super(Corilla, self).__init__(api_instance, verbosity)
 

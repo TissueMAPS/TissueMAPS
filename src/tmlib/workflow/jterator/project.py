@@ -4,10 +4,11 @@ import glob
 import logging
 import shutil
 from natsort import natsorted
-from . import path_utils
-from ..readers import YamlReader
-from ..writers import YamlWriter
-from ..errors import PipelineOSError
+
+from tmlib.workflow.jterator.utils import get_module_directories
+from tmlib.readers import YamlReader
+from tmlib.writers import YamlWriter
+from tmlib.errors import PipelineOSError
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,7 @@ PIPE_SUFFIX = '.pipe.yaml'
 
 
 def list_jtprojects(directory):
-    '''
-    List Jterator projects in a given directory.
+    '''List Jterator projects in a given directory.
     A Jterator project is defined as a folder containing a `.pipe` file.
 
     Parameters
@@ -38,10 +38,7 @@ def list_jtprojects(directory):
 
 class JtProject(object):
 
-    '''
-    A class for a Jterator project.
-
-    A Jterator project is defined as a folder containing a `.pipe` file.
+    '''A Jterator project is defined as a folder containing a `.pipe` file.
     The class holds information about the project, in particular on the content
     of YAML pipeline and module descriptor files that can be edited in the
     JtUI app.
@@ -198,10 +195,7 @@ class JtProject(object):
 
     @property
     def _module_names(self):
-        self.__module_names = [
-            m['name'] for m in self.pipe['description']['pipeline']
-        ]
-        return self.__module_names
+        return [m['name'] for m in self.pipe['description']['pipeline']]
 
     def _create_handles(self):
         handles = list()
@@ -212,11 +206,11 @@ class JtProject(object):
                     h_file = os.path.join(self.step_location, h_file)
                 if not os.path.exists(h_file):
                     raise PipelineOSError(
-                        'Handles file does not exist: "%s"' % f
+                        'Handles file does not exist: "%s"' % h_file
                     )
                 with YamlReader(h_file) as f:
                     handles.append({
-                        'name': self._get_descriptor_name(f),
+                        'name': self._get_descriptor_name(h_file),
                         'description': f.read()
                     })
         # Sort handles information according to order of modules in the pipeline
@@ -448,7 +442,7 @@ class JtAvailableModules(object):
         List[str]
             absolute paths to module files
         '''
-        dirs = path_utils.get_module_directories(self.repo_dir)
+        dirs = get_module_directories(self.repo_dir)
         search_strings = {
             'Python': '^[^_]+.*\.py$',  # exclude _ files
             'Matlab': '\.m$',

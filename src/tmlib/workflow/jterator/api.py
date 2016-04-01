@@ -3,39 +3,37 @@ import sys
 import shutil
 import logging
 import numpy as np
-import matlab_wrapper as matlab
 import collections
+import matlab_wrapper as matlab
 from cached_property import cached_property
-from .project import JtProject
-from .module import ImageProcessingModule
-from .checkers import PipelineChecker
-from .. import cfg
-from .. import utils
-from . import path_utils
-from ..api import ClusterRoutines
-from ..errors import PipelineDescriptionError
-from ..errors import NotSupportedError
-from ..writers import DataTableWriter
-from ..logging_utils import map_logging_verbosity
+
+import tmlib.models
+from tmlib.utils import autocreate_directory_property
+from tmlib.utils import notimplemented
+from tmlib.utils import flatten
+from tmlib.workflow.api import ClusterRoutines
+from tmlib.errors import PipelineDescriptionError
+from tmlib.logging_utils import map_logging_verbosity
+from tmlib.workflow.jterator.utils import complete_path
+from tmlib.workflow.jterator.utils import get_module_path
+from tmlib.workflow.jterator.project import JtProject
+from tmlib.workflow.jterator.module import ImageProcessingModule
+from tmlib.workflow.jterator.checkers import PipelineChecker
 
 logger = logging.getLogger(__name__)
 
 
 class ImageAnalysisPipeline(ClusterRoutines):
 
-    '''
-    Class for running an image processing pipeline.
-    '''
+    '''Class for running image processing pipelines.'''
 
-    def __init__(self, experiment, step_name, verbosity, pipeline,
+    def __init__(self, experiment_id, step_name, verbosity, pipeline,
                  pipe=None, handles=None, **kwargs):
         '''
-        Initialize an instance of class ImageAnalysisPipeline.
-
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        experiment_id: int
+            ID of the processed experiment
         step_name: str
             name of the corresponding program (command line interface)
         verbosity: int
@@ -43,11 +41,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         pipeline: str
             name of the pipeline that should be processed
         pipe: dict, optional
-            name of the pipeline and the description of module order and
-            paths to module code and descriptor files (default: ``None``)
+            description of pipeline, i.e. module order and paths to module
+            source code and descriptor files (default: ``None``)
         handles: List[dict], optional
-            name of each module and the description of its input/output
-            (default: ``None``)
+            description of module input/output (default: ``None``)
         kwargs: dict, optional
             additional key-value pairs that are ignored
 
@@ -58,117 +55,73 @@ class ImageAnalysisPipeline(ClusterRoutines):
         files on disk.
         '''
         super(ImageAnalysisPipeline, self).__init__(
-                experiment, step_name, verbosity)
-        self.experiment = experiment
+                experiment_id, step_name, verbosity)
         self.pipe_name = pipeline
         self.step_name = step_name
         self.verbosity = verbosity
         self.engines = {'Python': None, 'R': None}
         self.project = JtProject(
-                    step_location=self.step_location, pipe_name=self.pipe_name,
-                    pipe=pipe, handles=handles)
+            step_location=self.step_location, pipe_name=self.pipe_name,
+            pipe=pipe, handles=handles
+        )
 
-    @property
+    @autocreate_directory_property
     def step_location(self):
+        '''str: directory where files for job description, pipeline and module
+        description, log output, and figures are stored
         '''
-        Returns
-        -------
-        str
-            directory where joblist file, pipeline and module descriptor files,
-            log output, figures and data will be stored
-        '''
-        step_location = os.path.join(
-                            self.experiment.dir, 'tmaps',
-                            '%s_%s' % (self.step_name, self.pipe_name))
-        return step_location
+        return os.path.join(
+            self.workflow_location, '%s_%s' % (self.step_name, self.pipe_name)
+        )
 
     @property
     def project(self):
-        '''
-        Returns
-        -------
-        tmlib.jterator.project.JtProject
-            object representation of a jterator project
+        '''tmlib.jterator.project.JtProject: jterator project
         '''
         return self._project
 
     @project.setter
     def project(self, value):
         if not isinstance(value, JtProject):
-            raise TypeError('Attribute "project" must have type '
-                            'tmlib.jterator.project.JtProject')
+            raise TypeError(
+                'Attribute "project" must have type '
+                'tmlib.jterator.project.JtProject'
+            )
         self._project = value
 
     def check_pipeline(self):
-        '''
-        Check the content of the `pipe` and `handles` descriptor files.
+        '''Checks descriptions provided via `pipe` and `handles` files.
         '''
         handles_descriptions = [h['description'] for h in self.project.handles]
         checker = PipelineChecker(
-                step_location=self.step_location,
-                pipe_description=self.project.pipe['description'],
-                handles_descriptions=handles_descriptions
+            step_location=self.step_location,
+            pipe_description=self.project.pipe['description'],
+            handles_descriptions=handles_descriptions
         )
         checker.check_all()
 
-    @cached_property
-    def figures_dir(self):
+    @autocreate_directory_property
+    def figures_location(self):
+        '''str: location where figure files are stored
         '''
-        Returns
-        -------
-        str
-            absolute path to folder containing `.figure` files, containing the
-            figure output of each module
+        return os.path.join(self.step_location, 'figures')
 
-        Note
-        ----
-        Directory is created if it doesn't exist.
-        '''
-        self._figures_dir = os.path.join(self.step_location, 'figures')
-        if not os.path.exists(self._figures_dir):
-            os.mkdir(self._figures_dir)
-        return self._figures_dir
-
-    @cached_property
+    @autocreate_directory_property
     def module_log_location(self):
+        '''str: location where module log files (standard output and error)
+        are located
         '''
-        Returns
-        -------
-        str
-            absolute path to the directory with the `.data` HDF5 files,
-            containing output data of all modules
-
-        Note
-        ----
-        Directory is created if it doesn't exist.
-        '''
-        module_log_location = os.path.join(self.step_location, 'log_modules')
-        if not os.path.exists(module_log_location):
-            logger.debug('create directory for module log output: %s'
-                         % module_log_location)
-            os.mkdir(module_log_location)
-        return module_log_location
+        return os.path.join(self.step_location, 'log_modules')
 
     def remove_previous_output(self):
-        '''
-        Remove all figure and module log files.
-
-        Note
-        ----
-        These files are only produced in the first place when `plot` is set
-        to ``True``.
-        '''
+        '''Removes all figure and module log files.'''
         shutil.rmtree(self.module_log_location)
         shutil.rmtree(self.figures_dir)
 
     @cached_property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        List[tmlib.jterator.module.JtModule]
-            pipeline built in modular form based on *pipe* and *handles*
-            descriptions
+        '''List[tmlib.jterator.module.JtModule]: pipeline built in modular form
+        based on `pipe` and `handles` descriptions
 
         Raises
         ------
@@ -184,33 +137,31 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 libpath = os.environ['JTLIB']
             else:
                 raise OSError('JTLIB environment variable not set.')
-        libpath = path_utils.complete_path(libpath, self.step_location)
-        self._pipeline = list()
+        libpath = complete_path(libpath, self.step_location)
+        pipeline = list()
         for i, element in enumerate(self.project.pipe['description']['pipeline']):
             if not element['active']:
                 continue
             module_filename = element['source']
-            source_path = path_utils.get_module_path(module_filename, libpath)
+            source_path = get_module_path(module_filename, libpath)
             if not os.path.exists(source_path):
                 raise PipelineDescriptionError(
-                        'Module file does not exist: %s' % source_path)
+                    'Module file does not exist: %s' % source_path
+                )
             name = self.project.handles[i]['name']
             description = self.project.handles[i]['description']
             module = ImageProcessingModule(
-                        name=name,
-                        source_file=source_path,
-                        description=description)
-            self._pipeline.append(module)
-        if not self._pipeline:
+                name=name, source_file=source_path, description=description
+            )
+            pipeline.append(module)
+        if not pipeline:
             raise PipelineDescriptionError('No pipeline description available')
-        return self._pipeline
+        return pipeline
 
     def start_engines(self, plot):
-        '''
-        Start engines for non-Python modules in the pipeline. We want to
-        do this only once, because they may have long startup times, which
-        would slow down the execution of the pipeline, if we would have to do
-        it repeatedly for each module.
+        '''Starts engines required by non-Python modules in the pipeline.
+        This should be done only once, since engines may have long startup
+        times, which would otherwise slow down the execution of the pipeline.
 
         Parameters
         ----------
@@ -264,28 +215,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
         level = map_logging_verbosity(self.verbosity)
         jtlogger.setLevel(level)
 
-    def build_data_filename(self, job_id):
-        '''
-        Build name of the HDF5 file where pipeline data will be stored.
-
-        Parameters
-        ----------
-        job_id: int
-            one-based job identifier number
-        '''
-        return os.path.join(
-                    self.experiment.data_dir,
-                    cfg.DATA_NAME_FORMAT.format(s=job_id))
-
     def create_batches(self, args, job_ids=None):
-        '''
-        Create job descriptions for parallel computing.
+        '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
         args: tmlib.metaconfig.args.JteratorInitArgs
             step-specific arguments
-        job_ids: List[int], optional
+        job_ids: Set[int], optional
             subset of jobs for which descriptions should be generated
             (default: ``None``)
 
@@ -298,93 +235,72 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
-        if 'channels' in self.project.pipe['description']['input'].keys():
-            channels = self.project.pipe['description']['input']['channels']
-            channel_names = [ch['name'] for ch in channels]
+        channel_names = self.project.pipe['description']['input']['channels'].keys()
 
-            images_files = collections.defaultdict(list)
-            for name in channel_names:
-                if name is None:
+        with tmlib.models.utils.Session() as session:
+
+            sites = session.query(tmlib.models.Site).\
+                join(tmlib.models.Well).\
+                join(tmlib.models.Plate).\
+                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+                all()
+
+            if job_ids is None:
+                job_ids = set(range(1, len(sites)+1))
+
+            for j, site in enumerate(sites):
+
+                job_id = j+1  # job IDs are one-based!
+
+                if job_id not in job_ids:
                     continue
-                if name not in self.experiment.channel_names:
-                    raise PipelineDescriptionError(
-                            '"%s" is not a valid channel name' % name)
 
-                example_cycle = self.experiment.plates[0].cycles[0]
-                n_zplanes = len(np.unique(example_cycle.image_metadata.zplane))
-                n_tpoints = len(np.unique(example_cycle.image_metadata.tpoint))
-                if n_tpoints > 1 and n_zplanes > 1:
-                    raise NotSupportedError(
-                            'Jterator cannot load 4D images (yet).')
+                image_file_paths = dict()
+                image_file_ids = dict()
+                for ch_name in channel_names:
 
-                layer_names = self.experiment.channel_metadata[name].layers
-                for layer in layer_names:
-                    images_files[name].append(
-                            self.experiment.layer_metadata[layer].filenames
-                    )
+                    image_files = session.query(tmlib.models.ChannelImageFile).\
+                        join(tmlib.models.ChannelLayer).\
+                        join(tmlib.models.Channel).\
+                        join(tmlib.models.Site).\
+                        filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
+                        filter(tmlib.models.Channel.name == ch_name).\
+                        filter(tmlib.models.Site.id == site.id).\
+                        all()
 
+                    image_file_paths[ch_name] = [
+                        f.location for f in image_files
+                    ]
+                    image_file_ids[ch_name] = [
+                        f.id for f in image_files
+                    ]
+
+                job_descriptions['run'].append({
+                    'id': job_id,
+                    'inputs': {
+                        'image_files': image_file_paths
+                    },
+                    'outputs': {
+                        'figure_files': [
+                            module.build_figure_filename(
+                                self.figures_location, job_id
+                            )
+                            for module in self.pipeline
+                        ],
+                        'log_files': flatten([
+                            module.build_log_filenames(
+                                self.module_log_location, job_id).values()
+                            for module in self.pipeline
+                        ])
+                    },
+                    'image_file_ids': image_file_ids,
+                    'plot': args.plot
+                })
             # TODO: objects
-
-        else:
-            # There might be use cases, where a pipeline doesn't require any
-            # input (e.g. for unit tests)
-            logger.warning('pipeline doesn\'t describe any inputs')
-            logger.info('create a single empty job description')
-            images_files = collections.defaultdict(list)
-
-        if images_files:
-            batches = [
-                collections.defaultdict(list)
-                for i in xrange(len(images_files.values()[0][0]))
-            ]
-            for k, v in images_files.iteritems():
-                for i in xrange(len(v[0])):
-                    for j in xrange(len(v)):
-                        batches[i][k].append(v[j][i])
-
-            job_descriptions['run'] = [{
-                'id': i+1,
-                'inputs': {
-                    'image_files': batch
-                },
-                'outputs': {
-                    'data_files': [self.build_data_filename(i+1)],
-                    'figure_files': [
-                        module.build_figure_filename(
-                            self.figures_dir, i+1)
-                        for module in self.pipeline
-                    ],
-                    'log_files': utils.flatten([
-                        module.build_log_filenames(
-                            self.module_log_location, i+1).values()
-                        for module in self.pipeline
-                    ])
-                },
-                'plot': args.plot
-            } for i, batch in enumerate(batches)]
-
-            if job_ids:
-                job_descriptions_subset = dict()
-                job_descriptions_subset['run'] = list()
-                for j in job_ids:
-                    job_descriptions_subset['run'].append(
-                        job_descriptions['run'][j-1]  # job IDs are one-based
-                    )
-                return job_descriptions_subset
-            else:
-                return job_descriptions
-
-        else:
-            job_descriptions['run'] = [{
-                'id': 1,
-                'inputs': dict(),
-                'outputs': dict(),
-                'plot': False
-            }]
-            return job_descriptions
+        return job_descriptions
 
     def _build_run_command(self, batch):
-        # Overwrite method to account for additional "---pipeline" argument
+        # Overwrite method to account for additional "--pipeline" argument
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment.dir)
@@ -393,9 +309,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         return command
 
     def run_job(self, batch):
-        '''
-        Run pipeline, i.e. execute each module in the order defined by the
-        pipeline description.
+        '''Runs the pipeline, i.e. executes each module in sequential order.
 
         Parameters
         ----------
@@ -403,19 +317,16 @@ class ImageAnalysisPipeline(ClusterRoutines):
             description of the *run* job
         '''
         checker = PipelineChecker(
-                step_location=self.step_location,
-                pipe_description=self.project.pipe['description'],
-                handles_descriptions=[
-                    h['description'] for h in self.project.handles
-                ]
+            step_location=self.step_location,
+            pipe_description=self.project.pipe['description'],
+            handles_descriptions=[
+                h['description'] for h in self.project.handles
+            ]
         )
         checker.check_all()
         self._configure_loggers()
         self.start_engines(batch['plot'])
         job_id = batch['id']
-        data_file = batch['outputs']['data_files'][0]
-        with DataTableWriter(data_file, truncate=True) as writer:
-            logger.debug('data is stored in file "%s"', data_file)
 
         # Load the images,correct them if requested and align them if required.
         # NOTE: When the experiment was acquired in "multiplexing" mode,
@@ -429,40 +340,39 @@ class ImageAnalysisPipeline(ClusterRoutines):
             'objects': dict(),
             'channels': list()
         }
-        channels = self.project.pipe['description']['input']['channels']
-        # TODO: objects
-        for i, ch in enumerate(channels):
-            logger.info('load images of channel "%s"', ch['name'])
-            filenames = batch['inputs']['image_files'][ch['name']]
-            n = len(filenames)
-            for j in xrange(n):
-                name = os.path.basename(filenames[j])
-                img = self.experiment.get_image_by_name(name)
-                if ch['correct']:
-                    logger.info('correct images for illumination artifacts')
-                    for plate in self.experiment.plates:
-                        if plate.index != img.metadata.plate:
-                            continue
-                        cycle = plate.cycles[img.metadata.cycle]
-                        stats = cycle.illumstats_images[img.metadata.channel]
-                        stats.smooth_stats()
-                        img = img.correct(stats)
-                logger.info('align images between cycles')
-                orig_dims = img.dimensions
-                img = img.align()
-                pixels_array = img.pixels
 
-                # Combine images into "stack"
-                if j == 0 and n > 1:
-                    dims = img.dimensions
-                    store['pipe'][ch['name']] = np.empty(
-                                            (n, dims[0], dims[1]),
-                                            dtype=img.dtype)
-                if n > 1:
-                    store['pipe'][ch['name']][j, :, :] = pixels_array
+        channel_info = self.project.pipe['description']['input']['channels']
+        with tmlib.models.utils.Session() as session:
+            for channel_name, file_ids in batch['image_file_ids'].iteritems():
+                logger.info('load images for channel "%s"', channel_name)
+                if channel_info[channel_name]['correct']:
+                    logger.info('load illumination statistics')
+                    stats_file = session.query(tmlib.models.IllumstatsFile).\
+                        join(tmlib.models.Channel).\
+                        join(tmlib.models.Experiment).\
+                        filter(tmlib.models.Channel.name == channel_name).\
+                        filter(tmlib.models.Experiment.id == self.experiment_id).\
+                        one()
+                    stats = stats_file.get()
+
+                arrays = list()
+                for fid in file_ids:
+                    image_file = session.query(tmlib.models.ChannelImageFile).\
+                        get(fid)
+                    logger.info('load image "%s"', image_file.name)
+                    image = image_file.get()
+                    if channel_info[channel_name]['correct']:
+                        logger.info('correct image for illumination artifacts')
+                        image = image.correct(stats)
+                    image = image.align()  # images are aligned by default
+                    arrays.append(image.pixels)
+
+                if len(arrays) > 1:
+                    stack = np.dstack(arrays)
                 else:
-                    store['pipe'][ch['name']] = pixels_array
-                store['channels'].append(ch['name'])
+                    stack = arrays[0]
+
+                import ipdb; ipdb.set_trace()
 
             # Add some metadata to the HDF5 file, which may be required later
             if i == 0:
@@ -498,11 +408,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         # 
 
-    @utils.notimplemented
+    @notimplemented
     def collect_job_output(self, batch):
-        pass
-
-    @utils.notimplemented
-    def apply_statistics(self, output_dir, plates, wells, sites, channels,
-                         tpoints, zplanes, **kwargs):
+        # TODO: calculate per site, well, and plate statistics
         pass

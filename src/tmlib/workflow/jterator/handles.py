@@ -16,8 +16,9 @@ import skimage
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
-from .. import utils
-from ..image_utils import find_border_objects
+
+from tmlib import utils
+from tmlib.image_utils import find_border_objects
 
 
 class Handle(object):

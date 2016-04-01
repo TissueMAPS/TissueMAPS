@@ -1,4 +1,4 @@
-from ..args import VariableArgs
+from tmlib.workflow.args import VariableArgs
 
 
 class JteratorInitArgs(VariableArgs):

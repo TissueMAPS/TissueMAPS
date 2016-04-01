@@ -10,11 +10,9 @@ logger = logging.getLogger(__name__)
 
 class Metaconfig(CommandLineInterface):
 
-    '''
-    Command line interface for metadata conversion.
-    '''
+    '''Command line interface for metadata conversion.'''
 
-    def __init__(self, api_instance, verbosity, **kwargs):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
@@ -22,8 +20,6 @@ class Metaconfig(CommandLineInterface):
             instance of API class to which processing is delegated
         verbosity: int
             logging level
-        kwargs: dict
-            mapping of additional key-value pairs that are ignored
         '''
         super(Metaconfig, self).__init__(api_instance, verbosity)
 

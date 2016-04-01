@@ -1,21 +1,19 @@
-'''
-Parse arguments from the command line.
-'''
+'''Parse arguments from the command line.'''
 
-from .cli import Jterator
-from .args import JteratorInitArgs
-from .args import JteratorRunArgs
-from .args import JteratorCreateArgs
-from .args import JteratorSubmitArgs
-from .args import JteratorResubmitArgs
-from .args import JteratorLogArgs
-from .args import JteratorInfoArgs
-from .args import JteratorCheckArgs
-from .args import JteratorRemoveArgs
-from .args import JteratorCleanupArgs
-from ..args import CheckArgs
-from ..args import CreateArgs
-from ..args import RemoveArgs
+from tmlib.workflow.jterator.cli import Jterator
+from tmlib.workflow.jterator.args import JteratorInitArgs
+from tmlib.workflow.jterator.args import JteratorRunArgs
+from tmlib.workflow.jterator.args import JteratorCreateArgs
+from tmlib.workflow.jterator.args import JteratorSubmitArgs
+from tmlib.workflow.jterator.args import JteratorResubmitArgs
+from tmlib.workflow.jterator.args import JteratorLogArgs
+from tmlib.workflow.jterator.args import JteratorInfoArgs
+from tmlib.workflow.jterator.args import JteratorCheckArgs
+from tmlib.workflow.jterator.args import JteratorRemoveArgs
+from tmlib.workflow.jterator.args import JteratorCleanupArgs
+from tmlib.workflow.args import CheckArgs
+from tmlib.workflow.args import CreateArgs
+from tmlib.workflow.args import RemoveArgs
 
 
 parser, subparsers = Jterator.get_parser_and_subparsers({

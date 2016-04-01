@@ -4,12 +4,14 @@ import os
 import logging
 from os.path import splitext, basename, exists, dirname
 from collections import Counter
-from . import path_utils
-from .handles import create_handle
-from .handles import PipeHandle
-from .project import HANDLES_SUFFIX
-from ..readers import YamlReader
-from ..errors import PipelineDescriptionError
+
+from tmlib.workflow.jterator.utils import complete_path
+from tmlib.workflow.jterator.utils import get_module_path
+from tmlib.workflow.jterator.handles import create_handle
+from tmlib.workflow.jterator.handles import PipeHandle
+from tmlib.workflow.jterator.project import HANDLES_SUFFIX
+from tmlib.readers import YamlReader
+from tmlib.errors import PipelineDescriptionError
 
 logger = logging.getLogger(__name__)
 
@@ -45,50 +47,56 @@ class PipelineChecker(object):
         # Check "project" section
         if 'description' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
-                    'Pipeline file must contain the key "description".')
+                'Pipeline file must contain the key "description".'
+            )
         if 'lib' in self.pipe_description.keys():
             libpath = self.pipe_description['lib']
-            libpath = path_utils.complete_path(libpath, self.step_location)
+            libpath = complete_path(libpath, self.step_location)
             if libpath:
                 if not exists(libpath):
                     raise PipelineDescriptionError(
-                            'The path defined by "lib" in your '
-                            'pipeline file is not valid.')
+                        'The path defined by "lib" in your '
+                        'pipeline file is not valid.'
+                    )
         # Check "jobs" section
         if 'input' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
-                    'Pipe file must contain the key "input".')
+                'Pipe file must contain the key "input".'
+            )
         possible_keys = {'channels', 'objects'}
-        for i, key in enumerate(self.pipe_description['input'].keys()):
+        for key in self.pipe_description['input']:
             if key not in possible_keys:
                 raise PipelineDescriptionError(
                     'Pipe file must contain one of the following keys '
                     'as a subkey of "inputs": "%s"'
-                    % ", ".join(possible_keys))
+                    % ", ".join(possible_keys)
+                )
 
-            if not isinstance(self.pipe_description['input'][key], list):
+            if not isinstance(self.pipe_description['input'][key], dict):
                 raise PipelineDescriptionError(
-                        'The value of "%s" in the "inputs" section '
-                        'of the pipe file must be a list.' % key)
+                    'The value of "%s" in the "inputs" section '
+                    'of the pipe file must be a mapping.' % key
+                )
             # Check for presence of required keys
-            REQUIRED_HANDLE_ITEM_KEYS = {'name'}
+            REQUIRED_HANDLE_ITEM_KEYS = set()
             possible_subkeys = REQUIRED_HANDLE_ITEM_KEYS.union(
-                                    {'correct', 'align'})
+                {'correct', 'align'}
+            )
             inputs = self.pipe_description['input'][key]
-            if inputs:
-                for inpt in inputs:
-                    for k in REQUIRED_HANDLE_ITEM_KEYS:
-                        if k not in inpt:
-                            raise PipelineDescriptionError(
-                                    'Each element of "%s" in the "inputs" '
-                                    'section of the pipe file requires '
-                                    'key "%s".' % (key, k))
-                    for k in inpt:
-                        if k not in possible_subkeys:
-                            raise PipelineDescriptionError(
-                                    'Unknown key "%s" for element #%d of "%s" '
-                                    'in "inputs" section of the pipe file.'
-                                    % (k, i, key))
+            for name, inpt in inputs.iteritems():
+                for k in REQUIRED_HANDLE_ITEM_KEYS:
+                    if k not in inpt:
+                        raise PipelineDescriptionError(
+                            'Each element of "%s" in the "inputs" '
+                            'section of the pipe file requires '
+                            'key "%s".' % (key, k)
+                        )
+                for k in inpt:
+                    if k not in possible_subkeys:
+                        raise PipelineDescriptionError(
+                            'Unknown key "%s" for "%s" '
+                            'in "inputs" section of the pipe file.' % (k, key)
+                        )
 
         # Check "pipeline" section
         if 'pipeline' not in self.pipe_description.keys():
@@ -135,7 +143,7 @@ class PipelineChecker(object):
         lib_path = self.pipe_description.get('lib', None)
         if lib_path:
             self.libpath = self.pipe_description['lib']
-            self.libpath = path_utils.complete_path(
+            self.libpath = complete_path(
                             self.libpath, self.step_location)
         else:
             if 'JTLIB' in os.environ:
@@ -145,7 +153,7 @@ class PipelineChecker(object):
 
         for i, module in enumerate(self.pipe_description['pipeline']):
             # Check whether executable files exist
-            source_path = path_utils.get_module_path(
+            source_path = get_module_path(
                             module['source'], self.libpath)
             if not exists(source_path):
                 raise PipelineDescriptionError(
@@ -153,7 +161,7 @@ class PipelineChecker(object):
                             % source_path)
 
             # Check whether descriptor files exist
-            handles_path = path_utils.complete_path(
+            handles_path = complete_path(
                             module['handles'], self.step_location)
 
             if not self.handles_descriptions:
@@ -281,7 +289,7 @@ class PipelineChecker(object):
         '''
         upstream_outputs = list()
         for i, module in enumerate(self.pipe_description['pipeline']):
-            handles_path = path_utils.complete_path(
+            handles_path = complete_path(
                 module['handles'], self.step_location
             )
             with YamlReader(handles_path) as f:

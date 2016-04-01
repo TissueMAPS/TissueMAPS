@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Align(CommandLineInterface):
 
-    def __init__(self, api_instance, verbosity, **kwargs):
+    def __init__(self, api_instance, verbosity):
         '''
         Initialize an instance of class Align.
 
@@ -20,8 +20,6 @@ class Align(CommandLineInterface):
             configured experiment object
         verbosity: int
             logging level
-        kwargs: dict
-            additional key-value pairs that are ignored
         '''
         super(Align, self).__init__(api_instance, verbosity)
 

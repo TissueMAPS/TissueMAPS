@@ -14,10 +14,8 @@ class Imextract(CommandLineInterface):
     Command line interface for extraction of images from image files.
     '''
 
-    def __init__(self, api_instance, verbosity, **kwargs):
+    def __init__(self, api_instance, verbosity):
         '''
-        Initialize an instance of class Imextract.
-
         Parameters
         ----------
         api_instance: tmlib.workflow.metaextract.ImageExtractor

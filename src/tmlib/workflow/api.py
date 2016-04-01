@@ -24,7 +24,6 @@ from tmlib.readers import JsonReader
 from tmlib.writers import JsonWriter
 from tmlib.errors import JobDescriptionError
 from tmlib.errors import WorkflowError
-from tmlib.workflow.jobs import Job
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
 from tmlib.workflow.jobs import CollectJob
@@ -36,9 +35,7 @@ logger = logging.getLogger(__name__)
 
 class BasicClusterRoutines(object):
 
-    '''
-    Abstract base class for cluster routines.
-    '''
+    '''Abstract base class for cluster routines.'''
 
     __metaclass__ = ABCMeta
 
@@ -103,14 +100,14 @@ class BasicClusterRoutines(object):
         gc3libs.session.Session
             SQL-based session 
         '''
-        def get_time(task, attr):
+        def get_time(task, time_attr):
             def get_recursive(_task, duration):
                 if hasattr(_task, 'tasks'):
                     return np.sum([
                         get_recursive(t, duration) for t in _task.tasks
                     ])
                 else:
-                    return getattr(_task.execution, attr).to_timedelta()
+                    return getattr(_task.execution, time_attr).to_timedelta()
             return get_recursive(task, datetime.timedelta(seconds=0))
 
         logger.info('create session')
