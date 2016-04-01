@@ -98,8 +98,8 @@ def get_task_data(task, description=None):
             'failed': is_done and failed,
             'exitcode': task_.execution.exitcode,
             'percent_done': 0.0,  # fix later, if possible
-            'time': task_.get('duration', None),
-            'memory': task_.get('max_used_memory', None)
+            'time': task_.execution.get('duration', None),
+            'memory': task_.execution.get('max_used_memory', None)
         }
 
         if isinstance(task_, WorkflowStep):

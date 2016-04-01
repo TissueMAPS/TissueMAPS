@@ -3,6 +3,8 @@ import yaml
 import glob
 import time
 import logging
+import numpy as np
+import datetime
 from natsort import natsorted
 from abc import ABCMeta
 from abc import abstractmethod
@@ -22,6 +24,7 @@ from tmlib.readers import JsonReader
 from tmlib.writers import JsonWriter
 from tmlib.errors import JobDescriptionError
 from tmlib.errors import WorkflowError
+from tmlib.workflow.jobs import Job
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
 from tmlib.workflow.jobs import CollectJob
@@ -98,8 +101,18 @@ class BasicClusterRoutines(object):
         Returns
         -------
         gc3libs.session.Session
-            SQL-based session
+            SQL-based session 
         '''
+        def get_time(task, attr):
+            def get_recursive(_task, duration):
+                if hasattr(_task, 'tasks'):
+                    return np.sum([
+                        get_recursive(t, duration) for t in _task.tasks
+                    ])
+                else:
+                    return getattr(_task.execution, attr).to_timedelta()
+            return get_recursive(task, datetime.timedelta(seconds=0))
+
         logger.info('create session')
         gc3pie_session_uri = DATABASE_URI.replace('postgresql', 'postgres')
         table_columns = tmlib.models.Task.__table__.columns
@@ -109,17 +122,19 @@ class BasicClusterRoutines(object):
             table_name='tasks',
             extra_fields={
                 table_columns['name']:
-                    lambda obj: obj.jobname,
+                    lambda task: task.jobname,
                 table_columns['exitcode']:
-                    lambda obj: obj.execution.exitcode,
+                    lambda task: task.execution.exitcode,
                 table_columns['time']:
-                    lambda obj: obj.duration.to_timedelta(),
+                    lambda task: get_time(task, 'duration'),
                 table_columns['memory']:
-                    lambda obj: obj.max_used_memory,
+                    lambda task: task.execution.max_used_memory.amount(Memory.MB),
                 table_columns['cpu_time']:
-                    lambda obj: obj.used_cpu_time.to_timedelta(),
+                    lambda task: get_time(task, 'used_cpu_time'),
                 table_columns['submission_id']:
-                    lambda obj: obj.submission_id
+                    lambda task: task.submission_id,
+                table_columns['type']:
+                    lambda task: type(task).__name__
             }
         )
 
@@ -802,7 +817,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     if duration:
                         job.requested_walltime = Duration(duration)
                     if memory:
-                        job.requested_memory = Memory(memory, Memory.GB)
+                        job.requested_memory = Memory(memory, Memory.MB)
                     if cores:
                         if not isinstance(cores, int):
                             raise TypeError(
@@ -830,7 +845,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     submission_id=submission.id
                 )
                 collect_job.requested_walltime = Duration('02:00:00')
-                collect_job.requested_memory = Memory(4, Memory.GB)
+                collect_job.requested_memory = Memory(4000, Memory.MB)
 
             else:
                 collect_job = None

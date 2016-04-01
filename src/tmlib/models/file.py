@@ -1,5 +1,4 @@
 import os
-import cv2
 import logging
 import numpy as np
 from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey

@@ -542,8 +542,8 @@ class SubmitArgs(GeneralArgs):
         Returns
         -------
         int
-            amount of memory that should be allocated for each job in GB
-            (default: ``4``)
+            amount of memory that should be allocated for each job in Megabytes
+            (default: ``3800``)
         '''
         return self._memory
 
@@ -558,9 +558,10 @@ class SubmitArgs(GeneralArgs):
     def _memory_params(self):
         return {
             'type': int,
-            'default': 4,
+            'default': 3800,
             'help': '''
-                amount of memory that should be allocated for each job in GB
+                amount of memory that should be allocated for each job in MB
+                (default: 3800)
             '''
         }
 

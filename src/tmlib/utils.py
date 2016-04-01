@@ -317,8 +317,9 @@ def assert_type(**expected):
                     et_strings = expected_type
                 else:
                     raise TypeError(
-                                'Expected types have to provided as either '
-                                'a string of a list of strings.')
+                        'Expected types have to provided as either '
+                        'a string of a list of strings.'
+                    )
 
                 # Users provide the types as strings. The advantage is that
                 # the corresponding object doesn't have to be imported by the

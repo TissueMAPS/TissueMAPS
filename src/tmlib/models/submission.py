@@ -121,7 +121,7 @@ class Task(Model):
     time: datetime.timedelta
         duration of the task
     memory: int
-        memory used by the task in GB
+        memory used by the task in MB
     cpu_time: datetime.timedelta
         used cpu time of the task
     submission_id: int
@@ -140,6 +140,7 @@ class Task(Model):
     time = Column(Interval)
     memory = Column(Integer)
     cpu_time = Column(Interval)
+    type = Column(String, index=True)
     data = Column(LargeBinary)
     submission_id = Column(Integer, ForeignKey('submissions.id'))
 
