@@ -57,5 +57,7 @@ def db(app, engine, request):
 
 @pytest.fixture(scope='function', autouse=True)
 def dbsession(db, session, monkeypatch):
+    """Monkeypatch the session on the Flask-SqlAlchemy object
+    to correspond to the session fixture of the test app."""
     monkeypatch.setattr(db, 'session', session)
 
