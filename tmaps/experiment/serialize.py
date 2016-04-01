@@ -37,7 +37,8 @@ def encode_channel(obj, encoder):
 
 @json_encoder(ChannelLayer)
 def encode_channel_layer(obj, encoder):
-    image_height, image_width = obj.image_size
+    # Get the image size on the highest zoom level (last element in the list)
+    image_height, image_width = obj.image_size[-1]
     return {
         'id': encode_pk(obj.id),
         'zplane': obj.zplane,
