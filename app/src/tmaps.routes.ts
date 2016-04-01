@@ -6,17 +6,6 @@ angular.module('tmaps.ui')
     $urlRouterProvider.otherwise('/login');
 
     $stateProvider
-    .state('login', {
-        url: '/login',
-        views: {
-            'main-window': {
-                templateUrl: '/src/auth/login.html'
-            }
-        },
-        data: {
-            loginRequired: false
-        },
-    })
     .state('viewer', {
         // url: '/viewer?loadex=expids&state=stateid&snapshot=snapshotid',
         url: '/viewer/:experimentid',
@@ -83,27 +72,41 @@ angular.module('tmaps.ui')
             app.hide();
         }]
     })
+    .state('content', {
+        abstract: true,
+        views: {
+            'content-view': {
+                template: 
+                  '<div class="content-view" ui-view></div>' +
+                  '<div class="logo-container">' +
+                    '<img width=400 height=400 src="/resources/img/tmaps_logo.png" alt=""/>' +
+                  '</div>'
+            }
+        }
+    })
+    .state('login', {
+        parent: 'content',
+        url: '/login',
+        templateUrl: '/src/auth/login.html',
+        data: {
+            loginRequired: false
+        },
+    })
     .state('userpanel', {
+        parent: 'content',
         url: '/userpanel',
         data: {
             loginRequired: true
         },
-        views: {
-            'main-window': {
-                templateUrl: '/src/userpanel/userpanel.html'
-            }
-        }
+        templateUrl: '/src/userpanel/userpanel.html'
     })
     .state('setup', {
+        parent: 'content',
         url: '/setup',
         data: {
             loginRequired: true
         },
-        views: {
-            'main-window': {
-                templateUrl: '/src/setup/setup.html'
-            }
-        }
+        templateUrl: '/src/setup/setup.html'
     });
 
 }]);

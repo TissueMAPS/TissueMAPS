@@ -4,18 +4,16 @@
 .userpanel-sidebar {
     overflow-x: hidden;
     overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-    // background-color: #f5f5f5;
-    // background-color: #22303D;
-    background-color: #3a3f41;
     border-right: 1px solid @panel-bg-color;
     // border-right: 1px solid #eee;
-    border-right: 1px solid #eee;
+    border-right: 1px solid black;
     height: 100vh;
     padding: 0;
     padding-top: 40px;
     color: @font-color-light;
 
-    .ui-panel-gradient(right, @theme-color, 2%, 98%);
+    background-color: @panel-bg-color;
+    .ui-panel-gradient(right, @panel-bg-color, 2%, 98%);
 }
 
 .nav-sidebar {
@@ -44,15 +42,13 @@
 
 .userpanel-main {
 
-    background: white;
+    background: darken(white, 5%);
+    .lh-box-shadow(1px 1px 4px 0 black);
+
     height: 100vh;
 
     ul {
         padding: 0;
-    }
-
-    .panel {
-        width: 50%;
     }
 
     .list-group-item {

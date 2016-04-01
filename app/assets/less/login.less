@@ -2,8 +2,6 @@
 @import "variables.less";
 
 .login-view {
-    background-image: url("/resources/img/mocha.png");
-    background-repeat: repeat;
     // Stretch the login-view across the whole display.
     // The parent container main-view contains empty space for
     // the appbar which is not visible on the login page anyway.
@@ -52,29 +50,29 @@
         ));
     }
 
-    .logo-container {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        width: 100%;
-        text-align: right;
+    // .logo-container {
+    //     position: absolute;
+    //     bottom: 20px;
+    //     right: 20px;
+    //     width: 100%;
+    //     text-align: right;
 
-        img {
-            .lh-blur(3px);
-            opacity: 0.2;
-            -webkit-mask-image:-webkit-gradient(linear, left top, right bottom, from(rgba(0,0,0,0.1)), to(rgba(0,0,0,1)))
-        }
-    }
+    //     img {
+    //         .lh-blur(3px);
+    //         opacity: 0.2;
+    //         -webkit-mask-image:-webkit-gradient(linear, left top, right bottom, from(rgba(0,0,0,0.1)), to(rgba(0,0,0,1)))
+    //     }
+    // }
 }
 
 .login-view-inner {
     padding-top: 200px;
     height: 100%;
-    .lh-background-image(linear-gradient(
-        to bottom,
-        fade(black, 0%) 20%,
-        fade(black, 80%) 100%
-    ));
+    // .lh-background-image(linear-gradient(
+    //     to bottom,
+    //     fade(black, 0%) 20%,
+    //     fade(black, 80%) 100%
+    // ));
 }
 
 .login {

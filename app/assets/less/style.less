@@ -33,6 +33,7 @@
 @middle-container-center-height: 300px;
 @middle-container-center-padding: 20px;
 
+
 html, body {
     width: 100vw;
     height: 100vh;
@@ -41,15 +42,44 @@ html, body {
 body {
     font-family: Helvetica, 'Trebuchet MS', sans-serif;
     background: white;
+
+    background-image: url("/resources/img/mocha.png");
+    background-repeat: repeat;
 }
 
 .main-window {
     height: calc(~'100% - @{appbar-height}');
 }
 
+.content-view {
+    height: 100%;
+}
+
 .app {
     height: 100%;
     overflow: hidden;
+
+    .lh-background-image(linear-gradient(
+        to bottom,
+        fade(black, 0%) 20%,
+        fade(black, 80%) 100%
+    ));
+
+    .logo-container {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 100%;
+        text-align: right;
+        // Should be behind userpanel etc.
+        z-index: -1;
+
+        img {
+            .lh-blur(3px);
+            opacity: 0.6;
+            -webkit-mask-image:-webkit-gradient(linear, left top, right bottom, from(rgba(0,0,0,0.1)), to(rgba(0,0,0,1)))
+        }
+    }
 }
 
 // .middle-container {
