@@ -346,7 +346,7 @@ class FeatureValue(Model):
     feature = relationship('Feature', backref='values')
     mapobject = relationship('Mapobject', backref='feature_values')
 
-    def __init__(self, value, tpoint, feature, mapobject_id):
+    def __init__(self, value, tpoint, feature_id, mapobject_id):
         '''
         Parameters
         ----------
@@ -361,7 +361,7 @@ class FeatureValue(Model):
         '''
         self.value = value
         self.tpoint = tpoint
-        self.feature_id = feature.id
+        self.feature_id = feature_id
         self.mapobject_id = mapobject_id
 
     def __repr__(self):
