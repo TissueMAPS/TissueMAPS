@@ -17,7 +17,7 @@ input:
 output:
 
     - name: measurements
-      type: Features
+      type: Measurement
       objects_ref: label_image
       help: Extracted Zernike features.
 

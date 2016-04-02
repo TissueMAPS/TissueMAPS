@@ -28,7 +28,7 @@ input:
 output:
 
     - name: measurements
-      type: Features
+      type: Measurement
       ref: objects_name
       help: Extracted intensity features.
 

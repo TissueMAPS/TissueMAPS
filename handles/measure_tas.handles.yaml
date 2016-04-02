@@ -23,7 +23,7 @@ input:
 output:
 
     - name: measurements
-      type: Features
+      type: Measurement
       objects_ref: label_image
       channel_ref: intensity_image
       help: Extracted TAS features.
