@@ -321,10 +321,11 @@ class SegmentedObjects(LabelImage):
 
         # Set border pixels to background to find complete contours of
         # objects at the border of the image
-        self.value[0, :] = 0
-        self.value[-1, :] = 0
-        self.value[:, 0] = 0
-        self.value[:, -1] = 0
+        image = self.value.copy()
+        image[0, :] = 0
+        image[-1, :] = 0
+        image[:, 0] = 0
+        image[:, -1] = 0
 
         outlines = dict()
         for label in self.labels:
@@ -332,7 +333,7 @@ class SegmentedObjects(LabelImage):
             # object individually ensures that we get the correct number of
             # objects and that coordinates are in the correct order,
             # i.e. sorted according to their label.
-            obj_im = self.value == label
+            obj_im = image == label
             contours = skimage.measure.find_contours(
                 obj_im, 0.5, fully_connected='high'
             )

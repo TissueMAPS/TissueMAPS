@@ -303,7 +303,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # Overwrite method to account for additional "--pipeline" argument
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        command.append(self.experiment.dir)
+        command.append(self.experiment_id)
         command.extend(['run', '--job', str(batch['id'])])
         command.extend(['--pipeline', self.pipe_name])
         return command
