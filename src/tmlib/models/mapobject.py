@@ -4,6 +4,7 @@ from geoalchemy2 import Geometry
 from sqlalchemy import Column, String, Integer, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import Model, DateMixIn
 from tmlib.utils import autocreate_directory_property
@@ -34,6 +35,8 @@ class MapobjectType(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'mapobject_types'
+
+    __table_args__ = (UniqueConstraint('name', 'experiment_id'), )
 
     # Table columns
     name = Column(String, index=True)
@@ -135,7 +138,11 @@ class Mapobject(Model):
     mapobject_type_id: int
         ID of the parent mapobject
     mapobject_type: tmlib.models.MapobjectType
-        parent mapobject type to which map objects belong
+        parent mapobject type to which the mapobject belongs
+    site_id: int
+        ID of the parent site
+    site: tmlib.models.Site
+        parent site to which the mapobject belongs
     outlines: List[tmlib.models.MapobjectOutlines]
         outlines that belong to the mapobject
     feature_values: List[tmlib.models.FeatureValues]
@@ -145,24 +152,35 @@ class Mapobject(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'mapobjects'
 
+    __table_args__ = (
+        UniqueConstraint('label', 'site_id', 'mapobject_type_id'),
+    )
+
     # Table columns
+    label = Column(Integer, index=True)
     is_border = Column(Boolean, index=True)
+    site_id = Column(Integer, ForeignKey('sites.id'))
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
+    # TODO: monkey-patch additional columns for MapObject "attributes"
+
     # Relationships to other tables
+    site = relationship('Site', backref='sites')
     mapobject_type = relationship('MapobjectType', backref='mapobjects')
 
-    def __init__(self, is_border, mapobject_type_id):
+    def __init__(self, label, site_id, mapobject_type_id):
         '''
         Parameters
         ----------
-        is_border: bool
-            whether the object touches at the border of a *site* and is
-            therefore only partially represented on the corresponding image
+        label: int
+            mapobject label (site-specific ID)
+        site_id: int
+            ID of the parent site
         mapobject_type_id: int
             ID of the parent mapobject
         '''
-        self.is_border = is_border
+        self.label = label
+        self.site_id = site_id
         self.mapobject_type_id = mapobject_type_id
 
     def __repr__(self):
@@ -192,6 +210,8 @@ class MapobjectOutline(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'mapobject_outlines'
 
+    __table_args__ = (UniqueConstraint('tpoint', 'zplane', 'mapobject_id'), )
+
     # Table columns
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
@@ -202,7 +222,7 @@ class MapobjectOutline(Model):
     # Relationships to other tables
     mapobject = relationship('Mapobject', backref='outlines')
 
-    def __init__(self, tpoint, zplane, geom_poly, geom_centroid, mapobject_id):
+    def __init__(self, tpoint, zplane, mapobject_id):
         '''
         Parameters
         ----------
@@ -210,17 +230,11 @@ class MapobjectOutline(Model):
             time point index
         zplane: int
             z-plane index
-        geom_poly: str
-            EWKT polygon geometry
-        geom_centroid: str
-            EWKT point geometry
         mapobject_id: int
             ID of parent mapobject
         '''
         self.tpoint = tpoint
         self.zplane = zplane
-        self.geom_poly = geom_poly
-        self.geom_centroid = geom_centroid
         self.mapobject_id = mapobject_id
 
     @staticmethod
@@ -272,7 +286,7 @@ class MapobjectOutline(Model):
 class Feature(Model, DateMixIn):
 
     '''A *feature* is a measurement that is associated with a particular
-    *map object type*. For example the *feature* named "Morphology_Area"
+    *map object type*. For example a *feature* named "Morphology_Area"
     would correspond to a vector where each value would reflect the area of an
     individual *map object* of a given *map object type*.
 
@@ -290,6 +304,8 @@ class Feature(Model, DateMixIn):
 
     #: str: name of the corresponding database table
     __tablename__ = 'features'
+
+    __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
 
     # Table columns
     name = Column(String, index=True)
@@ -336,9 +352,13 @@ class FeatureValue(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'feature_values'
 
+    __table_args__ = (
+        UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
+    )
+
     # Table columns
     value = Column(Float(precision=15))
-    tpoint = Column(Integer)
+    tpoint = Column(Integer, index=True)
     feature_id = Column(Integer, ForeignKey('features.id'))
     mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
 
@@ -346,12 +366,10 @@ class FeatureValue(Model):
     feature = relationship('Feature', backref='values')
     mapobject = relationship('Mapobject', backref='feature_values')
 
-    def __init__(self, value, tpoint, feature_id, mapobject_id):
+    def __init__(self, tpoint, feature_id, mapobject_id):
         '''
         Parameters
         ----------
-        value: float
-            the actual measurement
         tpoint: int
             time point index
         feature: tmlib.models.Feature
@@ -359,7 +377,6 @@ class FeatureValue(Model):
         mapobject_id: int
             ID of the parent mapobject
         '''
-        self.value = value
         self.tpoint = tpoint
         self.feature_id = feature_id
         self.mapobject_id = mapobject_id

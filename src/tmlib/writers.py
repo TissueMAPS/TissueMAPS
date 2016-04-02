@@ -62,21 +62,21 @@ class Writer(object):
         pass
 
 
-class HtmlWriter(Writer):
+class TextWriter(Writer):
 
-    '''Class for writing data to a file in HTML format.'''
+    '''Class for writing text data to a file.'''
 
     @same_docstring_as(Writer.__init__)
     def __init__(self, filename):
-        super(HtmlWriter, self).__init__(filename)
+        super(TextWriter, self).__init__(filename)
 
     def write(self, data):
-        '''Write data to HTML file.
+        '''Write data to file.
 
         Parameters
         ----------
-        data: list or dict
-            the HTML string that should be written to the file
+        data: str
+            text that should be written to the file
         '''
         logger.debug('write data to file: %s' % self.filename)
         self._stream.write(data)

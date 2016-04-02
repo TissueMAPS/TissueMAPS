@@ -274,14 +274,16 @@ class PyramidBuilder(ClusterRoutines):
                 if duration:
                     job.requested_walltime = Duration(duration)
                 if memory:
-                    job.requested_memory = Memory(memory, Memory.GB)
+                    job.requested_memory = Memory(memory, Memory.MB)
                 if cores:
                     if not isinstance(cores, int):
                         raise TypeError(
-                                'Argument "cores" must have type int.')
+                            'Argument "cores" must have type int.'
+                        )
                     if not cores > 0:
                         raise ValueError(
-                                'The value of "cores" must be positive.')
+                            'The value of "cores" must be positive.'
+                        )
                     job.requested_cores = cores
 
                 multi_run_jobs[batch['index']].append(job)

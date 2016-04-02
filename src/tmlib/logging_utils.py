@@ -77,8 +77,8 @@ def configure_logging(level):
     Logging should only be configured once at the main entry point of the
     application!
     '''
-
-    fmt = '%(asctime)s | %(name)-30s | %(levelname)-8s | %(message)s'
+    # TODO: if level "DEBUG" also provide line number
+    fmt = '%(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 

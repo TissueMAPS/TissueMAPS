@@ -96,29 +96,6 @@ class ChannelLayer(Model):
             CHANNEL_LAYER_LOCATION_FORMAT.format(id=self.id)
         )
 
-    @cached_property
-    def plate_grid(self):
-        '''numpy.ndarray[int]: IDs of plates arranged according to
-        their relative position of the plate within the stitched channel layer
-        '''
-        n = len(self.channel.experiment.plates)
-        if (n / np.ceil(np.sqrt(n))) % 2 == 0:
-            dimensions = (
-                int(np.ceil(np.sqrt(n))), int(n / np.ceil(np.sqrt(n)))
-            )
-        else:
-            dimensions = tuple(np.repeat(int(np.ceil(np.sqrt(n))), 2))
-        cooridinates = list(
-            itertools.product(
-                np.arange(dimensions[0]), np.arange(dimensions[1])
-            )
-        )
-        height, width = dimensions
-        grid = np.zeros((height, width), dtype=int)
-        for i, c in enumerate(cooridinates):
-            grid[c[0], c[1]] = self.channel.experiment.plates[i].id
-        return grid
-
     @property
     def n_levels(self):
         '''int: number of zoom levels'''
@@ -158,11 +135,6 @@ class ChannelLayer(Model):
         return levels
 
     @cached_property
-    def plate_spacer_size(self):
-        '''int: gap between neighboring plates in pixels'''
-        return self.channel.experiment.well_spacer_size * 2
-
-    @cached_property
     def image_size(self):
         '''List[Tuple[int]]: number of pixels along the vertical and horizontal
         axis of the layer at each zoom level; levels are sorted such that the
@@ -180,11 +152,11 @@ class ChannelLayer(Model):
                 'since pyramid has not yet been created'
             )
             sizes = dict()
-            for r in xrange(self.plate_grid.shape[0]):
-                for c in xrange(self.plate_grid.shape[1]):
+            for r in xrange(experiment.plate_grid.shape[0]):
+                for c in xrange(experiment.plate_grid.shape[1]):
                     plate = [
                         p for p in experiment.plates
-                        if p.id == self.plate_grid[r, c]
+                        if p.id == experiment.plate_grid[r, c]
                     ][0]
                     sizes[(r, c)] = plate.image_size
             if len(set(sizes.values())) > 1:
@@ -192,10 +164,12 @@ class ChannelLayer(Model):
                 raise ValueError('Dimensions must be the same for all plates.')
             # Introduce spacers between plates
             row_spacer_height = (
-                (self.plate_grid.shape[0] - 1) * self.plate_spacer_size
+                (experiment.plate_grid.shape[0] - 1) *
+                experiment.plate_spacer_size
             )
             column_spacer_width = (
-                (self.plate_grid.shape[1] - 1) * self.plate_spacer_size
+                (experiment.plate_grid.shape[1] - 1) *
+                experimet.plate_spacer_size
             )
             height, width = tuple(
                 np.sum(np.array(sizes.values()), axis=0) +
@@ -283,7 +257,7 @@ class ChannelLayer(Model):
         '''
         mappings = list()
         experiment = self.channel.experiment
-        y_offset_site, x_offset_site = self.calc_site_offset(image_file.site)
+        y_offset_site, x_offset_site = image_file.site.offset
         # Determine the index and offset of each tile whose pixels are part of
         # the image
         row_info = self._calc_tile_indices_and_offsets(
@@ -348,7 +322,7 @@ class ChannelLayer(Model):
         mapping = collections.defaultdict(list)
         experiment = self.channel.experiment
         for file in self.image_files:
-            y_offset_site, x_offset_site = self.calc_site_offset(file.site)
+            y_offset_site, x_offset_site = file.site.offset
             row_indices = self._calc_tile_indices(
                 y_offset_site, file.site.image_size[0],
                 experiment.vertical_site_displacement
@@ -395,53 +369,53 @@ class ChannelLayer(Model):
                 coordinates.append((r, c))
         return coordinates
 
-    def calc_site_offset(self, site):
-        '''Calculate offset of a `site` within the layer.
+    # def calc_site_offset(self, site):
+    #     '''Calculate offset of a `site` within the layer.
 
-        Parameters
-        ----------
-        site: tmlib.models.Site
-            site for which offset should be calculated
+    #     Parameters
+    #     ----------
+    #     site: tmlib.models.Site
+    #         site for which offset should be calculated
 
-        Returns
-        -------
-        Tuple[int]
-            y, x coordinate of the top, left corner of the site relative to
-            the layer overview at the maximum zoom level
-        '''
-        well = site.well
-        plate = well.plate
-        experiment = self.channel.experiment
-        plate_coordinate = tuple(
-            [a[0] for a in np.where(self.plate_grid == plate.id)]
-        )
-        # NOTE: Shifts of sites between cycles only affect pixels within the
-        # site and are therefore handled separately.
-        y_offset = (
-            # Sites in the well above the site
-            site.coordinate[0] * site.image_size[0] +
-            # Potential displacement of sites in y-direction
-            site.coordinate[0] * experiment.vertical_site_displacement +
-            # Wells in the plate above the well
-            plate.nonempty_rows.index(well.coordinate[0]) * well.image_size[0] +
-            # Gap introduced between wells
-            plate.nonempty_rows.index(well.coordinate[0]) * experiment.well_spacer_size +
-            # Plates above the plate
-            plate_coordinate[0] * plate.image_size[0]
-        )
-        x_offset = (
-            # Sites in the well left of the site
-            site.coordinate[1] * site.image_size[1] +
-            # Potential displacement of sites in y-direction
-            site.coordinate[1] * experiment.horizontal_site_displacement +
-            # Wells in the plate left of the well
-            plate.nonempty_columns.index(well.coordinate[1]) * well.image_size[1] +
-            # Gap introduced between wells
-            plate.nonempty_columns.index(well.coordinate[1]) * experiment.well_spacer_size +
-            # Plates left of the plate
-            plate_coordinate[1] * plate.image_size[0]
-        )
-        return (y_offset, x_offset)
+    #     Returns
+    #     -------
+    #     Tuple[int]
+    #         y, x coordinate of the top, left corner of the site relative to
+    #         the layer overview at the maximum zoom level
+    #     '''
+    #     well = site.well
+    #     plate = well.plate
+    #     experiment = self.channel.experiment
+    #     plate_coordinate = tuple(
+    #         [a[0] for a in np.where(experiment.plate_grid == plate.id)]
+    #     )
+    #     # NOTE: Shifts of sites between cycles only affect pixels within the
+    #     # site and are therefore handled separately.
+    #     y_offset = (
+    #         # Sites in the well above the site
+    #         site.coordinate[0] * site.image_size[0] +
+    #         # Potential displacement of sites in y-direction
+    #         site.coordinate[0] * experiment.vertical_site_displacement +
+    #         # Wells in the plate above the well
+    #         plate.nonempty_rows.index(well.coordinate[0]) * well.image_size[0] +
+    #         # Gap introduced between wells
+    #         plate.nonempty_rows.index(well.coordinate[0]) * experiment.well_spacer_size +
+    #         # Plates above the plate
+    #         plate_coordinate[0] * plate.image_size[0]
+    #     )
+    #     x_offset = (
+    #         # Sites in the well left of the site
+    #         site.coordinate[1] * site.image_size[1] +
+    #         # Potential displacement of sites in y-direction
+    #         site.coordinate[1] * experiment.horizontal_site_displacement +
+    #         # Wells in the plate left of the well
+    #         plate.nonempty_columns.index(well.coordinate[1]) * well.image_size[1] +
+    #         # Gap introduced between wells
+    #         plate.nonempty_columns.index(well.coordinate[1]) * experiment.well_spacer_size +
+    #         # Plates left of the plate
+    #         plate_coordinate[1] * plate.image_size[0]
+    #     )
+    #     return (y_offset, x_offset)
 
     @cached_property
     def tile_coordinate_group_map(self):
