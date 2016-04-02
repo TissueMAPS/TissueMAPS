@@ -169,7 +169,7 @@ class ChannelLayer(Model):
             )
             column_spacer_width = (
                 (experiment.plate_grid.shape[1] - 1) *
-                experimet.plate_spacer_size
+                experiment.plate_spacer_size
             )
             height, width = tuple(
                 np.sum(np.array(sizes.values()), axis=0) +
