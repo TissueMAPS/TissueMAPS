@@ -19,23 +19,20 @@ logger = logging.getLogger(__name__)
 
 class Features(object):
 
-    '''
-    Abstract base class for the extraction of features from images.
-    '''
+    '''Abstract base class for the extraction of features from images.'''
 
     __metaclass__ = ABCMeta
 
     def __init__(self, label_image, intensity_image=None):
         '''
-        Initialize an instance of class Features.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
             labeled image, where background pixels are zero and
-            and object pixels have a unique identifier value
-        intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            intensity image
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
+        intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8], optional
+            intensity image (default: ``None``)
 
         Raises
         ------
@@ -49,25 +46,22 @@ class Features(object):
         if self.intensity_image is not None:
             if not str(self.intensity_image.dtype).startswith('uint'):
                 raise TypeError(
-                        'Argument "intensity_image" must have unsigned '
-                        'integer type')
+                    'Argument "intensity_image" must have unsigned '
+                    'integer type'
+                )
             if self.label_image.shape != self.intensity_image.shape:
                 raise ValueError(
-                        'Arrays "label_image" and "intensity_image" must have '
-                        'identical shape.')
+                    'Arrays "label_image" and "intensity_image" must have '
+                    'identical shape.'
+                )
 
     @cached_property
     def names(self):
-        '''
-        Returns
-        -------
-        List[str]
-            names of the features
-        '''
+        '''List[str]: names of the features'''
         return [
             '{feature_group}_{feature_name}'.format(
-                feature_group=self._feature_group,
-                feature_name=f)
+                feature_group=self._feature_group, feature_name=f
+            )
             for f in self._feature_names
         ]
 
@@ -81,51 +75,46 @@ class Features(object):
 
     @abstractmethod
     def extract(self):
-        '''
-        Extract features from objects.
+        '''Extracts features for segmented objects.
 
         Returns
         -------
-        pandas.DataFrame
+        pandas.DataFrame[float]
             extracted feature values for each object in `label_image`
+
+        Note
+        ----
+        The index must match the object labels in the range [1, *n*], where
+        *n* is the number of segmented objects.
         '''
         pass
 
     @property
     def object_ids(self):
-        '''
-        Returns
-        -------
-        numpy.array[numpy.int]
-            one-based unique id of each object in `label_image`
-        '''
+        '''numpy.array[numpy.int]: one-based unique id of each object in
+        `label_image`'''
         return np.unique(self.label_image[self.label_image > 0])
 
     @property
     def n_objects(self):
-        '''
-        Returns
-        -------
-        int
-            number of objects in `label_image`
-        '''
+        '''int: number of objects in `label_image`'''
         return len(self.object_ids)
 
     def get_object_mask_image(self, object_id):
-        '''
+        '''Extracts the bounding box for a given object from `label_image`.
+
         Returns
         -------
         numpy.ndarray[bool]
-            mask image for given object; the size of the image is determined by
-            the bounding box of the object
+            mask image for given object
         '''
         obj = self.object_properties[object_id]
         img = utils.crop_image(self.label_image, bbox=obj.bbox, pad=True)
-        mask = img == obj.label
-        return mask
+        return img == obj.label
 
     def get_object_intensity_image(self, object_id):
-        '''
+        '''Extracts the bounding box for a given object from `intensity_image`.
+
         Returns
         -------
         numpy.ndarray[numpy.uint16 or numpy.uint8]
@@ -133,21 +122,17 @@ class Features(object):
             determined by the bounding box of the object
         '''
         obj = self.object_properties[object_id]
-        img = utils.crop_image(self.intensity_image, bbox=obj.bbox, pad=True)
-        return img
+        return utils.crop_image(self.intensity_image, bbox=obj.bbox, pad=True)
 
     @cached_property
     def object_properties(self):
-        '''
-        Returns
-        -------
-        Dict[int, skimage.measure._regionprops._RegionProperties]
-            mapping of object id to properties for each object in `label_image`
+        '''Dict[int, skimage.measure._regionprops._RegionProperties]: mapping
+        of object id to properties for each object in `label_image`
         '''
         logger.debug('measure object properties')
         props = measure.regionprops(
-                    self.label_image,
-                    intensity_image=self.intensity_image)
+            self.label_image, intensity_image=self.intensity_image
+        )
         return {region.label: region for region in props}
 
     def plot(self):
@@ -159,26 +144,23 @@ class Intensity(Features):
 
     def __init__(self, label_image, intensity_image):
         '''
-        Initialize an instance of class Features.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
             labeled image, where background pixels are zero and
-            and object pixels have a unique identifier value
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
         '''
-        super(Intensity, self).__init__(
-                label_image, intensity_image)
+        super(Intensity, self).__init__(label_image, intensity_image)
 
     @property
     def _feature_names(self):
         return ['max', 'mean', 'min', 'sum', 'std']
 
     def extract(self):
-        '''
-        Extract intensity features by measuring maximum, minimum, sum,
+        '''Extracts intensity features by measuring maximum, minimum, sum,
         mean and the standard deviation of pixel values within each object
         region in the intensity image.
 
@@ -211,35 +193,30 @@ class Intensity(Features):
                         'Number of features for object %d is incorrect.', obj)
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
-        return pd.DataFrame(features)
+        return pd.DataFrame(features, index=self.object_ids)
 
 
 class Morphology(Features):
 
     def __init__(self, label_image):
         '''
-        Initialize an instance of class Morphology.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zeros and
-            and object pixels have a unique identifier value
+            labeled image, where background pixels are zero and
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
         '''
         super(Morphology, self).__init__(label_image)
 
     @property
     def _feature_names(self):
         return [
-            'area',
-            'eccentricity',
-            'solidity',
-            'form-factor'
+            'area', 'eccentricity', 'solidity', 'form-factor'
         ]
 
     def extract(self):
-        '''
-        Extract morphology features, such as the size and the shape of
+        '''Extracts morphology features, such as the size and the shape of
         each object in the image.
 
         Returns
@@ -264,7 +241,7 @@ class Morphology(Features):
                         'Number of features for object %d is incorrect.', obj)
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
-        return pd.DataFrame(features)
+        return pd.DataFrame(features, index=self.object_ids)
 
 
 class Haralick(Features):
@@ -279,13 +256,12 @@ class Haralick(Features):
 
     def __init__(self, label_image, intensity_image):
         '''
-        Initialize an instance of class Haralick.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zeros and
-            and object pixels have a unique identifier value
+            labeled image, where background pixels are zero and
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
 
@@ -293,7 +269,7 @@ class Haralick(Features):
         ----
         Computation of Haralick features is computational intensive and may
         require a lot of memory, in particular for 16 bit images. Therefore,
-        the `intensity_image` is streched to the range [0, 255].
+        the `intensity_image` is "stretched" to the range [0, 255].
         For further details see
         `Mahotas FAQs <http://mahotas.readthedocs.org/en/latest/faq.html#i-ran-out-of-memory-computing-haralick-features-on-16-bit-images-is-it-not-supported>`_  
         '''
@@ -319,8 +295,7 @@ class Haralick(Features):
         ]
 
     def extract(self):
-        '''
-        Extract Haralick texture features.
+        '''Extracts Haralick texture features.
 
         Returns
         -------
@@ -353,13 +328,12 @@ class Haralick(Features):
                         'Number of features for object %d is incorrect.', obj)
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
-        return pd.DataFrame(features)
+        return pd.DataFrame(features, index=self.object_ids)
 
 
 class TAS(Features):
 
-    '''
-    Class for calculating Threshold Adjacency Statistics based on
+    '''Class for calculating Threshold Adjacency Statistics based on
     Hamilton [1]_.
 
     References
@@ -369,13 +343,12 @@ class TAS(Features):
 
     def __init__(self, label_image, intensity_image):
         '''
-        Initialize an instance of class TAS.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zeros and
-            and object pixels have a unique identifier value
+            labeled image, where background pixels are zero and
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
         '''
@@ -384,16 +357,17 @@ class TAS(Features):
 
     @property
     def _feature_names(self):
-        return ['center-%s' % i for i in xrange(9)] + \
-                ['n-center-%s' % i for i in xrange(9)] + \
-                ['mu-margin-%s' % i for i in xrange(9)] + \
-                ['n-mu-margin-%s' % i for i in xrange(9)] + \
-                ['mu-%s' % i for i in xrange(9)] + \
-                ['n-mu-%s' % i for i in xrange(9)]
+        return (
+            ['center-%s' % i for i in xrange(9)] +
+            ['n-center-%s' % i for i in xrange(9)] +
+            ['mu-margin-%s' % i for i in xrange(9)] +
+            ['n-mu-margin-%s' % i for i in xrange(9)] +
+            ['mu-%s' % i for i in xrange(9)] +
+            ['n-mu-%s' % i for i in xrange(9)]
+        )
 
     def extract(self):
-        '''
-        Extract Threshold Adjacency Statistics.
+        '''Extracts Threshold Adjacency Statistics.
 
         Returns
         -------
@@ -416,28 +390,26 @@ class TAS(Features):
             feats = mh.features.pftas(img, T=self.threshold)
             if len(feats) != len(self.names):
                 raise IndexError(
-                        'Number of features for object %d is incorrect.', obj)
+                    'Number of features for object %d is incorrect.', obj
+                )
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
-        return pd.DataFrame(features)
+        return pd.DataFrame(features, index=self.object_ids)
 
 
 class Gabor(Features):
 
-    '''
-    Class for calculating Gabor texture features.
-    '''
+    '''Class for calculating Gabor texture features.'''
 
     def __init__(self, label_image, intensity_image,
                  theta_range=4, frequencies={1, 5, 10}):
         '''
-        Initialize an instance of class Gabor.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zeros and
-            and object pixels have a unique identifier value
+            labeled image, where background pixels are zero and
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
         theta_range: int, optional
@@ -455,10 +427,9 @@ class Gabor(Features):
         return ['frequency-%.2f' % f for f in self.frequencies]
 
     def extract(self):
-        '''
-        Extract Gabor texture features by filtering the intensity image with
-        Gabor kernels for a defined range of `frequency`, `sigma` and `theta`
-        values and calculating a score for each object.
+        '''Extracts Gabor texture features by filtering the intensity image with
+        Gabor kernels for a defined range of `frequency` and `theta` values and
+        then calculating a score for each object.
 
         Returns
         -------
@@ -485,26 +456,26 @@ class Gabor(Features):
                     theta = np.pi * angle / self.theta_range
                     g = gabor(img, label, freq, theta)
                     score_r = ndi.measurements.sum(
-                                    g.real, label,
-                                    np.arange(1, dtype=np.int32) + 1)
+                        g.real, label, np.arange(1, dtype=np.int32) + 1
+                    )
                     score_i = ndi.measurements.sum(
-                                    g.imag, label,
-                                    np.arange(1, dtype=np.int32) + 1)
+                        g.imag, label, np.arange(1, dtype=np.int32) + 1
+                    )
                     score = np.sqrt(score_r**2 + score_i**2)
                     best_score = np.max([best_score, score])
                 feats.append(best_score)
             if len(feats) != len(self.names):
                 raise IndexError(
-                        'Number of features for object %d is incorrect.', obj)
+                    'Number of features for object %d is incorrect.', obj
+                )
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
-        return pd.DataFrame(features)
+        return pd.DataFrame(features, index=self.object_ids)
 
 
 class Hu(Features):
 
-    '''
-    Class for calculating Hu moments based on Hu [1]_.
+    '''Class for calculating Hu moments based on Hu [1]_.
 
     Refernces
     ---------
@@ -513,13 +484,12 @@ class Hu(Features):
 
     def __init__(self, label_image, intensity_image):
         '''
-        Initialize an instance of class Hu.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zeros and
-            and object pixels have a unique identifier value
+            labeled image, where background pixels are zero and
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
         '''
@@ -530,8 +500,7 @@ class Hu(Features):
         return map(str, range(7))
 
     def extract(self):
-        '''
-        Extract Hu moments.
+        '''Extracts Hu moments.
 
         Returns
         -------
@@ -550,24 +519,21 @@ class Hu(Features):
                         'Number of features for object %d is incorrect.', obj)
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
-        return pd.DataFrame(features)
+        return pd.DataFrame(features, index=self.object_ids)
 
 
 class Zernike(Features):
 
-    '''
-    Class for calculating Zernike moments.
-    '''
+    '''Class for calculating Zernike moments.'''
 
     def __init__(self, label_image, radius=100):
         '''
-        Initialize an instance of class Zernike.
-
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zeros and
-            and object pixels have a unique identifier value
+            labeled image, where background pixels are zero and
+            and pixels belonging to a segmented object (connected component)
+            are labeled with a unique identifier value
         radius: int, optional
             radius for rescaling of images to achieve scale invariance
             (default: ``100``)
@@ -586,8 +552,7 @@ class Zernike(Features):
         return feats
 
     def extract(self):
-        '''
-        Extract Zernike moments.
+        '''Extracts Zernike moments.
 
         Returns
         -------
@@ -602,13 +567,15 @@ class Zernike(Features):
             mask = self.get_object_mask_image(obj)
             mask_rs = mh.imresize(mask, [self.radius*2, self.radius*2])
             feats = mh.features.zernike_moments(
-                            mask_rs, degree=self.degree, radius=self.radius)
+                mask_rs, degree=self.degree, radius=self.radius
+            )
             if len(feats) != len(self.names):
                 raise IndexError(
-                        'Number of features for object %d is incorrect.', obj)
+                    'Number of features for object %d is incorrect.', obj
+                )
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
-        return pd.DataFrame(features)
+        return pd.DataFrame(features, index=self.object_ids)
 
 
 # def measure_surf(im, mask):
