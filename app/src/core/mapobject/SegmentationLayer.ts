@@ -13,7 +13,7 @@ class SegmentationLayer extends VectorTileLayer {
     objectTypeName: string;
 
     constructor(objectTypeName: string, opt: SegmentationLayerOpts) {
-        this.objectTypeName = objectTypeName;
+         
         var url = '/api/experiments/' + opt.experimentId + '/mapobjects/' +
                   objectTypeName + '?x={x}&y={y}&z={z}&t=' + opt.t + '&zlevel=' + opt.zlevel;
         super({
@@ -21,6 +21,8 @@ class SegmentationLayer extends VectorTileLayer {
             size: opt.size,
             url: url
         });
+
+        this.objectTypeName = objectTypeName;
     }
 }
 

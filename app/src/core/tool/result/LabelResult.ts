@@ -4,9 +4,10 @@ class LabelResult extends LayerResult {
 
     constructor(name: string, session: ToolSession,
                 args: {id: number;}) {
-        this.id = args.id;
-        this.name = name;
+
         super(name, session);
+
+        this.id = args.id;
     }
 
     show(viewer: AppInstance) {

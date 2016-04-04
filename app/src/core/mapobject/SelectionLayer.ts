@@ -59,9 +59,10 @@ class SelectionLayer extends VectorLayer {
     name: string;
 
     constructor(name: string, opt: SelectionLayerOpts) {
-        this.name = name;
 
         super({ visible: opt.visible });
+
+        this.name = name;
 
         this.color = opt.color;
         var size = 42; // Compute via resolution

@@ -17,15 +17,17 @@ class ChannelLayer extends ImageTileLayer {
     zplane: number;
 
     constructor(args: ChannelLayerArgs) {
+        
+        var tileLayerArgs = {
+            imageSize: args.image_size,
+            url: '/api/channel_layers/' + args.id + '/tiles/',
+            additiveBlend: true
+        };
+        super(tileLayerArgs);
+
         this.id = args.id;
         this.tpoint = args.tpoint;
         this.zplane = args.zplane;
 
-        var tileLayerArgs = {
-            imageSize: args.image_size,
-            url: '/api/channel_layers/' + this.id + '/tiles/',
-            additiveBlend: true
-        };
-        super(tileLayerArgs);
     }
 }
