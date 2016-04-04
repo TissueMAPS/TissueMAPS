@@ -42,8 +42,14 @@ class SiteShift(Model):
     cycle_id = Column(Integer, ForeignKey('cycles.id'))
 
     # Relationships to other tables
-    site = relationship('Site', backref='shifts')
-    cycle = relationship('Cycle', backref='site_shifts')
+    site = relationship(
+        'Site',
+        backref=backref('shifts', cascade='all, delete-orphan')
+    )
+    cycle = relationship(
+        'Cycle',
+        backref=backref('site_shifts', cascade='all, delete-orphan')
+    )
 
     def __init__(self, x, y, site_id, cycle_id):
         '''
@@ -108,7 +114,12 @@ class SiteIntersection(Model):
     site_id = Column(Integer, ForeignKey('sites.id'))
 
     # Relationships to other tables
-    site = relationship('Site', backref=backref('intersection', uselist=False))
+    site = relationship(
+        'Site',
+        backref=backref(
+            'intersection', uselist=False, cascade='all, delete-orphan'
+        )
+    )
 
     def __init__(self, upper_overhang, lower_overhang,
                  right_overhang, left_overhang, site_id):

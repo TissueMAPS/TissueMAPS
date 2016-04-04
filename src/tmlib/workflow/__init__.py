@@ -1,5 +1,4 @@
-'''`TissueMAPS` workflow.
-'''
+'''`TissueMAPS` workflow.'''
 import importlib
 
 from workflow import WorkflowStep
@@ -80,4 +79,3 @@ def load_var_method_args(step_name, method_name):
         return getattr(module, class_name)
     except AttributeError:
         return None
-

@@ -1,36 +1,32 @@
+import os
 import logging
 
+from tmlib.utils import same_docstring_as
 from tmlib.workflow.tmaps import logo
-from tmlib.workflow.api import WorkflowClusterRoutines
-from tmlib.models import Experiment
-from tmilb.workflow import cli
+from tmlib.workflow.tmaps.api import WorkflowManager
+from tmlib.workflow import cli
 from tmlib.workflow.args import SubmitArgs
-from tmlib.workflow.args import ResumeArgs
+from tmlib.workflow.args import ResubmitArgs
 
 logger = logging.getLogger(__name__)
 
 
 class Tmaps(object):
 
-    '''
-    Command line interface for building, submitting, and monitoring
+    '''Command line interface for building, submitting, and monitoring
     `TissueMAPS` workflows.
     '''
 
-    def __init__(self, experiment, verbosity, **kwargs):
+    def __init__(self, api_instance, verbosity):
         '''
-        Initialize an instance of class Tmaps.
-
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
+        api_instance: tmlib.workflow.tmaps.WorkflowManager
+            instance of API class to which processing is delegated
         verbosity: int
             logging level
-        kwargs: dict
-            additional key-value pairs that are ignored
         '''
-        self.experiment = experiment
+        self.api_instance = api_instance
         self.verbosity = verbosity
 
     @staticmethod
@@ -39,23 +35,11 @@ class Tmaps(object):
 
     @property
     def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the command line program
-        '''
+        '''str: name of the step (command line program)'''
         return self.__class__.__name__.lower()
 
-    @property
-    def _api_instance(self):
-        return WorkflowClusterRoutines(
-                    self.experiment, self.name, self.verbosity)
-
     def submit(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "submit" subparser.
+        '''Processes arguments provided by the "submit" subparser.
 
         Parameters
         ----------
@@ -64,55 +48,52 @@ class Tmaps(object):
         '''
         self._print_logo()
         logger.info('submit workflow')
-        api = self._api_instance
-        jobs = api.create_jobs(
-                    start_stage=args.variable_args.stage,
-                    start_step=args.variable_args.step,
-                    waiting_time=args.variable_args.wait
+        api = self.api_instance
+        workflow = api.create_workflow(
+            waiting_time=args.variable_args.wait
         )
-        session = api.create_session(backup=args.backup)
-        session.add(jobs)
+        session = api.create_gc3pie_session()
+        logger.debug('add jobs to session "%s"', session.name)
+        session.add(workflow)
         session.save_all()
         logger.debug('add session to engine store')
-        engine = api.create_engine()
+        engine = api.create_gc3pie_engine()
         engine._store = session.store
         logger.info('submit and monitor jobs')
         try:
-            api.submit_jobs(jobs, engine, args.interval, args.depth)
+            api.submit_jobs(workflow, engine, args.interval, args.depth)
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')
             while True:
-                engine.kill(jobs)
+                engine.kill(workflow)
                 engine.progress()
-                if jobs.is_terminated:
+                if workflow.is_terminated:
                     break
-        except Exception:
+        except:
             raise
 
-    def resume(self, args):
-        '''
-        Initialize an instance of the step-specific API class
-        and process arguments provided by the "resume" subparser.
+    def resubmit(self, args):
+        '''Processes arguments provided by the "resubmit" subparser.
 
         Parameters
         ----------
-        args: tmlib.args.ResumeArgs
+        args: tmlib.args.ResubmitArgs
             method-specific arguments
         '''
         self._print_logo()
-        logger.info('resume workflow')
-        api = self._api_instance
-        session = api.create_session(overwrite=False)
+        api = self.api_instance
+        session = api.create_gc3pie_session()
+        logger.debug('load jobs from session "%s"', session.name)
+        job_ids = session.list_ids()
+        workflow = session.load(int(job_ids[-1]))
+        workflow.start_stage = args.variable_args.stage
         logger.debug('add session to engine store')
-        engine = api.create_engine()
+        engine = api.create_gc3pie_engine()
         engine._store = session.store
-        logger.debug('load jobs from session')
-        task_ids = session.list_ids()
-        jobs = session.load(task_ids[-1])
-        logger.info('submit and monitor jobs')
+        logger.info('resubmit and monitor jobs')
         try:
-            api.submit_jobs(jobs, engine, args.interval, args.depth)
+            api.submit_jobs(workflow, engine, args.interval, args.depth)
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')
@@ -121,37 +102,26 @@ class Tmaps(object):
                 engine.progress()
                 if jobs.is_terminated:
                     break
-        except Exception:
+        except:
             raise
 
     def _call(self, args):
         method_args = cli.create_method_args(
-                            step_name=self.name, **vars(args))
-        cli.call_cli_method(self, args.method_name, method_args)
+            step_name=self.name, **vars(args)
+        )
+        getattr(self, args.method_name)(method_args)
 
     @staticmethod
-    def call(args):
-        '''
-        Initialize an instance of the cli class with the parsed command
-        line arguments and call the method matching the name of the subparser.
-
-        Parameters
-        ----------
-        args: arparse.Namespace
-            parsed command line arguments
-
-        See also
-        --------
-        :py:mod:`tmlib.metaextract.argparser`
-        '''
-        experiment = Experiment(args.experiment_dir)
-        inst = Tmaps(experiment, args.verbosity)
-        inst._call(args)
+    @same_docstring_as(cli.CommandLineInterface.call)
+    def call(name, args):
+        api_instance = WorkflowManager(
+            args.experiment_id, args.verbosity
+        )
+        Tmaps(api_instance, args.verbosity)._call(args)
 
     @staticmethod
     def main(parser):
-        '''
-        Main entry point for command line interface.
+        '''Main entry point for command line interface.
 
         Parsers the command line arguments to the corresponding handler
         and configures logging.
@@ -200,19 +170,21 @@ class Tmaps(object):
                                 methods={})
 
         submit_parser = subparsers.add_parser(
-            'submit', help='submit and monitor a TissueMAPS workflow')
+            'submit', help='create, submit and monitor a workflow')
         submit_parser.description = '''
-            Create a workflow, submit it to the cluster, monitor its
-            processing and collect the outputs of individual steps.
+            Create a workflow, submit it to the cluster and monitor its
+            processing.
         '''
-        SubmitArgs().add_to_argparser(submit_parser,
-                                      ignore={'memory', 'duration'})
+        SubmitArgs().add_to_argparser(
+            submit_parser, ignore={'memory', 'duration'}
+        )
 
-        resume_parser = subparsers.add_parser(
-            'resume', help='resume a previously submitted workflow')
-        resume_parser.description = '''
-            Resume a workflow at a given stage/step.
+        resubmit_parser = subparsers.add_parser(
+            'resubmit', help='resubmit and monitor an already created workflow')
+        resubmit_parser.description = '''
+            Resubmit an already created workflow to the cluster and monitor
+            its processing.
         '''
-        ResumeArgs().add_to_argparser(resume_parser)
+        ResubmitArgs().add_to_argparser(resubmit_parser)
 
         return (parser, subparsers)

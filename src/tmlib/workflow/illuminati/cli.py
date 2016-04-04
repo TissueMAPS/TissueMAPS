@@ -28,7 +28,5 @@ class Illuminati(CommandLineInterface):
     @staticmethod
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):
-        api_instance = PyramidBuilder(
-            args.experiment_id, name, args.verbosity
-        )
+        api_instance = PyramidBuilder(args.experiment_id, args.verbosity)
         Illuminati(api_instance, args.verbosity)._call(args)

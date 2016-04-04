@@ -13,6 +13,7 @@ from tmlib.image import ChannelImage
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
+from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import MultiRunJobCollection
 from tmlib.workflow.workflow import WorkflowStep
 
@@ -21,35 +22,31 @@ logger = logging.getLogger(__name__)
 
 class PyramidBuilder(ClusterRoutines):
 
-    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, verbosity):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        step_name: str
-            name of the corresponding step
         verbosity: int
             logging level
-        **kwargs: dict
-            ignored keyword arguments
         '''
-        super(PyramidBuilder, self).__init__(
-                experiment_id, step_name, verbosity)
+        super(PyramidBuilder, self).__init__(experiment_id, verbosity)
 
-    def list_input_files(self, job_descriptions):
+    def list_input_files(self, batches):
         '''
         Provide a list of all input files that are required by the program.
 
         Parameters
         ----------
-        job_descriptions: List[dict]
+        batches: List[dict]
             job descriptions
         '''
         files = list()
-        if job_descriptions['run']:
+        if batches['run']:
             run_files = utils.flatten([
-                j['inputs'].values() for j in job_descriptions['run']
+                self._make_paths_absolute(j)['inputs'].values()
+                for j in batches['run']
                 if j['index'] == 0  # only base tile inputs
             ])
             if all([isinstance(f, list) for f in run_files]):
@@ -227,14 +224,16 @@ class PyramidBuilder(ClusterRoutines):
                         })
         return job_descriptions
 
-    def create_jobs(self, job_descriptions,
+    def create_jobs(self, step, batches,
                     duration=None, memory=None, cores=None):
         '''Create jobs that can be submitted for processing.
 
         Parameters
         ----------
-        job_descriptions: Dict[List[dict]]
-            description of inputs and outputs of individual computational jobs
+        step: tmlib.workflow.WorkflowStep
+            the step to which jobs should be added
+        batches: Dict[List[dict]]
+            job descriptions
         duration: str, optional
             computational time that should be allocated for a single job;
             in HH:MM:SS format (default: ``None``)
@@ -250,61 +249,50 @@ class PyramidBuilder(ClusterRoutines):
         tmlib.tmaps.workflow.WorkflowStep
             collection of jobs
         '''
-        logger.info('create workflow step')
+        logger.info('create jobs for "run" phase')
+        multi_run_jobs = collections.defaultdict(list)
+        for i, batch in enumerate(batches['run']):
 
-        with tmlib.models.utils.Session() as session:
-            experiment = session.query(tmlib.models.Experiment).\
-                get(self.experiment_id)
-            submission = tmlib.models.Submission(experiment_id=experiment.id)
-            session.add(submission)
-            session.flush()
-
-            logger.info('create jobs for "run" phase')
-            multi_run_jobs = collections.defaultdict(list)
-            for i, batch in enumerate(job_descriptions['run']):
-
-                job = RunJob(
-                    step_name=self.step_name,
-                    arguments=self._build_run_command(batch),
-                    output_dir=self.log_location,
-                    job_id=batch['id'],
-                    index=batch['index'],
-                    submission_id=submission.id
-                )
-                if duration:
-                    job.requested_walltime = Duration(duration)
-                if memory:
-                    job.requested_memory = Memory(memory, Memory.GB)
-                if cores:
-                    if not isinstance(cores, int):
-                        raise TypeError(
-                                'Argument "cores" must have type int.')
-                    if not cores > 0:
-                        raise ValueError(
-                                'The value of "cores" must be positive.')
-                    job.requested_cores = cores
-
-                multi_run_jobs[batch['index']].append(job)
-
-            run_jobs = MultiRunJobCollection(
+            job = RunJob(
                 step_name=self.step_name,
-                submission_id=submission.id
+                arguments=self._build_run_command(batch),
+                output_dir=self.log_location,
+                job_id=batch['id'],
+                index=batch['index'],
+                submission_id=step.submission_id
             )
-            for index, jobs in multi_run_jobs.iteritems():
-                run_jobs.add(
-                    RunJobCollection(
-                        step_name=self.step_name,
-                        jobs=jobs,
-                        index=index,
-                        submission_id=submission.id
+            if duration:
+                job.requested_walltime = Duration(duration)
+            if memory:
+                job.requested_memory = Memory(memory, Memory.MB)
+            if cores:
+                if not isinstance(cores, int):
+                    raise TypeError(
+                        'Argument "cores" must have type int.'
                     )
-                )
+                if not cores > 0:
+                    raise ValueError(
+                        'The value of "cores" must be positive.'
+                    )
+                job.requested_cores = cores
 
-            return WorkflowStep(
-                name=self.step_name,
-                run_jobs=run_jobs,
-                submission_id=submission.id
+            multi_run_jobs[batch['index']].append(job)
+
+        step.run_jobs = MultiRunJobCollection(
+            step_name=self.step_name,
+            submission_id=step.submission_id
+        )
+        for index, jobs in multi_run_jobs.iteritems():
+            step.run_jobs.add(
+                SingleRunJobCollection(
+                    step_name=self.step_name,
+                    jobs=jobs,
+                    index=index,
+                    submission_id=step.submission_id
+                )
             )
+
+        return step
 
     def _create_nonempty_maxzoom_level_tiles(self, batch):
         with tmlib.models.utils.Session() as session:
@@ -565,7 +553,7 @@ class PyramidBuilder(ClusterRoutines):
         Parameters
         ----------
         batch: dict
-            job_descriptions element
+            batches element
         '''
         if batch['index'] == 0:
             if batch.get('image_file_ids', None):
@@ -579,7 +567,24 @@ class PyramidBuilder(ClusterRoutines):
     def collect_job_output(self, batch):
         pass
 
-    @utils.notimplemented
-    def apply_statistics(self, output_dir, plates, wells, sites, channels,
-                         tpoints, zplanes, **kwargs):
-        pass
+
+def factory(experiment_id, verbosity, **kwargs):
+    '''Factory function for the instantiation of a `illuminati`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    **kwargs: dict
+        ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.PyramidBuilder
+        API instance
+    '''
+    return PyramidBuilder(experiment_id, verbosity)

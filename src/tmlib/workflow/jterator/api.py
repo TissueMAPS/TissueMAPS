@@ -3,7 +3,6 @@ import sys
 import shutil
 import logging
 import numpy as np
-import collections
 import matlab_wrapper as matlab
 from cached_property import cached_property
 
@@ -11,13 +10,14 @@ import tmlib.models
 from tmlib.utils import autocreate_directory_property
 from tmlib.utils import notimplemented
 from tmlib.utils import flatten
+from tmlib.writers import TextWriter
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import PipelineDescriptionError
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.workflow.jterator.utils import complete_path
 from tmlib.workflow.jterator.utils import get_module_path
 from tmlib.workflow.jterator.project import JtProject
-from tmlib.workflow.jterator.module import ImageProcessingModule
+from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.checkers import PipelineChecker
 
 logger = logging.getLogger(__name__)
@@ -27,15 +27,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     '''Class for running image processing pipelines.'''
 
-    def __init__(self, experiment_id, step_name, verbosity, pipeline,
-                 pipe=None, handles=None, **kwargs):
+    def __init__(self, experiment_id, verbosity, pipeline,
+                 pipe=None, handles=None):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        step_name: str
-            name of the corresponding program (command line interface)
         verbosity: int
             logging level
         pipeline: str
@@ -45,8 +43,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             source code and descriptor files (default: ``None``)
         handles: List[dict], optional
             description of module input/output (default: ``None``)
-        kwargs: dict, optional
-            additional key-value pairs that are ignored
 
         Note
         ----
@@ -54,11 +50,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         they are obtained from the YAML *.pipe* and *.handle* descriptor
         files on disk.
         '''
-        super(ImageAnalysisPipeline, self).__init__(
-                experiment_id, step_name, verbosity)
+        super(ImageAnalysisPipeline, self).__init__(experiment_id, verbosity)
         self.pipe_name = pipeline
-        self.step_name = step_name
-        self.verbosity = verbosity
         self.engines = {'Python': None, 'R': None}
         self.project = JtProject(
             step_location=self.step_location, pipe_name=self.pipe_name,
@@ -150,7 +143,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 )
             name = self.project.handles[i]['name']
             description = self.project.handles[i]['description']
-            module = ImageProcessingModule(
+            module = ImageAnalysisModule(
                 name=name, source_file=source_path, description=description
             )
             pipeline.append(module)
@@ -303,7 +296,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # Overwrite method to account for additional "--pipeline" argument
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        command.append(self.experiment.dir)
+        command.append(self.experiment_id)
         command.extend(['run', '--job', str(batch['id'])])
         command.extend(['--pipeline', self.pipe_name])
         return command
@@ -328,19 +321,21 @@ class ImageAnalysisPipeline(ClusterRoutines):
         self.start_engines(batch['plot'])
         job_id = batch['id']
 
-        # Load the images,correct them if requested and align them if required.
-        # NOTE: When the experiment was acquired in "multiplexing" mode,
-        # images will be aligned automatically. I assume that this is the
-        # desired behavior, but one should consider making the alignment
-        # optional and give the user the possibility to decide similar to
-        # illumination correction.
+        # Use an in-memory store for pipeline data and only flush/commit them
+        # to the database once the whole pipeline completed successfully.
         store = {
             'pipe': dict(),
-            'figures': list(),
-            'objects': dict(),
+            'current_figure': list(),
+            'segmented_objects': dict(),
             'channels': list()
         }
 
+        # Load the images,correct them if requested and align them if required.
+        # NOTE: When the experiment was acquired in "multiplexing" mode,
+        # images will be aligned automatically, assuming that this is the
+        # desired behavior.
+        # TODO: Make the alignment optional and give the user the possibility
+        # to decide similar to illumination correction.
         channel_info = self.project.pipe['description']['input']['channels']
         with tmlib.models.utils.Session() as session:
             for channel_name, file_ids in batch['image_file_ids'].iteritems():
@@ -349,9 +344,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     logger.info('load illumination statistics')
                     stats_file = session.query(tmlib.models.IllumstatsFile).\
                         join(tmlib.models.Channel).\
-                        join(tmlib.models.Experiment).\
                         filter(tmlib.models.Channel.name == channel_name).\
-                        filter(tmlib.models.Experiment.id == self.experiment_id).\
+                        filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
                         one()
                     stats = stats_file.get()
 
@@ -364,51 +358,164 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     if channel_info[channel_name]['correct']:
                         logger.info('correct image for illumination artifacts')
                         image = image.correct(stats)
-                    image = image.align()  # images are aligned by default
+                    logger.info('align image')
+                    image = image.align()  # shifted and cropped!
                     arrays.append(image.pixels)
 
                 if len(arrays) > 1:
-                    stack = np.dstack(arrays)
+                    logger.info('stack images along third axis')
+                    store['pipe'][channel_name] = np.dstack(arrays)
                 else:
-                    stack = arrays[0]
-
-                import ipdb; ipdb.set_trace()
-
-            # Add some metadata to the HDF5 file, which may be required later
-            if i == 0:
-                logger.info('add metadata to data file')
-                md = img.metadata
-                shift_y = md.upper_overhang - md.y_shift
-                if shift_y < 0:
-                    offset_y = abs(shift_y)
-                else:
-                    offset_y = 0
-                shift_x = md.left_overhang - md.x_shift
-                if shift_x < 0:
-                    offset_x = abs(shift_x)
-                else:
-                    offset_x = 0
+                    store['pipe'][channel_name] = arrays[0]
 
         # Run modules
+        logger.info('run pipeline')
         for i, module in enumerate(self.pipeline):
             logger.info('run module "%s"', module.name)
             module.update_handles(store, batch['plot'])
             output = module.run(self.engines[module.language])
 
             log_files = module.build_log_filenames(
-                                self.module_log_location, job_id)
-            module.write_output_and_errors(
-                log_files['stdout'], output['stdout'],
-                log_files['stderr'], output['stderr'])
+                self.module_log_location, job_id
+            )
+            logger.debug('write standard output and error to log files')
+            with TextWriter(log_files['stdout']) as f:
+                f.write(output['stdout'])
+            with TextWriter(log_files['stderr']) as f:
+                f.write(output['stderr'])
 
             if not output['success']:
                 sys.exit(output['error_message'])
 
             store = module.update_store(store)
 
-        # 
+            if batch['plot']:
+                logger.debug('write figure to file')
+                figure_file = module.build_figure_filename(
+                    self.figures_location, job_id
+                )
+                with TextWriter(figure_file) as f:
+                    f.write(store['current_figure'])
+
+        logger.info('write database entries for identified objects')
+        with tmlib.models.utils.Session() as session:
+            fid = batch['image_file_ids'].values()[0]  # TODO: 3D and time
+            image_file = session.query(tmlib.models.ChannelImageFile).get(fid)
+            y_offset, x_offset = image_file.site.offset
+            # TODO: shift values
+            shift = [
+                s for s in image_file.site.shifts
+                if s.cycle_id == image_file.cycle_id
+            ][0]
+            y_offset += shift.y
+            x_offset += shift.x
+            for obj_name, obj_type in store['segmented_objects'].iteritems():
+                logger.info('add mapobject type "%s"', obj_name)
+                mapobject_type = session.get_or_create(
+                    tmlib.models.MapobjectType,
+                    name=obj_name,
+                    experiment_id=image_file.site.well.plate.experiment_id
+                )
+                session.add(mapobject_type)
+                session.flush()
+                outlines = obj_type.calc_outlines(y_offset, x_offset)
+                feature_ids = dict()
+                for f_name in obj_type.measurements:
+                    feature = session.get_or_create(
+                        tmlib.models.Feature,
+                        name=f_name, mapobject_type_id=mapobject_type.id
+                    )
+                    session.add(feature)
+                    session.flush()
+                    feature_ids[f_name] = feature.id
+                # NOTE: numpy data types are not supported by SQLalchemy!
+                for label in obj_type.labels:
+                    logger.debug('add mapobject #%d', label)
+                    mapobject = session.get_or_create(
+                        tmlib.models.Mapobject,
+                        label=int(label),
+                        site_id=image_file.site.id,
+                        mapobject_type_id=mapobject_type.id
+                    )
+                    mapobject.is_border = bool(obj_type.is_border[label])
+                    session.add(mapobject)
+                    session.flush()
+                    # TODO: 3D and time
+                    # Create a string representation of the polygon using the
+                    # EWKT format, e.g. "POLGON((1 2,3 4,6 7)))"
+                    logger.debug('add mapobject outline')
+                    mapobject_outline = session.get_or_create(
+                        tmlib.models.MapobjectOutline,
+                        tpoint=image_file.tpoint, zplane=image_file.zplane,
+                        mapobject_id=mapobject.id
+                    )
+                    mapobject_outline.geom_poly = 'POLYGON((%s))' % ','.join([
+                        '%d %d' % (coordinate.x, coordinate.y)
+                        for i, coordinate in outlines[label].iterrows()
+                    ])
+                    centroid = np.mean(outlines[label])
+                    mapobject_outline.geom_centroid = 'POINT(%.2f %.2f)' % (
+                        centroid.x, centroid.y
+                    )
+                    session.add(mapobject_outline)
+                    session.flush()
+                    logger.debug('add feature values')
+                    feature_values = list()
+                    for f_name, f_id in feature_ids.iteritems():
+                        logger.debug('add value of feature "%s"', f_name)
+                        fvalue = session.get_or_create(
+                            tmlib.models.FeatureValue,
+                            tpoint=image_file.tpoint,
+                            feature_id=f_id,
+                            mapobject_id=mapobject.id
+                        )
+                        fvalue.value = float(
+                            obj_type.measurements.loc[label, f_name]
+                        )
+                        feature_values.append(fvalue)
+                    session.add_all(feature_values)
+                    session.flush
+
+            # max_z = 6
+            # n_points_in_tile_per_z = calculate_n_points_in_tile(
+            #     session, max_z,
+            #     mapobject_outline_ids=[o.id for o in outline_objects],
+            #     n_tiles_to_sample=10)
+
+            # min_poly_zoom = min([z for z, n in n_points_in_tile_per_z.items()
+            #                      if n <= N_POINTS_PER_TILE_LIMIT])
+            # mapobject_type.min_poly_zoom = min_poly_zoom
+            # session.flush()
 
     @notimplemented
     def collect_job_output(self, batch):
         # TODO: calculate per site, well, and plate statistics
         pass
+
+
+def factory(experiment_id, verbosity, pipeline, **kwargs):
+    '''Factory function for the instantiation of a `jterator`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    pipeline: str
+        name of the pipeline that should be processed
+    **kwargs: dict
+        optional and ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.ImageAnalysisPipeline
+        API instance
+    '''
+    pipe = kwargs.get('pipe', None)
+    handles = kwargs.get('handles', None)
+    return ImageAnalysisPipeline(
+        experiment_id, verbosity, pipeline, pipe, handles
+    )

@@ -72,6 +72,26 @@ class Reader(object):
         pass
 
 
+class TextReader(Reader):
+
+    '''Class for reading data from text files.'''
+
+    @same_docstring_as(Reader.__init__)
+    def __init__(self, filename):
+        super(TextReader, self).__init__(filename)
+
+    def read(self):
+        '''Read data from text file.
+
+        Returns
+        -------
+        lxml.etree._Element
+            xml
+        '''
+        logger.debug('read from file: %s', self.filename)
+        return self._stream.read()
+
+
 class XmlReader(Reader):
 
     # TODO: implement xpath subset reading via lxml

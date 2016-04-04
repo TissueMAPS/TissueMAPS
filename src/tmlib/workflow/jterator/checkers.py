@@ -63,7 +63,7 @@ class PipelineChecker(object):
             raise PipelineDescriptionError(
                 'Pipe file must contain the key "input".'
             )
-        possible_keys = {'channels', 'objects'}
+        possible_keys = {'channels', 'mapobjects'}
         for key in self.pipe_description['input']:
             if key not in possible_keys:
                 raise PipelineDescriptionError(

@@ -104,18 +104,22 @@ def get_task_data(task, description=None):
 
         if isinstance(task_, WorkflowStep):
             job_type = 'step'
+            data['name'] = '  ' + data['name']
         elif (isinstance(task_, ParallelWorkflowStage) or
                 isinstance(task_, SequentialWorkflowStage)):
             job_type = 'stage'
+            data['name'] = ' ' + data['name']
         elif isinstance(task_, Workflow):
             job_type = 'workflow'
         elif isinstance(task, CollectJob):
             job_type = 'phase/job'
-        elif (isinstance(task_, RunJobCollection) or
-                isinstance(task_, MultiRunJobCollection)):
+            data['name'] = '   ' + data['name']
+        elif isinstance(task_, RunJobCollection):
             job_type = 'phase'
+            data['name'] = '   ' + data['name']
         else:
             job_type = 'job'
+            data['name'] = '    ' + data['name']
 
         data['type'] = job_type
 
@@ -147,13 +151,13 @@ def get_task_data(task, description=None):
             raise NotImplementedError(
                 'Unhandled task class %r' % (task_.__class__))
 
-        if task_.execution.state == gc3libs.Run.State.TERMINATED:
-            if not data['time']:
-                # In case duration is not provided, e.g. on localhost
-                data['time'] = format_timestamp(
-                        task_.execution.state_last_changed -
-                        task_.execution.timestamp['SUBMITTED']
-                )
+        # if task_.execution.state == gc3libs.Run.State.TERMINATED:
+        #     if not data['time']:
+        #         # In case duration is not provided, e.g. on localhost
+        #         data['time'] = format_timestamp(
+        #                 task_.execution.state_last_changed -
+        #                 task_.execution.timestamp['SUBMITTED']
+        #         )
 
         if isinstance(task_, gc3libs.workflow.TaskCollection):
             # loop recursively over subtasks

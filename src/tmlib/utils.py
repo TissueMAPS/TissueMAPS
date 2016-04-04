@@ -429,8 +429,7 @@ def assert_path_exists(*expected):
 
 class autocreate_directory_property(object):
 
-    '''
-    Decorator class that acts like a property.
+    '''Decorator class that acts like a property.
     The value represents a path to a directory on disk. The directory is
     automatically created when it doesn't exist. Once created the value
     is cached, so that there is no reattempt to create the directory.
@@ -481,7 +480,7 @@ class autocreate_directory_property(object):
                 % (self.func.__name__, value)
             )
         if not os.path.exists(value):
-            logger.debug('create directory: %s')
+            logger.debug('create directory: %s', value)
             os.mkdir(value)
         return value
 

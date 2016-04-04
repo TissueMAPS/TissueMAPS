@@ -3,7 +3,7 @@ import numpy as np
 import logging
 from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from .. import utils
@@ -41,7 +41,10 @@ class Well(Model, DateMixIn):
     plate_id = Column(Integer, ForeignKey('plates.id'))
 
     # Relationships to other tables
-    plate = relationship('Plate', backref='wells')
+    plate = relationship(
+        'Plate',
+        backref=backref('wells', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, plate_id):
         '''

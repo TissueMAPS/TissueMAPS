@@ -1,5 +1,8 @@
 import os
+import numpy as np
 import logging
+import itertools
+from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
@@ -200,9 +203,42 @@ class Experiment(Model, DateMixIn):
         '''str: location where mapobject type data are stored'''
         return os.path.join(self.location, 'mapobject_types')
 
-    def belongs_to(self, user):
+    @autocreate_directory_property
+    def workflow_location(self):
+        '''str: location where workflow data are stored'''
+        return os.path.join(self.location, 'workflow')
+
+    @cached_property
+    def plate_spacer_size(self):
+        '''int: gap between neighboring plates in pixels'''
+        return self.well_spacer_size * 2
+
+    @cached_property
+    def plate_grid(self):
+        '''numpy.ndarray[int]: IDs of plates arranged according to
+        their relative position of the plate within the experiment overview
+        image
         '''
-        Determines whether the experiment belongs to a given `user`.
+        n = len(self.plates)
+        if (n / np.ceil(np.sqrt(n))) % 2 == 0:
+            dimensions = (
+                int(np.ceil(np.sqrt(n))), int(n / np.ceil(np.sqrt(n)))
+            )
+        else:
+            dimensions = tuple(np.repeat(int(np.ceil(np.sqrt(n))), 2))
+        cooridinates = list(
+            itertools.product(
+                np.arange(dimensions[0]), np.arange(dimensions[1])
+            )
+        )
+        height, width = dimensions
+        grid = np.zeros((height, width), dtype=int)
+        for i, c in enumerate(cooridinates):
+            grid[c[0], c[1]] = self.plates[i].id
+        return grid
+
+    def belongs_to(self, user):
+        '''Determines whether the experiment belongs to a given `user`.
 
         Parameters
         ----------
@@ -224,8 +260,7 @@ class Experiment(Model, DateMixIn):
         return all([pls.is_ready_for_processing for pls in self.plate_sources])
 
     def as_dict(self):
-        '''
-        Return attributes as key-value pairs.
+        '''Returns attributes as key-value pairs.
 
         Returns
         -------

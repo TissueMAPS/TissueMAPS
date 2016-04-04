@@ -45,15 +45,14 @@ class CaptureOutput(dict):
         self.update({'stdout': output, 'stderr': error})
 
 
-class ImageProcessingModule(object):
-    '''
-    Class for a Jterator module, the building block of a Jterator pipeline.
+class ImageAnalysisModule(object):
+
+    '''Class for a Jterator module, the building block of an image analysis
+    pipeline.
     '''
 
     def __init__(self, name, source_file, description):
         '''
-        Initiate Module class.
-
         Parameters
         ----------
         name: str
@@ -61,11 +60,7 @@ class ImageProcessingModule(object):
         source_file: str
             path to program file that should be executed
         description: Dict[str, List[dict]]
-            description of module input/output
-
-        Returns
-        -------
-        tmlib.jterator.module.ImageProcessingModule
+            description of module input/output as provided by `handles`
         '''
         self.name = name
         self.source_file = source_file
@@ -80,8 +75,7 @@ class ImageProcessingModule(object):
         self.persistent_store = dict()
 
     def build_log_filenames(self, log_location, job_id):
-        '''
-        Build names of log-files into which the module will write
+        '''Builds names of log-files into which the module will write
         standard output and error of the current job.
 
         Parameters
@@ -105,9 +99,8 @@ class ImageProcessingModule(object):
         return {'stdout': out_file, 'stderr': err_file}
 
     def build_figure_filename(self, figures_dir, job_id):
-        '''
-        Build name of figure file into which module will write figure output
-        of the current job.
+        '''Builds name of figure file into which module will write figure
+        output of the current job.
 
         Parameters
         ----------
@@ -121,32 +114,24 @@ class ImageProcessingModule(object):
         str
             absolute path to the figure file
         '''
-        figure_file = os.path.join(figures_dir, '%s_%.5d.html'
-                                   % (self.name, job_id))
-        return figure_file
+        return os.path.join(
+            figures_dir, '%s_%.5d.html' % (self.name, job_id)
+        )
 
     @property
     def keyword_arguments(self):
-        '''
-        Returns
-        -------
-        dict
-            name and value of each input handle as key-value pairs
-        '''
+        '''dict: name and value of each input handle as key-value pairs'''
         kwargs = collections.OrderedDict()
         for handle in self.handles['input']:
             kwargs[handle.name] = handle.value
         return kwargs
 
-    def build_error_message(self, stdout, stderr, message=''):
-        '''
-        Build a custom error massage that provides the standard input as well
-        as standard output and error for an executed module.
+    def build_error_message(self, stdout, stderr):
+        '''Builds a custom error massage that provides information about input
+        arguments as well as standard output and error of the executed module.
 
         Parameters
         ----------
-        kwargs: dict
-            input arguments as key-value pairs
         stdout: str
             standard output of the module execution
         stderr: str
@@ -169,31 +154,9 @@ class ImageProcessingModule(object):
         self.error_message = message
         return self.error_message
 
-    def write_output_and_errors(self, stdout_file, stdout_data,
-                                stderr_file, stderr_data):
-        '''
-        Write standard output and error to log file.
-
-        Parameters
-        ----------
-        stdout_data: str
-            standard output of the module execution
-        stderr_data: str
-            standard error of the module execution
-        '''
-        with open(stdout_file, 'w+') as output_log:
-            output_log.write(stdout_data)
-        with open(stderr_file, 'w+') as error_log:
-            error_log.write(stderr_data)
-
     @property
     def language(self):
-        '''
-        Returns
-        -------
-        str
-            language of the module (e.g. "python")
-        '''
+        '''str: language of the module (e.g. "python")'''
         return determine_language(self.source_file)
 
     def _exec_m_module(self, engine):
@@ -242,19 +205,23 @@ class ImageProcessingModule(object):
         module = importlib.import_module('jtlib.modules.%s' % module_name)
         func = getattr(module, module_name)
         kwargs = self.keyword_arguments
-        logger.debug('evaluating Python function with INPUTS: "%s"',
-                     '", "'.join(kwargs.keys()))
+        logger.debug(
+            'evaluating Python function with INPUTS: "%s"',
+            '", "'.join(kwargs.keys())
+        )
         py_out = func(**kwargs)
         if not isinstance(py_out, dict):
             raise PipelineRunError(
-                    'Module "%s" must return an object of type dict.'
-                    % self.name)
+                'Module "%s" must return an object of type dict.'
+                % self.name
+            )
 
         for handle in self.handles['output']:
             if handle.name not in py_out.keys():
                 raise PipelineRunError(
-                        'Module "%s" didn\'t return output argument "%s".'
-                        % (self.name, handle.name))
+                    'Module "%s" didn\'t return output argument "%s".'
+                    % (self.name, handle.name)
+                )
             handle.value = py_out[handle.name]
 
         return self.handles['output']
@@ -267,8 +234,10 @@ class ImageProcessingModule(object):
         function_name = os.path.splitext(os.path.basename(self.source_file))[0]
         func = rpy2.robjects.globalenv['{0}'.format(function_name)]
         kwargs = self.keyword_arguments
-        logger.debug('evaluating R function with INPUTS: "%s"'
-                     % '", "'.join(kwargs.keys()))
+        logger.debug(
+            'evaluating R function with INPUTS: "%s"',
+            '", "'.join(kwargs.keys())
+        )
         # R doesn't have unsigned integer types
         for k, v in kwargs.iteritems():
             if isinstance(v, np.ndarray):
@@ -276,7 +245,8 @@ class ImageProcessingModule(object):
                     logging.debug(
                         'module "%s" input argument "%s": '
                         'convert unsigned integer data type to integer',
-                        self.name, k)
+                        self.name, k
+                    )
                     kwargs[k] = v.astype(int)
             # TODO: we may have to translate pandas data frames into the
             # R equivalent
@@ -309,8 +279,7 @@ class ImageProcessingModule(object):
             raise PipelineRunError('Language not supported.')
 
     def update_handles(self, store, plot):
-        '''
-        Update values of handles that define the arguments of the
+        '''Updates values of handles that define the arguments of the
         module function.
 
         Parameters
@@ -337,7 +306,8 @@ class ImageProcessingModule(object):
                 except KeyError:
                     raise PipelineRunError(
                         'Value for argument "%s" was not created upstream '
-                        'in the pipeline!' % self.name)
+                        'in the pipeline: %s' % (self.name, handle.key)
+                    )
                 except Exception:
                     raise
             elif isinstance(handle, hdls.Plot):
@@ -346,18 +316,47 @@ class ImageProcessingModule(object):
         return self.handles['input']
 
     def _get_reference_objects_name(self, handle):
+        '''Determines the name of the segmented objects that are referenced by
+        a `Features` handle.
+
+        Parameters
+        ----------
+        handle: tmlib.workflow.jterator.handle.Features
+            output handle with a `objects_ref` attribute, which provides a
+            reference to an input handle
+
+        Returns
+        -------
+        str
+            name of the referenced segmented objects
+        '''
         objects_names = [
             h.key for h in self.handles['input']
             if h.name == handle.objects_ref and
-            isinstance(h, hdls.Objects)
+            isinstance(h, hdls.SegmentedObjects)
         ]
         if len(objects_names) == 0:
             raise PipelineRunError(
-                    'Invalid object reference for "%s" in module "%s"'
-                    % (handle.name, self.name))
+                'Invalid object reference for "%s" in module "%s": %s'
+                % (handle.name, self.name, handle.objects_ref)
+            )
         return objects_names[0]
 
     def _get_reference_channel_name(self, handle):
+        '''Determines the name of the channel that is referenced by a
+        `Features` handle.
+
+        Parameters
+        ----------
+        handle: tmlib.workflow.jterator.handle.Features
+            output handle with a `channel_ref` attribute, which provides a
+            reference to an input handle
+
+        Returns
+        -------
+        str
+            name of the referenced channel
+        '''
         if handle.channel_ref is None:
             return None
         channel_names = [
@@ -367,14 +366,14 @@ class ImageProcessingModule(object):
         ]
         if len(channel_names) == 0:
             raise PipelineRunError(
-                    'Invalid channel reference for "%s" in module "%s"'
-                    % (handle.name, self.name))
+                'Invalid channel reference for "%s" in module "%s": %s'
+                % (handle.name, self.name, handle.channel_ref)
+            )
         return channel_names[0]
 
     def update_store(self, store):
-        '''
-        Update `store` with key-value pairs that were returned by the module
-        function.
+        '''Updates `store` with key-value pairs that were returned by the
+        module function.
 
         Parameters
         ----------
@@ -393,39 +392,31 @@ class ImageProcessingModule(object):
         '''
         for i, handle in enumerate(self.handles['output']):
             if isinstance(handle, hdls.Figure):
-                store['figures'].append(handle.value)
-            elif isinstance(handle, hdls.Objects):
-                store['objects'][handle.key] = handle
+                store['current_figure'] = handle.value
+            elif isinstance(handle, hdls.SegmentedObjects):
+                store['segmented_objects'][handle.key] = handle
                 store['pipe'][handle.key] = handle.value
-            elif isinstance(handle, hdls.Features):
+            elif isinstance(handle, hdls.Measurement):
                 object_name = self._get_reference_objects_name(handle)
                 channel_name = self._get_reference_channel_name(handle)
                 if channel_name is not None:
+                    new_names = list()
                     for name in handle.value.columns:
-                        name += '_%s' % channel_name
-                obj_handle = store['objects'][object_name]
-                obj_handle.add_features(handle.value)
+                        new_names.append('%s_%s' % (name, channel_name))
+                    handle.value.columns = new_names
+                obj_handle = store['segmented_objects'][object_name]
+                obj_handle.add_measurement(handle)
             elif isinstance(handle, hdls.Attribute):
-                obj_names = [
-                    h.key for h in self.handles['output'][i]
-                    if h.name == handle.object_ref and
-                    isinstance(h, hdls.Objects)
-                ]
-                if len(obj_names) == 0:
-                    raise PipelineRunError(
-                            'Invalid object reference for "%s" '
-                            'in module "%s": %s'
-                            % (handle.name, self.name))
-                obj_handle = store['objects'][obj_names[0]]
-                obj_handle.add_attribute(handle.value)
+                object_name = self._get_reference_objects_name(handle)
+                obj_handle = store['segmented_objects'][object_name]
+                obj_handle.add_attribute(handle)
             else:
                 store['pipe'][handle.key] = handle.value
         return store
 
     def run(self, engine=None):
-        '''
-        Execute a module, i.e. evaluate the corresponding function with
-        the provided arguments.
+        '''Executes a module, i.e. evaluate the corresponding function with
+        the keyword arguments provided by `handles`.
 
         Parameters
         ----------
@@ -453,7 +444,7 @@ class ImageProcessingModule(object):
         :py:method:`tmlib.jterator.module.Module.update_store` afterwards.
         '''
         with CaptureOutput() as stream:
-            # TODO: the StringIO approach prevents debugging of modules
+            # TODO: the StringIO approach prevents debugging of modules -
             # build custom logger
             try:
                 self._execute_module(engine)
@@ -484,4 +475,7 @@ class ImageProcessingModule(object):
         }
 
     def __str__(self):
-        return ':%s: @ <%s>' % (self.name, self.source_file)
+        return (
+            '<ImageAnalysisModule(name=%r, source=%r)>'
+            % (self.name, self.source_file)
+        )

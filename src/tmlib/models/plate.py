@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import Model, DateMixIn
@@ -96,7 +96,10 @@ class Plate(Model, DateMixIn):
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     # Relationships to other tables
-    experiment = relationship('Experiment', backref='plates')
+    experiment = relationship(
+        'Experiment',
+        backref=backref('plates', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, experiment_id, description=''):
         '''

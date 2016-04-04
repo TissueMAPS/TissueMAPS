@@ -33,22 +33,18 @@ class MetadataConfigurator(ClusterRoutines):
     separate JSON file.
     '''
 
-    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, verbosity, **kwargs):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        step_name: str
-            name of the corresponding program (command line interface)
         verbosity: int
             logging level
         **kwargs: dict
             ignored keyword arguments
         '''
-        super(MetadataConfigurator, self).__init__(
-            experiment_id, step_name, verbosity
-        )
+        super(MetadataConfigurator, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
         '''
@@ -343,3 +339,25 @@ class MetadataConfigurator(ClusterRoutines):
                         t_index += 1
 
                     c_index += 1
+
+
+def factory(experiment_id, verbosity, **kwargs):
+    '''Factory function for the instantiation of a `metaconfig`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    **kwargs: dict
+        ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.MetadataConfigurator
+        API instance
+    '''
+    return MetadataConfigurator(experiment_id, verbosity, **kwargs)

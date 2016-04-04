@@ -1,74 +1,75 @@
 import os
 import logging
 
-from .workflow import Workflow
-from .api import BasicClusterRoutines
-from .. import utils
+import tmlib.models
+from tmlib.workflow import Workflow
+from tmlib.workflow.api import BasicClusterRoutines
 
 logger = logging.getLogger(__name__)
 
 
-class WorkflowClusterRoutines(BasicClusterRoutines):
+class WorkflowManager(BasicClusterRoutines):
 
-    def __init__(self, experiment, prog_name, verbosity):
+    '''The *workflow manager* creates workflows (a nested pipeline of
+    computational tasks - stages and steps) and submits them to the cluster
+    for processing.
+    '''
+
+    def __init__(self, experiment_id, verbosity):
         '''
-        Initialize an instance of class WorkflowClusterRoutines.
-
         Parameters
         ----------
-        experiment: tmlib.experiment.Experiment
-            configured experiment object
-        prog_name: str
-            name of the corresponding program (command line interface)
+        experiment_id: int
+            ID of the processed experiment
         verbosity: int
             logging verbosity level
         '''
-        super(WorkflowClusterRoutines, self).__init__(experiment)
-        self.experiment = experiment
-        self.prog_name = prog_name
+        super(WorkflowManager, self).__init__()
+        self.experiment_id = experiment_id
         self.verbosity = verbosity
+        with tmlib.models.utils.Session() as session:
+            experiment = session.query(tmlib.models.Experiment).\
+                get(self.experiment_id)
+            self.workflow_location = experiment.workflow_location
 
-    @utils.auto_create_directory_property
-    def step_location(self):
+    @property
+    def session_location(self):
+        '''str: location for the
+        `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
         '''
-        Returns
-        -------
-        str
-            location where files required for the step (such as job descriptor
-            and log files) will be stored
-        '''
-        return os.path.join(self.experiment.dir, self.prog_name)
+        return os.path.join(self.workflow_location, 'session')
 
-    def create_jobs(self, job_descriptions=None, start_stage=None,
-                    start_step=None, waiting_time=120):
-        '''
-        Create a `TissueMAPS` workflow.
+    def create_workflow(self, workflow_description=None, waiting_time=0):
+        '''Creates a `TissueMAPS` workflow.
 
         Parameters
         ----------
-        job_descriptions: tmlib.cfg.WorkflowDescription, optional
+        workflow_description: tmlib.cfg.WorkflowDescription, optional
             description of a `TissueMAPS` workflow (default: ``None``)
-        start_stage: str, optional
-            name of the stage from which the workflow should be started
-            (default: ``None``)
-        start_step: str, optional
-            name of the step in `start_stage` from which the workflow should be
-            started (default: ``None``)
         waiting_time: int, optional
             time in seconds that should be waited upon transition from one
-            stage to the other to avoid issues related to network file systems
-            (default: ``120``)
+            stage to the other; might be necessary depending on network file
+            systems settings (default: ``0``)
 
         Returns
         -------
-        tmlib.tmaps.workflow.Workflow
+        tmlib.workflow.Workflow
         '''
-        logger.info('create jobs')
-        jobs = Workflow(
-                    experiment=self.experiment,
-                    verbosity=self.verbosity,
-                    description=job_descriptions,
-                    start_stage=start_stage,
-                    start_step=start_step,
-                    waiting_time=waiting_time)
-        return jobs
+        logger.info('creating workflow')
+        with tmlib.models.utils.Session() as session:
+            experiment = session.query(tmlib.models.Experiment).\
+                get(self.experiment_id)
+            submission = tmlib.models.Submission(
+                experiment_id=experiment.id
+            )
+            session.add(submission)
+            session.flush()
+            submission_id = submission.id
+
+        return Workflow(
+            experiment_id=self.experiment_id,
+            verbosity=self.verbosity,
+            description=workflow_description,
+            waiting_time=waiting_time,
+            submission_id=submission_id
+        )

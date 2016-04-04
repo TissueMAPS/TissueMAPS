@@ -33,7 +33,5 @@ class Metaextract(CommandLineInterface):
     @staticmethod
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):
-        api_instance = MetadataExtractor(
-            args.experiment_id, name, args.verbosity
-        )
+        api_instance = MetadataExtractor(args.experiment_id, args.verbosity)
         Metaextract(api_instance, args.verbosity)._call(args)

@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
 from sqlalchemy.dialects.postgres import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 
@@ -55,7 +55,10 @@ class MicroscopeImageFile(File, DateMixIn):
     acquisition_id = Column(Integer, ForeignKey('acquisitions.id'))
 
     # Relationships to other tables
-    acquisition = relationship('Acquisition', backref='microscope_image_files')
+    acquisition = relationship(
+        'Acquisition',
+        backref=backref('microscope_image_files', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, acquisition_id):
         '''
@@ -129,7 +132,12 @@ class MicroscopeMetadataFile(File, DateMixIn):
     acquisition_id = Column(Integer, ForeignKey('acquisitions.id'))
 
     # Relationships to other tables
-    acquisition = relationship('Acquisition', backref='microscope_metadata_files')
+    acquisition = relationship(
+        'Acquisition',
+        backref=backref(
+            'microscope_metadata_files', cascade='all, delete-orphan'
+        )
+    )
 
     def __init__(self, name, acquisition_id):
         '''
@@ -240,9 +248,19 @@ class ChannelImageFile(File, DateMixIn):
     acquisition_id = Column(Integer, ForeignKey('acquisitions.id'))
 
     # Relationships to other tables
-    cycle = relationship('Cycle', backref='channel_image_files')
-    site = relationship('Site', backref='channel_image_files')
-    channel_layer = relationship('ChannelLayer', backref='image_files')
+    cycle = relationship(
+        'Cycle',
+        backref=backref('channel_image_files', cascade='all, delete-orphan')
+    )
+    site = relationship(
+        'Site',
+        backref=backref('channel_image_files', cascade='all, delete-orphan')
+    )
+    channel_layer = relationship(
+        'ChannelLayer',
+        backref=backref('image_files', cascade='all, delete-orphan')
+    )
+    # NOTE: We want to keep the file when the parent acquisition is deleted.
     acquisition = relationship('Acquisition', backref='channel_image_files')
 
     #: Format string for filenames
@@ -419,9 +437,17 @@ class ProbabilityImageFile(File, DateMixIn):
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
     # Relationships to other tables
-    site = relationship('Site', backref='probability_image_files')
+    site = relationship(
+        'Site',
+        backref=backref(
+            'probability_image_files', cascade='all, delete-orphan'
+        )
+    )
     mapobject_type = relationship(
-        'MapobjectType', backref='probability_image_files'
+        'MapobjectType',
+        backref=backref(
+            'probability_image_files', cascade='all, delete-orphan'
+        )
     )
 
     FILENAME_FORMAT = 'probability_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_m{m:0>3}_z{z:0>3}.tif'
@@ -504,7 +530,8 @@ class ProbabilityImageFile(File, DateMixIn):
 
 class PyramidTileFile(File):
 
-    '''
+    '''A *pyramid tile file* is a component of an image pyramid. Each tile
+    holds a single, small 2D pixel plane.
 
     Attributes
     ----------
@@ -540,7 +567,10 @@ class PyramidTileFile(File):
     channel_layer_id = Column(Integer, ForeignKey('channel_layers.id'))
 
     # Relationships to other tables
-    channel_layer = relationship('ChannelLayer', backref='pyramid_tile_files')
+    channel_layer = relationship(
+        'ChannelLayer',
+        backref=backref('pyramid_tile_files', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, group, level, row, column, channel_layer_id):
         '''
@@ -654,8 +684,14 @@ class IllumstatsFile(File, DateMixIn):
     cycle_id = Column(Integer, ForeignKey('cycles.id'))
 
     # Relationships to other tables
-    channel = relationship('Channel', backref='illumstats_files')
-    cycle = relationship('Cycle', backref='illumstats_files')
+    channel = relationship(
+        'Channel',
+        backref=backref('illumstats_files', cascade='all, delete-orphan')
+    )
+    cycle = relationship(
+        'Cycle',
+        backref=backref('illumstats_files', cascade='all, delete-orphan')
+    )
 
     def __init__(self, channel_id, cycle_id):
         '''

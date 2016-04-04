@@ -2,7 +2,7 @@ import logging
 
 from tmlib.utils import same_docstring_as
 from tmlib.workflow.corilla import logo
-from tmlib.workflow.corilla.api import IllumstatsGenerator
+from tmlib.workflow.corilla.api import IllumstatsCalculator
 from tmlib.workflow.cli import CommandLineInterface
 
 logger = logging.getLogger(__name__)
@@ -10,11 +10,10 @@ logger = logging.getLogger(__name__)
 
 class Corilla(CommandLineInterface):
 
-    '''Command line interface for calculating illumination statistics
-    across all images of the same channel.
+    '''Command line interface for calculating illumination statistics.
 
 
-    These statistics can then be used to correct channel images for
+    The resulting statistics can then be used to correct channel images for
     illumination artifacts.
     '''
 
@@ -22,7 +21,7 @@ class Corilla(CommandLineInterface):
         '''
         Parameters
         ----------
-        api_instance: tmlib.workflow.corilla.IllumstatsGenerator
+        api_instance: tmlib.workflow.corilla.IllumstatsCalculator
             instance of API class to which processing is delegated
         verbosity: int
             logging level
@@ -42,7 +41,5 @@ class Corilla(CommandLineInterface):
     @staticmethod
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):
-        api_instance = IllumstatsGenerator(
-            args.experiment_id, name, args.verbosity
-        )
+        api_instance = IllumstatsCalculator(args.experiment_id, args.verbosity)
         Corilla(api_instance, args.verbosity)._call(args)

@@ -78,6 +78,6 @@ class Jterator(CommandLineInterface):
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):
         api_instance = ImageAnalysisPipeline(
-            args.experiment_id, name, args.verbosity, args.pipeline
+            args.experiment_id, args.verbosity, args.pipeline
         )
         Jterator(api_instance, args.verbosity)._call(args)

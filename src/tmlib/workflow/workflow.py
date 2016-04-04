@@ -8,18 +8,18 @@ from cached_property import cached_property
 import gc3libs
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
-from gc3libs.workflow import AbortOnError
+from gc3libs.workflow import StopOnError, AbortOnError
 
+import tmlib.models
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.errors import WorkflowTransitionError
+from tmlib.readers import YamlReader
 from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow.jobs import RunJobCollection
 from tmlib.workflow.jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
-
-WAIT = 0  # make an argument for submission of workflows?
 
 
 class State(object):
@@ -53,48 +53,104 @@ class State(object):
         return self.execution.state == gc3libs.Run.State.NEW
 
 
-def load_step_interface(step_name):
-    '''
-    Load the command line interface for a `TissueMAPS` workflow step.
+def get_step_interface(step_name, experiment_id, verbosity, **kwargs):
+    '''Gets the active programming interface for a `TissueMAPS` workflow step.
 
     Parameters
     ----------
     step_name: str
-        name of the step, i.e. the corresponding subpackage in the "tmlib"
-        package
+        name of the step whose interface should be returned
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    **kwargs: dict, optional
+        additional keyword arguments that may have to be passed to the
+        constructor of the step-specific implementation of the
+        :py:class:` tmlib.workflow.cli.ClusterRoutines` abstract base class
 
     Returns
     -------
-    tmlib.cli.CommandLineInterface
-        command line interface
+    tmlib.workflow.cli.ClusterRoutines
+        step interface
 
     Raises
     ------
-    ImportError
-        when subpackage with name `step_name` doesn't have a module named "cli"
+    ValueError
+        when `step_name` is not a valid step name
     AttributeError
-        when the "cli" module doesn't contain a step-specific
-        implementation of the `CommandLineInterface` base class
+        when there is no step-specific `factory()` method available
     '''
-    module_name = 'tmlib.%s.cli' % step_name
-    logger.debug('load cli module "%s"' % module_name)
-    module = importlib.import_module(module_name)
-    class_name = step_name.capitalize()
+    module_name = '%s.%s.api' % ('.'.join(__name__.split('.')[:-1]), step_name)
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError:
+        raise ValueError('Unknown step "%s".' % step_name)
+    try:
+        factory = getattr(module, 'factory')
+        return factory(experiment_id, verbosity, **kwargs)
+    except AttributeError:
+        raise AttributeError(
+            'No factory method available for step "%s".', step_name
+        )
+    except:
+        raise
+
+
+def import_workflow_type_specific_module(workflow_type):
+    '''Loads the module for an implemented workflow type.
+
+    Parameters
+    ----------
+    workflow_type: str
+        workflow type
+
+    Returns
+    -------
+    module
+        loaded module instance
+
+    Raises
+    ------
+    ValueError
+        when `workflow_type` is not known
+    '''
+    module_name = 'tmlib.workflow.%s' % workflow_type
+    try:
+        return importlib.import_module(module_name)
+    except ImportError:
+        raise ValueError('Unknown workflow type "%s".')
+
+
+def workflow_description_factory(workflow_type):
+    '''Returns the implementation
+    of the :py:class:`tmlib.workflow.tmaps.description.WorkflowDescription`
+    abstract base class for the given workflow type.
+
+    Parameters
+    ----------
+    workflow_type: str
+        workflow type
+
+    Returns
+    -------
+    tmlib.workflow.tmaps.description.WorkflowDescription
+    '''
+    module = import_workflow_type_specific_module(workflow_type)
+    class_name = '%sWorkflowDescription' % workflow_type.capitalize()
     return getattr(module, class_name)
 
 
 class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
 
-    '''
-    Class for a TissueMAPS workflow step, which is composed of a fixed
-    collection of parallel run jobs and an optional collect job.
-    Fixed means that the number of jobs and the arguments are known in advance.
+    '''A *workflow step* represents a collection of computational tasks
+    that should be processed in parallel on a cluster, i.e. one parallelization
+    step within a larger, more complex workflow.
+    The number of jobs and the arguments for each job are known upon submission.
     '''
 
     def __init__(self, name, submission_id, run_jobs=None, collect_job=None):
         '''
-        Initialize an instance of class WorkflowStep.
-
         Parameters
         ----------
         name: str
@@ -111,27 +167,57 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         self.name = name
         self.submission_id = submission_id
         tasks = list()
-        if run_jobs is not None:
-            if not(isinstance(run_jobs, RunJobCollection) or
-                    isinstance(run_jobs, MultiRunJobCollection)):
-                raise TypeError(
-                    'Argument "run_jobs" must have type '
-                    'tmlib.workflow.jobs.RunJobCollection or '
-                    'tmlib.workflow.jobs.MultiRunJobCollection'
-                )
-            tasks.append(run_jobs)
-        if collect_job is not None:
-            if not isinstance(collect_job, CollectJob):
-                raise TypeError(
-                    'Argument "collect_job" must have type '
-                    'tmlib.workflow.jobs.CollectJob'
-                )
-            tasks.append(collect_job)
+        self.run_jobs = run_jobs
+        self.collect_job = collect_job
         super(WorkflowStep, self).__init__(tasks=tasks, jobname=name)
 
+    @property
+    def run_jobs(self):
+        '''tmlib.workflow.jobs.RunJobCollection: collection of run jobs'''
+        try:
+            return self.tasks[0]
+        except IndexError:
+            return None
+    
+    @run_jobs.setter
+    def run_jobs(self, value):
+        if value is not None:
+            if not isinstance(value, RunJobCollection):
+                raise TypeError(
+                    'Attribute "run_jobs" must have type '
+                    'tmlib.workflow.jobs.RunJobCollection'
+                )
+            if len(self.tasks) == 0:
+                self.tasks.append(value)
+            else:
+                self.tasks[0] = value
+
+    @property
+    def collect_job(self):
+        '''tmlib.workflow.jobs.CollectJob: individual collect job'''
+        try:
+            return self.tasks[1]
+        except IndexError:
+            return None
+    
+    @collect_job.setter
+    def collect_job(self, value):
+        if value is not None:
+            if not isinstance(value, CollectJob):
+                raise TypeError(
+                    'Attribute "collect_job" must have type '
+                    'tmlib.workflow.jobs.CollectJob'
+                )
+            if len(self.tasks) == 0:
+                self.tasks.append(None)
+                self.tasks.append(value)
+            elif len(self.tasks) == 1:
+                self.tasks.append(value)
+            else:
+                self.tasks[1] = value
+
     def next(self, done):
-        '''
-        Progress to the next phase.
+        '''Progresses to the next phase.
 
         Parameters
         ----------
@@ -147,190 +233,172 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
 
 class WorkflowStage(State):
 
-    '''Base class for `TissueMAPS` workflow stages.'''
+    '''Base class for `TissueMAPS` workflow stages. A *workflow stage* is
+    composed of one or more *workflow steps* that together comprise a logical
+    computational unit.'''
 
-    def __init__(self, name, experiment, verbosity, submission_id,
-                 description=None):
+    def __init__(self, name, experiment_id, verbosity, submission_id,
+                 description):
         '''
         Parameters
         ----------
         name: str
             name of the stage
-        experiment: str
-            configured experiment object
+        experiment_id: int
+            ID of the processed experiment
         verbosity: int
             logging verbosity index
         submission_id: int
             ID of the corresponding submission
-        description: tmlib.tmaps.description.WorkflowStageDescription, optional
-            description of the stage (default: ``None``)
-
-        Note
-        ----
-        If `description` is not provided, there will be an attempt to obtain
-        it from the user configuration file.
+        description: tmlib.tmaps.description.WorkflowStageDescription
+            description of the stage
 
         Raises
         ------
         TypeError
             when `description` doesn't have type
-            :py:class:`tmlib.tmaps.description.WorkflowStageDescription`
-        ValueError
-            when `description` is not provided and cannot be retrieved from
-            the user configuration file
-
-        See also
-        --------
-        :py:class:`tmlib.cfg.UserConfiguration`
+            :py:class:`tmlib.workflow.tmaps.description.WorkflowStageDescription`
         '''
         self.name = name
-        self.experiment = experiment
+        self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.submission_id = submission_id
-        if description is not None:
-            if not isinstance(description, WorkflowStageDescription):
-                raise TypeError(
-                    'Argument "description" must have type '
-                    'tmlib.tmaps.description.WorkflowStageDescription'
-                )
-            self.description = description
-        else:
-            stages = self.experiment.user_cfg.workflow.stages
-            names = [s.name for s in stages]
-            index = names.index(self.name)
-            self.description = stages[index]
-        if self.description is None:
-            raise ValueError(
-                'Description was not provided and could not be '
-                'determined from user configuration file.'
+        if not isinstance(description, WorkflowStageDescription):
+            raise TypeError(
+                'Argument "description" must have type '
+                'tmlib.tmaps.description.WorkflowStageDescription'
             )
+        self.description = description
         self.expected_outputs = None
+        self.tasks = self._create_steps()
 
-    def create_jobs_for_next_step(self, step_description):
+    def _create_steps(self):
+        '''Creates all steps for this stage.
+
+        Returns
+        -------
+        List[tmlib.workflow.WorkflowStep]
+            workflow steps
+
+        Note
+        ----
+        The steps don't have any jobs yet. They will later be added
+        dynamically at runtime.
+        '''
+        workflow_steps = list()
+        for step in self.description.steps:
+            workflow_steps.append(
+                WorkflowStep(name=step.name, submission_id=self.submission_id)
+            )
+        return workflow_steps
+
+    @property
+    def n_steps(self):
+        '''int: number of steps in the stage'''
+        return len(self.description.steps)
+
+    def create_jobs_for_next_step(self, step, step_description):
         '''Creates jobs for a given workflow step based on the provided
         description.
 
         Parameters
         ----------
-        step_description: tmlib.tmaps.description.WorkflowStepDescription
+        step: tmlib.workflow.WorkflowStep
+            the step for which jobs should be created
+        step_description: tmlib.workflow.description.WorkflowStepDescription
             description of the step
 
         Returns
         -------
         tmlib.tmaps.workflow.WorkflowStep
-            job collection
+            step that should be processed next
         '''
         logger.info('create jobs for step "%s"', step_description.name)
         step_name = step_description.name
-        logger.debug('load program "%s"', step_name)
-        prog = load_step_interface(step_name)
-        logger.debug('instantiate program')
-        prog_instance = prog(self.experiment, self.verbosity)
+        logger.debug('load step interface "%s"', step_name)
+        step_interface = get_step_interface(
+            step_name, self.experiment_id, self.verbosity,
+            **dict(step_description.args.variable_args)
+        )
 
-        logger.debug('call "init" method with configured arguments')
-        prog_instance.init(step_description.args)
+        # TODO: cleanup
+        logger.debug('create batches')
+        batches = step_interface.create_batches(
+            step_description.args.variable_args
+        )
+        logger.debug('write batches to files')
+        step_interface.write_batch_files(batches)
+        required_inputs = step_interface.list_input_files(batches)
         # Check whether inputs of current step were generated by previous steps
-        if not all([
-                    os.path.exists(i)
-                    for i in prog_instance.required_inputs
-                ]):
+        if not all([os.path.exists(i) for i in required_inputs]):
             logger.error('required inputs were not generated')
             raise WorkflowTransitionError(
-                'inputs for step "%s" do not exist'
-                % step_description.name
+                'inputs for step "%s" do not exist' % step_description.name
             )
 
         # # Store the expected outputs to be later able to check whether they
         # # were actually generated
         # self.expected_outputs.append(prog_instance.expected_outputs)
-        self.expected_outputs = prog_instance.expected_outputs
+        self.expected_outputs = step_interface.list_output_files(batches)
 
         logger.info('allocated time: %s', step_description.duration)
         logger.info('allocated memory: %d GB', step_description.memory)
         logger.info('allocated cores: %d', step_description.cores)
-        jobs = prog_instance.create_jobs(
+        return step_interface.create_jobs(
+            batches=batches,
+            step=step,
             duration=step_description.duration,
             memory=step_description.memory,
             cores=step_description.cores
         )
-        return jobs
 
 
 class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
 
-    '''Class for a `TissueMAPS` workflow stage, which is composed of
-    one or more dependent workflow steps that will be processed sequentially.
-    The number of jobs must be known for the first step of the stage,
-    but it is usually unknown for the subsequent steps, since their input
-    depends on the output of previous steps. Subsequent steps are thus build
+    '''A *workflow stage* whose *steps* should be processed sequentially.
+    The number of jobs is generally only known for the first step of the stage,
+    but unknown for the subsequent steps, since their input depends on the
+    output of the previous step. Subsequent steps are thus build
     dynamically upon transition from one step to the next.
     '''
 
-    def __init__(self, name, experiment, verbosity,
-                 submission_id, description=None,
-                 start_step=None, waiting_time=0):
+    def __init__(self, name, experiment_id, verbosity,
+                 submission_id, description=None, waiting_time=0):
         '''
         Parameters
         ----------
         name: str
             name of the stage
-        experiment: str
-            configured experiment object
+        experiment_id: int
+            ID of the processed experiment
         verbosity: int
             logging verbosity index
         submission_id: int
             ID of the corresponding submission
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
-        start_step: str or int, optional
-            name or index of a step from where the stage should be started
-            (default: ``None``)
         waiting_time: int, optional
             time in seconds that should be waited upon transition from one
             stage to the other to avoid issues related to network file systems
             (default: ``0``)
         '''
-        WorkflowStage.__init__(
-            self, name=name, experiment=experiment, verbosity=verbosity,
-            submission_id=submission_id
-        )
         SequentialTaskCollection.__init__(
             self, tasks=None, jobname='%s' % name
         )
-        self.start_step = start_step
+        WorkflowStage.__init__(
+            self, name=name, experiment_id=experiment_id, verbosity=verbosity,
+            submission_id=submission_id, description=description
+        )
         self.waiting_time = waiting_time
-        self._add_step(0)
 
-    @property
-    def n_steps(self):
-        '''int: total number of steps'''
-        return len(self.description.steps)
+    def _update_step(self, index):
+        '''Updates the indexed step, i.e. creates new jobs for it.
 
-    @property
-    def _start_index(self):
-        if self.start_step is None:
-            index = 0
-        elif isinstance(self.start_step, basestring):
-            step_names = [s.name for s in self.description.steps]
-            if self.start_step not in step_names:
-                raise ValueError('Invalid step: "%s"' % self.start_step)
-            index = step_names.index(self.start_step)
-        else:
-            raise TypeError('Argument "start_step" must have type str.')
-        return index
-
-    @cached_property
-    def _tasks_to_process(self):
-        steps_to_process = list()
-        logger.info('start stage at step "%s"',
-                    self.description.steps[self._start_index].name)
-        for i, step in enumerate(self.description.steps):
-            if i < self._start_index:
-                continue
-            steps_to_process.append(step)
-        return steps_to_process
-
-    def _add_step(self, index):
+        Parameters
+        ----------
+        index: int
+            index for the list of `tasks` (steps)
+        '''
         if index > 0:
             # NOTE: Checking the existence of files can be problematic,
             # because NFS may lie. We try to circumvent this by waiting upon
@@ -339,10 +407,10 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
                 raise WorkflowTransitionError(
                     'outputs of previous step do not exist'
                 )
-            logger.debug('create job descriptions for next step')
-        task = self.create_jobs_for_next_step(self._tasks_to_process[index])
-        logger.debug('add jobs to the task list')
-        self.tasks.append(task)
+        logger.debug('create job descriptions for next step')
+        self.tasks[index] = self.create_jobs_for_next_step(
+            self.tasks[index], self.description.steps[index]
+        )
 
     def next(self, done):
         '''Progresses to next step.
@@ -356,8 +424,10 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
         -------
         gc3libs.Run.State
         '''
-        logger.debug('state of %s: %s',
-                     self.__class__.__name__, self.execution.state)
+        logger.debug(
+            'state of %s: %s',
+            self.__class__.__name__, self.execution.state
+        )
         # Implement StopOnError behavior: set the state of the task collection
         # to the state of the last processed task.
         self.execution.returncode = self.tasks[done].execution.returncode
@@ -370,19 +440,20 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             return gc3libs.Run.State.STOPPED
         elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
-        logger.info('step "%s" is done', self._tasks_to_process[done].name)
-        if done+1 < len(self._tasks_to_process):
+        logger.info('step "%s" is done', self.description.steps[done].name)
+        if done+1 < self.n_steps:
             if self.waiting_time > 0:
                 logger.info('waiting ...')
                 logger.debug('wait %d seconds', self.waiting_time)
                 time.sleep(self.waiting_time)
             try:
-                step_names = [s.name for s in self.description.steps]
-                next_step_name = self._tasks_to_process[done+1].name
-                next_step_index = step_names.index(next_step_name) + 1
-                logger.info('transit to next step ({0} of {1}): "{2}"'.format(
-                            next_step_index, self.n_steps, next_step_name))
-                self._add_step(done+1)
+                next_step_name = self.description.steps[done+1].name
+                logger.info(
+                    'transit to next step ({0} of {1}): "{2}"'.format(
+                        done+1, self.n_steps, next_step_name
+                    )
+                )
+                self._update_step(done+1)
                 return gc3libs.Run.State.RUNNING
             except Exception as error:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -395,7 +466,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
                     tb_string += tb
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
-                logger.info('stopping stage "%s"', self.name)
+                logger.info('stopping stage "%s"', self.jobname)
                 self.execution.state = gc3libs.Run.State.STOPPED
                 raise
         else:
@@ -404,20 +475,19 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
 
 class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
 
-    '''Class for a parallel TissueMAPS workflow stage, which is composed of one
-    or more independent workflow steps that will be processed at once.
-    The number of jobs must be known for each step in advance.
+    '''A *workflow stage* whose *workflow steps* should be processed at once
+    in parallel. The number of jobs must thus be known for each step in advance.
     '''
 
-    def __init__(self, name, experiment, verbosity, submission_id,
+    def __init__(self, name, experiment_id, verbosity, submission_id,
                  description=None):
         '''
         Parameters
         ----------
         name: str
             name of the stage
-        experiment: str
-            configured experiment object
+        experiment_id: int
+            ID of the processed experiment
         verbosity: int
             logging verbosity index
         submission_id: int
@@ -425,14 +495,13 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
         '''
-        WorkflowStage.__init__(
-            self, name=name, experiment=experiment, verbosity=verbosity,
-            submission_id=submission_id
-        )
         ParallelTaskCollection.__init__(
             self, tasks=None, jobname='%s' % name
         )
-        self._build_tasks()
+        WorkflowStage.__init__(
+            self, name=name, experiment_id=experiment_id, verbosity=verbosity,
+            submission_id=submission_id, description=description
+        )
 
     def add(self, step):
         '''Adds a step.
@@ -454,34 +523,32 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
             )
         super(ParallelWorkflowStage, self).add(step)
 
-    def _build_tasks(self):
-        for step in self.description.steps:
-            step_jobs = self.create_jobs_for_next_step(step)
-            self.add(step_jobs)
+    def _update_all_steps(self):
+        for index, step_description in enumerate(self.description.steps):
+            self.tasks[index] = self.create_jobs_for_next_step(
+                self.tasks[index], step_description
+            )
 
 
 class Workflow(SequentialTaskCollection, State):
 
-    def __init__(self, experiment, verbosity, submission_id,
-                 description=None, start_stage=None, start_step=None,
-                 waiting_time=0):
+    '''A *workflow* represents a computational pipeline that processes one
+    *workflow stage* after another on a cluster.
+    '''
+
+    def __init__(self, experiment_id, verbosity, submission_id,
+                 description=None, waiting_time=0):
         '''
         Parameters
         ----------
-        experiment: str
-            configured experiment object
+        experiment_id: int
+            ID of processed experiment
         verbosity: int
             logging verbosity index
         submission_id: int
             ID of the corresponding submission
         description: tmlib.tmaps.description.WorkflowDescription, optional
             description of the workflow (default: ``None``)
-        start_stage: str or int, optional
-            name or index of a stage from where the workflow should be
-            started (default: ``None``)
-        start_step: str or int, optional
-            name or index of a step from where `start_stage` should be started
-            (default: ``None``)
         waiting_time: int, optional
             time in seconds that should be waited upon transition from one
             stage to the other to avoid issues related to network file systems
@@ -490,7 +557,7 @@ class Workflow(SequentialTaskCollection, State):
         Note
         ----
         If `description` is not provided, there will be an attempt to obtain
-        it from the user configuration file.
+        it from :py:attr:`tmlib.workflow.Workflow.description_file`.
 
         Raises
         ------
@@ -506,12 +573,16 @@ class Workflow(SequentialTaskCollection, State):
         :py:class:`tmlib.cfg.UserConfiguration`
        '''
         # TODO: consider pre-building tasks and then later adding subtasks
-        # (individual jobs)
-        self.submission_id
-        super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
-        self.experiment = experiment
+        # (individual jobs) for more convenient monitoring
+        self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.waiting_time = waiting_time
+        self.submission_id = submission_id
+        with tmlib.models.utils.Session() as session:
+            experiment = session.query(tmlib.models.Experiment).\
+                get(self.experiment_id)
+            super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
+            self.workflow_location = experiment.workflow_location
         if description is not None:
             if not isinstance(description, WorkflowDescription):
                 raise TypeError(
@@ -520,79 +591,121 @@ class Workflow(SequentialTaskCollection, State):
                 )
             self.description = description
         else:
-            self.description = self.experiment.user_cfg.workflow
-        if self.description is None:
-            raise ValueError(
-                'Description was not provided and could not be '
-                'determined from user configuration file.'
-            )
-        self.start_stage = start_stage
-        self.start_step = start_step
-        if self.start_step is not None and self.start_stage is None:
-            raise ValueError(
-                'Argument "start_step" also requires argument "start_stage".'
-            )
-        self.tasks = list()
-        self._add_stage(0)
+            self.description = self._read_description_from_file()
+        self.start_stage = None
+        self.start_step = None
+        self.tasks = self._create_stages()
+        # Update the first stage and its first step to start the workflow
+        self._update_stage(0)
+
+    def _create_stages(self):
+        '''Creates all stages for this workflow.
+
+        Returns
+        -------
+        List[tmlib.workflow.WorkflowStage]
+            workflow stages
+        '''
+        workflow_stages = list()
+        for stage in self.description.stages:
+            if stage.mode == 'sequential':
+                logger.debug('build sequential workflow stage')
+                workflow_stages.append(
+                    SequentialWorkflowStage(
+                        name=stage.name,
+                        experiment_id=self.experiment_id,
+                        verbosity=self.verbosity,
+                        submission_id=self.submission_id,
+                        description=stage,
+                        waiting_time=self.waiting_time
+                    )
+                )
+            elif stage.mode == 'parallel':
+                logger.debug('build parallel workflow stage')
+                workflow_stages.append(
+                    ParallelWorkflowStage(
+                        name=stage.name,
+                        experiment_id=self.experiment_id,
+                        verbosity=self.verbosity,
+                        submission_id=self.submission_id,
+                        description=stage
+                    )
+                )
+        return workflow_stages
+
+    @property
+    def start_stage(self):
+        '''str: name of stage where workflow should be (re)started'''
+        return self._start_stage
+
+    @start_stage.setter
+    def start_stage(self, value):
+        if value is not None:
+            if not isinstance(value, basestring):
+                raise TypeError(
+                    'Attribute "start_stage" must have type basestring.'
+                )
+            stage_names = [s.name for s in self.description.stages]
+            if value not in stage_names:
+                raise ValueError(
+                    'Value of attribute "start_stage" can be '
+                    'one of the following:\n"%s"' % '" or "'.join(stage_names)
+                )
+            self._update_stage(stage_names.index(value))
+        self._start_stage = value
+
+    @property
+    def description_file(self):
+        '''str: absolute path to workflow description file'''
+        return os.path.join(
+            self.workflow_location, 'workflow_description.yaml'
+        )
+
+    def _read_description_from_file(self):
+        '''Reads description of workflow in YAML format from file.
+
+        Returns
+        -------
+        tmlib.workflow.tmaps.description.WorkflowDescription
+            description of the workflow
+
+        Raises
+        ------
+        TypeError
+            when description obtained from file is not a mapping
+        KeyError
+            when description obtained from file doesn't have key "type"
+        '''
+        with YamlReader(self.description_file) as f:
+            description = f.read()
+        if not isinstance(description, dict):
+            raise TypeError('Description must be a mapping.')
+        if 'type' not in description:
+            raise KeyError('Description must have key "type".')
+        workflow_description_class = workflow_description_factory(
+            description['type']
+        )
+        return workflow_description_class(**description)
 
     @property
     def n_stages(self):
         '''int: total number of stages'''
         return len(self.description.stages)
 
-    @property
-    def _start_index(self):
-        if self.start_stage is None:
-            index = 0
-        elif isinstance(self.start_stage, basestring):
-            stage_names = [s.name for s in self.description.stages]
-            if self.start_stage not in stage_names:
-                raise ValueError('Invalid stage: "%s"' % self.start_stage)
-            index = stage_names.index(self.start_stage)
-        else:
-            raise TypeError('Argument "start_stage" must have type str.')
-        return index
+    def _update_stage(self, index):
+        '''Updates the indexed stage, i.e. creates new jobs for each step of
+        the stage.
 
-    @cached_property
-    def _tasks_to_process(self):
-        stages_to_process = list()
-        stage_name = self.description.stages[self._start_index].name
-        logger.info('start workflow at stage "%s"', stage_name)
-        for i, stage in enumerate(self.description.stages):
-            if i < self._start_index:
-                continue
-            stages_to_process.append(stage)
-        return stages_to_process
-
-    def _add_stage(self, index):
-        stage = self._tasks_to_process[index]
-        logger.debug('create next stage "%s"', stage.name)
-        if self.description.stages[self._start_index].name == stage.name:
-            start_step = self.start_step
-        else:
-            start_step = None
+        Parameters
+        ----------
+        index: int
+            index for the list of `tasks` (stages)
+        '''
+        stage = self.description.stages[index]
         if stage.mode == 'sequential':
-            logger.debug('build sequential workflow stage')
-            task = SequentialWorkflowStage(
-                name=stage.name,
-                experiment=self.experiment,
-                verbosity=self.verbosity,
-                submission_id=self.submission_id,
-                description=stage,
-                start_step=start_step,
-                waiting_time=self.waiting_time
-            )
-        elif stage.mode == 'parallel':
-            logger.debug('build parallel workflow stage')
-            task = ParallelWorkflowStage(
-                name=stage.name,
-                experiment=self.experiment,
-                verbosity=self.verbosity,
-                submission_id=self.submission_id,
-                description=stage
-            )
-        logger.debug('add stage to the workflow task list')
-        self.tasks.append(task)
+            self.tasks[index]._update_step(0)
+        else:
+            self.tasks[index]._update_all_steps()
 
     def next(self, done):
         '''Progresses to next stage.
@@ -606,8 +719,10 @@ class Workflow(SequentialTaskCollection, State):
         -------
         gc3libs.Run.State
         '''
-        logger.debug('state of %s: %s',
-                     self.__class__.__name__, self.execution.state)
+        logger.debug(
+            'state of %s: %s',
+            self.__class__.__name__, self.execution.state
+        )
         # Implement StopOnError behavior: set the state of the task collection
         # to the state of the last processed task.
         self.execution.returncode = self.tasks[done].execution.returncode
@@ -617,19 +732,20 @@ class Workflow(SequentialTaskCollection, State):
             return gc3libs.Run.State.STOPPED
         elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
-        logger.info('stage "%s" is done', self._tasks_to_process[done].name)
-        if done+1 < len(self._tasks_to_process):
+        logger.info('stage "%s" is done', self.description.stages[done].name)
+        if done+1 < self.n_stages:
             if self.waiting_time > 0:
                 logger.info('waiting ...')
                 logger.debug('wait %d seconds', self.waiting_time)
                 time.sleep(self.waiting_time)
             try:
-                stage_names = [s.name for s in self.description.stages]
-                next_stage_name = self._tasks_to_process[done+1].name
-                next_stage_index = stage_names.index(next_stage_name) + 1
-                logger.info('transit to next stage ({0} of {1}): "{2}"'.format(
-                            next_stage_index, self.n_stages, next_stage_name))
-                self._add_stage(done+1)
+                next_stage_name = self.description.stages[done+1].name
+                logger.info(
+                    'transit to next stage ({0} of {1}): "{2}"'.format(
+                        done+1, self.n_stages, next_stage_name
+                    )
+                )
+                self._update_stage(done+1)
                 return gc3libs.Run.State.RUNNING
             except Exception as error:
                 logger.error('transition to next stage failed: %s', error)
@@ -639,10 +755,10 @@ class Workflow(SequentialTaskCollection, State):
                 tb_string = str()
                 for tb in traceback.format_tb(exc_traceback):
                     tb_string += '\n'
-                    tb_string += tb[0]  # TODO
+                    tb_string += tb  # TODO
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
-                logger.info('stopping workflow "%s"', self.name)
+                logger.info('stopping workflow "%s"', self.jobname)
                 self.execution.state = gc3libs.Run.State.STOPPED
                 raise
         else:

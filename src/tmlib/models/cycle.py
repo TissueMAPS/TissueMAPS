@@ -1,7 +1,7 @@
 import os
 import logging
 from sqlalchemy import Column, String, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
@@ -52,7 +52,10 @@ class Cycle(Model, DateMixIn):
     plate_id = Column(Integer, ForeignKey('plates.id'))
 
     # Relationships to other tables
-    plate = relationship('Plate', backref='cycles')
+    plate = relationship(
+        'Plate',
+        backref=backref('cycles', cascade='all, delete-orphan')
+    )
 
     def __init__(self, index, tpoint, plate_id):
         '''
