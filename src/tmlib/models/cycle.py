@@ -5,7 +5,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
-from tmlib.models.utils import auto_remove_directory
+# from tmlib.models.utils import auto_remove_directory
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 CYCLE_LOCATION_FORMAT = 'cycle_{id}'
 
 
-@auto_remove_directory(lambda obj: obj.location)
+# @auto_remove_directory(lambda obj: obj.location)
 class Cycle(Model, DateMixIn):
 
     '''A *cycle* represents an individual image acquisition time point.

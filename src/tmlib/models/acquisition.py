@@ -7,7 +7,7 @@ from tmlib.readers import JsonReader
 from tmlib.metadata import ImageFileMapping
 from tmlib.models.base import Model, DateMixIn
 from tmlib.models.status import FileUploadStatus as fus
-from tmlib.models.utils import auto_remove_directory
+# from tmlib.models.utils import auto_remove_directory
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 
-@auto_remove_directory(lambda obj: obj.location)
+# @auto_remove_directory(lambda obj: obj.location)
 class Acquisition(Model, DateMixIn):
 
     '''An *acquisition* contains all files belonging to one microscope image

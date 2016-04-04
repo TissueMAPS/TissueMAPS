@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_datetimestamp():
-    '''Create a datetimestamp in the form "year-month-day_hour-minute-second".
+    '''Creates a datetimestamp in the form "year-month-day_hour-minute-second".
     
     Returns
     -------
@@ -25,7 +25,7 @@ def create_datetimestamp():
 
 
 def create_timestamp():
-    '''Create a timestamp in the form "hour-minute-second".
+    '''Creates a timestamp in the form "hour-minute-second".
 
     Returns
     -------
@@ -37,7 +37,7 @@ def create_timestamp():
 
 
 def regex_from_format_string(format_string):
-    '''Convert a format string with keywords into a named regular expression.
+    '''Converts a format string with keywords into a named regular expression.
 
     Parameters
     ----------
@@ -71,7 +71,7 @@ def regex_from_format_string(format_string):
 
 
 def indices(data, item):
-    '''Determine all indices of an item in a list.
+    '''Determines all indices of an item in a list.
 
     Parameters
     ----------
@@ -98,11 +98,11 @@ def indices(data, item):
 
 
 def flatten(data):
-    '''Transform a list of lists into a flat list.
+    '''Transforms a list of lists into a flat list.
 
     Parameters
     ----------
-    data: dataist[list]
+    data: List[list]
 
     Returns
     -------
@@ -112,11 +112,11 @@ def flatten(data):
 
 
 def common_substring(data):
-    '''Find longest common substring across a collection of strings.
+    '''Finds longest common substring across a collection of strings.
 
     Parameters
     ----------
-    data: dataist[str]
+    data: List[str]
 
     Returns
     -------
@@ -133,7 +133,7 @@ def common_substring(data):
 
 
 def list_directory_tree(start_dir):
-    '''Capture the whole directory tree downstream of `start_dir`.
+    '''Captures the whole directory tree downstream of `start_dir`.
 
     Parameters
     ----------
@@ -147,7 +147,7 @@ def list_directory_tree(start_dir):
 
 
 def is_number(s):
-    '''Check whether a string can be represented by a number.
+    '''Checks whether a string can be represented by a number.
 
     Parameters
     ----------
@@ -173,7 +173,7 @@ def is_number(s):
 
 
 def map_letter_to_number(letter):
-    '''Map capital letter to number.
+    '''Maps capital letter to number.
 
     Parameters
     ----------
@@ -194,7 +194,7 @@ def map_letter_to_number(letter):
 
 
 def map_number_to_letter(number):
-    '''Map number to capital letter.
+    '''Maps number to capital letter.
 
     Parameters
     ----------
@@ -215,7 +215,7 @@ def map_number_to_letter(number):
 
 
 def missing_elements(data, start=None, end=None):
-    '''Determine missing elements in a sequence of integers.
+    '''Determines missing elements in a sequence of integers.
 
     Parameters
     ----------
@@ -368,9 +368,8 @@ def assert_type(**expected):
 
 
 def assert_path_exists(*expected):
-    '''
-    Decorator function that asserts that a path to a file or directory on disk
-    specified by a function argument exists.
+    '''Decorator function that asserts that a path to a file or directory on
+    disk specified by a function argument exists.
 
     Parameters
     ----------
@@ -486,8 +485,7 @@ class autocreate_directory_property(object):
 
 
 def same_docstring_as(ref_func):
-    '''
-    Decorator function that sets the docstring of the decorate function
+    '''Decorator function that sets the docstring of the decorate function
     to the one of `ref_func`.
     This is helpful for methods of derived classes that should "inherit"
     the docstring of the abstract method in the base class.
@@ -506,8 +504,7 @@ def same_docstring_as(ref_func):
 
 
 def notimplemented(func):
-    '''
-    Decorator function for abstract methods that are not implemented in the
+    '''Decorator function for abstract methods that are not implemented in the
     derived class.
 
     Raises
@@ -527,49 +524,47 @@ def notimplemented(func):
     return wrapper
 
 
-class set_default(object):
+# class set_default(object):
 
-    '''
-    Decorator class for methods of :py:class:`tmlib.args.Args`.
-    '''
+#     '''Decorator class for methods of :py:class:`tmlib.args.Args`.'''
 
-    def __init__(self, type=None, help=None, default=None):
-        '''
-        Parameters
-        ----------
-        type: type
-            the type that the argument should have
-        help: str
-            help message that gives specifics about the argument
-        default:
-            default value for the argument
+#     def __init__(self, type=None, help=None, default=None):
+#         '''
+#         Parameters
+#         ----------
+#         type: type
+#             the type that the argument should have
+#         help: str
+#             help message that gives specifics about the argument
+#         default:
+#             default value for the argument
 
-        Raises
-        ------
-        TypeError
-        '''
-        self.type = type
-        self.help = help
-        self.default = default
-        if self.default is None:
-            self.required = True
-        else:
-            self.required = False
+#         Raises
+#         ------
+#         TypeError
+#         '''
+#         self.type = type
+#         self.help = help
+#         self.default = default
+#         if self.default is None:
+#             self.required = True
+#         else:
+#             self.required = False
 
-    def __call__(self, obj):
-        attr_name = '_%s' % obj.__name__
+#     def __call__(self, obj):
+#         attr_name = '_%s' % obj.__name__
 
-        def getter(cls):
-            if not hasattr(cls, attr_name):
-                if self.default is None:
-                    raise ValueError(
-                            'Argument "%s" is required.' % obj.__name__)
-                setattr(cls, attr_name, self.default)
-            setattr(cls, '%s_type' % attr_name, self.type)
-            setattr(cls, '%s_help' % attr_name, self.help)
-            return obj(cls)
-        getter.__name__ = obj.__name__
-        getter.__doc__ = obj.__doc__
+#         def getter(cls):
+#             if not hasattr(cls, attr_name):
+#                 if self.default is None:
+#                     raise ValueError(
+#                             'Argument "%s" is required.' % obj.__name__)
+#                 setattr(cls, attr_name, self.default)
+#             setattr(cls, '%s_type' % attr_name, self.type)
+#             setattr(cls, '%s_help' % attr_name, self.help)
+#             return obj(cls)
+#         getter.__name__ = obj.__name__
+#         getter.__doc__ = obj.__doc__
 
-        return property(getter)
+#         return property(getter)
 

@@ -5,7 +5,6 @@ from tmlib.workflow import ParallelWorkflowStage
 from tmlib.workflow import SequentialWorkflowStage
 from tmlib.workflow import WorkflowStep
 from tmlib.workflow.jobs import RunJobCollection
-from tmlib.workflow.jobs import MultiRunJobCollection
 from tmlib.workflow.jobs import CollectJob
 
 

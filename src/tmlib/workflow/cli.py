@@ -195,19 +195,19 @@ class CommandLineInterface(object):
             outputs = self.expected_outputs
             if outputs:
                 logger.info('clean up output of previous submission')
-                dont_exist_index = [not os.path.exists(f) for f in outputs]
+                dont_exist_index = [not os.path.exists(out) for out in outputs]
                 if all(dont_exist_index):
                     logger.debug('outputs don\'t exist')
                 elif any(dont_exist_index):
                     logger.warning('some outputs don\'t exist')
-                for out in outputs:
-                    if not os.path.exists(out):
+                for i, out in enumerate(outputs):
+                    if dont_exist_index[i]:
                         logger.debug('output doesn\'t exist: %s', out)
                         continue
                     if os.path.isdir(out):
                         logger.debug('remove output directory: %s' % out)
                         shutil.rmtree(out)
-                    else:
+                    elif os.path.isfile(out):
                         logger.debug('remove output file: %s' % out)
                         os.remove(out)
         except JobDescriptionError:

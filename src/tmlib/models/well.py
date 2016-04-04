@@ -55,7 +55,6 @@ class Well(Model, DateMixIn):
         plate_id: int
             ID of the parent plate
         '''
-        # TODO: ensure that name is unique within plate
         self.name = name
         self.plate_id = plate_id
 
@@ -63,6 +62,17 @@ class Well(Model, DateMixIn):
     def coordinate(self):
         '''Tuple[int]: row, column coordinate of the well within the plate'''
         return self.map_name_to_coordinate(self.name)
+
+    @property
+    def x(self):
+        '''int: zero-based *x*-coordinate (column) of the well within the plate
+        '''
+        return self.coordinate[1]
+
+    @property
+    def y(self):
+        '''int: zero-based *y*-coordinate (row) of the well within the plate'''
+        return self.coordinate[0]
 
     @cached_property
     def site_grid(self):

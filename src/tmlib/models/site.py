@@ -95,8 +95,8 @@ class Site(Model, DateMixIn):
         '''
         well = self.well
         plate = well.plate
-        n_rows = plate.nonempty_rows.index(well.coordinate[0])
-        n_columns = plate.nonempty_columns.index(well.coordinate[1])
+        n_rows = plate.nonempty_rows.index(well.y)
+        n_columns = plate.nonempty_columns.index(well.x)
         experiment = plate.experiment
         plate_coordinate = tuple(
             [a[0] for a in np.where(experiment.plate_grid == plate.id)]
@@ -105,9 +105,9 @@ class Site(Model, DateMixIn):
         # site and are therefore handled separately.
         y_offset = (
             # Sites in the well above the site
-            self.coordinate[0] * self.image_size[0] +
+            self.y * self.image_size[0] +
             # Potential displacement of sites in y-direction
-            self.coordinate[0] * experiment.vertical_site_displacement +
+            self.y * experiment.vertical_site_displacement +
             # Wells in the plate above the well
             n_rows * well.image_size[0] +
             # Gaps introduced between wells
@@ -119,9 +119,9 @@ class Site(Model, DateMixIn):
         )
         x_offset = (
             # Sites in the well left of the site
-            self.coordinate[1] * self.image_size[1] +
+            self.x * self.image_size[1] +
             # Potential displacement of sites in y-direction
-            self.coordinate[1] * experiment.horizontal_site_displacement +
+            self.x * experiment.horizontal_site_displacement +
             # Wells in the plate left of the well
             n_columns * well.image_size[1] +
             # Gaps introduced between wells

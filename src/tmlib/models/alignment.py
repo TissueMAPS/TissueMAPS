@@ -142,3 +142,10 @@ class SiteIntersection(Model):
         self.right_overhang = right_overhang
         self.left_overhang = left_overhang
         self.site_id = site_id
+
+    def __repr__(self):
+        return (
+            '<SiteIntersection(id=%r, upper=%r, lower=%r, left=%r, right=%r)>'
+            % (self.id, self.upper_overhang, self.lower_overhang,
+               self.left_overhang, self.right_overhang)
+        )

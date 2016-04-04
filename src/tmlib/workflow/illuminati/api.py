@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import collections
 import itertools
+import sqlalchemy.orm
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
@@ -32,8 +33,7 @@ class PyramidBuilder(ClusterRoutines):
         super(PyramidBuilder, self).__init__(experiment_id, verbosity)
 
     def list_input_files(self, batches):
-        '''
-        Provide a list of all input files that are required by the program.
+        '''Provides a list of all input files that are required by the step.
 
         Parameters
         ----------
@@ -62,8 +62,7 @@ class PyramidBuilder(ClusterRoutines):
         return files
 
     def create_batches(self, args):
-        '''
-        Create job descriptions for parallel computing.
+        '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -209,12 +208,28 @@ class PyramidBuilder(ClusterRoutines):
                         job_descriptions['run'].append(description)
 
                     if level == layer.base_level_index:
+                        coordinates = layer.get_empty_base_tile_coordinates()
                         # Creation of empty base tiles that don't map to images
                         job_count += 1
                         job_descriptions['run'].append({
                             'id': job_count,
                             'inputs': {},
-                            'outputs': {},
+                            'outputs': {
+                                'image_files': [
+                                    os.path.join(
+                                        layer.location,
+                                        layer.build_tile_group_name(
+                                            layer.tile_coordinate_group_map[
+                                                level, c[0], c[1]
+                                            ]
+                                        ),
+                                        layer.build_tile_file_name(
+                                            level, c[0], c[1]
+                                        )
+                                    )
+                                    for c in coordinates
+                                ]
+                            },
                             'layer_id': layer.id,
                             'level': level,
                             'index': index,
@@ -224,7 +239,7 @@ class PyramidBuilder(ClusterRoutines):
 
     def create_jobs(self, step, batches,
                     duration=None, memory=None, cores=None):
-        '''Create jobs that can be submitted for processing.
+        '''Creates jobs that can be submitted for processing.
 
         Parameters
         ----------
@@ -389,6 +404,8 @@ class PyramidBuilder(ClusterRoutines):
                             extra_file.site.y, extra_file.site.x
                         ))
                         condition = file_coordinate > extra_file_coordinate
+                        # Each batch only processes the overlapping tiles
+                        # at the upper and/or left border of images.
                         if all(condition):
                             logger.debug('insert pixels from top left image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
@@ -438,17 +455,10 @@ class PyramidBuilder(ClusterRoutines):
                             )
                             tile.insert(subtile, y_offset, 0)
                         else:
-                            logger.info(
-                                'skip - tile will be processed by another job'
+                            raise IndexError(
+                                'Tile "%s" shouldn\'t be in this batch!'
+                                % tile_file.name
                             )
-                            # Each job processes only the overlapping tiles
-                            # at the upper and/or left border of the image.
-                            # This prevents that tiles are created twice, which
-                            # may cause problems with file locking and so on.
-                            # The database entry was already created here, but
-                            # we just leave it for the other job that will
-                            # eventually (hopefully) process the tile.
-                            continue
 
                     tile_file.put(tile)
 
@@ -466,11 +476,8 @@ class PyramidBuilder(ClusterRoutines):
                 'creating empty tiles at maximum zoom level %d', batch['level']
             )
 
-            tile_coords = layer.maxzoom_tile_coordinate_to_image_file_map.keys()
-            rows = range(layer.dimensions[-1][0])
-            cols = range(layer.dimensions[-1][1])
-            all_tile_coords = list(itertools.product(rows, cols))
-            missing_tile_coords = set(all_tile_coords) - set(tile_coords)
+            missing_tile_coords = layer.get_empty_base_tile_coordinates()
+            # TODO: add to batches!!!
             for t in missing_tile_coords:
                 name = layer.build_tile_file_name(
                     batch['level'], t[0], t[1]
@@ -523,17 +530,24 @@ class PyramidBuilder(ClusterRoutines):
                 cols = np.unique([c[1] for c in coordinates])
                 # Build the mosaic by loading required higher level tiles
                 # (created in a previous run) and stitching them together
-
                 for i, r in enumerate(rows):
                     for j, c in enumerate(cols):
-                        pre_tile_file = session.query(
-                                tmlib.models.PyramidTileFile
-                            ).\
-                            filter_by(
-                                row=r, column=c, level=batch['level']+1,
-                                channel_layer_id=layer.id
-                            ).\
-                            one()
+                        try:
+                            pre_tile_file = session.query(
+                                    tmlib.models.PyramidTileFile
+                                ).\
+                                filter_by(
+                                    row=r, column=c, level=batch['level']+1,
+                                    channel_layer_id=layer.id
+                                ).\
+                                one()
+                        except sqlalchemy.orm.exc.NoResultFound:
+                            raise ValueError(
+                                'Tile "%s" was not created!'
+                                % layer.build_tile_file_name(
+                                    batch['level']+1, r, c
+                                )
+                            )
                         # We have to temporally treat it as an "image",
                         # since a tile can per definition not be larger
                         # than 256x256 pixels.

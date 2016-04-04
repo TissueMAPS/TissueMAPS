@@ -11,7 +11,8 @@ DATABASE_URI = os.path.expandvars('$TMAPS_DB_URI')
 
 
 def create_db_engine():
-    '''
+    '''Creates a database engine.
+
     Returns
     -------
     sqlalchemy.engine.base.Engine
@@ -19,43 +20,49 @@ def create_db_engine():
     return sqlalchemy.create_engine(DATABASE_URI)
 
 
-def auto_remove_directory(get_location_func):
-    """
-    @auto_remove_directory(lambda target: target.location)
-    SomeClassWithADirectoryOnDisk(db.Model):
+def remove_location_upon_delete(cls):
+    '''Decorator function for a database model class that automatically removes
+    the location that represents an instance of the class on the filesystem
+    once the corresponding row is deleted from the database table.
+
+    Examples
+    --------
+    @remove_location_upon_delete
+    SomeClassWithALocationOnDisk(Model):
     ...
 
-    """
-    def class_decorator(cls):
-        def after_delete_callback(mapper, connection, target):
-            loc = get_location_func(target)
-            if os.path.exists(loc):
-                logger.info('remove location: %s', loc)
+    '''
+    def after_delete_callback(mapper, connection, target):
+        loc = target.location
+        if os.path.exists(loc):
+            logger.debug('remove location: %s', loc)
+            if os.path.isdir(loc):
                 shutil.rmtree(loc)
+            elif os.path.isfile(loc):
+                os.remove(loc)
 
-        sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
-        return cls
-    return class_decorator
+    sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
+    return cls
 
 
-def auto_create_directory(get_location_func):
-    """
-    @auto_create_directory(lambda target: target.location)
-    SomeClassWithADirectoryOnDisk(db.Model):
-    ...
+# def auto_create_directory(get_location_func):
+#     """
+#     @auto_create_directory(lambda target: target.location)
+#     SomeClassWithADirectoryOnDisk(db.Model):
+#     ...
 
-    """
-    def class_decorator(cls):
-        def after_insert_callback(mapper, connection, target):
-            loc = get_location_func(target)
-            if not os.path.exists(loc):
-                logger.info('create location: %s', loc)
-                os.mkdir(loc)
-            else:
-                logger.warn('location already exists: %s', loc)
-        sqlalchemy.event.listen(cls, 'after_insert', after_insert_callback)
-        return cls
-    return class_decorator
+#     """
+#     def class_decorator(cls):
+#         def after_insert_callback(mapper, connection, target):
+#             loc = get_location_func(target)
+#             if not os.path.exists(loc):
+#                 logger.info('create location: %s', loc)
+#                 os.mkdir(loc)
+#             else:
+#                 logger.warn('location already exists: %s', loc)
+#         sqlalchemy.event.listen(cls, 'after_insert', after_insert_callback)
+#         return cls
+#     return class_decorator
 
 
 def exec_func_after_insert(func):

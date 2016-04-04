@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
-from tmlib.models.utils import auto_remove_directory
+# from tmlib.models.utils import auto_remove_directory
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 EXPERIMENT_LOCATION_FORMAT = 'experiment_{id}'
 
 
-@auto_remove_directory(lambda obj: obj.location)
+# @auto_remove_directory(lambda obj: obj.location)
 class Experiment(Model, DateMixIn):
 
     '''An *experiment* is the main organizational unit of `TissueMAPS`.

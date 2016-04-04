@@ -260,26 +260,60 @@ class ChannelLayer(Model):
         '''
         mappings = list()
         experiment = self.channel.experiment
-        y_offset_site, x_offset_site = image_file.site.offset
+        site = image_file.site
+        well = image_file.site.well
+        y_offset_site, x_offset_site = site.offset
         # Determine the index and offset of each tile whose pixels are part of
         # the image
         row_info = self._calc_tile_indices_and_offsets(
-            y_offset_site, image_file.site.image_size[0],
+            y_offset_site, site.image_size[0],
             experiment.vertical_site_displacement
         )
         col_info = self._calc_tile_indices_and_offsets(
-            x_offset_site, image_file.site.image_size[1],
+            x_offset_site, site.image_size[1],
             experiment.horizontal_site_displacement
         )
+        # Each job processes only the overlapping tiles at the upper and/or
+        # left border of the image. This prevents that tiles are created twice,
+        # which could cause problems with file locking and so on.
+        # Images at the lower and/or right border of the total overview, wells,
+        # or plates represent an exception because in these cases there is
+        # no neighboring image to create the tile instead, but an empty spacer.
         for i, row in enumerate(row_info['indices']):
+            y_offset = row_info['offsets'][i]
+            if (y_offset + self.tile_size) > site.image_size[0]:
+                if ((row + 1) != self.dimensions[-1][0] and
+                        (site.y + 1) != well.dimensions[0]):
+                    continue
             for j, col in enumerate(col_info['indices']):
+                x_offset = col_info['offsets'][j]
+                if (x_offset + self.tile_size) > site.image_size[1]:
+                    if ((col + 1) != self.dimensions[-1][1] and
+                            (site.x + 1) != well.dimensions[1]):
+                        continue
                 mappings.append({
                     'row': row,
                     'column': col,
-                    'y_offset': row_info['offsets'][i],
-                    'x_offset': col_info['offsets'][j]
+                    'y_offset': y_offset,
+                    'x_offset': x_offset
                 })
         return mappings
+
+    def get_empty_base_tile_coordinates(self):
+        '''Gets coordinates of empty base tiles, i.e. tiles at the highest
+        resolution level that don't map to an image because they fall into
+        a spacer.
+
+        Returns
+        -------
+        Set[Tuple[int]]
+            row, column coordinates
+        '''
+        tile_coords = self.maxzoom_tile_coordinate_to_image_file_map.keys()
+        rows = range(self.dimensions[-1][0])
+        cols = range(self.dimensions[-1][1])
+        all_tile_coords = list(itertools.product(rows, cols))
+        return set(all_tile_coords) - set(tile_coords)
 
     def _calc_tile_indices(self, position, length, displacement):
         '''Calculates row or column index for each tile
@@ -339,7 +373,7 @@ class ChannelLayer(Model):
         return mapping
 
     def calc_coordinates_of_next_higher_level(self, level, row, column):
-        '''Calculate for a given tile the coordinates of the 4 tiles at the
+        '''Calculates for a given tile the coordinates of the 4 tiles at the
         next higher zoom level that represent the tile at the current level.
 
         Parameters
@@ -393,7 +427,7 @@ class ChannelLayer(Model):
         return mapping
 
     def create_image_properties_file(self):
-        '''Create the image properties XML file, which provides
+        '''Creates the image properties XML file, which provides
         meta-information about the pyramid, such as the image dimensions at the
         highest resolution level and the total number of tiles.
         '''
@@ -413,7 +447,7 @@ class ChannelLayer(Model):
 
     @staticmethod
     def build_tile_group_name(i):
-        '''Build name of the `i`-th tile group.
+        '''Builds name of the `i`-th tile group.
 
         Parameters
         ----------
@@ -429,7 +463,7 @@ class ChannelLayer(Model):
 
     @staticmethod
     def build_tile_file_name(level, row, col):
-        '''Build name for a tile file at a given pyramid position.
+        '''Builds name for a tile file at a given pyramid position.
 
         Parameters
         ----------
@@ -448,7 +482,7 @@ class ChannelLayer(Model):
         return '{level}-{col}-{row}.jpg'.format(level=level, col=col, row=row)
 
     def get_coordinate_from_name(self, filename):
-        '''Determine "level", "row", and "column" index of a tile from its
+        '''Determines "level", "row", and "column" index of a tile from its
         filename.
 
         Parameters
@@ -477,7 +511,7 @@ class ChannelLayer(Model):
         return (indices['level'], indices['row'], indices['column'])
 
     def create_tile_groups(self):
-        '''Create all required tile group directories.
+        '''Creates all required tile group directories.
 
         Raises
         ------
@@ -491,7 +525,7 @@ class ChannelLayer(Model):
                 os.mkdir(tile_group_dir)
 
     def get_coordinates_of_next_higher_level(self, filename):
-        '''Get tiles of the next higher resolution level that make up the given
+        '''Gets tiles of the next higher resolution level that make up the given
         tile.
 
         Parameters
@@ -510,7 +544,7 @@ class ChannelLayer(Model):
         return self.calc_coordinates_of_next_higher_level(level, row, col)
 
     def extract_tile_from_image(self, image, y_offset, x_offset):
-        '''Extract a subset of pixels for a tile from an image. In case the
+        '''Extracts a subset of pixels for a tile from an image. In case the
         area of the tile overlaps the image, pad the tile with zeros.
 
         Parameters
@@ -532,8 +566,8 @@ class ChannelLayer(Model):
         The size of the tile is predefined.
         '''
         # Some tiles may lie on the border of wells and contain spacer
-        # background pixels. The pixel offset will be negative in these cases.
-        # The missing pixels will be replaced with zeros.
+        # background pixels. The pixel offset is negative in these cases and
+        # missing pixels are replaced with zeros.
         y_end = y_offset + self.tile_size
         x_end = x_offset + self.tile_size
 
@@ -568,8 +602,7 @@ class ChannelLayer(Model):
         return tile
 
     def as_dict(self):
-        '''
-        Return attributes as key-value pairs.
+        '''Returns attributes as key-value pairs.
 
         Returns
         -------
