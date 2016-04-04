@@ -13,16 +13,50 @@ module.exports = function(gulp, opt) {
     var tsProject = typescript.createProject('tsconfig.json');
     var banner = require('gulp-banner');
 
+    gulp.task('make-test-script', function() {
+
+        var typeDefFiles = gulp.src([
+            './app/typedefs/DefinitelyTyped/jasmine/jasmine.d.ts',
+            './app/typedefs/DefinitelyTyped/angularjs/angular-mocks.d.ts',
+            './app/typedefs/libs.d.ts',
+            './app/typedefs/DefinitelyTyped/underscore/underscore.d.ts',
+            './app/typedefs/DefinitelyTyped/angularjs/angular.d.ts',
+            './app/typedefs/DefinitelyTyped/bluebird/bluebird.d.ts',
+            './app/typedefs/DefinitelyTyped/jquery/jquery.d.ts',
+            './app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts',
+            opt.destFolder + '/script.d.ts'
+        ]);
+        var testFiles = gulp.src('./test/unit/**/*.ts');
+        es.merge(typeDefFiles, testFiles)
+            .pipe(typescript({
+                outFile: 'script.test.js',
+                target: 'ES5'
+            }))
+            .pipe(gulp.dest(opt.destFolder));
+    });
+
     /**
      * Compile all TypeScript code and concatenate all library code.
      */
     gulp.task('make-script', function() {
+        /**
+         * Copy the typescript files into the directory from which the connect
+         * server serves its files. By doing so the original sources files can be
+         * loaded by the browser when interacting with the source map.
+         */
         var copy;
         if (opt.dev) {
             copy = gulp.src('./app/src/**/*.ts', {base: './app'})
                 .pipe(gulp.dest(opt.destFolder));
         }
 
+        // Only produce declaration files in case of dev mode.
+        tsProject.config.declaration = opt.dev;
+
+        /**
+         * Compile the application source code.
+         * In case of production execution mode the source code will be uglified and revved.
+         */
         var src = tsProject.src()
             .pipe(sourcemaps.init())
             .pipe(typescript({
@@ -53,6 +87,10 @@ module.exports = function(gulp, opt) {
             .pipe(gulp.dest(opt.destFolder))
             .pipe(_if(opt.reload, livereload()));
 
+        /**
+         * Compile the library code.
+         * In case of production mode also apply revving and uglifying.
+         */
         var libs;
         if (opt.prod) {
             libs = gulp.src(dependencies)
