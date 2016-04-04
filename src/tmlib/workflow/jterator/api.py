@@ -405,14 +405,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
             fid = batch['image_file_ids'].values()[0]  # TODO: 3D and time
             image_file = session.query(tmlib.models.ChannelImageFile).get(fid)
             y_offset, x_offset = image_file.site.offset
-            # TODO: shift values
-            shift = [
-                s for s in image_file.site.shifts
-                if s.cycle_id == image_file.cycle_id
-            ][0]
-            # overhang instead of shift?
-            y_offset += shift.y
-            x_offset += shift.x
+            # shift = [
+            #     s for s in image_file.site.shifts
+            #     if s.cycle_id == image_file.cycle_id
+            # ][0]
+            # y_offset += shift.y
+            # x_offset += shift.x
+            y_offset += image_file.site.intersection.lower_overhang
+            x_offset += image_file.site.intersection.right_overhang
             for obj_name, obj_type in store['segmented_objects'].iteritems():
                 logger.info('add mapobject type "%s"', obj_name)
                 mapobject_type = session.get_or_create(
