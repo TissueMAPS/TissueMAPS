@@ -432,12 +432,14 @@ class CommandLineInterface(object):
         else:
             logger.info('create all jobs')
             batches = self.batches
-        jobs = api.create_jobs(
-                batches=batches,
-                duration=duration,
-                memory=memory,
-                cores=cores)
-        return jobs
+        step = api.create_step()
+        return api.create_jobs(
+            step=step,
+            batches=batches,
+            duration=duration,
+            memory=memory,
+            cores=cores
+        )
 
     def submit(self, args):
         '''Processes arguments provided by the "submit" subparser, which

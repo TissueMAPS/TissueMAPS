@@ -25,7 +25,6 @@ from tmlib.writers import JsonWriter
 from tmlib.errors import JobDescriptionError
 from tmlib.errors import WorkflowError
 from tmlib.workflow.jobs import RunJob
-from tmlib.workflow.jobs import RunJobCollection
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow import WorkflowStep

@@ -12,10 +12,8 @@ from tmlib.image import PyramidTile
 from tmlib.image import ChannelImage
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
-from tmlib.workflow.jobs import RunJobCollection
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import MultiRunJobCollection
-from tmlib.workflow.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)
 
@@ -363,7 +361,7 @@ class PyramidBuilder(ClusterRoutines):
                     )
                     logger.info('creating tile: %s', tile_file.name)
                     tile = file.channel_layer.extract_tile_from_image(
-                        image, t['y_offset'], t['x_offset']
+                        image_store[file.name], t['y_offset'], t['x_offset']
                     )
 
                     file_coordinate = np.array((file.site.y, file.site.x))
@@ -386,8 +384,6 @@ class PyramidBuilder(ClusterRoutines):
                             image = image.clip(clip_value)
                             image = image.scale(clip_value)
                             image_store[extra_file.name] = image
-                        else:
-                            image = image_store[extra_file.name]
 
                         extra_file_coordinate = np.array((
                             extra_file.site.y, extra_file.site.x
@@ -400,7 +396,9 @@ class PyramidBuilder(ClusterRoutines):
                             height = abs(t['y_offset'])
                             width = abs(t['x_offset'])
                             subtile = PyramidTile(
-                                image.extract(y, x, height, width).pixels
+                                image_store[extra_file.name].extract(
+                                    y, x, height, width
+                                ).pixels
                             )
                             tile.insert(subtile, 0, 0)
                         elif condition[0] and not condition[1]:
@@ -416,7 +414,9 @@ class PyramidBuilder(ClusterRoutines):
                                 width = tile.dimensions[1]
                                 x_offset = 0
                             subtile = PyramidTile(
-                                image.extract(y, x, height, width).pixels
+                                image_store[extra_file.name].extract(
+                                    y, x, height, width
+                                ).pixels
                             )
                             tile.insert(subtile, 0, x_offset)
                         elif not condition[0] and condition[1]:
@@ -432,10 +432,15 @@ class PyramidBuilder(ClusterRoutines):
                                 height = tile.dimensions[0]
                                 y_offset = 0
                             subtile = PyramidTile(
-                                image.extract(y, x, height, width).pixels
+                                image_store[extra_file.name].extract(
+                                    y, x, height, width
+                                ).pixels
                             )
                             tile.insert(subtile, y_offset, 0)
                         else:
+                            logger.info(
+                                'skip - tile will be processed by another job'
+                            )
                             # Each job processes only the overlapping tiles
                             # at the upper and/or left border of the image.
                             # This prevents that tiles are created twice, which

@@ -397,6 +397,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 with TextWriter(figure_file) as f:
                     f.write(store['current_figure'])
 
+        # TODO: delete all prior mapobjects and features for the given
+        # site and then bulk insert them them without using `get_or_create()`
+
         logger.info('write database entries for identified objects')
         with tmlib.models.utils.Session() as session:
             fid = batch['image_file_ids'].values()[0]  # TODO: 3D and time
@@ -407,6 +410,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 s for s in image_file.site.shifts
                 if s.cycle_id == image_file.cycle_id
             ][0]
+            # overhang instead of shift?
             y_offset += shift.y
             x_offset += shift.x
             for obj_name, obj_type in store['segmented_objects'].iteritems():
