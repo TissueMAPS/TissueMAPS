@@ -50,7 +50,7 @@ def shell():
 
 
 @db_manager.command
-def create_tables():
+def createtables():
     """A command to initialize the tables in the database specified by the
     config key 'SQLALCHEMY_DATABASE_URI'.
 
@@ -65,10 +65,10 @@ def create_tables():
 
 
 @db_manager.command
-def insert_data(yaml_file):
+def insertdata(yaml_file):
     """Insert some records values into the database.
 
-    This command has to be run after after `create_tables`.
+    This command has to be run after after `createtables`.
 
     Arguments
     ---------
