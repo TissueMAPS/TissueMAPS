@@ -34,10 +34,9 @@ angular.module('tmaps.ui')
                     Experiment.get(experimentId).then(function(exp) {
                         var newViewer = new AppInstance(exp);
                         app.addViewer(newViewer);
+                        app.showViewer(newViewer);
                     });
                 }
-
-                app.show();
             } else {
                 var availableViewers = app.appInstances;
                 if (availableViewers.length > 0)  {
