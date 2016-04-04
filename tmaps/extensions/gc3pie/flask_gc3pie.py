@@ -46,14 +46,6 @@ from tmaps.model import Model
 from tmaps.extensions import db
 
 
-class GC3PieTask(Model):
-    __tablename__ = 'gc3pie_tasks'
-
-    id = db.Column(db.Integer, primary_key=True)
-    data = db.LargeBinary()
-    state = db.Column(db.String(128))
-
-
 class GC3Pie(object):
     def __init__(self, session, engine):
         self.session = session
