@@ -132,8 +132,10 @@ class Acquisition(Model, DateMixIn):
             'name': self.name,
             'description': self.description,
             'status': self.status,
-            'image_files': [im.as_dict() for im in self.image_files],
-            'metadata_files': [md.as_dict() for md in self.metadata_files]
+            'microscope_image_files':
+                [im.name for im in self.microscope_image_files],
+            'microscope_metadata_files':
+                [md.name for md in self.microscope_metadata_files]
         }
 
     def __repr__(self):

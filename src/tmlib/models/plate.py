@@ -144,7 +144,7 @@ class Plate(Model, DateMixIn):
     def status(self):
         '''str: upload status based on the status of acquisitions'''
         child_status = set([
-            f.upload_status for f in self.acquisitions
+            f.status for f in self.acquisitions
         ])
         if fus.UPLOADING in child_status:
             return fus.UPLOADING
