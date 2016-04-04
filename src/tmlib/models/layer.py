@@ -372,54 +372,6 @@ class ChannelLayer(Model):
                 coordinates.append((r, c))
         return coordinates
 
-    # def calc_site_offset(self, site):
-    #     '''Calculate offset of a `site` within the layer.
-
-    #     Parameters
-    #     ----------
-    #     site: tmlib.models.Site
-    #         site for which offset should be calculated
-
-    #     Returns
-    #     -------
-    #     Tuple[int]
-    #         y, x coordinate of the top, left corner of the site relative to
-    #         the layer overview at the maximum zoom level
-    #     '''
-    #     well = site.well
-    #     plate = well.plate
-    #     experiment = self.channel.experiment
-    #     plate_coordinate = tuple(
-    #         [a[0] for a in np.where(experiment.plate_grid == plate.id)]
-    #     )
-    #     # NOTE: Shifts of sites between cycles only affect pixels within the
-    #     # site and are therefore handled separately.
-    #     y_offset = (
-    #         # Sites in the well above the site
-    #         site.coordinate[0] * site.image_size[0] +
-    #         # Potential displacement of sites in y-direction
-    #         site.coordinate[0] * experiment.vertical_site_displacement +
-    #         # Wells in the plate above the well
-    #         plate.nonempty_rows.index(well.coordinate[0]) * well.image_size[0] +
-    #         # Gap introduced between wells
-    #         plate.nonempty_rows.index(well.coordinate[0]) * experiment.well_spacer_size +
-    #         # Plates above the plate
-    #         plate_coordinate[0] * plate.image_size[0]
-    #     )
-    #     x_offset = (
-    #         # Sites in the well left of the site
-    #         site.coordinate[1] * site.image_size[1] +
-    #         # Potential displacement of sites in y-direction
-    #         site.coordinate[1] * experiment.horizontal_site_displacement +
-    #         # Wells in the plate left of the well
-    #         plate.nonempty_columns.index(well.coordinate[1]) * well.image_size[1] +
-    #         # Gap introduced between wells
-    #         plate.nonempty_columns.index(well.coordinate[1]) * experiment.well_spacer_size +
-    #         # Plates left of the plate
-    #         plate_coordinate[1] * plate.image_size[0]
-    #     )
-    #     return (y_offset, x_offset)
-
     @cached_property
     def tile_coordinate_group_map(self):
         '''Dict[Tuple[int], int]: mapping of tile coordinate
