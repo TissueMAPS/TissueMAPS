@@ -88,4 +88,4 @@ CheckArgs().add_to_argparser(check_parser)
 JteratorCheckArgs().add_to_argparser(check_parser)
 
 for name in subparsers.choices:
-    subparsers.choices[name].set_defaults(handler=Jterator.call)
+    subparsers.choices[name].set_defaults(call=Jterator.call)

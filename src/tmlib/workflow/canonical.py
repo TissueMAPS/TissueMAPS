@@ -1,5 +1,4 @@
-'''
-Settings for the canonical `TissueMAPS` workflow.
+'''Settings for the canonical `TissueMAPS` workflow.
 
 In principle, workflow steps can be arranged in arbitrary order and
 interdependencies between steps are checked dynamically while the workflow
@@ -12,9 +11,9 @@ described workflow in the first place.
 '''
 from collections import OrderedDict
 
-from tmlib.workflow import WorkflowDescription
-from tmlib.workflow import WorkflowStageDescription
-from tmlib.workflow import WorkflowStepDescription
+from tmlib.workflow.description import WorkflowDescription
+from tmlib.workflow.description import WorkflowStageDescription
+from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.errors import WorkflowDescriptionError
 from tmlib import utils
 

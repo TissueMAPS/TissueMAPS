@@ -30,7 +30,5 @@ class Metaconfig(CommandLineInterface):
     @staticmethod
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):
-        api_instance = MetadataConfigurator(
-            args.experiment_id, name, args.verbosity
-        )
+        api_instance = MetadataConfigurator(args.experiment_id, args.verbosity)
         Metaconfig(api_instance, args.verbosity)._call(args)

@@ -203,6 +203,11 @@ class Experiment(Model, DateMixIn):
         '''str: location where mapobject type data are stored'''
         return os.path.join(self.location, 'mapobject_types')
 
+    @autocreate_directory_property
+    def workflow_location(self):
+        '''str: location where workflow data are stored'''
+        return os.path.join(self.location, 'workflow')
+
     @cached_property
     def plate_spacer_size(self):
         '''int: gap between neighboring plates in pixels'''

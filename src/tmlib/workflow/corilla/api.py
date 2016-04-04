@@ -10,26 +10,20 @@ from tmlib.workflow.corilla.stats import OnlineStatistics
 logger = logging.getLogger(__name__)
 
 
-class IllumstatsGenerator(ClusterRoutines):
+class IllumstatsCalculator(ClusterRoutines):
 
     '''Class for calculating illumination statistics.'''
 
-    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, verbosity):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of parent experiment
-        step_name: str
-            name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        **kwargs: dict
-            ignored keyword arguments
         '''
-        super(IllumstatsGenerator, self).__init__(
-            experiment_id, step_name, verbosity
-        )
+        super(IllumstatsCalculator, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
         '''
@@ -141,3 +135,25 @@ class IllumstatsGenerator(ClusterRoutines):
     @notimplemented
     def collect_job_output(self, batch):
         pass
+
+
+def factory(experiment_id, verbosity, **kwargs):
+    '''Factory function for the instantiation of a `corilla`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    **kwargs: dict
+        ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.IllumstatsCalculator
+        API instance
+    '''
+    return IllumstatsCalculator(experiment_id, verbosity)

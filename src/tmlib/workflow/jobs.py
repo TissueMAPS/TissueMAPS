@@ -206,11 +206,16 @@ class RunJob(Job):
         )
 
 
-class RunJobCollection(ParallelTaskCollection):
+class RunJobCollection(object):
 
-    '''Class for TissueMAPS run jobs based on a
-    `gc3libs.workflow.ParallelTaskCollection`.
-    '''
+    '''Abstract base class for run job collections.'''
+
+    __metaclass__ = ABCMeta
+
+
+class SingleRunJobCollection(ParallelTaskCollection, RunJobCollection):
+
+    '''Class for a single run job collection.'''
 
     def __init__(self, step_name, submission_id, jobs=None, index=None):
         '''
@@ -220,7 +225,7 @@ class RunJobCollection(ParallelTaskCollection):
             name of the corresponding TissueMAPS workflow step
         submission_id: int
             ID of the corresponding submission
-        jobs: List[tmlibs.tmaps.workflow.RunJob], optional
+        jobs: List[tmlibs.workflow.jobs.RunJob], optional
             list of jobs that should be processed (default: ``None``)
         index: int, optional
             index of the *run* job collection in case the step has multiple
@@ -232,8 +237,9 @@ class RunJobCollection(ParallelTaskCollection):
                 raise TypeError('Argument "jobs" must have type list.')
             if not all([isinstance(j, RunJob) for j in jobs]):
                 raise TypeError(
-                        'Elements of argument "jobs" must have type '
-                        'tmlib.jobs.RunJob')
+                    'Elements of argument "jobs" must have type '
+                    'tmlib.workflow.jobs.RunJob'
+                )
         if index is None:
             self.name = '%s_run' % self.step_name
         else:
@@ -241,14 +247,16 @@ class RunJobCollection(ParallelTaskCollection):
                 raise TypeError('Argument "index" must have type int.')
             self.name = '%s_run-%.2d' % (self.step_name, index)
         self.submission_id = submission_id
-        super(RunJobCollection, self).__init__(jobname=self.name, tasks=jobs)
+        super(SingleRunJobCollection, self).__init__(
+            jobname=self.name, tasks=jobs
+        )
 
     def add(self, job):
-        '''Add a job to the collection.
+        '''Adds a job to the collection.
 
         Parameters
         ----------
-        job: tmlibs.tmaps.workflow.RunJob
+        job: tmlibs.workflow.jobs.RunJob
             job that should be added
 
         Raises
@@ -258,18 +266,21 @@ class RunJobCollection(ParallelTaskCollection):
         '''
         if not isinstance(job, RunJob):
             raise TypeError(
-                        'Argument "job" must have type '
-                        'tmlib.jobs.RunJob')
-        super(RunJobCollection, self).add(job)
+                'Argument "job" must have type '
+                'tmlib.workflow.jobs.RunJob'
+            )
+        super(SingleRunJobCollection, self).add(job)
 
     def __repr__(self):
         return (
-            '<RunJobCollection(name=%r, n=%r, submission_id=%r)>'
+            '<SingleRunJobCollection(name=%r, n=%r, submission_id=%r)>'
             % (self.name, len(self.tasks), self.submission_id)
         )
 
 
-class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
+class MultiRunJobCollection(AbortOnError, SequentialTaskCollection, RunJobCollection):
+
+    '''Class for multiple run job collections.'''
 
     def __init__(self, step_name, submission_id, run_job_collections=None):
         '''
@@ -279,15 +290,14 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
             name of the corresponding TissueMAPS workflow step
         submission_id: int
             ID of the corresponding submission
-        run_job_collections: List[tmlib.jobs.RunJobCollection], optional
+        run_job_collections: List[tmlib.workflow.jobs.SingleRunJobCollection], optional
             collections of run jobs that should be processed one after another
         '''
-        self.name = '%s_multirun' % step_name
+        self.name = '%s_run' % step_name
         self.step_name = step_name
         self.submission_id = submission_id
         super(MultiRunJobCollection, self).__init__(
-            tasks=run_job_collections,
-            jobname=self.name
+            jobname=self.name, tasks=run_job_collections
         )
 
     def add(self, run_job_collection):
@@ -295,7 +305,7 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
 
         Parameters
         ----------
-        run_job_collection: exittmlib.jobs.RunJobCollection
+        run_job_collection: tmlib.workflow.jobs.SingleRunJobCollection
             collection of run jobs that should be added
 
         Raises
@@ -303,10 +313,11 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
         TypeError
             when `run_job_collection` has wrong type
         '''
-        if not isinstance(run_job_collection, RunJobCollection):
+        if not isinstance(run_job_collection, SingleRunJobCollection):
             raise TypeError(
-                        'Argument "run_job_collection" must have type '
-                        'tmlib.jobs.RunJobCollection')
+                'Argument "run_job_collection" must have type '
+                'tmlib.workflow.jobs.SingleRunJobCollection'
+            )
         super(MultiRunJobCollection, self).add(run_job_collection)
 
     def __repr__(self):
@@ -318,7 +329,7 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection):
 
 class CollectJob(Job):
 
-    '''Class for TissueMAPS collect jobs, which can be processed once all
+    '''Class for a collect jobs, which can be processed once all
     parallel jobs are successfully completed.
     '''
 

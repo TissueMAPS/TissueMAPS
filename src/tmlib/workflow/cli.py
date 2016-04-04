@@ -71,26 +71,6 @@ def create_method_args(step_name, method_name, **kwargs):
     return method_args
 
 
-# def call_cli_method(cli_instance, method_name, method_args):
-#     '''Call a method of a *cli* class with the parsed command line arguments.
-
-#     Parameters
-#     ----------
-#     cli_instance: tmlib.steps.cli.CommandLineInterface
-#         an instance of an implementation of the
-#         :py:class:`tmlib.cli.CommandLineInterface` base class
-#     method_name: str
-#         name of the method that should be called
-#     method_args: tmlib.stepstmlib.workflow.args.GeneralArgs
-#         arguments required for the method
-
-#     See also
-#     --------
-#     :py:func:`tmlib.steps.cli.create_method_args`
-#     '''
-#     getattr(cli_instance, method_name)(method_args)
-
-
 class CommandLineInterface(object):
 
     '''Abstract base class for command line interfaces.
@@ -167,7 +147,7 @@ class CommandLineInterface(object):
         apscheduler_logger.setLevel(logging.CRITICAL)
 
         try:
-            arguments.handler(name=parser.prog, args=arguments)
+            arguments.call(name=parser.prog, args=arguments)
             logger.info('COMPLETED')
             sys.exit(0)
             return 0
@@ -260,41 +240,51 @@ class CommandLineInterface(object):
         Returns
         -------
         dict
-            job descriptions
+            batches
         '''
-        if not args.keep_output:
-            self._cleanup()
+        self._print_logo()
+        self._cleanup()
         api = self.api_instance
         if args.backup:
-            logger.info('backup log reports and job descriptions '
-                        'of previous submission')
+            logger.info(
+                'backup log reports and batches of previous submission'
+            )
             timestamp = api.create_datetimestamp()
-            shutil.move(api.log_location,
-                        '{name}_backup_{time}'.format(
-                            name=api.log_location,
-                            time=timestamp))
-            shutil.move(api.job_descriptions_location,
-                        '{name}_backup_{time}'.format(
-                            name=api.job_descriptions_location,
-                            time=timestamp))
+            shutil.move(
+                api.log_location,
+                '{name}_backup_{time}'.format(
+                    name=api.log_location, time=timestamp
+                )
+            )
+            shutil.move(
+                api.batches_location,
+                '{name}_backup_{time}'.format(
+                    name=api.batches_location, time=timestamp
+                )
+            )
             if os.path.exists(api.session_location):
-                shutil.move(api.job_descriptions_location,
-                        '{name}_backup_{time}'.format(
-                            name=api.session_location,
-                            time=timestamp))
+                shutil.move(
+                    api.batches_location,
+                    '{name}_backup_{time}'.format(
+                        name=api.session_location, time=timestamp
+                    )
+                )
         else:
-            logger.debug('remove log reports and job descriptions '
-                         'of previous submission')
-            shutil.rmtree(api.job_descriptions_location)
+            logger.debug(
+                'remove log reports and batches of previous submission'
+            )
+            shutil.rmtree(api.batches_location)
+            os.mkdir(api.batches_location)
             shutil.rmtree(api.log_location)
+            os.mkdir(api.log_location)
 
-        logger.info('create job descriptions')
-        job_descriptions = api.create_batches(args.variable_args)
-        if not job_descriptions['run']:
-            raise ValueError('No job descriptions were created.')
-        logger.info('write job descriptions to files')
-        api.write_job_files(job_descriptions)
-        return job_descriptions
+        logger.info('create batches')
+        batches = api.create_batches(args.variable_args)
+        if not batches['run']:
+            raise ValueError('No batches were created.')
+        logger.info('write batches to files')
+        api.write_batch_files(batches)
+        return batches
 
     def run(self, args):
         '''Processes arguments provided by the "run" subparser, which runs
@@ -304,16 +294,12 @@ class CommandLineInterface(object):
         ----------
         args: tmlibtmlib.workflow.args.RunArgs
             method-specific arguments
-
-        Note
-        ----
-        Requires calling :py:method:`tmlib.cli.init` first.
         '''
         self._print_logo()
         api = self.api_instance
-        logger.info('read job description from file')
-        job_file = api.build_run_job_filename(args.job)
-        batch = api.read_job_file(job_file)
+        logger.info('read job description from batch file')
+        batch_file = api.build_batch_filename_for_run_job(args.job)
+        batch = api.read_batch_file(batch_file)
         logger.info('run job #%d' % batch['id'])
         api.run_job(batch)
 
@@ -338,10 +324,10 @@ class CommandLineInterface(object):
             )
         api = self.api_instance
         if args.phase == 'run':
-            job_file = api.build_run_job_filename(args.job)
+            batch_file = api.build_batch_filename_for_run_job(args.job)
         else:
-            job_file = api.build_collect_job_filename()
-        batch = api.read_job_file(job_file)
+            batch_file = api.build_batch_filename_for_collect_job()
+        batch = api.read_batch_file(batch_file)
         print('\nJOB DESCRIPTION\n===============\n\n%s'
               % yaml.safe_dump(batch, default_flow_style=False))
 
@@ -370,11 +356,11 @@ class CommandLineInterface(object):
               % (log['stdout'], log['stderr']))
 
     @cached_property
-    def job_descriptions(self):
-        '''dict: descriptions of all jobs retrieved from files'''
+    def batches(self):
+        '''dict: job descriptions'''
         api = self.api_instance
-        logger.debug('read job descriptions from files')
-        return api.get_job_descriptions_from_files()
+        logger.debug('read batches from files')
+        return api.get_batches_from_files()
 
     @property
     def expected_outputs(self):
@@ -382,18 +368,18 @@ class CommandLineInterface(object):
         the step
         '''
         api = self.api_instance
-        logger.debug('get expected outputs from job descriptions')
-        return api.list_output_files(self.job_descriptions)
+        logger.debug('get expected outputs from batches')
+        return api.list_output_files(self.batches)
 
     @property
     def required_inputs(self):
         '''List[str]: absolute paths to inputs that are required by the step'''
         api = self.api_instance
-        logger.debug('get required inputs from job descriptions')
-        return api.list_input_files(self.job_descriptions)
+        logger.debug('get required inputs from batches')
+        return api.list_input_files(self.batches)
 
     def create_jobs(self, duration, memory, cores, phase=None, ids=None):
-        '''Creates *jobs* based on previously created job descriptions.
+        '''Creates *jobs* based on previously created batches.
         Job descriptions are loaded from files on disk and used to
         instantiate *job* objects. 
 
@@ -428,26 +414,26 @@ class CommandLineInterface(object):
         if phase == 'run':
             if ids is not None:
                 logger.info('create run jobs %s', ', '.join(map(str, ids)))
-                job_descriptions = dict()
-                job_descriptions['run'] = [
-                    j for j in self.job_descriptions['run'] if j['id'] in ids
+                batches = dict()
+                batches['run'] = [
+                    j for j in self.batches['run'] if j['id'] in ids
                 ]
             else:
-                job_descriptions = dict()
-                job_descriptions['run'] = self.job_descriptions['run']
+                batches = dict()
+                batches['run'] = self.batches['run']
         elif phase == 'collect':
             logger.info('create collect job')
-            if 'collect' not in self.job_descriptions.keys():
+            if 'collect' not in self.batches.keys():
                 raise ValueError(
                             'Step "%s" doesn\'t have a "collect" phase.'
                             % self.name)
-            job_descriptions = dict()
-            job_descriptions['collect'] = self.job_descriptions['collect']
+            batches = dict()
+            batches['collect'] = self.batches['collect']
         else:
             logger.info('create all jobs')
-            job_descriptions = self.job_descriptions
+            batches = self.batches
         jobs = api.create_jobs(
-                job_descriptions=job_descriptions,
+                batches=batches,
                 duration=duration,
                 memory=memory,
                 cores=cores)
@@ -461,10 +447,6 @@ class CommandLineInterface(object):
         ----------
         args: tmlibtmlib.workflow.args.SubmitArgs
             method-specific arguments
-
-        Note
-        ----
-        Requires calling :py:method:`tmlib.cli.init` first.
         '''
         self._print_logo()
         api = self.api_instance
@@ -512,7 +494,7 @@ class CommandLineInterface(object):
 
         Note
         ----
-        Requires calling :py:method:`tmlib.cli.init` first.
+        Requires a prior call of :py:method:`tmlib.workflow.cli.submit`.
         '''
         # TODO: session has some delay, immediate resubmission may cause trouble
         self._print_logo()
@@ -547,17 +529,12 @@ class CommandLineInterface(object):
         ----------
         args: tmlibtmlib.workflow.args.CollectArgs
             method-specific arguments
-
-        Note
-        ----
-        Requires calling :py:method:`tmlib.cli.init` and
-        :py:method:`tmlib.cli.submit` first.
         '''
         self._print_logo()
         api = self.api_instance
         logger.info('read job description from file')
-        job_file = api.build_collect_job_filename()
-        batch = api.read_job_file(job_file)
+        batch_file = api.build_batch_filename_for_collect_job()
+        batch = api.read_batch_file(batch_file)
         logger.info('collect job output')
         api.collect_job_output(batch)
 
@@ -594,11 +571,11 @@ class CommandLineInterface(object):
             init_parser = subparsers.add_parser(
                 'init', help='initialize the program with required arguments')
             init_parser.description = '''
-                Create a list of persistent job descriptions for parallel
+                Create a list of persistent batches for parallel
                 processing, which are used to dynamically build GC3Pie jobs.
                 The descriptions are stored on disk in form of JSON files.
                 Note that in case of the existence of a previous submission,
-                job descriptions and log outputs will be overwritten
+                batches and log outputs will be overwritten
                 unless the "--backup" option is used.
                 Also note that all outputs created by a previous submission
                 will also be removed unless the "--keep_output" option is

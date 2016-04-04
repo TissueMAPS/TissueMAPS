@@ -15,22 +15,18 @@ class MetadataExtractor(ClusterRoutines):
     `Open Microscopy Environment (OME) schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
     '''
 
-    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, verbosity, **kwargs):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        step_name: str
-            name of the corresponding step
         verbosity: int
             logging level
         **kwargs: dict
             ignored keyword arguments
         '''
-        super(MetadataExtractor, self).__init__(
-            experiment_id, step_name, verbosity
-        )
+        super(MetadataExtractor, self).__init__(experiment_id, verbosity)
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):
@@ -130,3 +126,25 @@ class MetadataExtractor(ClusterRoutines):
     @notimplemented
     def collect_job_output(self, batch):
         pass
+
+
+def factory(experiment_id, verbosity, **kwargs):
+    '''Factory function for the instantiation of a `metaextract`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    **kwargs: dict
+        ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.MetadataExtractor
+        API instance
+    '''
+    return MetadataExtractor(experiment_id, verbosity, **kwargs)

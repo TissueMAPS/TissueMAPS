@@ -1,7 +1,7 @@
 import os
 import logging
 from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import Model, DateMixIn
@@ -49,7 +49,10 @@ class Channel(Model, DateMixIn):
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     # Relationships to other tables
-    experiment = relationship('Experiment', backref='channels')
+    experiment = relationship(
+        'Experiment',
+        backref=backref('channels', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, index, experiment_id):
         '''

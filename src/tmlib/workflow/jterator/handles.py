@@ -360,34 +360,6 @@ class SegmentedObjects(LabelImage):
             })
         return outlines
 
-    def calc_centroids(self, offset_y, offset_x):
-        '''Calculates the global map coordinates for each object centroid.
-
-        Parameters
-        ----------
-        offset_y: int
-            vertical offset that needs to be added along the *y* axis
-        offset_x: int
-            horizontal offset that needs to be added along the *x* axis
-
-
-        Returns
-        -------
-        Dict[int, pandas.DataFrame[numpy.int64]]
-            *y* and *x* coordinate of each object centroid,
-            indexable by its one-based label
-        '''
-        logger.debug('calculate centroids for mapobject type "%s"', self.key)
-        regions = skimage.measure.regionprops(self.value)
-        centroids = dict()
-        for r in regions:
-            c = np.array(r.centroid).astype(np.int64)
-            centroids[r.label] = pd.DataFrame({
-                'y': [-1 * (c[0] + offset_y)],
-                'x': [c[1] + offset_x]
-            })
-        return centroids
-
     @property
     def is_border(self):
         '''pandas.Series[numpy.bool]: ``True`` if object lies at the border of

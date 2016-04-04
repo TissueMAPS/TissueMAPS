@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Imextract(CommandLineInterface):
 
-    '''
-    Command line interface for extraction of images from image files.
-    '''
+    '''Command line interface for extraction of images from image files.'''
 
     def __init__(self, api_instance, verbosity):
         '''
@@ -38,7 +36,5 @@ class Imextract(CommandLineInterface):
     @staticmethod
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):
-        api_instance = ImageExtractor(
-            args.experiment_id, name, args.verbosity
-        )
+        api_instance = ImageExtractor(args.experiment_id, args.verbosity)
         Imextract(api_instance, args.verbosity)._call(args)

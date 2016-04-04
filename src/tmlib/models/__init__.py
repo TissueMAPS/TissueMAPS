@@ -1,6 +1,4 @@
-'''
-Database models.
-'''
+'''`TissueMAPS` database models.'''
 
 from base import Model, DateMixIn, File
 from user import User
@@ -8,7 +6,8 @@ from experiment import Experiment
 from well import Well
 from channel import Channel
 from layer import ChannelLayer
-from mapobject import MapobjectType, Mapobject, MapobjectOutline, Feature, FeatureValue
+from mapobject import MapobjectType, Mapobject, MapobjectOutline
+from feature import Feature, FeatureValue
 from plate import Plate
 from acquisition import Acquisition
 from cycle import Cycle

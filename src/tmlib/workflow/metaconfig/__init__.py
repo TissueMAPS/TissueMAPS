@@ -13,8 +13,8 @@ logo = '''
 SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager', 'default'}
 
 
-def import_microscope_specific_module(microscope_type):
-    '''Load the module specific to a given microscope type.
+def import_microscope_type_specific_module(microscope_type):
+    '''Load the module specific to an implemented microscope type.
 
     Parameters
     ----------
@@ -41,9 +41,9 @@ def import_microscope_specific_module(microscope_type):
 
 
 def metadata_reader_factory(microscope_type):
-    '''Return a microscope-specific implementation
-    of the :py:class:`tmlib.steps.metaconfig.default.MetadataReader`
-    abstract base class.
+    '''Return the implementation
+    of the :py:class:`tmlib.workflow.metaconfig.default.MetadataReader`
+    abstract base class for the given microscope type.
 
     Parameters
     ----------
@@ -52,17 +52,17 @@ def metadata_reader_factory(microscope_type):
 
     Returns
     -------
-    tmlib.steps.metaconfig.default.MetadataReader
+    tmlib.workflow.metaconfig.default.MetadataReader
     '''
-    module = import_microscope_specific_module(microscope_type)
+    module = import_microscope_type_specific_module(microscope_type)
     class_name = '%sMetadataReader' % microscope_type.capitalize()
     return getattr(module, class_name)
 
 
 def metadata_handler_factory(microscope_type):
-    '''Return a microscope-specific implementation
-    of the :py:class:`tmlib.steps.metaconfig.default.MetadataHandler`
-    abstract base class.
+    '''Return the implementation of the
+    :py:class:`tmlib.workflow.metaconfig.default.MetadataHandler`
+    abstract base class for the given microscope type.
 
     Parameters
     ----------
@@ -71,8 +71,8 @@ def metadata_handler_factory(microscope_type):
 
     Returns
     -------
-    tmlib.steps.metaconfig.default.MetadataHandler
+    tmlib.workflow.metaconfig.default.MetadataHandler
     '''
-    module = import_microscope_specific_module(microscope_type)
+    module = import_microscope_type_specific_module(microscope_type)
     class_name = '%sMetadataHandler' % microscope_type.capitalize()
     return getattr(module, class_name)

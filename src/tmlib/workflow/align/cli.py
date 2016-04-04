@@ -2,7 +2,7 @@ import logging
 
 from tmlib.utils import same_docstring_as
 from tmlib.workflow.align import logo
-from tmlib.workflow.align.api import ImageRegistration
+from tmlib.workflow.align.api import ImageRegistrator
 from tmlib.workflow.cli import CommandLineInterface
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class Align(CommandLineInterface):
 
         Parameters
         ----------
-        api_instance: tmlib.workflow.align.ImageRegistration
+        api_instance: tmlib.workflow.align.ImageRegistrator
             configured experiment object
         verbosity: int
             logging level
@@ -30,7 +30,5 @@ class Align(CommandLineInterface):
     @staticmethod
     @same_docstring_as(CommandLineInterface.call)
     def call(name, args):
-        api_instance = ImageRegistration(
-            args.experiment_id, name, args.verbosity
-        )
+        api_instance = ImageRegistrator(args.experiment_id, args.verbosity)
         Align(api_instance, args.verbosity)._call(args)

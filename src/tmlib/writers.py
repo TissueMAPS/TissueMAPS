@@ -42,7 +42,7 @@ class Writer(object):
 
     def __enter__(self):
         logger.debug('open file: %s', self.filename)
-        self._stream = open(self.filename, 'w')
+        self._stream = open(self.filename, 'w+')
         return self
 
     def __exit__(self, except_type, except_value, except_trace):

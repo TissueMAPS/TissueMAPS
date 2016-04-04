@@ -27,15 +27,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     '''Class for running image processing pipelines.'''
 
-    def __init__(self, experiment_id, step_name, verbosity, pipeline,
-                 pipe=None, handles=None, **kwargs):
+    def __init__(self, experiment_id, verbosity, pipeline,
+                 pipe=None, handles=None):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        step_name: str
-            name of the corresponding program (command line interface)
         verbosity: int
             logging level
         pipeline: str
@@ -45,8 +43,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             source code and descriptor files (default: ``None``)
         handles: List[dict], optional
             description of module input/output (default: ``None``)
-        kwargs: dict, optional
-            additional key-value pairs that are ignored
 
         Note
         ----
@@ -54,11 +50,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         they are obtained from the YAML *.pipe* and *.handle* descriptor
         files on disk.
         '''
-        super(ImageAnalysisPipeline, self).__init__(
-                experiment_id, step_name, verbosity)
+        super(ImageAnalysisPipeline, self).__init__(experiment_id, verbosity)
         self.pipe_name = pipeline
-        self.step_name = step_name
-        self.verbosity = verbosity
         self.engines = {'Python': None, 'R': None}
         self.project = JtProject(
             step_location=self.step_location, pipe_name=self.pipe_name,
@@ -426,7 +419,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 session.add(mapobject_type)
                 session.flush()
                 outlines = obj_type.calc_outlines(y_offset, x_offset)
-                centroids = obj_type.calc_centroids(y_offset, x_offset)
                 feature_ids = dict()
                 for f_name in obj_type.measurements:
                     feature = session.get_or_create(
@@ -461,9 +453,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         '%d %d' % (coordinate.x, coordinate.y)
                         for i, coordinate in outlines[label].iterrows()
                     ])
+                    centroid = np.mean(outlines[label])
                     mapobject_outline.geom_centroid = 'POINT(%.2f %.2f)' % (
-                        centroids[label].loc[0, 'x'],
-                        centroids[label].loc[0, 'y']
+                        centroid.x, centroid.y
                     )
                     session.add(mapobject_outline)
                     session.flush()
@@ -499,3 +491,31 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def collect_job_output(self, batch):
         # TODO: calculate per site, well, and plate statistics
         pass
+
+
+def factory(experiment_id, verbosity, pipeline, **kwargs):
+    '''Factory function for the instantiation of a `jterator`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    pipeline: str
+        name of the pipeline that should be processed
+    **kwargs: dict
+        optional and ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.ImageAnalysisPipeline
+        API instance
+    '''
+    pipe = kwargs.get('pipe', None)
+    handles = kwargs.get('handles', None)
+    return ImageAnalysisPipeline(
+        experiment_id, verbosity, pipeline, pipe, handles
+    )

@@ -19,4 +19,4 @@ init_extra_group = init_parser.add_argument_group(
 MetaextractInitArgs().add_to_argparser(init_extra_group)
 
 for name in subparsers.choices:
-    subparsers.choices[name].set_defaults(handler=Metaextract.call)
+    subparsers.choices[name].set_defaults(call=Metaextract.call)

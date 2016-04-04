@@ -7,7 +7,7 @@ import lxml
 from xml.dom import minidom
 import collections
 from sqlalchemy import Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 from cached_property import cached_property
 
@@ -55,7 +55,10 @@ class ChannelLayer(Model):
     channel_id = Column(Integer, ForeignKey('channels.id'))
 
     # Relationships to other tables
-    channel = relationship('Channel', backref='layers')
+    channel = relationship(
+        'Channel',
+        backref=backref('layers', cascade='all, delete-orphan')
+    )
 
     def __init__(self, tpoint, zplane, channel_id):
         '''

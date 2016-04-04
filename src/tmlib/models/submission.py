@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, Interval, ForeignKey
 from sqlalchemy.dialects.postgres import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import Model, DateMixIn
 
@@ -31,7 +31,10 @@ class Submission(Model, DateMixIn):
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     # Relationships to other tables
-    experiment = relationship('Experiment', backref='submissions')
+    experiment = relationship(
+        'Experiment',
+        backref=backref('submissions', cascade='all, delete-orphan')
+    )
 
     def __init__(self, experiment_id):
         '''
@@ -139,15 +142,18 @@ class Task(Model):
     state = Column(String, index=True)
     name = Column(String, index=True)
     exitcode = Column(Integer, index=True)
-    time = Column(Interval)
-    memory = Column(Integer)
-    cpu_time = Column(Interval)
+    time = Column(Interval, index=True)
+    memory = Column(Integer, index=True)
+    cpu_time = Column(Interval, index=True)
     type = Column(String, index=True)
     data = Column(LargeBinary)
     submission_id = Column(Integer, ForeignKey('submissions.id'))
 
     # Relationships to other tables
-    submission = relationship('Submission', backref='tasks')
+    submission = relationship(
+        'Submission',
+        backref=backref('tasks', cascade='all, delete-orphan')
+    )
 
     def __repr__(self):
         return (

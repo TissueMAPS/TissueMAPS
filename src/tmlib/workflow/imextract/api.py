@@ -14,13 +14,12 @@ logger = logging.getLogger(__name__)
 
 class ImageExtractor(ClusterRoutines):
 
-    '''
-    Class for extraction of pixel arrays (planes) stored in image files using
+    '''Class for extraction of pixel arrays (planes) stored in image files using
     `python-bioformats <https://github.com/CellProfiler/python-bioformats>`_.
     The extracted arrays are written to PNG files.
     '''
 
-    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, verbosity):
         '''
         Initialize an instance of class ImageExtractor.
 
@@ -28,16 +27,10 @@ class ImageExtractor(ClusterRoutines):
         ----------
         experiment_id: int
             ID of the processed experiment
-        step_name: str
-            name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        kwargs: dict
-            ignored keyword arguments
         '''
-        super(ImageExtractor, self).__init__(
-            experiment_id, step_name, verbosity
-        )
+        super(ImageExtractor, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
         '''
@@ -153,3 +146,25 @@ class ImageExtractor(ClusterRoutines):
     @notimplemented
     def collect_job_output(self, batch):
         pass
+
+
+def factory(experiment_id, verbosity, **kwargs):
+    '''Factory function for the instantiation of a `imextract`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    **kwargs: dict
+        ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.ImageExtractor
+        API instance
+    '''
+    return ImageExtractor(experiment_id, verbosity)

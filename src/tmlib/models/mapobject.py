@@ -1,8 +1,8 @@
 import os
 import logging
 from geoalchemy2 import Geometry
-from sqlalchemy import Column, String, Integer, Float, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 
@@ -44,7 +44,10 @@ class MapobjectType(Model, DateMixIn):
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     #: Relationship to other tables
-    experiment = relationship('Experiment', backref='mapobject_types')
+    experiment = relationship(
+        'Experiment',
+        backref=backref('mapobject_types', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, experiment_id):
         '''
@@ -166,7 +169,10 @@ class Mapobject(Model):
 
     # Relationships to other tables
     site = relationship('Site', backref='sites')
-    mapobject_type = relationship('MapobjectType', backref='mapobjects')
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('mapobjects', cascade='all, delete-orphan')
+    )
 
     def __init__(self, label, site_id, mapobject_type_id):
         '''
@@ -184,7 +190,7 @@ class Mapobject(Model):
         self.mapobject_type_id = mapobject_type_id
 
     def __repr__(self):
-        return '<Mapobject(id=%d)>' % (self.id, self.name)
+        return '<Mapobject(id=%d)>' % self.id
 
 
 class MapobjectOutline(Model):
@@ -220,7 +226,10 @@ class MapobjectOutline(Model):
     mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
 
     # Relationships to other tables
-    mapobject = relationship('Mapobject', backref='outlines')
+    mapobject = relationship(
+        'Mapobject',
+        backref=backref('outlines', cascade='all, delete-orphan')
+    )
 
     def __init__(self, tpoint, zplane, mapobject_id):
         '''
@@ -280,109 +289,4 @@ class MapobjectOutline(Model):
             (MapobjectOutline.geom_poly.ST_Intersects(tile)) &
             (~MapobjectOutline.geom_poly.ST_Intersects(left_border)) &
             (~MapobjectOutline.geom_poly.ST_Intersects(top_border))
-        )
-
-
-class Feature(Model, DateMixIn):
-
-    '''A *feature* is a measurement that is associated with a particular
-    *map object type*. For example a *feature* named "Morphology_Area"
-    would correspond to a vector where each value would reflect the area of an
-    individual *map object* of a given *map object type*.
-
-    Attributes
-    ----------
-    name: str
-        name of the feature
-    mapobject_type_id: int
-        ID of parent mapobject type
-    mapobject_type: tmlib.models.MapobjectType
-        parent map object type to which the feature belongs
-    values: List[tmlib.models.FeatureValues]
-        values that belong to the feature
-    '''
-
-    #: str: name of the corresponding database table
-    __tablename__ = 'features'
-
-    __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
-
-    # Table columns
-    name = Column(String, index=True)
-    mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
-
-    # Relationships to other tables
-    mapobject_type = relationship('MapobjectType', backref='features')
-
-    def __init__(self, name, mapobject_type_id):
-        '''
-        Parameters
-        ----------
-        name: str
-            name of the feature
-        mapobject_type_id: int
-            ID of parent mapobject type
-        '''
-        self.name = name
-        self.mapobject_type_id = mapobject_type_id
-
-    def __repr__(self):
-        return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
-
-
-class FeatureValue(Model):
-
-    '''An individual value of a *feature* that was measured for a given
-    *map object*.
-
-    Attributes
-    ----------
-    value: float
-        the actual measurement
-    tpoint: int
-        time point index
-    feature: tmlib.models.Feature
-        parent feature to which the feature belongs
-    mapobject_id: int
-        ID of the parent mapobject
-    mapobject: tmlib.models.MapobjectType
-        parent mapobject to which the feature belongs
-    '''
-
-    #: str: name of the corresponding database table
-    __tablename__ = 'feature_values'
-
-    __table_args__ = (
-        UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
-    )
-
-    # Table columns
-    value = Column(Float(precision=15))
-    tpoint = Column(Integer, index=True)
-    feature_id = Column(Integer, ForeignKey('features.id'))
-    mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
-
-    # Relationships to other tables
-    feature = relationship('Feature', backref='values')
-    mapobject = relationship('Mapobject', backref='feature_values')
-
-    def __init__(self, tpoint, feature_id, mapobject_id):
-        '''
-        Parameters
-        ----------
-        tpoint: int
-            time point index
-        feature: tmlib.models.Feature
-            parent feature to which the feature belongs
-        mapobject_id: int
-            ID of the parent mapobject
-        '''
-        self.tpoint = tpoint
-        self.feature_id = feature_id
-        self.mapobject_id = mapobject_id
-
-    def __repr__(self):
-        return (
-            '<FeatureValue(id=%d, tpoint=%d, feature_name=%r, value=%f)>'
-            % (self.id, self.tpoint, self.feature.name, self.value)
         )

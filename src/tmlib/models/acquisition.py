@@ -1,7 +1,7 @@
 import os
 import logging
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from tmlib.readers import JsonReader
 from tmlib.metadata import ImageFileMapping
@@ -55,7 +55,10 @@ class Acquisition(Model, DateMixIn):
     plate_id = Column(Integer, ForeignKey('plates.id'))
 
     # Relationships to other tables
-    plate = relationship('Plate', backref='acquisitions')
+    plate = relationship(
+        'Plate',
+        backref=backref('acquisitions', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, plate_id, description=''):
         '''

@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from cached_property import cached_property
 from sqlalchemy import Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
@@ -50,7 +50,10 @@ class Site(Model, DateMixIn):
     well_id = Column(Integer, ForeignKey('wells.id'))
 
     # Relationships to other tables
-    well = relationship('Well', backref='sites')
+    well = relationship(
+        'Well',
+        backref=backref('sites', cascade='all, delete-orphan')
+    )
 
     def __init__(self, y, x, height, width, well_id):
         '''

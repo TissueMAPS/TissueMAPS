@@ -11,27 +11,21 @@ from tmlib.workflow.api import ClusterRoutines
 logger = logging.getLogger(__name__)
 
 
-class ImageRegistration(ClusterRoutines):
+class ImageRegistrator(ClusterRoutines):
 
     '''Class for registering and aligning images between cycles.
     '''
 
-    def __init__(self, experiment_id, step_name, verbosity, **kwargs):
+    def __init__(self, experiment_id, verbosity):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        step_name: str
-            name of the corresponding program (command line interface)
         verbosity: int
             logging level
-        **kwargs: dict, optional
-            ignored keyword arguments
         '''
-        super(ImageRegistration, self).__init__(
-            experiment_id, step_name, verbosity
-        )
+        super(ImageRegistrator, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
         '''Create job descriptions for parallel computing.
@@ -183,3 +177,25 @@ class ImageRegistration(ClusterRoutines):
     @notimplemented
     def collect_job_output(self, batch):
         pass
+
+
+def factory(experiment_id, verbosity, **kwargs):
+    '''Factory function for the instantiation of a `align`-specific
+    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
+    abstract base class.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the processed experiment
+    verbosity: int
+        logging level
+    **kwargs: dict
+        ignored keyword arguments
+
+    Returns
+    -------
+    tmlib.workflow.metaextract.api.ImageRegistrator
+        API instance
+    '''
+    return ImageRegistrator(experiment_id, verbosity)
