@@ -1,6 +1,7 @@
 import os
 import logging
 from geoalchemy2 import Geometry
+from sqlalchemy.orm import Session
 from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -77,7 +78,7 @@ class MapobjectType(Model, DateMixIn):
     def min_poly_zoom(self, value):
         self._min_poly_zoom = value
 
-    def get_mapobject_outlines_within_tile(self, session, x, y, z, tpoint, zplane):
+    def get_mapobject_outlines_within_tile(self, x, y, z, tpoint, zplane):
         '''Get outlines of all objects that fall within a given pyramid tile,
         defined by their `y`, `x`, `z` coordinates.
 
@@ -101,6 +102,8 @@ class MapobjectType(Model, DateMixIn):
         Tuple[int, str]
             GeoJSON string for each selected map object
         '''
+        session = Session.object_session(self)
+
         do_simplify = z < self.min_poly_zoom
         if do_simplify:
             select_stmt = session.query(
