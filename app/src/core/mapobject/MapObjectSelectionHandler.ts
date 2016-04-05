@@ -33,9 +33,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         // Register click listeners on the map.
         this.viewport.map.on('singleclick', (evt) => {
             this.viewport.map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
-                console.log(evt);
-                var mapObject = feat.get('mapObject');
+                var mapObjectId = feat.get('id');
                 var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
+                var mapObject = new MapObject(mapObjectId, this._activeMapObjectType);
                 this.clickOnMapObject(mapObject, clickPos);
             });
         });
@@ -140,9 +140,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     clickOnMapObject(mapObject: MapObject, clickPos: MapPosition) {
         console.log('Clicked on: ', mapObject);
-        if (!this._isValidType(mapObject.type)) {
-            return;
-        }
         if (this._markerSelectionModeActive) {
             var sel = this.activeSelection;
             if (sel) {

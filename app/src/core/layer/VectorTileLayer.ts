@@ -7,7 +7,7 @@ interface VectorTileLayerOpts {
 
 class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
 
-    private _fillColor: Color = Color.WHITE.withAlpha(0);
+    private _fillColor: Color = Color.WHITE.withAlpha(0.02);
     private _strokeColor: Color = Color.WHITE;
 
     set fillColor(c: Color) {

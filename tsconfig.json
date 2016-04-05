@@ -105,8 +105,10 @@
 
         "app/src/viewer/toolui/toolwindow/widgets/tmObjectNameWidget.ts",
         "app/src/viewer/toolui/toolwindow/widgets/tmFeatureSelectionWidget.ts",
+        "app/src/viewer/toolui/toolwindow/widgets/tmClassSelectionWidget.ts",
 
         "app/src/tools/ClusterTool/ClusterToolCtrl.ts",
+        "app/src/tools/SVMTool/SVMToolCtrl.ts",
 
         "app/src/viewer/toolui/toolbar/tmToolbar.ts",
         "app/src/viewer/toolui/toolbar/ToolbarCtrl.ts",

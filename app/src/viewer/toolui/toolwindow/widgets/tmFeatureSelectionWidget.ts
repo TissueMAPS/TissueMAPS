@@ -91,7 +91,7 @@ class FeatureSelectionWidgetCtrl {
     }
 }
 
-angular.module('tmaps.toolwindow').controller('FeatureSelectionWidgetCtrl', FeatureSelectionWidgetCtrl);
+angular.module('tmaps.ui').controller('FeatureSelectionWidgetCtrl', FeatureSelectionWidgetCtrl);
 
 angular.module('tmaps.ui')
 /**

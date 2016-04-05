@@ -19,13 +19,16 @@ var banner = template([
 });
 
 // Define variables
+var isProd = argv.prod === true;
+var isDev = !isProd;
 var opt = {
     destFolder: './build',
-    prod: argv.prod === true,
-    dev: argv.prod !== true,
-    watchTs: argv['watch-ts'] === true,
-    reload: argv.reload === true,
-    banner: banner
+    prod: isProd,
+    dev: isDev,
+    watchTs: isDev,
+    reload: isDev,
+    banner: banner,
+    watchOl: isDev
 };
 
 // Read tasks

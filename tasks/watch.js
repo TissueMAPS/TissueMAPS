@@ -1,6 +1,7 @@
 module.exports = function (gulp, opt) {
 
     var livereload = require('gulp-livereload');
+    var runSequence  = require('run-sequence');
 
     // Watch Files For Changes
     gulp.task('watch', function() {
@@ -16,6 +17,11 @@ module.exports = function (gulp, opt) {
          */
         if (opt.watchTs) {
             gulp.watch('app/src/**/*.ts', ['make-script']);
+        }
+        if (opt.watchOl) {
+            gulp.watch('app/assets/libs/ol3/src/**/*.js', function() {
+                runSequence(['compile-ol-debug', 'make-script']);
+            });
         }
         gulp.watch('app/src/**/*.js', ['make-script']);
         gulp.watch('app/assets/less/**/*.less', ['make-style']);

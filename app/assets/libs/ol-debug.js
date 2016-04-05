@@ -81572,10 +81572,6 @@ ol.render.webgl.LineStringReplay.prototype.getDeleteResourcesFunction =
  * @param {ol.Size} size Size.
  * @param {number} pixelRatio Pixel ratio.
  * @param {number} opacity Global opacity.
- * @param {number} brightness Global brightness.
- * @param {number} contrast Global contrast.
- * @param {number} hue Global hue.
- * @param {number} saturation Global saturation.
  * @param {Object} skippedFeaturesHash Ids of features to skip.
  * @param {function(ol.Feature): T|undefined} featureCallback Feature callback.
  * @param {boolean} oneByOne Draw features one-by-one for the hit-detecion.
@@ -81585,9 +81581,8 @@ ol.render.webgl.LineStringReplay.prototype.getDeleteResourcesFunction =
  * @template T
  */
 ol.render.webgl.LineStringReplay.prototype.replay = function(context,
-    center, resolution, rotation, size, pixelRatio,
-    opacity, brightness, contrast, hue, saturation, skippedFeaturesHash,
-    featureCallback, oneByOne, opt_hitExtent) {
+    center, resolution, rotation, size, pixelRatio, opacity, 
+    skippedFeaturesHash, featureCallback, oneByOne, opt_hitExtent) {
   var gl = context.getGL();
 
   // bind the vertices buffer
@@ -81924,10 +81919,6 @@ ol.render.webgl.PolygonReplay.prototype.getDeleteResourcesFunction =
  * @param {ol.Size} size Size.
  * @param {number} pixelRatio Pixel ratio.
  * @param {number} opacity Global opacity.
- * @param {number} brightness Global brightness.
- * @param {number} contrast Global contrast.
- * @param {number} hue Global hue.
- * @param {number} saturation Global saturation.
  * @param {Object} skippedFeaturesHash Ids of features to skip.
  * @param {function(ol.Feature): T|undefined} featureCallback Feature callback.
  * @param {boolean} oneByOne Draw features one-by-one for the hit-detecion.
@@ -81938,7 +81929,7 @@ ol.render.webgl.PolygonReplay.prototype.getDeleteResourcesFunction =
  */
 ol.render.webgl.PolygonReplay.prototype.replay = function(context,
     center, resolution, rotation, size, pixelRatio,
-    opacity, brightness, contrast, hue, saturation, skippedFeaturesHash,
+    opacity, skippedFeaturesHash,
     featureCallback, oneByOne, opt_hitExtent) {
   var gl = context.getGL();
 
@@ -82044,7 +82035,7 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
   this.lineStringReplay_.replay(context,
       center, resolution, rotation, size, pixelRatio,
-      opacity, brightness, contrast, hue, saturation, skippedFeaturesHash,
+      opacity, skippedFeaturesHash,
       featureCallback, oneByOne, opt_hitExtent);
   // FIXME get result
   return result;
@@ -84689,6 +84680,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
  * @inheritDoc
  */
 ol.renderer.webgl.VectorTileLayer.prototype.composeFrame = function(frameState, layerState, context) {
+  this.layerState_ = layerState;
 
   var tilesToDraw = this.renderedTiles_;
   var viewState = frameState.viewState;
@@ -84791,6 +84783,56 @@ ol.renderer.webgl.VectorTileLayer.prototype.renderFeature = function(feature, re
   }
   return loading;
 };
+
+
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.VectorTileLayer.prototype.forEachFeatureAtCoordinate = function(coordinate, frameState, callback, thisArg) {
+  var noLayerStateSet = this.layerState_ === null;
+  var noTilesRendered = this.renderedTiles_.length === 0;
+  if (noLayerStateSet || noTilesRendered) {
+    return undefined;
+  } else {
+    // TODO: What to return from this branch?
+    var context = this.mapRenderer.getContext();
+    var viewState = frameState.viewState;
+    var layer = this.getLayer();
+    var layerState = this.layerState_;
+
+    /** @type {Object.<string, boolean>} */
+    var features = {};
+
+    /**
+     * @param {ol.Feature} feature Feature.
+     * @return {?} Callback result.
+     */
+    var hitCallbackWrapper = function(feature) {
+      goog.asserts.assert(feature !== undefined, 'received a feature');
+      var key = goog.getUid(feature).toString();
+      if (!(key in features)) {
+        features[key] = true;
+        return callback.call(thisArg, feature, layer);
+      }
+    };
+
+    var i, tile, replayState, replayGroup, rv;
+    var nTiles = this.renderedTiles_.length;
+    for (i = 0; i < nTiles; i++) {
+      tile = this.renderedTiles_[i];
+      replayState = tile.getReplayState();
+      replayGroup = replayState.replayGroup;
+
+      rv = replayGroup.forEachFeatureAtCoordinate(
+        coordinate, context, viewState.center, viewState.resolution,
+        viewState.rotation, frameState.size, frameState.pixelRatio,
+        layerState.opacity, layerState.managed ? frameState.skippedFeatureUids : {},
+        hitCallbackWrapper
+      );
+    }
+  }
+};
+
 
 // FIXME check against gl.getParameter(webgl.MAX_TEXTURE_SIZE)
 

@@ -15,22 +15,9 @@ class MapObject {
 
     id: number;
     type: MapObjectType;
-    outline: PolygonCoordinates;
 
-    constructor(id: number, type: MapObjectType, outline) {
+    constructor(id: number, type: MapObjectType) {
         this.id = id;
         this.type = type;
-        this.outline = outline;
-    }
-
-
-    getVisual(): ColorizableVisual {
-        var visual = new PolygonVisual(this.outline);
-        // Set this mapobject as a property on the visual's underlying
-        // openlayers feature, so this information can be restored when the user
-        // clicks on the feature.
-        var feat = <any> visual.olFeature;
-        feat.set('mapObject', this);
-        return visual;
     }
 }
