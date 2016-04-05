@@ -11,11 +11,7 @@ DEBUG = True
 JWT_EXPIRATION_DELTA = datetime.timedelta(days=2)
 JWT_NOT_BEFORE_DELTA = datetime.timedelta(seconds=0)
 
-POSTGRES_DB_USER = None
-POSTGRES_DB_PASSWORD = None
-POSTGRES_DB_NAME = None
-POSTGRES_DB_HOST = None
-POSTGRES_DB_PORT = None
+SQLALCHEMY_DATABASE_URI = None
 
 REDIS_URL = 'redis://localhost:6379'
 
