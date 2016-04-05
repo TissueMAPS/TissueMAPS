@@ -190,32 +190,6 @@ class CommandLineInterface(object):
         '''Prints the step-specific logo to standard output (console).'''
         pass
 
-    def _cleanup(self):
-        try:
-            outputs = self.expected_outputs
-            if outputs:
-                logger.info('clean up output of previous submission')
-                dont_exist_index = [not os.path.exists(out) for out in outputs]
-                if all(dont_exist_index):
-                    logger.debug('outputs don\'t exist')
-                elif any(dont_exist_index):
-                    logger.warning('some outputs don\'t exist')
-                for i, out in enumerate(outputs):
-                    if dont_exist_index[i]:
-                        logger.debug('output doesn\'t exist: %s', out)
-                        continue
-                    if os.path.isdir(out):
-                        logger.debug('remove output directory: %s' % out)
-                        shutil.rmtree(out)
-                    elif os.path.isfile(out):
-                        logger.debug('remove output file: %s' % out)
-                        os.remove(out)
-        except JobDescriptionError:
-            # Expected outputs are retrieved from job descriptor files.
-            # One ends up here in case no job descriptor files have been
-            # created so far.
-            logger.debug('nothing to clean up')
-
     def cleanup(self, args):
         '''Processes arguments provided by the "cleanup" subparser, which
         removes all output files or directories from a previous submission.
@@ -226,7 +200,7 @@ class CommandLineInterface(object):
             method-specific arguments
         '''
         self._print_logo()
-        self._cleanup()
+        self.api_instance.delete_previous_job_output()
 
     def init(self, args):
         '''Processes arguments provided by the "init" subparser, which creates
@@ -243,8 +217,9 @@ class CommandLineInterface(object):
             batches
         '''
         self._print_logo()
-        self._cleanup()
         api = self.api_instance
+        logger.info('delete previous job output')
+        api.delete_previous_job_output()
         if args.backup:
             logger.info(
                 'backup log reports and batches of previous submission'

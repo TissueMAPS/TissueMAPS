@@ -61,7 +61,7 @@ class Batch(Model):
     ----------
     name: str
         name of the corresponding task
-    description: dict
+    job_description: dict
         specification of inputs and outputs (and potentially other
         parameters)
     submission_id: int
@@ -75,19 +75,19 @@ class Batch(Model):
 
     # Table columns
     name = Column(String, index=True)
-    description = Column(JSONB)
+    job_description = Column(JSONB)
     submission_id = Column(Integer, ForeignKey('submissions.id'))
 
     # Relationships to other tables
     submission = relationship('Submission', backref='batches')
 
-    def __init__(self, name, description, submission_id):
+    def __init__(self, name, job_description, submission_id):
         '''
         Parameters
         ----------
         name: str
             name of the corresponding task
-        description: dict
+        job_description: dict
             specification of inputs and outputs (and potentially other
             parameters)
         submission_id: int
@@ -98,7 +98,7 @@ class Batch(Model):
         :py:method:`tmlib.workflow.api.create_batches`
         '''
         self.name = name
-        self.description = description
+        self.job_description = job_description
         self.submission_id = submission_id
 
     def __repr__(self):

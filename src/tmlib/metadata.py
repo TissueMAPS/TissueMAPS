@@ -21,8 +21,8 @@ class ChannelImageMetadata(object):
     }
 
     # @assert_type()
-    def __init__(self, name, zplane, tpoint, plate, well, x, y, channel,
-                 wavelength, cycle, **kwargs):
+    def __init__(self, name, zplane, tpoint, plate, well, x, y, channel, cycle,
+                 **kwargs):
         '''
         Parameters
         ----------
@@ -41,10 +41,8 @@ class ChannelImageMetadata(object):
             of acquisition
         channel: int
             zero-based index of the corresponding channel
-        wavelength: str
-            name of the corresponding wavelength
         **kwargs: dict, optional
-            metadata attributes as keyword arguments
+            additional keyword arguments
         '''
         self.name = name
         self.zplane = zplane
@@ -54,7 +52,6 @@ class ChannelImageMetadata(object):
         self.y = y
         self.x = x
         self.channel = channel
-        self.wavelength = wavelength
         self.cycle = cycle
         self.is_corrected = False
         self.is_aligned = False

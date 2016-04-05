@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class BasicClusterRoutines(object):
 
-    '''Mixin class for submission of jobs to a cluster.'''
+    '''Abstract base class for submission of jobs to a cluster.'''
 
     __metaclass__ = ABCMeta
 
@@ -205,7 +205,7 @@ class BasicClusterRoutines(object):
 class ClusterRoutines(BasicClusterRoutines):
 
     '''Abstract base class for API classes, which provide methods for 
-    cluster routines, such as creation, submission, and monitoring of jobs.
+    cluster routines to process images on a batch cluster.
     '''
 
     __metaclass__ = ABCMeta
@@ -662,7 +662,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @abstractmethod
     def run_job(self, batch):
-        '''Run an individual job.
+        '''Runs an individual job.
 
         Parameters
         ----------
@@ -672,8 +672,14 @@ class ClusterRoutines(BasicClusterRoutines):
         pass
 
     @abstractmethod
+    def delete_previous_job_output(self):
+        '''Deletes the output of a previous submission.
+        '''
+        pass
+
+    @abstractmethod
     def collect_job_output(self, batch):
-        '''Collect the output of jobs and fuse them if necessary.
+        '''Collects the output of jobs and fuse them if necessary.
 
         Parameters
         ----------
@@ -686,7 +692,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @abstractmethod
     def create_batches(self, args):
-        '''Create job descriptions with information required for the creation
+        '''Creates job descriptions with information required for the creation
         and processing of individual jobs.
 
         Parameters
@@ -744,8 +750,7 @@ class ClusterRoutines(BasicClusterRoutines):
         pass
 
     def print_job_descriptions(self, batches):
-        '''
-        Print `batches` to standard output in YAML format.
+        '''Prints `batches` to standard output in YAML format.
 
         Parameters
         ----------

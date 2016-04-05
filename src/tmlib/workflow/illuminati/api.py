@@ -1,6 +1,7 @@
 import os
 import logging
 import numpy as np
+import pandas as pd
 import collections
 import itertools
 import sqlalchemy.orm
@@ -80,23 +81,44 @@ class PyramidBuilder(ClusterRoutines):
         job_count = 0
         with tmlib.models.utils.Session() as session:
 
-            for layer in session.query(tmlib.models.ChannelLayer).\
-                    join(tmlib.models.Channel).\
-                    join(tmlib.models.Experiment).\
-                    filter(tmlib.models.Experiment.id == self.experiment_id):
+            metadata = pd.DataFrame(
+                session.query(
+                    tmlib.models.ChannelImageFile.tpoint,
+                    tmlib.models.ChannelImageFile.zplane,
+                    tmlib.models.ChannelImageFile.channel_id,
+                ).
+                join(tmlib.models.Channel).
+                filter(tmlib.models.Channel.experiment_id == self.experiment_id).
+                all()
+            )
+            metadata.drop_duplicates(inplace=True)
+
+            for i, attributes in metadata.iterrows():
+
+                layer = session.get_or_create(
+                    tmlib.models.ChannelLayer,
+                    tpoint=attributes.tpoint, zplane=attributes.zplane,
+                    channel_id=attributes.channel_id
+                )
+
+                image_files = session.query(tmlib.models.ChannelImageFile).\
+                    filter_by(
+                        tpoint=layer.tpoint, zplane=layer.zplane,
+                        channel_id=layer.channel_id
+                    ).\
+                    all()
 
                 for index, level in enumerate(reversed(range(layer.n_levels))):
                     # NOTE: The pyramid "level" increases from top to bottom.
                     # We build the pyramid bottom-up, therefore, the "index"
                     # decreases from top to bottom.
-                    if level == layer.base_level_index:
+                    if level == layer.maxzoom_level_index:
                         layer.create_tile_groups()
                         layer.create_image_properties_file()
                         # For the base level, batches are composed of
                         # image files, which will get chopped into tiles.
                         batches = self._create_batches(
-                            np.arange(len(layer.image_files)),
-                            args.batch_size
+                            np.arange(len(image_files)), args.batch_size
                         )
                     else:
                         # For the subsequent levels, batches are composed of
@@ -116,11 +138,11 @@ class PyramidBuilder(ClusterRoutines):
                         # For consistency, the paths to both types of image
                         # files are provided relative to the root pyramid
                         # directory.
-                        if level == layer.base_level_index:
-                            image_files = np.array(layer.image_files)[batch]
+                        if level == layer.maxzoom_level_index:
+                            image_file_subset = np.array(image_files)[batch]
                             input_files = list()
                             output_files = list()
-                            for f in image_files:
+                            for f in image_file_subset:
                                 input_files.append(f.location)
                                 tiles = layer.map_image_to_base_tiles(f)
                                 for t in tiles:
@@ -194,7 +216,7 @@ class PyramidBuilder(ClusterRoutines):
                             'level': level,
                             'index': index
                         }
-                        if level == layer.base_level_index:
+                        if level == layer.maxzoom_level_index:
                             # Only base tiles need to be corrected for
                             # illumination artifacts and aligned, this then
                             # automatically translates to the subsequent levels
@@ -207,7 +229,7 @@ class PyramidBuilder(ClusterRoutines):
                             })
                         job_descriptions['run'].append(description)
 
-                    if level == layer.base_level_index:
+                    if level == layer.maxzoom_level_index:
                         coordinates = layer.get_empty_base_tile_coordinates()
                         # Creation of empty base tiles that don't map to images
                         job_count += 1
@@ -236,6 +258,21 @@ class PyramidBuilder(ClusterRoutines):
                             'clip_value': None
                         })
         return job_descriptions
+
+    def delete_previous_job_output(self):
+        '''Deletes all instances of class
+        :py:class:`tmlib.models.ChannelLayer` as well as all children
+        instances for the processed experiment.
+        '''
+        with tmlib.models.utils.Session() as session:
+
+            layer = session.query(tmlib.models.ChannelLayer).\
+                join(tmlib.models.Channel).\
+                filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
+                all()
+            for l in layer:
+                logger.debug('delete channel layer: %r', l)
+                session.delete(l)
 
     def create_jobs(self, step, batches,
                     duration=None, memory=None, cores=None):
@@ -324,7 +361,7 @@ class PyramidBuilder(ClusterRoutines):
                 illumstats_file = session.query(tmlib.models.IllumstatsFile).\
                     filter_by(
                         channel_id=layer.channel_id,
-                        cycle_id=layer.image_files[0].cycle_id
+                        cycle_id=layer.channel.image_files[0].cycle_id
                     ).\
                     one()
                 stats = illumstats_file.get()
@@ -348,9 +385,12 @@ class PyramidBuilder(ClusterRoutines):
         for fid in batch['image_file_ids']:
             with tmlib.models.utils.Session() as session:
 
+                layer = session.query(tmlib.models.ChannelLayer).\
+                    get(batch['layer_id'])
+
                 file = session.query(tmlib.models.ChannelImageFile).get(fid)
                 logger.info('process image "%s"', file.name)
-                mapped_tiles = file.channel_layer.map_image_to_base_tiles(file)
+                mapped_tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
                 image = file.get()
                 if batch['illumcorr']:
@@ -361,31 +401,29 @@ class PyramidBuilder(ClusterRoutines):
                 image = image.scale(clip_value)
                 image_store[file.name] = image
                 for t in mapped_tiles:
-                    name = file.channel_layer.build_tile_file_name(
+                    name = layer.build_tile_file_name(
                         batch['level'], t['row'], t['column']
                     )
-                    group = file.channel_layer.tile_coordinate_group_map[
+                    group = layer.tile_coordinate_group_map[
                         batch['level'], t['row'], t['column']
                     ]
-                    # TODO: only create if not at the lower and/or right border
                     tile_file = session.get_or_create(
                         tmlib.models.PyramidTileFile,
                         name=name, group=group, row=t['row'],
                         column=t['column'], level=batch['level'],
-                        channel_layer_id=file.channel_layer_id
+                        channel_layer_id=layer.id
                     )
                     logger.info('creating tile: %s', tile_file.name)
-                    tile = file.channel_layer.extract_tile_from_image(
+                    tile = layer.extract_tile_from_image(
                         image_store[file.name], t['y_offset'], t['x_offset']
                     )
 
                     file_coordinate = np.array((file.site.y, file.site.x))
                     # TODO: calculate this only for the local neighborhood
                     # of the file rather than for all files!
-                    extra_files = file.channel_layer.\
-                        maxzoom_tile_coordinate_to_image_file_map[
-                            (tile_file.row, tile_file.column)
-                        ]
+                    extra_files = layer.base_tile_coordinate_to_image_file_map[
+                        (tile_file.row, tile_file.column)
+                    ]
                     extra_files.remove(file)  # remove the current file
                     if len(extra_files) > 0:
                         logger.info('tile overlaps multiple images')

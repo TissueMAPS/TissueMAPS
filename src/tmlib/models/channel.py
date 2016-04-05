@@ -5,7 +5,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import Model, DateMixIn
-# from tmlib.models.utils import auto_remove_directory
+from tmlib.models.utils import remove_location_upon_delete
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 CHANNEL_LOCATION_FORMAT = 'channel_{id}'
 
 
-# @auto_remove_directory(lambda obj: obj.location)
+@remove_location_upon_delete
 class Channel(Model, DateMixIn):
 
     '''A *channel* represents all *images* across different time points and
@@ -29,6 +29,8 @@ class Channel(Model, DateMixIn):
         ID of the parent experiment
     experiment: tmlib.models.Experiment
         parent experiment to which the plate belongs
+    wavelength: str
+        name of the corresponding wavelength
     layers: List[tmlib.models.ChannelLayer]
         layers belonging to the channel
     illumstats_files: List[tmlib.model.IllumstatsFile]
@@ -46,6 +48,7 @@ class Channel(Model, DateMixIn):
     # Table columns
     name = Column(String, index=True)
     index = Column(Integer, index=True)
+    wavelength = Column(String, index=True)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
     # Relationships to other tables
@@ -54,7 +57,7 @@ class Channel(Model, DateMixIn):
         backref=backref('channels', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, index, experiment_id):
+    def __init__(self, name, index, wavelength, experiment_id):
         '''
         Parameters
         ----------
@@ -62,11 +65,14 @@ class Channel(Model, DateMixIn):
             name of the channel
         index: int
             zero-based channel index
+        wavelength: str
+            name of the corresponding wavelength
         experiment_id: int
             ID of the parent experiment
         '''
         self.name = name
         self.index = index
+        self.wavelength = wavelength
         self.experiment_id = experiment_id
 
     @autocreate_directory_property

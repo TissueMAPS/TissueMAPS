@@ -1,8 +1,6 @@
 class FileUploadStatus(object):
 
-    '''
-    Upload status of a file.
-    '''
+    '''Upload status of a file.'''
 
     #: The file is registered, but upload not yet started
     WAITING = 'WAITING'

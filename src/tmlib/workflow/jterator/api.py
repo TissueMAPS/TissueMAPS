@@ -253,7 +253,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 for ch_name in channel_names:
 
                     image_files = session.query(tmlib.models.ChannelImageFile).\
-                        join(tmlib.models.ChannelLayer).\
                         join(tmlib.models.Channel).\
                         join(tmlib.models.Site).\
                         filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
@@ -287,13 +286,28 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         ])
                     },
                     'image_file_ids': image_file_ids,
+                    'site_id': site.id,
                     'plot': args.plot
                 })
             # TODO: objects
         return job_descriptions
 
+    def delete_previous_job_output(self):
+        '''Deletes all instances of class
+        :py:class:`tmlib.models.MapobjectType` as well as all children
+        instances for the processed experiment.
+        '''
+        with tmlib.models.utils.Session() as session:
+
+            mapobject_type = session.query(tmlib.models.MapobjectType).\
+                filter(tmlib.models.MapobjectType.experiment_id == self.experiment_id).\
+                all()
+            for m in mapobject_type:
+                logger.debug('delete mapobject type: %r', m)
+                session.delete(m)
+
     def _build_run_command(self, batch):
-        # Overwrite method to account for additional "--pipeline" argument
+        # Overwrite method to include "--pipeline" argument
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment_id)
@@ -302,12 +316,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         return command
 
     def run_job(self, batch):
-        '''Runs the pipeline, i.e. executes each module in sequential order.
+        '''Runs the pipeline, i.e. executes modules sequentially.
 
         Parameters
         ----------
         batch: dict
-            description of the *run* job
+            job description
         '''
         checker = PipelineChecker(
             step_location=self.step_location,
@@ -397,8 +411,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 with TextWriter(figure_file) as f:
                     f.write(store['current_figure'])
 
-        # TODO: delete all prior mapobjects and features for the given
-        # site and then bulk insert them them without using `get_or_create()`
+        # Delete all prior mapobjects and feature values for the given site
+        # NOTE: this allows use to bulk insert feature values afterwards, since
+        # we don't have to worry anymore whether we would create duplicates.
+        with tmlib.models.utils.Session() as session:
+
+            mapobjects = session.query(tmlib.models.Mapobject).\
+                filter_by(site_id=batch['site_id']).\
+                all()
+            for m in mapobjects:
+                logger.debug('delete map object: %r', m)
+                session.delete(m)
 
         logger.info('write database entries for identified objects')
         with tmlib.models.utils.Session() as session:
@@ -420,23 +443,19 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     name=obj_name,
                     experiment_id=image_file.site.well.plate.experiment_id
                 )
-                session.add(mapobject_type)
-                session.flush()
                 outlines = obj_type.calc_outlines(y_offset, x_offset)
                 feature_ids = dict()
                 for f_name in obj_type.measurements:
+                    # TODO: This seems to take very long!
                     feature = session.get_or_create(
                         tmlib.models.Feature,
                         name=f_name, mapobject_type_id=mapobject_type.id
                     )
-                    session.add(feature)
-                    session.flush()
                     feature_ids[f_name] = feature.id
                 # NOTE: numpy data types are not supported by SQLalchemy!
                 for label in obj_type.labels:
                     logger.debug('add mapobject #%d', label)
-                    mapobject = session.get_or_create(
-                        tmlib.models.Mapobject,
+                    mapobject = tmlib.models.Mapobject(
                         label=int(label),
                         site_id=image_file.site.id,
                         mapobject_type_id=mapobject_type.id
@@ -447,34 +466,32 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     # TODO: 3D and time
                     # Create a string representation of the polygon using the
                     # EWKT format, e.g. "POLGON((1 2,3 4,6 7)))"
-                    logger.debug('add mapobject outline')
-                    mapobject_outline = session.get_or_create(
-                        tmlib.models.MapobjectOutline,
-                        tpoint=image_file.tpoint, zplane=image_file.zplane,
-                        mapobject_id=mapobject.id
-                    )
-                    mapobject_outline.geom_poly = 'POLYGON((%s))' % ','.join([
+                    logger.debug('add outline')
+                    geom_poly = 'POLYGON((%s))' % ','.join([
                         '%d %d' % (coordinate.x, coordinate.y)
                         for i, coordinate in outlines[label].iterrows()
                     ])
                     centroid = np.mean(outlines[label])
-                    mapobject_outline.geom_centroid = 'POINT(%.2f %.2f)' % (
+                    geom_centroid = 'POINT(%.2f %.2f)' % (
                         centroid.x, centroid.y
+                    )
+                    mapobject_outline = tmlib.models.MapobjectOutline(
+                        tpoint=image_file.tpoint, zplane=image_file.zplane,
+                        mapobject_id=mapobject.id, geom_poly=geom_poly,
+                        geom_centroid=geom_centroid
                     )
                     session.add(mapobject_outline)
                     session.flush()
                     logger.debug('add feature values')
                     feature_values = list()
                     for f_name, f_id in feature_ids.iteritems():
-                        logger.debug('add value of feature "%s"', f_name)
-                        fvalue = session.get_or_create(
-                            tmlib.models.FeatureValue,
+                        fvalue = tmlib.models.FeatureValue(
                             tpoint=image_file.tpoint,
                             feature_id=f_id,
-                            mapobject_id=mapobject.id
-                        )
-                        fvalue.value = float(
-                            obj_type.measurements.loc[label, f_name]
+                            mapobject_id=mapobject.id,
+                            value=float(
+                                obj_type.measurements.loc[label, f_name]
+                            )
                         )
                         feature_values.append(fvalue)
                     session.add_all(feature_values)

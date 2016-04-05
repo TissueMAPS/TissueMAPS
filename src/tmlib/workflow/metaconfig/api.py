@@ -47,8 +47,7 @@ class MetadataConfigurator(ClusterRoutines):
         super(MetadataConfigurator, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
-        '''
-        Create job descriptions for parallel computing.
+        '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -97,22 +96,44 @@ class MetadataConfigurator(ClusterRoutines):
                 job_descriptions['run'].append(description)
 
             job_descriptions['collect'] = {
-                'inputs': {
-                    'mapper_files': [
-                        os.path.join(
-                            acq.location,
-                            acq.image_mapping_file
-                        )
-                        for acq in acquisitions
-                    ]
-                },
+                'inputs': dict(),
                 'outputs': dict()
             }
 
         return job_descriptions
 
+    def delete_previous_job_output(self):
+        '''Deletes all instances of class :py:class:`tmlib.models.Cycle`,
+        :py:class:`tmlib.models.Well`, and :py:class:`tmlib.models.Channel` as
+        well as all children for the processed experiment.
+        '''
+        with tmlib.models.utils.Session() as session:
+
+            cycles = session.query(tmlib.models.Cycle).\
+                join(tmlib.models.Plate).\
+                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+                all()
+            for c in cycles:
+                logger.debug('delete cycle: %r', c)
+                session.delete(c)
+
+            wells = session.query(tmlib.models.Well).\
+                join(tmlib.models.Plate).\
+                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+                all()
+            for w in wells:
+                logger.debug('delete well: %r', w)
+                session.delete(w)
+
+            channels = session.query(tmlib.models.Channel).\
+                filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
+                all()
+            for c in channels:
+                logger.debug('delete channel: %r', c)
+                session.delete(c)
+
     def run_job(self, batch):
-        '''Format OMEXML metadata extracted from microscope image files and
+        '''Formats OMEXML metadata extracted from microscope image files and
         complement it with metadata retrieved from additional microscope
         metadata files and/or user input.
 
@@ -253,15 +274,15 @@ class MetadataConfigurator(ClusterRoutines):
 
                     for index, i in md.ix[s_index].iterrows():
                         session.get_or_create(
-                            tmlib.models.ChannelImageFile,
+                            tmlib.models.ImageFileMapping,
                             tpoint=i.tpoint, zplane=i.zplane,
-                            site_id=site.id, file_map=fmap[index],
+                            site_id=site.id, map=fmap[index],
                             wavelength=i.channel_name,
                             acquisition_id=acquisition.id
                         )
 
     def collect_job_output(self, batch):
-        '''Assign registered image files from different acquisitions to
+        '''Assigns registered image files from different acquisitions to
         separate *cycles*. If an acquisition includes multiple time points,
         a separate *cycle* is created for each time point.
         The mapping from *acquisitions* to *cycles* is consequently
@@ -290,11 +311,12 @@ class MetadataConfigurator(ClusterRoutines):
                     acq.plate.experiment.plate_acquisition_mode == 'multiplexing'
                 df = pd.DataFrame(
                     session.query(
-                        tmlib.models.ChannelImageFile.tpoint,
-                        tmlib.models.ChannelImageFile.wavelength,
-                        tmlib.models.ChannelImageFile.zplane).
-                        filter(tmlib.models.ChannelImageFile.acquisition_id == acq.id).
-                        all()
+                        tmlib.models.ImageFileMapping.tpoint,
+                        tmlib.models.ImageFileMapping.wavelength,
+                        tmlib.models.ImageFileMapping.zplane
+                    ).
+                    filter(tmlib.models.ImageFileMapping.acquisition_id == acq.id).
+                    all()
                 )
                 tpoints = np.unique(df.tpoint)
                 wavelengths = np.unique(df.wavelength)
@@ -310,27 +332,22 @@ class MetadataConfigurator(ClusterRoutines):
                             name = 'cycle-%d_wavelength-%s' % (c_index, w)
                         channel = session.get_or_create(
                             tmlib.models.Channel,
-                            name=name, index=w_index,
+                            name=name, index=w_index, wavelength=w,
                             experiment_id=acq.plate.experiment.id
                         )
 
                         for z in zplanes:
-                            channel_layer = session.get_or_create(
-                                tmlib.models.ChannelLayer,
-                                tpoint=t_index, zplane=z, channel_id=channel.id
-                            )
-
-                            for im_file in session.query(
-                                    tmlib.models.ChannelImageFile).\
-                                    filter_by(
-                                        acquisition_id=acq.id,
-                                        tpoint=t,
-                                        zplane=z,
-                                        wavelength=w):
-                                im_file.tpoint = t_index
-                                im_file.channel_layer_id = channel_layer.id
-                                im_file.cycle_id = cycle.id
-                                im_file.name
+                            file_query = session.query(
+                                tmlib.models.ImageFileMapping
+                                ).\
+                                filter_by(
+                                    tpoint=t, zplane=z, wavelength=w,
+                                    acquisition_id=acq.id
+                                )
+                            for im_file_mapping in file_query:
+                                im_file_mapping.tpoint = t_index
+                                im_file_mapping.cycle_id = cycle.id
+                                im_file_mapping.channel_id = channel.id
 
                         if is_multiplexing_experiment:
                             w_index += 1

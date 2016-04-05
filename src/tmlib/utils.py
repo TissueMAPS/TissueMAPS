@@ -5,7 +5,6 @@ import datetime
 import re
 import os
 import inspect
-# import types  # require for type checks
 from types import *
 import logging
 

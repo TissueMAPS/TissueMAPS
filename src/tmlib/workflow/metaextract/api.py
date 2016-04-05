@@ -1,10 +1,14 @@
 import os
 import re
+import logging
 import subprocess
 
 import tmlib.models
 from tmlib.utils import notimplemented
+from tmlib.utils import same_docstring_as
 from tmlib.workflow.api import ClusterRoutines
+
+logger = logging.getLogger(__name__)
 
 
 class MetadataExtractor(ClusterRoutines):
@@ -36,8 +40,7 @@ class MetadataExtractor(ClusterRoutines):
         )
 
     def create_batches(self, args):
-        '''
-        Create job descriptions for parallel computing.
+        '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -81,8 +84,26 @@ class MetadataExtractor(ClusterRoutines):
 
         return job_descriptions
 
+    @same_docstring_as(ClusterRoutines.delete_previous_job_output)
+    def delete_previous_job_output(self):
+        with tmlib.models.utils.Session() as session:
+            files = session.query(tmlib.models.MicroscopeImageFile).\
+                join(tmlib.models.Acquisition).\
+                join(tmlib.models.Plate).\
+                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+                all()
+
+            # Set value in "omexml" column to NULL
+            logger.debug(
+                'set attribute "omexml" of instances of class '
+                'tmlib.models.MicroscopeImageFile to None'
+            )
+            for f in files:
+                f.omexml = None
+            session.add_all(files)
+
     def run_job(self, batch):
-        '''Extract OMEXML from microscope image or metadata files.
+        '''Extracts OMEXML from microscope image or metadata files.
 
         Parameters
         ----------

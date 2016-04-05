@@ -4,6 +4,7 @@ from collections import defaultdict
 import tmlib.models
 from tmlib.image_utils import mip
 from tmlib.utils import notimplemented
+from tmlib.utils import same_docstring_as
 from tmlib.errors import NotSupportedError
 from tmlib.workflow.align import registration as reg
 from tmlib.workflow.api import ClusterRoutines
@@ -28,7 +29,7 @@ class ImageRegistrator(ClusterRoutines):
         super(ImageRegistrator, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
-        '''Create job descriptions for parallel computing.
+        '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -50,8 +51,6 @@ class ImageRegistrator(ClusterRoutines):
         job_count = 0
         job_descriptions = dict()
         job_descriptions['run'] = list()
-
-        # TODO: group z-planes
 
         with tmlib.models.utils.Session() as session:
 
@@ -86,11 +85,12 @@ class ImageRegistrator(ClusterRoutines):
                             files = session.query(
                                     tmlib.models.ChannelImageFile
                                 ).\
-                                filter_by(
-                                    site_id=s,
-                                    cycle_id=cycle.id,
-                                    wavelength=args.ref_wavelength
-                                ).\
+                                join(tmlib.models.Site).\
+                                join(tmlib.models.Cycle).\
+                                join(tmlib.models.Channel).\
+                                filter(tmlib.models.Site.id == s).\
+                                filter(tmlib.models.Cycle.id == cycle.id).\
+                                filter(tmlib.models.Channel.wavelength == args.ref_wavelength).\
                                 all()
 
                             if not files:
@@ -112,6 +112,44 @@ class ImageRegistrator(ClusterRoutines):
                     })
 
         return job_descriptions
+
+    @same_docstring_as(ClusterRoutines.delete_previous_job_output)
+    def delete_previous_job_output(self):
+        with tmlib.models.utils.Session() as session:
+
+            shifts = session.query(tmlib.models.SiteShift).\
+                join(tmlib.models.Cycle).\
+                join(tmlib.models.Plate).\
+                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+                all()
+            for s in shifts:
+                logger.debug('delete site shifts: %r', s)
+                session.delete(s)
+
+            intersections = session.query(tmlib.models.SiteIntersection).\
+                join(tmlib.models.Site).\
+                join(tmlib.models.Well).\
+                join(tmlib.models.Plate).\
+                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+                all()
+            for i in intersections:
+                logger.debug('delete site intersection: %r', i)
+                session.delete(i)
+
+            layers = session.query(tmlib.models.ChannelLayer).\
+                join(tmlib.models.Channel).\
+                filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
+                all()
+            for l in layers:
+                logger.debug('delete channel layer: %r', l)
+                session.delete(l)
+
+            mapobject_types = session.query(tmlib.models.MapobjectType).\
+                filter(tmlib.models.MapobjectType.experiment_id == self.experiment_id).\
+                all()
+            for m in mapobject_types:
+                logger.debug('delete mapobject type: %r', m)
+                session.delete(m)
 
     def run_job(self, batch):
         '''Calculate shift and overhang values for the given sites.

@@ -1,11 +1,11 @@
 import os
 import logging
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
-# from tmlib.models.utils import auto_remove_directory
+from tmlib.models.utils import remove_location_upon_delete
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 CYCLE_LOCATION_FORMAT = 'cycle_{id}'
 
 
-# @auto_remove_directory(lambda obj: obj.location)
+@remove_location_upon_delete
 class Cycle(Model, DateMixIn):
 
     '''A *cycle* represents an individual image acquisition time point.
@@ -28,8 +28,6 @@ class Cycle(Model, DateMixIn):
         index of the cycle (based on the order of acquisition)
     tpoint: int
         time point of the cycle
-    status: str
-        processing status
     plate_id: int
         ID of the parent plate
     plate: tmlib.models.Plate
@@ -48,7 +46,6 @@ class Cycle(Model, DateMixIn):
     # Table columns
     tpoint = Column(Integer, index=True)
     index = Column(Integer, index=True)
-    status = Column(String, index=True)
     plate_id = Column(Integer, ForeignKey('plates.id'))
 
     # Relationships to other tables
@@ -71,7 +68,6 @@ class Cycle(Model, DateMixIn):
         self.index = index
         self.tpoint = tpoint
         self.plate_id = plate_id
-        self.status = 'WAITING'
 
     @autocreate_directory_property
     def location(self):

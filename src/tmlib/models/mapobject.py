@@ -128,10 +128,9 @@ class MapobjectType(Model, DateMixIn):
 
 class Mapobject(Model):
 
-    '''An individual *map object* represents a connected pixel component in an
-    image. They have coordinates that allows drawing their
-    outlines on the map and may also be associated with measurements
-    (*features*), which can be queried or used for analysis.
+    '''A *map object* represents a connected pixel component in an
+    image. It has outlines for drawing on the map and may also be associated
+    with measurements (*features*), which can be queried or used for analysis.
 
     Attributes
     ----------
@@ -195,7 +194,7 @@ class Mapobject(Model):
 
 class MapobjectOutline(Model):
 
-    '''Outlines of an individual *map object*.
+    '''Outline of an individual *map object*.
 
     Attributes
     ----------
@@ -231,7 +230,8 @@ class MapobjectOutline(Model):
         backref=backref('outlines', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, zplane, mapobject_id):
+    def __init__(self, tpoint, zplane, mapobject_id, geom_poly=None,
+                 geom_centroid=None):
         '''
         Parameters
         ----------
@@ -241,15 +241,20 @@ class MapobjectOutline(Model):
             z-plane index
         mapobject_id: int
             ID of parent mapobject
+        geom_poly: str, optional
+            EWKT polygon geometry (default: ``None``)
+        geom_centroid: str, optional
+            EWKT point geometry (default: ``None``)
         '''
         self.tpoint = tpoint
         self.zplane = zplane
         self.mapobject_id = mapobject_id
+        self.geom_poly = geom_poly
+        self.geom_centroid = geom_centroid
 
     @staticmethod
     def intersection_filter(x, y, z):
-        '''
-        Generate an `SQLalchemy` query filter to select mapobject outlines
+        '''Generates an `SQLalchemy` query filter to select mapobject outlines
         for a given `y`, `x`, `z` pyramid coordinate.
 
         Parameters
@@ -275,7 +280,7 @@ class MapobjectOutline(Model):
         miny = -y0 - size
         maxy = -y0
 
-        tile = 'POLYGON(({maxx} {maxy},{minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
+        tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
             minx=minx, maxx=maxx, miny=miny, maxy=maxy
         )
         top_border = 'LINESTRING({minx} {miny}, {maxx} {miny})'.format(

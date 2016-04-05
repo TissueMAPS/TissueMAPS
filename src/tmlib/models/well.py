@@ -110,8 +110,7 @@ class Well(Model, DateMixIn):
 
     @staticmethod
     def map_name_to_coordinate(name):
-        '''Map the identifier string representation to the coordinate, i.e.
-        zero-based index position.
+        '''Maps identifier string representation to coordinate.
 
         Parameters
         ----------
@@ -135,8 +134,7 @@ class Well(Model, DateMixIn):
 
     @staticmethod
     def map_coordinate_to_name(coordinate):
-        '''Map the zero-based index position to the identifier string
-        representation.
+        '''Maps coordinate to identifier string representation.
 
         Parameters
         ----------

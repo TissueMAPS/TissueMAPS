@@ -9,7 +9,7 @@ from layer import ChannelLayer
 from mapobject import MapobjectType, Mapobject, MapobjectOutline
 from feature import Feature, FeatureValue
 from plate import Plate
-from acquisition import Acquisition
+from acquisition import Acquisition, ImageFileMapping
 from cycle import Cycle
 from submission import Submission, Task
 from site import Site

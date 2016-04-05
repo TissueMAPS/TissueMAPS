@@ -60,8 +60,7 @@ class MetadataHandler(object):
 
     @staticmethod
     def _create_channel_planes(pixels):
-        '''
-        Add new `Plane` elements to an existing OMEXML `Pixels` element for
+        '''Adds new `Plane` elements to an existing OMEXML `Pixels` element for
         each channel, z-plane or time point.
 
         Parameters
@@ -100,7 +99,7 @@ class MetadataHandler(object):
         return pixels
 
     def configure_omexml_from_image_files(self):
-        '''Collect image metadata from individual `OMEXML` elements (one for each
+        '''Collects image metadata from individual `OMEXML` elements (one for each
         original image file) and combine them into a metadata table, where each
         row represents a single-plane image elements.
 
@@ -201,7 +200,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def configure_omexml_from_metadata_files(self, regex):
-        '''Use the *OMEXML* metadata retrieved form additional
+        '''Uses the *OMEXML* metadata retrieved form additional
         microscope metadata files to complement metadata retrieved
         from microscope image files.
 
@@ -359,8 +358,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def determine_missing_metadata(self):
-        '''
-        Determine if required basic metadata information, such as
+        '''Determines if required basic metadata information, such as
         channel names or time point identifiers, could not yet been configured.
 
         Returns
@@ -380,8 +378,7 @@ class MetadataHandler(object):
         return missing_metadata
 
     def configure_metadata_from_filenames(self, plate_dimensions, regex):
-        '''
-        Configure metadata based on information encoded in image filenames
+        '''Configures metadata based on information encoded in image filenames
         using a regular expression with named groups:
             - *w*: well
             - *t*: time point
@@ -477,8 +474,7 @@ class MetadataHandler(object):
         return coordinates
 
     def determine_grid_coordinates_from_stage_positions(self):
-        '''
-        Determine the coordinates of each image acquisition site within the
+        '''Determines the coordinates of each image acquisition site within the
         overall continuous acquisition grid (slide or well in a plate)
         based on the absolute microscope stage positions.
 
@@ -525,8 +521,7 @@ class MetadataHandler(object):
                                                stitch_layout,
                                                stitch_major_axis,
                                                stitch_dimensions=None):
-        '''
-        Determine the coordinates of each image acquisition site within the
+        '''Determines the coordinates of each image acquisition site within the
         overall continuous acquisition grid (slide or well in a plate)
         based on a provided layout.
 
@@ -594,8 +589,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def reconfigure_ome_metadata_for_projection(self):
-        '''
-        Reconfigure metadata in order to account for subsequent intensity
+        '''Reconfigures metadata in order to account for subsequent intensity
         projection.
         To this end, each z-stack (all focal planes acquired at
         at different z resolutions but at the same microscope stage position,
@@ -651,8 +645,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def update_channel(self):
-        '''
-        Create for each channel a zero-based unique identifier number.
+        '''Creates for each channel a zero-based unique identifier number.
 
         Returns
         -------
@@ -679,8 +672,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def update_zplane(self):
-        '''
-        Create for each focal plane a zero-based unique identifier number.
+        '''Creates for each focal plane a zero-based unique identifier number.
 
         Returns
         -------
@@ -704,8 +696,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def assign_acquisition_site_indices(self):
-        '''
-        Give each acquisition site a globally (plate-wide) unique index.
+        '''Gives each acquisition site a globally (plate-wide) unique index.
 
         Returns
         -------
@@ -725,8 +716,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def remove_redundant_columns(self):
-        '''
-        Clean-up metadata, i.e. remove information that is no longer required.
+        '''Cleans up metadata, i.e. remove information that is no longer required.
 
         Returns
         -------
@@ -742,8 +732,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def create_image_file_mapping(self):
-        '''
-        Create a file map for the extraction of individual planes from the
+        '''Creates a file map for the extraction of individual planes from the
         microscopy image files.
 
         Returns
@@ -817,7 +806,7 @@ class MetadataReader(object):
 
     @abstractmethod
     def read(self, microscope_metadata_files, microscope_image_files):
-        '''Read metadata from vendor specific files on disk.
+        '''Reads metadata from vendor specific files on disk.
 
         Parameters
         ----------

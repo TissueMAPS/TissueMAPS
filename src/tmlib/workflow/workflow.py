@@ -4,11 +4,10 @@ import logging
 import importlib
 import sys
 import traceback
-from cached_property import cached_property
 import gc3libs
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
-from gc3libs.workflow import StopOnError, AbortOnError
+from gc3libs.workflow import AbortOnError
 
 import tmlib.models
 from tmlib.workflow.description import WorkflowDescription
@@ -17,7 +16,6 @@ from tmlib.errors import WorkflowTransitionError
 from tmlib.readers import YamlReader
 from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow.jobs import RunJobCollection
-from tmlib.workflow.jobs import MultiRunJobCollection
 
 logger = logging.getLogger(__name__)
 
@@ -321,8 +319,9 @@ class WorkflowStage(State):
             **dict(step_description.args.variable_args)
         )
 
-        # TODO: cleanup
-        logger.debug('create batches')
+        logger.info('delete previous job output')
+        step_interface.delete_previous_job_output()
+        logger.info('create batches')
         batches = step_interface.create_batches(
             step_description.args.variable_args
         )

@@ -13,6 +13,7 @@ from cached_property import cached_property
 
 from tmlib.models.base import Model
 from tmlib.utils import autocreate_directory_property
+from tmlib.models.utils import remove_location_upon_delete
 from tmlib.writers import XmlWriter
 from tmlib.errors import RegexError
 from tmlib.image import PyramidTile
@@ -20,10 +21,10 @@ from tmlib.image import PyramidTile
 logger = logging.getLogger(__name__)
 
 #: Format string for channel layer locations
-# TODO: Should this be renamed to layer_XX?
 CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
+@remove_location_upon_delete
 class ChannelLayer(Model):
 
     '''A *channel layer* represents a multi-resolution overview of all images
@@ -40,8 +41,6 @@ class ChannelLayer(Model):
         ID of the parent channel
     channel: tmlib.models.Channel
         parent channel to which the plate belongs
-    image_files: List[tmlib.models.ChannelImageFile]
-        image files that belong to the channel layer
     '''
 
     #: str: name of the corresponding database table
@@ -115,9 +114,9 @@ class ChannelLayer(Model):
         return int(np.ceil(np.float(self.n_tiles) / 256))
 
     @property
-    def base_level_index(self):
-        '''int: index of the highest resolution level, i.e. the pyramid base
-        level
+    def maxzoom_level_index(self):
+        '''int: index of the highest resolution level, i.e. the base of the
+        pyramid
         '''
         return len(self.dimensions) - 1
 
@@ -244,8 +243,8 @@ class ChannelLayer(Model):
         }
 
     def map_image_to_base_tiles(self, image_file):
-        '''Maps an image to the corresponding tiles that are contained in the
-        image.
+        '''Maps an image to the corresponding tiles at the base of the pyramid
+        (maximal zoom level) that intersect with the image.
 
         Parameters
         ----------
@@ -257,6 +256,11 @@ class ChannelLayer(Model):
             array of mappings with "row" and "column" coordinate as well as
             "y_offset" and "x_offset" for each tile whose pixels are part of
             `image_file`
+
+        Note
+        ----
+        For those tiles that overlap multiple images, only map those at the
+        upper and/or left border of the image in `image_file`
         '''
         mappings = list()
         experiment = self.channel.experiment
@@ -300,16 +304,16 @@ class ChannelLayer(Model):
         return mappings
 
     def get_empty_base_tile_coordinates(self):
-        '''Gets coordinates of empty base tiles, i.e. tiles at the highest
-        resolution level that don't map to an image because they fall into
-        a spacer.
+        '''Gets coordinates of empty base tiles, i.e. tiles at the maximum
+        zoom level that don't map to an image because they fall into
+        a spacer region, e.g. gap introduced wells.
 
         Returns
         -------
         Set[Tuple[int]]
             row, column coordinates
         '''
-        tile_coords = self.maxzoom_tile_coordinate_to_image_file_map.keys()
+        tile_coords = self.base_tile_coordinate_to_image_file_map.keys()
         rows = range(self.dimensions[-1][0])
         cols = range(self.dimensions[-1][1])
         all_tile_coords = list(itertools.product(rows, cols))
@@ -351,14 +355,18 @@ class ChannelLayer(Model):
         return range(start_index, end_index)
 
     @cached_property
-    def maxzoom_tile_coordinate_to_image_file_map(self):
+    def base_tile_coordinate_to_image_file_map(self):
         '''Dict[Tuple[int], List[tmlib.models.ChannelImageFile]]: maps
-        coordinates of tiles at the highest zoom level
-        to the corresponding image files which overlap with each tile
+        coordinates of tiles at the maximal zoom level
+        to the corresponding image files which intersect with each tile
         '''
         mapping = collections.defaultdict(list)
         experiment = self.channel.experiment
-        for file in self.image_files:
+        image_files = [
+            f for f in self.channel.image_files
+            if f.tpoint == self.tpoint and f.zplane == self.zplane
+        ]
+        for file in image_files:
             y_offset_site, x_offset_site = file.site.offset
             row_indices = self._calc_tile_indices(
                 y_offset_site, file.site.image_size[0],

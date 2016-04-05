@@ -26,8 +26,7 @@ class IllumstatsCalculator(ClusterRoutines):
         super(IllumstatsCalculator, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
-        '''
-        Create job descriptions for parallel computing.
+        '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
@@ -65,7 +64,7 @@ class IllumstatsCalculator(ClusterRoutines):
 
                     files = [
                         f for f in cycle.channel_image_files
-                        if f.channel_layer.channel.id == channel.id
+                        if f.channel_id == channel.id
                     ]
 
                     if not files:
@@ -98,14 +97,34 @@ class IllumstatsCalculator(ClusterRoutines):
                     })
         return job_descriptions
 
-    def run_job(self, batch):
+    def delete_previous_job_output(self):
+        '''Deletes all instances of class
+        :py:class:`tmlib.models.IllumstatsFile` as well as all children for the
+        processed experiment.
         '''
-        Calculate online statistics and write results to a HDF5 file.
+        with tmlib.models.utils.Session() as session:
+
+            illumstats_files = session.query(tmlib.models.IllumstatsFile).\
+                join(tmlib.models.Cycle).\
+                join(tmlib.models.Plate).\
+                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+                all()
+            for f in illumstats_files:
+                logger.debug('delete illumination statistics file: %r', f)
+                session.delete(f)
+
+            # NOTE: Workflow stages "pyramid_creation" and "image_analysis"
+            # could be affected, since the calculated statistics could have
+            # been used. However, illumination correction is optional for these
+            # stages so we don't delete them.
+
+    def run_job(self, batch):
+        '''Calculates illumination statistics.
 
         Parameters
         ----------
         batch: dict
-            job_descriptions element
+            job description
         '''
         file_ids = batch['channel_image_files_ids']
         logger.info('calculate illumination statistics')

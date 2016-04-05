@@ -100,7 +100,7 @@ class FeatureValue(Model):
         backref=backref('feature_values', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, feature_id, mapobject_id):
+    def __init__(self, tpoint, feature_id, mapobject_id, value=None):
         '''
         Parameters
         ----------
@@ -110,13 +110,16 @@ class FeatureValue(Model):
             parent feature to which the feature belongs
         mapobject_id: int
             ID of the parent mapobject
+        value: float, optional
+            the actual measurement (default: ``None``)
         '''
         self.tpoint = tpoint
         self.feature_id = feature_id
         self.mapobject_id = mapobject_id
+        self.value = value
 
     def __repr__(self):
         return (
-            '<FeatureValue(id=%d, tpoint=%d, feature_name=%r, value=%f)>'
-            % (self.id, self.tpoint, self.feature.name, self.value)
+            '<FeatureValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
+            % (self.id, self.tpoint, self.mapobject_id, self.feature.name)
         )

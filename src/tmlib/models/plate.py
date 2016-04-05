@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import Model, DateMixIn
-# from tmlib.models.utils import auto_remove_directory
+from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.status import FileUploadStatus as fus
 from tmlib.utils import autocreate_directory_property
 
@@ -48,7 +48,7 @@ def determine_plate_dimensions(n_wells):
     return plate_dimensions[n_wells]
 
 
-# @auto_remove_directory(lambda obj: obj.location)
+@remove_location_upon_delete
 class Plate(Model, DateMixIn):
 
     '''A *plate* represents a container with reservoirs for biological
@@ -112,7 +112,6 @@ class Plate(Model, DateMixIn):
         description: str, optional
             description of the plate
         '''
-        # TODO: ensure that name is unique within experiment
         self.name = name
         self.description = description
         self.experiment_id = experiment_id
@@ -156,7 +155,6 @@ class Plate(Model, DateMixIn):
     @property
     def n_wells(self):
         '''int: number of wells in the plate'''
-        # TODO: Ensure that this is actually correct!
         return self.experiment.plate_format
 
     @property
@@ -229,8 +227,7 @@ class Plate(Model, DateMixIn):
         )
 
     def as_dict(self):
-        '''
-        Return attributes as key-value pairs.
+        '''Returns attributes as key-value pairs.
 
         Returns
         -------

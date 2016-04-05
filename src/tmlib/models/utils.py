@@ -7,7 +7,7 @@ import sqlalchemy.orm
 logger = logging.getLogger(__name__)
 
 #: URI for the TissueMAPS database
-DATABASE_URI = os.path.expandvars('$TMAPS_DB_URI')
+DATABASE_URI = os.environ['TMAPS_DB_URI']
 
 
 def create_db_engine():
