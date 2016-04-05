@@ -41,15 +41,6 @@ def create_app(config):
     # Set the JSON encoder
     app.json_encoder = TmJSONEncoder
 
-    # Add log handlers
-    # TODO: Consider adding mail and file handlers if being in a production
-    # environment (i.e. app.config.DEBUG == False).
-    stream_handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    stream_handler.setFormatter(formatter)
-    app.logger.addHandler(stream_handler)
-
     if not app.config.get('SQLALCHEMY_DATABASE_URI'):
         raise ValueError('No database URI specified!')
 
@@ -57,23 +48,12 @@ def create_app(config):
     if not secret_key:
         raise ValueError('Specify a secret key for this application!')
     if secret_key == 'default_secret_key':
-        app.logger.warn(
-            'The application will run with the default secret key!')
+        print ' * The application will run with the default secret key!'
 
-    salt_string = app.config.get('HASHIDS_SALT')
-    if not salt_string:
-        raise ValueError(
-            'Specify a secret salt string for this application!')
-    if salt_string == 'default_salt_string':
-        app.logger.warn(
-            'The application will run with the default salt string!')
-
-    if app.config['DEBUG']:
-        app.logger.info("Starting in __DEBUG__ mode")
-    elif app.config['TESTING']:
-        app.logger.info("Starting in __TESTING__ mode")
-    else:
-        app.logger.info("Starting in __PRODUCTION__ mode")
+    print ' * Starting mode: %s' % (
+        'DEBUG' if app.config['DEBUG'] else (
+            'TESTING' if app.config['TESTING'] else 'PRODUCTION'
+        ))
 
     # Initialize Plugins
     jwt.init_app(app)

@@ -79,23 +79,25 @@ def process_tool_request(tool_id):
     experiment_id = data.get('experiment_id')
 
     # Check if the user has permissions to access this experiment.
-    e = Experiment.get(experiment_id)
+    e = db.session.query(Experiment).get_with_hash(experiment_id)
     if e is None:
         return RESOURCE_NOT_FOUND_RESPONSE
     if not e.belongs_to(current_identity):
         return NOT_AUTHORIZED_RESPONSE
 
     # Instantiate the correct tool plugin class.
-    tool = Tool.get(tool_id)
+    tool = db.session.query(Tool).get_with_hash(tool_id)
     tool_cls = tool.get_class()
     tool_inst = tool_cls()
 
     # Load or create the persistent tool session.
-    session = ToolSession.query.filter_by(uuid=session_uuid).first()
+    session = db.session.query(ToolSession).\
+        filter_by(uuid=session_uuid).first()
     if session is None:
-        session = ToolSession.create(
-            experiment_id=e.id, user_id=current_identity.id,
-            uuid=session_uuid, tool_id=tool.id, appstate_id=None)
+        session = ToolSession(
+            experiment_id=e.id, uuid=session_uuid, tool_id=tool.id)
+        db.session.add(session)
+        db.session.commit()
 
     # Execute the tool plugin.
     tool_result = tool_inst.process_request(payload, session, e)
@@ -126,10 +128,10 @@ def get_labelresult(labelresult_id):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    label_result = LabelResult.get(int(labelresult_id))
+    label_result = db.session.query(LabelResult).get(int(labelresult_id))
 
     query_res = label_result.mapobject_type.get_mapobject_outlines_within_tile(
-        x, y, z, zlevel, t)
+        x, y, z, zplane=zlevel, tpoint=t)
     features = []
 
     if len(query_res) > 0:

@@ -13,6 +13,8 @@ class ToolSession(Model):
         Column(Integer, ForeignKey('experiments.id'))
 
     tool_id = Column(Integer, ForeignKey('tools.id'))
+
+    # TODO: Tool session should be linked to an saved experiment state.
     # appstate_id = Column(Integer, ForeignKey('appstates.id'))
 
     # appstate = relationship(
@@ -32,4 +34,3 @@ class ToolSession(Model):
 
     def get(key):
         pass
-

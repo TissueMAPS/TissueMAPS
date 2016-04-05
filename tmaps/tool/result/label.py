@@ -1,6 +1,8 @@
 from sqlalchemy import Integer, ForeignKey, Column, Float
 from sqlalchemy.orm import relationship
 
+
+from tmaps.extensions import db
 from tmaps.model import Model
 from tmaps.mapobject import Mapobject
 
@@ -19,20 +21,18 @@ class LabelResult(Model):
         self.mapobject_type_id = mapobject_type.id
         self.tool_session_id = session.id
 
-        session.add(self)
-        session.flush()
+        db.session.add(self)
+        db.session.flush()
 
         label_objs = []
-        ids = Mapobject.translate_external_ids(
-            ids, session.experiment_id, mapobject_type.id)
-        for ext_id, label in zip(ids, labels):
+        for mapobject_id, label in zip(ids, labels):
             pl = LabelResultLabel(
-                mapobject_id=ext_id, label=label,
+                mapobject_id=mapobject_id, label=label,
                 label_result_id=self.id)
             label_objs.append(pl)
 
-        session.add_all(label_objs)
-        session.commit()
+        db.session.add_all(label_objs)
+        db.session.commit()
 
     def to_dict(self):
         return {
