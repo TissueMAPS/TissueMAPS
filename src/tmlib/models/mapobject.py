@@ -65,7 +65,7 @@ class MapobjectType(Model, DateMixIn):
         '''
         self.name = name
         self.experiment_id = experiment_id
-        self.static = static
+        self.is_static = is_static
 
     @autocreate_directory_property
     def location(self):
