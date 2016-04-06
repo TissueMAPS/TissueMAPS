@@ -38,8 +38,19 @@ class AppInstance {
             this.mapObjectSelectionHandler.addMapObjectType(name);
             this.mapObjectSelectionHandler.addNewSelection(name);
         });
-    }
 
+        // DEBUG
+        var segmLayer = new SegmentationLayer('DEBUG_TILE', {
+            t: 0,
+            experimentId: this.experiment.id,
+            zlevel: 0,
+            size: this.viewport.mapSize,
+            visible: true
+        });
+        segmLayer.strokeColor = Color.RED;
+        segmLayer.fillColor = Color.WHITE.withAlpha(0);
+        this.viewport.addLayer(segmLayer);
+    }
 
     saveCurrentResult() {
         this.savedResults.push(this.currentResult);
