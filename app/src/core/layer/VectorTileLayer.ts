@@ -3,12 +3,15 @@ interface VectorTileLayerOpts {
     size: Size;
     style?: ol.style.Style | ol.FeatureStyleFunction;
     visible?: boolean;
+    strokeColor?: Color;
+    fillColor?: Color;
+    
 }
 
 class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
 
-    private _fillColor: Color = Color.WHITE.withAlpha(0.02);
-    private _strokeColor: Color = Color.WHITE;
+    private _fillColor: Color;
+    private _strokeColor: Color;
 
     set fillColor(c: Color) {
         this._fillColor = c;
@@ -86,6 +89,9 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
                 origin: [0, 0]
             })
         });
+
+        this._fillColor = opt.fillColor !== undefined ? opt.fillColor : Color.WHITE.withAlpha(0);
+        this._strokeColor = opt.strokeColor !== undefined ? opt.strokeColor : Color.WHITE;
 
         this._olLayer = new ol.layer.VectorTile({
             source: vectorSource,

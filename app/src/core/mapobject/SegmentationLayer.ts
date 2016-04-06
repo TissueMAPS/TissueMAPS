@@ -19,7 +19,9 @@ class SegmentationLayer extends VectorTileLayer {
         super({
             visible: opt.visible,
             size: opt.size,
-            url: url
+            url: url,
+            strokeColor: Color.WHITE,
+            fillColor: Color.WHITE.withAlpha(0)
         });
 
         this.objectTypeName = objectTypeName;
