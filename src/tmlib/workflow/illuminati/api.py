@@ -703,7 +703,7 @@ class PyramidBuilder(ClusterRoutines):
                         '%d %d' % ur
                     ])
                     centroid = 'POINT(%.2f %.2f)' % (
-                        np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
+                        np.mean([ul[0], ll[0]]), np.mean([ul[1], ur[1]])
                     )
                     mapobject_outline = tm.MapobjectOutline(
                         mapobject_id=mapobject.id,
