@@ -1,14 +1,13 @@
 import os
 import logging
 import numpy as np
-import pandas as pd
 import collections
 import itertools
 import sqlalchemy.orm
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib import utils
 from tmlib.image import PyramidTile
 from tmlib.image import ChannelImage
@@ -16,6 +15,7 @@ from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import MultiRunJobCollection
+from tmlib.workflow.jobs import CollectJob
 
 logger = logging.getLogger(__name__)
 
@@ -79,29 +79,26 @@ class PyramidBuilder(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            metadata = pd.DataFrame(
-                session.query(
-                    tmlib.models.ChannelImageFile.tpoint,
-                    tmlib.models.ChannelImageFile.zplane,
-                    tmlib.models.ChannelImageFile.channel_id,
-                ).
-                join(tmlib.models.Channel).
-                filter(tmlib.models.Channel.experiment_id == self.experiment_id).
-                all()
-            )
-            metadata.drop_duplicates(inplace=True)
+            metadata = session.query(
+                    tm.ChannelImageFile.tpoint,
+                    tm.ChannelImageFile.zplane,
+                    tm.ChannelImageFile.channel_id,
+                ).\
+                join(tm.Channel).\
+                filter(tm.Channel.experiment_id == self.experiment_id).\
+                distinct()
 
-            for i, attributes in metadata.iterrows():
+            for attributes in metadata:
 
                 layer = session.get_or_create(
-                    tmlib.models.ChannelLayer,
+                    tm.ChannelLayer,
                     tpoint=attributes.tpoint, zplane=attributes.zplane,
                     channel_id=attributes.channel_id
                 )
 
-                image_files = session.query(tmlib.models.ChannelImageFile).\
+                image_files = session.query(tm.ChannelImageFile).\
                     filter_by(
                         tpoint=layer.tpoint, zplane=layer.zplane,
                         channel_id=layer.channel_id
@@ -257,22 +254,31 @@ class PyramidBuilder(ClusterRoutines):
                             'index': index,
                             'clip_value': None
                         })
+        job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
         return job_descriptions
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tmlib.models.ChannelLayer` as well as all children
+        :py:class:`tm.ChannelLayer` and
+        :py:class:`tm.MapobjectType` as well as all children
         instances for the processed experiment.
         '''
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            layer = session.query(tmlib.models.ChannelLayer).\
-                join(tmlib.models.Channel).\
-                filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
+            layer = session.query(tm.ChannelLayer).\
+                join(tm.Channel).\
+                filter(tm.Channel.experiment_id == self.experiment_id).\
                 all()
             for l in layer:
                 logger.debug('delete channel layer: %r', l)
                 session.delete(l)
+
+            mapobject_types = session.query(tm.MapobjectType).\
+                filter_by(experiment_id=self.experiment_id).\
+                all()
+            for m in mapobject_types:
+                logger.debug('delete map object type: %r', m)
+                session.delete(m)
 
     def create_jobs(self, step, batches,
                     duration=None, memory=None, cores=None):
@@ -342,11 +348,23 @@ class PyramidBuilder(ClusterRoutines):
                 )
             )
 
+        logger.info('create job for "collect" phase')
+        batch = batches['collect']
+
+        step.collect_job = CollectJob(
+            step_name=self.step_name,
+            arguments=self._build_collect_command(),
+            output_dir=self.log_location,
+            submission_id=step.submission_id
+        )
+        step.collect_job.requested_walltime = Duration('02:00:00')
+        step.collect_job.requested_memory = Memory(3800, Memory.MB)
+
         return step
 
     def _create_nonempty_maxzoom_level_tiles(self, batch):
-        with tmlib.models.utils.Session() as session:
-            layer = session.query(tmlib.models.ChannelLayer).\
+        with tm.utils.Session() as session:
+            layer = session.query(tm.ChannelLayer).\
                 get(batch['layer_id'])
             logger.info(
                 'processing layer: channel %d, time point %d, z-plane %d',
@@ -358,7 +376,7 @@ class PyramidBuilder(ClusterRoutines):
             )
 
             if batch['illumcorr'] or (batch['clip'] and not batch['clip_value']):
-                illumstats_file = session.query(tmlib.models.IllumstatsFile).\
+                illumstats_file = session.query(tm.IllumstatsFile).\
                     filter_by(
                         channel_id=layer.channel_id,
                         cycle_id=layer.channel.image_files[0].cycle_id
@@ -383,12 +401,12 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('aligning images between cycles')
 
         for fid in batch['image_file_ids']:
-            with tmlib.models.utils.Session() as session:
+            with tm.utils.Session() as session:
 
-                layer = session.query(tmlib.models.ChannelLayer).\
+                layer = session.query(tm.ChannelLayer).\
                     get(batch['layer_id'])
 
-                file = session.query(tmlib.models.ChannelImageFile).get(fid)
+                file = session.query(tm.ChannelImageFile).get(fid)
                 logger.info('process image "%s"', file.name)
                 mapped_tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
@@ -408,7 +426,7 @@ class PyramidBuilder(ClusterRoutines):
                         batch['level'], t['row'], t['column']
                     ]
                     tile_file = session.get_or_create(
-                        tmlib.models.PyramidTileFile,
+                        tm.PyramidTileFile,
                         name=name, group=group, row=t['row'],
                         column=t['column'], level=batch['level'],
                         channel_layer_id=layer.id
@@ -501,9 +519,9 @@ class PyramidBuilder(ClusterRoutines):
                     tile_file.put(tile)
 
     def _create_empty_maxzoom_level_tiles(self, batch):
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            layer = session.query(tmlib.models.ChannelLayer).\
+            layer = session.query(tm.ChannelLayer).\
                 get(batch['layer_id'])
 
             logger.info(
@@ -524,7 +542,7 @@ class PyramidBuilder(ClusterRoutines):
                     batch['level'], t[0], t[1]
                 ]
                 tile_file = session.get_or_create(
-                    tmlib.models.PyramidTileFile,
+                    tm.PyramidTileFile,
                     name=name, group=group, row=t[0],
                     column=t[1], level=batch['level'],
                     channel_layer_id=layer.id
@@ -534,8 +552,8 @@ class PyramidBuilder(ClusterRoutines):
                 tile_file.put(tile)
 
     def _create_lower_zoom_level_tiles(self, batch):
-        with tmlib.models.utils.Session() as session:
-            layer = session.query(tmlib.models.ChannelLayer).\
+        with tm.utils.Session() as session:
+            layer = session.query(tm.ChannelLayer).\
                 get(batch['layer_id'])
             logger.info(
                 'processing layer: channel %d, time point %d, z-plane %d',
@@ -544,8 +562,8 @@ class PyramidBuilder(ClusterRoutines):
             logger.info('creating tiles at zoom level %d', batch['level'])
 
         for f in batch['outputs']['image_files']:
-            with tmlib.models.utils.Session() as session:
-                layer = session.query(tmlib.models.ChannelLayer).\
+            with tm.utils.Session() as session:
+                layer = session.query(tm.ChannelLayer).\
                     get(batch['layer_id'])
                 name = os.path.basename(f)
                 level, row, column = layer.get_coordinate_from_name(name)
@@ -558,7 +576,7 @@ class PyramidBuilder(ClusterRoutines):
                     level, row, column
                 ]
                 tile_file = session.get_or_create(
-                    tmlib.models.PyramidTileFile,
+                    tm.PyramidTileFile,
                     name=name, group=group, row=row,
                     column=column, level=level,
                     channel_layer_id=layer.id
@@ -572,7 +590,7 @@ class PyramidBuilder(ClusterRoutines):
                     for j, c in enumerate(cols):
                         try:
                             pre_tile_file = session.query(
-                                    tmlib.models.PyramidTileFile
+                                    tm.PyramidTileFile
                                 ).\
                                 filter_by(
                                     row=r, column=c, level=batch['level']+1,
@@ -620,9 +638,140 @@ class PyramidBuilder(ClusterRoutines):
         else:
             self._create_lower_zoom_level_tiles(batch)
 
-    @utils.notimplemented
     def collect_job_output(self, batch):
-        pass
+        '''Creates default instances of :py:class:`tm.MapobjectType`
+        for :py:class:`tm.Site`, :py:class:`tm.Well`,
+        and :py:class:`tm.Plate` and creates for each instance an
+        instance of :py:class:`tm.Mapobject` and the corresponding
+        :py:class:`tm.MapobjectOutline`.
+
+        batch: dict
+            job description
+        '''
+        with tm.utils.Session() as session:
+
+            mapobject_types = session.query(tm.MapobjectType).\
+                filter_by(experiment_id=self.experiment_id, static=True).\
+                all()
+            for m in mapobject_types:
+                logger.debug('delete map object type: %r', m)
+                session.delete(m)
+
+        with tm.utils.Session() as session:
+
+            logger.info('create mapobject type "Plates"')
+            plates_mapobject_type = session.get_or_create(
+                tm.MapobjectType,
+                name='Plates', experiment_id=self.experiment_id,
+                static=True
+            )
+            session.add(plates_mapobject_type)
+            session.flush()
+
+            plates = session.query(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id)
+            logger.info('create mapobjects of type "Plates"')
+            for plate in plates:
+
+                plate_mapobject = tm.Mapobject(
+                    mapobject_type_id=plates_mapobject_type.id
+                )
+                session.add(plate_mapobject)
+                session.flush()
+                # NOTE: first element: x axis; second element: inverted y axis
+                ul = (plate.offset[1], -1 * plate.offset[0])
+                ll = (ul[0] + plate.image_size[1], ul[1])
+                ur = (ul[0], ul[1] - plate.image_size[0])
+                lr = (ll[0], ul[1] - plate.image_size[0])
+                plate_poly = 'POLYGON((%s))' % ','.join([
+                    '%d %d' % ur, '%d %d' % ul, '%d %d' % ll, '%d %d' % lr,
+                    '%d %d' % ur
+                ])
+                plate_centroid = 'POINT(%.2f %.2f)' % (
+                    np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
+                )
+                plates_mapobject_outline = tm.MapobjectOutline(
+                    mapobject_id=plate_mapobject.id,
+                    geom_poly=plate_poly, geom_centroid=plate_centroid
+                )
+                session.add(plates_mapobject_outline)
+
+        with tm.utils.Session() as session:
+
+            logger.info('create mapobject type "Wells"')
+            wells_mapobject_type = session.get_or_create(
+                tm.MapobjectType,
+                name='Wells', experiment_id=self.experiment_id, static=True
+            )
+            session.add(wells_mapobject_type)
+            session.flush()
+
+            wells = session.query(tm.Well).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id)
+            logger.info('create mapobjects of type "Wells"')
+            for well in wells:
+
+                well_mapobject = tm.Mapobject(
+                    mapobject_type_id=wells_mapobject_type.id
+                )
+                session.add(well_mapobject)
+                session.flush()
+                ul = (well.offset[1], -1 * well.offset[0])
+                ll = (ul[0] + well.image_size[1], ul[1])
+                ur = (ul[0], ul[1] - well.image_size[0])
+                lr = (ll[0], ul[1] - well.image_size[0])
+                well_poly = 'POLYGON((%s))' % ','.join([
+                    '%d %d' % ur, '%d %d' % ul, '%d %d' % ll, '%d %d' % lr,
+                    '%d %d' % ur
+                ])
+                well_centroid = 'POINT(%.2f %.2f)' % (
+                    np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
+                )
+                well_mapobject_outline = tm.MapobjectOutline(
+                    mapobject_id=well_mapobject.id,
+                    geom_poly=well_poly, geom_centroid=well_centroid
+                )
+                session.add(well_mapobject_outline)
+
+        with tm.utils.Session() as session:
+
+            logger.info('create mapobject type "Sites"')
+            sites_mapobject_type = session.get_or_create(
+                tm.MapobjectType,
+                name='Sites', experiment_id=self.experiment_id, static=True
+            )
+            session.add(sites_mapobject_type)
+            session.flush()
+
+            sites = session.query(tm.Site).\
+                join(tm.Well).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id)
+            logger.info('create mapobjects of type "Sites"')
+            for site in sites:
+
+                site_mapobject = tm.Mapobject(
+                    mapobject_type_id=sites_mapobject_type.id
+                )
+                session.add(site_mapobject)
+                session.flush()
+                ul = (site.offset[1], -1 * site.offset[0])
+                ll = (ul[0] + site.image_size[1], ul[1])
+                ur = (ul[0], ul[1] - site.image_size[0])
+                lr = (ll[0], ul[1] - site.image_size[0])
+                site_poly = 'POLYGON((%s))' % ','.join([
+                    '%d %d' % ur, '%d %d' % ul, '%d %d' % ll,
+                    '%d %d' % lr, '%d %d' % ur
+                ])
+                site_centroid = 'POINT(%.2f %.2f)' % (
+                    np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
+                )
+                site_mapobject_outline = tm.MapobjectOutline(
+                    mapobject_id=site_mapobject.id,
+                    geom_poly=site_poly, geom_centroid=site_centroid
+                )
+                session.add(site_mapobject_outline)
 
 
 def factory(experiment_id, verbosity, **kwargs):

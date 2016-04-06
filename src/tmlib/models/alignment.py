@@ -117,7 +117,7 @@ class SiteIntersection(Model):
     site = relationship(
         'Site',
         backref=backref(
-            'intersection', uselist=False, cascade='all, delete-orphan'
+            'intersection', cascade='all, delete-orphan', uselist=False
         )
     )
 

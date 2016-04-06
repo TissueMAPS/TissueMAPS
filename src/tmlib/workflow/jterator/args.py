@@ -5,8 +5,6 @@ class JteratorInitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorInitArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -83,11 +81,7 @@ class JteratorInitArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipeline
 
@@ -113,8 +107,6 @@ class JteratorRunArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorRunArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -128,11 +120,7 @@ class JteratorRunArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -158,8 +146,6 @@ class JteratorSubmitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorSubmitArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -173,11 +159,7 @@ class JteratorSubmitArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -203,8 +185,6 @@ class JteratorResubmitArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorResubmitArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -218,11 +198,46 @@ class JteratorResubmitArgs(VariableArgs):
 
     @property
     def pipeline(self):
+        '''str: name of the pipeline that should be processed
         '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        return self._pipelines
+
+    @pipeline.setter
+    def pipeline(self, value):
+        if not isinstance(value, self._pipeline_params['type']):
+            raise TypeError('Argument "pipeline" must have type %s'
+                            % self._pipeline_params['type'].__name__)
+        self._pipeline = value
+
+    @property
+    def _pipeline_params(self):
+        return {
+            'type': str,
+            'required': True,
+            'help': '''
+                name of the pipeline that should be processed
+            '''
+        }
+
+
+class JteratorCollectArgs(VariableArgs):
+
+    def __init__(self, **kwargs):
+        '''
+        Parameters
+        ----------
+        **kwargs: dict
+            arguments as key-value pairs
+        '''
+        super(JteratorCollectArgs, self).__init__(**kwargs)
+
+    @property
+    def _persistent_attrs(self):
+        return {'pipeline'}
+
+    @property
+    def pipeline(self):
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -248,8 +263,6 @@ class JteratorCleanupArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorCleanupArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -263,11 +276,7 @@ class JteratorCleanupArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -293,8 +302,6 @@ class JteratorLogArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorLogArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -308,11 +315,7 @@ class JteratorLogArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -338,8 +341,6 @@ class JteratorInfoArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorInfoArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -353,11 +354,7 @@ class JteratorInfoArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -383,8 +380,6 @@ class JteratorCreateArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorCreateArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -400,11 +395,7 @@ class JteratorCreateArgs(VariableArgs):
 
     @property
     def repo_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to repository directory where module files are located
+        '''str: path to repository directory where module files are located
         '''
         return self._repo_dir
 
@@ -428,11 +419,7 @@ class JteratorCreateArgs(VariableArgs):
 
     @property
     def skel_dir(self):
-        '''
-        Returns
-        -------
-        str
-            path to a directory that represents a project skeleton
+        '''str: path to a directory that represents a project skeleton
         '''
         return self._skel_dir
 
@@ -456,11 +443,7 @@ class JteratorCreateArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -486,8 +469,6 @@ class JteratorCheckArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorCheckArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -501,11 +482,7 @@ class JteratorCheckArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 
@@ -531,8 +508,6 @@ class JteratorRemoveArgs(VariableArgs):
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class JteratorRemoveArgs.
-
         Parameters
         ----------
         **kwargs: dict
@@ -546,11 +521,7 @@ class JteratorRemoveArgs(VariableArgs):
 
     @property
     def pipeline(self):
-        '''
-        Returns
-        -------
-        str
-            name of the pipeline that should be processed
+        '''str: name of the pipeline that should be processed
         '''
         return self._pipelines
 

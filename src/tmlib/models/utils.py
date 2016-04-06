@@ -153,7 +153,7 @@ class Session(object):
         return self._sqla_session.delete(*args, **kwargs)
 
     def get_or_create(self, model, **kwargs):
-        '''Get a particular instance of a model class if it already exists and
+        '''Get an instance of a model class if it already exists or
         create it otherwise.
 
         Parameters
@@ -161,7 +161,7 @@ class Session(object):
         model: type
             an implementation of the :py:class:`tmlib.models.Model`
             abstract base class
-        kwargs: dict
+        **kwargs: dict
             keyword arguments for the constructor of the model class
 
         Returns
@@ -178,7 +178,7 @@ class Session(object):
             try:
                 instance = model(**kwargs)
                 self._sqla_session.add(instance)
-                self._sqla_session.commit()  # flush() not sufficient???
+                self._sqla_session.commit()
                 logger.debug('created new instance: %r', instance)
             except sqlalchemy.exc.IntegrityError:
                 self._sqla_session.rollback()
@@ -189,3 +189,43 @@ class Session(object):
         except:
             raise
         return instance
+
+    def get_or_create_all(self, model, args):
+        '''Get a collection of instances of a model class if they already exist
+        or create them otherwise.
+
+        Parameters
+        ----------
+        model: type
+            an implementation of the :py:class:`tmlib.models.Model`
+            abstract base class
+        args: List[dict]
+            keyword arguments for the constructor of the model class
+
+        Returns
+        -------
+        List[tmlib.models.Model]
+            instances of `model`
+        '''
+        collection = list()
+        for kwargs in args:
+            collection.extend(
+                self.query(model).filter_by(**kwargs).all()
+            )
+        if not collection:
+            try:
+                collection = list()
+                for kwargs in args:
+                    collection.append(model(**kwargs))
+                self._sqla_session.add_all(collection)
+                self._sqla_session.commit()
+            except sqlalchemy.exc.IntegrityError:
+                self._sqla_session.rollback()
+                collection = list()
+                for kwargs in args:
+                    collection.extend(
+                        self.query(model).filter_by(**kwargs).all()
+                    )
+            except:
+                raise
+        return collection

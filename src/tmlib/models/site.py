@@ -35,6 +35,8 @@ class Site(Model, DateMixIn):
         intersection that belongs to the site
     channel_image_files: List[tmlib.models.ChannelImageFile]
         channel image files that belong to the site
+    mapobject_segmentations: List[tmlib.models.MapobjectSegmentation]
+        segmentations that belong to the site
     '''
 
     #: str: name of the corresponding database table
@@ -95,41 +97,22 @@ class Site(Model, DateMixIn):
         '''
         well = self.well
         plate = well.plate
-        n_rows = plate.nonempty_rows.index(well.y)
-        n_columns = plate.nonempty_columns.index(well.x)
         experiment = plate.experiment
-        plate_coordinate = tuple(
-            [a[0] for a in np.where(experiment.plate_grid == plate.id)]
-        )
-        # NOTE: Shifts of sites between cycles only affect pixels within the
-        # site and are therefore handled separately.
         y_offset = (
             # Sites in the well above the site
             self.y * self.image_size[0] +
             # Potential displacement of sites in y-direction
             self.y * experiment.vertical_site_displacement +
-            # Wells in the plate above the well
-            n_rows * well.image_size[0] +
-            # Gaps introduced between wells
-            n_rows * experiment.well_spacer_size +
-            # Plates above the plate
-            plate_coordinate[0] * plate.image_size[0] +
-            # Gaps introduced between plates
-            plate_coordinate[0] * experiment.plate_spacer_size
+            # Wells and plates above the well
+            well.offset[0]
         )
         x_offset = (
             # Sites in the well left of the site
             self.x * self.image_size[1] +
             # Potential displacement of sites in y-direction
             self.x * experiment.horizontal_site_displacement +
-            # Wells in the plate left of the well
-            n_columns * well.image_size[1] +
-            # Gaps introduced between wells
-            n_columns * experiment.well_spacer_size +
-            # Plates left of the plate
-            plate_coordinate[1] * plate.image_size[0] +
-            # Gaps introduced between plates
-            plate_coordinate[1] * experiment.plate_spacer_size
+            # Wells and plates left of the well
+            well.offset[1]
         )
         return (y_offset, x_offset)
 

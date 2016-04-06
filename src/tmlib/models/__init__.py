@@ -6,7 +6,7 @@ from experiment import Experiment
 from well import Well
 from channel import Channel
 from layer import ChannelLayer
-from mapobject import MapobjectType, Mapobject, MapobjectOutline
+from mapobject import MapobjectType, Mapobject, MapobjectOutline, MapobjectSegmentation
 from feature import Feature, FeatureValue
 from plate import Plate
 from acquisition import Acquisition, ImageFileMapping

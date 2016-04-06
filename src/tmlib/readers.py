@@ -81,7 +81,7 @@ class TextReader(Reader):
         super(TextReader, self).__init__(filename)
 
     def read(self):
-        '''Read data from text file.
+        '''Reads data from text file.
 
         Returns
         -------
@@ -102,7 +102,7 @@ class XmlReader(Reader):
         super(XmlReader, self).__init__(filename)
 
     def read(self):
-        '''Read data from XML file.
+        '''Reads data from XML file.
 
         Returns
         -------
@@ -138,7 +138,7 @@ class JsonReader(Reader):
         super(JsonReader, self).__init__(filename)
 
     def read(self):
-        '''Read data from JSON file.
+        '''Reads data from JSON file.
 
         Returns
         -------
@@ -150,7 +150,7 @@ class JsonReader(Reader):
 
 
 def load_yaml(string):
-    '''Convert YAML string to Python object.
+    '''Converts YAML string to Python object.
 
     Parameters
     ----------
@@ -173,7 +173,7 @@ class YamlReader(Reader):
         super(YamlReader, self).__init__(filename)
 
     def read(self):
-        '''Read YAML file.
+        '''Reads YAML file.
 
         Returns
         -------
@@ -218,7 +218,7 @@ class TablesReader(Reader):
             return False
 
     def read(self, path):
-        '''Read a dataset.
+        '''Reads a dataset.
 
         Parameters
         ----------
@@ -347,7 +347,7 @@ class DatasetReader(Reader):
         return names
 
     def read(self, path):
-        '''Read a dataset.
+        '''Reads a dataset.
 
         Parameters
         ----------
@@ -371,7 +371,7 @@ class DatasetReader(Reader):
         return dset[()]
 
     def read_subset(self, path, index=None, row_index=None, column_index=None):
-        '''Read a subset of a dataset. For *fancy-indexing* see
+        '''Reads a subset of a dataset. For *fancy-indexing* see
         `h5py docs <http://docs.h5py.org/en/latest/high/dataset.html#fancy-indexing>`_.
 
         Parameters
@@ -547,7 +547,7 @@ class BFImageReader(object):
                 sys.stdout.write(tb)
 
     def read(self, filename):
-        '''Read an image from a file.
+        '''Reads an image from a file.
 
         For details on reading images via Bio-Format from Python, see
         `load_image() <http://pythonhosted.org/python-bioformats/#reading-images>`_.
@@ -582,7 +582,7 @@ class BFImageReader(object):
         return image
 
     def read_subset(self, filename, series=None, plane=None):
-        '''Read a subset of images from a file.
+        '''Reads a subset of images from a file.
 
         Parameters
         ----------
@@ -629,7 +629,7 @@ class PixelsReader(Reader):
         super(PixelsReader, self).__init__(filename)
 
     def read(self, dtype=np.uint16):
-        '''Read pixels data from image file.
+        '''Reads pixels data from image file.
 
         Parameters
         ----------
