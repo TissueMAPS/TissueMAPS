@@ -81686,6 +81686,60 @@ ol.render.webgl.LineStringReplay.prototype.setFillStrokeStyle =
 
 
 /**
+ * PolygonReplay
+ *
+ * A polygon replay is in charge of rendering a collection of polygon geometries.
+ * To this end it triangulates and stores vertices belonging to these geometries.
+ * It also has a linestring replay that is in charge of rendering the outlines.
+ *
+ * Draw
+ * ====
+ *
+ * The following chain of function calls draws a polygon:
+ *
+ * Preperation
+ * -----------
+ * drawPolygonGeometry(polygonGeometry, feature)
+ *  - sets the replay-wide fill color (taken from the feature object)
+ * drawCoordinates_(coordinates, fillColor)
+ *  - called for the polygon geometry and on the linestring replay
+ *  - triangulates the geometry in order to get a list of triangle coordinates
+ *    that WebGL can work with.
+ *  - The color values (RGBA) are appended inside the same array.
+ *  - TODO: At the moment only the fill color can be different.
+      The linereplay always uses the same color.
+ *  - The start index where the coordinates and color values start for each triangle
+ *    is stored inside the array indices_.
+ *    End indices are stored inside endIndices_ (in function drawPolygonGeometry).
+ *
+ * Replay
+ * ----
+ * replay(context, ..., featureCallback)
+ *  - binds the vertices buffer
+ *  - binds the index buffer
+ *  - gets the shaders programs
+ *  - pushes values used by the shader to the GPU
+ *  - if featureCallback was not supplied the chain continues
+ *    with the function drawReplay_ (A), otherwise hit detection is done (B)).
+ * A) drawReplay_(...)
+ *  - calls the drawElements of WebGL
+ * B) hit detection
+ *  - Each 
+ *  - A different off-screen framebuffer should be loaded before!.
+ *  - Each feature is plotted separately and the callback is executed.
+ *  - This scenario happens when forEachFeatureAtCoordinate is called.
+ *  - forEachFeatureAtCoordinate will bind a offscreen framebuffer and 
+ *    supply `replay` with a callback that reads a single pixel value
+ *    and checks whether it was colored.
+ *
+ * Hit detection
+ * =============
+ * ReplayGroup.prototype.forEachFeatureAtCoordinate
+ *  - binds offscreen framebuffer for hit detection
+ * ReplayGroup.prototype.replayHitDetection_
+ *  - calls replay for each replay in a specified order (REPLAY_ORDER)
+ * PolyReplay.prototype.replay  # with feature callback
+ *
  * @constructor
  * @extends {ol.render.VectorContext}
  * @param {number} tolerance Tolerance.
@@ -81701,7 +81755,6 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
    * @type {ol.Color}
    */
   this.fillColor_ = null;
-
 
   /**
    * @private
@@ -81965,16 +82018,22 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
   gl.uniform1f(locations.u_opacity, opacity);
 
-  // enable the vertex attrib arrays
+  // Structure of vertex attrib array:
+  // [x1 y1 r1 g1 b1 a1 x2 y2 r2 g2 b2 a2....]
+  // Total length of attributes for one vertex:
+  // (2 positional + 4 color) * 4 bytes per int = 24
+  // Offset of color attribute pointer to positional attribute:
+  // 2 positional attributes * 4 bytes per int = 8
+  //
+  // Enable the vertex attrib position arrays
   gl.enableVertexAttribArray(locations.a_position);
   gl.vertexAttribPointer(locations.a_position, 2, goog.webgl.FLOAT,
       false, 24, 0);
-
+  // Enable the array holding the feature colors
   gl.enableVertexAttribArray(locations.a_color);
   gl.vertexAttribPointer(locations.a_color, 4, goog.webgl.FLOAT,
-      false, 24, 8);
+    false, 24, 8);
 
-  // set the "uniform" values
   // TODO: use RTE to avoid jitter
   var projectionMatrix = this.projectionMatrix_;
   ol.vec.Mat4.makeTransform2D(projectionMatrix,
@@ -81986,12 +82045,18 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
   gl.uniformMatrix4fv(locations.u_projectionMatrix, false, projectionMatrix);
 
-  // draw!
   var result;
   if (!goog.isDef(featureCallback)) {
+    // DRAW FOR VISUALIZATION
     this.drawReplay_(gl, context, skippedFeaturesHash);
   } else {
-    // TODO: draw feature by feature for the hit-detection
+    // DRAW FOR HIT DETECTION
+    //
+    // Set the blend function to additive blending for hit detection.
+    // In this way one can detect wether a pixel was drawn with a color like (1, 1, 1, 0), i.e.
+    // white with 100% opacity.
+    //
+    gl.blendFunc(gl.ONE, gl.ONE);
     var elementType = context.hasOESElementIndexUint ?
         goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
 
@@ -82027,9 +82092,15 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
       }
       featureIndex--;
     }
+
+    // Reset the blend function to the original value
+    gl.blendFuncSeparate(
+      goog.webgl.SRC_ALPHA, goog.webgl.ONE_MINUS_SRC_ALPHA,
+      goog.webgl.ONE, goog.webgl.ONE_MINUS_SRC_ALPHA
+    );
   }
 
-  // disable the vertex attrib arrays
+  // Disable the vertex attrib arrays
   gl.disableVertexAttribArray(locations.a_position);
   gl.disableVertexAttribArray(locations.a_color);
 
@@ -82285,7 +82356,7 @@ ol.render.webgl.ReplayGroup.prototype.forEachFeatureAtCoordinate = function(
         var imageData = new Uint8Array(4);
         gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 
-        if (imageData[3] > 0) {
+        if (imageData[0] > 0 || imageData[1] > 0 || imageData[2] > 0) {
           var result = callback(feature);
           if (result) {
             return result;
