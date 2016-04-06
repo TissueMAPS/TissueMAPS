@@ -2,12 +2,10 @@ import os
 import sys
 import shutil
 import logging
-import random
 import numpy as np
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.sql import func
 
 import tmlib.models as tm
 from tmlib.utils import autocreate_directory_property
@@ -603,14 +601,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type.id).\
                     all()
 
-                n_points_in_tile_per_z = self._calculate_n_points_in_tile(
-                    session, layer.maxzoom_level_index, n_sample=10,
+                min_poly_zoom = mapobject_type.calculate_min_poly_zoom(
+                    layer.maxzoom_level_index,
                     mapobject_outline_ids=[o.id for o in mapobject_outlines]
                 )
-
-                min_poly_zoom = min([
-                    z for z, n in n_points_in_tile_per_z.items() if n <= 1500
-                ])
 
                 logger.info(
                     'zoom level for mapobjects of type "%s": %d',
@@ -624,196 +618,85 @@ class ImageAnalysisPipeline(ClusterRoutines):
             features = session.query(tm.Feature).\
                 join(tm.MapobjectType).\
                 filter(tm.MapobjectType.experiment_id == self.experiment_id).\
-                filter(tm.MapobjectType.static).\
+                filter(tm.MapobjectType.is_static).\
                 all()
             logger.debug('delete existing features for static mapobject types')
             for f in features:
                 session.delete(f)
 
+        mapobject_names = {'Sites', 'Wells'}
         stats_to_compute = {'mean': np.nanmean, 'std': np.nanstd}
-        with tm.utils.Session() as session:
+        for name in mapobject_names:
 
-            logger.info('add features for mapobjects of type "sites"')
-            mapobject_types = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id, is_static=False)
+            with tm.utils.Session() as session:
 
-            site_mapobject_type = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id, name='sites').\
-                one()
+                logger.info('add features for mapobjects of type "sites"')
+                mapobject_types = session.query(tm.MapobjectType).\
+                    filter_by(experiment_id=self.experiment_id, is_static=False)
 
-            for mapobject_type in mapobject_types:
-                logger.info(
-                    'compute statistics on features of mapobjects of '
-                    'type "%s"', mapobject_type.name
-                )
-                new_features = list()
-                for feature in mapobject_type.features:
-                    for statistic in stats_to_compute.keys():
-                        name = '{name}_{statistic}_{type}'.format(
-                            name=feature.name, statistic=statistic,
-                            type=mapobject_type.name
-                        )
-                        new_features.append(
-                            tm.Feature(
-                                name=name,
-                                mapobject_type_id=site_mapobject_type.id
+                parent_type = session.query(tm.MapobjectType).\
+                    filter_by(experiment_id=self.experiment_id, name=name).\
+                    one()
+
+                for mapobject_type in mapobject_types:
+                    logger.info(
+                        'compute statistics on features of mapobjects of '
+                        'type "%s"', mapobject_type.name
+                    )
+                    parent_features = list()
+                    for feature in mapobject_type.features:
+                        for statistic in stats_to_compute.keys():
+                            name = '{name}_{statistic}_{type}'.format(
+                                name=feature.name, statistic=statistic,
+                                type=mapobject_type.name
                             )
-                        )
-                session.add_all(new_features)
-                session.flush()
-
-                count = 0
-                new_feature_values = list()
-                for feature in mapobject_type.features:
-
-                    for function in stats_to_compute.values():
-
-                        for site_mapobject in site_mapobject_type.mapobjects:
-
-                            feature_values = session.query(tm.FeatureValue).\
-                                join(tm.Feature).\
-                                join(tm.MapobjectType).\
-                                join(tm.Mapobject).\
-                                join(tm.MapobjectOutline).\
-                                filter(tm.Feature.id == feature.id).\
-                                filter(tm.MapobjectType.id == mapobject_type.id).\
-                                filter(tm.FeatureValue.tpoint == 0).\
-                                filter(
-                                    tm.MapobjectOutline.geom_poly.intersects(
-                                        site_mapobject.outlines[0].geom_poly
-                                    )
-                                ).\
-                                all()
-
-                            import ipdb; ipdb.set_trace()
-
-                            # TODO: time points
-
-                            new_value = function(
-                                [v.value for v in feature_values]
-                            )
-
-                            new_feature_values.append(
-                                tm.FeatureValue(
-                                    feature_id=new_features[count].id,
-                                    mapobject_id=site_mapobject.id,
-                                    value=new_value
+                            parent_features.append(
+                                tm.Feature(
+                                    name=name,
+                                    mapobject_type_id=parent_type.id
                                 )
                             )
-                        count += 1
-                session.add_all(new_feature_values)
+                    session.add_all(parent_features)
+                    session.flush()
 
-        with tm.utils.Session() as session:
+                    count = 0
+                    new_feature_values = list()
+                    for feature in mapobject_type.features:
 
-            logger.info('add features for mapobjects of type "wells"')
-            mapobject_types = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id, is_static=False)
+                        for function in stats_to_compute.values():
 
-            well_mapobject_type = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id, name='wells').\
-                one()
+                            for parent in parent_type.mapobjects:
 
-            for mapobject_type in mapobject_types:
-                logger.info(
-                    'compute statistics on features of mapobjects of '
-                    'type "%s"', mapobject_type.name
-                )
-                new_features = list()
-                for feature in mapobject_type.features:
-                    for statistic in stats_to_compute.keys():
-                        name = '{name}_{statistic}_{type}'.format(
-                            name=feature.name, statistic=statistic,
-                            type=mapobject_type.name
-                        )
-                        new_features.append(
-                            tm.Feature(
-                                name=name,
-                                mapobject_type_id=well_mapobject_type.id
-                            )
-                        )
-                session.add_all(new_features)
-                session.flush()
+                                feature_values = session.query(tm.FeatureValue).\
+                                    join(tm.Feature).\
+                                    join(tm.MapobjectType).\
+                                    join(tm.Mapobject).\
+                                    join(tm.MapobjectOutline).\
+                                    filter(tm.Feature.id == feature.id).\
+                                    filter(tm.MapobjectType.id == mapobject_type.id).\
+                                    filter(tm.FeatureValue.tpoint == 0).\
+                                    filter(
+                                        tm.MapobjectOutline.geom_poly.intersects(
+                                            parent.outlines[0].geom_poly
+                                        )
+                                    ).\
+                                    all()
 
-                count = 0
-                new_feature_values = list()
-                for feature in mapobject_type.features:
+                                # TODO: time points
 
-                    for function in stats_to_compute.values():
-
-                        for well_mapobject in well_mapobject_type.mapobjects:
-
-                            feature_values = session.query(tm.FeatureValue).\
-                                join(tm.Feature).\
-                                join(tm.MapobjectType).\
-                                join(tm.Mapobject).\
-                                join(tm.MapobjectOutline).\
-                                filter(tm.Feature.id == feature.id).\
-                                filter(tm.MapobjectType.id == mapobject_type.id).\
-                                filter(
-                                    tm.MapobjectOutline.geom_poly.intersects(
-                                        well_mapobject.outlines[0].geom_poly
-                                    )
-                                ).\
-                                filter(tm.FeatureValue.tpoint == 0).\
-                                all()
-
-                            new_value = function(
-                                [v.value for v in feature_values]
-                            )
-
-                            new_feature_values.append(
-                                tm.FeatureValue(
-                                    feature_id=new_features[count].id,
-                                    mapobject_id=well_mapobject.id,
-                                    value=new_value
+                                parent_value = function(
+                                    [v.value for v in feature_values]
                                 )
-                            )
-                        count += 1
-                session.add_all(new_feature_values)
 
-    @staticmethod
-    def _calculate_n_points_in_tile(session, max_z, mapobject_outline_ids, n_sample):
-
-        n_points_in_tile_per_z = {}
-
-        for z in range(max_z, -1, -1):
-            tilesize = 256 * 2 ** (6 - z)
-
-            rand_xs = [random.randrange(0, 2**z) for _ in range(n_sample)]
-            rand_ys = [random.randrange(0, 2**z) for _ in range(n_sample)]
-
-            n_points_in_tile_samples = []
-            for x, y in zip(rand_xs, rand_ys):
-                x0 = x * tilesize
-                y0 = -y * tilesize
-
-                minx = x0
-                maxx = x0 + tilesize
-                miny = y0 - tilesize
-                maxy = y0
-
-                tile = 'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy})'.format(
-                    minx=minx, maxx=maxx, miny=miny, maxy=maxy
-                )
-
-                n_points_in_tile = session.query(
-                        func.sum(tm.MapobjectOutline.geom_poly.ST_NPoints())
-                    ).\
-                    filter(
-                        tm.MapobjectOutline.id.in_(mapobject_outline_ids),
-                        tm.MapobjectOutline.geom_poly.intersects(tile)
-                    ).\
-                    scalar()
-
-                if n_points_in_tile is not None:
-                    n_points_in_tile_samples.append(n_points_in_tile)
-
-            n_points_in_tile_per_z[z] = (
-                float(sum(n_points_in_tile_samples)) /
-                len(n_points_in_tile_samples)
-            )
-
-        return n_points_in_tile_per_z
+                                new_feature_values.append(
+                                    tm.FeatureValue(
+                                        feature_id=parent_features[count].id,
+                                        mapobject_id=parent.id,
+                                        value=parent_value
+                                    )
+                                )
+                            count += 1
+                    session.add_all(new_feature_values)
 
 
 def factory(experiment_id, verbosity, pipeline, **kwargs):

@@ -659,6 +659,11 @@ class PyramidBuilder(ClusterRoutines):
 
         with tm.utils.Session() as session:
 
+            layer = session.query(tm.ChannelLayer).\
+                join(tm.Channel).\
+                filter(tm.Channel.experiment_id == self.experiment_id).\
+                first()
+
             mapobjects = {
                 'Plate':
                     session.query(tm.Plate).
@@ -686,6 +691,7 @@ class PyramidBuilder(ClusterRoutines):
                 session.flush()
 
                 logger.info('create mapobjects of type "%s"', name)
+                mapobject_outlines = list()
                 for obj in query:
 
                     mapobject = tm.Mapobject(
@@ -705,11 +711,20 @@ class PyramidBuilder(ClusterRoutines):
                     centroid = 'POINT(%.2f %.2f)' % (
                         np.mean([ul[0], ll[0]]), np.mean([ul[1], ur[1]])
                     )
-                    mapobject_outline = tm.MapobjectOutline(
-                        mapobject_id=mapobject.id,
-                        geom_poly=polygon, geom_centroid=centroid
+                    mapobject_outlines.append(
+                        tm.MapobjectOutline(
+                            mapobject_id=mapobject.id,
+                            geom_poly=polygon, geom_centroid=centroid
+                        )
                     )
-                    session.add(mapobject_outline)
+                session.add_all(mapobject_outlines)
+                session.flush()
+
+                min_poly_zoom = mapobject_type.calculate_min_poly_zoom(
+                    layer.maxzoom_level_index,
+                    mapobject_outline_ids=[o.id for o in mapobject_outlines]
+                )
+                mapobject_type.min_poly_zoom = min_poly_zoom
 
 
 def factory(experiment_id, verbosity, **kwargs):

@@ -1,5 +1,7 @@
 import os
 import logging
+import random
+from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
@@ -131,6 +133,76 @@ class MapobjectType(Model, DateMixIn):
             all()
 
         return outlines
+
+    def calculate_min_poly_zoom(self, maxzoom_level, mapobject_outline_ids,
+                                n_sample=10, n_points_per_tile_limit=3000):
+        '''Calculates the minimum zoom level above which mapobjects are
+        represented on the map as polygons instead of centroids.
+
+        Parameters
+        ----------
+        maxzoom_level: int
+            maximum zoom level of the pyramid
+        mapobject_outline_ids: List[int]
+            IDs of instances of :py:class:`tmlib.models.MapobjectOutline`
+        n_sample: int, optional
+            number of tiles that should be sampled (default: ``10``)
+        n_points_per_tile_limit: int, optional
+            maximum number of points per tile that are allowed before the
+            polygon geometry is simplified to a point (default: ``3000``)
+
+        Returns
+        -------
+        int
+            minimal zoom level
+        '''
+        session = Session.object_session(self)
+
+        n_points_in_tile_per_z = dict()
+        for z in range(maxzoom_level, -1, -1):
+            tilesize = 256 * 2 ** (6 - z)
+
+            rand_xs = [random.randrange(0, 2**z) for _ in range(n_sample)]
+            rand_ys = [random.randrange(0, 2**z) for _ in range(n_sample)]
+
+            n_points_in_tile_samples = []
+            for x, y in zip(rand_xs, rand_ys):
+                x0 = x * tilesize
+                y0 = -y * tilesize
+
+                minx = x0
+                maxx = x0 + tilesize
+                miny = y0 - tilesize
+                maxy = y0
+
+                tile = (
+                    'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, '
+                    '{maxx} {miny}, {maxx} {maxy})'.format(
+                            minx=minx, maxx=maxx, miny=miny, maxy=maxy
+                        )
+                )
+
+                n_points_in_tile = session.query(
+                        func.sum(MapobjectOutline.geom_poly.ST_NPoints())
+                    ).\
+                    filter(
+                        MapobjectOutline.id.in_(mapobject_outline_ids),
+                        MapobjectOutline.geom_poly.intersects(tile)
+                    ).\
+                    scalar()
+
+                if n_points_in_tile is not None:
+                    n_points_in_tile_samples.append(n_points_in_tile)
+
+            n_points_in_tile_per_z[z] = int(
+                float(sum(n_points_in_tile_samples)) /
+                len(n_points_in_tile_samples)
+            )
+
+        return min([
+            z for z, n in n_points_in_tile_per_z.items()
+            if n <= n_points_per_tile_limit
+        ])
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
