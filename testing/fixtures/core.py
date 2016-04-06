@@ -10,7 +10,7 @@ from tmaps.extensions import db as _db
 from tmaps.model import Model
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.yield_fixture(scope='session', autouse=True)
 def app(request, tmpdir_factory):
     """Session-wide test `Flask` application."""
 

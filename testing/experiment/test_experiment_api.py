@@ -8,13 +8,6 @@ import json
 import tmaps
 from tmlib.models import Experiment, Feature, MapobjectType
 
-
-@pytest.fixture
-def testexp(testexps):
-    """Choose a single experiment for the experiment rest API unit tests."""
-    return testexps['cellvoyager_384_1plate_2acquisitions_multiplexing']
-
-
 #
 # GET EXPERIMENTS
 #
@@ -112,7 +105,7 @@ def test_create_experiment_with_login(rr, db, monkeypatch):
 #
 # DELETE EXPERIMENT
 #
-def test_delete_experiment(rr, testexp, monkeypatch, session):
+def test_delete_experiment(rr, testexp, session):
     # monkeypatch.setattr(db.session, 'delete', fake_delete)
     assert session.query(Experiment).get(testexp.id) is not None, \
         'Test experiment of fixture not present in database'
