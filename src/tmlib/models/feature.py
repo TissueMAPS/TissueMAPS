@@ -3,12 +3,12 @@ from sqlalchemy import Column, String, Integer, Float, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models.base import Model, DateMixIn
+from tmlib.models.base import Model
 
 logger = logging.getLogger(__name__)
 
 
-class Feature(Model, DateMixIn):
+class Feature(Model):
 
     '''A *feature* is a measurement that is associated with a particular
     *map object type*. For example a *feature* named "Morphology_Area"
