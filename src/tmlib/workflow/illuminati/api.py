@@ -659,119 +659,57 @@ class PyramidBuilder(ClusterRoutines):
 
         with tm.utils.Session() as session:
 
-            logger.info('create mapobject type "Plates"')
-            plates_mapobject_type = session.get_or_create(
-                tm.MapobjectType,
-                name='Plates', experiment_id=self.experiment_id,
-                static=True
-            )
-            session.add(plates_mapobject_type)
-            session.flush()
+            mapobjects = {
+                'Plate':
+                    session.query(tm.Plate).
+                    filter(tm.Plate.experiment_id == self.experiment_id),
+                'Wells':
+                    session.query(tm.Well).
+                    join(tm.Plate).
+                    filter(tm.Plate.experiment_id == self.experiment_id),
+                'Sites':
+                    session.query(tm.Site).
+                    join(tm.Well).
+                    join(tm.Plate).
+                    filter(tm.Plate.experiment_id == self.experiment_id)
+            }
 
-            plates = session.query(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id)
-            logger.info('create mapobjects of type "Plates"')
-            for plate in plates:
+            for name, query in mapobjects.iteritems():
 
-                plate_mapobject = tm.Mapobject(
-                    mapobject_type_id=plates_mapobject_type.id
+                logger.info('create mapobject type "%s"', name)
+                mapobject_type = session.get_or_create(
+                    tm.MapobjectType,
+                    name=name, experiment_id=self.experiment_id,
+                    static=True
                 )
-                session.add(plate_mapobject)
+                session.add(mapobject_type)
                 session.flush()
-                # NOTE: first element: x axis; second element: inverted y axis
-                ul = (plate.offset[1], -1 * plate.offset[0])
-                ll = (ul[0] + plate.image_size[1], ul[1])
-                ur = (ul[0], ul[1] - plate.image_size[0])
-                lr = (ll[0], ul[1] - plate.image_size[0])
-                plate_poly = 'POLYGON((%s))' % ','.join([
-                    '%d %d' % ur, '%d %d' % ul, '%d %d' % ll, '%d %d' % lr,
-                    '%d %d' % ur
-                ])
-                plate_centroid = 'POINT(%.2f %.2f)' % (
-                    np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
-                )
-                plates_mapobject_outline = tm.MapobjectOutline(
-                    mapobject_id=plate_mapobject.id,
-                    geom_poly=plate_poly, geom_centroid=plate_centroid
-                )
-                session.add(plates_mapobject_outline)
 
-        with tm.utils.Session() as session:
+                logger.info('create mapobjects of type "%s"', name)
+                for obj in query:
 
-            logger.info('create mapobject type "Wells"')
-            wells_mapobject_type = session.get_or_create(
-                tm.MapobjectType,
-                name='Wells', experiment_id=self.experiment_id, static=True
-            )
-            session.add(wells_mapobject_type)
-            session.flush()
-
-            wells = session.query(tm.Well).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id)
-            logger.info('create mapobjects of type "Wells"')
-            for well in wells:
-
-                well_mapobject = tm.Mapobject(
-                    mapobject_type_id=wells_mapobject_type.id
-                )
-                session.add(well_mapobject)
-                session.flush()
-                ul = (well.offset[1], -1 * well.offset[0])
-                ll = (ul[0] + well.image_size[1], ul[1])
-                ur = (ul[0], ul[1] - well.image_size[0])
-                lr = (ll[0], ul[1] - well.image_size[0])
-                well_poly = 'POLYGON((%s))' % ','.join([
-                    '%d %d' % ur, '%d %d' % ul, '%d %d' % ll, '%d %d' % lr,
-                    '%d %d' % ur
-                ])
-                well_centroid = 'POINT(%.2f %.2f)' % (
-                    np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
-                )
-                well_mapobject_outline = tm.MapobjectOutline(
-                    mapobject_id=well_mapobject.id,
-                    geom_poly=well_poly, geom_centroid=well_centroid
-                )
-                session.add(well_mapobject_outline)
-
-        with tm.utils.Session() as session:
-
-            logger.info('create mapobject type "Sites"')
-            sites_mapobject_type = session.get_or_create(
-                tm.MapobjectType,
-                name='Sites', experiment_id=self.experiment_id, static=True
-            )
-            session.add(sites_mapobject_type)
-            session.flush()
-
-            sites = session.query(tm.Site).\
-                join(tm.Well).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id)
-            logger.info('create mapobjects of type "Sites"')
-            for site in sites:
-
-                site_mapobject = tm.Mapobject(
-                    mapobject_type_id=sites_mapobject_type.id
-                )
-                session.add(site_mapobject)
-                session.flush()
-                ul = (site.offset[1], -1 * site.offset[0])
-                ll = (ul[0] + site.image_size[1], ul[1])
-                ur = (ul[0], ul[1] - site.image_size[0])
-                lr = (ll[0], ul[1] - site.image_size[0])
-                site_poly = 'POLYGON((%s))' % ','.join([
-                    '%d %d' % ur, '%d %d' % ul, '%d %d' % ll,
-                    '%d %d' % lr, '%d %d' % ur
-                ])
-                site_centroid = 'POINT(%.2f %.2f)' % (
-                    np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
-                )
-                site_mapobject_outline = tm.MapobjectOutline(
-                    mapobject_id=site_mapobject.id,
-                    geom_poly=site_poly, geom_centroid=site_centroid
-                )
-                session.add(site_mapobject_outline)
+                    mapobject = tm.Mapobject(
+                        mapobject_type_id=mapobject_type.id
+                    )
+                    session.add(mapobject)
+                    session.flush()
+                    # NOTE: first element: x axis; second element: inverted y axis
+                    ul = (obj.offset[1], -1 * obj.offset[0])
+                    ll = (ul[0] + obj.image_size[1], ul[1])
+                    ur = (ul[0], ul[1] - obj.image_size[0])
+                    lr = (ll[0], ul[1] - obj.image_size[0])
+                    polygon = 'POLYGON((%s))' % ','.join([
+                        '%d %d' % ur, '%d %d' % ul, '%d %d' % ll, '%d %d' % lr,
+                        '%d %d' % ur
+                    ])
+                    centroid = 'POINT(%.2f %.2f)' % (
+                        np.mean([ul[1], ll[1]]), np.mean([ul[0], ur[0]])
+                    )
+                    mapobject_outline = tm.MapobjectOutline(
+                        mapobject_id=mapobject.id,
+                        geom_poly=polygon, geom_centroid=centroid
+                    )
+                    session.add(mapobject_outline)
 
 
 def factory(experiment_id, verbosity, **kwargs):
