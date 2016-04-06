@@ -98,9 +98,9 @@ class Tmaps(object):
             logger.info('processing interrupted')
             logger.info('killing jobs')
             while True:
-                engine.kill(jobs)
+                engine.kill(workflow)
                 engine.progress()
-                if jobs.is_terminated:
+                if workflow.is_terminated:
                     break
         except:
             raise

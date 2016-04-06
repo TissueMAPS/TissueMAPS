@@ -557,14 +557,16 @@ class Workflow(SequentialTaskCollection, State):
         If `description` is not provided, there will be an attempt to obtain
         it from :py:attr:`tmlib.workflow.Workflow.description_file`.
 
+        Note
+        ----
+        A previously submitted workflow can be resubmitted at any stage by
+        setting the `start_stage` attribute.
+
         Raises
         ------
         TypeError
             when `description` doesn't have type
             :py:class:`tmlib.tmaps.description.WorkflowDescription`
-        ValueError
-            when `description` is not provided and cannot be retrieved from
-            the user configuration file
 
         See also
         --------
@@ -590,8 +592,8 @@ class Workflow(SequentialTaskCollection, State):
             self.description = description
         else:
             self.description = self._read_description_from_file()
-        self.start_stage = None
-        self.start_step = None
+        self._start_stage = self.description.stages[0].name
+        self._current_task = 0
         self.tasks = self._create_stages()
         # Update the first stage and its first step to start the workflow
         self._update_stage(0)
@@ -638,18 +640,23 @@ class Workflow(SequentialTaskCollection, State):
 
     @start_stage.setter
     def start_stage(self, value):
-        if value is not None:
-            if not isinstance(value, basestring):
-                raise TypeError(
-                    'Attribute "start_stage" must have type basestring.'
-                )
-            stage_names = [s.name for s in self.description.stages]
-            if value not in stage_names:
-                raise ValueError(
-                    'Value of attribute "start_stage" can be '
-                    'one of the following:\n"%s"' % '" or "'.join(stage_names)
-                )
-            self._update_stage(stage_names.index(value))
+        stage_names = [s.name for s in self.description.stages]
+        if value is None:
+            value = stage_names[0]
+        if not isinstance(value, basestring):
+            raise TypeError(
+                'Attribute "start_stage" must have type basestring.'
+            )
+        if value not in stage_names:
+            raise ValueError(
+                'Value of attribute "start_stage" can be '
+                'one of the following:\n"%s"' % '" or "'.join(stage_names)
+            )
+        # self_current_task will trigger resubmission of the stage even if the
+        # workflow was previously set to TERMINATED
+        self._current_task = stage_names.index(value)
+        # Resubmission requires that jobs for subsequent stages are re-created
+        self._update_stage(self._current_task)
         self._start_stage = value
 
     @property
@@ -704,6 +711,28 @@ class Workflow(SequentialTaskCollection, State):
             self.tasks[index]._update_step(0)
         else:
             self.tasks[index]._update_all_steps()
+
+    def submit(self, resubmit=True, targets=None, **extra_args):
+        '''Starts the workflow at `start_stage`.
+        '''
+        if self.tasks:
+            if self._current_task is None:
+                self._current_task = 0
+            task = self.tasks[self._current_task]
+            task.attach(self._controller)
+            task.submit(resubmit, targets, **extra_args)
+            if task.execution.state == gc3libs.Run.State.NEW:
+                # submission failed, state unchanged
+                self.execution.state = gc3libs.Run.State.NEW
+            elif task.execution.state == gc3libs.Run.State.SUBMITTED:
+                self.execution.state = gc3libs.Run.State.SUBMITTED
+            else:
+                self.execution.state = gc3libs.Run.State.RUNNING
+        else:
+            # no tasks to run, sequence is already finished
+            self.execution.state = gc3libs.Run.State.TERMINATED
+        self.changed = True
+        return self.execution.state
 
     def next(self, done):
         '''Progresses to next stage.
