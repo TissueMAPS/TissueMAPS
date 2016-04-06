@@ -1,0 +1,16 @@
+<div>
+  <p><tm-object-name-widget></tm-object-name-widget></p>
+
+  <p>
+    <label>Select feature</label>
+    <tm-feature-selection-widget
+      selected-object-name="objectNameWidget.selectedName">
+    </tm-feature-selection-widget>
+  </p>
+
+  <p>
+    <button class="btn btn-primary"
+      ng-disabled="featureWidget.selectedFeatures.length == 0"
+      ng-click="toolCtrl.submit()">Submit</button>
+  </p>
+</div>

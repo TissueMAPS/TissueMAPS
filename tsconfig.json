@@ -109,6 +109,7 @@
 
         "app/src/tools/ClusterTool/ClusterToolCtrl.ts",
         "app/src/tools/SVMTool/SVMToolCtrl.ts",
+        "app/src/tools/HeatmapTool/HeatmapToolCtrl.ts",
 
         "app/src/viewer/toolui/toolbar/tmToolbar.ts",
         "app/src/viewer/toolui/toolbar/ToolbarCtrl.ts",
