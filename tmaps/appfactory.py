@@ -55,6 +55,10 @@ def create_app(config):
             'TESTING' if app.config['TESTING'] else 'PRODUCTION'
         ))
 
+    if 'TMAPS_STORAGE' in app.config:
+        os.environ['TMAPS_STORAGE'] = app.config['TMAPS_STORAGE']
+        print ' * Setting TMAPS_STORAGE to: %s' % app.config['TMAPS_STORAGE']
+
     # Initialize Plugins
     jwt.init_app(app)
     db.init_app(app)
