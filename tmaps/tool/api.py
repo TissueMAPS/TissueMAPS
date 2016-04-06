@@ -104,7 +104,7 @@ def process_tool_request(tool_id):
 
     response = {
         'result_type': tool_result.__class__.__name__,
-        'payload': tool_result.to_dict(),
+        'payload': tool_result,
         'session_uuid': session_uuid,
         'tool_id': tool_id
     }
@@ -128,7 +128,7 @@ def get_labelresult(labelresult_id):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    label_result = db.session.query(LabelResult).get(int(labelresult_id))
+    label_result = db.session.query(LabelResult).get_with_hash(labelresult_id)
 
     query_res = label_result.mapobject_type.get_mapobject_outlines_within_tile(
         x, y, z, zplane=zlevel, tpoint=t)
@@ -149,74 +149,7 @@ def get_labelresult(labelresult_id):
             }
             features.append(feature)
 
-    return jsonify(
-        {
-            "type": "FeatureCollection",
-            "features": features
-        }
-    )
-
-# @api.route('/tools/<tool_id>/instances', methods=['POST'])
-# @jwt_required()
-# def create_tool_instance(tool_id):
-#     """
-#     The client opened a new tool window. Create a server-side
-#     representation of that tool instance that allows the server to keep track
-#     of what server-side tool data belongs to which appstate.
-#     This method will be called by tissueMAPS itself whenever a window opens.
-
-#     Request:
-
-#     {
-#         appstate_id: string,
-#         experiment_id: string
-#     }
-
-#     Response:
-
-#     {
-#         'id': int,
-#         'tool_id': string,
-#         'appstate_id': int,
-#         'experiment_id': int,
-#         'user_id': int
-#     }
-
-#     Each subsequent request made from this tool window should use
-#     `tool_instance_id` to identify itself. The framework will take care of this.
-#     Doing so, the instances methods will have access to the saved data and other
-#     required contextual info.
-
-#     """
-#     data = json.loads(request.data)
-#     appstate_id = decode(data.get('appstate_id'))
-#     experiment_id = decode(data.get('experiment_id'))
-
-#     if not appstate_id or not experiment_id:
-#         return 'Not a valid request', 400
-#     else:
-#         inst = ToolInstance(
-#             tool_id=tool_id,
-#             appstate_id=appstate_id,
-#             experiment_id=experiment_id,
-#             user_id=current_identity.id
-#         )
-#         db.session.add(inst)
-#         db.session.commit()
-
-#         return jsonify(inst.as_dict())
-
-
-# @api.route('/tool_instances/<int:instance_id>', methods=['DELETE'])
-# @jwt_required()
-# def delete_toolinstance(instance_id):
-#     inst = ToolInstance.query.get(instance_id)
-#     if not inst:
-#         return 'No ToolInstance found with id %d' % instance_id, 404
-#     if inst.appstate.is_editable_by_user(current_identity):
-#         db.session.delete(inst)
-#         db.session.commit()
-#         return 'ToolInstance was removed successfully', 200
-#     else:
-#         return 'You don\'t have the permission to edit the appstate, to ' \
-#                'which this ToolInstance belongs', 401
+    return jsonify({
+        "type": "FeatureCollection",
+        "features": features
+    })

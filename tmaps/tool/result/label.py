@@ -1,7 +1,7 @@
 from sqlalchemy import Integer, ForeignKey, Column, Float
 from sqlalchemy.orm import relationship
 
-
+from tmaps.serialize import json_encoder
 from tmaps.extensions import db
 from tmaps.model import Model
 from tmaps.mapobject import Mapobject
@@ -34,16 +34,18 @@ class LabelResult(Model):
         db.session.add_all(label_objs)
         db.session.commit()
 
-    def to_dict(self):
-        return {
-            'id': self.id
-        }
-
     def get_labels_for_objects(self, mapobject_ids):
         return dict(
             [(l.mapobject_id, l.label)
              for l in self.labels
              if l.mapobject_id in set(mapobject_ids)])
+
+
+@json_encoder(LabelResult)
+def encode_tool(obj, encoder):
+    return {
+        'id': obj.hash,
+    }
 
 
 class LabelResultLabel(Model):
@@ -57,3 +59,5 @@ class LabelResultLabel(Model):
     label_result = relationship('LabelResult', backref='labels')
     mapobject = relationship('Mapobject', backref='labels')
     label = Column(Float(precision=15))
+
+
