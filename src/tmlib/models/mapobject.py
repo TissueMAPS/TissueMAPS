@@ -51,7 +51,7 @@ class MapobjectType(Model, DateMixIn):
         backref=backref('mapobject_types', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, experiment_id, static=False):
+    def __init__(self, name, experiment_id, is_static=False):
         '''
         Parameters
         ----------

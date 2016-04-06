@@ -651,7 +651,7 @@ class PyramidBuilder(ClusterRoutines):
         with tm.utils.Session() as session:
 
             mapobject_types = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id, static=True).\
+                filter_by(experiment_id=self.experiment_id, is_static=True).\
                 all()
             for m in mapobject_types:
                 logger.debug('delete map object type: %r', m)
@@ -680,7 +680,7 @@ class PyramidBuilder(ClusterRoutines):
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType,
                     name=name, experiment_id=self.experiment_id,
-                    static=True
+                    is_static=True
                 )
                 session.add(mapobject_type)
                 session.flush()
