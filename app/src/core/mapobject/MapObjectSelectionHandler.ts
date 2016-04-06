@@ -139,7 +139,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     clickOnMapObject(mapObject: MapObject, clickPos: MapPosition) {
-        console.log('Clicked on: ', mapObject);
         if (this._markerSelectionModeActive) {
             var sel = this.activeSelection;
             if (sel) {
