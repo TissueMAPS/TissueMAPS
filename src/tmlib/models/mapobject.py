@@ -276,27 +276,39 @@ class MapobjectOutline(Model):
         ???
         '''
         # TODO: docstring
-        size = 256 * 2 ** (6 - z)
+        # TODO: max_zoom should be taken from the layer
+        max_zoom = 6
+        # The extent of a tile of the current zoom level in mapobject
+        # coordinates (i.e. coordinates on the highest zoom level)
+        size = 256 * 2 ** (max_zoom - z)
+        # Coordinates of the top-left corner of the tile
         x0 = x * size
         y0 = y * size
-
+        # Coordinates with which to specify all corners of the tile
         minx = x0
         maxx = x0 + size
         miny = -y0 - size
         maxy = -y0
-
+        # Convert the tile into EWKT format s.t. it can be used in
+        # postgis queries.
         tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
-            minx=minx, maxx=maxx, miny=miny, maxy=maxy
-        )
+            minx=minx, maxx=maxx, miny=miny, maxy=maxy)
+        # The outlines should not lie on the top or left border since this
+        # would otherwise lead to requests for neighboring tiles receiving
+        # the same objects.
+        # This in turn leads to overplotting and is noticeable when the objects
+        # have a fill color with an opacity != 0 or != 1.
         top_border = 'LINESTRING({minx} {miny}, {maxx} {miny})'.format(
-            minx=minx, maxx=maxx, miny=miny
-        )
+            minx=minx, maxx=maxx, miny=miny)
         left_border = 'LINESTRING({minx} {maxy}, {minx} {miny})'.format(
-            minx=minx, maxy=maxy, miny=miny
-        )
+            minx=minx, maxy=maxy, miny=miny)
 
-        return (
-            (MapobjectOutline.geom_poly.ST_Intersects(tile)) &
-            (~MapobjectOutline.geom_poly.ST_Intersects(left_border)) &
-            (~MapobjectOutline.geom_poly.ST_Intersects(top_border))
-        )
+        spatial_filter = (MapobjectOutline.geom_poly.ST_Intersects(tile))
+        if x != 0:
+            spatial_filter = spatial_filter & \
+                (~MapobjectOutline.geom_poly.ST_Intersects(left_border))
+        if y != 0:
+            spatial_filter = spatial_filter & \
+                (~MapobjectOutline.geom_poly.ST_Intersects(top_border))
+
+        return spatial_filter
