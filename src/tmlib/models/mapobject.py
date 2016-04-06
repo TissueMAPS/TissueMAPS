@@ -116,10 +116,12 @@ class MapobjectType(Model, DateMixIn):
 
         outlines = select_stmt.\
             join(MapobjectOutline.mapobject).\
+            join(MapobjectType).\
             filter(
-                (Mapobject.mapobject_type_id == self.id) &
-                (MapobjectOutline.tpoint == tpoint) &
-                (MapobjectOutline.zplane == zplane) &
+                (MapobjectType.id == self.id) &
+                ((MapobjectType.is_static) |
+                 (MapobjectOutline.tpoint == tpoint) &
+                 (MapobjectOutline.zplane == zplane)) &
                 (MapobjectOutline.intersection_filter(x, y, z))).\
             all()
 
