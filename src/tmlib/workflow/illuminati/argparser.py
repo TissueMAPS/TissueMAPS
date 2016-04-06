@@ -7,7 +7,10 @@ from tmlib.workflow.illuminati.args import IlluminatiInitArgs
 
 
 parser, subparsers = Illuminati.get_parser_and_subparsers(
-    methods={'init', 'run', 'submit', 'resubmit', 'cleanup', 'log', 'info'})
+    methods={
+        'init', 'run', 'submit', 'resubmit', 'cleanup', 'log', 'info',
+        'collect'
+    })
 
 parser.description = '''
         Create image pyramids for visualization in TissueMAPS.

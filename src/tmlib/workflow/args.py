@@ -284,42 +284,12 @@ class InitArgs(GeneralArgs):
         **kwargs: dict, optional
             arguments as key-value pairs
         '''
-        self.backup = self._backup_params['default']
         self.keep_output = self._keep_output_params['default']
         super(InitArgs, self).__init__(**kwargs)
 
     @property
     def _persistent_attrs(self):
-        return {'backup', 'keep_output'}
-
-    @property
-    def backup(self):
-        '''
-        Returns
-        -------
-        bool
-            indicator that a backup of job descriptions and log output of a
-            previous submission should be created
-        '''
-        return self._backup
-
-    @backup.setter
-    def backup(self, value):
-        if not isinstance(value, self._backup_params['type']):
-            raise TypeError('Attribute "backup" must have type %s.'
-                            % self._backup_params['type'].__name__)
-        self._backup = value
-
-    @property
-    def _backup_params(self):
-        return {
-            'default': False,
-            'type': bool,
-            'help': '''
-                create a backup of the job descriptions and log output
-                of a previous submission
-            '''
-        }
+        return {'keep_output'}
 
     @property
     def keep_output(self):
@@ -327,8 +297,8 @@ class InitArgs(GeneralArgs):
         Returns
         -------
         bool
-            indicator that the output of a prior submission should be kept,
-            i.e. not cleaned up
+            whether the output of a prior submission should be kept,
+            i.e. database entries and files not deleted
         '''
         return self._keep_output
 

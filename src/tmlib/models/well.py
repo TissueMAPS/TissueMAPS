@@ -155,5 +155,32 @@ class Well(Model, DateMixIn):
         row_name = utils.map_number_to_letter(row_index + 1)
         return '%s%.2d' % (row_name, col_index + 1)
 
+    @cached_property
+    def offset(self):
+        '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the site
+        relative to the layer overview at the maximum zoom level
+        '''
+        plate = self.plate
+        n_rows = plate.nonempty_rows.index(self.y)
+        n_columns = plate.nonempty_columns.index(self.x)
+        experiment = plate.experiment
+        y_offset = (
+            # Wells in the plate above the well
+            n_rows * self.image_size[0] +
+            # Gaps introduced between wells
+            n_rows * experiment.well_spacer_size +
+            # Plates above the plate
+            plate.offset[0]
+        )
+        x_offset = (
+            # Wells in the plate left of the well
+            n_columns * self.image_size[1] +
+            # Gaps introduced between wells
+            n_columns * experiment.well_spacer_size +
+            # Plates left of the plate
+            plate.offset[1]
+        )
+        return (y_offset, x_offset)
+
     def __repr__(self):
         return '<Well(id=%r, name=%r)>' % (self.id, self.name)

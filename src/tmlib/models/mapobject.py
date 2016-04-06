@@ -40,7 +40,8 @@ class MapobjectType(Model, DateMixIn):
     __table_args__ = (UniqueConstraint('name', 'experiment_id'), )
 
     # Table columns
-    name = Column(String, index=True)
+    name = Column(String, index=True, nullable=False)
+    is_static = Column(Boolean, index=True)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
     experiment_id = Column(Integer, ForeignKey('experiments.id'))
 
@@ -50,7 +51,7 @@ class MapobjectType(Model, DateMixIn):
         backref=backref('mapobject_types', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, experiment_id):
+    def __init__(self, name, experiment_id, static=False):
         '''
         Parameters
         ----------
@@ -58,9 +59,13 @@ class MapobjectType(Model, DateMixIn):
             name of the map objects type, e.g. "cells"
         experiment_id: int
             ID of the parent experiment
+        static: bool, optional
+            whether map objects outlines are fixed across different time
+            points and z-planes (default: ``False``)
         '''
         self.name = name
         self.experiment_id = experiment_id
+        self.static = static
 
     @autocreate_directory_property
     def location(self):
@@ -139,17 +144,10 @@ class Mapobject(Model):
 
     Attributes
     ----------
-    is_border: bool
-        whether the object touches at the border of a *site* and is
-        therefore only partially represented on the corresponding image
     mapobject_type_id: int
         ID of the parent mapobject
     mapobject_type: tmlib.models.MapobjectType
         parent mapobject type to which the mapobject belongs
-    site_id: int
-        ID of the parent site
-    site: tmlib.models.Site
-        parent site to which the mapobject belongs
     outlines: List[tmlib.models.MapobjectOutlines]
         outlines that belong to the mapobject
     feature_values: List[tmlib.models.FeatureValues]
@@ -159,38 +157,22 @@ class Mapobject(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'mapobjects'
 
-    __table_args__ = (
-        UniqueConstraint('label', 'site_id', 'mapobject_type_id'),
-    )
-
     # Table columns
-    label = Column(Integer, index=True)
-    is_border = Column(Boolean, index=True)
-    site_id = Column(Integer, ForeignKey('sites.id'))
     mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
 
-    # TODO: monkey-patch additional columns for MapObject "attributes"
-
     # Relationships to other tables
-    site = relationship('Site', backref='sites')
     mapobject_type = relationship(
         'MapobjectType',
         backref=backref('mapobjects', cascade='all, delete-orphan')
     )
 
-    def __init__(self, label, site_id, mapobject_type_id):
+    def __init__(self, mapobject_type_id):
         '''
         Parameters
         ----------
-        label: int
-            mapobject label (site-specific ID)
-        site_id: int
-            ID of the parent site
         mapobject_type_id: int
             ID of the parent mapobject
         '''
-        self.label = label
-        self.site_id = site_id
         self.mapobject_type_id = mapobject_type_id
 
     def __repr__(self):
@@ -220,8 +202,6 @@ class MapobjectOutline(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'mapobject_outlines'
 
-    __table_args__ = (UniqueConstraint('tpoint', 'zplane', 'mapobject_id'), )
-
     # Table columns
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
@@ -235,21 +215,21 @@ class MapobjectOutline(Model):
         backref=backref('outlines', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, zplane, mapobject_id, geom_poly=None,
-                 geom_centroid=None):
+    def __init__(self, mapobject_id, geom_poly=None, geom_centroid=None,
+                 tpoint=None, zplane=None):
         '''
         Parameters
         ----------
-        tpoint: int
-            time point index
-        zplane: int
-            z-plane index
         mapobject_id: int
             ID of parent mapobject
         geom_poly: str, optional
             EWKT polygon geometry (default: ``None``)
         geom_centroid: str, optional
             EWKT point geometry (default: ``None``)
+        tpoint: int, optional
+            time point index (default: ``None``)
+        zplane: int, optional
+            z-plane index (default: ``None``)
         '''
         self.tpoint = tpoint
         self.zplane = zplane
@@ -312,3 +292,78 @@ class MapobjectOutline(Model):
                 (~MapobjectOutline.geom_poly.ST_Intersects(top_border))
 
         return spatial_filter
+
+
+class MapobjectSegmentation(Model):
+
+    '''A *mapobject segmentation* associates a *mapobject outline* with the
+    corresponding image acquisition *site* in which the object was identified.
+
+    Attributes
+    ----------
+    is_border: bool
+        whether the object touches at the border of a *site* and is
+        therefore only partially represented on the corresponding image
+    label: int
+        one-based object identifier number which is unique per site
+    site_id: int
+        ID of the parent site
+    site: tmlib.models.Site
+        site to which the segmentation belongs
+    mapobject_outline_id: int
+        ID of the parent corresponding mapobject outline
+    mapobject_outline: tmlib.models.MapobjectOutline
+        mapobject outline to which the segmentation belongs
+    '''
+
+    #: str: name of the corresponding database table
+    __tablename__ = 'mapobject_segmentations'
+
+    __table_args__ = (
+        UniqueConstraint('label', 'site_id', 'mapobject_outline_id'),
+    )
+
+    # Table columns
+    is_border = Column(Boolean, index=True)
+    label = Column(Integer, index=True)
+    site_id = Column(Integer, ForeignKey('sites.id'), primary_key=True)
+    mapobject_outline_id = Column(
+        Integer, ForeignKey('mapobject_outlines.id'), primary_key=True
+    )
+
+    # Relationships to other tables
+    site = relationship(
+        'Site',
+        backref=backref(
+            'mapobject_segmentations', cascade='all, delete-orphan'
+        )
+    )
+    mapobject_outline = relationship(
+        'MapobjectOutline',
+        backref=backref(
+            'segmentation', cascade='all, delete-orphan', uselist=False
+        )
+    )
+
+    def __init__(self, label, site_id, mapobject_outline_id):
+        '''
+        Parameters
+        ----------
+        label: int
+            one-based object identifier number which is unique per site
+        site_id: int
+            ID of the parent site
+        mapobject_outline_id: int
+            ID of the parent corresponding mapobject outline
+        '''
+        self.label = label
+        self.site_id = site_id
+        self.mapobject_outline_id = mapobject_outline_id
+
+    def __repr__(self):
+        return (
+            '<MapobjectSegmentation('
+                'id=%d, site_id=%r, mapobject_outline_id=%r, label=%r'
+            ')>'
+            % (self.id, self.site_id, self.mapobject_outline_id, self.label)
+        )

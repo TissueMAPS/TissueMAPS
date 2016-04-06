@@ -226,6 +226,29 @@ class Plate(Model, DateMixIn):
             cols * well_size[1] + offset * (cols - 1)
         )
 
+    @cached_property
+    def offset(self):
+        '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the plate
+        relative to the layer overview at the maximum zoom level
+        '''
+        experiment = self.experiment
+        plate_coordinate = tuple(
+            [a[0] for a in np.where(experiment.plate_grid == self.id)]
+        )
+        y_offset = (
+            # Plates above the plate
+            plate_coordinate[0] * self.image_size[0] +
+            # Gaps introduced between plates
+            plate_coordinate[0] * experiment.plate_spacer_size
+        )
+        x_offset = (
+            # Plates left of the plate
+            plate_coordinate[1] * self.image_size[0] +
+            # Gaps introduced between plates
+            plate_coordinate[1] * experiment.plate_spacer_size
+        )
+        return (y_offset, x_offset)
+
     def as_dict(self):
         '''Returns attributes as key-value pairs.
 

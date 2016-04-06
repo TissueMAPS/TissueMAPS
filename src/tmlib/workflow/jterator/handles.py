@@ -294,7 +294,7 @@ class SegmentedObjects(LabelImage):
     @property
     def labels(self):
         '''List[int]: unique object identifier labels'''
-        return list(np.unique(self.value[self.value > 0]))
+        return map(int, np.unique(self.value[self.value > 0]))
 
     def calc_outlines(self, offset_y, offset_x, tolerance=1):
         '''Calculates the global map coordinates for each object outline.
@@ -362,12 +362,12 @@ class SegmentedObjects(LabelImage):
 
     @property
     def is_border(self):
-        '''pandas.Series[numpy.bool]: ``True`` if object lies at the border of
+        '''pandas.Series[bool]: ``True`` if object lies at the border of
         the image and ``False`` otherwise
         '''
         return pd.Series(
-            find_border_objects(self.value), name='is_border',
-            index=self.labels
+            map(bool, find_border_objects(self.value)),
+            name='is_border', index=self.labels
         )
 
     @property

@@ -25,7 +25,6 @@ from tmlib.workflow import load_method_args
 from tmlib.workflow import load_var_method_args
 from tmlib.logging_utils import configure_logging
 from tmlib.logging_utils import map_logging_verbosity
-from tmlib.errors import JobDescriptionError
 
 logger = logging.getLogger(__name__)
 
@@ -219,39 +218,13 @@ class CommandLineInterface(object):
         self._print_logo()
         api = self.api_instance
         logger.info('delete previous job output')
-        api.delete_previous_job_output()
-        if args.backup:
-            logger.info(
-                'backup log reports and batches of previous submission'
-            )
-            timestamp = api.create_datetimestamp()
-            shutil.move(
-                api.log_location,
-                '{name}_backup_{time}'.format(
-                    name=api.log_location, time=timestamp
-                )
-            )
-            shutil.move(
-                api.batches_location,
-                '{name}_backup_{time}'.format(
-                    name=api.batches_location, time=timestamp
-                )
-            )
-            if os.path.exists(api.session_location):
-                shutil.move(
-                    api.batches_location,
-                    '{name}_backup_{time}'.format(
-                        name=api.session_location, time=timestamp
-                    )
-                )
-        else:
-            logger.debug(
-                'remove log reports and batches of previous submission'
-            )
-            shutil.rmtree(api.batches_location)
-            os.mkdir(api.batches_location)
-            shutil.rmtree(api.log_location)
-            os.mkdir(api.log_location)
+        if not args.keep_output:
+            api.delete_previous_job_output()
+        logger.debug(
+            'remove log reports and batches of previous submission'
+        )
+        shutil.rmtree(api.batches_location)
+        os.mkdir(api.batches_location)
 
         logger.info('create batches')
         batches = api.create_batches(args.variable_args)
@@ -400,8 +373,9 @@ class CommandLineInterface(object):
             logger.info('create collect job')
             if 'collect' not in self.batches.keys():
                 raise ValueError(
-                            'Step "%s" doesn\'t have a "collect" phase.'
-                            % self.name)
+                    'Step "%s" doesn\'t have a "collect" phase.'
+                    % self.name
+                )
             batches = dict()
             batches['collect'] = self.batches['collect']
         else:

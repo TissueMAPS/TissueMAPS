@@ -859,7 +859,7 @@ class ClusterRoutines(BasicClusterRoutines):
                 submission_id=step.submission_id
             )
             step.collect_job.requested_walltime = Duration('02:00:00')
-            step.collect_job.requested_memory = Memory(4000, Memory.MB)
+            step.collect_job.requested_memory = Memory(3800, Memory.MB)
 
         else:
             step.collect_job = None

@@ -162,12 +162,11 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             job for the *collect* phase that should be processed after
             `run_jobs` have terminated successfully (default: ``None``)
         '''
+        super(WorkflowStep, self).__init__(tasks=list(), jobname=name)
         self.name = name
         self.submission_id = submission_id
-        tasks = list()
         self.run_jobs = run_jobs
         self.collect_job = collect_job
-        super(WorkflowStep, self).__init__(tasks=tasks, jobname=name)
 
     @property
     def run_jobs(self):
@@ -176,7 +175,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             return self.tasks[0]
         except IndexError:
             return None
-    
+
     @run_jobs.setter
     def run_jobs(self, value):
         if value is not None:
@@ -197,7 +196,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             return self.tasks[1]
         except IndexError:
             return None
-    
+
     @collect_job.setter
     def collect_job(self, value):
         if value is not None:

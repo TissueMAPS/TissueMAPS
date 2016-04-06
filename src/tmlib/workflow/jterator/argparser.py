@@ -4,6 +4,7 @@ from tmlib.workflow.jterator.cli import Jterator
 from tmlib.workflow.jterator.args import JteratorInitArgs
 from tmlib.workflow.jterator.args import JteratorRunArgs
 from tmlib.workflow.jterator.args import JteratorCreateArgs
+from tmlib.workflow.jterator.args import JteratorCollectArgs
 from tmlib.workflow.jterator.args import JteratorSubmitArgs
 from tmlib.workflow.jterator.args import JteratorResubmitArgs
 from tmlib.workflow.jterator.args import JteratorLogArgs
@@ -17,7 +18,7 @@ from tmlib.workflow.args import RemoveArgs
 
 
 parser, subparsers = Jterator.get_parser_and_subparsers({
-    'init', 'submit', 'resubmit', 'run', 'cleanup', 'log', 'info'
+    'init', 'submit', 'resubmit', 'run', 'cleanup', 'log', 'info', 'collect'
 })
 
 parser.description = '''
@@ -36,6 +37,11 @@ run_parser = subparsers.choices['run']
 run_extra_group = run_parser.add_argument_group(
     'additional step-specific arguments')
 JteratorRunArgs().add_to_argparser(run_extra_group)
+
+collect_parser = subparsers.choices['collect']
+collect_extra_group = collect_parser.add_argument_group(
+    'additional step-specific arguments')
+JteratorCollectArgs().add_to_argparser(collect_extra_group)
 
 resubmit_parser = subparsers.choices['resubmit']
 resubmit_extra_group = resubmit_parser.add_argument_group(

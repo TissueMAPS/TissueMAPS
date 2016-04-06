@@ -100,18 +100,18 @@ class FeatureValue(Model):
         backref=backref('feature_values', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, feature_id, mapobject_id, value=None):
+    def __init__(self, feature_id, mapobject_id, value=None, tpoint=None):
         '''
         Parameters
         ----------
-        tpoint: int
-            time point index
         feature: tmlib.models.Feature
             parent feature to which the feature belongs
         mapobject_id: int
             ID of the parent mapobject
         value: float, optional
             the actual measurement (default: ``None``)
+        tpoint: int, optional
+            time point index (default: ``None``)
         '''
         self.tpoint = tpoint
         self.feature_id = feature_id
