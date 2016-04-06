@@ -60,7 +60,7 @@ def get_mapobjects_tile(experiment_id, object_name):
         db.session.query(MapobjectType).\
         filter_by(name=object_name).one()
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
-        db.session, x, y, z, t, zlevel)
+        x, y, z, t, zlevel)
 
     features = []
 
