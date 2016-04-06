@@ -56,6 +56,26 @@ def get_mapobjects_tile(experiment_id, object_name):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
+    if object_name == 'DEBUG_TILE':
+        maxzoom = ex.channels[0].layers[0].maxzoom_level_index
+        minx, miny, maxx, maxy = MapobjectOutline.create_tile(x, y, z, maxzoom)
+        return jsonify({
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Polygon',
+                'coordinates': [[
+                    [maxx, maxy], [minx, maxy], [minx, miny], [maxx, miny],
+                    [maxx, maxy]
+                ]]
+            },
+            'properties': {
+                'x': x,
+                'y': y,
+                'z': z,
+                'type': 'DEBUG_TILE'
+            }
+        })
+
     mapobject_type = \
         db.session.query(MapobjectType).\
         filter_by(name=object_name).one()
@@ -70,9 +90,15 @@ def get_mapobjects_tile(experiment_id, object_name):
         for mapobject_id, geom_geojson_str in query_res:
             feature = {
                 "type": "Feature",
+                "id": mapobject_id,
                 "geometry": json.loads(geom_geojson_str),
                 "properties": {
-                    "id": mapobject_id
+                    "id": mapobject_id,
+                    # Coordinates of the requested tile
+                    "x": x,  
+                    "y": y,
+                    "z": z,
+                    "type": object_name
                 }
             }
             features.append(feature)
