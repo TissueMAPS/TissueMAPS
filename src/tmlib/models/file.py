@@ -53,7 +53,10 @@ class MicroscopeImageFile(File, DateMixIn):
     name = Column(String, index=True)
     omexml = Column(Text)
     upload_status = Column(String, index=True)
-    acquisition_id = Column(Integer, ForeignKey('acquisitions.id'))
+    acquisition_id = Column(
+        Integer,
+        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     acquisition = relationship(
@@ -131,7 +134,10 @@ class MicroscopeMetadataFile(File, DateMixIn):
     # Table columns
     name = Column(String, index=True)
     upload_status = Column(String, index=True)
-    acquisition_id = Column(Integer, ForeignKey('acquisitions.id'))
+    acquisition_id = Column(
+        Integer,
+        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     acquisition = relationship(
@@ -234,9 +240,18 @@ class ChannelImageFile(File, DateMixIn):
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
     omitted = Column(Boolean, index=True)
-    cycle_id = Column(Integer, ForeignKey('cycles.id'))
-    site_id = Column(Integer, ForeignKey('sites.id'))
-    channel_id = Column(Integer, ForeignKey('channels.id'))
+    cycle_id = Column(
+        Integer,
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    site_id = Column(
+        Integer,
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    channel_id = Column(
+        Integer,
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     cycle = relationship(
@@ -399,7 +414,10 @@ class ProbabilityImageFile(File, DateMixIn):
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
     site_id = Column(Integer, ForeignKey('sites.id'))
-    mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     site = relationship(
@@ -530,7 +548,10 @@ class PyramidTileFile(File):
     level = Column(Integer, index=True)
     row = Column(Integer, index=True)
     column = Column(Integer, index=True)
-    channel_layer_id = Column(Integer, ForeignKey('channel_layers.id'))
+    channel_layer_id = Column(
+        Integer,
+        ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     channel_layer = relationship(
@@ -647,8 +668,14 @@ class IllumstatsFile(File, DateMixIn):
 
     # Table columns
     name = Column(String, index=True)
-    channel_id = Column(Integer, ForeignKey('channels.id'))
-    cycle_id = Column(Integer, ForeignKey('cycles.id'))
+    channel_id = Column(
+        Integer,
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    cycle_id = Column(
+        Integer,
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     channel = relationship(

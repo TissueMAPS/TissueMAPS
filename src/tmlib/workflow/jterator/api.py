@@ -738,6 +738,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 all()
                             )
                             feature_values = df_features.value.values
+                            # TODO: check that number of feature values
+                            # for one feature equals object count
                             for statistic, function in moments.iteritems():
                                 logger.debug(
                                     'compute value of feature "%s"',

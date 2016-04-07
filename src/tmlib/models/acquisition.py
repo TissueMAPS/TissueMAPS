@@ -56,7 +56,10 @@ class Acquisition(Model, DateMixIn):
     # Table columns
     name = Column(String, index=True)
     description = Column(Text)
-    plate_id = Column(Integer, ForeignKey('plates.id'))
+    plate_id = Column(
+        Integer,
+        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     plate = relationship(
@@ -201,10 +204,22 @@ class ImageFileMapping(Model):
     zplane = Column(Integer, index=True)
     wavelength = Column(String, index=True)
     map = Column(JSONB)
-    site_id = Column(Integer, ForeignKey('sites.id'))
-    cycle_id = Column(Integer, ForeignKey('cycles.id'))
-    acquisition_id = Column(Integer, ForeignKey('acquisitions.id'))
-    channel_id = Column(Integer, ForeignKey('channels.id'))
+    site_id = Column(
+        Integer,
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    cycle_id = Column(
+        Integer,
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    acquisition_id = Column(
+        Integer,
+        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    channel_id = Column(
+        Integer,
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     site = relationship(

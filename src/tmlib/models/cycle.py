@@ -46,7 +46,10 @@ class Cycle(Model, DateMixIn):
     # Table columns
     tpoint = Column(Integer, index=True)
     index = Column(Integer, index=True)
-    plate_id = Column(Integer, ForeignKey('plates.id'))
+    plate_id = Column(
+        Integer,
+        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     plate = relationship(

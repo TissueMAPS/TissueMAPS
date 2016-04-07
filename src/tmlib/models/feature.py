@@ -34,7 +34,10 @@ class Feature(Model):
 
     # Table columns
     name = Column(String, index=True)
-    mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     mapobject_type = relationship(
@@ -87,8 +90,14 @@ class FeatureValue(Model):
     # Table columns
     value = Column(Float(precision=15))
     tpoint = Column(Integer, index=True)
-    feature_id = Column(Integer, ForeignKey('features.id'))
-    mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
+    feature_id = Column(
+        Integer,
+        ForeignKey('features.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     feature = relationship(

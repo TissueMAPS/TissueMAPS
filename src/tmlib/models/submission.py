@@ -28,7 +28,10 @@ class Submission(Model, DateMixIn):
     __tablename__ = 'submissions'
 
     # Table columns
-    experiment_id = Column(Integer, ForeignKey('experiments.id'))
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     experiment = relationship(
@@ -76,10 +79,16 @@ class Batch(Model):
     # Table columns
     name = Column(String, index=True)
     job_description = Column(JSONB)
-    submission_id = Column(Integer, ForeignKey('submissions.id'))
+    submission_id = Column(
+        Integer,
+        ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
-    submission = relationship('Submission', backref='batches')
+    submission = relationship(
+        'Submission',
+        backref=backref('batches', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, job_description, submission_id):
         '''
@@ -147,7 +156,10 @@ class Task(Model):
     cpu_time = Column(Interval, index=True)
     type = Column(String, index=True)
     data = Column(LargeBinary)
-    submission_id = Column(Integer, ForeignKey('submissions.id'))
+    submission_id = Column(
+        Integer,
+        ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     submission = relationship(

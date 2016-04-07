@@ -38,8 +38,14 @@ class SiteShift(Model):
     # Table columns
     y = Column(Integer)
     x = Column(Integer)
-    site_id = Column(Integer, ForeignKey('sites.id'))
-    cycle_id = Column(Integer, ForeignKey('cycles.id'))
+    site_id = Column(
+        Integer,
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    cycle_id = Column(
+        Integer,
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     site = relationship(

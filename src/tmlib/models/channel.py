@@ -49,7 +49,10 @@ class Channel(Model, DateMixIn):
     name = Column(String, index=True)
     index = Column(Integer, index=True)
     wavelength = Column(String, index=True)
-    experiment_id = Column(Integer, ForeignKey('experiments.id'))
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     experiment = relationship(

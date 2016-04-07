@@ -51,7 +51,10 @@ class ChannelLayer(Model):
     # Table columns
     tpoint = Column(Integer)
     zplane = Column(Integer)
-    channel_id = Column(Integer, ForeignKey('channels.id'))
+    channel_id = Column(
+        Integer,
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     channel = relationship(

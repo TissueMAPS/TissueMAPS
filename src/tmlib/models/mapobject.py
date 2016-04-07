@@ -45,7 +45,10 @@ class MapobjectType(Model, DateMixIn):
     name = Column(String, index=True, nullable=False)
     is_static = Column(Boolean, index=True)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
-    experiment_id = Column(Integer, ForeignKey('experiments.id'))
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     #: Relationship to other tables
     experiment = relationship(
@@ -230,7 +233,10 @@ class Mapobject(Model):
     __tablename__ = 'mapobjects'
 
     # Table columns
-    mapobject_type_id = Column(Integer, ForeignKey('mapobject_types.id'))
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     mapobject_type = relationship(
@@ -279,7 +285,10 @@ class MapobjectOutline(Model):
     zplane = Column(Integer, index=True)
     geom_poly = Column(Geometry('POLYGON'))
     geom_centroid = Column(Geometry('POINT'))
-    mapobject_id = Column(Integer, ForeignKey('mapobjects.id'))
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     mapobject = relationship(
@@ -398,9 +407,15 @@ class MapobjectSegmentation(Model):
     # Table columns
     is_border = Column(Boolean, index=True)
     label = Column(Integer, index=True)
-    site_id = Column(Integer, ForeignKey('sites.id'), primary_key=True)
+    site_id = Column(
+        Integer,
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True
+    )
     mapobject_outline_id = Column(
-        Integer, ForeignKey('mapobject_outlines.id'), primary_key=True
+        Integer,
+        ForeignKey('mapobject_outlines.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True
     )
 
     # Relationships to other tables

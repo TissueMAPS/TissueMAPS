@@ -38,7 +38,10 @@ class Well(Model, DateMixIn):
 
     # Table columns
     name = Column(String, index=True)
-    plate_id = Column(Integer, ForeignKey('plates.id'))
+    plate_id = Column(
+        Integer,
+        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     plate = relationship(

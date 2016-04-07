@@ -49,7 +49,10 @@ class Site(Model, DateMixIn):
     x = Column(Integer, index=True)
     height = Column(Integer, index=True)
     width = Column(Integer, index=True)
-    well_id = Column(Integer, ForeignKey('wells.id'))
+    well_id = Column(
+        Integer,
+        ForeignKey('wells.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     well = relationship(

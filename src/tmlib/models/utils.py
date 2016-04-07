@@ -27,9 +27,12 @@ def remove_location_upon_delete(cls):
 
     Examples
     --------
+    from tmlib.models import Model
+    from tmlib.models.utils import remove_location_upon_delete
+
     @remove_location_upon_delete
-    SomeClassWithALocationOnDisk(Model):
-    ...
+    class SomeClassWithALocationOnDisk(Model):
+        """A database model class"""
 
     '''
     def after_delete_callback(mapper, connection, target):
@@ -42,6 +45,9 @@ def remove_location_upon_delete(cls):
                 os.remove(loc)
 
     sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
+    # sqlalchemy.event.listen(
+    #     Session, 'after_bulk_delete', after_delete_callback
+    # )
     return cls
 
 
