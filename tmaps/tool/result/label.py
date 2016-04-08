@@ -1,15 +1,17 @@
-from sqlalchemy import Integer, ForeignKey, Column, Float
+from sqlalchemy import Integer, ForeignKey, Column, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSON
 
 from tmaps.serialize import json_encoder
 from tmaps.extensions import db
 from tmaps.model import Model
-from tmaps.mapobject import Mapobject
 
 
 class LabelResult(Model):
-    __tablename__ = 'label_results'
+    __tablename__ = 'result_labelresults'
 
+    result_type = Column(String)
+    attributes = Column(JSON)
     tool_session_id = \
         Column(Integer, ForeignKey('tool_sessions.id'))
     mapobject_type_id = Column(
@@ -17,9 +19,12 @@ class LabelResult(Model):
     mapobject_type = relationship(
         'MapobjectType', backref='label_results')
 
-    def __init__(self, ids, labels, mapobject_type, session):
+    def __init__(self, ids, labels, mapobject_type, session, result_type,
+                 attributes=None):
+        self.result_type = result_type
         self.mapobject_type_id = mapobject_type.id
         self.tool_session_id = session.id
+        self.attributes = attributes
 
         db.session.add(self)
         db.session.flush()
@@ -45,19 +50,19 @@ class LabelResult(Model):
 def encode_tool(obj, encoder):
     return {
         'id': obj.hash,
+        'result_type': obj.result_type,
+        'attributes': obj.attributes
     }
 
 
 class LabelResultLabel(Model):
-    __tablename__ = 'label_result_labels'
+    __tablename__ = 'result_labelresult_labels'
 
     mapobject_id = Column(
         Integer, ForeignKey('mapobjects.id'))
     label_result_id = \
-        Column(Integer, ForeignKey('label_results.id'))
+        Column(Integer, ForeignKey('result_labelresults.id'))
+    label = Column(JSON)
 
     label_result = relationship('LabelResult', backref='labels')
     mapobject = relationship('Mapobject', backref='labels')
-    label = Column(Float(precision=15))
-
-

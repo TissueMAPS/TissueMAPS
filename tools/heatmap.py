@@ -6,6 +6,9 @@ from tmlib.models import Feature, FeatureValue, MapobjectType
 from tmaps.extensions import db
 from tmaps.tool.result import LabelResult
 
+class HeatmapResult(LabelResult):
+    def __init__(self, *args, **kwargs):
+        super(HeatmapResult, self).__init__(*args, result_type='HeatmapResult', **kwargs)
 
 class HeatmapTool():
     def process_request(self, payload, session, experiment):
@@ -35,12 +38,13 @@ class HeatmapTool():
 
         minval = np.min(values)
         maxval = np.max(values)
-        norm = matplotlib.colors.Normalize(vmin=minval, vmax=maxval)
-        mapper = cm.ScalarMappable(norm=norm, cmap=cm.hot)
-        colors = [mapper.to_rgba(val) for val in values]
 
-        response = LabelResult(
-            ids=mapobject_ids, labels=values,
-            mapobject_type=mapobject_type, session=session)
+        response = HeatmapResult(
+            ids=mapobject_ids, labels=values, mapobject_type=mapobject_type,
+            session=session, attributes={
+                'min': minval,
+                'max': maxval
+            }
+        )
 
         return response

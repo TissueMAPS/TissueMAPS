@@ -19,20 +19,6 @@ from tmaps.response import (
 )
 
 
-
-
-def _create_mapobject_feature(obj_id, geometry_obj):
-    """Create a GeoJSON feature object given a object id of type int
-    and a object that represents a GeoJSON geometry definition."""
-    return {
-        "type": "Feature",
-        "geometry": geometry_obj,
-        "properties": {
-            "id": str(obj_id)
-        }
-    }
-
-
 @api.route('/experiments/<experiment_id>/mapobjects/<object_name>', methods=['GET'])
 def get_mapobjects_tile(experiment_id, object_name):
 
@@ -93,11 +79,6 @@ def get_mapobjects_tile(experiment_id, object_name):
                 "id": mapobject_id,
                 "geometry": json.loads(geom_geojson_str),
                 "properties": {
-                    "id": mapobject_id,
-                    # Coordinates of the requested tile
-                    "x": x,  
-                    "y": y,
-                    "z": z,
                     "type": object_name
                 }
             }

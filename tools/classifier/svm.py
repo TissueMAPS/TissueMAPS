@@ -7,6 +7,7 @@ from sklearn import svm, cross_validation
 from tmlib.models import MapobjectType, Feature, FeatureValue
 from tmaps.tool.result import LabelResult
 from tmaps.extensions import db
+from tools.classifier import ClassifierResult
 
 
 class SVMTool():
@@ -63,6 +64,7 @@ class SVMTool():
 
         n_examples = len(y_train)
         n_folds = min(n_examples / 2, 10)
+
         folds = cross_validation.StratifiedKFold(y_train, n_folds=n_folds)
         searchspace = [
             {'kernel': ['rbf'], 'C': np.linspace(0.1, 1, 10), 'gamma': [0.001, 0, 1]},
@@ -80,12 +82,12 @@ class SVMTool():
         all_object_ids = training_ids + X_pred.index.tolist()
         all_object_labels = y_train.tolist() + y_pred.tolist()
 
-        unique_labels = set(all_object_labels)
-        label_number_map = dict(zip(unique_labels, range(len(unique_labels))))
-        all_object_labels = [label_number_map[l] for l in all_object_labels]
+        unique_labels = list(set(all_object_labels))
 
-        response = LabelResult(
+        response = ClassifierResult(
             ids=all_object_ids, labels=all_object_labels,
-            mapobject_type=mapobject_type, session=session)
+            mapobject_type=mapobject_type, session=session, attributes={
+                'labels': unique_labels
+            })
 
         return response
