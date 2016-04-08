@@ -20,14 +20,6 @@ class SelectionSettingsCtrl {
         }
     }
 
-    toggleMarkerSelectionMode() {
-        if (this.selHandler.isMarkerSelectionModeActive()) {
-            this.selHandler.deactivateMarkerSelectionMode();
-        } else {
-            this.selHandler.activateMarkerSelectionMode();
-        }
-    }
-
     addSelection() {
         this.selHandler.addNewSelection(this.selHandler.activeMapObjectType);
     }

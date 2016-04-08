@@ -23,9 +23,8 @@ class ObjectNameWidgetCtrl {
     selectedName: string;
 
     constructor($scope: any) {
-
-        this.selectedName = $scope.viewer.experiment.mapObjectNames[0];
-        this.mapObjectNames = $scope.$parent.viewer.experiment.mapObjectNames;
+        this.selectedName = $scope.viewer.mapObjectSelectionHandler.activeMapObjectType;
+        this.mapObjectNames = $scope.viewer.experiment.mapObjectNames;
     }
 }
 

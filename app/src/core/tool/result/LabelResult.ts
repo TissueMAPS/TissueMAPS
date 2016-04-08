@@ -1,13 +1,25 @@
-class LabelResult extends LayerResult {
+interface LabelColorMapper {
+    (label: any): Color;
+}
+
+interface LabelResultPayload {
+    id: number;
+    attributes: any;
+}
+
+abstract class LabelResult extends LayerResult {
 
     id: number;
+    attributes: any;
 
-    constructor(name: string, session: ToolSession,
-                args: {id: number;}) {
+    abstract getLabelColorMapper(): LabelColorMapper;
+
+    constructor(name: string, session: ToolSession, payload: LabelResultPayload) {
 
         super(name, session);
 
-        this.id = args.id;
+        this.id = payload.id;
+        this.attributes = payload.attributes;
     }
 
     show(viewer: AppInstance) {
@@ -17,7 +29,8 @@ class LabelResult extends LayerResult {
                 visible: false,
                 labelResultId: this.id,
                 t: 0,
-                zlevel: 0
+                zlevel: 0,
+                labelColorMapper: this.getLabelColorMapper()
             });
             viewer.viewport.addLayer(this._layer);
         }

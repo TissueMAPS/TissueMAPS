@@ -3,19 +3,22 @@ interface LabelResultLayerArgs {
     t: number;
     zlevel: number;
     size: Size;
+    labelColorMapper: LabelColorMapper;
     visible?: boolean;
 }
 
 
 class LabelResultLayer extends VectorTileLayer {
     constructor(args: LabelResultLayerArgs) {
+        var colorMapper = args.labelColorMapper;
         var styleFunc = function(feature, style) {
             var geomType = feature.getGeometry().getType();
-            var fillColor;
-            if (feature.get('label') === 0) {
-                fillColor = Color.GREEN.toOlColor();
+            var label = feature.get('label');
+            var fillColor: ol.Color;
+            if (label !== undefined) {
+                fillColor = colorMapper(label).toOlColor();
             } else {
-                fillColor = Color.BLUE.toOlColor();
+                throw new Error('Feature has no property "label"!');
             }
             if (geomType === 'Polygon') {
                 return [
@@ -23,9 +26,6 @@ class LabelResultLayer extends VectorTileLayer {
                         fill: new ol.style.Fill({
                             color: fillColor
                         })
-                        // stroke: new ol.style.Stroke({
-                        //     color: Color.WHITE.toOlColor()
-                        // })
                     })
                 ];
             } else if (geomType === 'Point') {

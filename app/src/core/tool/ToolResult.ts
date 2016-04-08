@@ -7,16 +7,15 @@ abstract class ToolResult {
 
     constructor(public name: string, public session: ToolSession) {}
 
+    // TODO: Solve this via some registration mechanism.
     static createToolResult(session: ToolSession, result: ServerToolResponse) {
         var time = (new Date()).toLocaleTimeString();
         var resultName = session.tool.name + ' at ' + time;
         switch (result.result_type) {
-            case 'LabelResult':
-                console.log('Received LabelResult:', result);
-                return new LabelResult(resultName, session, result.payload);
-            case 'SimpleResult':
-                console.log('Received SimpleResult:', result);
-                return undefined;
+            case 'ClassifierResult':
+                return new ClassifierResult(resultName, session, result.payload);
+            case 'HeatmapResult':
+                return new HeatmapResult(resultName, session, result.payload);
             default:
                 console.log('Can\'t handle result:', result);
                 break;

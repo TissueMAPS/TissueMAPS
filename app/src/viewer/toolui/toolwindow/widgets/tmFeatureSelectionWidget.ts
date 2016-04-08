@@ -45,14 +45,29 @@ class FeatureSelectionWidgetCtrl {
     }
 
     selectFeature(tab) {
+        var wasSelected = tab.selected;
+
         if (this.nSelected < this.maxSelections) {
-            var wasSelected = tab.selected;
             tab.selected = true;
             if (!wasSelected) {
                 this.nSelected += 1;
             }
         } else {
-            console.log('Can\'t select any more features, deselect some!');
+            // Check if the user chose to limit the number of selected features to one.
+            // In this case a new selection should automatically deselect all other features
+            // s.t. it is not required to deselect the other feature first.
+            var isSingleSelection = this.maxSelections == 1;
+            if (isSingleSelection) {
+                this.featureTabsForChosenName.forEach((tab) => {
+                    this.deselectFeature(tab);
+                });
+                tab.selected = true;
+                if (!wasSelected) {
+                    this.nSelected += 1;
+                }
+            } else {
+                console.log('Can\'t select any more features, deselect some!');
+            }
         }
     }
 
@@ -60,7 +75,6 @@ class FeatureSelectionWidgetCtrl {
         var wasSelected = tab.selected;
         tab.selected = false;
         if (wasSelected) {
-            // this._parentScope.$broadcast('featureDeselected', tab, this);
             this.nSelected -= 1;
         }
     }

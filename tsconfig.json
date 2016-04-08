@@ -86,6 +86,9 @@
         "app/src/core/tool/result/LabelResult.ts",
         "app/src/core/tool/result/LabelResultLayer.ts",
 
+        "app/src/core/tool/result/HeatmapResult.ts",
+        "app/src/core/tool/result/ClassifierResult.ts",
+
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
 

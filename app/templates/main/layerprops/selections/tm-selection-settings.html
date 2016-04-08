@@ -1,11 +1,6 @@
 <div class="selection-settings">
 
   <div class="selection-controls">
-    <button ng-click="selCtrl.toggleMarkerSelectionMode()"
-            ng-class="{'active': selCtrl.selHandler.isMarkerSelectionModeActive()}"
-            class="marker-mode-switch">
-      <i class="fa fa-map-marker"></i>
-    </button>
     <label>Object type: </label>
     <select ng-model="selCtrl.selHandler.activeMapObjectType">
       <option value="{{::t}}"

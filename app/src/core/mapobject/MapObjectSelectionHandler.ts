@@ -21,7 +21,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         null: []
     };
 
-    private _markerSelectionModeActive: boolean = false;
     private _activeMapObjectType: MapObjectType = null;
     private _activeSelection: MapObjectSelection = null;
     private _outlineLayers: {[objectType: string]: VectorLayer;} = {};
@@ -33,12 +32,17 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         // Register click listeners on the map.
         this.viewport.map.on('singleclick', (evt) => {
             this.viewport.map.forEachFeatureAtPixel(evt.pixel, (feat, layer) => {
-                var mapObjectId = feat.get('id');
+                var mapObjectId = <number>feat.getId();
+                var mapObjectType = feat.get('type');
                 var clickPos = {x: evt.coordinate[0], y: evt.coordinate[1]};
-                var mapObject = new MapObject(mapObjectId, this._activeMapObjectType);
+                var mapObject = new MapObject(mapObjectId, mapObjectType);
                 this.clickOnMapObject(mapObject, clickPos);
             });
         });
+    }
+
+    get hasActiveSelection() {
+        return this._activeSelection !== null; 
     }
 
     get activeMapObjectType() {
@@ -139,7 +143,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     clickOnMapObject(mapObject: MapObject, clickPos: MapPosition) {
-        if (this._markerSelectionModeActive) {
+        if (this.hasActiveSelection && mapObject.type === this.activeMapObjectType) {
             var sel = this.activeSelection;
             if (sel) {
                 sel.addRemoveMapObject(mapObject, clickPos);
@@ -171,18 +175,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         newSel.visualizeOnViewport(this.viewport);
         this.addSelection(newSel);
         return newSel;
-    }
-
-    activateMarkerSelectionMode() {
-        this._markerSelectionModeActive = true;
-    }
-
-    deactivateMarkerSelectionMode() {
-        this._markerSelectionModeActive = false;
-    }
-
-    isMarkerSelectionModeActive() {
-        return this._markerSelectionModeActive;
     }
 
     private _getNextColor(type: string) {

@@ -9,7 +9,7 @@ class AppInstance {
 
     experiment: Experiment;
     viewport: Viewport;
-    currentResult: ToolResult;
+    _currentResult: ToolResult = null;
     savedResults: ToolResult[] = [];
     private _currentZplane = 0;
 
@@ -39,17 +39,33 @@ class AppInstance {
             this.mapObjectSelectionHandler.addNewSelection(name);
         });
 
-        // DEBUG
-        var segmLayer = new SegmentationLayer('DEBUG_TILE', {
-            t: 0,
-            experimentId: this.experiment.id,
-            zlevel: 0,
-            size: this.viewport.mapSize,
-            visible: true
-        });
-        segmLayer.strokeColor = Color.RED;
-        segmLayer.fillColor = Color.WHITE.withAlpha(0);
-        this.viewport.addLayer(segmLayer);
+        //// DEBUG
+        // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
+        //     t: 0,
+        //     experimentId: this.experiment.id,
+        //     zlevel: 0,
+        //     size: this.viewport.mapSize,
+        //     visible: true
+        // });
+        // segmLayer.strokeColor = Color.RED;
+        // segmLayer.fillColor = Color.WHITE.withAlpha(0);
+        // this.viewport.addLayer(segmLayer);
+    }
+
+    get currentResult() {
+        return this._currentResult;
+    }
+
+    set currentResult(r: ToolResult) {
+        this.deleteCurrentResult();
+        this._currentResult = r;
+    }
+
+    deleteCurrentResult() {
+        if (this.currentResult !== null) {
+            this.currentResult.hide(this);
+        }
+        this._currentResult = null;
     }
 
     saveCurrentResult() {
