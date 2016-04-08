@@ -78988,713 +78988,6 @@ goog.webgl.TEXTURE_MAX_ANISOTROPY_EXT = 0x84FE;
  */
 goog.webgl.MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84FF;
 
-goog.provide('ol.ext.earcut');
-/** @typedef {function(*)} */
-ol.ext.earcut;
-(function() {
-var exports = {};
-var module = {exports: exports};
-var define;
-/**
- * @fileoverview
- * @suppress {accessControls, ambiguousFunctionDecl, checkDebuggerStatement, checkRegExp, checkTypes, checkVars, const, constantProperty, deprecated, duplicate, es5Strict, fileoverviewTags, missingProperties, nonStandardJsDocs, strictModuleDepCheck, suspiciousCode, undefinedNames, undefinedVars, unknownDefines, uselessCode, visibility}
- */
-'use strict';
-
-module.exports = earcut;
-
-function earcut(points, returnIndices) {
-
-    var outerNode = filterPoints(linkedList(points[0], true)),
-        triangles = returnIndices ? {vertices: [], indices: []} : [];
-
-    if (!outerNode) return triangles;
-
-    var node, minX, minY, maxX, maxY, x, y, size, i,
-        threshold = 80;
-
-    for (i = 0; threshold >= 0 && i < points.length; i++) threshold -= points[i].length;
-
-    // if the shape is not too simple, we'll use z-order curve hash later; calculate polygon bbox
-    if (threshold < 0) {
-        node = outerNode.next;
-        minX = maxX = node.p[0];
-        minY = maxY = node.p[1];
-        do {
-            x = node.p[0];
-            y = node.p[1];
-            if (x < minX) minX = x;
-            if (y < minY) minY = y;
-            if (x > maxX) maxX = x;
-            if (y > maxY) maxY = y;
-            node = node.next;
-        } while (node !== outerNode);
-
-        // minX, minY and size are later used to transform coords into integers for z-order calculation
-        size = Math.max(maxX - minX, maxY - minY);
-    }
-
-    if (points.length > 1) outerNode = eliminateHoles(points, outerNode);
-
-    earcutLinked(outerNode, triangles, minX, minY, size);
-
-    return triangles;
-}
-
-// create a circular doubly linked list from polygon points in the specified winding order
-function linkedList(points, clockwise) {
-    var sum = 0,
-        len = points.length,
-        i, j, p1, p2, last;
-
-    // calculate original winding order of a polygon ring
-    for (i = 0, j = len - 1; i < len; j = i++) {
-        p1 = points[i];
-        p2 = points[j];
-        sum += (p2[0] - p1[0]) * (p1[1] + p2[1]);
-    }
-
-    // link points into circular doubly-linked list in the specified winding order
-    if (clockwise === (sum > 0)) {
-        for (i = 0; i < len; i++) last = insertNode(points[i], last);
-    } else {
-        for (i = len - 1; i >= 0; i--) last = insertNode(points[i], last);
-    }
-
-    return last;
-}
-
-// eliminate colinear or duplicate points
-function filterPoints(start, end) {
-    if (!end) end = start;
-
-    var node = start,
-        again;
-    do {
-        again = false;
-
-        if (equals(node.p, node.next.p) || orient(node.prev.p, node.p, node.next.p) === 0) {
-
-            // remove node
-            node.prev.next = node.next;
-            node.next.prev = node.prev;
-
-            if (node.prevZ) node.prevZ.nextZ = node.nextZ;
-            if (node.nextZ) node.nextZ.prevZ = node.prevZ;
-
-            node = end = node.prev;
-
-            if (node === node.next) return null;
-            again = true;
-
-        } else {
-            node = node.next;
-        }
-    } while (again || node !== end);
-
-    return end;
-}
-
-// main ear slicing loop which triangulates a polygon (given as a linked list)
-function earcutLinked(ear, triangles, minX, minY, size, pass) {
-    if (!ear) return;
-
-    var indexed = triangles.vertices !== undefined;
-
-    // interlink polygon nodes in z-order
-    if (!pass && minX !== undefined) indexCurve(ear, minX, minY, size);
-
-    var stop = ear,
-        prev, next;
-
-    // iterate through ears, slicing them one by one
-    while (ear.prev !== ear.next) {
-        prev = ear.prev;
-        next = ear.next;
-
-        if (isEar(ear, minX, minY, size)) {
-            // cut off the triangle
-            if (indexed) {
-                addIndexedVertex(triangles, prev);
-                addIndexedVertex(triangles, ear);
-                addIndexedVertex(triangles, next);
-            } else {
-                triangles.push(prev.p);
-                triangles.push(ear.p);
-                triangles.push(next.p);
-            }
-
-            // remove ear node
-            next.prev = prev;
-            prev.next = next;
-
-            if (ear.prevZ) ear.prevZ.nextZ = ear.nextZ;
-            if (ear.nextZ) ear.nextZ.prevZ = ear.prevZ;
-
-            // skipping the next vertice leads to less sliver triangles
-            ear = next.next;
-            stop = next.next;
-
-            continue;
-        }
-
-        ear = next;
-
-        // if we looped through the whole remaining polygon and can't find any more ears
-        if (ear === stop) {
-            // try filtering points and slicing again
-            if (!pass) {
-                earcutLinked(filterPoints(ear), triangles, minX, minY, size, 1);
-
-            // if this didn't work, try curing all small self-intersections locally
-            } else if (pass === 1) {
-                ear = cureLocalIntersections(ear, triangles);
-                earcutLinked(ear, triangles, minX, minY, size, 2);
-
-            // as a last resort, try splitting the remaining polygon into two
-            } else if (pass === 2) {
-                splitEarcut(ear, triangles, minX, minY, size);
-            }
-
-            break;
-        }
-    }
-}
-
-function addIndexedVertex(triangles, node) {
-    if (node.source) node = node.source;
-
-    var i = node.index;
-    if (i === null) {
-        var dim = node.p.length;
-        var vertices = triangles.vertices;
-        node.index = i = vertices.length / dim;
-
-        for (var d = 0; d < dim; d++) vertices.push(node.p[d]);
-    }
-    triangles.indices.push(i);
-}
-
-// check whether a polygon node forms a valid ear with adjacent nodes
-function isEar(ear, minX, minY, size) {
-
-    var a = ear.prev.p,
-        b = ear.p,
-        c = ear.next.p,
-
-        ax = a[0], bx = b[0], cx = c[0],
-        ay = a[1], by = b[1], cy = c[1],
-
-        abd = ax * by - ay * bx,
-        acd = ax * cy - ay * cx,
-        cbd = cx * by - cy * bx,
-        A = abd - acd - cbd;
-
-    if (A <= 0) return false; // reflex, can't be an ear
-
-    // now make sure we don't have other points inside the potential ear;
-    // the code below is a bit verbose and repetitive but this is done for performance
-
-    var cay = cy - ay,
-        acx = ax - cx,
-        aby = ay - by,
-        bax = bx - ax,
-        p, px, py, s, t, k, node;
-
-    // if we use z-order curve hashing, iterate through the curve
-    if (minX !== undefined) {
-
-        // triangle bbox; min & max are calculated like this for speed
-        var minTX = ax < bx ? (ax < cx ? ax : cx) : (bx < cx ? bx : cx),
-            minTY = ay < by ? (ay < cy ? ay : cy) : (by < cy ? by : cy),
-            maxTX = ax > bx ? (ax > cx ? ax : cx) : (bx > cx ? bx : cx),
-            maxTY = ay > by ? (ay > cy ? ay : cy) : (by > cy ? by : cy),
-
-            // z-order range for the current triangle bbox;
-            minZ = zOrder(minTX, minTY, minX, minY, size),
-            maxZ = zOrder(maxTX, maxTY, minX, minY, size);
-
-        // first look for points inside the triangle in increasing z-order
-        node = ear.nextZ;
-
-        while (node && node.z <= maxZ) {
-            p = node.p;
-            node = node.nextZ;
-            if (p === a || p === c) continue;
-
-            px = p[0];
-            py = p[1];
-
-            s = cay * px + acx * py - acd;
-            if (s >= 0) {
-                t = aby * px + bax * py + abd;
-                if (t >= 0) {
-                    k = A - s - t;
-                    if ((k >= 0) && ((s && t) || (s && k) || (t && k))) return false;
-                }
-            }
-        }
-
-        // then look for points in decreasing z-order
-        node = ear.prevZ;
-
-        while (node && node.z >= minZ) {
-            p = node.p;
-            node = node.prevZ;
-            if (p === a || p === c) continue;
-
-            px = p[0];
-            py = p[1];
-
-            s = cay * px + acx * py - acd;
-            if (s >= 0) {
-                t = aby * px + bax * py + abd;
-                if (t >= 0) {
-                    k = A - s - t;
-                    if ((k >= 0) && ((s && t) || (s && k) || (t && k))) return false;
-                }
-            }
-        }
-
-    // if we don't use z-order curve hash, simply iterate through all other points
-    } else {
-        node = ear.next.next;
-
-        while (node !== ear.prev) {
-            p = node.p;
-            node = node.next;
-
-            px = p[0];
-            py = p[1];
-
-            s = cay * px + acx * py - acd;
-            if (s >= 0) {
-                t = aby * px + bax * py + abd;
-                if (t >= 0) {
-                    k = A - s - t;
-                    if ((k >= 0) && ((s && t) || (s && k) || (t && k))) return false;
-                }
-            }
-        }
-    }
-
-    return true;
-}
-
-// go through all polygon nodes and cure small local self-intersections
-function cureLocalIntersections(start, triangles) {
-    var indexed = !!triangles.vertices;
-
-    var node = start;
-    do {
-        var a = node.prev,
-            b = node.next.next;
-
-        // a self-intersection where edge (v[i-1],v[i]) intersects (v[i+1],v[i+2])
-        if (a.p !== b.p && intersects(a.p, node.p, node.next.p, b.p) && locallyInside(a, b) && locallyInside(b, a)) {
-
-            if (indexed) {
-                addIndexedVertex(triangles, a);
-                addIndexedVertex(triangles, node);
-                addIndexedVertex(triangles, b);
-            } else {
-                triangles.push(a.p);
-                triangles.push(node.p);
-                triangles.push(b.p);
-            }
-
-            // remove two nodes involved
-            a.next = b;
-            b.prev = a;
-
-            var az = node.prevZ,
-                bz = node.nextZ && node.nextZ.nextZ;
-
-            if (az) az.nextZ = bz;
-            if (bz) bz.prevZ = az;
-
-            node = start = b;
-        }
-        node = node.next;
-    } while (node !== start);
-
-    return node;
-}
-
-// try splitting polygon into two and triangulate them independently
-function splitEarcut(start, triangles, minX, minY, size) {
-    // look for a valid diagonal that divides the polygon into two
-    var a = start;
-    do {
-        var b = a.next.next;
-        while (b !== a.prev) {
-            if (a.p !== b.p && isValidDiagonal(a, b)) {
-                // split the polygon in two by the diagonal
-                var c = splitPolygon(a, b);
-
-                // filter colinear points around the cuts
-                a = filterPoints(a, a.next);
-                c = filterPoints(c, c.next);
-
-                // run earcut on each half
-                earcutLinked(a, triangles, minX, minY, size);
-                earcutLinked(c, triangles, minX, minY, size);
-                return;
-            }
-            b = b.next;
-        }
-        a = a.next;
-    } while (a !== start);
-}
-
-// link every hole into the outer loop, producing a single-ring polygon without holes
-function eliminateHoles(points, outerNode) {
-    var len = points.length;
-
-    var queue = [];
-    for (var i = 1; i < len; i++) {
-        var list = filterPoints(linkedList(points[i], false));
-        if (list) queue.push(getLeftmost(list));
-    }
-    queue.sort(compareX);
-
-    // process holes from left to right
-    for (i = 0; i < queue.length; i++) {
-        eliminateHole(queue[i], outerNode);
-        outerNode = filterPoints(outerNode, outerNode.next);
-    }
-
-    return outerNode;
-}
-
-// find a bridge between vertices that connects hole with an outer ring and and link it
-function eliminateHole(holeNode, outerNode) {
-    outerNode = findHoleBridge(holeNode, outerNode);
-    if (outerNode) {
-        var b = splitPolygon(outerNode, holeNode);
-        filterPoints(b, b.next);
-    }
-}
-
-// David Eberly's algorithm for finding a bridge between hole and outer polygon
-function findHoleBridge(holeNode, outerNode) {
-    var node = outerNode,
-        p = holeNode.p,
-        px = p[0],
-        py = p[1],
-        qMax = -Infinity,
-        mNode, a, b;
-
-    // find a segment intersected by a ray from the hole's leftmost point to the left;
-    // segment's endpoint with lesser x will be potential connection point
-    do {
-        a = node.p;
-        b = node.next.p;
-
-        if (py <= a[1] && py >= b[1]) {
-            var qx = a[0] + (py - a[1]) * (b[0] - a[0]) / (b[1] - a[1]);
-            if (qx <= px && qx > qMax) {
-                qMax = qx;
-                mNode = a[0] < b[0] ? node : node.next;
-            }
-        }
-        node = node.next;
-    } while (node !== outerNode);
-
-    if (!mNode) return null;
-
-    // look for points strictly inside the triangle of hole point, segment intersection and endpoint;
-    // if there are no points found, we have a valid connection;
-    // otherwise choose the point of the minimum angle with the ray as connection point
-
-    var bx = mNode.p[0],
-        by = mNode.p[1],
-        pbd = px * by - py * bx,
-        pcd = px * py - py * qMax,
-        cpy = py - py,
-        pcx = px - qMax,
-        pby = py - by,
-        bpx = bx - px,
-        A = pbd - pcd - (qMax * by - py * bx),
-        sign = A <= 0 ? -1 : 1,
-        stop = mNode,
-        tanMin = Infinity,
-        mx, my, amx, s, t, tan;
-
-    node = mNode.next;
-
-    while (node !== stop) {
-
-        mx = node.p[0];
-        my = node.p[1];
-        amx = px - mx;
-
-        if (amx >= 0 && mx >= bx) {
-            s = (cpy * mx + pcx * my - pcd) * sign;
-            if (s >= 0) {
-                t = (pby * mx + bpx * my + pbd) * sign;
-
-                if (t >= 0 && A * sign - s - t >= 0) {
-                    tan = Math.abs(py - my) / amx; // tangential
-                    if (tan < tanMin && locallyInside(node, holeNode)) {
-                        mNode = node;
-                        tanMin = tan;
-                    }
-                }
-            }
-        }
-
-        node = node.next;
-    }
-
-    return mNode;
-}
-
-// interlink polygon nodes in z-order
-function indexCurve(start, minX, minY, size) {
-    var node = start;
-
-    do {
-        if (node.z === null) node.z = zOrder(node.p[0], node.p[1], minX, minY, size);
-        node.prevZ = node.prev;
-        node.nextZ = node.next;
-        node = node.next;
-    } while (node !== start);
-
-    node.prevZ.nextZ = null;
-    node.prevZ = null;
-
-    sortLinked(node);
-}
-
-// Simon Tatham's linked list merge sort algorithm
-// http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
-function sortLinked(list) {
-    var i, p, q, e, tail, numMerges, pSize, qSize,
-        inSize = 1;
-
-    while (true) {
-        p = list;
-        list = null;
-        tail = null;
-        numMerges = 0;
-
-        while (p) {
-            numMerges++;
-            q = p;
-            pSize = 0;
-            for (i = 0; i < inSize; i++) {
-                pSize++;
-                q = q.nextZ;
-                if (!q) break;
-            }
-
-            qSize = inSize;
-
-            while (pSize > 0 || (qSize > 0 && q)) {
-
-                if (pSize === 0) {
-                    e = q;
-                    q = q.nextZ;
-                    qSize--;
-                } else if (qSize === 0 || !q) {
-                    e = p;
-                    p = p.nextZ;
-                    pSize--;
-                } else if (p.z <= q.z) {
-                    e = p;
-                    p = p.nextZ;
-                    pSize--;
-                } else {
-                    e = q;
-                    q = q.nextZ;
-                    qSize--;
-                }
-
-                if (tail) tail.nextZ = e;
-                else list = e;
-
-                e.prevZ = tail;
-                tail = e;
-            }
-
-            p = q;
-        }
-
-        tail.nextZ = null;
-
-        if (numMerges <= 1) return list;
-
-        inSize *= 2;
-    }
-}
-
-// z-order of a point given coords and size of the data bounding box
-function zOrder(x, y, minX, minY, size) {
-    // coords are transformed into (0..1000) integer range
-    x = 1000 * (x - minX) / size;
-    x = (x | (x << 8)) & 0x00FF00FF;
-    x = (x | (x << 4)) & 0x0F0F0F0F;
-    x = (x | (x << 2)) & 0x33333333;
-    x = (x | (x << 1)) & 0x55555555;
-
-    y = 1000 * (y - minY) / size;
-    y = (y | (y << 8)) & 0x00FF00FF;
-    y = (y | (y << 4)) & 0x0F0F0F0F;
-    y = (y | (y << 2)) & 0x33333333;
-    y = (y | (y << 1)) & 0x55555555;
-
-    return x | (y << 1);
-}
-
-// find the leftmost node of a polygon ring
-function getLeftmost(start) {
-    var node = start,
-        leftmost = start;
-    do {
-        if (node.p[0] < leftmost.p[0]) leftmost = node;
-        node = node.next;
-    } while (node !== start);
-
-    return leftmost;
-}
-
-// check if a diagonal between two polygon nodes is valid (lies in polygon interior)
-function isValidDiagonal(a, b) {
-    return !intersectsPolygon(a, a.p, b.p) &&
-           locallyInside(a, b) && locallyInside(b, a) &&
-           middleInside(a, a.p, b.p);
-}
-
-// winding order of triangle formed by 3 given points
-function orient(p, q, r) {
-    var o = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1]);
-    return o > 0 ? 1 :
-           o < 0 ? -1 : 0;
-}
-
-// check if two points are equal
-function equals(p1, p2) {
-    return p1[0] === p2[0] && p1[1] === p2[1];
-}
-
-// check if two segments intersect
-function intersects(p1, q1, p2, q2) {
-    return orient(p1, q1, p2) !== orient(p1, q1, q2) &&
-           orient(p2, q2, p1) !== orient(p2, q2, q1);
-}
-
-// check if a polygon diagonal intersects any polygon segments
-function intersectsPolygon(start, a, b) {
-    var node = start;
-    do {
-        var p1 = node.p,
-            p2 = node.next.p;
-
-        if (p1 !== a && p2 !== a && p1 !== b && p2 !== b && intersects(p1, p2, a, b)) return true;
-
-        node = node.next;
-    } while (node !== start);
-
-    return false;
-}
-
-// check if a polygon diagonal is locally inside the polygon
-function locallyInside(a, b) {
-    return orient(a.prev.p, a.p, a.next.p) === -1 ?
-        orient(a.p, b.p, a.next.p) !== -1 && orient(a.p, a.prev.p, b.p) !== -1 :
-        orient(a.p, b.p, a.prev.p) === -1 || orient(a.p, a.next.p, b.p) === -1;
-}
-
-// check if the middle point of a polygon diagonal is inside the polygon
-function middleInside(start, a, b) {
-    var node = start,
-        inside = false,
-        px = (a[0] + b[0]) / 2,
-        py = (a[1] + b[1]) / 2;
-    do {
-        var p1 = node.p,
-            p2 = node.next.p;
-
-        if (((p1[1] > py) !== (p2[1] > py)) &&
-            (px < (p2[0] - p1[0]) * (py - p1[1]) / (p2[1] - p1[1]) + p1[0])) inside = !inside;
-
-        node = node.next;
-    } while (node !== start);
-
-    return inside;
-}
-
-function compareX(a, b) {
-    return a.p[0] - b.p[0];
-}
-
-// link two polygon vertices with a bridge; if the vertices belong to the same ring, it splits polygon into two;
-// if one belongs to the outer ring and another to a hole, it merges it into a single ring
-function splitPolygon(a, b) {
-    var a2 = new Node(a.p),
-        b2 = new Node(b.p),
-        an = a.next,
-        bp = b.prev;
-
-    a2.source = a;
-    b2.source = b;
-
-    a.next = b;
-    b.prev = a;
-
-    a2.next = an;
-    an.prev = a2;
-
-    b2.next = a2;
-    a2.prev = b2;
-
-    bp.next = b2;
-    b2.prev = bp;
-
-    return b2;
-}
-
-// create a node and optionally link it with previous one (in a circular doubly linked list)
-function insertNode(point, last) {
-    var node = new Node(point);
-
-    if (!last) {
-        node.prev = node;
-        node.next = node;
-
-    } else {
-        node.next = last.next;
-        node.prev = last;
-        last.next.prev = node;
-        last.next = node;
-    }
-    return node;
-}
-
-function Node(p) {
-    // vertex coordinates
-    this.p = p;
-
-    // previous and next vertice nodes in a polygon ring
-    this.prev = null;
-    this.next = null;
-
-    // z-order curve value
-    this.z = null;
-
-    // previous and next nodes in z-order
-    this.prevZ = null;
-    this.nextZ = null;
-
-    // used for indexed output
-    this.source = null;
-    this.index = null;
-}
-
-ol.ext.earcut = module.exports;
-})();
-
 goog.provide('ol.webgl.Fragment');
 goog.provide('ol.webgl.Shader');
 goog.provide('ol.webgl.Vertex');
@@ -79926,118 +79219,6 @@ ol.render.webgl.imagereplay.shader.Default.Locations = function(gl, program) {
    */
   this.a_texCoord = gl.getAttribLocation(
       program, goog.DEBUG ? 'a_texCoord' : 'd');
-};
-
-// This file is automatically generated, do not edit
-goog.provide('ol.render.webgl.polygonreplay.shader.Default');
-goog.provide('ol.render.webgl.polygonreplay.shader.Default.Locations');
-goog.provide('ol.render.webgl.polygonreplay.shader.DefaultFragment');
-goog.provide('ol.render.webgl.polygonreplay.shader.DefaultVertex');
-
-goog.require('ol.webgl.shader');
-
-
-/**
- * @constructor
- * @extends {ol.webgl.shader.Fragment}
- * @struct
- */
-ol.render.webgl.polygonreplay.shader.DefaultFragment = function() {
-  goog.base(this, ol.render.webgl.polygonreplay.shader.DefaultFragment.SOURCE);
-};
-goog.inherits(ol.render.webgl.polygonreplay.shader.DefaultFragment, ol.webgl.shader.Fragment);
-goog.addSingletonGetter(ol.render.webgl.polygonreplay.shader.DefaultFragment);
-
-
-/**
- * @const
- * @type {string}
- */
-ol.render.webgl.polygonreplay.shader.DefaultFragment.DEBUG_SOURCE = 'precision mediump float;\nvarying vec4 v_color;\n\n\n\nuniform float u_opacity;\n\nvoid main(void) {\n  gl_FragColor = v_color;\n  gl_FragColor *= u_opacity;\n}\n';
-
-
-/**
- * @const
- * @type {string}
- */
-ol.render.webgl.polygonreplay.shader.DefaultFragment.OPTIMIZED_SOURCE = 'precision mediump float;varying vec4 a;uniform float e;void main(void){gl_FragColor=a;gl_FragColor*=e;}';
-
-
-/**
- * @const
- * @type {string}
- */
-ol.render.webgl.polygonreplay.shader.DefaultFragment.SOURCE = goog.DEBUG ?
-    ol.render.webgl.polygonreplay.shader.DefaultFragment.DEBUG_SOURCE :
-    ol.render.webgl.polygonreplay.shader.DefaultFragment.OPTIMIZED_SOURCE;
-
-
-/**
- * @constructor
- * @extends {ol.webgl.shader.Vertex}
- * @struct
- */
-ol.render.webgl.polygonreplay.shader.DefaultVertex = function() {
-  goog.base(this, ol.render.webgl.polygonreplay.shader.DefaultVertex.SOURCE);
-};
-goog.inherits(ol.render.webgl.polygonreplay.shader.DefaultVertex, ol.webgl.shader.Vertex);
-goog.addSingletonGetter(ol.render.webgl.polygonreplay.shader.DefaultVertex);
-
-
-/**
- * @const
- * @type {string}
- */
-ol.render.webgl.polygonreplay.shader.DefaultVertex.DEBUG_SOURCE = 'varying vec4 v_color;\n\n\nattribute vec2 a_position;\nattribute vec4 a_color;\n\nuniform mat4 u_projectionMatrix;\n\nvoid main(void) {\n  v_color = a_color;\n  gl_Position = u_projectionMatrix * vec4(a_position, 0., 1.);\n}\n\n\n';
-
-
-/**
- * @const
- * @type {string}
- */
-ol.render.webgl.polygonreplay.shader.DefaultVertex.OPTIMIZED_SOURCE = 'varying vec4 a;attribute vec2 b;attribute vec4 c;uniform mat4 d;void main(void){a=c;gl_Position=d*vec4(b,0.,1.);}';
-
-
-/**
- * @const
- * @type {string}
- */
-ol.render.webgl.polygonreplay.shader.DefaultVertex.SOURCE = goog.DEBUG ?
-    ol.render.webgl.polygonreplay.shader.DefaultVertex.DEBUG_SOURCE :
-    ol.render.webgl.polygonreplay.shader.DefaultVertex.OPTIMIZED_SOURCE;
-
-
-/**
- * @constructor
- * @param {WebGLRenderingContext} gl GL.
- * @param {WebGLProgram} program Program.
- * @struct
- */
-ol.render.webgl.polygonreplay.shader.Default.Locations = function(gl, program) {
-
-  /**
-   * @type {WebGLUniformLocation}
-   */
-  this.u_opacity = gl.getUniformLocation(
-      program, goog.DEBUG ? 'u_opacity' : 'e');
-
-  /**
-   * @type {WebGLUniformLocation}
-   */
-  this.u_projectionMatrix = gl.getUniformLocation(
-      program, goog.DEBUG ? 'u_projectionMatrix' : 'd');
-
-  /**
-   * @type {number}
-   */
-  this.a_color = gl.getAttribLocation(
-      program, goog.DEBUG ? 'a_color' : 'c');
-
-  /**
-   * @type {number}
-   */
-  this.a_position = gl.getAttribLocation(
-      program, goog.DEBUG ? 'a_position' : 'b');
 };
 
 goog.provide('ol.webgl.Buffer');
@@ -80509,22 +79690,14 @@ ol.webgl.Context.createTexture = function(gl, image, opt_wrapS, opt_wrapT) {
 };
 
 goog.provide('ol.render.webgl.ImageReplay');
-goog.provide('ol.render.webgl.LineStringReplay');
-goog.provide('ol.render.webgl.PolygonReplay');
-goog.provide('ol.render.webgl.ReplayGroup');
 
 goog.require('goog.asserts');
-goog.require('goog.functions');
 goog.require('goog.object');
 goog.require('goog.vec.Mat4');
-goog.require('ol.color');
 // goog.require('ol.color.Matrix');
-goog.require('ol.ext.earcut');
 goog.require('ol.extent');
-goog.require('ol.render.IReplayGroup');
 goog.require('ol.render.VectorContext');
 goog.require('ol.render.webgl.imagereplay.shader.Default');
-goog.require('ol.render.webgl.polygonreplay.shader.Default');
 goog.require('ol.render.webgl.imagereplay.shader.Default.Locations');
 goog.require('ol.render.webgl.imagereplay.shader.DefaultFragment');
 goog.require('ol.render.webgl.imagereplay.shader.DefaultVertex');
@@ -80533,13 +79706,11 @@ goog.require('ol.webgl.Buffer');
 goog.require('ol.webgl.Context');
 
 
-
 /**
  * @constructor
  * @extends {ol.render.VectorContext}
  * @param {number} tolerance Tolerance.
  * @param {ol.Extent} maxExtent Max extent.
- * @protected
  * @struct
  */
 ol.render.webgl.ImageReplay = function(tolerance, maxExtent) {
@@ -81427,6 +80598,131 @@ ol.render.webgl.ImageReplay.prototype.setImageStyle = function(imageStyle) {
   this.width_ = size[0];
 };
 
+// This file is automatically generated, do not edit
+goog.provide('ol.render.webgl.polygonreplay.shader.Default');
+goog.provide('ol.render.webgl.polygonreplay.shader.Default.Locations');
+goog.provide('ol.render.webgl.polygonreplay.shader.DefaultFragment');
+goog.provide('ol.render.webgl.polygonreplay.shader.DefaultVertex');
+
+goog.require('ol.webgl.shader');
+
+
+/**
+ * @constructor
+ * @extends {ol.webgl.shader.Fragment}
+ * @struct
+ */
+ol.render.webgl.polygonreplay.shader.DefaultFragment = function() {
+  goog.base(this, ol.render.webgl.polygonreplay.shader.DefaultFragment.SOURCE);
+};
+goog.inherits(ol.render.webgl.polygonreplay.shader.DefaultFragment, ol.webgl.shader.Fragment);
+goog.addSingletonGetter(ol.render.webgl.polygonreplay.shader.DefaultFragment);
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.polygonreplay.shader.DefaultFragment.DEBUG_SOURCE = 'precision mediump float;\nvarying vec4 v_color;\n\n\n\nuniform float u_opacity;\n\nvoid main(void) {\n  gl_FragColor = v_color;\n  gl_FragColor *= u_opacity;\n}\n';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.polygonreplay.shader.DefaultFragment.OPTIMIZED_SOURCE = 'precision mediump float;varying vec4 a;uniform float e;void main(void){gl_FragColor=a;gl_FragColor*=e;}';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.polygonreplay.shader.DefaultFragment.SOURCE = goog.DEBUG ?
+    ol.render.webgl.polygonreplay.shader.DefaultFragment.DEBUG_SOURCE :
+    ol.render.webgl.polygonreplay.shader.DefaultFragment.OPTIMIZED_SOURCE;
+
+
+/**
+ * @constructor
+ * @extends {ol.webgl.shader.Vertex}
+ * @struct
+ */
+ol.render.webgl.polygonreplay.shader.DefaultVertex = function() {
+  goog.base(this, ol.render.webgl.polygonreplay.shader.DefaultVertex.SOURCE);
+};
+goog.inherits(ol.render.webgl.polygonreplay.shader.DefaultVertex, ol.webgl.shader.Vertex);
+goog.addSingletonGetter(ol.render.webgl.polygonreplay.shader.DefaultVertex);
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.polygonreplay.shader.DefaultVertex.DEBUG_SOURCE = 'varying vec4 v_color;\n\n\nattribute vec2 a_position;\nattribute vec4 a_color;\n\nuniform mat4 u_projectionMatrix;\n\nvoid main(void) {\n  v_color = a_color;\n  gl_Position = u_projectionMatrix * vec4(a_position, 0., 1.);\n}\n\n\n';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.polygonreplay.shader.DefaultVertex.OPTIMIZED_SOURCE = 'varying vec4 a;attribute vec2 b;attribute vec4 c;uniform mat4 d;void main(void){a=c;gl_Position=d*vec4(b,0.,1.);}';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.polygonreplay.shader.DefaultVertex.SOURCE = goog.DEBUG ?
+    ol.render.webgl.polygonreplay.shader.DefaultVertex.DEBUG_SOURCE :
+    ol.render.webgl.polygonreplay.shader.DefaultVertex.OPTIMIZED_SOURCE;
+
+
+/**
+ * @constructor
+ * @param {WebGLRenderingContext} gl GL.
+ * @param {WebGLProgram} program Program.
+ * @struct
+ */
+ol.render.webgl.polygonreplay.shader.Default.Locations = function(gl, program) {
+
+  /**
+   * @type {WebGLUniformLocation}
+   */
+  this.u_opacity = gl.getUniformLocation(
+      program, goog.DEBUG ? 'u_opacity' : 'e');
+
+  /**
+   * @type {WebGLUniformLocation}
+   */
+  this.u_projectionMatrix = gl.getUniformLocation(
+      program, goog.DEBUG ? 'u_projectionMatrix' : 'd');
+
+  /**
+   * @type {number}
+   */
+  this.a_color = gl.getAttribLocation(
+      program, goog.DEBUG ? 'a_color' : 'c');
+
+  /**
+   * @type {number}
+   */
+  this.a_position = gl.getAttribLocation(
+      program, goog.DEBUG ? 'a_position' : 'b');
+};
+
+goog.provide('ol.render.webgl.LineStringReplay');
+
+goog.require('goog.asserts');
+goog.require('goog.object');
+goog.require('goog.vec.Mat4');
+goog.require('ol.color');
+// goog.require('ol.color.Matrix');
+goog.require('ol.extent');
+goog.require('ol.render.VectorContext');
+goog.require('ol.render.webgl.polygonreplay.shader.Default');
+goog.require('ol.vec.Mat4');
+goog.require('ol.webgl.Buffer');
+goog.require('ol.webgl.Context');
 
 
 /**
@@ -81434,7 +80730,6 @@ ol.render.webgl.ImageReplay.prototype.setImageStyle = function(imageStyle) {
  * @extends {ol.render.VectorContext}
  * @param {number} tolerance Tolerance.
  * @param {ol.Extent} maxExtent Max extent.
- * @protected
  * @struct
  */
 ol.render.webgl.LineStringReplay = function(tolerance, maxExtent) {
@@ -81488,7 +80783,7 @@ goog.inherits(ol.render.webgl.LineStringReplay, ol.render.VectorContext);
  * @param {Array.<ol.Coordinate>} coordinates
  * @private
  */
-ol.render.webgl.LineStringReplay.prototype.drawCoordinates_ =
+ol.render.webgl.LineStringReplay.prototype.populateVerticesArray_ =
     function(coordinates) {
   var i, ii;
 
@@ -81518,9 +80813,19 @@ ol.render.webgl.LineStringReplay.prototype.drawCoordinates_ =
  */
 ol.render.webgl.LineStringReplay.prototype.drawLineStringGeometry =
     function(geometry, feature) {
-  this.drawCoordinates_(geometry.getCoordinates());
+  this.populateVerticesArray_(geometry.getCoordinates());
 };
 
+/**
+ * Draw a linear ring geometry.
+ * This function can be called by a PolygonReplay in order to 
+ * prepare the drawing of its outline.
+ * @param {ol.geom.LinearRing} geometry A linear ring geometry.
+ */
+ol.render.webgl.LineStringReplay.prototype.drawLinearRingGeometry =
+    function(geometry) {
+  this.populateVerticesArray_(geometry.getCoordinates());
+};
 
 /**
  * @inheritDoc
@@ -81530,7 +80835,7 @@ ol.render.webgl.LineStringReplay.prototype.drawMultiLineStringGeometry =
   var coordinatess = geometry.getCoordinates();
   var i, ii;
   for (i = 0, ii = coordinatess.length; i < ii; ++i) {
-    this.drawCoordinates_(coordinatess[i]);
+    this.populateVerticesArray_(coordinatess[i]);
   }
 };
 
@@ -81684,6 +80989,727 @@ ol.render.webgl.LineStringReplay.prototype.setFillStrokeStyle =
 };
 
 
+goog.provide('ol.ext.earcut');
+/** @typedef {function(*)} */
+ol.ext.earcut;
+(function() {
+var exports = {};
+var module = {exports: exports};
+var define;
+/**
+ * @fileoverview
+ * @suppress {accessControls, ambiguousFunctionDecl, checkDebuggerStatement, checkRegExp, checkTypes, checkVars, const, constantProperty, deprecated, duplicate, es5Strict, fileoverviewTags, missingProperties, nonStandardJsDocs, strictModuleDepCheck, suspiciousCode, undefinedNames, undefinedVars, unknownDefines, uselessCode, visibility}
+ */
+'use strict';
+
+module.exports = earcut;
+
+function earcut(points, returnIndices) {
+
+    var outerNode = filterPoints(linkedList(points[0], true)),
+        triangles = returnIndices ? {vertices: [], indices: []} : [];
+
+    if (!outerNode) return triangles;
+
+    var node, minX, minY, maxX, maxY, x, y, size, i,
+        threshold = 80;
+
+    for (i = 0; threshold >= 0 && i < points.length; i++) threshold -= points[i].length;
+
+    // if the shape is not too simple, we'll use z-order curve hash later; calculate polygon bbox
+    if (threshold < 0) {
+        node = outerNode.next;
+        minX = maxX = node.p[0];
+        minY = maxY = node.p[1];
+        do {
+            x = node.p[0];
+            y = node.p[1];
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+            node = node.next;
+        } while (node !== outerNode);
+
+        // minX, minY and size are later used to transform coords into integers for z-order calculation
+        size = Math.max(maxX - minX, maxY - minY);
+    }
+
+    if (points.length > 1) outerNode = eliminateHoles(points, outerNode);
+
+    earcutLinked(outerNode, triangles, minX, minY, size);
+
+    return triangles;
+}
+
+// create a circular doubly linked list from polygon points in the specified winding order
+function linkedList(points, clockwise) {
+    var sum = 0,
+        len = points.length,
+        i, j, p1, p2, last;
+
+    // calculate original winding order of a polygon ring
+    for (i = 0, j = len - 1; i < len; j = i++) {
+        p1 = points[i];
+        p2 = points[j];
+        sum += (p2[0] - p1[0]) * (p1[1] + p2[1]);
+    }
+
+    // link points into circular doubly-linked list in the specified winding order
+    if (clockwise === (sum > 0)) {
+        for (i = 0; i < len; i++) last = insertNode(points[i], last);
+    } else {
+        for (i = len - 1; i >= 0; i--) last = insertNode(points[i], last);
+    }
+
+    return last;
+}
+
+// eliminate colinear or duplicate points
+function filterPoints(start, end) {
+    if (!end) end = start;
+
+    var node = start,
+        again;
+    do {
+        again = false;
+
+        if (equals(node.p, node.next.p) || orient(node.prev.p, node.p, node.next.p) === 0) {
+
+            // remove node
+            node.prev.next = node.next;
+            node.next.prev = node.prev;
+
+            if (node.prevZ) node.prevZ.nextZ = node.nextZ;
+            if (node.nextZ) node.nextZ.prevZ = node.prevZ;
+
+            node = end = node.prev;
+
+            if (node === node.next) return null;
+            again = true;
+
+        } else {
+            node = node.next;
+        }
+    } while (again || node !== end);
+
+    return end;
+}
+
+// main ear slicing loop which triangulates a polygon (given as a linked list)
+function earcutLinked(ear, triangles, minX, minY, size, pass) {
+    if (!ear) return;
+
+    var indexed = triangles.vertices !== undefined;
+
+    // interlink polygon nodes in z-order
+    if (!pass && minX !== undefined) indexCurve(ear, minX, minY, size);
+
+    var stop = ear,
+        prev, next;
+
+    // iterate through ears, slicing them one by one
+    while (ear.prev !== ear.next) {
+        prev = ear.prev;
+        next = ear.next;
+
+        if (isEar(ear, minX, minY, size)) {
+            // cut off the triangle
+            if (indexed) {
+                addIndexedVertex(triangles, prev);
+                addIndexedVertex(triangles, ear);
+                addIndexedVertex(triangles, next);
+            } else {
+                triangles.push(prev.p);
+                triangles.push(ear.p);
+                triangles.push(next.p);
+            }
+
+            // remove ear node
+            next.prev = prev;
+            prev.next = next;
+
+            if (ear.prevZ) ear.prevZ.nextZ = ear.nextZ;
+            if (ear.nextZ) ear.nextZ.prevZ = ear.prevZ;
+
+            // skipping the next vertice leads to less sliver triangles
+            ear = next.next;
+            stop = next.next;
+
+            continue;
+        }
+
+        ear = next;
+
+        // if we looped through the whole remaining polygon and can't find any more ears
+        if (ear === stop) {
+            // try filtering points and slicing again
+            if (!pass) {
+                earcutLinked(filterPoints(ear), triangles, minX, minY, size, 1);
+
+            // if this didn't work, try curing all small self-intersections locally
+            } else if (pass === 1) {
+                ear = cureLocalIntersections(ear, triangles);
+                earcutLinked(ear, triangles, minX, minY, size, 2);
+
+            // as a last resort, try splitting the remaining polygon into two
+            } else if (pass === 2) {
+                splitEarcut(ear, triangles, minX, minY, size);
+            }
+
+            break;
+        }
+    }
+}
+
+function addIndexedVertex(triangles, node) {
+    if (node.source) node = node.source;
+
+    var i = node.index;
+    if (i === null) {
+        var dim = node.p.length;
+        var vertices = triangles.vertices;
+        node.index = i = vertices.length / dim;
+
+        for (var d = 0; d < dim; d++) vertices.push(node.p[d]);
+    }
+    triangles.indices.push(i);
+}
+
+// check whether a polygon node forms a valid ear with adjacent nodes
+function isEar(ear, minX, minY, size) {
+
+    var a = ear.prev.p,
+        b = ear.p,
+        c = ear.next.p,
+
+        ax = a[0], bx = b[0], cx = c[0],
+        ay = a[1], by = b[1], cy = c[1],
+
+        abd = ax * by - ay * bx,
+        acd = ax * cy - ay * cx,
+        cbd = cx * by - cy * bx,
+        A = abd - acd - cbd;
+
+    if (A <= 0) return false; // reflex, can't be an ear
+
+    // now make sure we don't have other points inside the potential ear;
+    // the code below is a bit verbose and repetitive but this is done for performance
+
+    var cay = cy - ay,
+        acx = ax - cx,
+        aby = ay - by,
+        bax = bx - ax,
+        p, px, py, s, t, k, node;
+
+    // if we use z-order curve hashing, iterate through the curve
+    if (minX !== undefined) {
+
+        // triangle bbox; min & max are calculated like this for speed
+        var minTX = ax < bx ? (ax < cx ? ax : cx) : (bx < cx ? bx : cx),
+            minTY = ay < by ? (ay < cy ? ay : cy) : (by < cy ? by : cy),
+            maxTX = ax > bx ? (ax > cx ? ax : cx) : (bx > cx ? bx : cx),
+            maxTY = ay > by ? (ay > cy ? ay : cy) : (by > cy ? by : cy),
+
+            // z-order range for the current triangle bbox;
+            minZ = zOrder(minTX, minTY, minX, minY, size),
+            maxZ = zOrder(maxTX, maxTY, minX, minY, size);
+
+        // first look for points inside the triangle in increasing z-order
+        node = ear.nextZ;
+
+        while (node && node.z <= maxZ) {
+            p = node.p;
+            node = node.nextZ;
+            if (p === a || p === c) continue;
+
+            px = p[0];
+            py = p[1];
+
+            s = cay * px + acx * py - acd;
+            if (s >= 0) {
+                t = aby * px + bax * py + abd;
+                if (t >= 0) {
+                    k = A - s - t;
+                    if ((k >= 0) && ((s && t) || (s && k) || (t && k))) return false;
+                }
+            }
+        }
+
+        // then look for points in decreasing z-order
+        node = ear.prevZ;
+
+        while (node && node.z >= minZ) {
+            p = node.p;
+            node = node.prevZ;
+            if (p === a || p === c) continue;
+
+            px = p[0];
+            py = p[1];
+
+            s = cay * px + acx * py - acd;
+            if (s >= 0) {
+                t = aby * px + bax * py + abd;
+                if (t >= 0) {
+                    k = A - s - t;
+                    if ((k >= 0) && ((s && t) || (s && k) || (t && k))) return false;
+                }
+            }
+        }
+
+    // if we don't use z-order curve hash, simply iterate through all other points
+    } else {
+        node = ear.next.next;
+
+        while (node !== ear.prev) {
+            p = node.p;
+            node = node.next;
+
+            px = p[0];
+            py = p[1];
+
+            s = cay * px + acx * py - acd;
+            if (s >= 0) {
+                t = aby * px + bax * py + abd;
+                if (t >= 0) {
+                    k = A - s - t;
+                    if ((k >= 0) && ((s && t) || (s && k) || (t && k))) return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+// go through all polygon nodes and cure small local self-intersections
+function cureLocalIntersections(start, triangles) {
+    var indexed = !!triangles.vertices;
+
+    var node = start;
+    do {
+        var a = node.prev,
+            b = node.next.next;
+
+        // a self-intersection where edge (v[i-1],v[i]) intersects (v[i+1],v[i+2])
+        if (a.p !== b.p && intersects(a.p, node.p, node.next.p, b.p) && locallyInside(a, b) && locallyInside(b, a)) {
+
+            if (indexed) {
+                addIndexedVertex(triangles, a);
+                addIndexedVertex(triangles, node);
+                addIndexedVertex(triangles, b);
+            } else {
+                triangles.push(a.p);
+                triangles.push(node.p);
+                triangles.push(b.p);
+            }
+
+            // remove two nodes involved
+            a.next = b;
+            b.prev = a;
+
+            var az = node.prevZ,
+                bz = node.nextZ && node.nextZ.nextZ;
+
+            if (az) az.nextZ = bz;
+            if (bz) bz.prevZ = az;
+
+            node = start = b;
+        }
+        node = node.next;
+    } while (node !== start);
+
+    return node;
+}
+
+// try splitting polygon into two and triangulate them independently
+function splitEarcut(start, triangles, minX, minY, size) {
+    // look for a valid diagonal that divides the polygon into two
+    var a = start;
+    do {
+        var b = a.next.next;
+        while (b !== a.prev) {
+            if (a.p !== b.p && isValidDiagonal(a, b)) {
+                // split the polygon in two by the diagonal
+                var c = splitPolygon(a, b);
+
+                // filter colinear points around the cuts
+                a = filterPoints(a, a.next);
+                c = filterPoints(c, c.next);
+
+                // run earcut on each half
+                earcutLinked(a, triangles, minX, minY, size);
+                earcutLinked(c, triangles, minX, minY, size);
+                return;
+            }
+            b = b.next;
+        }
+        a = a.next;
+    } while (a !== start);
+}
+
+// link every hole into the outer loop, producing a single-ring polygon without holes
+function eliminateHoles(points, outerNode) {
+    var len = points.length;
+
+    var queue = [];
+    for (var i = 1; i < len; i++) {
+        var list = filterPoints(linkedList(points[i], false));
+        if (list) queue.push(getLeftmost(list));
+    }
+    queue.sort(compareX);
+
+    // process holes from left to right
+    for (i = 0; i < queue.length; i++) {
+        eliminateHole(queue[i], outerNode);
+        outerNode = filterPoints(outerNode, outerNode.next);
+    }
+
+    return outerNode;
+}
+
+// find a bridge between vertices that connects hole with an outer ring and and link it
+function eliminateHole(holeNode, outerNode) {
+    outerNode = findHoleBridge(holeNode, outerNode);
+    if (outerNode) {
+        var b = splitPolygon(outerNode, holeNode);
+        filterPoints(b, b.next);
+    }
+}
+
+// David Eberly's algorithm for finding a bridge between hole and outer polygon
+function findHoleBridge(holeNode, outerNode) {
+    var node = outerNode,
+        p = holeNode.p,
+        px = p[0],
+        py = p[1],
+        qMax = -Infinity,
+        mNode, a, b;
+
+    // find a segment intersected by a ray from the hole's leftmost point to the left;
+    // segment's endpoint with lesser x will be potential connection point
+    do {
+        a = node.p;
+        b = node.next.p;
+
+        if (py <= a[1] && py >= b[1]) {
+            var qx = a[0] + (py - a[1]) * (b[0] - a[0]) / (b[1] - a[1]);
+            if (qx <= px && qx > qMax) {
+                qMax = qx;
+                mNode = a[0] < b[0] ? node : node.next;
+            }
+        }
+        node = node.next;
+    } while (node !== outerNode);
+
+    if (!mNode) return null;
+
+    // look for points strictly inside the triangle of hole point, segment intersection and endpoint;
+    // if there are no points found, we have a valid connection;
+    // otherwise choose the point of the minimum angle with the ray as connection point
+
+    var bx = mNode.p[0],
+        by = mNode.p[1],
+        pbd = px * by - py * bx,
+        pcd = px * py - py * qMax,
+        cpy = py - py,
+        pcx = px - qMax,
+        pby = py - by,
+        bpx = bx - px,
+        A = pbd - pcd - (qMax * by - py * bx),
+        sign = A <= 0 ? -1 : 1,
+        stop = mNode,
+        tanMin = Infinity,
+        mx, my, amx, s, t, tan;
+
+    node = mNode.next;
+
+    while (node !== stop) {
+
+        mx = node.p[0];
+        my = node.p[1];
+        amx = px - mx;
+
+        if (amx >= 0 && mx >= bx) {
+            s = (cpy * mx + pcx * my - pcd) * sign;
+            if (s >= 0) {
+                t = (pby * mx + bpx * my + pbd) * sign;
+
+                if (t >= 0 && A * sign - s - t >= 0) {
+                    tan = Math.abs(py - my) / amx; // tangential
+                    if (tan < tanMin && locallyInside(node, holeNode)) {
+                        mNode = node;
+                        tanMin = tan;
+                    }
+                }
+            }
+        }
+
+        node = node.next;
+    }
+
+    return mNode;
+}
+
+// interlink polygon nodes in z-order
+function indexCurve(start, minX, minY, size) {
+    var node = start;
+
+    do {
+        if (node.z === null) node.z = zOrder(node.p[0], node.p[1], minX, minY, size);
+        node.prevZ = node.prev;
+        node.nextZ = node.next;
+        node = node.next;
+    } while (node !== start);
+
+    node.prevZ.nextZ = null;
+    node.prevZ = null;
+
+    sortLinked(node);
+}
+
+// Simon Tatham's linked list merge sort algorithm
+// http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
+function sortLinked(list) {
+    var i, p, q, e, tail, numMerges, pSize, qSize,
+        inSize = 1;
+
+    while (true) {
+        p = list;
+        list = null;
+        tail = null;
+        numMerges = 0;
+
+        while (p) {
+            numMerges++;
+            q = p;
+            pSize = 0;
+            for (i = 0; i < inSize; i++) {
+                pSize++;
+                q = q.nextZ;
+                if (!q) break;
+            }
+
+            qSize = inSize;
+
+            while (pSize > 0 || (qSize > 0 && q)) {
+
+                if (pSize === 0) {
+                    e = q;
+                    q = q.nextZ;
+                    qSize--;
+                } else if (qSize === 0 || !q) {
+                    e = p;
+                    p = p.nextZ;
+                    pSize--;
+                } else if (p.z <= q.z) {
+                    e = p;
+                    p = p.nextZ;
+                    pSize--;
+                } else {
+                    e = q;
+                    q = q.nextZ;
+                    qSize--;
+                }
+
+                if (tail) tail.nextZ = e;
+                else list = e;
+
+                e.prevZ = tail;
+                tail = e;
+            }
+
+            p = q;
+        }
+
+        tail.nextZ = null;
+
+        if (numMerges <= 1) return list;
+
+        inSize *= 2;
+    }
+}
+
+// z-order of a point given coords and size of the data bounding box
+function zOrder(x, y, minX, minY, size) {
+    // coords are transformed into (0..1000) integer range
+    x = 1000 * (x - minX) / size;
+    x = (x | (x << 8)) & 0x00FF00FF;
+    x = (x | (x << 4)) & 0x0F0F0F0F;
+    x = (x | (x << 2)) & 0x33333333;
+    x = (x | (x << 1)) & 0x55555555;
+
+    y = 1000 * (y - minY) / size;
+    y = (y | (y << 8)) & 0x00FF00FF;
+    y = (y | (y << 4)) & 0x0F0F0F0F;
+    y = (y | (y << 2)) & 0x33333333;
+    y = (y | (y << 1)) & 0x55555555;
+
+    return x | (y << 1);
+}
+
+// find the leftmost node of a polygon ring
+function getLeftmost(start) {
+    var node = start,
+        leftmost = start;
+    do {
+        if (node.p[0] < leftmost.p[0]) leftmost = node;
+        node = node.next;
+    } while (node !== start);
+
+    return leftmost;
+}
+
+// check if a diagonal between two polygon nodes is valid (lies in polygon interior)
+function isValidDiagonal(a, b) {
+    return !intersectsPolygon(a, a.p, b.p) &&
+           locallyInside(a, b) && locallyInside(b, a) &&
+           middleInside(a, a.p, b.p);
+}
+
+// winding order of triangle formed by 3 given points
+function orient(p, q, r) {
+    var o = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1]);
+    return o > 0 ? 1 :
+           o < 0 ? -1 : 0;
+}
+
+// check if two points are equal
+function equals(p1, p2) {
+    return p1[0] === p2[0] && p1[1] === p2[1];
+}
+
+// check if two segments intersect
+function intersects(p1, q1, p2, q2) {
+    return orient(p1, q1, p2) !== orient(p1, q1, q2) &&
+           orient(p2, q2, p1) !== orient(p2, q2, q1);
+}
+
+// check if a polygon diagonal intersects any polygon segments
+function intersectsPolygon(start, a, b) {
+    var node = start;
+    do {
+        var p1 = node.p,
+            p2 = node.next.p;
+
+        if (p1 !== a && p2 !== a && p1 !== b && p2 !== b && intersects(p1, p2, a, b)) return true;
+
+        node = node.next;
+    } while (node !== start);
+
+    return false;
+}
+
+// check if a polygon diagonal is locally inside the polygon
+function locallyInside(a, b) {
+    return orient(a.prev.p, a.p, a.next.p) === -1 ?
+        orient(a.p, b.p, a.next.p) !== -1 && orient(a.p, a.prev.p, b.p) !== -1 :
+        orient(a.p, b.p, a.prev.p) === -1 || orient(a.p, a.next.p, b.p) === -1;
+}
+
+// check if the middle point of a polygon diagonal is inside the polygon
+function middleInside(start, a, b) {
+    var node = start,
+        inside = false,
+        px = (a[0] + b[0]) / 2,
+        py = (a[1] + b[1]) / 2;
+    do {
+        var p1 = node.p,
+            p2 = node.next.p;
+
+        if (((p1[1] > py) !== (p2[1] > py)) &&
+            (px < (p2[0] - p1[0]) * (py - p1[1]) / (p2[1] - p1[1]) + p1[0])) inside = !inside;
+
+        node = node.next;
+    } while (node !== start);
+
+    return inside;
+}
+
+function compareX(a, b) {
+    return a.p[0] - b.p[0];
+}
+
+// link two polygon vertices with a bridge; if the vertices belong to the same ring, it splits polygon into two;
+// if one belongs to the outer ring and another to a hole, it merges it into a single ring
+function splitPolygon(a, b) {
+    var a2 = new Node(a.p),
+        b2 = new Node(b.p),
+        an = a.next,
+        bp = b.prev;
+
+    a2.source = a;
+    b2.source = b;
+
+    a.next = b;
+    b.prev = a;
+
+    a2.next = an;
+    an.prev = a2;
+
+    b2.next = a2;
+    a2.prev = b2;
+
+    bp.next = b2;
+    b2.prev = bp;
+
+    return b2;
+}
+
+// create a node and optionally link it with previous one (in a circular doubly linked list)
+function insertNode(point, last) {
+    var node = new Node(point);
+
+    if (!last) {
+        node.prev = node;
+        node.next = node;
+
+    } else {
+        node.next = last.next;
+        node.prev = last;
+        last.next.prev = node;
+        last.next = node;
+    }
+    return node;
+}
+
+function Node(p) {
+    // vertex coordinates
+    this.p = p;
+
+    // previous and next vertice nodes in a polygon ring
+    this.prev = null;
+    this.next = null;
+
+    // z-order curve value
+    this.z = null;
+
+    // previous and next nodes in z-order
+    this.prevZ = null;
+    this.nextZ = null;
+
+    // used for indexed output
+    this.source = null;
+    this.index = null;
+}
+
+ol.ext.earcut = module.exports;
+})();
+
+goog.provide('ol.render.webgl.PolygonReplay');
+
+goog.require('goog.asserts');
+goog.require('goog.object');
+goog.require('ol.color');
+// goog.require('ol.color.Matrix');
+goog.require('ol.ext.earcut');
+goog.require('ol.extent');
+goog.require('ol.webgl.Buffer');
+goog.require('ol.webgl.Context');
+goog.require('ol.render.webgl.LineStringReplay');
+goog.require('ol.render.VectorContext');
+goog.require('ol.render.webgl.polygonreplay.shader.Default');
+
 
 /**
  * PolygonReplay
@@ -81701,7 +81727,7 @@ ol.render.webgl.LineStringReplay.prototype.setFillStrokeStyle =
  * -----------
  * drawPolygonGeometry(polygonGeometry, feature)
  *  - sets the replay-wide fill color (taken from the feature object)
- * drawCoordinates_(coordinates, fillColor)
+ * populateVerticesArray_(coordinates, fillColor)
  *  - called for the polygon geometry and on the linestring replay
  *  - triangulates the geometry in order to get a list of triangle coordinates
  *    that WebGL can work with.
@@ -81744,7 +81770,6 @@ ol.render.webgl.LineStringReplay.prototype.setFillStrokeStyle =
  * @extends {ol.render.VectorContext}
  * @param {number} tolerance Tolerance.
  * @param {ol.Extent} maxExtent Max extent.
- * @protected
  * @struct
  */
 ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
@@ -81755,6 +81780,14 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
    * @type {ol.Color}
    */
   this.fillColor_ = null;
+
+  /**
+   * Flag to indicate whether the stroke color for the LineStringReplay was set.
+   * The polygon outline is not drawn in case no color was supplied.
+   * @private
+   * @type {boolean}
+   */
+  this.hasLineStringReplayColor_ = false;
 
   /**
    * @private
@@ -81795,49 +81828,70 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
   this.projectionMatrix_ = goog.vec.Mat4.createNumberIdentity();
 
   /**
+   * An array that holds all vertices of the triangulated geometry as well as
+   * the color values each vertex should have.
+   * For n vertices the format would look like the following:
+   *
+   * [x1, y1, r1, g1, b1, a1,
+   *  x2, y2, r2, g2, b2, a2, 
+   *  ...
+   *  xn, yn, rn, gn, bn, an]
+   *
+   * Before a draw call is executed this array is used to populate a vertexBuffer.
+   *
    * @type {Array.<number>}
    * @private
    */
   this.vertices_ = [];
 
   /**
+   * The vertex buffer populated form `vertices_` that is bound as an array buffer. 
    * @type {ol.webgl.Buffer}
    * @private
    */
   this.verticesBuffer_ = null;
 
   /**
-   * Start index per feature (the index).
+   * Start index per feature.
+   * Each index specifies where in the `vertices_` array the range of
+   * vertex attributes of a new feature starts.
    * @type {Array.<number>}
    * @private
    */
   this.startIndices_ = [];
 
   /**
-   * Start index per feature (the index).
+   * End index per feature.
+   * Each index specifies where in the `vertices_` array the range of
+   * vertex attributes of a new feature ends.
    * @type {Array.<number>}
    * @private
    */
   this.endIndices_ = [];
+
   /**
-   * Start index per feature (the feature).
+   * The features whose polygons are rendered by this replay.
+   * In this array a feature at position `i` has its range of vertex attributes
+   * in `vertices_` specified by the start and end indices `startIndices_[i]` and
+   * `endIndices_[i]`.
    * @type {Array.<ol.Feature>}
    * @private
    */
-  this.startIndicesFeature_ = [];
+  this.features_ = [];
 };
 goog.inherits(ol.render.webgl.PolygonReplay, ol.render.VectorContext);
 
 
 /**
- * Draw one polygon.
+ * Populate the vertex array for a polygon geometry.
  * @param {Array.<Array.<ol.Coordinate>>} coordinates
- * @param {Array.<number>} fillColor Array of size 4. Each value ahs to be between 0 and one.
+ * @param {Array.<number>} fillColor The fill color of the array.
+ *         This has to be an array of size 4 and each value has to be between 0 and one.
  * @private
  */
-ol.render.webgl.PolygonReplay.prototype.drawCoordinates_ =
+ol.render.webgl.PolygonReplay.prototype.populateVerticesArray_ =
     function(coordinates, fillColor) {
-  // Triangulate the polgon
+  // Triangulate the polygon
   var triangulation = ol.ext.earcut(coordinates, true);
   var i, ii;
   var indices = triangulation.indices;
@@ -81874,10 +81928,10 @@ ol.render.webgl.PolygonReplay.prototype.drawMultiPolygonGeometry =
 
   var coordinatess = geometry.getCoordinates();
   this.startIndices_.push(this.indices_.length);
-  this.startIndicesFeature_.push(feature);
+  this.features_.push(feature);
   var i, ii;
   for (i = 0, ii = coordinatess.length; i < ii; i++) {
-    this.drawCoordinates_(coordinatess[i], this.fillColor_);
+    this.populateVerticesArray_(coordinatess[i], this.fillColor_);
   }
 };
 
@@ -81891,7 +81945,7 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   if (!goog.isNull(feature.getStyle())) {
       var color = feature.getStyle().getFill().getColor();
       fillColor = ol.color.asArray(color);
-  } else if (!goog.isNull(this.fillColor_)) {
+  } else {
       fillColor = this.fillColor_;
   }
 
@@ -81899,19 +81953,18 @@ ol.render.webgl.PolygonReplay.prototype.drawPolygonGeometry =
   if (fillColor) {
     var coordinates = polygonGeometry.getCoordinates();
     this.startIndices_.push(this.indices_.length);
-    this.startIndicesFeature_.push(feature);
-    this.drawCoordinates_(coordinates, fillColor);
+    this.features_.push(feature);
+    this.populateVerticesArray_(coordinates, fillColor);
     var endIndex = this.indices_.length;
     this.endIndices_.push(endIndex);
   }
 
-  // Plot polygon ring
-  var strokeColor = this.lineStringReplay_.strokeColor_;
-  if (strokeColor) {
+  // Plot polygon ring in case a stroke color has been set at one point.
+  if (this.hasLineStringReplayColor_) {
     var linearRings = polygonGeometry.getLinearRings();
     var i, ii;
     for (i = 0, ii = linearRings.length; i < ii; i++) {
-      this.lineStringReplay_.drawCoordinates_(linearRings[i].getCoordinates());
+      this.lineStringReplay_.drawLinearRingGeometry(linearRings[i]);
     }
   }
 };
@@ -82018,11 +82071,11 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
   gl.uniform1f(locations.u_opacity, opacity);
 
-  // Structure of vertex attrib array:
+  // In this case the structure of a vertex attrib array looks like this:
   // [x1 y1 r1 g1 b1 a1 x2 y2 r2 g2 b2 a2....]
-  // Total length of attributes for one vertex:
-  // (2 positional + 4 color) * 4 bytes per int = 24
-  // Offset of color attribute pointer to positional attribute:
+  // The total length of attributes for one vertex is therefore calculated as:
+  // (2 positional attributes + 4 color attributes) * 4 bytes per int = 24
+  // Offset of color attributes pointer to positional attributes:
   // 2 positional attributes * 4 bytes per int = 8
   //
   // Enable the vertex attrib position arrays
@@ -82055,7 +82108,6 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
     // Set the blend function to additive blending for hit detection.
     // In this way one can detect wether a pixel was drawn with a color like (1, 1, 1, 0), i.e.
     // white with 100% opacity.
-    //
     gl.blendFunc(gl.ONE, gl.ONE);
     var elementType = context.hasOESElementIndexUint ?
         goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
@@ -82067,7 +82119,7 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
     while (featureIndex >= 0) {
 
-      feature = this.startIndicesFeature_[featureIndex];
+      feature = this.features_[featureIndex];
 
       featureUid = goog.getUid(feature).toString();
       dontSkipFeature = !goog.isDef(skippedFeaturesHash[featureUid]);
@@ -82150,9 +82202,28 @@ ol.render.webgl.PolygonReplay.prototype.setFillStrokeStyle =
   } else {
     this.fillColor_ = null;
   }
-  this.lineStringReplay_.setFillStrokeStyle(fillStyle, strokeStyle);
+
+  if (strokeStyle) {
+      this.lineStringReplay_.setFillStrokeStyle(fillStyle, strokeStyle);
+      this.hasLineStringReplayColor_ = true;
+  } 
 };
 
+
+
+
+goog.provide('ol.render.webgl.ReplayGroup');
+
+goog.require('goog.asserts');
+goog.require('goog.functions');
+goog.require('goog.object');
+// goog.require('ol.color.Matrix');
+goog.require('ol.extent');
+goog.require('ol.render.IReplayGroup');
+goog.require('ol.webgl.Context');
+goog.require('ol.render.webgl.LineStringReplay');
+goog.require('ol.render.webgl.PolygonReplay');
+goog.require('ol.render.webgl.ImageReplay');
 
 
 /**
@@ -82185,8 +82256,8 @@ ol.render.webgl.ReplayGroup = function(
   this.renderBuffer_ = opt_renderBuffer;
 
   /**
-   * ImageReplay only is supported at this point.
-   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay>}
+   * ImageReplay and PolygonReplay are supported at this point.
+   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay|ol.render.webgl.PolygonReplay>}
    * @private
    */
   this.replays_ = {};
@@ -84880,7 +84951,21 @@ ol.renderer.webgl.VectorTileLayer.prototype.forEachFeatureAtCoordinate = functio
      */
     var hitCallbackWrapper = function(feature) {
       goog.asserts.assert(feature !== undefined, 'received a feature');
-      var key = goog.getUid(feature).toString();
+      // Features for tissuemaps (mapobjects) have a type and an id.
+      // Since only one feature should be reported in case they were overplotted
+      // tue to multiple tile requests, their id is saved inside a map
+      // to indicate whether the callback has been called for them already. 
+      var featureId = feature.getId();
+      var featureType = feature.get('type');
+      var isTmapsFeature = featureId !== undefined && featureType !== undefined;
+
+      var key;
+      if (isTmapsFeature) {
+        key = featureType + featureId;
+      } else {
+        key = goog.getUid(feature).toString();
+      }
+
       if (!(key in features)) {
         features[key] = true;
         return callback.call(thisArg, feature, layer);
