@@ -1,3 +1,4 @@
+import sys
 import os
 from os.path import join, dirname, abspath
 import logging
@@ -5,21 +6,17 @@ import logging
 from flask import Flask
 import gc3libs
 
+from tmaps import defaultconfig
 from tmaps.extensions import db
 from tmaps.extensions.auth import jwt
 from tmaps.extensions.redis import redis_store
 # from tmaps.extensions.gc3pie import gc3pie_engine
-from tmaps.config import default as default_config
 from tmaps.serialize import TmJSONEncoder
 
-
-MAIN_DIR_LOCATION = abspath(join(dirname(__file__), os.pardir, os.pardir))
-_CLIENT_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'client')
-EXPDATA_DIR_LOCATION = join(MAIN_DIR_LOCATION, 'expdata')
+log = logging.getLogger(__name__)
 
 
-
-def create_app(config):
+def create_app(config_overrides={}):
     """Create a Flask application object that registers all the blueprints on
     which the actual routes are defined.
 
@@ -27,16 +24,22 @@ def create_app(config):
     Additional can be supplied to this method as a dict-like config argument.
 
     """
-
-    # NOTE: The static folder shouldn't for production and is for debug
-    # purposes only. The static files will be served by NGINX or similar.
-    app = Flask('wsgi',
-                static_folder=join(_CLIENT_DIR_LOCATION, 'app'),
-                static_url_path='')
+    app = Flask('wsgi')
 
     # Load the default settings
-    app.config.from_object(default_config)
-    app.config.update(config)
+    app.config.from_object(defaultconfig)
+
+    settings_location = os.environ.get('TMAPS_SETTINGS')
+    if not settings_location:
+        log.error(
+            'You need to supply the location of a config file via the '
+            'environment variable `TMAPS_SETTINGS`!')
+        sys.exit(1)
+    else:
+        app.config.from_envvar('TMAPS_SETTINGS')
+        log.info('Loaded config: "%s"' % settings_location)
+
+    app.config.update(config_overrides)
 
     # Set the JSON encoder
     app.json_encoder = TmJSONEncoder
@@ -48,16 +51,17 @@ def create_app(config):
     if not secret_key:
         raise ValueError('Specify a secret key for this application!')
     if secret_key == 'default_secret_key':
-        print ' * The application will run with the default secret key!'
+        log.info('The application will run with the default secret key!')
 
-    print ' * Starting mode: %s' % (
+    log.info(
+        'Starting mode: %s' % (
         'DEBUG' if app.config['DEBUG'] else (
             'TESTING' if app.config['TESTING'] else 'PRODUCTION'
-        ))
+        )))
 
     if 'TMAPS_STORAGE' in app.config:
         os.environ['TMAPS_STORAGE'] = app.config['TMAPS_STORAGE']
-        print ' * Setting TMAPS_STORAGE to: %s' % app.config['TMAPS_STORAGE']
+        log.info('Setting TMAPS_STORAGE to: %s' % app.config['TMAPS_STORAGE'])
 
     # Initialize Plugins
     jwt.init_app(app)

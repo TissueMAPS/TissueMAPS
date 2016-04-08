@@ -19,8 +19,7 @@ import os.path as p
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import flask
 from tmaps.appfactory import create_app
-import logging
-
+from tmaps import log
 
 logo = """
   _____ _                    __  __    _    ____  ____  
@@ -28,17 +27,12 @@ logo = """
    | | | / __/ __| | | |/ _ \ |\/| | / _ \ | |_) \___ \ 
    | | | \__ \__ \ |_| |  __/ |  | |/ ___ \|  __/ ___) |
    |_| |_|___/___/\__,_|\___|_|  |_/_/   \_\_|   |____/ 
+
 """
 
 print logo
 
-cfg = flask.Config(p.realpath(p.dirname(__file__)))
-# Will throw a RuntimeError if not provided
-cfg.from_envvar('TMAPS_SETTINGS')
-
-print ' * Loaded config: "%s"' % os.environ['TMAPS_SETTINGS']
-
-app = create_app(cfg)
+app = create_app()
 
 if __name__ == '__main__':
     import argparse
