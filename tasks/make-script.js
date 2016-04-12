@@ -78,7 +78,7 @@ module.exports = function(gulp, opt) {
             // Produce source maps (won't work with banner)
             .pipe(_if(opt.dev, 
                 sourcemaps.write('.', {
-                    sourceRoot: '/src/'
+                    sourceRoot: '/app/src/'
                 })
             ))
             .pipe(gulp.dest(opt.destFolder))

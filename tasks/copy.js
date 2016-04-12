@@ -5,7 +5,7 @@ module.exports = function(gulp, opt) {
     var revReplace = require('gulp-rev-replace');
 
     gulp.task('copy-src', function() {
-        return gulp.src('./app/src/**/*.ts', {base: './app'})
+        return gulp.src('./app/src/**/*.ts', {base: './'})
             .pipe(gulp.dest(opt.destFolder));
     });
 
