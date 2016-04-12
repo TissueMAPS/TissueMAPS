@@ -7,6 +7,10 @@ angular.module('tmaps.ui')
         return $scope.selectionBox.getSelectedItems();
     }
 
+    this.getOpacityFormatted = function(channel) {
+        return Math.floor(channel.opacity * 100);
+    };
+
     this.color = {
         RED:   Color.RED,
         GREEN: Color.GREEN,

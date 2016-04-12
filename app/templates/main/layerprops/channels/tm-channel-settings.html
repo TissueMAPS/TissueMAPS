@@ -32,7 +32,7 @@
           </div>
 
           <h4>Opacity</h4>
-          <span class="output" ng-bind="channel.opacity * 100"></span>
+          <span class="output" ng-bind="ctrl.getOpacityFormatted(channel)"></span>
           <div ui-slider
                min="0" max="100"
                ng-model="ctrl.opacityInput"
