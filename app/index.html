@@ -1,5 +1,7 @@
 <!doctype html>
-<html ng-app="tmaps">
+<html ng-app="tmaps"
+      ng-controller="AppCtrl as appCtrl"
+      ng-keydown="appCtrl.keyDown($event)">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title>TissueMAPS</title>
@@ -32,9 +34,7 @@
 <body>
 
   <div class="app"
-        ng-controller="AppCtrl as appCtrl"
-        ng-keydown="app.keyDown($event)"
-        ng-keyup="app.keyUp($event)">
+        ng-keyup="appCtrl.keyUp($event)">
 
     <tm-appbar ng-show="appCtrl.isUserAuthenticated()"></tm-appbar>
      <!-- The main view holding the viewer, the setup window or the userpanel. -->
