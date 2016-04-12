@@ -12,84 +12,99 @@ angular.module('tmaps.ui')
 
 interface Class {
     name: string;
-    selection: MapObjectSelection;
+    mapobjectIds: number[];
 }
 
 class ClassSelectionWidgetCtrl {
     static $inject = ['$scope'];
 
-    private _classes: {[objectType: string]: Class[];} = {};
+    private _controllers: {[objectType: string]: ClassSelectionCtrl[];} = {};
 
     constructor(public $scope: ToolWindowContentScope) {
         this.$scope.$parent['classSelectionWidget'] = this;
     }
 
-    private _getViewer() {
-        var parentScope = <SVMScope> this.$scope.$parent;
+    private get _viewer() {
+        var parentScope = <ToolWindowContentScope> this.$scope.$parent;
         return parentScope.viewer;
     }
 
-    private _getSelectedMapobjectType() {
-        var parentScope = <SVMScope> this.$scope.$parent;
-        return parentScope.objectNameWidget.selectedName;
+    private get _selectedMapobjectType() {
+        var parentScope = this.$scope.$parent;
+        var objectTypeWidget: ObjectNameWidgetCtrl =
+            parentScope['objectNameWidget'];
+        return objectTypeWidget.selectedName;
     }
+
+    private _classes: Class[] = [];
 
     /**
      * To be called from the controller using this widget, e.g.:
      * var theClasses = $scope.classSelectionWidget.classes;
      */
-    get classes() {
-        var selectedType = this._getSelectedMapobjectType();
-        var cls = this._classes[selectedType];
-        return cls === undefined ? [] : cls;
+    private _computeClasses() {
+        var clsMap = {};
+        for (var objType in this._controllers) {
+            var ctrls = this._controllers[objType];
+            ctrls.forEach((ctrl) => {
+                if (ctrl.useAsClass) {
+                    if (clsMap[ctrl.className] === undefined) {
+                        clsMap[ctrl.className] = [];
+                    }
+                    var mapobjectIds = ctrl.selection.mapObjects.map((o) => {
+                        return o.id;
+                    });
+                    Array.prototype.push.apply(clsMap[ctrl.className], mapobjectIds); 
+                }
+            });
+        }
+
+        var classes: Class[] = [];
+        for (var clsName in clsMap) {
+            classes.push({
+                name: clsName,
+                mapobjectIds: clsMap[clsName]
+            });
+        }
+
+        return classes;
+    }
+
+    get classes(): Class[] {
+        var classes = this._computeClasses();
+        if (this._classes.length != classes.length) {
+            this._classes = classes;
+        }
+        return this._classes;
     }
 
     get selections() {
-        var selectedType = this._getSelectedMapobjectType();
-        var selHandler = this._getViewer().mapObjectSelectionHandler;
+        var selectedType = this._selectedMapobjectType;;
+        var selHandler = this._viewer.mapObjectSelectionHandler;
         return selHandler.getSelectionsForType(selectedType);
     }
 
-    registerSelectionAsClass(sel: MapObjectSelection, className: string) {
-        if (this._classes[sel.mapObjectType] === undefined) {
-            this._classes[sel.mapObjectType] = [];
-        }
-        var classes = this._classes[sel.mapObjectType];
-        classes.push({
-            name: className,
-            selection: sel
-        });
-    }
-
-    updateClassName(sel: MapObjectSelection, className: string) {
-        if (this._classes[sel.mapObjectType] !== undefined) {
-            var classes = this._classes[sel.mapObjectType];
-            var cl = _(classes).find((cl) => {
-                return cl.selection == sel;
-            });
-            if (cl !== undefined) {
-                cl.name = className;
-            } else {
-                console.log('Cannot update name of class, no such class.');
-            }
-        } else {
-            console.log('Cannot update name of class, no such array of classes.');
-        }
-    }
-
-    deregisterSelection(sel: MapObjectSelection) {
-        var classes = this._classes[sel.mapObjectType];
-        if (classes !== undefined) {
-            var cl = _(classes).find((cl) => {
-                return cl.selection == sel;
-            });
-            if (cl !== undefined) {
-                var idx = classes.indexOf(cl);
-                classes.splice(idx, 1);
+    deregisterSelectionCtrl(selCtrl: ClassSelectionCtrl) {
+        var objType = selCtrl.selection.mapObjectType;
+        if (this._controllers[objType] !== undefined) {
+            var idx = this._controllers[objType].indexOf(selCtrl);
+            if (idx > -1) {
+                this._controllers[objType].splice(idx, 1);
             }
         }
     }
 
+    registerSelectionCtrl(selCtrl: ClassSelectionCtrl) {
+        var objType = selCtrl.selection.mapObjectType;
+        if (this._controllers[objType] === undefined) {
+            this._controllers[objType] = [];
+        }
+        this._controllers[objType].push(selCtrl);
+    }
+
+    recomputeClasses() {
+        this._classes = this._computeClasses();
+    }
 }
 angular.module('tmaps.ui').controller('ClassSelectionWidgetCtrl', ClassSelectionWidgetCtrl);
 
@@ -98,91 +113,21 @@ class ClassSelectionCtrl {
 
     useAsClass: boolean = true;
     className: string;
+    get selection() {
+        return this._$scope.objSelection;
+    }
 
-    constructor($scope) {
-        this.className = 'Class_' + $scope.$index;
-
-        $scope.$watch('sel.className', (newVal) => {
-            if (newVal !== undefined && newVal !== '') {
-                this.useAsClass = true;
-                $scope.classSelectionWidget.updateClassName(
-                    $scope.objSelection,
-                    this.className
-                );
-            } else {
-                this.useAsClass = false;
-            }
+    constructor(private _$scope) {
+        this.className = 'Class_' + _$scope.$index;
+        _$scope.classSelectionWidget.registerSelectionCtrl(this);
+        _$scope.$on('$destroy', () => {
+            _$scope.classSelectionWidget.deregisterSelectionCtrl(this);
         });
-        $scope.$watch('sel.useAsClass', (doUse) => {
-            if (doUse !== undefined && doUse) {
-                $scope.classSelectionWidget.registerSelectionAsClass(
-                    $scope.objSelection, this.className
-                );
-            } else {
-                $scope.classSelectionWidget.deregisterSelection(
-                    $scope.objSelection
-                );
+        _$scope.$watch('sel.className', (newName, oldName) => {
+            if (newName !== oldName) {
+                this._$scope.classSelectionWidget.recomputeClasses();
             }
-        });
-
+        })
     }
 }
 angular.module('tmaps.ui').controller('ClassSelectionCtrl', ClassSelectionCtrl);
-
-//             // Add a default class label to each selection
-//             _($scope.selections).each(function(sel, i) {
-//                 sel.viewProps = {
-//                     class: 'CLASS_' + i
-//                 };
-//             });
-
-//             $scope.classArray = [];
-
-//             $scope.updateClasses = function() {
-//                 var classes = {};
-//                 $scope.selections.forEach(function(sel) {
-//                     var clsName = sel.viewProps.class;
-//                     if (clsName) {
-//                         if (_.isUndefined(classes[clsName])) {
-//                             classes[clsName] = {
-//                                 mapObjectIds: []
-//                             };
-//                         }
-//                         classes[clsName].mapObjects = classes[clsName].mapObjectIds.concat(
-//                             sel.getMapObjects().map(function(o) {
-//                                 return o.id;
-//                             })
-//                         );
-//                         if (!classes[clsName].color) {
-//                             classes[clsName].color = sel.color.toOlColor();
-//                         }
-//                     }
-//                 });
-
-//                 $scope.onChangeExpr({
-//                     classes: classes
-//                 });
-
-//                 var clsArray = [];
-//                 _(classes).each(function(classObj, clsName) {
-//                     clsArray.push({
-//                         name: clsName,
-//                         mapObjectIds: classObj.mapObjects
-//                     });
-//                 });
-//                 $scope.classArray = clsArray;
-//             };
-
-//             // Update the 'classes' variable in the expression
-//             // for the first time. This will set the class assignments
-//             // to the default ones.
-//             $scope.updateClasses();
-
-//             // Update the classes whenever a selection changes.
-//             // This ensures that the onChange expression is up to date.
-//             tmapsProxy.viewportScope.then(function(scope) {
-//                 scope.$on('cellSelectionChanged', function(sel) {
-//                     $scope.updateClasses();
-//                 });
-//             });
-//         }]

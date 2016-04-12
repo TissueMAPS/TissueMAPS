@@ -19,9 +19,7 @@
         <td>
           Use? <input type="checkbox" ng-model="sel.useAsClass">
           Label:
-          <input type="text"
-            ng-model="sel.className"
-            ng-change="updateClasses()">
+          <input type="text" ng-model="sel.className">
         </td>
       </tr>
     </table>
@@ -29,7 +27,7 @@
     <ul class="list-group">
       <li ng-repeat="cls in classSelectionWidget.classes"
         class="list-group-item">
-          {{cls.name}} <span class="badge">{{cls.selection.mapObjects.length}} {{toolOptions.chosenMapObjectType}}</span>
+          {{cls.name}} <span class="badge">{{cls.mapobjectIds.length}}</span>
       </li>
     </ul>
   </div>
