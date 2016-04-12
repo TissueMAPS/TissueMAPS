@@ -199,9 +199,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             if (sel === this._activeSelection) {
                 this.activeSelection = null;
             }
-            this.viewport.map.then((map: ol.Map) => {
-                sel.removeFromMap(map);
-            });
+            sel.removeFromMap(this.viewport.map);
             var selections = this.getSelectionsForType(sel.mapObjectType);
             selections.splice(selections.indexOf(sel), 1);
         } else {
