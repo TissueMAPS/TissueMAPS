@@ -66254,7 +66254,6 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
   return result;
 };
 
-
 /**
  * @private
  * @param {WebGLRenderingContext} gl gl.
