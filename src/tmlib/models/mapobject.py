@@ -1,10 +1,13 @@
+import json
 import os
 import logging
 import random
+
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
+from geoalchemy2.functions import GenericFunction
 from sqlalchemy.orm import Session
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, not_
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
@@ -13,6 +16,11 @@ from tmlib.models.base import Model, DateMixIn
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
+
+
+class ST_ExteriorRing(GenericFunction):
+    name = 'ST_ExteriorRing'
+    type = Geometry
 
 
 class MapobjectType(Model, DateMixIn):
@@ -104,7 +112,7 @@ class MapobjectType(Model, DateMixIn):
             zoom level
         tpoint: int
             time point index
-        zplane:
+        zplane: int
             z-plane index
 
         Returns
@@ -112,6 +120,9 @@ class MapobjectType(Model, DateMixIn):
         Tuple[int, str]
             GeoJSON string for each selected map object
         '''
+
+        maxzoom = self.experiment.channels[0].layers[0].maxzoom_level_index
+
         session = Session.object_session(self)
 
         do_simplify = z < self.min_poly_zoom
@@ -132,7 +143,7 @@ class MapobjectType(Model, DateMixIn):
                 ((MapobjectType.is_static) |
                  (MapobjectOutline.tpoint == tpoint) &
                  (MapobjectOutline.zplane == zplane)) &
-                (MapobjectOutline.intersection_filter(x, y, z))).\
+                (MapobjectOutline.intersection_filter(x, y, z, maxzoom))).\
             all()
 
         return outlines
@@ -319,7 +330,35 @@ class MapobjectOutline(Model):
         self.geom_centroid = geom_centroid
 
     @staticmethod
-    def intersection_filter(x, y, z):
+    def create_tile(x, y, z, maxzoom):
+        """Calculate the bounding box of a tile.
+
+        Parameters
+        ----------
+        x: int
+            horizontal tile coordiante
+        y: int
+            vertical tile coordiante
+        z: int
+            zoom level
+        maxzoom: int
+            maximal zoom level of layers belonging to the visualized experiment
+        """
+        # The extent of a tile of the current zoom level in mapobject
+        # coordinates (i.e. coordinates on the highest zoom level)
+        size = 256 * 2 ** (maxzoom - z)
+        # Coordinates of the top-left corner of the tile
+        x0 = x * size
+        y0 = y * size
+        # Coordinates with which to specify all corners of the tile
+        minx = x0
+        maxx = x0 + size
+        miny = -y0 - size
+        maxy = -y0
+        return (minx, miny, maxx, maxy)
+
+    @staticmethod
+    def intersection_filter(x, y, z, maxzoom):
         '''Generates an `SQLalchemy` query filter to select mapobject outlines
         for a given `y`, `x`, `z` pyramid coordinate.
 
@@ -331,27 +370,14 @@ class MapobjectOutline(Model):
             row map coordinate at the given `z` level
         z: int
             zoom level
+        maxzoom: int
+            maximal zoom level of layers belonging to the visualized experiment
 
         Returns
         -------
         ???
         '''
-        # TODO: docstring
-        # TODO: max_zoom should be taken from the layer
-        max_zoom = 6
-        # The extent of a tile of the current zoom level in mapobject
-        # coordinates (i.e. coordinates on the highest zoom level)
-        size = 256 * 2 ** (max_zoom - z)
-        # Coordinates of the top-left corner of the tile
-        x0 = x * size
-        y0 = y * size
-        # Coordinates with which to specify all corners of the tile
-        minx = x0
-        maxx = x0 + size
-        miny = -y0 - size
-        maxy = -y0
-        # Convert the tile into EWKT format s.t. it can be used in
-        # postgis queries.
+        minx, miny, maxx, maxy = MapobjectOutline.create_tile(x, y, z, maxzoom)
         tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
             minx=minx, maxx=maxx, miny=miny, maxy=maxy)
         # The outlines should not lie on the top or left border since this
@@ -359,18 +385,20 @@ class MapobjectOutline(Model):
         # the same objects.
         # This in turn leads to overplotting and is noticeable when the objects
         # have a fill color with an opacity != 0 or != 1.
-        top_border = 'LINESTRING({minx} {miny}, {maxx} {miny})'.format(
-            minx=minx, maxx=maxx, miny=miny)
+        top_border = 'LINESTRING({minx} {maxy}, {maxx} {maxy})'.format(
+            minx=minx, maxx=maxx, maxy=maxy)
         left_border = 'LINESTRING({minx} {maxy}, {minx} {miny})'.format(
             minx=minx, maxy=maxy, miny=miny)
 
         spatial_filter = (MapobjectOutline.geom_poly.ST_Intersects(tile))
         if x != 0:
             spatial_filter = spatial_filter & \
-                (~MapobjectOutline.geom_poly.ST_Intersects(left_border))
+                not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
+                     ST_Intersects(left_border))
         if y != 0:
             spatial_filter = spatial_filter & \
-                (~MapobjectOutline.geom_poly.ST_Intersects(top_border))
+                not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
+                     ST_Intersects(top_border))
 
         return spatial_filter
 
