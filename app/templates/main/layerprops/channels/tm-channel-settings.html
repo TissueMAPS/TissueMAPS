@@ -24,7 +24,7 @@
           </div>
 
           <h4>Brightness</h4>
-          <span class="output" ng-bind="channel.brightness * 100"></span>
+          <span class="output" ng-bind="ctrl.getBrightnessFormatted(channel)"></span>
           <div ui-slider
                min="-50" max="50"
                ng-model="ctrl.brightnessInput"

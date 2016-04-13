@@ -7,6 +7,10 @@ angular.module('tmaps.ui')
         return $scope.selectionBox.getSelectedItems();
     }
 
+    this.getBrightnessFormatted = function(channel) {
+        return Math.floor(channel.brightness * 100);
+    };
+
     this.getOpacityFormatted = function(channel) {
         return Math.floor(channel.opacity * 100);
     };
