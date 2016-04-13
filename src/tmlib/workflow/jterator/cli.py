@@ -1,83 +1,61 @@
 import logging
 
-from tmlib.utils import same_docstring_as
+from tmlib.utils import assert_type
 from tmlib.workflow.jterator import logo
-from tmlib.workflow.jterator.api import ImageAnalysisPipeline
 from tmlib.workflow.cli import CommandLineInterface
+from tmlib.workflow.cli import climethod
+from tmlib.workflow.args import Argument
 
 logger = logging.getLogger(__name__)
 
 
 class Jterator(CommandLineInterface):
 
-    '''Command line interface for image analysis pipelines.'''
+    '''Apply a sequence of algorithms to a set of images in order to
+    segment the images and extract features for the identified objects.
+    '''
 
-    def __init__(self, api_instance, verbosity):
+    pipeline = Argument(
+        type=str, flag='p', help='pipeline that should be processed'
+    )
+
+    @assert_type(api_instance='tmlib.workflow.jterator.api.ImageAnalysisPipeline')
+    def __init__(self, api_instance):
         '''
         Parameters
         ----------
-        api_instance: tmlib.workflow.jterator.ImageAnalysisPipeline
+        api_instance: tmlib.workflow.jterator.api.ImageAnalysisPipeline
             instance of API class to which processing is delegated
-        verbosity: int
-            logging level
         '''
-        super(Jterator, self).__init__(api_instance, verbosity)
+        super(Jterator, self).__init__(api_instance)
 
-    def create(self, args):
-        '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "create" subparser.
-
-        Parameters
-        ----------
-        args: tmlib.args.CreateArgs
-            method-specific arguments
-        '''
-        self._print_logo()
-        api = self._api_instance
-        logger.info('create project: %s' % api.step_location)
-        api.project.create(
-            args.variable_args.repo_dir, args.variable_args.skel_dir
+    @climethod(
+        help='creates a new project on disk',
+        repo_dir=Argument(
+            type=str, help='path to local copy of jtlib repository'
+        ),
+        skel_dir=Argument(
+            type=str,
+            help='path to a directory that should serve as a project skeleton'
         )
-
-    def remove(self, args):
-        '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "remove" subparser.
-
-        Parameters
-        ----------
-        args: tmlib.args.RemoveArgs
-            method-specific arguments
-        '''
+    )
+    def create(self, repo_dir, skel_dir):
         self._print_logo()
-        api = self._api_instance
-        logger.info('remove project: %s' % api.step_location)
-        api.project.remove()
+        logger.info('create project: %s' % self.api_instance.step_location)
+        self.api_instance.project.create(repo_dir, skel_dir)
 
-    def check(self, args):
-        '''
-        Initialize an instance of the API class corresponding to the specific
-        command line interface and process arguments of the "check" subparser.
-
-        Parameters
-        ----------
-        args: tmlib.args.CheckArgs
-            method-specific arguments
-        '''
+    @climethod(help='removes an existing project')
+    def remove(self):
         self._print_logo()
-        api = self._api_instance
+        logger.info('remove project: %s' % self.api_instance.step_location)
+        self.api_instance.project.remove()
+
+    @climethod(help='checks pipeline and module descriptor files')
+    def check(self):
+        self._print_logo()
         logger.info('check pipe and handle descriptor files')
-        api.check_pipeline()
+        self.api_instance.check_pipeline()
 
     @staticmethod
     def _print_logo():
         print logo
-
-    @staticmethod
-    @same_docstring_as(CommandLineInterface.call)
-    def call(name, args):
-        api_instance = ImageAnalysisPipeline(
-            args.experiment_id, args.verbosity, args.pipeline
-        )
-        Jterator(api_instance, args.verbosity)._call(args)

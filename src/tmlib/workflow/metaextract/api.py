@@ -4,6 +4,7 @@ import logging
 import subprocess
 
 import tmlib.models
+from tmlib.workflow.registry import api
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.workflow.api import ClusterRoutines
@@ -11,6 +12,7 @@ from tmlib.workflow.api import ClusterRoutines
 logger = logging.getLogger(__name__)
 
 
+@api('metaextract')
 class MetadataExtractor(ClusterRoutines):
 
     '''Class for extraction of metadata from microscopic image files.
@@ -125,6 +127,7 @@ class MetadataExtractor(ClusterRoutines):
             with tmlib.models.utils.Session() as session:
                 img_file = session.query(tmlib.models.MicroscopeImageFile).\
                     get(fid)
+                logger.info('process image "%s"' % img_file.name)
                 # The "showinf" command line tool writes the extracted OMEXML
                 # to standard output.
                 command = [
@@ -141,31 +144,9 @@ class MetadataExtractor(ClusterRoutines):
                         'Extraction of OMEXML failed! Error message:\n%s'
                         % stderr
                     )
-
                 img_file.omexml = stdout
 
     @notimplemented
     def collect_job_output(self, batch):
         pass
 
-
-def factory(experiment_id, verbosity, **kwargs):
-    '''Factory function for the instantiation of a `metaextract`-specific
-    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
-    abstract base class.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the processed experiment
-    verbosity: int
-        logging level
-    **kwargs: dict
-        ignored keyword arguments
-
-    Returns
-    -------
-    tmlib.workflow.metaextract.api.MetadataExtractor
-        API instance
-    '''
-    return MetadataExtractor(experiment_id, verbosity, **kwargs)

@@ -1,5 +1,4 @@
-'''Abstract base and mixin classes for database models.
-'''
+'''Abstract base and mixin classes for database models.'''
 import os
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import Column, DateTime, Integer

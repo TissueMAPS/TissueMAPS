@@ -1,8 +1,8 @@
 import logging
 
-from tmlib.utils import same_docstring_as
+from tmlib.utils import notimplemented
+from tmlib.utils import assert_type
 from tmlib.workflow.imextract import logo
-from tmlib.workflow.imextract.api import ImageExtractor
 from tmlib.workflow.cli import CommandLineInterface
 
 logger = logging.getLogger(__name__)
@@ -10,31 +10,25 @@ logger = logging.getLogger(__name__)
 
 class Imextract(CommandLineInterface):
 
-    '''Command line interface for extraction of images from image files.'''
+    '''Extract pixel elements from heterogeneous microscopy image file formats
+    and store each 2D pixel plane in a standardized file format.
+    '''
 
-    def __init__(self, api_instance, verbosity):
+    @assert_type(api_instance='tmlib.workflow.imextract.api.ImageExtractor')
+    def __init__(self, api_instance):
         '''
         Parameters
         ----------
-        api_instance: tmlib.workflow.metaextract.ImageExtractor
+        api_instance: tmlib.workflow.metaextract.api.ImageExtractor
             instance of API class to which processing is delegated
-        verbosity: int
-            logging level
         '''
-        super(Imextract, self).__init__(api_instance, verbosity)
+        super(Imextract, self).__init__(api_instance)
 
     @staticmethod
     def _print_logo():
         print logo
 
+    @notimplemented
     def collect(self, args):
-        raise AttributeError(
-            '"%s" object doesn\'t have a "collect" method'
-            % self.__class__.__name__
-        )
+        pass
 
-    @staticmethod
-    @same_docstring_as(CommandLineInterface.call)
-    def call(name, args):
-        api_instance = ImageExtractor(args.experiment_id, args.verbosity)
-        Imextract(api_instance, args.verbosity)._call(args)

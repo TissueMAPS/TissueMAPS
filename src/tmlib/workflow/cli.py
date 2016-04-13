@@ -1,120 +1,185 @@
 import os
+import re
 import sys
 import traceback
 import logging
 import shutil
 import yaml
-import argparse
+import inspect
 import socket
+import argparse
+import types
+import collections
 from cached_property import cached_property
 from abc import ABCMeta
-from abc import abstractproperty
 from abc import abstractmethod
+from abc import abstractproperty
 
 from tmlib import __version__
-from tmlib.workflow.args import InitArgs
-from tmlib.workflow.args import SubmitArgs
-from tmlib.workflow.args import ResubmitArgs
-from tmlib.workflow.args import RunArgs
-from tmlib.workflow.args import CollectArgs
-from tmlib.workflow.args import CleanupArgs
-from tmlib.workflow.args import LogArgs
-from tmlib.workflow.args import InfoArgs
-from tmlib.workflow.args import GeneralArgs
-from tmlib.workflow import load_method_args
-from tmlib.workflow import load_var_method_args
+from tmlib.workflow.registry import get_step_api
+from tmlib.workflow.registry import get_step_args
+from tmlib.workflow.registry import climethod
+from tmlib.workflow.args import Argument
+from tmlib.workflow.args import ArgumentCollection
+from tmlib.workflow.args import CliMethodArguments
 from tmlib.logging_utils import configure_logging
 from tmlib.logging_utils import map_logging_verbosity
+from tmlib.errors import WorkflowError
 
 logger = logging.getLogger(__name__)
 
-AVAILABLE_METHODS = {
-    'init', 'submit', 'resume', 'resubmit', 'run', 'collect',
-    'cleanup', 'log', 'info'
-}
 
+class CliMeta(ABCMeta):
 
-def create_method_args(step_name, method_name, **kwargs):
-    '''Creates the argument object required as an input argument for methods of
-    the :py:class:`tmlib.cli.CommandLineInterface` class.
+    '''Metaclass that provides classes command line interface functionality.
+    Generated classes behave as abstract base classes and need to be
+    implemented for each workflow step. When the generated class has the
+    attribute ``__abstract__`` set to ``True`` no command line functionality
+    will be added to this class. Derived classes will, however, be automatically
+    equipped with this functionality.
 
-    Parameters
-    ----------
-    step_name: str
-        name of the step (command line program)
-    method_name: str
-        name of the method for which arguments should be build
-    **kwargs: dict, optional
-        description of keyword arguments that are passed to the method
-
-    Returns
-    -------
-    tmlib.workflow.args.GeneralArgs
-        arguments object that can be parsed to the specified method
-
-    Note
-    ----
-    The function knows which arguments to strip from `kwargs`.
-
-    See also
-    --------
-    :py:func:`tmlib.workflow.load_method_args`
-    :py:func:`tmlib.workflow.load_var_method_args`
-    :py:class:`tmlibtmlib.workflow.args.Args`
+    This is achieved by adding an instance of :py:class:`argparse.ArgumentParser`
+    to the derived class.
+    The docstring of the class is used as value for the `description` attribute
+    of the parser and a separate subparser is added for each method of the
+    class that is decorated with :py:func:`tmlib.workflow.climethod`.
+    The decorator provides descriptions for the arguments required, which are
+    added to the corresponding subparser.
+    The :py:method:`tmlib.workflow.cli.CommandLineInterface.init`
+    and :py:method:`tmlib.workflow.cli.CommandLineInterace.submit` methods
+    require additional step-specific arguments that are passed to the *API*
+    methods :py:method:`tmlib.workflow.api.ClusterRoutines.create_batches` and
+    :py:method:`tmlib.workflow.api.ClusterRoutines.create_jobs`, respectively.
+    These arguments are handled separately, because they also need to be
+    accessible outside the scope of the command line interace.
+    They are provided by step-specific implementations of
+    :py:class:`tmlib.workflow.args.BatchArguments` and
+    :py:class:`tmlib.workflow.args.SubmissionArguments`, respectively,
+    and are automatically loaded from the `args` module of the step package
+    and added to corresponding subparser.
     '''
-    args_handler = load_method_args(method_name)
-    method_args = args_handler(**kwargs)
-    variable_args_handler = load_var_method_args(step_name, method_name)
-    if variable_args_handler is not None:
-        method_args.variable_args = variable_args_handler(**kwargs)
-    return method_args
+
+    def __init__(cls, clsname, bases, attrs):
+        super(CliMeta, cls).__init__(clsname, bases, attrs)
+        if '__abstract__' in vars(cls).keys():
+            return
+        parser = argparse.ArgumentParser()
+        parser.description = cls.__doc__
+        parser.version = __version__
+        parser.add_argument(
+            'experiment_id', type=int,
+            help='ID of the experiment that should be processed'
+        )
+        parser.add_argument(
+            '--verbosity', '-v', action='count', default=0,
+            help='increase logging verbosity'
+        )
+        subparsers = parser.add_subparsers(dest='method', help='methods')
+        subparsers.required = True
+        flags = collections.defaultdict(list)
+        for attr_name in dir(cls):
+            if attr_name.startswith('__'):
+                continue
+            attr_value = getattr(cls, attr_name)
+            # Arguments that are described by class attributes are added
+            # to the main parser.
+            if isinstance(attr_value, Argument):
+                attr_value.name = attr_name
+                attr_value.add_to_argparser(parser)
+            # The climethod decorator provides argument descriptions via
+            # the "args" attribute of the decoreated method.
+            # These arguments are added to the method-specific subparser.
+            if isinstance(attr_value, types.MethodType):
+                if getattr(attr_value, 'is_climethod', None):
+                    method_parser = subparsers.add_parser(
+                        attr_name, help=attr_value.help
+                    )
+                    method_parser.description = attr_value.help
+                    for arg in attr_value.args().iterargs():
+                        arg.add_to_argparser(method_parser)
+                        if arg.flag is not None:
+                            flags[attr_name].append(arg.flag)
+        # The "init" and "submit" methods require additional arguments
+        # that also need to be accessible outside the scope of the
+        # command line interface and are therefore handled separately.
+        # Each workflow step must implement BatchArguments and
+        # SubmissionArguments and register them using the batch_args and
+        # submission_args decorator, respectively.
+        # These arguments are added to the corresponding method-specific
+        # subparser as a separate group to highlight that they represent a
+        # different type of argument.
+        def add_step_specific_method_args(step_name, method_name, args_class):
+            method_parser = subparsers.choices[method_name]
+            parser_group = method_parser.add_argument_group(
+                    'step-specific arguments'
+            )
+            for arg in args_class().iterargs():
+                arg.add_to_argparser(parser_group)
+                if arg.flag is not None:
+                    flags[attr_name].append(arg.flag)
+        step_name = cls.__name__.lower()
+        # pkg_name = '.'.join(cls.__module__.split('.')[:-1])
+        # args_module_name = '%s.args' % pkg_name
+        # try:
+        #     args_module = importlib.import_module(args_module_name)
+        # except ImportError:
+        #     raise ImportError(
+        #         'Step "%s" must implement module "%s"'
+        #         % (step_name, args_module)
+        #     )
+        # api_module_name = '%s.api' % pkg_name
+        # try:
+        #     api_module = importlib.import_module(api_module_name)
+        # except ImportError:
+        #     raise ImportError(
+        #         'Step "%s" must implement module "%s"'
+        #         % (step_name, args_module)
+        #     )
+        # batch_args = _step_register[step_name]['batch_args']
+        batch_args, submission_args = get_step_args(step_name)
+        add_step_specific_method_args(step_name, 'init', batch_args)
+        setattr(cls, '_batch_args_class', batch_args)
+        add_step_specific_method_args(step_name, 'submit', submission_args)
+        setattr(cls, '_submission_args_class', submission_args)
+        # api = _step_register[step_name]['api']
+        api = get_step_api(step_name)
+        setattr(cls, '_api_class', api)
+        setattr(cls, '_parser', parser)
+
 
 
 class CommandLineInterface(object):
 
     '''Abstract base class for command line interfaces.
 
-    Note
-    ----
-    There must be a method for each subparser, where the name of the method
-    has to match that of the subparser.
+    Derived classes must implement abstract methods and properties
+    and provide the attribute ``__cli__ = True`` to active command line
+    interface functionality.
     '''
 
-    __metaclass__ = ABCMeta
+    __metaclass__ = CliMeta
 
-    def __init__(self, api_instance, verbosity):
+    __abstract__ = True
+
+    def __init__(self, api_instance):
         '''
         Parameters
         ----------
         api_instance: tmlib.api.ClusterRoutines
             instance of API class to which processing is delegated
-        verbosity: int
-            logging level
-
-        See also
-        --------
-        :py:func:`tmlib.logging_utils.map_logging_verbosity`
         '''
         self.api_instance = api_instance
-        self.verbosity = verbosity
 
     @property
     def name(self):
         '''str: name of the step (command line program)'''
         return self.__class__.__name__.lower()
 
-    @staticmethod
-    def main(parser):
+    @classmethod
+    def main(cls):
         '''Main entry point for command line interfaces.
 
-        Parsers the command line arguments to the corresponding handler,
-        retrieves the specified experiment from the database, and
-        configures logging.
-
-        Parameters
-        ----------
-        parser: argparse.ArgumentParser
-            argument parser object
+        Parses the command line arguments and configures logging.
 
         Returns
         -------
@@ -130,14 +195,14 @@ class CommandLineInterface(object):
         -------
         Don't do any other logging configuration anywhere else!
         '''
-        arguments = parser.parse_args()
+        arguments = cls._parser.parse_args()
 
         configure_logging(logging.CRITICAL)
         logger = logging.getLogger('tmlib')
         level = map_logging_verbosity(arguments.verbosity)
         logger.setLevel(level)
         logger.debug('processing on node: %s', socket.gethostname())
-        logger.debug('running program: %s' % parser.prog)
+        logger.debug('running program: %s' % cls._parser.prog)
 
         # Silence some chatty loggers
         gc3libs_logger = logging.getLogger('gc3.gc3libs')
@@ -146,7 +211,20 @@ class CommandLineInterface(object):
         apscheduler_logger.setLevel(logging.CRITICAL)
 
         try:
-            arguments.call(name=parser.prog, args=arguments)
+            logger.debug('instantiate API class "%s"', cls._api_class.__name__)
+            # Derived CLI classes may provide additional arguments for the main
+            # parser, i.e. arguments for the constructor of the API class.
+            kwargs = {
+                'experiment_id': arguments.experiment_id,
+                'verbosity': arguments.verbosity
+            }
+            for arg_name, arg_value in vars(cls).iteritems():
+                if isinstance(arg_value, Argument):
+                    kwargs[arg_name] = getattr(arguments, arg_name)
+            api_instance = cls._api_class(**kwargs)
+            logger.debug('instantiate CLI class "%s"', cls.__name__)
+            cli_instance = cls(api_instance)
+            cli_instance(arguments)
             logger.info('COMPLETED')
             sys.exit(0)
             return 0
@@ -158,148 +236,169 @@ class CommandLineInterface(object):
             sys.exit(1)
             return 1
 
-    @abstractmethod
-    def call(name, args):
+    def __call__(self, cli_args):
         '''Executes the command line call.
 
-        Initializes an instance of the step-specific implementation of the
-        :py:class:`tmlib.workflow.cli.CommandLineInterface` abstract base class
-        and calls the method matching the name of the specified subparser
+        Calls the method matching the name of the specified subparser
         with the parsed arguments.
 
         Parameters
         ----------
-        name: str
-            name of the step (the command line program)
-        args: argparse.Namespace
+        cli_args: argparse.Namespace
             parsed command line arguments
         '''
-        pass
-
-    def _call(self, args):
         logger.debug(
-            'call "%s" method of class "%s" with the parsed arguments',
-            args.method_name, self.__class__.__name__
+            'call "%s" method of CLI class "%s" with the parsed arguments',
+            cli_args.method, self.__class__.__name__
         )
-        method_args = create_method_args(step_name=self.name, **vars(args))
-        getattr(self, args.method_name)(method_args)
+        # Strip the relevant arguments from the namespace
+        method = getattr(self, cli_args.method)
+        arg_names = inspect.getargspec(method).args[1:]
+        arg_defaults = inspect.getargspec(method).defaults
+        if arg_defaults:
+            logger.warning(
+                'default values for arguments of method "%s" are ignored; '
+                'defaults should be provided via the climethod decorator.'
+            )
+        method_args = dict()
+        for name in arg_names:
+            logger.debug(
+                'pass argument "%s" to method "%s" of class "%s"',
+                name, cli_args.method, self.__class__.__name__
+            )
+            index = list(reversed(arg_names)).index(name)
+            try:
+                value = getattr(cli_args, name)
+            except AttributeError:
+                raise AttributeError(
+                    'Argument "%s" was not parsed via command line' % name
+                )
+            if value is None:
+                try:
+                    value = arg_defaults[-index+1]
+                    logger.debug(
+                        'set value for argument "%s" for method "%s" '
+                        'of class "%s" according to default value',
+                        name, cli_args.method, self.__class__.__name__
+                    )
+                except:
+                    pass
+            method_args[name] = value
+        if cli_args.method == 'init':
+            self._batch_args = self._batch_args_class(**vars(cli_args))
+        elif cli_args.method == 'submit':
+            self._submission_args = self._submission_args_class(**vars(cli_args))
+        method(**method_args)
 
     @abstractmethod
     def _print_logo():
         '''Prints the step-specific logo to standard output (console).'''
         pass
 
-    def cleanup(self, args):
-        '''Processes arguments provided by the "cleanup" subparser, which
-        removes all output files or directories from a previous submission.
-
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.CleanupArgs
-            method-specific arguments
+    @climethod(
+        help='''cleans up the output of a previous submission, i.e. removes
+            files and database entries created by previously submitted jobs
         '''
+    )
+    def cleanup(self):
         self._print_logo()
         self.api_instance.delete_previous_job_output()
 
-    def init(self, args):
-        '''Processes arguments provided by the "init" subparser, which creates
-        the job descriptor files required for submission.
-
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.InitArgs
-            method-specific arguments
-
-        Returns
-        -------
-        dict
-            batches
+    @climethod(
+        help='''creates batches for parallel processing and thereby
+            defines how the computational task should be distrubuted over
+            the cluster (also cleans up the output of previous submissions)
         '''
+    )
+    def init(self):
         self._print_logo()
         api = self.api_instance
         logger.info('delete previous job output')
-        if not args.keep_output:
-            api.delete_previous_job_output()
-        logger.debug(
-            'remove log reports and batches of previous submission'
-        )
+        api.delete_previous_job_output()
+        logger.debug('remove log reports and batches of previous submission')
         shutil.rmtree(api.batches_location)
         os.mkdir(api.batches_location)
 
         logger.info('create batches')
-        batches = api.create_batches(args.variable_args)
+        batches = api.create_batches(self._batch_args)
         if not batches['run']:
-            raise ValueError('No batches were created.')
+            raise WorkflowError(
+                'No batches were created!\n'
+                'Did upstream workflow steps get submitted and did they '
+                'complete successfully?'
+            )
         logger.info('write batches to files')
         api.write_batch_files(batches)
         return batches
 
-    def run(self, args):
-        '''Processes arguments provided by the "run" subparser, which runs
-        an individual job on the local computer.
-
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.RunArgs
-            method-specific arguments
-        '''
+    @climethod(
+        help='runs an invidiual jobs on the local machine',
+        job_id=Argument(
+            type=int, help='ID of the job that should be run', flag='j'
+        )
+    )
+    def run(self, job_id):
         self._print_logo()
         api = self.api_instance
         logger.info('read job description from batch file')
-        batch_file = api.build_batch_filename_for_run_job(args.job)
+        batch_file = api.build_batch_filename_for_run_job(job_id)
         batch = api.read_batch_file(batch_file)
         logger.info('run job #%d' % batch['id'])
         api.run_job(batch)
 
-    def info(self, args):
-        '''Processes arguments provided by the "info" subparser, which prints
-        the description of an individual job to the console.
-
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.LogArgs
-            method-specific arguments
-        '''
-        if args.job is not None and args.phase != 'run':
+    @climethod(
+        help='prints the description of a given batch job to the console',
+        phase=Argument(
+                type=str, default='run', choices={'run', 'collect'},
+                help='phase of the workflow step to which the job belongs'
+        ),
+        job_id=Argument(
+            type=int, flag='j',
+            help='ID of the job for which information should be displayed'
+        )
+    )
+    def info(self, phase, job_id):
+        if job_id is not None and phase != 'run':
             raise AttributeError(
-                'Argument "job" can only be set when '
+                'Argument "job_id" can only be set when '
                 'value of argument "phase" is "run".'
             )
-        if args.job is None and args.phase == 'run':
+        if job_id is None and phase == 'run':
             raise AttributeError(
-                'Argument "job" is required '
+                'Argument "job_id" is required '
                 'when "phase" is set to "run".'
             )
         api = self.api_instance
-        if args.phase == 'run':
-            batch_file = api.build_batch_filename_for_run_job(args.job)
+        if phase == 'run':
+            batch_file = api.build_batch_filename_for_run_job(job_id)
         else:
             batch_file = api.build_batch_filename_for_collect_job()
         batch = api.read_batch_file(batch_file)
         print('\nJOB DESCRIPTION\n===============\n\n%s'
               % yaml.safe_dump(batch, default_flow_style=False))
 
-    def log(self, args):
-        '''Processes arguments provided by the "log" subparser, which prints
-        the log output of an individual job to the console.
+    @climethod(
+        help='prints the log output of a given batch job to the console',
+        phase=Argument(
+                type=str, default='run', choices={'run', 'collect'}, flag='p',
+                help='phase of the workflow step to which the job belongs'
+        ),
+        job_id=Argument(type=int, help='ID of the job that should be run')
 
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.LogArgs
-            method-specific arguments
-        '''
-        if args.job is not None and args.phase != 'run':
+    )
+    def log(self, phase, job_id):
+        if job_id is not None and phase != 'run':
             raise AttributeError(
-                'Argument "job" can only be set when '
+                'Argument "job_id" can only be set when '
                 'value of argument "phase" is "run".'
             )
-        if args.job is None and args.phase == 'run':
+        if job_id is None and phase == 'run':
             raise AttributeError(
-                'Argument "job" is required '
+                'Argument "job_id" is required '
                 'when "phase" is set to "run".'
             )
         api = self.api_instance
-        log = api.get_log_output_from_files(args.job)
+        log = api.get_log_output_from_files(job_id)
         print('\nOUTPUT\n======\n\n%s\n\nERROR\n=====\n\n%s'
               % (log['stdout'], log['stderr']))
 
@@ -326,10 +425,8 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from batches')
         return api.list_input_files(self.batches)
 
-    def create_jobs(self, duration, memory, cores, phase=None, ids=None):
-        '''Creates *jobs* based on previously created batches.
-        Job descriptions are loaded from files on disk and used to
-        instantiate *job* objects. 
+    def create_jobs(self, duration, memory, cores, phase=None, job_id=None):
+        '''Creates *jobs* based on previously created batch descrptions.
 
         Parameters
         ----------
@@ -343,8 +440,8 @@ class CommandLineInterface(object):
             phase for which jobs should be build; if not set jobs of *run* and
             *collect* phase will be submitted
             (options: ``"run"`` or ``"collect"``; default: ``None``)
-        ids: List[int], optional
-            ids of jobs that should be submitted (default: ``None``)
+        job_id: int, optional
+            id of a single job that should be submitted (default: ``None``)
 
         Returns
         -------
@@ -360,11 +457,11 @@ class CommandLineInterface(object):
         logger.debug('allocated memory: %d GB', memory)
         logger.debug('allocated cores: %d', cores)
         if phase == 'run':
-            if ids is not None:
-                logger.info('create run jobs %s', ', '.join(map(str, ids)))
+            if job_id is not None:
+                logger.info('create run job %d', job_id)
                 batches = dict()
                 batches['run'] = [
-                    j for j in self.batches['run'] if j['id'] in ids
+                    j for j in self.batches['run'] if j['id'] == job_id 
                 ]
             else:
                 batches = dict()
@@ -390,27 +487,34 @@ class CommandLineInterface(object):
             cores=cores
         )
 
-    def submit(self, args):
-        '''Processes arguments provided by the "submit" subparser, which
-        submits jobs to the cluster and monitors their status.
-
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.SubmitArgs
-            method-specific arguments
-        '''
+    @climethod(
+        help='''creates batch jobs, submits them to the cluster and
+            monitors their status
+        ''',
+        phase=Argument(
+            type=str, choices={'run', 'collect'}, flag='p',
+            help='phase of the workflow step to which the job belongs'
+        ),
+        job_id=Argument(
+            type=int, help='ID of the job that should be run', flag='j'
+        ),
+        monitoring_depth=Argument(
+            type=int, help='depth of monitoring the task hierarchy',
+            default=1, flag='m'
+        )
+    )
+    def submit(self, phase, job_id, monitoring_depth):
         self._print_logo()
         api = self.api_instance
-        if args.jobs is not None and args.phase != 'run':
+        if job_id is not None and phase != 'run':
             raise AttributeError(
-                'Argument "job" is required when "phase" is set to "run".'
+                'Argument "job_id" is required when "phase" is set to "run".'
             )
         jobs = self.create_jobs(
-            duration=args.duration,
-            memory=args.memory,
-            cores=args.cores,
-            phase=args.phase,
-            ids=args.jobs
+            duration=self._submission_args.duration,
+            memory=self._submission_args.memory,
+            cores=self._submission_args.cores,
+            phase=phase, job_id=job_id
         )
         session = api.create_gc3pie_session()
         logger.debug('add jobs to session "%s"', session.name)
@@ -421,7 +525,7 @@ class CommandLineInterface(object):
         engine._store = session.store
         logger.info('submit and monitor jobs')
         try:
-            api.submit_jobs(jobs, engine, args.interval, args.depth)
+            api.submit_jobs(jobs, engine, monitoring_depth)
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')
@@ -433,33 +537,55 @@ class CommandLineInterface(object):
         except Exception:
             raise
 
-    def resubmit(self, args):
-        '''Processes arguments provided by the "resubmit" subparser,
-        which resubmits previously created jobs to the cluster and monitors
-        their status.
-
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.ResubmitArgs
-            method-specific arguments
-
-        Note
-        ----
-        Requires a prior call of :py:method:`tmlib.workflow.cli.submit`.
-        '''
+    @climethod(
+        help='''resubmits previously created jobs to the cluster and
+            monitors their status
+        ''',
+        phase=Argument(
+                type=str, choices={'run', 'collect'}, flag='p',
+                help='phase of the workflow step to which the job belongs'
+        ),
+        job_id=Argument(
+            type=int, help='ID of the job that should be run', flag='j'
+        ),
+        monitoring_depth=Argument(
+            type=int, help='depth of monitoring the task hierarchy',
+            default=1, flag='m'
+        )
+    )
+    def resubmit(self, phase, job_id, monitoring_depth):
         # TODO: session has some delay, immediate resubmission may cause trouble
         self._print_logo()
         api = self.api_instance
         session = api.create_gc3pie_session()
         logger.debug('load jobs from session "%s"', session.name)
-        job_ids = session.list_ids()
-        jobs = session.load(int(job_ids[-1]))
+        task_ids = session.list_ids()
+        task = session.load(int(task_ids[-1]))
+        # Select an individual job based on "phase" and "job_id"
+        for phase_task in task.tasks:
+            if isinstance(phase_task, RunJobCollection) and phase == 'run':
+                try:
+                    job = phase_task.tasks[job_id-1]
+                except IndexError:
+                    ValueError(
+                        'Could not find a job for phase "%s" and ID %d'
+                        % (phase, job_id)
+                    )
+            elif isinstance(phase_task, CollectJob) and phase == 'collect':
+                job = phase_task
+            else:
+                ValueError(
+                    'Could not find a job for phase "%s" and ID %d'
+                    % (phase, job_id)
+                )
         logger.debug('add session to engine store')
         engine = api.create_gc3pie_engine()
         engine._store = session.store
         logger.info('resubmit and monitor jobs')
         try:
-            api.submit_jobs(jobs, engine, args.interval, args.depth)
+            api.submit_jobs(
+                jobs, engine,monitoring_depth, resumit=True
+            )
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')
@@ -471,16 +597,13 @@ class CommandLineInterface(object):
         except Exception:
             raise
 
-    def collect(self, args):
-        '''Processes arguments of the "collect" subparser, which collects the
-        output of previously run jobs or performs a post-processing operation
-        that cannot be parallelized. 
-
-        Parameters
-        ----------
-        args: tmlibtmlib.workflow.args.CollectArgs
-            method-specific arguments
+    @climethod(
+        help='''collects the output of run jobs, i.e. performs a
+            post-processing operation that either cannot be parallelized
+            or needs to be performed afterwards
         '''
+    )
+    def collect(self):
         self._print_logo()
         api = self.api_instance
         logger.info('read job description from file')
@@ -488,117 +611,3 @@ class CommandLineInterface(object):
         batch = api.read_batch_file(batch_file)
         logger.info('collect job output')
         api.collect_job_output(batch)
-
-    @staticmethod
-    def get_parser_and_subparsers(methods=None):
-        '''Creates an argument parser object for a subclass of
-        :py:class:`tmlib.cli.CommandLineInterface` and a subparser object
-        for each implemented method of the class.
-        Subparsers may already have default arguments, but additional
-        implementation specific arguments can be added.
-
-        Parameters
-        ----------
-        methods: Set[str]
-            methods for which a subparser should be returned (default:
-            ``{"init", "run", "submit", "collect", cleanup", "log", "info"}``)
-
-        Returns
-        -------
-        Tuple[argparse.Argumentparser and argparse._SubParsersAction]
-            parser and subparsers objects
-        '''
-        if methods is None:
-            methods = AVAILABLE_METHODS
-        # TODO: do this smarter, e.g. via pyCli, cement, or click package
-        parser = argparse.ArgumentParser()
-        parser.version == __version__
-        GeneralArgs().add_to_argparser(parser)
-
-        subparsers = parser.add_subparsers(
-            dest='method_name', help='sub-commands')
-
-        if 'init' in methods:
-            init_parser = subparsers.add_parser(
-                'init', help='initialize the program with required arguments')
-            init_parser.description = '''
-                Create a list of persistent batches for parallel
-                processing, which are used to dynamically build GC3Pie jobs.
-                The descriptions are stored on disk in form of JSON files.
-                Note that in case of the existence of a previous submission,
-                batches and log outputs will be overwritten
-                unless the "--backup" option is used.
-                Also note that all outputs created by a previous submission
-                will also be removed unless the "--keep_output" option is
-                used.
-            '''
-            InitArgs().add_to_argparser(init_parser)
-            # TODO: add step-specific args
-
-        if 'run' in methods:
-            run_parser = subparsers.add_parser(
-                'run',
-                help='run an individual job')
-            run_parser.description = '''
-                Run an individual job.
-            '''
-            RunArgs().add_to_argparser(run_parser)
-
-        if 'submit' in methods:
-            submit_parser = subparsers.add_parser(
-                'submit',
-                help='submit and monitor jobs')
-            submit_parser.description = '''
-                Create jobs, submit them to the cluster, monitor their
-                processing and collect their outputs
-            '''
-            SubmitArgs().add_to_argparser(submit_parser)
-
-        if 'resubmit' in methods:
-            submit_parser = subparsers.add_parser(
-                'resubmit',
-                help='resubmit and monitor jobs')
-            submit_parser.description = '''
-                Create jobs, submit them to the cluster, monitor their
-                processing and collect their outputs using an existing session.
-            '''
-            ResubmitArgs().add_to_argparser(submit_parser)
-
-        if 'collect' in methods:
-            collect_parser = subparsers.add_parser(
-                'collect',
-                help='collect job output after submission')
-            collect_parser.description = '''
-                Collect outputs of processed jobs and fuse them.
-            '''
-            CollectArgs().add_to_argparser(collect_parser)
-
-        if 'cleanup' in methods:
-            cleanup_parser = subparsers.add_parser(
-                'cleanup',
-                help='clean-up output of previous runs')
-            cleanup_parser.description = '''
-                Remove files and folders generated upon previous submissions.
-            '''
-            CleanupArgs().add_to_argparser(cleanup_parser)
-
-        if 'log' in methods:
-            log_parser = subparsers.add_parser(
-                'log',
-                help='show log message (standard output and error) of a job')
-            log_parser.description = '''
-                Print the log output of a job to the console.
-            '''
-            LogArgs().add_to_argparser(log_parser)
-
-        if 'info' in methods:
-            info_parser = subparsers.add_parser(
-                'info',
-                help='show description of a job')
-            info_parser.description = '''
-                Print the description (parameter settings, input, output)
-                of a job to the console.
-            '''
-            InfoArgs().add_to_argparser(info_parser)
-
-        return (parser, subparsers)

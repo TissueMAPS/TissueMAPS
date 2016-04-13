@@ -117,7 +117,10 @@ class SiteIntersection(Model):
     lower_overhang = Column(Integer)
     right_overhang = Column(Integer)
     left_overhang = Column(Integer)
-    site_id = Column(Integer, ForeignKey('sites.id'))
+    site_id = Column(
+        Integer,
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # Relationships to other tables
     site = relationship(

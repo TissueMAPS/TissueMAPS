@@ -10,10 +10,12 @@ from tmlib.workflow.metaconfig import metadata_reader_factory
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.models.plate import determine_plate_dimensions
 from tmlib.errors import MetadataError
+from tmlib.workflow.registry import api
 
 logger = logging.getLogger(__name__)
 
 
+@api('metaconfig')
 class MetadataConfigurator(ClusterRoutines):
 
     '''Class for configuration of microscope image metadata.
@@ -109,28 +111,31 @@ class MetadataConfigurator(ClusterRoutines):
         '''
         with tmlib.models.utils.Session() as session:
 
-            cycles = session.query(tmlib.models.Cycle).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+            plate_ids = session.query(tmlib.models.Plate.id).\
+                filter_by(experiment_id=self.experiment_id).\
                 all()
-            for c in cycles:
-                logger.debug('delete cycle: %r', c)
-                session.delete(c)
+            plate_ids = [p[0] for p in plate_ids]
 
-            wells = session.query(tmlib.models.Well).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
-                all()
-            for w in wells:
-                logger.debug('delete well: %r', w)
-                session.delete(w)
+        with tmlib.models.utils.Session() as session:
 
-            channels = session.query(tmlib.models.Channel).\
+            logger.info('delete existing cycles')
+            session.query(tmlib.models.Cycle).\
+                filter(tmlib.models.Cycle.plate_id.in_(plate_ids)).\
+                delete()
+
+        with tmlib.models.utils.Session() as session:
+
+            logger.info('delete existing wells')
+            session.query(tmlib.models.Well).\
+                filter(tmlib.models.Well.plate_id.in_(plate_ids)).\
+                delete()
+
+        with tmlib.models.utils.Session() as session:
+
+            logger.info('delete existing channels')
+            session.query(tmlib.models.Channel).\
                 filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
-                all()
-            for c in channels:
-                logger.debug('delete channel: %r', c)
-                session.delete(c)
+                delete()
 
     def run_job(self, batch):
         '''Formats OMEXML metadata extracted from microscope image files and

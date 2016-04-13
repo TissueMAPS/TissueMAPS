@@ -20,6 +20,22 @@ def create_db_engine():
     return sqlalchemy.create_engine(DATABASE_URI)
 
 
+def delete_location(path):
+    '''Deletes a location on disk.
+
+    Parameter
+    ---------
+    path: str
+        absolute path to directory or file
+    '''
+    if os.path.exists(path):
+        logger.debug('remove location: %s', path)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        elif os.path.isfile(path):
+            os.remove(path)
+
+
 def remove_location_upon_delete(cls):
     '''Decorator function for a database model class that automatically removes
     the location that represents an instance of the class on the filesystem
@@ -36,39 +52,10 @@ def remove_location_upon_delete(cls):
 
     '''
     def after_delete_callback(mapper, connection, target):
-        loc = target.location
-        if os.path.exists(loc):
-            logger.debug('remove location: %s', loc)
-            if os.path.isdir(loc):
-                shutil.rmtree(loc)
-            elif os.path.isfile(loc):
-                os.remove(loc)
+        delete_location(target.location)
 
     sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
-    # sqlalchemy.event.listen(
-    #     Session, 'after_bulk_delete', after_delete_callback
-    # )
     return cls
-
-
-# def auto_create_directory(get_location_func):
-#     """
-#     @auto_create_directory(lambda target: target.location)
-#     SomeClassWithADirectoryOnDisk(db.Model):
-#     ...
-
-#     """
-#     def class_decorator(cls):
-#         def after_insert_callback(mapper, connection, target):
-#             loc = get_location_func(target)
-#             if not os.path.exists(loc):
-#                 logger.info('create location: %s', loc)
-#                 os.mkdir(loc)
-#             else:
-#                 logger.warn('location already exists: %s', loc)
-#         sqlalchemy.event.listen(cls, 'after_insert', after_insert_callback)
-#         return cls
-#     return class_decorator
 
 
 def exec_func_after_insert(func):
@@ -86,6 +73,44 @@ def exec_func_after_insert(func):
     return class_decorator
 
 
+class Query(sqlalchemy.orm.query.Query):
+
+    '''A query class with custom methods.'''
+
+    def __init__(self, *args, **kwargs):
+        super(Query, self).__init__(*args, **kwargs)
+
+    def delete(self):
+        '''Performs a bulk delete query
+
+        Returns
+        -------
+        int
+            count of rows matched as returned by the database's "row count"
+            feature
+
+        Note
+        ----
+        Also removes locations of instances on the file system. 
+        '''
+        instances = self.all()
+        locations = [getattr(inst, 'location', None) for inst in instances]
+        # For performance reasons delete all rows via raw SQL without updating
+        # the session and then enforce the session to update afterwards.
+        if instances:
+            logger.debug(
+                'delete %d instances of class %s from database',
+                len(instances), instances[0].__class__.__name__
+            )
+            super(Query, self).delete(synchronize_session=False)
+            self.session.expire_all()
+        if locations:
+            logger.debug('remove corresponding locations on disk')
+            for loc in locations:
+                if loc is not None:
+                    delete_location(loc)
+
+
 class Session(object):
 
     '''Create a session scope for interaction with the database.
@@ -94,8 +119,10 @@ class Session(object):
 
     Examples
     --------
-    >>>with Session() as session:
-           session.query()
+    from tmlib.models.utils import Session
+
+    with Session() as session:
+        session.query()
 
     Note
     ----
@@ -114,7 +141,9 @@ class Session(object):
             Session._engine = create_db_engine()
         if Session._session_factory is None:
             Session._session_factory = sqlalchemy.orm.scoped_session(
-                sqlalchemy.orm.sessionmaker(bind=self._engine)
+                sqlalchemy.orm.sessionmaker(
+                    bind=Session._engine, query_cls=Query
+                )
             )
         self._sqla_session = Session._session_factory()
         return self
@@ -123,8 +152,25 @@ class Session(object):
         if except_value:
             self._sqla_session.rollback()
         else:
+            sqlalchemy.event.listen(
+                self._session_factory, 'after_bulk_delete',
+                self._after_bulk_delete_callback
+            )
             self._sqla_session.commit()
         self._sqla_session.close()
+
+    def _after_bulk_delete_callback(self, delete_context):
+        '''Deletes locations defined by instances of :py:class`tmlib.Model`
+        after they have been deleted en bulk.
+
+        Parameters
+        ----------
+        delete_context: sqlalchemy.orm.persistence.BulkDelete
+        '''
+        logger.debug(
+            'deleted %d rows from table "%s"',
+            delete_context.rowcount, delete_context.primary_table.name
+        )
 
     def query(self, *args, **kwargs):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.query`'''
@@ -168,7 +214,9 @@ class Session(object):
             an implementation of the :py:class:`tmlib.models.Model`
             abstract base class
         **kwargs: dict
-            keyword arguments for the constructor of the model class
+            keyword arguments for the instance that can be passed to the
+            constructor of `model` or to
+            :py:method:`sqlalchemy.orm.query.Query.filter_by`
 
         Returns
         -------
@@ -197,8 +245,8 @@ class Session(object):
         return instance
 
     def get_or_create_all(self, model, args):
-        '''Get a collection of instances of a model class if they already exist
-        or create them otherwise.
+        '''Gets a collection of instances of a model class if they already
+        exist or create them otherwise.
 
         Parameters
         ----------
@@ -206,32 +254,68 @@ class Session(object):
             an implementation of the :py:class:`tmlib.models.Model`
             abstract base class
         args: List[dict]
-            keyword arguments for the constructor of the model class
+            keyword arguments for each instance that can be passed to the
+            constructor of `model` or to
+            :py:method:`sqlalchemy.orm.query.Query.filter_by`
 
         Returns
         -------
         List[tmlib.models.Model]
             instances of `model`
         '''
-        collection = list()
+        instances = list()
         for kwargs in args:
-            collection.extend(
+            instances.extend(
                 self.query(model).filter_by(**kwargs).all()
             )
-        if not collection:
+        if not instances:
             try:
-                collection = list()
+                instances = list()
                 for kwargs in args:
-                    collection.append(model(**kwargs))
-                self._sqla_session.add_all(collection)
+                    instances.append(model(**kwargs))
+                self._sqla_session.add_all(instances)
                 self._sqla_session.commit()
             except sqlalchemy.exc.IntegrityError:
                 self._sqla_session.rollback()
-                collection = list()
+                instances = list()
                 for kwargs in args:
-                    collection.extend(
+                    instances.extend(
                         self.query(model).filter_by(**kwargs).all()
                     )
             except:
                 raise
-        return collection
+        return instances
+
+    # def delete_bulk(self, model, *criterion):
+    #     '''Deletes all matching instances of class `model` en bulk.
+
+    #     Parameters
+    #     ----------
+    #     model: tmlib.model.Model
+    #         an implementation of the :py:class:`tmlib.models.Model`
+    #         abstract base class
+    #     *criterion: List[sqlalchemy.sql.elements.BinaryExpression]
+    #         filter criterion that can be passed to
+    #         :py:method:`sqlalchemy.orm.query.Query.filter`
+
+    #     Note
+    #     ----
+    #     Also removes locations of instances on the file system. 
+    #     '''
+    #     instances = self.query(model).filter(*criterion).all()
+    #     locations = [getattr(inst, 'location', None) for inst in instances]
+    #     # For performance reasons delete all rows via raw SQL without updating
+    #     # the session and then enforce the session to update afterwards.
+    #     if instances:
+    #         logger.info(
+    #             'delete %d instances of class %s from database',
+    #             len(instances), model.__name__
+    #         )
+    #         self.query(model).filter(*criterion).\
+    #             delete(synchronize_session=False)
+    #         self._sqla_session.expire_all()
+    #     if locations:
+    #         logger.info('remove corresponding locations on disk')
+    #         for loc in locations:
+    #             if loc is not None:
+    #                 delete_location(loc)

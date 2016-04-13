@@ -51,49 +51,6 @@ class State(object):
         return self.execution.state == gc3libs.Run.State.NEW
 
 
-def get_step_interface(step_name, experiment_id, verbosity, **kwargs):
-    '''Gets the active programming interface for a `TissueMAPS` workflow step.
-
-    Parameters
-    ----------
-    step_name: str
-        name of the step whose interface should be returned
-    experiment_id: int
-        ID of the processed experiment
-    verbosity: int
-        logging level
-    **kwargs: dict, optional
-        additional keyword arguments that may have to be passed to the
-        constructor of the step-specific implementation of the
-        :py:class:` tmlib.workflow.cli.ClusterRoutines` abstract base class
-
-    Returns
-    -------
-    tmlib.workflow.cli.ClusterRoutines
-        step interface
-
-    Raises
-    ------
-    ValueError
-        when `step_name` is not a valid step name
-    AttributeError
-        when there is no step-specific `factory()` method available
-    '''
-    module_name = '%s.%s.api' % ('.'.join(__name__.split('.')[:-1]), step_name)
-    try:
-        module = importlib.import_module(module_name)
-    except ImportError:
-        raise ValueError('Unknown step "%s".' % step_name)
-    try:
-        factory = getattr(module, 'factory')
-        return factory(experiment_id, verbosity, **kwargs)
-    except AttributeError:
-        raise AttributeError(
-            'No factory method available for step "%s".', step_name
-        )
-    except:
-        raise
-
 
 def import_workflow_type_specific_module(workflow_type):
     '''Loads the module for an implemented workflow type.
@@ -313,7 +270,7 @@ class WorkflowStage(State):
         logger.info('create jobs for step "%s"', step_description.name)
         step_name = step_description.name
         logger.debug('load step interface "%s"', step_name)
-        step_interface = get_step_interface(
+        step_interface = get_step_api(
             step_name, self.experiment_id, self.verbosity,
             **dict(step_description.args.variable_args)
         )
@@ -711,28 +668,6 @@ class Workflow(SequentialTaskCollection, State):
             self.tasks[index]._update_step(0)
         else:
             self.tasks[index]._update_all_steps()
-
-    def submit(self, resubmit=True, targets=None, **extra_args):
-        '''Starts the workflow at `start_stage`.
-        '''
-        if self.tasks:
-            if self._current_task is None:
-                self._current_task = 0
-            task = self.tasks[self._current_task]
-            task.attach(self._controller)
-            task.submit(resubmit, targets, **extra_args)
-            if task.execution.state == gc3libs.Run.State.NEW:
-                # submission failed, state unchanged
-                self.execution.state = gc3libs.Run.State.NEW
-            elif task.execution.state == gc3libs.Run.State.SUBMITTED:
-                self.execution.state = gc3libs.Run.State.SUBMITTED
-            else:
-                self.execution.state = gc3libs.Run.State.RUNNING
-        else:
-            # no tasks to run, sequence is already finished
-            self.execution.state = gc3libs.Run.State.TERMINATED
-        self.changed = True
-        return self.execution.state
 
     def next(self, done):
         '''Progresses to next stage.

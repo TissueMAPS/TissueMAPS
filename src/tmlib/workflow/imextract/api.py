@@ -8,10 +8,12 @@ from tmlib.utils import notimplemented
 from tmlib.readers import BFImageReader
 from tmlib.image import ChannelImage
 from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.registry import api
 
 logger = logging.getLogger(__name__)
 
 
+@api('imextract')
 class ImageExtractor(ClusterRoutines):
 
     '''Class for extraction of pixel arrays (planes) stored in image files using
@@ -21,8 +23,6 @@ class ImageExtractor(ClusterRoutines):
 
     def __init__(self, experiment_id, verbosity):
         '''
-        Initialize an instance of class ImageExtractor.
-
         Parameters
         ----------
         experiment_id: int
@@ -154,38 +154,20 @@ class ImageExtractor(ClusterRoutines):
         '''
         with tmlib.models.utils.Session() as session:
 
-            image_files = session.query(tmlib.models.ChannelImageFile).\
-                join(tmlib.models.Cycle).\
+            cycle_ids = session.query(tmlib.models.Cycle.id).\
                 join(tmlib.models.Plate).\
                 filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
                 all()
-            for f in image_files:
-                logger.debug('delete channel image file: %r', f)
-                session.delete(f)
+            cycle_ids = [p[0] for p in cycle_ids]
 
-            illumstats_files = session.query(tmlib.models.IllumstatsFile).\
-                join(tmlib.models.Cycle).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
-                all()
-            for f in illumstats_files:
-                logger.debug('delete illumination statistics file: %r', f)
-                session.delete(f)
+        if cycle_ids:
 
-            channel_layers = session.query(tmlib.models.ChannelLayer).\
-                join(tmlib.models.Channel).\
-                filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
-                all()
-            for l in channel_layers:
-                logger.debug('delete channel layer: %r', l)
-                session.delete(l)
+            with tmlib.models.utils.Session() as session:
 
-            mapobject_types = session.query(tmlib.models.MapobjectType).\
-                filter(tmlib.models.MapobjectType.experiment_id == self.experiment_id).\
-                all()
-            for m in mapobject_types:
-                logger.debug('delete mapobject type: %r', m)
-                session.delete(m)
+                logger.info('delete existing channel image files')
+                session.query(tmlib.models.ChannelImageFile).\
+                    filter(tmlib.models.ChannelImageFile.cycle_id.in_(cycle_ids)).\
+                    delete()
 
     @notimplemented
     def collect_job_output(self, batch):

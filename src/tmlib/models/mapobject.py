@@ -382,6 +382,9 @@ class MapobjectSegmentation(Model):
 
     Attributes
     ----------
+    pipeline: str
+            name of the corresponding Jterator pipeline in which the objects
+            were segmented
     is_border: bool
         whether the object touches at the border of a *site* and is
         therefore only partially represented on the corresponding image
@@ -407,6 +410,7 @@ class MapobjectSegmentation(Model):
     # Table columns
     is_border = Column(Boolean, index=True)
     label = Column(Integer, index=True)
+    pipeline = Column(String, index=True)
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -432,10 +436,13 @@ class MapobjectSegmentation(Model):
         )
     )
 
-    def __init__(self, label, site_id, mapobject_outline_id):
+    def __init__(self, pipeline, label, site_id, mapobject_outline_id):
         '''
         Parameters
         ----------
+        pipeline: str
+            name of the corresponding Jterator pipeline in which the objects
+            were segmented
         label: int
             one-based object identifier number which is unique per site
         site_id: int
@@ -443,6 +450,7 @@ class MapobjectSegmentation(Model):
         mapobject_outline_id: int
             ID of the parent corresponding mapobject outline
         '''
+        self.pipeline = pipeline
         self.label = label
         self.site_id = site_id
         self.mapobject_outline_id = mapobject_outline_id

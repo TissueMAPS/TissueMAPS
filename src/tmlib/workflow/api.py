@@ -16,7 +16,6 @@ from gc3libs.session import Session as GC3PieSession
 
 import tmlib.models
 from tmlib import utils
-from tmlib.workflow.utils import format_timestamp
 from tmlib.workflow.utils import get_task_data
 from tmlib.workflow.utils import print_task_status
 from tmlib.workflow.utils import log_task_failure
@@ -27,7 +26,7 @@ from tmlib.errors import WorkflowError
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import CollectJob
-from tmlib.workflow import WorkflowStep
+from tmlib.workflow.workflow import WorkflowStep
 from tmlib.models.utils import DATABASE_URI
 
 logger = logging.getLogger(__name__)
@@ -131,8 +130,7 @@ class BasicClusterRoutines(object):
         engine.retrieve_overwrites = True
         return engine
 
-    def submit_jobs(self, jobs, engine, monitoring_interval=5,
-                    monitoring_depth=1, n_submit=2000):
+    def submit_jobs(self, jobs, engine, monitoring_depth=1, n_submit=2000):
         '''Submits jobs to a cluster and continuously monitors their progress.
 
         Parameters
@@ -141,8 +139,6 @@ class BasicClusterRoutines(object):
             jobs that should be submitted
         engine: gc3libs.core.Engine
             engine that should submit the jobs
-        monitoring_interval: int, optional
-            monitoring interval in seconds (default: ``5``)
         monitoring_depth: int, optional
             recursion depth for job monitoring, i.e. in which detail subtasks
             in the task tree should be monitored (default: ``1``)
@@ -158,7 +154,6 @@ class BasicClusterRoutines(object):
         -------
         This method is intended for interactive use via the command line only.
         '''
-        logger.debug('monitoring interval: %d seconds' % monitoring_interval)
         logger.debug('monitoring depth: %d' % monitoring_depth)
         if monitoring_depth < 0:
             monitoring_depth = 0
@@ -172,15 +167,16 @@ class BasicClusterRoutines(object):
         engine.add(jobs)
 
         # periodically check the status of submitted jobs
-        t_submitted = time.time()
+        t_submitted = datetime.datetime.now()
+
         break_next = False
         while True:
 
-            time.sleep(monitoring_interval)
-            logger.debug('wait %d seconds', monitoring_interval)
+            time.sleep(3)
+            logger.debug('wait for 3 sechnds')
 
-            t_elapsed = time.time() - t_submitted
-            logger.info('duration: %s', format_timestamp(t_elapsed))
+            t_elapsed = datetime.datetime.now() - t_submitted
+            logger.info('elapsed time: %s', str(t_elapsed))
 
             logger.info('progress...')
             engine.progress()
@@ -205,7 +201,11 @@ class BasicClusterRoutines(object):
 class ClusterRoutines(BasicClusterRoutines):
 
     '''Abstract base class for API classes, which provide methods for 
-    cluster routines to process images on a batch cluster.
+    for large scale image processing on a batch cluster.
+
+    Each workflow step must implement this class and decorate it with
+    :py:function:`tmlib.workflow.api.api` to register it for use in
+    command line interface and worklow.
     '''
 
     __metaclass__ = ABCMeta

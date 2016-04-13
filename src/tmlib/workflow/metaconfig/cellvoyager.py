@@ -137,6 +137,8 @@ class CellvoyagerMetadataReader(MetadataReader):
             y.append(img.Pixels.Plane(0).PositionY)
 
             matches = r.search(img.Name)
+            # NOTE: We use a dictionary as reference, which is not serializable
+            # into XML.
             captures = matches.groupdict()
             well_row = utils.map_number_to_letter(
                             int(e.attrib['{%s}Row' % mlf_ns]))

@@ -1,4 +1,3 @@
-import os
 import logging
 
 from tmlib.utils import same_docstring_as

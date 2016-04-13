@@ -1,17 +1,19 @@
 import logging
 from collections import defaultdict
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib.image_utils import mip
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import NotSupportedError
 from tmlib.workflow.align import registration as reg
 from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.registry import api
 
 logger = logging.getLogger(__name__)
 
 
+@api('align')
 class ImageRegistrator(ClusterRoutines):
 
     '''Class for registering and aligning images between cycles.
@@ -52,9 +54,9 @@ class ImageRegistrator(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            for plate in session.query(tmlib.models.Plate).\
+            for plate in session.query(tm.Plate).\
                     filter_by(experiment_id=self.experiment_id):
 
                 if not(len(plate.cycles) > 1):
@@ -62,10 +64,10 @@ class ImageRegistrator(ClusterRoutines):
                         'Alignment requires more than one cycle.'
                     )
 
-                sites = session.query(tmlib.models.Site).\
-                    join(tmlib.models.Well).\
-                    join(tmlib.models.Plate).\
-                    filter(tmlib.models.Plate.id == plate.id).\
+                sites = session.query(tm.Site).\
+                    join(tm.Well).\
+                    join(tm.Plate).\
+                    filter(tm.Plate.id == plate.id).\
                     all()
 
                 site_ids = [s.id for s in sites]
@@ -83,14 +85,14 @@ class ImageRegistrator(ClusterRoutines):
                         for s in batch:
 
                             files = session.query(
-                                    tmlib.models.ChannelImageFile
+                                    tm.ChannelImageFile
                                 ).\
-                                join(tmlib.models.Site).\
-                                join(tmlib.models.Cycle).\
-                                join(tmlib.models.Channel).\
-                                filter(tmlib.models.Site.id == s).\
-                                filter(tmlib.models.Cycle.id == cycle.id).\
-                                filter(tmlib.models.Channel.wavelength == args.ref_wavelength).\
+                                join(tm.Site).\
+                                join(tm.Cycle).\
+                                join(tm.Channel).\
+                                filter(tm.Site.id == s).\
+                                filter(tm.Cycle.id == cycle.id).\
+                                filter(tm.Channel.wavelength == args.ref_wavelength).\
                                 all()
 
                             if not files:
@@ -115,41 +117,38 @@ class ImageRegistrator(ClusterRoutines):
 
     @same_docstring_as(ClusterRoutines.delete_previous_job_output)
     def delete_previous_job_output(self):
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            shifts = session.query(tmlib.models.SiteShift).\
-                join(tmlib.models.Cycle).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+            cycle_ids = session.query(tm.Cycle.id).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
                 all()
-            for s in shifts:
-                logger.debug('delete site shifts: %r', s)
-                session.delete(s)
+            cycle_ids = [p[0] for p in cycle_ids]
 
-            intersections = session.query(tmlib.models.SiteIntersection).\
-                join(tmlib.models.Site).\
-                join(tmlib.models.Well).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+            site_ids = session.query(tm.Site.id).\
+                join(tm.Well).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
                 all()
-            for i in intersections:
-                logger.debug('delete site intersection: %r', i)
-                session.delete(i)
+            site_ids = [p[0] for p in site_ids]
 
-            layers = session.query(tmlib.models.ChannelLayer).\
-                join(tmlib.models.Channel).\
-                filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
-                all()
-            for l in layers:
-                logger.debug('delete channel layer: %r', l)
-                session.delete(l)
+        if cycle_ids:
 
-            mapobject_types = session.query(tmlib.models.MapobjectType).\
-                filter(tmlib.models.MapobjectType.experiment_id == self.experiment_id).\
-                all()
-            for m in mapobject_types:
-                logger.debug('delete mapobject type: %r', m)
-                session.delete(m)
+            with tm.utils.Session() as session:
+
+                logger.info('delete existing site shifts')
+                session.query(tm.SiteShift).\
+                    filter(tm.SiteShift.cycle_id.in_(cycle_ids)).\
+                    delete()
+
+        if site_ids:
+
+            with tm.utils.Session() as session:
+
+                logger.info('delete existing site intersections')
+                session.query(tm.SiteIntersection).\
+                    filter(tm.SiteIntersection.site_id.in_(site_ids)).\
+                    delete()
 
     def run_job(self, batch):
         '''Calculate shift and overhang values for the given sites.
@@ -167,9 +166,9 @@ class ImageRegistrator(ClusterRoutines):
         reference_file_ids = batch['input_ids']['reference_file_ids']
         target_file_ids = batch['input_ids']['target_file_ids']
         for i, reference_ids in enumerate(reference_file_ids):
-            with tmlib.models.utils.Session() as session:
+            with tm.utils.Session() as session:
                 reference_files = [
-                    session.query(tmlib.models.ChannelImageFile).get(rid)
+                    session.query(tm.ChannelImageFile).get(rid)
                     for rid in reference_ids
                 ]
                 ref_img = mip([f.get().pixels for f in reference_files])
@@ -180,7 +179,7 @@ class ImageRegistrator(ClusterRoutines):
                 x_shifts = list()
                 for target_ids in target_file_ids.values():
                     target_files = [
-                        session.query(tmlib.models.ChannelImageFile).get(tid)
+                        session.query(tm.ChannelImageFile).get(tid)
                         for tid in target_ids[i]
                     ]
                     logger.info(
@@ -191,7 +190,7 @@ class ImageRegistrator(ClusterRoutines):
                     y, x = reg.calculate_shift(target_img, ref_img)
 
                     session.get_or_create(
-                        tmlib.models.SiteShift,
+                        tm.SiteShift,
                         x=x, y=y,
                         site_id=target_files[0].site_id,
                         cycle_id=target_files[0].cycle_id
@@ -206,7 +205,7 @@ class ImageRegistrator(ClusterRoutines):
                 )
 
                 session.get_or_create(
-                    tmlib.models.SiteIntersection,
+                    tm.SiteIntersection,
                     upper_overhang=top, lower_overhang=bottom,
                     right_overhang=right, left_overhang=left,
                     site_id=reference_files[0].site_id

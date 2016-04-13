@@ -1,23 +1,16 @@
-from tmlib.workflow.args import VariableArgs
+from tmlib.workflow.args import BatchArguments
+from tmlib.workflow.args import SubmissionArguments
+from tmlib.workflow.registry import batch_args
+from tmlib.workflow.registry import submission_args
 
 
-class CorillaInitArgs(VariableArgs):
+@batch_args('corilla')
+class CorillaBatchArguments(BatchArguments):
 
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class CorillaInitArgs.
+    pass
 
-        Parameters
-        ----------
-        **kwargs: dict
-            arguments as key-value pairs
-        '''
-        super(CorillaInitArgs, self).__init__(**kwargs)
 
-    @property
-    def _required_args(self):
-        return set()
+@submission_args('corilla')
+class CorillaSubmissionArguments(SubmissionArguments):
 
-    @property
-    def _persistent_attrs(self):
-        return set()
+    pass

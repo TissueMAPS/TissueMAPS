@@ -1,1042 +1,547 @@
 import re
-import json
-from abc import ABCMeta
-from abc import abstractproperty
 import logging
+from abc import ABCMeta
+
+from tmlib.utils import assert_type
 
 logger = logging.getLogger(__name__)
 
 
-class Args(object):
+class Argument(object):
 
-    '''
-    Abstract base class for arguments of *TissueMAPS* steps. 
-    '''
+    '''Descriptor class for an argument.'''
 
-    __metaclass__ = ABCMeta
-
-    def __init__(self, **kwargs):
+    @assert_type(
+        type='type', help='basestring',
+        choices=['set', 'list', 'types.NoneType'],
+        flag=['basestring', 'types.NoneType']
+    )
+    def __init__(self, type, help, default=None, choices=None, flag=None,
+            required=False):
         '''
-        Initialize an instance of class Args.
-
         Parameters
         ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
+        type: type
+            type of the argument
+        help: str
+            help message that describes the argument 
+        default: , optional
+            default value (default: ``None``)
+        choices: set or list, optional
+            set of choices for value (default: ``None``)
+        flag: str, optional
+            single letter that serves as a flag for command line usage
+            (default: ``None``)
+        required: bool, optional
+            whether the argument is required (default: ``False``)
+
+        Note
+        ----
+        Automatically adds a docstring in NumPy style to the instance based on 
+        the values of `type` and `help`.
 
         Warning
         -------
-        Only known arguments are stripped from `kwargs` and any
-        unknown arguments are ignored.
+        Value of `flag` must be unique within an argument collection,
+        otherwise this will lead to conflicts in parsing of the arguments.
         '''
-        if kwargs:
-            # for a in self._required_args:
-            #     if a not in kwargs.keys():
-            #         raise ValueError('Argument "%s" is required.' % a)
-            for key, value in kwargs.iteritems():
-                if not isinstance(key, basestring):
-                    raise TypeError('"kwargs" keys must have type basestring')
-                if isinstance(value, basestring):
-                    value = str(value)
-                if key in self._persistent_attrs:
-                    logger.debug('set argument "%s"', key)
-                    setattr(self, key, value)
-                else:
-                    logger.debug('argument "%s" is ignored', key)
+        self.type = type
+        self.help = help
+        if default is not None:
+            if not isinstance(default, self.type):
+                raise TypeError(
+                    'Argument "default" must have type %s' % self.type.__name__
+                )
+        self.default = default
+        self.choices = choices
+        if self.choices is not None:
+            self.choices = set(choices)
+        self.flag = flag
+        self.required = required
+        formatted_help_message = self.help.replace('\n', ' ').split(' ')
+        formatted_help_message[0] = formatted_help_message[0].lower()
+        formatted_help_message = ' '.join(formatted_help_message)
+        self.__doc__ = '%s: %s' % (self.type.__name__, formatted_help_message)
 
-    @abstractproperty
-    def _persistent_attrs(self):
-        # should return a set of strings
-        pass
+    @property
+    def name(self):
+        '''str: name of the argument'''
+        return self._name
 
-    def __iter__(self):
-        for attr in dir(self):
-            if attr.startswith('__') or attr.endswith('__'):
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, str):
+            raise TypeError('Attribute "name" must have type str.')
+        if re.search(r'[^a-z_]', value):
+            raise ValueError(
+                'Attribute "name" must be lower case and only contain letters '
+                '(a-z) or underscores (_).'
+            )
+        self._name = value
+
+    @property
+    def _attr_name(self):
+        return '_%s' % self.name
+
+    def __get__(self, instance, owner):
+        # Allow only instances of a class to get the value, i.e.
+        # when accessed as an instance attribute, but return
+        # the instance of the Argument class if accessed
+        # as a class attribute
+        if instance is None:
+            return self
+        logger.debug(
+            'get argument "%s" from attribute "%s" of instance of class "%s"',
+            self.name, self._attr_name, instance.__class__.__name__
+        )
+        if not hasattr(instance, self._attr_name):
+            if self.required:
+                raise AttributeError(
+                    'Argument "%s" is required.' % self.name
+                )
+            setattr(instance, self._attr_name, self.default)
+        return getattr(instance, self._attr_name)
+
+    def __set__(self, instance, value):
+        logger.debug(
+            'set argument "%s" as attribute "%s" of instance of class "%s"',
+            self.name, self._attr_name, instance.__class__.__name__
+        )
+        if not isinstance(value, self.type) and value is not None:
+            raise TypeError(
+                'Argument "%s" must have type %s.'
+                % (self.name, self.type.__name__)
+            )
+        setattr(instance, self._attr_name, value)
+
+    def as_dict(self):
+        '''Returns attributes as key-value pairs.
+
+        Returns
+        -------
+        dict
+            name and value of attributes of the instance
+        '''
+        description = dict()
+        for name, value in vars(self).iteritems():
+            if name.startswith('_'):
                 continue
-            if attr.startswith('_'):
-                attr = re.search(r'_(.*)', attr).group(1)
-            if attr in self._persistent_attrs:
-                yield (attr, getattr(self, attr))
+            if isinstance(value, types.FunctionType):
+                continue
+            # set() is not JSON serializable
+            if isinstance(value, set):
+                value = list(value)
+            description[name] = value
+        return description
 
-    def add_to_argparser(self, parser, ignore=set()):
-        '''
-        Add the attributes as arguments to `parser` using
-        `add_argument() <https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument>`_.
+    def add_to_argparser(self, parser):
+        '''Adds the argument to an argument parser for use in a command line
+        interface.
 
         Parameters
         ----------
         parser: argparse.ArgumentParser
-            parser or subparser object
-        ignore: List[str]
-            names of arguments that should not be added to the parser
-        '''
-        for attr in dir(self):
-            if attr in self._persistent_attrs and attr not in ignore:
-                if attr == 'variable_args':
-                    continue
-                params = '_%s_params' % attr
-                if not hasattr(self, params):
-                    raise AttributeError(
-                            '"%s" object must have an "%s" attribute'
-                            % (self.__class__.__name__, params))
-                kwargs = dict(getattr(self, params))  # make a copy
-                # There is no logic for dealing with a boolean "type" argument.
-                # This is handled via the "action" argument.
-                if kwargs['type'] == bool:
-                    if kwargs['default']:
-                        kwargs['action'] = 'store_false'
-                    else:
-                        kwargs['action'] = 'store_true'
-                    del kwargs['type']
-                # Arguments "experiment_dir" and "verbosity" get special
-                # treatment because they are arguments of the main parser and
-                # shared across all command line interfaces.
-                if attr == 'experiment_id':
-                    # Positional arguments cannot have "required" argument
-                    del kwargs['required']
-                    parser.add_argument(attr, **kwargs)
-                elif attr == 'verbosity':
-                    flags = ['--%s' % attr]
-                    flags.append('-v')
-                    kwargs['action'] = 'count'
-                    # "type" argument is conflicting with "action" argument
-                    del kwargs['type']
-                    parser.add_argument(*flags, **kwargs)
-                else:
-                    flags = ['--%s' % attr]
-                    parser.add_argument(*flags, **kwargs)
-
-    def jsonify(self):
-        '''
-        Convert the attributes of the class into a JSON encoded list.
+            argument parser
 
         Returns
         -------
-        str
-            JSON string that encodes for each argument a mapping with "name",
-            "value", "help", "default", and "options" hyperparameters
+        argparse.ArgumentParser
+            `parser` with added arguments
         '''
-        args = list()
-        for attr in dir(self):
-            if attr.startswith('_'):
+        flags = ['--%s' % self.name]
+        kwargs = dict()
+        if self.flag is not None:
+            flags.append('-%s' % self.flag)
+        kwargs['help'] = self.help.replace('\n', ' ')
+        if self.type == bool:
+            if self.default:
+                kwargs['action'] = 'store_false'
+            else:
+                kwargs['action'] = 'store_true'
+        else:
+            kwargs['type'] = self.type
+            kwargs['default'] = self.default
+            kwargs['choices'] = self.choices
+            if self.default is not None:
+                kwargs['help'] += ' (default: %s)' % self.default
+        kwargs['required'] = self.required
+        parser.add_argument(*flags, **kwargs)
+
+
+class ArgumentMeta(ABCMeta):
+
+    '''Metaclass for adding class attributes of type
+    :py:class:`tmlib.workflow.args.Argument` as descriptors to instances of
+    the class.
+    '''
+
+    def __init__(cls, clsname, bases, attrs):
+        super(ArgumentMeta, cls).__init__(clsname, bases, attrs)
+        for name, value in attrs.iteritems():
+            if isinstance(value, Argument):
+                argument = value
+                argument.name = name
+
+    def __call__(cls, *args, **kwargs):
+        logger.debug(
+            'pass arguments to constructor of class "%s"', cls.__name__
+        )
+        return ABCMeta.__call__(cls, *args, **kwargs)
+
+
+class ArgumentCollection(object):
+
+    '''Abstract base class for an argument collection. The collection serves
+    as a container for arguments that can be parsed to methods of 
+    :py:class:`tmlib.workflow.cli.CommandLineInterface`.
+
+    Implementations of the class can be instantiated without having to
+    implement a constructor, i.e. an `__init__` method. The constructor
+    accepts keyword arguments and strips the values from those arguments
+    that are implemented as class attributes with type
+    :py:class:`tmlib.workflow.args.Argument` and replaces any default values.
+    When there is no default value specified, the argument has to be provided
+    as a key-value pair. Derived classes can explicitly implement a constructor
+    if required.
+    '''
+
+    __metaclass__ = ArgumentMeta
+
+    def __init__(self, **kwargs):
+        '''
+        Parameters
+        ----------
+        **kwargs: dict, optional
+            keyword arguments to overwrite
+        '''
+        for name, value in vars(self.__class__).iteritems():
+            if isinstance(value, Argument):
+                if name in kwargs:
+                    setattr(self, name, kwargs[name])
+
+    @property
+    def help(self):
+        '''str: brief description of the collection or the method to which
+        the arguments should be passed
+        '''
+        return self._help
+
+    @help.setter
+    def help(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "help" must have type basestring.')
+        self._help = value
+
+    @property
+    def docstring(self):
+        '''str: docstring in NumPy style for the method to which the arguments
+        should be passed; build based on the value of the `help` attribute
+        and those of the `type` and `help` attributes of individual arguments
+        '''
+        formatted_help_message = self.help.replace('\n', ' ').split()
+        formatted_help_message[0] = formatted_help_message[0].capitalize()
+        formatted_help_message = ' '.join(formatted_help_message)
+        formatted_help_message += '.'
+        docstring = '%s\n\nParameters\n----------\n' % formatted_help_message
+        for name in dir(self):
+            if name.startswith('_'):
                 continue
-            if attr in self._persistent_attrs:
-                arg = dict()
-                arg['name'] = attr
-                arg['value'] = getattr(self, attr)
-                params = dict(getattr(self, '_%s_params' % attr))
-                if 'choices' in params:
-                    # sets are not JSON serializable
-                    params['choices'] = list(params['choices'])
-                if params['type'] == bool:
-                    params['choices'] = [True, False]
-                del params['type']  # types are not JSON serializable
-                if 'action' in params:
-                    del params['action']
-                if 'nargs' in params:
-                    del params['nargs']
-                # TODO: format value of type and nargs
-                # The information could be used in the GUI to check format
-                # the input accordingly (map to Javascript datatypes?)
-                arg.update(params)
-                args.append(arg)
-        return json.dumps(args)
+            value = getattr(self.__class__, name)
+            if isinstance(value, Argument):
+                docstring += '%s: %s' % (name, value.type.__name__)
+                if value.default is not None:
+                    docstring += ', optional\n'
+                else:
+                    docstring += '\n'
+                docstring += '    %s' % value.help
+                if value.default is not None:
+                    docstring += ' (default: ``%r``)\n' % value.default
+                else:
+                    docstring += '\n'
 
-
-class GeneralArgs(Args):
-
-    '''
-    Class for general arguments that are shared between different steps;
-    they correspond the main parser of command line interfaces.
-    '''
-
-    def __init__(self, **kwargs):
+    def iterargs(self):
+        '''Iterates over the class attributes of type
+        :py:class:`tmlib.workflow.arg.Argument`
         '''
-        Initialize an instance of class GeneralArgs.
+        for name in dir(self):
+            if name.startswith('_'):
+                continue
+            value = getattr(self.__class__, name)
+            if isinstance(value, Argument):
+                yield value
+
+    def iterargitems(self):
+        '''Iterates over the argument items stored as attributes of the
+        instance.
+        '''
+        for name in dir(self):
+            if name.startswith('_'):
+                continue
+            value = getattr(self.__class__, name)
+            if isinstance(value, Argument):
+                yield (name, getattr(self, name))
+
+    def add_to_argparser(self, parser):
+        '''Adds each argument to an argument parser for use in a command line
+        interface.
 
         Parameters
         ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        self.variable_args = VariableArgs()
-        self.verbosity = self._verbosity_params['default']
-        super(GeneralArgs, self).__init__(**kwargs)
+        parser: argparse.ArgumentParser
+            argument parser
 
-    @property
-    def _persistent_attrs(self):
-        return {'experiment_id', 'verbosity'}
-
-    @property
-    def experiment_id(self):
-        '''
         Returns
         -------
-        str
-            path to the key file
+        argparse.ArgumentParser
+            `parser` with added arguments
         '''
-        return self._experiment_id
+        for name in dir(self):
+            if name.startswith('__'):
+                continue
+            value = getattr(self.__class__, name)
+            if isinstance(value, Argument):
+                value.add_to_argparser(parser)
+        return parser
 
-    @experiment_id.setter
-    def experiment_id(self, value):
-        if not isinstance(value, self._experiment_id_params['type']):
-            raise TypeError('Attribute "backup" must have type %s.'
-                            % self._experiment_id_params['type'].__name__)
-        self._experiment_id = value
+    def as_dict(self):
+        '''Returns class attributes of type
+        :py:class:`tmlib.workflow.args.Argument` as key-value pairs.
 
-    @property
-    def _experiment_id_params(self):
-        return {
-            'type': int,
-            'required': True,
-            'help': 'ID of the experiment that should be processed'
-        }
-
-    @property
-    def verbosity(self):
-        '''
         Returns
         -------
-        int
-            logging verbosity level
-
-        See also
-        --------
-        :py:func:`tmlib.logging_utils.map_logging_verbosity`
+        Dict[str, tmlib.workflow.args.Argument]
+            name and instance of each argument in the collection
         '''
-        return self._verbosity
+        arguments = dict()
+        for name in dir(self):
+            if name.startswith('__'):
+                continue
+            value = getattr(self.__class__, name)
+            if isinstance(value, Argument):
+                arguments[name] = value.as_dict()
+        return arguments
 
-    @verbosity.setter
-    def verbosity(self, value):
-        if not isinstance(value, self._verbosity_params['type']):
-            raise TypeError('Attribute "backup" must have type %s.'
-                            % self._verbosity_params['type'].__name__)
-        self._experiment_dir = value
+    @assert_type(collection='tmlib.workflow.args.ArgumentCollection')
+    def union(self, collection):
+        '''Adds all arguments contained in another `collection`.
 
-    @property
-    def _verbosity_params(self):
-        return {
-            'default': 0,
-            'type': int,
-            'help': 'increase logging verbosity'
-        }
-
-    @property
-    def variable_args(self):
+        Parameters
+        ----------
+        collection: tmlib.workflow.args.ArgumentCollection
+            collection of arguments that should be added
         '''
-        Returns
-        -------
-        tmlib.args.VariableArgs
-            additional step-specific arguments
-
-        Note
-        ----
-        Each step (`tmlib` subpackage) must contain a module named "args",
-        which must implement a step-specific subclass of
-        :py:class:`tmlib.args.VariableArgs`.
-
-        See also
-        --------
-        :py:class:`tmlib.cfg.WorkflowStepDescription`
-        '''
-        return self._variable_args
-
-    @variable_args.setter
-    def variable_args(self, value):
-        if not(isinstance(value, VariableArgs) or value is None):
-            raise TypeError(
-                    'Attribute "variable_args" must have type '
-                    'tmlib.args.VariableArgs')
-        self._variable_args = value
+        for name in dir(collection):
+            if name.startswith('__'):
+                continue
+            value = getattr(self.__class__, name)
+            if isinstance(value, Argument):
+                setattr(self.__class__, name, value)
 
 
-class VariableArgs(Args):
+class BatchArguments(ArgumentCollection):
 
-    '''
-    Class for variable, step-specific arguments;
-    they correspond to the subparsers of command line interfaces.
+    '''Base class for arguments that are used to define how the
+    computational task should be devided into individual batch jobs
+    for parallel processing on the cluster.
+
+    These arguments can be passed to a step-specific implementation of
+    :py:method:`tmlib.workflow.cli.CommandLineInterface.init` and are
+    required by :py:method:`tmlib.workflow.api.ClusterRoutines.create_batches`.
+
+    Note
+    ----
+    Each workflow step must implement this class and add the arguments that
+    the user should be able to set.
     '''
 
-    def __init__(self, **kwargs):
+
+class SubmissionArguments(ArgumentCollection):
+
+    '''Base class for arguments that are used to control the submission of
+    jobs to the cluster.
+
+    These arguments can be passed to a step-specific implementation of
+    :py:method:`tmlib.workflow.cli.CommandLineInterface.submit` and are
+    required by :py:method:`tmlib.workflow.api.ClusterRoutines.create_jobs`.
+
+    Note
+    ----
+    Each workflow step must implement this class and potentially override
+    the provided defaults depending on the requirements of the jobs.
+
+    '''
+
+    duration = Argument(
+        type=str, default='02:00:00',
+        help='''
+            walltime that should be allocated to a each "run" job
+            in the format "HH:MM:SS"
         '''
-        Initialize an instance of class VariableArgs.
+    )
 
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
+    memory = Argument(
+        type=int, default=3800,
+        help='''
+            amount of memory that should be allocated to each "run" job
+            in megabytes (MB)
         '''
-        super(VariableArgs, self).__init__(**kwargs)
+    )
 
-    @property
-    def _persistent_attrs(self):
-        return set()
-
-
-class InitArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
+    cores = Argument(
+        type=int, default=1,
+        help='''
+            number of cores that should be allocated to each "run" job
         '''
-        Initialize an instance of class InitArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        self.keep_output = self._keep_output_params['default']
-        super(InitArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {'keep_output'}
-
-    @property
-    def keep_output(self):
-        '''
-        Returns
-        -------
-        bool
-            whether the output of a prior submission should be kept,
-            i.e. database entries and files not deleted
-        '''
-        return self._keep_output
-
-    @keep_output.setter
-    def keep_output(self, value):
-        if not isinstance(value, self._keep_output_params['type']):
-            raise TypeError('Attribute "keep_output" must have type %s.'
-                            % self._keep_output_params['type'].__name__)
-        self._keep_output = value
-
-    @property
-    def _keep_output_params(self):
-        return {
-            'default': False,
-            'type': bool,
-            'help': '''
-                keep output of a prior submission, i.e. don't cleanup
-            '''
-        }
-
-
-class SubmitArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class SubmitArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        self.interval = self._interval_params['default']
-        self.depth = self._depth_params['default']
-        self.duration = self._duration_params['default']
-        self.memory = self._memory_params['default']
-        self.cores = self._cores_params['default']
-        self.phase = self._phase_params['default']
-        self.jobs = self._jobs_params['default']
-        super(SubmitArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {
-            'interval', 'phase', 'jobs', 'depth',
-            'memory', 'duration', 'cores'
-        }
-
-    @property
-    def jobs(self):
-        '''
-        Returns
-        -------
-        List[int]
-            ids of *run* jobs that should be submitted (default: ``None``)
-
-        Note
-        ----
-        Can only be set if value of attribute `phase` is ``"run"``.
-        '''
-        return self._jobs
-
-    @jobs.setter
-    def jobs(self, value):
-        if not(isinstance(value, list) or value is None):
-            raise TypeError('Attribute "jobs" must have type list')
-        if value is None:
-            self._jobs = value
-            return
-        if any([not isinstance(e, self._jobs_params['type']) for e in value]):
-            raise TypeError(
-                    'Elements of attribute "jobs" must have type %s.'
-                    % self._jobs_params['type'].__name__)
-        self._jobs = value
-
-    @property
-    def _jobs_params(self):
-        return {
-            'type': int,
-            'nargs': '+',
-            'default': None,
-            'help': '''
-                one-based indices of jobs that should be submitted
-                (requires argument "phase" to be set to "run")
-            '''
-        }
-
-    @property
-    def phase(self):
-        '''
-        Returns
-        -------
-        List[int]
-            phase for which jobs should be submitted
-            (options: ``"run"`` or ``"collect"``; default: ``None``)
-        '''
-        return self._phase
-
-    @phase.setter
-    def phase(self, value):
-        if not(isinstance(value, self._phase_params['type']) or value is None):
-            raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'].__name__)
-        self._phase = value
-
-    @property
-    def _phase_params(self):
-        return {
-            'type': str,
-            'default': None,
-            'choices': {'run', 'collect'},
-            'help': '''
-                phase for which jobs should be submitted
-            '''
-        }
-
-    @property
-    def interval(self):
-        '''
-        Returns
-        -------
-        int
-            monitoring interval in seconds (default: ``1``)
-        '''
-        return self._interval
-
-    @interval.setter
-    def interval(self, value):
-        if not(isinstance(value, self._interval_params['type']) or
-               value is None):
-            raise TypeError('Attribute "interval" must have type %s'
-                            % self._interval_params['type'].__name__)
-        self._interval = value
-
-    @property
-    def _interval_params(self):
-        return {
-            'type': int,
-            'default': 1,
-            'help': '''
-                monitoring interval in seconds (default: 1)
-            '''
-        }
-
-    @property
-    def depth(self):
-        '''
-        Returns
-        -------
-        int
-            monitoring recursion depth, i.e. how detailed status information of
-            subtasks should be monitored during the processing of the jobs
-            (default: ``1``)
-        '''
-        return self._depth
-
-    @depth.setter
-    def depth(self, value):
-        if not isinstance(value, self._depth_params['type']):
-            raise TypeError('Attribute "depth" must have type %s'
-                            % self._depth_params['type'].__name__)
-        self._depth = value
-
-    @property
-    def _depth_params(self):
-        return {
-            'type': int,
-            'default': 1,
-            'help': '''
-                recursion depth for subtask monitoring (default: 1)
-            '''
-        }
-
-    @property
-    def duration(self):
-        '''
-        Returns
-        -------
-        str
-            time that should be allocated for each job in HH:MM:SS
-            (default: ``"02:00:00"``)
-        '''
-        return self._duration
-
-    @duration.setter
-    def duration(self, value):
-        if not isinstance(value, self._duration_params['type']):
-            raise TypeError('Attribute "duration" must have type %s'
-                            % self._duration_params['type'].__name__)
-        match = re.search(r'(?P<h>\d{2}):(?P<m>\d{2}):(?P<s>\d{2})', value)
-        results = match.groupdict()
-        if any([r is None for r in results.values()]):
-            raise ValueError(
-                    'Attribute "duration" must have the format "HH:MM:SS"')
-        self._duration = value
-
-    @property
-    def _duration_params(self):
-        return {
-            'type': str,
-            'default': '02:00:00',
-            'help': '''
-                time that should be allocated for each job in HH:MM:SS
-                (default: 02:00:00)
-            '''
-        }
-
-    @property
-    def memory(self):
-        '''
-        Returns
-        -------
-        int
-            amount of memory that should be allocated for each job in Megabytes
-            (default: ``3800``)
-        '''
-        return self._memory
-
-    @memory.setter
-    def memory(self, value):
-        if not isinstance(value, self._memory_params['type']):
-            raise TypeError('Attribute "memory" must have type %s'
-                            % self._memory_params['type'].__name__)
-        self._memory = value
-
-    @property
-    def _memory_params(self):
-        return {
-            'type': int,
-            'default': 3800,
-            'help': '''
-                amount of memory that should be allocated for each job in MB
-                (default: 3800)
-            '''
-        }
-
-    @property
-    def cores(self):
-        '''
-        Returns
-        -------
-        int
-            number of CPUs that should be allocated for each job
-            (default: ``1``)
-        '''
-        return self._cores
-
-    @cores.setter
-    def cores(self, value):
-        if not isinstance(value, self._cores_params['type']):
-            raise TypeError('Attribute "cores" must have type %s'
-                            % self._cores_params['type'].__name__)
-        self._cores = value
-
-    @property
-    def _cores_params(self):
-        return {
-            'type': int,
-            'default': 1,
-            'help': '''
-                number of CPUs that should be allocated for each job
-                (default: 1)
-            '''
-        }
-
-
-class ResubmitArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class SubmitArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        self.interval = self._interval_params['default']
-        self.depth = self._depth_params['default']
-        self.duration = self._duration_params['default']
-        self.memory = self._memory_params['default']
-        self.cores = self._cores_params['default']
-        super(ResubmitArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {
-            'interval', 'depth', 'memory', 'duration', 'cores'
-        }
-
-    @property
-    def interval(self):
-        '''
-        Returns
-        -------
-        int
-            monitoring interval in seconds (default: ``1``)
-        '''
-        return self._interval
-
-    @interval.setter
-    def interval(self, value):
-        if not(isinstance(value, self._interval_params['type']) or
-               value is None):
-            raise TypeError('Attribute "interval" must have type %s'
-                            % self._interval_params['type'].__name__)
-        self._interval = value
-
-    @property
-    def _interval_params(self):
-        return {
-            'type': int,
-            'default': 1,
-            'help': '''
-                monitoring interval in seconds (default: 1)
-            '''
-        }
-
-    @property
-    def depth(self):
-        '''
-        Returns
-        -------
-        int
-            monitoring recursion depth, i.e. how detailed status information of
-            subtasks should be monitored during the processing of the jobs
-            (default: ``1``)
-        '''
-        return self._depth
-
-    @depth.setter
-    def depth(self, value):
-        if not isinstance(value, self._depth_params['type']):
-            raise TypeError('Attribute "depth" must have type %s'
-                            % self._depth_params['type'].__name__)
-        self._depth = value
-
-    @property
-    def _depth_params(self):
-        return {
-            'type': int,
-            'default': 1,
-            'help': '''
-                recursion depth for subtask monitoring (default: 1)
-            '''
-        }
-
-    @property
-    def duration(self):
-        '''
-        Returns
-        -------
-        str
-            time that should be allocated for each job in HH:MM:SS
-            (default: ``"02:00:00"``)
-        '''
-        return self._duration
-
-    @duration.setter
-    def duration(self, value):
-        if not isinstance(value, self._duration_params['type']):
-            raise TypeError('Attribute "duration" must have type %s'
-                            % self._duration_params['type'].__name__)
-        self._duration = value
-
-    @property
-    def _duration_params(self):
-        return {
-            'type': str,
-            'default': '02:00:00',
-            'help': '''
-                time that should be allocated for each job in HH:MM:SS
-                (default: 02:00:00)
-            '''
-        }
-
-    @property
-    def memory(self):
-        '''
-        Returns
-        -------
-        int
-            amount of memory that should be allocated for each job in GB
-            (default: ``4``)
-        '''
-        return self._memory
-
-    @memory.setter
-    def memory(self, value):
-        if not isinstance(value, self._memory_params['type']):
-            raise TypeError('Attribute "memory" must have type %s'
-                            % self._memory_params['type'].__name__)
-        self._memory = value
-
-    @property
-    def _memory_params(self):
-        return {
-            'type': int,
-            'default': 4,
-            'help': '''
-                amount of memory that should be allocated for each job in GB
-            '''
-        }
-
-    @property
-    def cores(self):
-        '''
-        Returns
-        -------
-        int
-            number of CPUs that should be allocated for each job
-            (default: ``1``)
-        '''
-        return self._cores
-
-    @cores.setter
-    def cores(self, value):
-        if not isinstance(value, self._cores_params['type']):
-            raise TypeError('Attribute "cores" must have type %s'
-                            % self._cores_params['type'].__name__)
-        self._cores = value
-
-    @property
-    def _cores_params(self):
-        return {
-            'type': int,
-            'default': 1,
-            'help': '''
-                number of CPUs that should be allocated for each job
-                (default: 1)
-            '''
-        }
-
-
-class CollectArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class CollectArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        super(CollectArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return set()
-
-
-class CleanupArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class CleanupArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        super(CleanupArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return set()
-
-
-class RunArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class RunArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        super(RunArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {'job'}
-
-    @property
-    def job(self):
-        '''
-        Returns
-        -------
-        int
-            one-based job index
-        '''
-        return self._job
-
-    @job.setter
-    def job(self, value):
-        if not isinstance(value, self._job_params['type']):
-            raise TypeError('Attribute "job" must have type %s'
-                            % self._job_params['type'].__name__)
-        self._job = value
-
-    @property
-    def _job_params(self):
-        return {
-            'type': int,
-            'required': True,
-            'help': '''
-                one-based job index
-            '''
-        }
-
-
-class LogArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class LogArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        self.job = self._job_params['default']
-        super(LogArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {'phase', 'job'}
-
-    @property
-    def phase(self):
-        '''
-        Returns
-        -------
-        List[int]
-            phase for which job log should be displayed
-            (options: ``"run"`` or ``"collect"``)
-        '''
-        return self._phase
-
-    @phase.setter
-    def phase(self, value):
-        if not(isinstance(value, self._phase_params['type']) or value is None):
-            raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'].__name__)
-        self._phase = value
-
-    @property
-    def _phase_params(self):
-        return {
-            'type': str,
-            'required': True,
-            'choices': {'run', 'collect'},
-            'help': '''
-                phase for which job log should be displayed
-            '''
-        }
-
-    @property
-    def job(self):
-        '''
-        Returns
-        -------
-        int
-            one-based job index
-        '''
-        return self._job
-
-    @job.setter
-    def job(self, value):
-        if not(isinstance(value, self._job_params['type']) or value is None):
-            raise TypeError('Attribute "job" must have type %s'
-                            % self._job_params['type'].__name__)
-        self._job = value
-
-    @property
-    def _job_params(self):
-        return {
-            'type': int,
-            'default': None,
-            'help': '''
-                one-based index of *run* job
-                (requires argument "phase" to be set to "run")
-            '''
-        }
-
-
-class InfoArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class InfoArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        self.job = self._job_params['default']
-        super(InfoArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {'phase', 'job'}
-
-    @property
-    def phase(self):
-        '''
-        Returns
-        -------
-        List[int]
-            phase for which job description should be displayed
-            (options: ``"run"`` or ``"collect"``)
-        '''
-        return self._phase
-
-    @phase.setter
-    def phase(self, value):
-        if not(isinstance(value, self._phase_params['type']) or value is None):
-            raise TypeError('Attribute "phase" must have type %s'
-                            % self._phase_params['type'].__name__)
-        self._phase = value
-
-    @property
-    def _phase_params(self):
-        return {
-            'type': str,
-            'required': True,
-            'choices': {'run', 'collect'},
-            'help': '''
-                phase for which job description should be displayed
-            '''
-        }
-
-    @property
-    def job(self):
-        '''
-        Returns
-        -------
-        int
-            one-based job index
-        '''
-        return self._job
-
-    @job.setter
-    def job(self, value):
-        if not(isinstance(value, self._job_params['type']) or value is None):
-            raise TypeError('Attribute "job" must have type %s'
-                            % self._job_params['type'].__name__)
-        self._job = value
-
-    @property
-    def _job_params(self):
-        return {
-            'type': int,
-            'default': None,
-            'help': '''
-                one-based index of *run* job
-                (requires argument "phase" to be set to "run")
-            '''
-        }
-
-# NOTE: The following argument classes are specific to the jterator program.
-# However, they have to be defined here, since they get dynamically loaded
-# from this module.
-
-
-class CreateArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class CreateArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        super(CreateArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return set()
-
-
-class RemoveArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class RemoveArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        super(RemoveArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return set()
-
-
-class CheckArgs(GeneralArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class CheckArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        super(CheckArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return set()
-
-
-class ResumeArgs(SubmitArgs):
-
-    def __init__(self, **kwargs):
-        '''
-        Initialize an instance of class ResumeArgs.
-
-        Parameters
-        ----------
-        **kwargs: dict, optional
-            arguments as key-value pairs
-        '''
-        super(ResumeArgs, self).__init__(**kwargs)
-
-    @property
-    def _persistent_attrs(self):
-        return {'interval', 'depth'}
+    )
+
+
+class CliMethodArguments(ArgumentCollection):
+
+    '''Collection of arguments that should be passed to a method of
+    an implemenation of :py:class:`tmlib.workflow.cli.CommandLineInterface`.
+    '''
+
+
+# class argument_property(object):
+
+#     '''Custom implementation of `property` that allows setting additional
+#     attributes on the object. It can be used to represent a command line
+#     argument and to add it to an instance of :py:class:`argparse.ArgumentParser`.
+#     '''
+
+#     def __init__(self, getter, setter):
+#         '''
+#         Parameters
+#         ----------
+#         getter: function
+#             getter function for returning the value
+#         setter: function
+#             setter function that accepts the value as an argument
+#         '''
+#         self.getter = getter
+#         self.setter = setter
+
+#     def __get__(self, instance, owner):
+#         return self.getter(instance)
+
+#     def __set__(self, instance, value):
+#         self.setter(instance, value)
+
+
+# class add_argument(object):
+
+#     '''Decorator class that acts like a property.
+#     The value represents an argument that can be parsed via the command line.
+
+#     The setter of the property checks whether the value has the specified
+#     `type` and whether it is in the set of valid `choices` (if provided).
+#     The getter return the `default` value if provided and if it has not been
+#     overwritten, i.e. a different value has been set.
+    
+#     Raises
+#     ------
+#     TypeError
+#         when type of the property value doesn't have the specified `type`
+#     ValueError
+#         when the property value is not one the specified `choices`
+    
+#     Note
+#     ----
+#     Values of type ``basestring`` (e.g. ``unicode``) are converted to ``str``
+#     before `type` is checked, so use ``type=str`` for all strings.
+
+#     Examples
+#     --------
+#     from tmlib.utils import argument_parserargument_property
+    
+#     class Foo(object):
+
+#         @add_argument(
+#             type=int, help='help for bar', default=1, choices={1, 2}
+#         )
+#         def bar(self:
+#             return self._bar
+
+#     >>>foo = Foo()
+#     >>>foo.bar
+#     1
+#     >>>foo.bar = 2
+#     >>>foo.bar
+#     2
+#     >>>foo.bar = 3
+#     ValueError: Argument "bar" can be one of the following: 1, 2
+#     >>>foo.bar = 1.0
+#     TypeError: Argument "bar" must have type int.
+#     '''
+
+#     @assert_type(
+#         type='type', help='basestring', choices=['set', 'types.NoneType'],
+#         flag=['basestring', 'types.NoneType']
+#     )
+#     def __init__(self, type, help, default=None, choices=None, flag=None):
+#         '''
+#         Parameters
+#         ----------
+#         type: type
+#             type of the argument
+#         help: str
+#             help message that describes the argument 
+#         default: , optional
+#             default value
+#         choices: set, optional
+#             set of choices for value
+#         flag: str, optional
+#             short name for a command line (will be prepended with a hyphen)
+#         '''
+#         self.type = type
+#         self.help = help
+#         if default is not None:
+#             if not isinstance(default, self.type):
+#                 raise TypeError(
+#                     'Argument "default" must have type %s' % self.type.__name__
+#                 )
+#         self.default = default
+#         self.choices = choices
+#         self.flag = flag
+
+#     def __call__(self, obj):
+#         attr_name = '_%s' % obj.__name__
+
+#         def getter(cls):
+#             if not hasattr(cls, attr_name):
+#                 if self.default is None:
+#                     raise ValueError(
+#                         'Argument "%s" is required.' % obj.__name__
+#                     )
+#                 setattr(cls, attr_name, self.default)
+#             return obj(cls)
+#         getter.__name__ = obj.__name__
+#         # NOTE: The docstring for the getter is automatically build using the
+#         # provided type and help attributes.
+#         getter.__doc__ = '{type}: {description}'.format(
+#             type=self.type.__name__, description=self.help
+#         )
+
+#         def setter(cls, value):
+#             if isinstance(value, basestring):
+#                 value = str(value)
+#             if not isinstance(value, self.type):
+#                 raise TypeError(
+#                     'Argument "%s" must have type %s.'
+#                     % (obj.__name__, self.type.__name__)
+#                 )
+#             if self.choices is not None:
+#                 if value not in self.choices:
+#                     raise ValueError(
+#                         'Argument "%s" must be one of the following: %s'
+#                         % (obj.__name__,
+#                            ', '.join(['%r' % c for c in self.choices]))
+#                     )
+#             setattr(cls, attr_name, value)
+
+#         property_obj = argument_property(getter, setter)
+#         property_obj.type = self.type
+#         property_obj.help = self.help
+#         property_obj.choices = self.choices
+#         property_obj.flag = self.flag
+#         return property_obj

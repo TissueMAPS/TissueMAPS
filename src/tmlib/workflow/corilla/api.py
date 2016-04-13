@@ -6,10 +6,12 @@ from tmlib.utils import notimplemented
 from tmlib.image import IllumstatsContainer
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.corilla.stats import OnlineStatistics
+from tmlib.workflow.registry import api
 
 logger = logging.getLogger(__name__)
 
 
+@api('corilla')
 class IllumstatsCalculator(ClusterRoutines):
 
     '''Class for calculating illumination statistics.'''
@@ -104,19 +106,20 @@ class IllumstatsCalculator(ClusterRoutines):
         '''
         with tmlib.models.utils.Session() as session:
 
-            illumstats_files = session.query(tmlib.models.IllumstatsFile).\
-                join(tmlib.models.Cycle).\
+            cycle_ids = session.query(tmlib.models.Cycle.id).\
                 join(tmlib.models.Plate).\
                 filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
                 all()
-            for f in illumstats_files:
-                logger.debug('delete illumination statistics file: %r', f)
-                session.delete(f)
+            cycle_ids = [p[0] for p in cycle_ids]
 
-            # NOTE: Workflow stages "pyramid_creation" and "image_analysis"
-            # could be affected, since the calculated statistics could have
-            # been used. However, illumination correction is optional for these
-            # stages so we don't delete them.
+        if cycle_ids:
+
+            with tmlib.models.utils.Session() as session:
+
+                logger.info('delete existing illumination statistics files')
+                session.query(tmlib.models.IllumstatsFile).\
+                    filter(tmlib.models.IllumstatsFile.cycle_id.in_(cycle_ids)).\
+                    delete()
 
     def run_job(self, batch):
         '''Calculates illumination statistics.

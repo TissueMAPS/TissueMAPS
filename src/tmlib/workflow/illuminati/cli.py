@@ -1,8 +1,7 @@
 import logging
 
-from tmlib.utils import same_docstring_as
+from tmlib.utils import assert_type
 from tmlib.workflow.illuminati import logo
-from tmlib.workflow.illuminati.api import PyramidBuilder
 from tmlib.workflow.cli import CommandLineInterface
 
 logger = logging.getLogger(__name__)
@@ -10,23 +9,18 @@ logger = logging.getLogger(__name__)
 
 class Illuminati(CommandLineInterface):
 
-    def __init__(self, api_instance, verbosity):
+    '''Create image pyramids for interactive web-based visualization.'''
+
+    @assert_type(api_instance='tmlib.workflow.illuminati.api.PyramidBuilder')
+    def __init__(self, api_instance):
         '''
         Parameters
         ----------
-        api_instance: tmlib.workflow.illuminati.PyramidBuilder
+        api_instance: tmlib.workflow.illuminati.api.PyramidBuilder
             instance of API class to which processing is delegated
-        verbosity: int
-            logging level
         '''
-        super(Illuminati, self).__init__(api_instance, verbosity)
+        super(Illuminati, self).__init__(api_instance)
 
     @staticmethod
     def _print_logo():
         print logo
-
-    @staticmethod
-    @same_docstring_as(CommandLineInterface.call)
-    def call(name, args):
-        api_instance = PyramidBuilder(args.experiment_id, args.verbosity)
-        Illuminati(api_instance, args.verbosity)._call(args)

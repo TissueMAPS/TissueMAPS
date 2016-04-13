@@ -16,10 +16,12 @@ from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import MultiRunJobCollection
 from tmlib.workflow.jobs import CollectJob
+from tmlib.workflow.registry import api
 
 logger = logging.getLogger(__name__)
 
 
+@api('illuminati')
 class PyramidBuilder(ClusterRoutines):
 
     def __init__(self, experiment_id, verbosity):
@@ -265,20 +267,19 @@ class PyramidBuilder(ClusterRoutines):
         '''
         with tm.utils.Session() as session:
 
-            layer = session.query(tm.ChannelLayer).\
-                join(tm.Channel).\
+            channel_ids = session.query(tm.Channel.id).\
                 filter(tm.Channel.experiment_id == self.experiment_id).\
                 all()
-            for l in layer:
-                logger.debug('delete channel layer: %r', l)
-                session.delete(l)
+            channel_ids = [p[0] for p in channel_ids]
 
-            mapobject_types = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id).\
-                all()
-            for m in mapobject_types:
-                logger.debug('delete map object type: %r', m)
-                session.delete(m)
+        if channel_ids:
+
+            with tm.utils.Session() as session:
+
+                logger.debug('delete existing channel layers')
+                session.query(tm.ChannelLayer).\
+                    filter(tm.ChannelLayer.channel_id.in_(channel_ids)).\
+                    delete()
 
     def create_jobs(self, step, batches,
                     duration=None, memory=None, cores=None):
@@ -623,7 +624,7 @@ class PyramidBuilder(ClusterRoutines):
                 tile_file.put(tile)
 
     def run_job(self, batch):
-        '''Create 8-bit grayscale JPEG pyramid tiles.
+        '''Creates 8-bit grayscale JPEG pyramid tiles.
 
         Parameters
         ----------

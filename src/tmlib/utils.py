@@ -316,8 +316,9 @@ def assert_type(**expected):
                     et_strings = expected_type
                 else:
                     raise TypeError(
-                        'Expected types have to provided as either '
-                        'a string of a list of strings.'
+                        'Expected types for function "%s" have to provided as '
+                        'either a string of a list of strings.'
+                        % func.__name__
                     )
 
                 # Users provide the types as strings. The advantage is that
@@ -339,7 +340,12 @@ def assert_type(**expected):
                             path_parts = ets.split('.')
                             fullname = '.'.join(path_parts[:-1])
                             module = importlib.import_module(fullname)
-                            ett = getattr(module, path_parts[-1])
+                            try:
+                                ett = getattr(module, path_parts[-1])
+                            except AttributeError:
+                                raise AttributeError(
+                                    'Custom type %s does not exist.' % fullname
+                                )
                         except ImportError:
                             raise ImportError(
                                 'Import of custom type "%s" failed.' % ets
@@ -445,14 +451,14 @@ class autocreate_directory_property(object):
     --------
     from tmlib.utils import autocreate_directory_property
     
-    class AutocreateExample(object):
+    class Foo(object):
 
         @autocreate_directory_property
         def my_new_directory(self):
             return '/tmp/blabla'
 
-    example = AutocreateExample()
-    example.my_new_directory
+    foo = Foo()
+    foo.my_new_directory
     '''
     def __init__(self, func):
         self.__doc__ = func.__doc__
@@ -471,7 +477,7 @@ class autocreate_directory_property(object):
             raise ValueError(
                 'Value of property "%s" cannot be empty.'
                 % self.func.__name__
-        )
+            )
         if not os.path.exists(os.path.dirname(value)):
             raise OSError(
                 'Value of property "%s" must be a valid path: %s'
@@ -512,6 +518,7 @@ def notimplemented(func):
         when decorated function (method) is called
     '''
     func.__doc__ = 'Not implemented.'
+    func.is_climethod = False  # removes method from command line interface
 
     def wrapper(obj, *args, **kwargs):
         raise NotImplementedError(
@@ -521,49 +528,4 @@ def notimplemented(func):
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
     return wrapper
-
-
-# class set_default(object):
-
-#     '''Decorator class for methods of :py:class:`tmlib.args.Args`.'''
-
-#     def __init__(self, type=None, help=None, default=None):
-#         '''
-#         Parameters
-#         ----------
-#         type: type
-#             the type that the argument should have
-#         help: str
-#             help message that gives specifics about the argument
-#         default:
-#             default value for the argument
-
-#         Raises
-#         ------
-#         TypeError
-#         '''
-#         self.type = type
-#         self.help = help
-#         self.default = default
-#         if self.default is None:
-#             self.required = True
-#         else:
-#             self.required = False
-
-#     def __call__(self, obj):
-#         attr_name = '_%s' % obj.__name__
-
-#         def getter(cls):
-#             if not hasattr(cls, attr_name):
-#                 if self.default is None:
-#                     raise ValueError(
-#                             'Argument "%s" is required.' % obj.__name__)
-#                 setattr(cls, attr_name, self.default)
-#             setattr(cls, '%s_type' % attr_name, self.type)
-#             setattr(cls, '%s_help' % attr_name, self.help)
-#             return obj(cls)
-#         getter.__name__ = obj.__name__
-#         getter.__doc__ = obj.__doc__
-
-#         return property(getter)
 

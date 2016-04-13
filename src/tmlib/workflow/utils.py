@@ -1,16 +1,15 @@
 import gc3libs
 from prettytable import PrettyTable
-from tmlib.workflow import Workflow
-from tmlib.workflow import ParallelWorkflowStage
-from tmlib.workflow import SequentialWorkflowStage
-from tmlib.workflow import WorkflowStep
+from tmlib.workflow.workflow import Workflow
+from tmlib.workflow.workflow import ParallelWorkflowStage
+from tmlib.workflow.workflow import SequentialWorkflowStage
+from tmlib.workflow.workflow import WorkflowStep
 from tmlib.workflow.jobs import RunJobCollection
 from tmlib.workflow.jobs import CollectJob
 
 
 def format_stats_data(stats):
-    '''
-    For each task state (and pseudo-state like ``ok`` or
+    '''For each task state (and pseudo-state like ``ok`` or
     ``failed``), two values are returned: the count of managed
     tasks that were in that state when `Engine.progress()` was
     last run, and what percentage of the total managed tasks this
@@ -35,8 +34,7 @@ def format_stats_data(stats):
 
 
 def format_timestamp(elapsed_time):
-    '''
-    Formats a timestamp in seconds to "HH:MM:SS" string.
+    '''Formats a timestamp in seconds to "HH:MM:SS" string.
 
     Parameters
     ----------
@@ -56,8 +54,7 @@ def format_timestamp(elapsed_time):
 
 
 def get_task_data(task, description=None):
-    '''
-    Provide the following data for each task and recursively for each
+    '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
 
         * ``"name"`` (*str*): name of task
@@ -168,8 +165,7 @@ def get_task_data(task, description=None):
 
 
 def print_task_status(task_data, monitoring_depth):
-    '''
-    Pretty print the status of a submitted GC3Pie tasks to the console in
+    '''Pretty prints the status of a submitted GC3Pie tasks to the console in
     table format.
 
     Parameters
@@ -210,8 +206,7 @@ def print_task_status(task_data, monitoring_depth):
 
 
 def log_task_status(task_data, logger, monitoring_depth):
-    '''
-    Log the status of a submitted GC3Pie task.
+    '''Logs the status of a submitted GC3Pie task.
 
     Parameters
     ----------
@@ -233,8 +228,7 @@ def log_task_status(task_data, logger, monitoring_depth):
 
 
 def log_task_failure(task_data, logger):
-    '''
-    Log the failure of a submitted GC3Pie task.
+    '''Logs the failure of a submitted GC3Pie task.
 
     Parameters
     ----------

@@ -2,7 +2,7 @@ import os
 import logging
 
 import tmlib.models
-from tmlib.workflow import Workflow
+from tmlib.workflow.workflow import Workflow
 from tmlib.workflow.api import BasicClusterRoutines
 
 logger = logging.getLogger(__name__)
