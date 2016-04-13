@@ -56,7 +56,6 @@
     .ui-panel-gradient(bottom, @panel-fg);
     height: 100%;
     transition: background 50ms ease;
-
     &.selected {
         .ui-panel-gradient(bottom, @panel-selection-color);
     }
@@ -112,15 +111,6 @@
 
     button {
         margin-top: 10px;
-    }
-
-    * {
-        // Needed since it will otherwise change color when
-        // the selected class is set on the parent li (selected
-        // changes the background gradient which adjusts the color
-        // automatically. In this case this isn't necessary since
-        // this element isn't on the li itself.
-        color: @font-color-light;
     }
 
     span.output {

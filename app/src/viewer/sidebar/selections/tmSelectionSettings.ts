@@ -12,4 +12,3 @@ angular.module('tmaps.ui')
         templateUrl: '/templates/main/layerprops/selections/tm-selection-settings.html'
     };
 });
-

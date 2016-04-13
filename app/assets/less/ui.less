@@ -19,10 +19,6 @@
         darken(@color, 8%) 100%,
     ));
 
-    * {
-        color: contrast(@color, #101010, #dddddd);
-    }
-
     button {
         background-color: gray;
     }
@@ -70,10 +66,8 @@
     // .box-shadow(<offset-x> <offset-y> spread blur-radius color inset, …)
     // .lh-box-shadow(1px 1px 2 black);
 
-    * {
-        color: @panel-font-color;
-        .noselect(); // dont select text inside ui panels
-    }
+    color: @panel-font-color;
+    .noselect(); // dont select text inside ui panels
 
     a {
         text-decoration: none;

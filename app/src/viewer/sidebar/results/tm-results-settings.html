@@ -29,6 +29,13 @@
 
     </tm-selectable-tabs>
 
+    <tm-multi-selection-controls ng-controller="ResultsControlsCtrl as controls">
+      <button ng-click="controls.removeSelectedResults()"
+        ng-show="selectionBox.hasSelectedItems()">
+        <i class="fa fa-trash"></i>
+      </button>
+    </tm-multi-selection-controls>
+
   </tm-multi-selection-box>
 
 </div>

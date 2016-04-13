@@ -1,18 +1,15 @@
 interface ResultsSettingsScope extends ng.IScope {
     selectionBox: any;
     resultSettingsCtrl: ResultsSettingsCtrl;
+    viewer: AppInstance;
 }
 
 class ResultsSettingsCtrl {
 
-    viewport: Viewport;
+    results: ToolResult[];
+    viewer: AppInstance;
 
     constructor() {}
-
-    removeResult(result) {
-        result.hide()
-    }
-
 }
 
 angular.module('tmaps.ui').controller('ResultsSettingsCtrl', ResultsSettingsCtrl);

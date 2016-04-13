@@ -27,3 +27,20 @@ class SelectionSettingsCtrl {
 }
 
 angular.module('tmaps.ui') .controller('SelectionSettingsCtrl', SelectionSettingsCtrl);
+
+class SelectionTabCtrl {
+    static $inject = ['$scope'];
+
+    selection: MapObjectSelection;
+    inRenamingMode: boolean = false;
+
+    constructor(private _$scope: any) {
+        this.selection = _$scope.sel;
+    }
+
+    toggleRenamingMode() {
+        this.inRenamingMode = !this.inRenamingMode;
+    }
+}
+
+angular.module('tmaps.ui') .controller('SelectionTabCtrl', SelectionTabCtrl);

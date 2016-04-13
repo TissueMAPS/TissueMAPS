@@ -61,16 +61,29 @@ class AppInstance {
         this._currentResult = r;
     }
 
+    private _deleteResult(res: ToolResult) {
+        // TODO: Also completely remove the result
+        res.hide(this);
+    }
+
+    deleteSavedResult(res: ToolResult) {
+        var idx = this.savedResults.indexOf(res);
+        if (idx > -1) {
+            this._deleteResult(res);
+            this.savedResults.splice(idx, 1);
+        }
+    }
+
     deleteCurrentResult() {
         if (this.currentResult !== null) {
-            this.currentResult.hide(this);
+            this._deleteResult(this.currentResult);
+            this._currentResult = null;
         }
-        this._currentResult = null;
     }
 
     saveCurrentResult() {
         this.savedResults.push(this.currentResult);
-        this.currentResult = undefined;
+        this._currentResult = null;
     }
 
     get currentZplane() {

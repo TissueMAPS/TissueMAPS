@@ -3,8 +3,8 @@ angular.module('tmaps.ui')
     return {
         restrict: 'E',
         scope: {
-            viewport: '=',
-            results: '='
+            results: '=',
+            viewer: '='
         },
         bindToController: true,
         controllerAs: 'resultsSettingsCtrl',
