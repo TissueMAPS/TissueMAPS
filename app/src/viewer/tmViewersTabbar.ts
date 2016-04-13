@@ -3,11 +3,11 @@ class ViewersTabbarCtrl {
 
     constructor(private $scope: ViewerWindowScope) {}
 
-    clickTab(viewer: AppInstance) {
+    clickTab(viewer: Viewer) {
         this.$scope.viewerWindowCtrl.selectViewer(viewer);
     }
 
-    clickDelete(viewer: AppInstance) {
+    clickDelete(viewer: Viewer) {
         this.$scope.viewerWindowCtrl.deleteViewer(viewer);
     }
 }

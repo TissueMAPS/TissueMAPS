@@ -3,7 +3,7 @@
 //     var appstateHash = 'ddfg438';
 //     var serializedApp = {
 //         activeInstanceNumber: 0,
-//         appInstances: [{}]
+//         viewers: [{}]
 //     };
 //     var appstateServerResponse = {
 //         id: appstateHash,

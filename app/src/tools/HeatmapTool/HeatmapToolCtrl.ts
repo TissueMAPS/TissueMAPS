@@ -7,7 +7,7 @@ class HeatmapToolCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
     constructor(public $scope: SVMScope,
-                public viewer: AppInstance) {
+                public viewer: Viewer) {
         super();
     }
 

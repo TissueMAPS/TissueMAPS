@@ -159,7 +159,6 @@ class Channel implements Layer {
     /**
      * @property {number} opacity - The opacity of the layers belonging to this
      * channel. Ranges from 0 to 1.
-     * @default 50
      */
     get opacity(): number {
         return _.values(this._layers)[0].opacity;

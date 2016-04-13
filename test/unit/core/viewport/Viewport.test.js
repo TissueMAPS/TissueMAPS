@@ -4,7 +4,7 @@ describe('In Viewport', function() {
     // Load the module of ObjectLayer and its dependencies
     beforeEach(module('tmaps.core'));
 
-    var appInstance;
+    var viewer;
 
     // Injected services and factories
     var $httpBackend, $rootScope, $document, application;
@@ -21,7 +21,7 @@ describe('In Viewport', function() {
     }));
 
     beforeEach(function() {
-        appInstance = {};
+        viewer = {};
 
         // Since our index isn't loaded and PhantomJS has its own document, we
         // need to append the necessary elements to it.
@@ -48,7 +48,7 @@ describe('In Viewport', function() {
 
     beforeEach(function() {
         vp = new Viewport();
-        vp.injectIntoDocumentAndAttach(appInstance);
+        vp.injectIntoDocumentAndAttach(viewer);
         // Perform requests for templates
         $httpBackend.flush();
     });
@@ -97,9 +97,9 @@ describe('In Viewport', function() {
             $rootScope.$apply();
         });
 
-        it('the viewport scope should receive the appInstance as a property', function(done) {
+        it('the viewport scope should receive the viewer as a property', function(done) {
             vp.elementScope.then(function(elementScope) {
-                expect(elementScope.appInstance).toEqual(appInstance);
+                expect(elementScope.viewer).toEqual(viewer);
                 done();
             });
             // So the then callback on the $q deferred will fire.

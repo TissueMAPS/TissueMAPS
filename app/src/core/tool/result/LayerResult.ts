@@ -25,11 +25,11 @@ abstract class LayerResult extends ToolResult implements Layer {
         this._layer.removeFromMap(map);
     }
 
-    show(viewer: AppInstance) {
+    show(viewer: Viewer) {
         this._layer.visible = true;
     }
     
-    hide(viewer: AppInstance) {
+    hide(viewer: Viewer) {
         this._layer.visible = false;
     }
 }

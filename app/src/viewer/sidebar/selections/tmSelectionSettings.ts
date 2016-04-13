@@ -4,7 +4,7 @@ angular.module('tmaps.ui')
         restrict: 'E',
         // Create a new scope for this directive but prototypically link
         // it with the parent viewport scope, s.t. the directive has access
-        // to the appInstance.
+        // to the viewer.
         scope: true,
         bindToController: true,
         controllerAs: 'selCtrl',

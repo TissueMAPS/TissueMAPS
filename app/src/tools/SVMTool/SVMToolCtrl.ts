@@ -12,7 +12,7 @@ class SVMToolCtrl extends ToolCtrl {
     kernel = 'rbf';
 
     constructor(public $scope: SVMScope,
-                public viewer: AppInstance) {
+                public viewer: Viewer) {
         super();
     }
 

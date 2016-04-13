@@ -10,16 +10,16 @@ class RestoreAppstateService {
 
     // restoreAppstate(appstate: Appstate) {
     //     var bp = appstate.blueprint;
-    //     bp.appInstances.forEach((ai) => {
+    //     bp.viewers.forEach((ai) => {
     //         var expArgs = <ExperimentArgs> ai.experiment;
     //         var exp = new Experiment(expArgs);
-    //         var inst = new AppInstance(exp);
-    //         this.app.appInstances.push(inst);
-    //         this.restoreAppInstance(inst, ai);
+    //         var inst = new Viewer(exp);
+    //         this.app.viewers.push(inst);
+    //         this.restoreViewer(inst, ai);
     //     });
     // }
 
-    // private restoreAppInstance(inst: AppInstance, ai: SerializedAppInstance) {
+    // private restoreViewer(inst: Viewer, ai: SerializedViewer) {
     //     this.restoreViewport(inst.viewport, ai.viewport);
     // }
 

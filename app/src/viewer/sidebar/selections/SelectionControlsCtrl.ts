@@ -17,7 +17,7 @@ class SelectionControlsCtrl {
 
     constructor($scope: SelectionSettingsControlsScope) {
         this._$scope = $scope;
-        this.selHandler = $scope.appInstance.mapObjectSelectionHandler;
+        this.selHandler = $scope.viewer.mapObjectSelectionHandler;
     }
 
     clearSelectedSelections() {

@@ -24,7 +24,7 @@ angular.module('tmaps.toolwindow')
 .directive('tmToolWindowTabbar', ['$compile', '$rootScope', ($compile, $rootScope) => {
     return {
         // TODO: Needs access to the viewport scope
-        // TODO: Create a viewport (or maybe better AppInstance) directive that sits on the viewport div
+        // TODO: Create a viewport (or maybe better Viewer) directive that sits on the viewport div
         // The ViewportCtrl should then have the $scope directly on in.
         // In this way all directives can just "require: '^^viewport"
         // and get a link to the viewport scope that they can use to broadcast stuff.

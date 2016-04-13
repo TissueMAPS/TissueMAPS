@@ -9,7 +9,7 @@ class ClusterToolCtrl extends ToolCtrl {
     nClusters: number = 2;
 
     constructor(public $scope: ClusterScope,
-                public viewer: AppInstance) {
+                public viewer: Viewer) {
         super();
     }
 

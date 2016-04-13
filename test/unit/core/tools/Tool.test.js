@@ -34,14 +34,14 @@ describe('In Tool', function() {
 
     var appstate;
     var experiment;
-    var appInstance;
+    var viewer;
     var toolInstance;
 
     // Assign sample data each time a test is executed.
     beforeEach(function() {
         appstate = {};
         experiment = {};
-        appInstance = {
+        viewer = {
             viewport: {
                 elementScope: $q.when(jasmine.createSpyObj('elementScope', [
                     '$broadcast'
@@ -52,7 +52,7 @@ describe('In Tool', function() {
             id: 10
         };
 
-        tool = new FeatureStatsTool(appInstance);
+        tool = new FeatureStatsTool(viewer);
     });
 
     // Setup the server endpoints (without setting up expectations)
@@ -131,8 +131,8 @@ describe('In Tool', function() {
             var win = toolWindow.windowObject;
 
             expect(win.init).toBeDefined();
-            expect(win.init.appInstance).toEqual(appInstance);
-            expect(win.init.viewportScope).toEqual(appInstance.viewport.elementScope);
+            expect(win.init.viewer).toEqual(viewer);
+            expect(win.init.viewportScope).toEqual(viewer.viewport.elementScope);
             expect(win.init.toolWindow).toBeDefined();
             expect(win.init.tool).toEqual(tool);
 
@@ -218,7 +218,7 @@ describe('In Tool', function() {
             pending();
             tool.sendRequest(payload);
             $httpBackend.flush();
-            tool.appInstance.viewport.elementScope.then(function(vpScope) {
+            tool.viewer.viewport.elementScope.then(function(vpScope) {
                 expect(vpScope.$broadcast).toHaveBeenCalledWith('toolRequestSent');
                 expect(vpScope.$broadcast).toHaveBeenCalledWith('toolRequestDone');
                 expect(vpScope.$broadcast).toHaveBeenCalledWith('toolRequestSuccess');
@@ -236,7 +236,7 @@ describe('In Tool', function() {
             };
             tool.sendRequest(payload);
             $httpBackend.flush();
-            tool.appInstance.viewport.elementScope.then(function(vpScope) {
+            tool.viewer.viewport.elementScope.then(function(vpScope) {
                 expect(vpScope.$broadcast).toHaveBeenCalledWith('toolRequestSent');
                 expect(vpScope.$broadcast).toHaveBeenCalledWith('toolRequestDone');
                 expect(vpScope.$broadcast).toHaveBeenCalledWith('toolRequestFailed', 'some error message');

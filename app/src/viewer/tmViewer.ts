@@ -1,7 +1,6 @@
 interface ViewerScope extends ViewerWindowScope {
     // FIXME: Remove this.
-    appInstance: AppInstance;
-    viewer: AppInstance;
+    viewer: Viewer;
     viewerCtrl: ViewerCtrl;
 }
 
@@ -21,7 +20,7 @@ class ViewerCtrl {
     }
 
     constructor(public $scope: ViewerScope) {
-        $scope.appInstance = $scope.viewer;
+        $scope.viewer = $scope.viewer;
         this.zStep = 10;
         // The slider won't be able to set currentZplane to 0 if
         // the knob is all the way to the left. Therefore

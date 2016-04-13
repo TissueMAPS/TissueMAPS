@@ -2,7 +2,7 @@
 
 // describe('In restoreAppstateService', function() {
 //     // Some fake data
-//     var appstateJSON = '{"id":"V7Nl4Noz","name":"asdf","owner":"testuser","isSnapshot":false,"blueprint":{"activeAppInstanceNumber":0,"appInstances":[{"experiment":{"channels":[{"imageSize":[30310,23028],"name":"Cell_Mask","pyramidPath":"/experiments/D5YAKwe7/layers/Cell_Mask/"},{"imageSize":[30307,23020],"name":"Channel_01","pyramidPath":"/experiments/D5YAKwe7/layers/Channel_01/"},{"imageSize":[30307,23020],"name":"Channel_02","pyramidPath":"/experiments/D5YAKwe7/layers/Channel_02/"},{"imageSize":[30307,23020],"name":"Channel_03","pyramidPath":"/experiments/D5YAKwe7/layers/Channel_03/"},{"imageSize":[30310,23028],"name":"Nuclei_Mask","pyramidPath":"/experiments/D5YAKwe7/layers/Nuclei_Mask/"},{"imageSize":[30310,23028],"name":"outlines","pyramidPath":"/experiments/D5YAKwe7/layers/outlines/"}],"description":"Very nice exp","id":"D5YAKwe7","name":"150316-30min-PBS"},"viewport":{"channelLayerOptions":[{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30310,23028],"max":0.26666666666666666,"min":0,"name":"Cell_Mask","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Cell_Mask/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":0,"g":0,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30307,23020],"max":0.16862745098039217,"min":0,"name":"Channel_01","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Channel_01/","visible":true},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30307,23020],"max":1,"min":0,"name":"Channel_02","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Channel_02/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30307,23020],"max":1,"min":0,"name":"Channel_03","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Channel_03/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30310,23028],"max":1,"min":0,"name":"Nuclei_Mask","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Nuclei_Mask/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30310,23028],"max":1,"min":0,"name":"outlines","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/outlines/","visible":false}],"mapState":{"center":[17448.9697265625,-16881.01171875],"resolution":7.39990234375,"rotation":0,"zoom":4},"selectionHandler":{"selections":[]}}}]}}';
+//     var appstateJSON = '{"id":"V7Nl4Noz","name":"asdf","owner":"testuser","isSnapshot":false,"blueprint":{"activeViewerNumber":0,"viewers":[{"experiment":{"channels":[{"imageSize":[30310,23028],"name":"Cell_Mask","pyramidPath":"/experiments/D5YAKwe7/layers/Cell_Mask/"},{"imageSize":[30307,23020],"name":"Channel_01","pyramidPath":"/experiments/D5YAKwe7/layers/Channel_01/"},{"imageSize":[30307,23020],"name":"Channel_02","pyramidPath":"/experiments/D5YAKwe7/layers/Channel_02/"},{"imageSize":[30307,23020],"name":"Channel_03","pyramidPath":"/experiments/D5YAKwe7/layers/Channel_03/"},{"imageSize":[30310,23028],"name":"Nuclei_Mask","pyramidPath":"/experiments/D5YAKwe7/layers/Nuclei_Mask/"},{"imageSize":[30310,23028],"name":"outlines","pyramidPath":"/experiments/D5YAKwe7/layers/outlines/"}],"description":"Very nice exp","id":"D5YAKwe7","name":"150316-30min-PBS"},"viewport":{"channelLayerOptions":[{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30310,23028],"max":0.26666666666666666,"min":0,"name":"Cell_Mask","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Cell_Mask/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":0,"g":0,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30307,23020],"max":0.16862745098039217,"min":0,"name":"Channel_01","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Channel_01/","visible":true},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30307,23020],"max":1,"min":0,"name":"Channel_02","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Channel_02/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30307,23020],"max":1,"min":0,"name":"Channel_03","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Channel_03/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30310,23028],"max":1,"min":0,"name":"Nuclei_Mask","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/Nuclei_Mask/","visible":false},{"additiveBlend":true,"brightness":0,"color":{"a":1,"b":255,"g":255,"r":255},"drawBlackPixels":true,"drawWhitePixels":true,"imageSize":[30310,23028],"max":1,"min":0,"name":"outlines","opacity":1,"pyramidPath":"/experiments/D5YAKwe7/layers/outlines/","visible":false}],"mapState":{"center":[17448.9697265625,-16881.01171875],"resolution":7.39990234375,"rotation":0,"zoom":4},"selectionHandler":{"selections":[]}}}]}}';
 
 //     var appstate;
 //     // Declare variables that will get assigned an actual instance after each
@@ -52,24 +52,24 @@
 //             $httpBackend.flush();
 //         });
 
-//         it('should restore all the AppInstances', function() {
-//             expect(application.appInstances.length == 1);
-//             application.appInstances.forEach(function(inst) {
-//                 expect(inst.constructor.name).toEqual('AppInstance');
+//         it('should restore all the Viewers', function() {
+//             expect(application.viewers.length == 1);
+//             application.viewers.forEach(function(inst) {
+//                 expect(inst.constructor.name).toEqual('Viewer');
 //             });
 //         });
 
 //         it('should add the cell outline layers', function() {
-//             application.appInstances.forEach(function(inst) {
+//             application.viewers.forEach(function(inst) {
 //                 expect(inst.viewport.selectionHandler.addCellOutlines).toHaveBeenCalled();
 //             });
 //         });
 
-//         it('should correctly set the experiment of the AppInstances', function() {
-//             var serializedInstances = appstate.blueprint.appInstances;
+//         it('should correctly set the experiment of the Viewers', function() {
+//             var serializedInstances = appstate.blueprint.viewers;
 //             for (var i = 0; i < serializedInstances.length; i++) {
 //                 var serializedInst = serializedInstances[i];
-//                 var inst = application.appInstances[i];
+//                 var inst = application.viewers[i];
 //                 var exp = inst.experiment;
 //                 var serializedExp = serializedInst.experiment;
 
@@ -84,7 +84,7 @@
 //             var vp;
 
 //             beforeEach(function() {
-//                 vp = application.appInstances[0].viewport;
+//                 vp = application.viewers[0].viewport;
 //             });
 
 //             it('should add all layers', function() {

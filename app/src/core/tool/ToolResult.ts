@@ -2,8 +2,8 @@ abstract class ToolResult {
 
     visible: boolean;
 
-    abstract show(viewer: AppInstance);
-    abstract hide(viewer: AppInstance);
+    abstract show(viewer: Viewer);
+    abstract hide(viewer: Viewer);
 
     constructor(public name: string, public session: ToolSession) {}
 

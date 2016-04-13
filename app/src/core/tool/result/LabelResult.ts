@@ -22,7 +22,7 @@ abstract class LabelResult extends LayerResult {
         this.attributes = payload.attributes;
     }
 
-    show(viewer: AppInstance) {
+    show(viewer: Viewer) {
         if (this._layer === undefined) {
             this._layer = new LabelResultLayer({
                 size: viewer.viewport.mapSize,

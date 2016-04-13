@@ -24,7 +24,7 @@ angular.module('tmaps.ui')
             var wasExperimentIdSupplied =
                 experimentId !== undefined && experimentId !== '';
             if (wasExperimentIdSupplied) {
-                var viewerToBeShown = _(app.appInstances).find((viewer) => {
+                var viewerToBeShown = _(app.viewers).find((viewer) => {
                     return viewer.experiment.id === experimentId;
                 });
                 var viewerToBeShownExists = viewerToBeShown !== undefined;
@@ -32,13 +32,13 @@ angular.module('tmaps.ui')
                     app.showViewer(viewerToBeShown);
                 } else {
                     Experiment.get(experimentId).then(function(exp) {
-                        var newViewer = new AppInstance(exp);
+                        var newViewer = new Viewer(exp);
                         app.addViewer(newViewer);
                         app.showViewer(newViewer);
                     });
                 }
             } else {
-                var availableViewers = app.appInstances;
+                var availableViewers = app.viewers;
                 if (availableViewers.length > 0)  {
                     app.showViewer(availableViewers[0]);
                 } else {

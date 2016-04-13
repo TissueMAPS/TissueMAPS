@@ -1,13 +1,13 @@
 interface ResultsSettingsScope extends ng.IScope {
     selectionBox: any;
-    resultSettingsCtrl: ResultsSettingsCtrl;
-    viewer: AppInstance;
+    resultsSettingsCtrl: ResultsSettingsCtrl;
+    viewer: Viewer;
 }
 
 class ResultsSettingsCtrl {
 
     results: ToolResult[];
-    viewer: AppInstance;
+    viewer: Viewer;
 
     constructor() {}
 }

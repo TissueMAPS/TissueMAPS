@@ -9,8 +9,8 @@
 
 //     constructor($scope, tmapsProxy) {
 //         this._tool = tmapsProxy.tool;
-//         var mapObjectRegistry = tmapsProxy.appInstance.mapObjectRegistry;
-//         var viewport = tmapsProxy.appInstance.viewport;
+//         var mapObjectRegistry = tmapsProxy.viewer.mapObjectRegistry;
+//         var viewport = tmapsProxy.viewer.viewport;
 //         // CHART OPTIONS
 //         this.highchartConfig = {
 //             options: {

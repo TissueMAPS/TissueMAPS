@@ -17,7 +17,7 @@ interface ViewportElementScope extends ng.IScope {
     viewport: Viewport;
     // TODO: Set type to that of ViewportCtrl
     viewportCtrl: any;
-    appInstance: AppInstance;
+    viewer: Viewer;
 }
 
 class ResetViewControl extends ol.control.Control {

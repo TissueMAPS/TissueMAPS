@@ -18,19 +18,19 @@ interface ViewerWindowScope extends ng.IScope {
 class ViewerWindowCtrl {
     static $inject = ['$scope', 'application', '$document'];
 
-    private viewers: AppInstance[];
+    private viewers: Viewer[];
 
     constructor(public $scope: ViewerWindowScope,
                 private application: Application,
                 private $document: ng.IDocumentService) {
-        this.viewers = application.appInstances;
+        this.viewers = application.viewers;
     }
 
-    selectViewer(viewer: AppInstance) {
+    selectViewer(viewer: Viewer) {
         this.application.showViewer(viewer);
     }
 
-    deleteViewer(viewer: AppInstance) {
+    deleteViewer(viewer: Viewer) {
         this.application.removeViewer(viewer);
     }
 

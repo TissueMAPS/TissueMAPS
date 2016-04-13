@@ -1,10 +1,10 @@
-// interface SerializedAppInstance extends Serialized<AppInstance> {
+// interface SerializedViewer extends Serialized<Viewer> {
 //     experiment: SerializedExperiment;
 //     viewport: SerializedViewport;
 // }
 
 // TODO: Rename to Viewer
-class AppInstance {
+class Viewer {
     id: string;
 
     experiment: Experiment;
@@ -119,7 +119,7 @@ class AppInstance {
         this.viewport.update();
     }
 
-    // serialize(): ng.IPromise<SerializedAppInstance> {
+    // serialize(): ng.IPromise<SerializedViewer> {
     //     return $injector.get<ng.IQService>('$q').all({
     //         experiment: this.experiment.serialize(),
     //         viewport: this.viewport.serialize()
@@ -158,7 +158,7 @@ class AppInstance {
             return data.payload;
         },
         (err) => {
-            // this.appInstance.viewport.elementScope.then((vpScope) => {
+            // this.viewer.viewport.elementScope.then((vpScope) => {
                 // TODO: Send event to Viewer messagebox
                 // vpScope.$broadcast('toolRequestDone');
                 // vpScope.$broadcast('toolRequestFailed', err.data);

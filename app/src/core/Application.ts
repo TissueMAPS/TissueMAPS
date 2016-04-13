@@ -1,9 +1,9 @@
 // TODO: Rename to ViewerApp
 class Application {
 
-    appInstances: AppInstance[] = [];
+    viewers: Viewer[] = [];
 
-    private _activeAppInstanceNumber = 0;
+    private _activeViewerNumber = 0;
 
     static $inject = ['$q'];
 
@@ -16,17 +16,17 @@ class Application {
         }
     }
 
-    removeViewer(viewer: AppInstance) {
-        var idx = this.appInstances.indexOf(viewer);
+    removeViewer(viewer: Viewer) {
+        var idx = this.viewers.indexOf(viewer);
         if (idx > -1) {
-            var viewer = this.appInstances[idx];
+            var viewer = this.viewers[idx];
             viewer.destroy();
-            this.appInstances.splice(idx, 1);
+            this.viewers.splice(idx, 1);
         }
     }
 
-    showViewer(viewer: AppInstance): AppInstance {
-        this.appInstances.forEach((v) => {
+    showViewer(viewer: Viewer): Viewer {
+        this.viewers.forEach((v) => {
             if (v !== viewer) {
                 v.hide();
             }
@@ -44,34 +44,34 @@ class Application {
      * visualization state.
      */
     hide() {
-        this.appInstances.forEach((viewer) => {
+        this.viewers.forEach((viewer) => {
             viewer.hide();
         });
         $('#viewer-window').hide();
     }
 
     /**
-     * Show the appInstances after hiding them with `hideViewports`.
+     * Show the viewers after hiding them with `hideViewports`.
      */
     show() {
         $('#viewer-window').show();
-        this.appInstances.forEach((inst) => {
+        this.viewers.forEach((inst) => {
             inst.viewport.update();
         });
     }
 
-    addViewer(viewer: AppInstance) {
-        this.appInstances.push(viewer);
+    addViewer(viewer: Viewer) {
+        this.viewers.push(viewer);
     }
 
     // serialize(): ng.IPromise<SerializedApplication> {
-    //     var instPromises = _(this.appInstances).map((inst) => {
+    //     var instPromises = _(this.viewers).map((inst) => {
     //         return inst.serialize();
     //     });
     //     return this.$q.all(instPromises).then((sers) => {
     //         var serApp =  {
-    //             activeAppInstanceNumber: this._activeAppInstanceNumber,
-    //             appInstances: sers
+    //             activeViewerNumber: this._activeViewerNumber,
+    //             viewers: sers
     //         };
     //         return serApp;
     //     });
@@ -82,6 +82,6 @@ class Application {
 angular.module('tmaps.core').service('application', Application);
 
 // interface SerializedApplication extends Serialized<Application> {
-//     activeAppInstanceNumber: number;
-//     appInstances: SerializedAppInstance[];
+//     activeViewerNumber: number;
+//     viewers: SerializedViewer[];
 // }

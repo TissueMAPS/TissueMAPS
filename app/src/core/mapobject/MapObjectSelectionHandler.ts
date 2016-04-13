@@ -7,7 +7,7 @@ interface SerializedSelectionHandler extends Serialized<MapObjectSelectionHandle
 
 class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandler> {
 
-    viewer: AppInstance;
+    viewer: Viewer;
     viewport: Viewport;
 
     /**
@@ -25,7 +25,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _activeSelection: MapObjectSelection = null;
     private _outlineLayers: {[objectType: string]: VectorLayer;} = {};
 
-    constructor(viewer: AppInstance) {
+    constructor(viewer: Viewer) {
         this.viewer = viewer;
         this.viewport = viewer.viewport;
 

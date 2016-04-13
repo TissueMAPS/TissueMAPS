@@ -20,14 +20,14 @@
 //     var svm;
 //     var appstate;
 //     var experiment;
-//     var appInstance;
+//     var viewer;
 //     var classificationResult;
 
 //     // Assign sample data each time a test is executed.
 //     beforeEach(function() {
 //         appstate = {};
 //         experiment = {};
-//         appInstance = {
+//         viewer = {
 //             viewport: {
 //                 addObjectLayer: jasmine.createSpy('addObjectLayer')
 //             },
@@ -55,7 +55,7 @@
 //             ]
 //         };
 
-//         svm = new SVMTool(appInstance);
+//         svm = new SVMTool(viewer);
 //     });
 
 //     describe('the function handleResult', function() {
@@ -74,7 +74,7 @@
 //             //     var cls = classificationResult.classes[i];
 //             //     var color = Color.fromObject(cls.color);
 //             // }
-//             expect(appInstance.viewport.addObjectLayer).toHaveBeenCalledWith(
+//             expect(viewer.viewport.addObjectLayer).toHaveBeenCalledWith(
 //                 jasmine.objectContaining({
 //                     name: 'SVM'
 //                 })
