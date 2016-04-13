@@ -147,6 +147,7 @@
         "app/src/viewer/sidebar/tmResizeHandle.ts",
 
         "app/src/userpanel/UserpanelWindowCtrl.ts",
+        "app/src/userpanel/CreateExperimentCtrl.ts",
 
         "app/src/setup/SetupWindowCtrl.ts"
     ]

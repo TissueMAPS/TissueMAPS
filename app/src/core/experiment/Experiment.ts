@@ -12,6 +12,13 @@ interface SerializedExperiment {
     mapobject_info: SerializedMapObjectInfo[];
 }
 
+interface CreateExperimentArgs {
+    name: string;
+    description: string;
+    plateFormat: number;
+    microscopeType: string;
+    plateAcquisitionMode: string;
+}
 
 type ExperimentArgs = SerializedExperiment;
 
@@ -110,4 +117,23 @@ class Experiment {
         });
     }
 
+    static create(args: CreateExperimentArgs) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var deferredExp = $q.defer();
+        $http.post('/api/experiments', {
+            name: args.name,
+            description: args.description,
+            plate_format: args.plateFormat,
+            microscope_type: args.microscopeType,
+            plate_acquisition_mode: args.plateAcquisitionMode
+        })
+        .then((resp: {data: {experiment: SerializedExperiment}}) => {
+            deferredExp.resolve(new Experiment(resp.data.experiment));
+        })
+        .catch((resp) => {
+            deferredExp.reject(resp.error);
+        });
+        return deferredExp.promise;
+    }
 }

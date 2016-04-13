@@ -3,7 +3,7 @@ angular.module('tmaps.ui')
              function($stateProvider, $urlRouterProvider, $locationProvider) {
 
     // For any unmatched url redirect to root
-    $urlRouterProvider.otherwise('/login');
+    // $urlRouterProvider.otherwise('/login');
 
     $stateProvider
     .state('viewer', {
@@ -97,7 +97,28 @@ angular.module('tmaps.ui')
         data: {
             loginRequired: true
         },
-        templateUrl: '/src/userpanel/userpanel.html'
+        templateUrl: '/src/userpanel/userpanel.html',
+        redirectTo: 'experiment-list'
+
+    })
+    .state('experiment', {
+        parent: 'userpanel',
+        url: '/experiments',
+        views: {
+            'userpanel-main': { template: '<ui-view></ui-view>' }
+        },
+        abstract: true,
+    })
+    .state('experiment.list', {
+        url: '',
+        parent: 'experiment',
+        templateUrl: '/src/userpanel/experiment.list.html'
+    })
+    .state('experiment.create', {
+        url: '/create',
+        templateUrl: '/src/userpanel/experiment.create.html',
+        controller: 'CreateExperimentCtrl',
+        controllerAs: 'createExpCtrl'
     })
     .state('setup', {
         parent: 'content',
@@ -107,6 +128,8 @@ angular.module('tmaps.ui')
         },
         templateUrl: '/src/setup/setup.html'
     });
+
+
 
 }]);
 

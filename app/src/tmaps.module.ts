@@ -84,6 +84,15 @@
             }
         });
 
+
+        // Add a redirectTo property to states
+        $rootScope.$on('$stateChangeStart', (evt, to, params) => {
+            if (to.redirectTo) {
+                evt.preventDefault();
+                $state.go(to.redirectTo, params);
+            }
+        });
+
     }]);
 
 }());
