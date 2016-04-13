@@ -66062,10 +66062,11 @@ ol.render.webgl.PolygonReplay.prototype.finish = function(context) {
 
   var indices = this.indices_;
   var bits = context.hasOESElementIndexUint ? 32 : 16;
+
   // FIXME
-  // goog.asserts.assert(indices[indices.length - 1] < Math.pow(2, bits),
-  //     'Too large element index detected [%s] (OES_element_index_uint "%s")',
-  //     indices[indices.length - 1], context.hasOESElementIndexUint);
+  goog.asserts.assert(indices[indices.length - 1] < Math.pow(2, bits),
+      'Too large element index detected [%s] (OES_element_index_uint "%s")',
+      indices[indices.length - 1], context.hasOESElementIndexUint);
 
   // create, bind, and populate the indices buffer
   this.indicesBuffer_ = new ol.webgl.Buffer(indices);
@@ -66217,7 +66218,10 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
 
         var numItems = end - start;
         var offsetInBytes = start * elementSize;
-        gl.drawElements(goog.webgl.TRIANGLES, numItems, elementType, offsetInBytes);
+
+        if (numItems > 0) {
+          gl.drawElements(goog.webgl.TRIANGLES, numItems, elementType, offsetInBytes);
+        }
 
         result = featureCallback(feature);
         if (result) {
@@ -66238,10 +66242,14 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
   gl.disableVertexAttribArray(locations.a_position);
   gl.disableVertexAttribArray(locations.a_color);
 
-  this.lineStringReplay_.replay(context,
-      center, resolution, rotation, size, pixelRatio,
-      opacity, skippedFeaturesHash,
-      featureCallback, oneByOne, opt_hitExtent);
+  // Only replay the line string replay for the polygon's outline
+  // if it was actually populated with vertices.
+  if (this.hasLineStringReplayColor_) {
+    this.lineStringReplay_.replay(context,
+        center, resolution, rotation, size, pixelRatio,
+        opacity, skippedFeaturesHash,
+        featureCallback, oneByOne, opt_hitExtent);
+  }
   // FIXME get result
   return result;
 };
@@ -66258,7 +66266,6 @@ ol.render.webgl.PolygonReplay.prototype.drawReplay_ =
   var elementType = context.hasOESElementIndexUint ?
       goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
   //  var elementSize = context.hasOESElementIndexUint ? 4 : 2;
-
   if (!goog.object.isEmpty(skippedFeaturesHash)) {
     // TODO: draw by blocks to skip features
   } else {
