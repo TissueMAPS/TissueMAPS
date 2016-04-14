@@ -234,6 +234,8 @@ class Experiment(Model, DateMixIn):
         height, width = dimensions
         grid = np.zeros((height, width), dtype=int)
         for i, c in enumerate(cooridinates):
+            if i >= n:
+                break
             grid[c[0], c[1]] = self.plates[i].id
         return grid
 

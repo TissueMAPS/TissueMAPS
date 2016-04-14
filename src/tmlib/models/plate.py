@@ -221,6 +221,8 @@ class Plate(Model, DateMixIn):
         -------
         It's assumed that all wells have the same size.
         '''
+        if len(self.wells) == 0:
+            return None
         offset = self.experiment.well_spacer_size
         well_size = self.wells[0].image_size
         rows = len(self.nonempty_rows)
