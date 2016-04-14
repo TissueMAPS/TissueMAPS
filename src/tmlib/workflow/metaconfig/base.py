@@ -174,6 +174,8 @@ class MetadataHandler(object):
                     metadata['zplane'].append(plane.TheZ)
                     # "TheC" will be defined later on, because this information
                     # is often not yet available at this point.
+                    metadata['height'].append(pixels.SizeY)
+                    metadata['width'].append(pixels.SizeX)
 
                     metadata['stage_position_y'].append(plane.PositionY)
                     metadata['stage_position_x'].append(plane.PositionX)
