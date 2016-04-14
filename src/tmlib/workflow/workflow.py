@@ -11,7 +11,6 @@ from gc3libs.workflow import AbortOnError
 
 import tmlib.models
 from tmlib.workflow.registry import get_step_api
-from tmlib.workflow.registry import get_workflow_description
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.errors import WorkflowTransitionError
@@ -81,6 +80,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         self.submission_id = submission_id
         self.run_jobs = run_jobs
         self.collect_job = collect_job
+        self._current_task = 0
 
     @property
     def run_jobs(self):
@@ -479,11 +479,6 @@ class Workflow(SequentialTaskCollection, State):
         If `description` is not provided, there will be an attempt to obtain
         it from :py:attr:`tmlib.workflow.Workflow.description_file`.
 
-        Note
-        ----
-        A previously submitted workflow can be resubmitted at any stage by
-        setting the `start_stage` attribute.
-
         Raises
         ------
         TypeError
@@ -494,8 +489,6 @@ class Workflow(SequentialTaskCollection, State):
         --------
         :py:class:`tmlib.cfg.UserConfiguration`
        '''
-        # TODO: consider pre-building tasks and then later adding subtasks
-        # (individual jobs) for more convenient monitoring
         self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.waiting_time = waiting_time
@@ -505,16 +498,12 @@ class Workflow(SequentialTaskCollection, State):
                 get(self.experiment_id)
             super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
             self.workflow_location = experiment.workflow_location
-        if description is not None:
-            if not isinstance(description, WorkflowDescription):
-                raise TypeError(
-                    'Argument "description" must have type '
-                    'tmlib.tmaps.description.WorkflowDescription'
-                )
-            self.description = description
-        else:
-            self.description = self._read_description_from_file()
-        self._start_stage = self.description.stages[0].name
+        if not isinstance(description, WorkflowDescription):
+             raise TypeError(
+                 'Argument "description" must have type '
+                 'tmlib.tmaps.description.WorkflowDescription'
+             )
+        self.description = description
         self._current_task = 0
         self.tasks = self._create_stages()
         # Update the first stage and its first step to start the workflow
@@ -554,65 +543,6 @@ class Workflow(SequentialTaskCollection, State):
                     )
                 )
         return workflow_stages
-
-    @property
-    def start_stage(self):
-        '''str: name of stage where workflow should be (re)started'''
-        return self._start_stage
-
-    @start_stage.setter
-    def start_stage(self, value):
-        stage_names = [s.name for s in self.description.stages]
-        if value is None:
-            value = stage_names[0]
-        if not isinstance(value, basestring):
-            raise TypeError(
-                'Attribute "start_stage" must have type basestring.'
-            )
-        if value not in stage_names:
-            raise ValueError(
-                'Value of attribute "start_stage" can be '
-                'one of the following:\n"%s"' % '" or "'.join(stage_names)
-            )
-        # self_current_task will trigger resubmission of the stage even if the
-        # workflow was previously set to TERMINATED
-        self._current_task = stage_names.index(value)
-        # Resubmission requires that jobs for subsequent stages are re-created
-        self._update_stage(self._current_task)
-        self._start_stage = value
-
-    @property
-    def description_file(self):
-        '''str: absolute path to workflow description file'''
-        return os.path.join(
-            self.workflow_location, 'workflow_description.yaml'
-        )
-
-    def _read_description_from_file(self):
-        '''Reads description of workflow in YAML format from file.
-
-        Returns
-        -------
-        tmlib.workflow.tmaps.description.WorkflowDescription
-            description of the workflow
-
-        Raises
-        ------
-        TypeError
-            when description obtained from file is not a mapping
-        KeyError
-            when description obtained from file doesn't have key "type"
-        '''
-        with YamlReader(self.description_file) as f:
-            description = f.read()
-        if not isinstance(description, dict):
-            raise TypeError('Description must be a mapping.')
-        if 'type' not in description:
-            raise KeyError('Description must have key "type".')
-        workflow_description_class = get_workflow_description(
-            description['type']
-        )
-        return workflow_description_class(**description)
 
     @property
     def n_stages(self):

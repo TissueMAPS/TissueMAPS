@@ -130,7 +130,7 @@ class BasicClusterRoutines(object):
         engine.retrieve_overwrites = True
         return engine
 
-    def submit_jobs(self, jobs, engine, monitoring_depth=1, n_submit=2000):
+    def submit_jobs(self, jobs, engine, start_index=0, monitoring_depth=1, n_submit=2000):
         '''Submits jobs to a cluster and continuously monitors their progress.
 
         Parameters
@@ -139,6 +139,8 @@ class BasicClusterRoutines(object):
             jobs that should be submitted
         engine: gc3libs.core.Engine
             engine that should submit the jobs
+        start_index: int, optional
+            index of the job at which the collection should be (re)submitted
         monitoring_depth: int, optional
             recursion depth for job monitoring, i.e. in which detail subtasks
             in the task tree should be monitored (default: ``1``)
@@ -165,6 +167,7 @@ class BasicClusterRoutines(object):
 
         logger.debug('add jobs %s to engine', jobs)
         engine.add(jobs)
+        # engine.redo(jobs, start_index)
 
         # periodically check the status of submitted jobs
         t_submitted = datetime.datetime.now()

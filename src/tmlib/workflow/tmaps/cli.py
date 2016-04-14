@@ -59,7 +59,9 @@ class Tmaps(object):
         engine._store = session.store
         logger.info('submit and monitor jobs')
         try:
-            api.submit_jobs(workflow, engine, monitoring_depth)
+            api.submit_jobs(
+                workflow, engine, monitoring_depth=monitoring_depth
+            )
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')
@@ -91,14 +93,17 @@ class Tmaps(object):
         logger.debug('load jobs from session "%s"', session.name)
         job_ids = session.list_ids()
         workflow = session.load(int(job_ids[-1]))
+        start_index
         logger.info('resubmit workflow at stage "%s"', stage)
-        workflow.start_stage = stage
         logger.debug('add session to engine store')
         engine = api.create_gc3pie_engine()
         engine._store = session.store
         logger.info('resubmit and monitor jobs')
         try:
-            api.submit_jobs(workflow, engine, monitoring_depth)
+            api.submit_jobs(
+                workflow, engine, start_index=start_index,
+                monitoring_depth=monitoring_depth
+            )
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')

@@ -18,8 +18,6 @@ from tmlib import __version__
 from tmlib.workflow.registry import get_step_api
 from tmlib.workflow.registry import get_step_args
 from tmlib.workflow.registry import climethod
-from tmlib.workflow.jobs import RunJobCollection
-from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow.args import Argument
 from tmlib.logging_utils import configure_logging
 from tmlib.logging_utils import map_logging_verbosity
@@ -502,7 +500,7 @@ class CommandLineInterface(object):
         engine._store = session.store
         logger.info('submit and monitor jobs')
         try:
-            api.submit_jobs(jobs, engine, monitoring_depth)
+            api.submit_jobs(jobs, engine, monitoring_depth=monitoring_depth)
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')
@@ -539,29 +537,22 @@ class CommandLineInterface(object):
         task_ids = session.list_ids()
         task = session.load(int(task_ids[-1]))
         # Select an individual job based on "phase" and "job_id"
-        for phase_task in task.tasks:
-            if isinstance(phase_task, RunJobCollection) and phase == 'run':
-                try:
-                    jobs = phase_task.tasks[job_id-1]
-                except IndexError:
-                    ValueError(
-                        'Could not find a job for phase "%s" and ID %d'
-                        % (phase, job_id)
-                    )
-            elif isinstance(phase_task, CollectJob) and phase == 'collect':
-                jobs = phase_task
-            else:
-                ValueError(
-                    'Could not find a job for phase "%s" and ID %d'
-                    % (phase, job_id)
+        if phase == 'run':
+            job_index = 0
+        elif phase == 'collect':
+            if len(jobs.tasks) == 1:
+                raise ValueError(
+                    'Step "%s" doens\'t have a collect phase' % self.name
                 )
+            job_index = 1
         logger.debug('add session to engine store')
         engine = api.create_gc3pie_engine()
         engine._store = session.store
         logger.info('resubmit and monitor jobs')
         try:
             api.submit_jobs(
-                jobs, engine, monitoring_depth, resumit=True
+                jobs, engine, start_index=job_index,
+                monitoring_depth=monitoring_depth
             )
         except KeyboardInterrupt:
             logger.info('processing interrupted')
