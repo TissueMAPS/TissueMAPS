@@ -15,10 +15,6 @@ class Jterator(CommandLineInterface):
     segment the images and extract features for the identified objects.
     '''
 
-    pipeline = Argument(
-        type=str, flag='p', help='pipeline that should be processed'
-    )
-
     @assert_type(api_instance='tmlib.workflow.jterator.api.ImageAnalysisPipeline')
     def __init__(self, api_instance):
         '''

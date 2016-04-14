@@ -10,14 +10,16 @@ description is correct and thereby prevent submission of an incorrectly
 described workflow in the first place.
 '''
 from collections import OrderedDict
+import logging
 
+
+from tmlib.utils import same_docstring_as
+from tmlib.utils import flatten
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.errors import WorkflowDescriptionError
-from tmlib import utils
-
-import logging
+from tmlib.workflow.registry import workflow
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +80,7 @@ INTRA_STAGE_DEPENDENCIES = {
 
 
 def check_stage_name(stage_name):
-    '''
-    Check whether a described stage is known.
+    '''Checks whether a described stage is known.
 
     Parameters
     ----------
@@ -98,13 +99,13 @@ def check_stage_name(stage_name):
     known_names = STAGES
     if stage_name not in known_names:
         raise WorkflowDescriptionError(
-                'Unknown stage "%s". Known stages are: "%s"'
-                % (stage_name, '", "'.join(known_names)))
+            'Unknown stage "%s". Known stages are: "%s"'
+            % (stage_name, '", "'.join(known_names))
+        )
 
 
 def check_step_name(step_name, stage_name=None):
-    '''
-    Check whether a described step is known.
+    '''Checks whether a described step is known.
 
     Parameters
     ----------
@@ -132,26 +133,25 @@ def check_step_name(step_name, stage_name=None):
         known_names = STEPS_PER_STAGE[stage_name]
         if step_name not in known_names:
             raise WorkflowDescriptionError(
-                    'Unknown step "%s" for stage "%s". Known steps are: "%s"'
-                    % (step_name, stage_name, '", "'.join(known_names)))
+                'Unknown step "%s" for stage "%s". Known steps are: "%s"'
+                % (step_name, stage_name, '", "'.join(known_names))
+            )
     else:
-        known_names = utils.flatten(STEPS_PER_STAGE.values())
+        known_names = flatten(STEPS_PER_STAGE.values())
         if step_name not in known_names:
             raise WorkflowDescriptionError(
-                    'Unknown step "%s". Known steps are: "%s"'
-                    % (step_name, '", "'.join(known_names)))
+                'Unknown step "%s". Known steps are: "%s"'
+                % (step_name, '", "'.join(known_names))
+            )
 
 
+@workflow('canonical')
 class CanonicalWorkflowDescription(WorkflowDescription):
 
-    '''
-    Description of a canonical TissueMAPS workflow.
-    '''
+    '''Description of the canonical `TissueMAPS` workflow.'''
 
     def __init__(self, **kwargs):
         '''
-        Initialize an instance of class CanonicalWorkflowDescription.
-
         Parameters
         ----------
         **kwargs: dict, optional
@@ -163,8 +163,7 @@ class CanonicalWorkflowDescription(WorkflowDescription):
                 self.add_stage(CanonicalWorkflowStageDescription(**stage))
 
     def add_stage(self, stage_description):
-        '''
-        Add an additional stage to the workflow.
+        '''Adds an additional stage to the workflow.
 
         Parameters
         ----------
@@ -181,13 +180,14 @@ class CanonicalWorkflowDescription(WorkflowDescription):
         '''
         if not isinstance(stage_description, CanonicalWorkflowStageDescription):
             raise TypeError(
-                    'Argument "stage_description" must have type '
-                    'tmlib.tmaps.canonical.CanonicalWorkflowStageDescription.')
+                'Argument "stage_description" must have type '
+                'tmlib.workflow.canonical.CanonicalWorkflowStageDescription.'
+            )
         for stage in self.stages:
             if stage.name == stage_description.name:
                 raise WorkflowDescriptionError(
-                            'Stage "%s" already exists.'
-                            % stage_description.name)
+                    'Stage "%s" already exists.' % stage_description.name
+                )
         check_stage_name(stage_description.name)
         for step in stage_description.steps:
             check_step_name(step.name, stage_description.name)
@@ -196,33 +196,32 @@ class CanonicalWorkflowDescription(WorkflowDescription):
             for dep in INTER_STAGE_DEPENDENCIES[stage_description.name]:
                 if dep not in stage_names:
                     logger.warning(
-                            'Stage "%s" requires upstream stage "%s"',
-                            stage_description.name, dep)
+                        'stage "%s" requires upstream stage "%s"',
+                        stage_description.name, dep
+                    )
         for name in stage_names:
             if stage_description.name in INTER_STAGE_DEPENDENCIES[name]:
                 raise WorkflowDescriptionError(
-                            'Stage "%s" must be upstream of stage "%s"'
-                            % (stage_description.name, name))
+                    'Stage "%s" must be upstream of stage "%s".'
+                    % (stage_description.name, name)
+                )
         step_names = [s.name for s in stage_description.steps]
         required_steps = STEPS_PER_STAGE[stage_description.name]
         for name in step_names:
             if name not in required_steps:
                 raise WorkflowDescriptionError(
-                            'Stage "%s" requires the following steps: "%s" '
-                            % '", "'.join(required_steps))
+                    'Stage "%s" requires the following steps: "%s" '
+                    % '", "'.join(required_steps)
+                )
         self.stages.append(stage_description)
 
 
 class CanonicalWorkflowStageDescription(WorkflowStageDescription):
 
-    '''
-    Description of a TissueMAPS workflow stage.
-    '''
+    '''Description of a stage of the canonical `TissueMAPS` workflow.'''
 
     def __init__(self, name, mode, steps=None):
         '''
-        Initialize an instance of class CanonicalWorkflowStageDescription.
-
         Parameters
         ----------
         name: str
@@ -236,15 +235,14 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
         '''
         check_stage_name(name)
         super(CanonicalWorkflowStageDescription, self).__init__(
-                name, mode, steps
+            name, mode, steps
         )
         if steps is not None:
             for s in steps:
                 self.add_step(CanonicalWorkflowStepDescription(**s))
 
     def add_step(self, step_description):
-        '''
-        Add an additional step to the stage.
+        '''Adds an additional step to the stage.
 
         Parameters
         ----------
@@ -261,48 +259,33 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
         '''
         if not isinstance(step_description, CanonicalWorkflowStepDescription):
             raise TypeError(
-                    'Argument "step_description" must have type '
-                    'tmlib.cfg.CanonicalWorkflowStepDescription.')
+                'Argument "step_description" must have type '
+                'tmlib.cfg.CanonicalWorkflowStepDescription.'
+            )
         for step in self.steps:
             if step.name == step_description.name:
                 raise WorkflowDescriptionError(
-                            'Step "%s" already exists.'
-                            % step_description.name)
+                    'Step "%s" already exists.' % step_description.name
+                )
         name = step_description.name
         step_names = [s.name for s in self.steps]
         if name in INTRA_STAGE_DEPENDENCIES:
             for dep in INTRA_STAGE_DEPENDENCIES[name]:
                 if dep not in step_names:
                     raise WorkflowDescriptionError(
-                            'Step "%s" requires upstream step "%s"'
-                            % (name, dep))
+                        'Step "%s" requires upstream step "%s".' % (name, dep)
+                    )
         self.steps.append(step_description)
 
 
 class CanonicalWorkflowStepDescription(WorkflowStepDescription):
 
-    '''
-    Description of a step as part of a `TissueMAPS` workflow stage.
-    '''
+    '''Description of a step of a canonical `TissueMAPS` workflow.'''
 
-    def __init__(self, name, args=None, **kwargs):
-        '''
-        Initialize an instance of class CanonicalWorkflowStepDescription.
-
-        Parameters
-        ----------
-        name: str
-            name of the step
-        args: dict, optional
-            arguments of the step as key-value pairs
-        kwargs: dict, optional
-            additional arguments as key-value pairs
-
-        Raises
-        ------
-        WorkflowDescriptionError
-            when the step is not known
-        '''
+    @same_docstring_as(WorkflowStepDescription.__init__)
+    def __init__(self, name, batch_args=dict(), submission_args=dict(),
+            extra_args=dict()):
         check_step_name(name)
         super(CanonicalWorkflowStepDescription, self).__init__(
-                    name, args, **kwargs)
+            name, batch_args, submission_args, extra_args
+        )

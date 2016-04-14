@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 _step_register = collections.defaultdict(dict)
+_workflow_register = collections.defaultdict(dict)
 
 
 def api(step_name):
@@ -32,6 +33,27 @@ def api(step_name):
         _step_register[step_name]['api'] = cls
         return cls
     return decorator
+
+
+def workflow(workflow_type):
+    '''Class decorator to register a derived class of
+    :py:class:`tmlib.workflow.description.WorkflowDescription` for use in
+    command line interface and workflow.
+
+    Parameters
+    ----------
+    workflow_type: str
+        name of the type of workflow
+
+    Returns
+    -------
+    tmlib.workflow.description.WorkflowDescription
+    '''
+    def decorator(cls):
+        _workflow_register[workflow_type] = cls
+        return cls
+    return decorator
+
 
 def climethod(help, **kwargs):
     '''Method decorator that flags a method for use in the command line
@@ -121,6 +143,26 @@ def submission_args(step_name):
     return decorator
 
 
+def extra_args(step_name):
+    '''Class decorator to register a derived class of
+    :py:class:`tmlib.workflow.args.ExtraArguments` for a worklow
+    step to use it via the command line or within a worklow.
+
+    Parameters
+    ----------
+    step_name: str
+        name of the corresponding workflow step
+
+    Returns
+    -------
+    tmlib.workflow.args.ExtraArguments
+    '''
+    def decorator(cls):
+        _step_register[step_name]['extra_args'] = cls
+        return cls
+    return decorator
+
+
 def get_step_args(name):
     '''Gets the step-specific implementations of the argument collection
     classes.
@@ -132,8 +174,9 @@ def get_step_args(name):
 
     Returns
     -------
-    Tuple[tmlib.workflow.args.BatchArguments and tmlib.workflow.args.SubmissionArguments]
-        batch and submission arguments
+    Tuple[tmlib.workflow.args.ArgumentCollection or None]
+        batch and submission arguments and extra arguments in case the step
+        implemented any
     '''
     pkg_name = '.'.join(__name__.split('.')[:-1])
     args_module_name = '%s.%s.args' % (pkg_name, name)
@@ -142,13 +185,15 @@ def get_step_args(name):
     except ImportError:
         raise ImportError(
             'Step "%s" must implement module "%s"'
-            % (step_name, args_module)
+            % (name, args_module)
         )
     # Once the module has been loaded, the argument collection classes
     # are available in the register
     batch_args = _step_register[name]['batch_args']
     submission_args = _step_register[name]['submission_args']
-    return (batch_args, submission_args)
+    extra_args = _step_register[name].get('extra_args', None) 
+    return (batch_args, submission_args, extra_args)
+
 
 def get_step_api(name):
     '''Gets the step-specific implementation of the API class.
@@ -173,3 +218,24 @@ def get_step_api(name):
             % (step_name, args_module)
         )
     return _step_register[name]['api']
+
+
+def get_workflow_description(name):
+    '''Gets an implementation of a workflow description.
+
+    Parameters
+    ----------
+    name: str
+        name of a workflow type
+
+    Returns
+    -------
+    tmlib.workflow.description.WorkflowDescription
+    '''
+    pkg_name = '.'.join(__name__.split('.')[:-1])
+    module_name = '%s.%s' % (pkg_name, name)
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError:
+        raise ValueError('Unknown workflow type "%s".', name)
+    return _workflow_register[name]

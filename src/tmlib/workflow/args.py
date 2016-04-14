@@ -1,4 +1,5 @@
 import re
+import types
 import logging
 from abc import ABCMeta
 
@@ -259,14 +260,15 @@ class ArgumentCollection(object):
                 else:
                     docstring += '\n'
 
-    def iterargs(self):
+    @classmethod
+    def iterargs(cls):
         '''Iterates over the class attributes of type
         :py:class:`tmlib.workflow.arg.Argument`
         '''
-        for name in dir(self):
+        for name in dir(cls):
             if name.startswith('_'):
                 continue
-            value = getattr(self.__class__, name)
+            value = getattr(cls, name)
             if isinstance(value, Argument):
                 yield value
 
@@ -314,7 +316,7 @@ class ArgumentCollection(object):
         '''
         arguments = dict()
         for name in dir(self):
-            if name.startswith('__'):
+            if name.startswith('_'):
                 continue
             value = getattr(self.__class__, name)
             if isinstance(value, Argument):
@@ -395,10 +397,29 @@ class SubmissionArguments(ArgumentCollection):
     )
 
 
+class ExtraArguments(ArgumentCollection):
+
+    '''Collection of arguments that can be passed to the constructor of
+    API classes, i.e. a step-specific implementation of
+    :py:class:`tmlib.workflow.api.ClusterRoutines`, in addition to the default
+    arguments `experiment_id` and `verbosity`.
+
+    Note
+    ----
+    A step may implement this class if required.
+    '''
+
+
 class CliMethodArguments(ArgumentCollection):
 
-    '''Collection of arguments that should be passed to a method of
-    an implemenation of :py:class:`tmlib.workflow.cli.CommandLineInterface`.
+    '''Collection of arguments that can be passed to a method of
+    a step-specific implemenation of
+    :py:class:`tmlib.workflow.cli.CommandLineInterface`.
+
+    Note
+    ----
+    This class is automatically implemented for each method by the
+    :py:function:`tmlib.workflow.registry.climethod` decorator.
     '''
 
 

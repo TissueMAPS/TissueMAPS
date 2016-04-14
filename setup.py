@@ -133,8 +133,8 @@ def readme():
 def get_version():
     src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'src')
     sys.path = [src_path] + sys.path
-    import tmlib.version
-    return tmlib.version.__version__
+    import tmlib
+    return tmlib.__version__
 
 
 def get_requirements():
@@ -162,7 +162,7 @@ scripts = []
 
 packages = [
     'tmlib',
-    'tmlib.models.'
+    'tmlib.models',
     'tmlib.workflow.imextract',
     'tmlib.workflow.jterator',
     'tmlib.workflow.metaextract',

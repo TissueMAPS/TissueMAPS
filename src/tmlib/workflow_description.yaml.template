@@ -11,7 +11,7 @@ stages:
     mode: parallel
     steps:
       - name: align
-        args:
+        batch_args:
           ref_wavelength: "1"
           ref_cycle: 1
       - name: corilla
@@ -19,7 +19,7 @@ stages:
     mode: sequential
     steps:
       - name: illuminati
-        args:
+        batch_args:
           align: true
           illumcorr: true
           clip: true
@@ -27,9 +27,9 @@ stages:
     mode: sequential
     steps:
       - name: jterator
-        args:
-          pipeline: segment
+        extra_args:
+            pipeline: segment
       - name: jterator
-        args:
-          pipeline: measure
+        extra_args:
+            pipeline: measure
 

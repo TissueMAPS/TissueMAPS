@@ -5,6 +5,11 @@ from abc import abstractmethod
 
 import tmlib.workflow
 from tmlib.errors import WorkflowDescriptionError
+from tmlib.workflow.registry import get_step_args
+from tmlib.workflow.registry import get_step_api
+from tmlib.workflow.args import BatchArguments
+from tmlib.workflow.args import SubmissionArguments
+from tmlib.workflow.args import ExtraArguments
 
 
 class WorkflowDescription(object):
@@ -238,7 +243,8 @@ class WorkflowStepDescription(object):
 
     '''Description of a workflow step.'''
 
-    def __init__(self, name, batch_args=None, submission_args=None):
+    def __init__(self, name, batch_args=dict(), submission_args=dict(),
+            extra_args=dict()):
         '''
         Parameters
         ----------
@@ -248,23 +254,34 @@ class WorkflowStepDescription(object):
             names and values of batch arguments
         submission_args: dict, optional
             names and values of submission arguments 
+        extra_args: dict, optional
+            names and values of additional arguments
 
         Raises
         ------
-        TypeError
-            when `name` or `args` have the wrong type
         WorkflowDescriptionError
             when a provided argument is not a valid argument for the given step
         '''
-        if not isinstance(name, basestring):
-            raise TypeError('Argument "name" must have type basestring.')
         self.name = str(name)
-        if not(isinstance(batch_args, dict) or args is None):
-            raise TypeError('Argument "batch_args" must have type dict.')
-        if not(isinstance(submission_args, dict) or args is None):
-            raise TypeError('Argument "submission_args" must have type dict.')
-        self.batch_args = BatchArguments(**batch_args)
-        self.submission_args = SubmissionArguments(**submission_args)
+        batch_args_cls, submission_args_cls, extra_args_cls = get_step_args(name)
+        self.batch_args = batch_args_cls(**batch_args)
+        self.submission_args = submission_args_cls(**submission_args)
+        if extra_args_cls is not None:
+            self.extra_args = extra_args_cls(**extra_args)
+
+    @property
+    def extra_args(self):
+        '''tmlib.workflow.args.ExtraArguments: extra arguments instance'''
+        return self._extra_args
+
+    @extra_args.setter
+    def extra_args(self, value):
+        if not isinstance(value, ExtraArguments):
+            raise TypeError(
+                'Attribute "extra_args" must have type '
+                'tmlib.workflow.args.ExtraArguments'
+            )
+        self._extra_args = value
 
     @property
     def batch_args(self):
@@ -304,8 +321,6 @@ class WorkflowStepDescription(object):
         description = dict()
         description['name'] = self.name
         # TODO: serialize argument collection (only key-value pairs):w
-        description['batch_args'] = self.batch_args
-        description['submission_args'] = self.submission_args
 
     def jsonify(self):
         '''Returns attributes as key-value pairs encoded as JSON.

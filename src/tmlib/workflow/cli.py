@@ -1,5 +1,4 @@
 import os
-import re
 import sys
 import traceback
 import logging
@@ -19,9 +18,9 @@ from tmlib import __version__
 from tmlib.workflow.registry import get_step_api
 from tmlib.workflow.registry import get_step_args
 from tmlib.workflow.registry import climethod
+from tmlib.workflow.jobs import RunJobCollection
+from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow.args import Argument
-from tmlib.workflow.args import ArgumentCollection
-from tmlib.workflow.args import CliMethodArguments
 from tmlib.logging_utils import configure_logging
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.errors import WorkflowError
@@ -66,6 +65,8 @@ class CliMeta(ABCMeta):
         parser = argparse.ArgumentParser()
         parser.description = cls.__doc__
         parser.version = __version__
+        # The parser for each step receives at least two arguments, which are
+        # passed to the corresponding API class.
         parser.add_argument(
             'experiment_id', type=int,
             help='ID of the experiment that should be processed'
@@ -74,6 +75,13 @@ class CliMeta(ABCMeta):
             '--verbosity', '-v', action='count', default=0,
             help='increase logging verbosity'
         )
+        # Extra arguments are added to the main parser as well because they
+        # also need to be parssed to the constructor of the API class.
+        step_name = cls.__name__.lower()
+        batch_args, submission_args, extra_args = get_step_args(step_name)
+        if extra_args is not None:
+            for arg in extra_args.iterargs():
+                arg.add_to_argparser(parser)
         subparsers = parser.add_subparsers(dest='method', help='methods')
         subparsers.required = True
         flags = collections.defaultdict(list)
@@ -81,11 +89,6 @@ class CliMeta(ABCMeta):
             if attr_name.startswith('__'):
                 continue
             attr_value = getattr(cls, attr_name)
-            # Arguments that are described by class attributes are added
-            # to the main parser.
-            if isinstance(attr_value, Argument):
-                attr_value.name = attr_name
-                attr_value.add_to_argparser(parser)
             # The climethod decorator provides argument descriptions via
             # the "args" attribute of the decoreated method.
             # These arguments are added to the method-specific subparser.
@@ -95,57 +98,37 @@ class CliMeta(ABCMeta):
                         attr_name, help=attr_value.help
                     )
                     method_parser.description = attr_value.help
-                    for arg in attr_value.args().iterargs():
+                    for arg in attr_value.args.iterargs():
                         arg.add_to_argparser(method_parser)
                         if arg.flag is not None:
                             flags[attr_name].append(arg.flag)
         # The "init" and "submit" methods require additional arguments
         # that also need to be accessible outside the scope of the
-        # command line interface and are therefore handled separately.
+        # command line interface. Therefore, they are handled separately.
         # Each workflow step must implement BatchArguments and
         # SubmissionArguments and register them using the batch_args and
         # submission_args decorator, respectively.
         # These arguments are added to the corresponding method-specific
         # subparser as a separate group to highlight that they represent a
         # different type of argument.
+
         def add_step_specific_method_args(step_name, method_name, args_class):
             method_parser = subparsers.choices[method_name]
             parser_group = method_parser.add_argument_group(
                     'step-specific arguments'
             )
-            for arg in args_class().iterargs():
+            for arg in args_class.iterargs():
                 arg.add_to_argparser(parser_group)
                 if arg.flag is not None:
                     flags[attr_name].append(arg.flag)
-        step_name = cls.__name__.lower()
-        # pkg_name = '.'.join(cls.__module__.split('.')[:-1])
-        # args_module_name = '%s.args' % pkg_name
-        # try:
-        #     args_module = importlib.import_module(args_module_name)
-        # except ImportError:
-        #     raise ImportError(
-        #         'Step "%s" must implement module "%s"'
-        #         % (step_name, args_module)
-        #     )
-        # api_module_name = '%s.api' % pkg_name
-        # try:
-        #     api_module = importlib.import_module(api_module_name)
-        # except ImportError:
-        #     raise ImportError(
-        #         'Step "%s" must implement module "%s"'
-        #         % (step_name, args_module)
-        #     )
-        # batch_args = _step_register[step_name]['batch_args']
-        batch_args, submission_args = get_step_args(step_name)
+
         add_step_specific_method_args(step_name, 'init', batch_args)
         setattr(cls, '_batch_args_class', batch_args)
         add_step_specific_method_args(step_name, 'submit', submission_args)
         setattr(cls, '_submission_args_class', submission_args)
-        # api = _step_register[step_name]['api']
         api = get_step_api(step_name)
         setattr(cls, '_api_class', api)
         setattr(cls, '_parser', parser)
-
 
 
 class CommandLineInterface(object):
@@ -214,13 +197,11 @@ class CommandLineInterface(object):
             logger.debug('instantiate API class "%s"', cls._api_class.__name__)
             # Derived CLI classes may provide additional arguments for the main
             # parser, i.e. arguments for the constructor of the API class.
-            kwargs = {
-                'experiment_id': arguments.experiment_id,
-                'verbosity': arguments.verbosity
-            }
-            for arg_name, arg_value in vars(cls).iteritems():
-                if isinstance(arg_value, Argument):
-                    kwargs[arg_name] = getattr(arguments, arg_name)
+            kwargs = dict()
+            valid_arg_names = inspect.getargspec(cls._api_class.__init__).args
+            for arg_name, arg_value in vars(arguments).iteritems():
+                if arg_name in valid_arg_names:
+                    kwargs[arg_name] = arg_value
             api_instance = cls._api_class(**kwargs)
             logger.debug('instantiate CLI class "%s"', cls.__name__)
             cli_instance = cls(api_instance)
@@ -255,11 +236,6 @@ class CommandLineInterface(object):
         method = getattr(self, cli_args.method)
         arg_names = inspect.getargspec(method).args[1:]
         arg_defaults = inspect.getargspec(method).defaults
-        if arg_defaults:
-            logger.warning(
-                'default values for arguments of method "%s" are ignored; '
-                'defaults should be provided via the climethod decorator.'
-            )
         method_args = dict()
         for name in arg_names:
             logger.debug(
@@ -383,8 +359,9 @@ class CommandLineInterface(object):
                 type=str, default='run', choices={'run', 'collect'}, flag='p',
                 help='phase of the workflow step to which the job belongs'
         ),
-        job_id=Argument(type=int, help='ID of the job that should be run')
-
+        job_id=Argument(
+            type=int, help='ID of the job that should be run', flag='j'
+        )
     )
     def log(self, phase, job_id):
         if job_id is not None and phase != 'run':
@@ -499,7 +476,7 @@ class CommandLineInterface(object):
             type=int, help='ID of the job that should be run', flag='j'
         ),
         monitoring_depth=Argument(
-            type=int, help='depth of monitoring the task hierarchy',
+            type=int, help='number of child tasks that should be monitored',
             default=1, flag='m'
         )
     )
@@ -565,14 +542,14 @@ class CommandLineInterface(object):
         for phase_task in task.tasks:
             if isinstance(phase_task, RunJobCollection) and phase == 'run':
                 try:
-                    job = phase_task.tasks[job_id-1]
+                    jobs = phase_task.tasks[job_id-1]
                 except IndexError:
                     ValueError(
                         'Could not find a job for phase "%s" and ID %d'
                         % (phase, job_id)
                     )
             elif isinstance(phase_task, CollectJob) and phase == 'collect':
-                job = phase_task
+                jobs = phase_task
             else:
                 ValueError(
                     'Could not find a job for phase "%s" and ID %d'
@@ -584,7 +561,7 @@ class CommandLineInterface(object):
         logger.info('resubmit and monitor jobs')
         try:
             api.submit_jobs(
-                jobs, engine,monitoring_depth, resumit=True
+                jobs, engine, monitoring_depth, resumit=True
             )
         except KeyboardInterrupt:
             logger.info('processing interrupted')

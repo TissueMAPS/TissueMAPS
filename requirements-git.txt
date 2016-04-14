@@ -1,3 +1,3 @@
 git+https://github.com/cellprofiler/python-bioformats
 git+https://github.com/jmcgeheeiv/pyfakefs
-git+https://github.com/uzh/gc3pie
+git+https://github.com/uzh/gc3pie@develop
