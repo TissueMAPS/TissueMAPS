@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+import argparse
+import sqlalchemy.orm.exc
+
+import tmlib.models
+
+
+def add_plate(plate_name, experiment_name):
+    # TODO: authentication
+    with tmlib.models.utils.Session() as session:
+        try:
+            experiment = session.query(tmlib.models.Experiment).\
+                filter_by(name=experiment_name).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Experiment "%s" does not exist!' % experiment_name
+            )
+        except:
+            raise
+        plate = tmlib.models.Plate(
+            name=plate_name, experiment_id=experiment.id
+        )
+        session.add(plate)
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description='''
+            Add a new plate to an existing experiment
+            in the TissueMAPS database.
+        '''
+    )
+    parser.add_argument(
+        '-e', '--experiment_name', required=True, type=str,
+        help='name of the parent experiment'
+    )
+    parser.add_argument(
+        '-p', '--plate_name', required=True, type=str,
+        help='name of the new plate'
+    )
+
+    args = parser.parse_args()
+
+    add_plate(args.plate_name, args.experiment_name)

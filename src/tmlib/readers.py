@@ -5,112 +5,112 @@ import logging
 import json
 import ruamel.yaml
 import traceback
+import lxml.etree
 import cv2
 import bioformats
 import javabridge
+import numpy as np
 import pandas as pd
 from abc import ABCMeta
 from abc import abstractmethod
-from .errors import NotSupportedError
-from . import utils
+
+from tmlib.errors import NotSupportedError
+from tmlib.utils import same_docstring_as
 
 logger = logging.getLogger(__name__)
 
 
 class Reader(object):
 
-    '''
-    Abstract base class for reading data from files.
+    '''Abstract base class for reading data from files.
 
-    All readers make use of the 
+    Readers make use of the 
     `with statement context manager <https://docs.python.org/2/reference/datamodel.html#context-managers>`_.
-    and follow a similar syntax::
+    and thus follow a similar syntax::
 
-        with Reader('/path/to/folder') as reader:
-            data = reader.read('name_of_file')
-
-        with Reader() as reader:
-            data = reader.read('/path/to/file')
+        with Reader('/path/to/file') as f:
+            data = f.read()
     '''
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, directory=None):
+    def __init__(self, filename):
         '''
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-
-        Raises
-        ------
-        OSError
-            when `directory` does not exist
-        '''
-        self.directory = directory
-        if self.directory is not None:
-            if not os.path.exists(self.directory):
-                raise OSError('Directory does not exist: %s', self.directory)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, except_type, except_value, except_trace):
-        pass
-        # if except_value:
-        #     sys.stdout.write('%s\n' % str(except_value))
-        #     for tb in traceback.format_tb(except_trace):
-        #         sys.stdout.write(tb)
-
-
-class TextReader(Reader):
-    '''
-    Abstract base class for reading text from files.
-    '''
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def read(self, filename, **kwargs):
-        pass
-
-
-class XmlReader(TextReader):
-
-    # TODO: implement xpath subset reading via lxml
-    '''
-    Class for reading data from files in XML format.
-    '''
-
-    @utils.same_docstring_as(Reader.__init__)
-    def __init__(self, directory=None):
-        super(XmlReader, self).__init__(directory)
-
-    def read(self, filename):
-        '''
-        Read data from XML file.
-
         Parameters
         ----------
         filename: str
-            path to the file
-
-        Returns
-        -------
-        basestring
-            xml string
+            absolute path to a file
 
         Raises
         ------
         OSError
             when `filename` does not exist
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
         if not os.path.exists(filename):
             raise OSError('File does not exist: %s' % filename)
-        with open(filename, 'r') as f:
-            return f.read()
+        self.filename = filename
+
+    def __enter__(self):
+        logger.debug('open file: %s', self.filename)
+        self._stream = open(self.filename, 'r')
+        return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        logger.debug('close file: %s', self.filename)
+        self._stream.close()
+        if except_value:
+            sys.stdout.write(
+                'The following error occurred while reading from file:\n%s'
+                % str(except_value)
+            )
+            for tb in traceback.format_tb(except_trace):
+                sys.stdout.write(tb)
+            sys.exit(1)
+
+    @abstractmethod
+    def read(self):
+        pass
+
+
+class TextReader(Reader):
+
+    '''Class for reading data from text files.'''
+
+    @same_docstring_as(Reader.__init__)
+    def __init__(self, filename):
+        super(TextReader, self).__init__(filename)
+
+    def read(self):
+        '''Reads data from text file.
+
+        Returns
+        -------
+        lxml.etree._Element
+            xml
+        '''
+        logger.debug('read from file: %s', self.filename)
+        return self._stream.read()
+
+
+class XmlReader(Reader):
+
+    # TODO: implement xpath subset reading via lxml
+    '''Class for reading data from files in XML format.'''
+
+    @same_docstring_as(Reader.__init__)
+    def __init__(self, filename):
+        super(XmlReader, self).__init__(filename)
+
+    def read(self):
+        '''Reads data from XML file.
+
+        Returns
+        -------
+        lxml.etree._Element
+            xml
+        '''
+        logger.debug('read from file: %s', self.filename)
+        return lxml.etree.fromstring(self._stream.read())
 
 
 def load_json(string):
@@ -129,46 +129,28 @@ def load_json(string):
     return json.loads(string)
 
 
-class JsonReader(TextReader):
-    '''
-    Class for reading data from files in JSON format.
-    '''
+class JsonReader(Reader):
 
-    @utils.same_docstring_as(Reader.__init__)
-    def __init__(self, directory=None):
-        super(JsonReader, self).__init__(directory)
+    '''Class for reading data from files in JSON format.'''
 
-    def read(self, filename, **kwargs):
-        '''
-        Read data from JSON file.
+    @same_docstring_as(Reader.__init__)
+    def __init__(self, filename):
+        super(JsonReader, self).__init__(filename)
 
-        Parameters
-        ----------
-        filename: str
-            path to the file
+    def read(self):
+        '''Reads data from JSON file.
 
         Returns
         -------
         dict or list
             file content
-
-        Raises
-        ------
-        OSError
-            when `filename` does not exist
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        if not os.path.exists(filename):
-            raise OSError('File does not exist: %s' % filename)
-        logger.debug('read file: %s', filename)
-        with open(filename, 'r') as f:
-            return load_json(f.read())
+        logger.debug('read from file: %s', self.filename)
+        return load_json(self._stream.read())
 
 
 def load_yaml(string):
-    '''
-    Convert YAML string to Python object.
+    '''Converts YAML string to Python object.
 
     Parameters
     ----------
@@ -182,77 +164,43 @@ def load_yaml(string):
     return ruamel.yaml.load(string, ruamel.yaml.RoundTripLoader)
 
 
-class YamlReader(TextReader):
-    '''
-    Class for reading data from files in YAML 1.2 format.
-    '''
+class YamlReader(Reader):
 
-    @utils.same_docstring_as(Reader.__init__)
-    def __init__(self, directory=None):
+    '''Class for reading data from files in YAML 1.2 format.'''
 
-        super(YamlReader, self).__init__(directory)
+    @same_docstring_as(Reader.__init__)
+    def __init__(self, filename):
+        super(YamlReader, self).__init__(filename)
 
-    def read(self, filename):
-        '''
-        Read YAML file.
-
-        Parameters
-        ----------
-        filename: str
-            path to the YAML file
+    def read(self):
+        '''Reads YAML file.
 
         Returns
         -------
         dict or list
             file content
-
-        Raises
-        ------
-        OSError
-            when `filename` does not exist
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        if not os.path.exists(filename):
-            raise OSError('File does not exist: %s' % filename)
-        logger.debug('read file: %s', filename)
-        with open(filename, 'r') as f:
-            return load_yaml(f.read())
+        logger.debug('read from file: %s', self.filename)
+        return load_yaml(self._stream.read())
 
 
-class TablesReader(object):
+class TablesReader(Reader):
 
-    '''
-    Class for reading datasets and attributes from HDF5 files
+    '''Class for reading datasets and attributes from HDF5 files
     using the `pytables <http://www.pytables.org/>`_ library.
     '''
 
+    @same_docstring_as(Reader.__init__)
     def __init__(self, filename):
-        '''
-        Parameters
-        ----------
-        filename: str
-            absolute path to HDF5 file
-        '''
-        self.filename = filename
+        super(TablesReader, self).__init__(filename)
 
     def __enter__(self):
         logger.debug('open file: %s', self.filename)
         self._stream = pd.HDFStore(self.filename, 'r')
         return self
 
-    def __exit__(self, except_type, except_value, except_trace):
-        logger.debug('close file: %s', self.filename)
-        self._stream.close()
-        if except_value:
-            sys.stdout.write('The following error occurred:\n%s'
-                             % str(except_value))
-            for tb in traceback.format_tb(except_trace):
-                sys.stdout.write(tb)
-
     def exists(self, path):
-        '''
-        Check whether a `path` exists within the file.
+        '''Check whether a `path` exists within the file.
 
         Parameters
         ----------
@@ -270,8 +218,7 @@ class TablesReader(object):
             return False
 
     def read(self, path):
-        '''
-        Read a dataset.
+        '''Reads a dataset.
 
         Parameters
         ----------
@@ -291,21 +238,15 @@ class TablesReader(object):
         return self._stream.select(path)
 
 
-class DatasetReader(object):
+class DatasetReader(Reader):
 
-    '''
-    Class for reading datasets and attributes from HDF5 files
+    '''Class for reading datasets and attributes from HDF5 files
     using the `h5py <http://docs.h5py.org/en/latest/>`_ library.
     '''
 
+    @same_docstring_as(Reader.__init__)
     def __init__(self, filename):
-        '''
-        Parameters
-        ----------
-        filename: str
-            absolute path to HDF5 file
-        '''
-        self.filename = filename
+        super(DatasetReader, self).__init__(filename)
 
     def __enter__(self):
         logger.debug('open file: %s', self.filename)
@@ -314,18 +255,8 @@ class DatasetReader(object):
         self._stream = h5py.File(self.filename, 'r+')
         return self
 
-    def __exit__(self, except_type, except_value, except_trace):
-        logger.debug('close file: %s', self.filename)
-        self._stream.close()
-        if except_value:
-            sys.stdout.write('The following error occurred:\n%s'
-                             % str(except_value))
-            for tb in traceback.format_tb(except_trace):
-                sys.stdout.write(tb)
-
     def exists(self, path):
-        '''
-        Check whether a `path` exists within the file.
+        '''Check whether a `path` exists within the file.
 
         Parameters
         ----------
@@ -358,7 +289,8 @@ class DatasetReader(object):
             return True
 
     def list_datasets(self, path):
-        '''
+        '''List datasets within a given group.
+
         Parameters
         ----------
         path: str
@@ -386,7 +318,8 @@ class DatasetReader(object):
         return names
 
     def list_groups(self, path):
-        '''
+        '''List groups within a given group.
+
         Parameters
         ----------
         path: str
@@ -414,8 +347,7 @@ class DatasetReader(object):
         return names
 
     def read(self, path):
-        '''
-        Read a dataset.
+        '''Reads a dataset.
 
         Parameters
         ----------
@@ -439,8 +371,7 @@ class DatasetReader(object):
         return dset[()]
 
     def read_subset(self, path, index=None, row_index=None, column_index=None):
-        '''
-        Read a subset of a dataset. For *fancy-indexing* see
+        '''Reads a subset of a dataset. For *fancy-indexing* see
         `h5py docs <http://docs.h5py.org/en/latest/high/dataset.html#fancy-indexing>`_.
 
         Parameters
@@ -489,8 +420,7 @@ class DatasetReader(object):
             raise ValueError('No index provided.')
 
     def get_attribute(self, path, name):
-        '''
-        Get an attribute attached to a dataset.
+        '''Get an attribute attached to a dataset.
 
         Parameters
         ----------
@@ -522,8 +452,7 @@ class DatasetReader(object):
         return attribute
 
     def get_dims(self, path):
-        '''
-        Get the dimensions of a dataset.
+        '''Get the dimensions of a dataset.
 
         Parameters
         ----------
@@ -547,8 +476,7 @@ class DatasetReader(object):
         return dims
 
     def get_type(self, path):
-        ''''
-        Get the data type of a dataset.
+        ''''Get the data type of a dataset.
 
         Parameters
         ----------
@@ -572,10 +500,9 @@ class DatasetReader(object):
         return dtype
 
 
-class BFImageReader(Reader):
+class BFImageReader(object):
 
-    '''
-    Class for reading data from vendor-specific image file formats as
+    '''Class for reading data from vendor-specific image file formats as
     :py:class:`numpy.ndarray` objects using the
     `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
     library.
@@ -599,9 +526,9 @@ class BFImageReader(Reader):
     numpy.ndarray
     '''
 
-    @utils.same_docstring_as(Reader.__init__)
+    @same_docstring_as(Reader.__init__)
     def __init__(self, directory=None):
-        super(BFImageReader, self).__init__(directory)
+        self.directory = directory
 
     def __enter__(self):
         # NOTE: updated "loci_tools.jar" file to latest schema:
@@ -609,9 +536,18 @@ class BFImageReader(Reader):
         javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
         return self
 
+    def __exit__(self, except_type, except_value, except_trace):
+        javabridge.kill_vm()
+        if except_type is javabridge.JavaException:
+            raise NotSupportedError('File format is not supported.')
+        if except_value:
+            sys.stdout.write('The following error occurred:\n%s'
+                             % str(except_value))
+            for tb in traceback.format_tb(except_trace):
+                sys.stdout.write(tb)
+
     def read(self, filename):
-        '''
-        Read an image from a file.
+        '''Reads an image from a file.
 
         For details on reading images via Bio-Format from Python, see
         `load_image() <http://pythonhosted.org/python-bioformats/#reading-images>`_.
@@ -646,8 +582,7 @@ class BFImageReader(Reader):
         return image
 
     def read_subset(self, filename, series=None, plane=None):
-        '''
-        Read a subset of images from a file.
+        '''Reads a subset of images from a file.
 
         Parameters
         ----------
@@ -682,155 +617,31 @@ class BFImageReader(Reader):
                                       series=series, index=plane)
         return image
 
-    def __exit__(self, except_type, except_value, except_trace):
-        javabridge.kill_vm()
-        if except_type is javabridge.JavaException:
-            raise NotSupportedError('File format is not supported.')
-        if except_value:
-            sys.stdout.write('The following error occurred:\n%s'
-                             % str(except_value))
-            for tb in traceback.format_tb(except_trace):
-                sys.stdout.write(tb)
 
+class PixelsReader(Reader):
 
-class ImageReader(Reader):
-
-    '''
-    Class for reading data from standard image file formats as
+    '''Class for reading pixel data from standard image file formats as
     :py:class:`numpy.ndarray` objects.
-
-    Examples
-    --------
-    >>> filename = '/path/to/image/file'
-    >>> with ImageReader() as reader:
-    ...     img = reader.read(filename)
-    >>> type(img)
-    numpy.ndarray
     '''
 
-    @utils.same_docstring_as(Reader.__init__)
-    def __init__(self, directory=None):
-        super(ImageReader, self).__init__(directory)
+    @same_docstring_as(Reader.__init__)
+    def __init__(self, filename):
+        super(PixelsReader, self).__init__(filename)
 
-    def read(self, filename):
-        '''
-        Read an image from file.
-
-        For details on reading image via OpenCV from Python, see
-        `imread() <http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread>`_
+    def read(self, dtype=np.uint16):
+        '''Reads pixels data from image file.
 
         Parameters
         ----------
-        filename: str
-            absolute path to the file
+        dtype: type, optional
+            `numpy` data type (default: ``numpy.uint16``)
 
         Returns
         -------
-        numpy.array
-            image pixel array
-
-        Raises
-        ------
-        OSError
-            when `filename` does not exist
+        numpy.ndarray
+            pixels data
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        if not os.path.exists(filename):
-            raise OSError('Image file does not exist: %s' % filename)
-        logger.debug('read image from file: %s', filename)
-        image = cv2.imread(filename, cv2.IMREAD_UNCHANGED)
-        return image
-
-    def read_subset(self, filename, series=None, plane=None):
-        '''
-        If the image file contains more than one plane (band), only the first
-        one will be read.
-        '''
-        raise AttributeError('%s doesn\'t have a "read_subset" method'
-                             % self.__class__.__name__)
-
-
-class SlideReader(object):
-
-    '''
-    Class for reading whole slide images and associated metadata using the
-    `Openslide <http://openslide.org/>`_ library.
-
-    Raises
-    ------
-    NotSupportedError
-        when the file format is not supported by the reader
-
-    Warning
-    -------
-    `Openslide` doesn't support fluorescence slides.
-
-    Examples
-    --------
-    >>> filename = '/path/to/image/file'
-    >>> with OpenslideReader() as reader:
-    ...     img = reader.read(filename)
-    >>> type(img)
-    Vips.Image
-    '''
-
-    def read(self, filename):
-        '''
-        Read highest resolution level of a whole slide image from disk.
-
-        For details on reading whole slide images via Vips from Python, see
-        `vips_openslideload() <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/VipsForeignSave.html#vips-openslideload>`_.
-
-        Parameters
-        ----------
-        filename: str
-            absolute path to the file
-
-        Returns
-        -------
-        Vips.Image
-            image pixel array
-        '''
-        return Vips.Image.openslideload(filename, level=0)
-
-    def read_subset(self, filename, series_index=None, plane_index=None):
-        raise AttributeError('%s doesn\'t have a "read_subset" method. '
-                             'If the file contains more than one plane/band, '
-                             'only the first one will be read.'
-                             % self.__class__.__name__)
-
-
-class MetadataReader(Reader):
-
-    '''
-    Abstract base class for reading metadata from additional (non-image) files.
-
-    They return metadata as OMEXML objects, according to the OME data model,
-    see `python-bioformats <http://pythonhosted.org/python-bioformats/#metadata>`_.
-
-    Unfortunately, the documentation is very sparse.squ 
-    If you need additional information, refer to the relevant
-    `source code <https://github.com/CellProfiler/python-bioformats/blob/master/bioformats/omexml.py>`_.
-
-    Note
-    ----
-    In case custom readers provide a *Plate* element, they also have to specify
-    an *ImageRef* elements for each *WellSample* element, which serve as
-    references to OME *Image* elements. Each *ImageRef* attribute must be a
-    dictionary with a single entry. The value must be a list of strings, where
-    each element represents the reference information that can be used to map
-    the *WellSample* element to an individual *Image* element. The key must be
-    a regular expression string that can be used to extract the reference
-    information from the corresponding image filenames.
-    '''
-
-    __metaclass__ = ABCMeta
-
-    @utils.same_docstring_as(Reader.__init__)
-    def __init__(self, directory=None):
-        super(MetadataReader, self).__init__(directory)
-
-    @abstractmethod
-    def read(self, filename):
-        pass
+        logger.debug('read from file: %s', self.filename)
+        arr = np.fromstring(self._stream.read(), dtype)
+        return cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+        # return cv2.imread(filename, cv2.IMREAD_UNCHANGED)

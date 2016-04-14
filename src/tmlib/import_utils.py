@@ -26,7 +26,7 @@ def load_method_args(method_name):
         when the "args" module doesn't contain a method-specific
         implementation of the `Args` base class
     '''
-    module = importlib.import_module('tmlib.args')
+    module = importlib.import_module('tmlib.workflow.args')
     try:
         class_name = '%sArgs' % method_name.capitalize()
     except ImportError:
@@ -64,8 +64,8 @@ def load_var_method_args(step_name, method_name):
         when subpackage with name `step_name`
         doesn't have a module named "args"
     '''
-    package_name = 'tmlib.%s' % step_name
-    module_name = 'tmlib.%s.args' % step_name
+    package_name = 'tmlib.workflow.%s' % step_name
+    module_name = 'tmlib.workflow.%s.args' % step_name
     importlib.import_module(package_name)
     module = importlib.import_module(module_name)
     class_name = '%s%sArgs' % (step_name.capitalize(),

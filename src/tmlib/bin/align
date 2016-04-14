@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-from tmlib.align.cli import Align
-from tmlib.align.argparser import parser
+from tmlib.workflow.align.cli import Align
 
 
 if __name__ == '__main__':
 
-    Align.main(parser)
+    Align.main()

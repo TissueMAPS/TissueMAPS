@@ -5,114 +5,102 @@ import cv2
 import numpy as np
 import pandas as pd
 import logging
+import lxml.etree
 import json
 import ruamel.yaml
 import traceback
 from abc import ABCMeta
-from . import utils
+from abc import abstractmethod
+
+from tmlib.utils import same_docstring_as
 
 logger = logging.getLogger(__name__)
 
 
 class Writer(object):
-    '''
-    Abstract base class for writing data to files.
 
-    All writers make use of the 
+    '''Abstract base class for writing data to files.
+
+    Writers make use of the
     `with statement context manager <https://docs.python.org/2/reference/datamodel.html#context-managers>`_.
     and follow a similar syntax::
 
-    with Writer('/path/to/folder') as writer:
-        writer.write('name_of_file')
-
-    with Writer() as writer:
-        writer.write('/path/to/file')
+        with Writer('/path/to/file') as f:
+            f.write()
     '''
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, directory=None):
+    def __init__(self, filename):
         '''
-        Parameters
-        ----------
-        directory: str, optional
-            absolute path to a directory where files are located
-
-        Raises
-        ------
-        OSError
-            when `directory` does not exist
-        '''
-        self.directory = directory
-        if self.directory is not None:
-            if not os.path.exists(self.directory):
-                raise OSError('Directory does not exist: %s', self.directory)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, except_type, except_value, except_trace):
-        if except_value:
-            sys.stdout.write('The following error occurred:\n%s'
-                             % str(except_value))
-            for tb in traceback.format_tb(except_trace):
-                sys.stdout.write(tb)
-
-
-class HtmlWriter(Writer):
-
-    '''
-    Class for writing data to file on disk in HTML format.
-    '''
-
-    @utils.same_docstring_as(Writer.__init__)
-    def __init__(self, directory=None):
-        super(HtmlWriter, self).__init__(directory)
-
-    def write(self, filename, data):
-        '''
-        Write data to HTML file.
-
         Parameters
         ----------
         filename: str
-            name of the HTML file
-        data: list or dict
-            the HTML string that should be written to the file
+            absolute path to a file
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        logger.debug('write data to file: %s' % filename)
-        with open(filename, 'w') as f:
-            f.write(data)
+        self.filename = filename
+
+    def __enter__(self):
+        logger.debug('open file: %s', self.filename)
+        self._stream = open(self.filename, 'w+')
+        return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        logger.debug('close file: %s', self.filename)
+        self._stream.close()
+        if except_value:
+            sys.stdout.write(
+                'The following error occurred while writing to file:\n%s'
+                % str(except_value)
+            )
+            for tb in traceback.format_tb(except_trace):
+                sys.stdout.write(tb)
+            sys.exit(1)
+
+    @abstractmethod
+    def write(self, data):
+        pass
+
+
+class TextWriter(Writer):
+
+    '''Class for writing text data to a file.'''
+
+    @same_docstring_as(Writer.__init__)
+    def __init__(self, filename):
+        super(TextWriter, self).__init__(filename)
+
+    def write(self, data):
+        '''Write data to file.
+
+        Parameters
+        ----------
+        data: str
+            text that should be written to the file
+        '''
+        logger.debug('write data to file: %s' % self.filename)
+        self._stream.write(data)
 
 
 class XmlWriter(Writer):
 
-    '''
-    Class for writing data to file on disk in XML format.
-    '''
+    '''Class for writing data to a file in XML format.'''
 
-    @utils.same_docstring_as(Writer.__init__)
-    def __init__(self, directory=None):
-        super(XmlWriter, self).__init__(directory)
+    @same_docstring_as(Writer.__init__)
+    def __init__(self, filename):
+        super(XmlWriter, self).__init__(filename)
 
-    def write(self, filename, data):
+    def write(self, data):
         '''
         Write data to XML file.
 
         Parameters
         ----------
-        filename: str
-            name of the XML file
-        data: list or dict
-            the XML string that should be written to the file
+        data: lxml.etree._Element
+            xml element that should be written to the file
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        logger.debug('write data to file: %s' % filename)
-        with open(filename, 'w') as f:
-            f.write(data)
+        logger.debug('write data to file: %s' % self.filename)
+        self._stream.write(lxml.etree.tostring(data))
 
 
 class JsonWriter(Writer):
@@ -121,18 +109,16 @@ class JsonWriter(Writer):
     Class for writing data to file on disk in JSON format.
     '''
 
-    @utils.same_docstring_as(Writer.__init__)
-    def __init__(self, directory=None):
-        super(JsonWriter, self).__init__(directory)
+    @same_docstring_as(Writer.__init__)
+    def __init__(self, filename):
+        super(JsonWriter, self).__init__(filename)
 
-    def write(self, filename, data):
+    def write(self, data):
         '''
         Write data to JSON file.
 
         Parameters
         ----------
-        filename: str
-            name of the JSON file
         data: list or dict
             the JSON string that should be written to the file
 
@@ -140,31 +126,23 @@ class JsonWriter(Writer):
         ----
         `filename` will be truncated in case it already exists.
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        logger.debug('write data to file: %s' % filename)
-        with open(filename, 'w') as f:
-            json.dump(data, f, sort_keys=True)
+        logger.debug('write data to file: %s' % self.filename)
+        json.dump(data, self._stream, sort_keys=True)
 
 
 class YamlWriter(Writer):
 
-    '''
-    Class for writing data to file on disk in YAML 1.2 format
-    '''
+    '''Class for writing data to file on disk in YAML 1.2 format'''
 
-    @utils.same_docstring_as(Writer.__init__)
-    def __init__(self, directory=None):
-        super(YamlWriter, self).__init__(directory)
+    @same_docstring_as(Writer.__init__)
+    def __init__(self, filename):
+        super(YamlWriter, self).__init__(filename)
 
-    def write(self, filename, data):
-        '''
-        Write data to YAML file.
+    def write(self, data):
+        '''Write data to YAML file.
 
         Parameters
         ----------
-        filename: str
-            name of the YAML file
         data: list or dict
             the YAML string that should be written to the file
 
@@ -172,80 +150,64 @@ class YamlWriter(Writer):
         ----
         `filename` will be truncated in case it already exists.
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        logger.debug('write data to file: %s' % filename)
-        with open(filename, 'w') as f:
-            f.write(
-                ruamel.yaml.dump(
-                    data,
-                    Dumper=ruamel.yaml.RoundTripDumper,
-                    explicit_start=True
-                )
+        logger.debug('write data to file: %s' % self.filename)
+        self._stream.write(
+            ruamel.yaml.dump(
+                data, Dumper=ruamel.yaml.RoundTripDumper, explicit_start=True
             )
+        )
 
 
-class ImageWriter(Writer):
+class PixelsWriter(Writer):
 
-    '''
-    Class for writing :py:class:`numpy.ndarray` objects to image files
+    '''Class for writing :py:class:`numpy.ndarray` objects to image files
     using the `OpenCV <http://docs.opencv.org>`_ library.
     '''
 
-    @utils.same_docstring_as(Writer.__init__)
-    def __init__(self, directory=None):
-        super(ImageWriter, self).__init__(directory)
+    @same_docstring_as(Writer.__init__)
+    def __init__(self, filename):
+        super(PixelsWriter, self).__init__(filename)
 
-    def write(self, filename, data):
-        '''
-        Write `data` to image file.
+    def write(self, data):
+        '''Write pixels data to image file.
 
         The format depends on the file extension:
-        - *.png for PNG (8-bit and 16-bit)
-        - *.tiff or *.tif for TIFF (8-bit and 16-bit)
-        - *.jpeg or *.jpg for JPEG (only supports 8-bit)
+            - *.png for PNG (8-bit and 16-bit)
+            - *.tiff or *.tif for TIFF (8-bit and 16-bit)
+            - *.jpeg or *.jpg for JPEG (only supports 8-bit)
 
         Parameters
         ----------
         data: numpy.ndarray 
-            image that should be saved
-        filename: str
-            path to the image file
+            pixels that should be saved
 
         Raises
         ------
         TypeError
             when `data` is not of type numpy.ndarray
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        logger.debug('write image to file: %s' % filename)
+        logger.debug('write data to file: %s' % self.filename)
         if not isinstance(data, np.ndarray):
-            raise TypeError('Image must have type numpy.ndarray.')
-        if filename.endswith('.ppm'):
-            cv2.imwrite(filename, data, [cv2.IMWRITE_PXM_BINARY, 0])
-        else:
-            cv2.imwrite(filename, data)
+            raise TypeError('Data must have type numpy.ndarray.')
+        binary = cv2.imencode(os.path.splitext(self.filename)[1], data)[1]
+        self._stream.write(binary)
 
 
-class DataTableWriter(object):
+class DataTableWriter(Writer):
 
-    '''
-    Class for writing data tables to a persistent store.
-    '''
+    '''Class for writing data tables to a persistent store.'''
 
     def __init__(self, filename, truncate=False):
         '''
         Parameters
         ----------
         filename: str
-            absolute path to the HDF5 file
+            absolute path to a file
         truncate: bool, optional
             truncate the file if it already exists (default: ``False``)
         '''
-        self.filename = filename
+        super(DataTableWriter, self).__init__(filename)
         self.truncate = truncate
-        logger.debug('write data to file: %s', filename)
 
     def __enter__(self):
         logger.debug('open file: %s', self.filename)
@@ -255,18 +217,8 @@ class DataTableWriter(object):
             self._stream = pd.HDFStore(self.filename, 'a')
         return self
 
-    def __exit__(self, except_type, except_value, except_trace):
-        logger.debug('close file: %s', self.filename)
-        self._stream.close()
-        if except_value:
-            sys.stdout.write('The following error occurred:\n%s'
-                             % str(except_value))
-            for tb in traceback.format_tb(except_trace):
-                sys.stdout.write(tb)
-
     def exists(self, path):
-        '''
-        Check whether a `path` exists within the file.
+        '''Check whether a `path` exists within the file.
 
         Parameters
         ----------
@@ -284,8 +236,7 @@ class DataTableWriter(object):
             return False
 
     def write(self, path, data):
-        '''
-        Write a data table.
+        '''Write a data table.
 
         Parameters
         ----------
@@ -297,8 +248,7 @@ class DataTableWriter(object):
         self._stream.put(path, data, format='table', data_columns=True)
 
     def append(self, path, data):
-        '''
-        Append an existing data table.
+        '''Append an existing data table.
 
         Parameters
         ----------
@@ -310,11 +260,9 @@ class DataTableWriter(object):
         self._stream.append(path, data, format='table', data_columns=True)
 
 
-class DatasetWriter(object):
+class DatasetWriter(Writer):
 
-    '''
-    Class for writing data sets to a persistent store.
-    '''
+    '''Class for writing data sets to a persistent store.'''
 
     def __init__(self, filename, truncate=False):
         '''
@@ -325,9 +273,8 @@ class DatasetWriter(object):
         truncate: bool, optional
             truncate the file if it already exists (default: ``False``)
         '''
-        self.filename = filename
+        super(DatasetWriter, self).__init__(filename)
         self.truncate = truncate
-        logger.debug('write data to file: %s', filename)
 
     def __enter__(self):
         logger.debug('open file: %s', self.filename)
@@ -337,18 +284,8 @@ class DatasetWriter(object):
             self._stream = h5py.File(self.filename, 'a')
         return self
 
-    def __exit__(self, except_type, except_value, except_trace):
-        logger.debug('close file: %s', self.filename)
-        self._stream.close()
-        if except_value:
-            sys.stdout.write('The following error occurred:\n%s'
-                             % str(except_value))
-            for tb in traceback.format_tb(except_trace):
-                sys.stdout.write(tb)
-
     def exists(self, path):
-        '''
-        Check whether a `path` exists within the file.
+        '''Check whether a `path` exists within the file.
 
         Parameters
         ----------
@@ -366,8 +303,7 @@ class DatasetWriter(object):
             return False
 
     def write(self, path, data):
-        '''
-        Create a dataset and write data to it.
+        '''Create a dataset and write data to it.
 
         Parameters
         ----------
@@ -418,8 +354,7 @@ class DatasetWriter(object):
 
     def write_subset(self, path, data,
                      index=None, row_index=None, column_index=None):
-        '''
-        Write data to a subset of an existing dataset.
+        '''Write data to a subset of an existing dataset.
 
         Parameters
         ----------
@@ -561,8 +496,8 @@ class DatasetWriter(object):
         return dset
 
     def create(self, path, dims, dtype, max_dims=None):
-        '''
-        Create a dataset with a given size and data type without writing data.
+        '''Create a dataset with a given size and data type without actually
+        writing data to it.
 
         Parameters
         ----------
@@ -595,8 +530,7 @@ class DatasetWriter(object):
                         path, shape=dims, dtype=dtype, maxshape=max_dims)
 
     def append(self, path, data):
-        '''
-        Append data to an existing one-dimensional dataset.
+        '''Append data to an existing one-dimensional dataset.
         The dataset needs to be created first using the
         :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
@@ -642,8 +576,7 @@ class DatasetWriter(object):
         # dset[start_index:] = data
 
     def vstack(self, path, data):
-        '''
-        Vertically append data to an existing multi-dimensional dataset.
+        '''Vertically append data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
         :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
@@ -701,8 +634,7 @@ class DatasetWriter(object):
         dset[start_index:, :] = data
 
     def hstack(self, path, data):
-        '''
-        Horizontally append data to an existing multi-dimensional dataset.
+        '''Horizontally append data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
         :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the horizontal dimension needs to be
@@ -762,8 +694,7 @@ class DatasetWriter(object):
         dset[:, start_index:] = data
 
     def set_attribute(self, path, name, data):
-        '''
-        Attach an attribute to a dataset.
+        '''Attach an attribute to a dataset.
 
         Parameters
         ----------
@@ -784,8 +715,7 @@ class DatasetWriter(object):
         self._stream[path].attrs.create(name, data)
 
     def create_group(self, path):
-        '''
-        Create a group.
+        '''Create a group.
 
         Parameters
         ----------

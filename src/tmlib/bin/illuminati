@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-from tmlib.illuminati.cli import Illuminati
-from tmlib.illuminati.argparser import parser
+from tmlib.workflow.illuminati.cli import Illuminati
 
 
 if __name__ == '__main__':
 
-    Illuminati.main(parser)
+    Illuminati.main()

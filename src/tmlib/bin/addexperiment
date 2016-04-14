@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+import os
+import sys
+import argparse
+import sqlalchemy.orm.exc
+
+import tmlib.models
+
+# Don't trash the user with long tracebacks
+sys.tracebacklimit = 0
+
+
+def valid_dir(path):
+    if not os.path.exists(path):
+        raise OSError('Provided path does not exist: %s' % path)
+    return path
+
+
+def add_experiment(experiment_name, user_name, microscope_type, plate_format,
+                   plate_acquisition_mode):
+    # TODO: authentication
+    with tmlib.models.utils.Session() as session:
+        try:
+            user = session.query(tmlib.models.User).\
+                filter_by(name=user_name).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError('Unknown user "%s"!' % user_name)
+        except:
+            raise
+        experiment = tmlib.models.Experiment(
+            name=experiment_name, user_id=user.id,
+            microscope_type=microscope_type,
+            plate_format=plate_format,
+            plate_acquisition_mode=plate_acquisition_mode
+        )
+        session.add(experiment)
+        session.flush()
+        return experiment.id
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description='''
+            Add a new experiment to the TissueMAPS database.
+        '''
+    )
+    parser.add_argument(
+        '-e', '--experiment_name', required=True, type=str,
+        help='name of the experiment'
+    )
+    parser.add_argument(
+        '-u', '--user_name', required=True, type=str,
+        help='user name'
+    )
+    parser.add_argument(
+        '--plate_format', type=int, default=384,
+        choices={1, 96, 384},
+        help='well plate format (default: 384)'
+    )
+    parser.add_argument(
+        '--microscope_type', type=str, default='cellvoyager',
+        choices={'cellvoyager', 'visiview'},
+        help='microscope type (default: cellvoyager'
+    )
+    parser.add_argument(
+        '--plate_acquisition_mode', type=str, default='multiplexing',
+        choices={'series', 'multiplexing'},
+        help='''
+            whether multiple acquisitions of the same plate are interpreted 
+            as time points or multiplexing iterations (default: multiplexing)
+        '''
+    )
+    parser.add_argument(
+        '-o', '--output_dir', type=valid_dir, default=os.getcwd(),
+        help='''
+            directory where key file will be stored
+            (defaults to current working directory)
+        '''
+    )
+
+    args = parser.parse_args()
+
+    experiment_id = add_experiment(
+        args.experiment_name, args.user_name, args.microscope_type,
+        args.plate_format, args.plate_acquisition_mode
+    )
+
+    print 'EXPERIMENT ID: %d\n' % experiment_id
+    print 'You will need it to process the experiment via the command line.'

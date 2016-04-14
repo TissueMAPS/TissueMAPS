@@ -132,13 +132,9 @@ def readme():
 
 def get_version():
     src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'src')
-    code_lines = open(os.path.join(src_path, 'tmlib', '__init__.py'))
-    for line in code_lines:
-        if '__version__' in line:
-            matches = re.match('__version__\s+=\s+\'(\S+)\'', line)
-            return matches.group(1)
-    raise Exception('Failed to find __version__ in tmlib.__init__.py!')
-
+    sys.path = [src_path] + sys.path
+    import tmlib
+    return tmlib.__version__
 
 
 def get_requirements():
@@ -166,14 +162,15 @@ scripts = []
 
 packages = [
     'tmlib',
-    'tmlib.imextract',
-    'tmlib.jterator',
-    'tmlib.metaextract',
-    'tmlib.illuminati',
-    'tmlib.corilla',
-    'tmlib.metaconfig',
-    'tmlib.tmaps',
-    'tmlib.align',
+    'tmlib.models',
+    'tmlib.workflow.imextract',
+    'tmlib.workflow.jterator',
+    'tmlib.workflow.metaextract',
+    'tmlib.workflow.illuminati',
+    'tmlib.workflow.corilla',
+    'tmlib.workflow.metaconfig',
+    'tmlib.workflow.tmaps',
+    'tmlib.workflow.align',
 ]
 
 package_data = {'': ['*.html', '*.svg', '*.js']}

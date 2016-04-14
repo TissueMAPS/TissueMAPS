@@ -2,14 +2,12 @@
 
 import numpy as np
 import logging
-from skimage.exposure import rescale_intensity
 
 logger = logging.getLogger(__name__)
 
 
 def remove_border_objects(img):
-    '''
-    Given a matrix of a site image, set all pixels with
+    '''Given a matrix of a site image, set all pixels with
     ids belonging to border objects to zero.
 
     Parameters
@@ -30,8 +28,7 @@ def remove_border_objects(img):
 
 
 def remove_objects(img, ids):
-    '''
-    Given a matrix of a site image, set all pixels whose values
+    '''Given a matrix of a site image, set all pixels whose values
     are in "ids" to zero.
 
     Parameters
@@ -54,8 +51,7 @@ def remove_objects(img, ids):
 
 
 def compute_outlines(img, keep_ids=False):
-    '''
-    Given a labeled pixels array, return an array of the outlines of encoded
+    '''Given a labeled pixels array, return an array of the outlines of encoded
     objects.
     If `keep_ids` is True, the outlines will still consist of their cell's id,
     otherwise the outlines will be ``True`` and all other pixels ``False``.
@@ -103,53 +99,118 @@ def compute_outlines(img, keep_ids=False):
         return output
 
 
-def convert_to_uint8(img, min_value=None, max_value=None):
-    '''
-    Scale an image to 8-bit by linearly scaling from a given range
-    to 0-255. The lower and upper values of the range can be set. If not set
-    they default to the minimum and maximum intensity value of `img`.
+# def convert_to_uint8(img, min_value=None, max_value=None):
+#     '''
+#     Scale an image to 8-bit by linearly scaling from a given range
+#     to 0-255. The lower and upper values of the range can be set. If not set
+#     they default to the minimum and maximum intensity value of `img`.
     
-    This can be useful for displaying an image in a figure, for example.
+#     This can be useful for displaying an image in a figure, for example.
 
+#     Parameters
+#     ----------
+#     img: numpy.ndarray
+#         image that should be rescaled
+#     min_value: int, optional
+#         lower intensity value of rescaling range (default: `None`)
+#     max_value: int, optional
+#         upper intensity value of rescaling range (default: `None`)
+
+#     Returns
+#     -------
+#     numpy.ndarray[uint8]
+
+#     Note
+#     ----
+#     When no `min_value` or `max_value` is provided the result is equivalent to
+#     the corresponding method in ImageJ: Image > Type > 8-bit.
+#     '''
+#     if min_value is not None:
+#         if not isinstance(min_value, int):
+#             raise TypeError('Argument "min_value" must have type int.')
+#         min_value = min_value
+#     else:
+#         min_value = np.min(img)
+#     if max_value is not None:
+#         if not isinstance(max_value, int):
+#             raise TypeError('Argument "max_value" must have type int.')
+#         max_value = max_value
+#     else:
+#         max_value = np.max(img)
+#     in_range = (min_value, max_value)
+#     img_rescaled = rescale_intensity(
+#                     img, out_range='uint8', in_range=in_range).astype(np.uint8)
+#     return img_rescaled
+
+
+def map_to_uint8(img, lower_bound=None, upper_bound=None):
+    '''Maps a 16-bit image trough a lookup table to convert it to 8-bit.
+    
     Parameters
     ----------
-    img: numpy.ndarray
-        image that should be rescaled
-    min_value: int, optional
-        lower intensity value of rescaling range (default: `None`)
-    max_value: int, optional
-        upper intensity value of rescaling range (default: `None`)
-
+    img: numpy.ndarray[np.uint16]
+        image that should be mapped
+    lower_bound: int, optional
+        lower bound of the range that should be mapped to ``[0, 255]``,
+        value must be in the range ``[0, 65535]``
+        (defaults to ``numpy.min(img)``)
+    upper_bound: int, optional
+        upper bound of the range that should be mapped to ``[0, 255]``,
+        value must be in the range ``[0, 65535]``
+        (defaults to ``numpy.max(img)``)
+    
     Returns
     -------
     numpy.ndarray[uint8]
+        mapped image
+    '''
+    if img.dtype != np.uint16:
+        raise TypeError('"img" must have 16-bit unsigned integer type.')
+    if not(0 <= lower_bound < 2**16) and lower_bound is not None:
+            raise ValueError('"lower_bound" must be in the range [0, 65535]')
+    if not(0 <= upper_bound < 2**16) and upper_bound is not None:
+        raise ValueError('"upper_bound" must be in the range [0, 65535]')
+    if lower_bound is None:
+        lower_bound = np.min(img)
+    if upper_bound is None:
+        upper_bound = np.max(img)
+    if lower_bound >= upper_bound:
+        raise ValueError('"lower_bound" must be smaller than "upper_bound"')
+    lut = np.concatenate([
+        np.zeros(lower_bound, dtype=np.uint16),
+        np.linspace(0, 255, upper_bound - lower_bound).astype(np.uint16),
+        np.ones(2**16 - upper_bound, dtype=np.uint16) * 255
+    ])
+    return lut[img].astype(np.uint8)
+
+
+def mip(zplanes):
+    '''Performs maximum intensity projection.
+
+    Parameters
+    ----------
+    zplanes: List[numpy.ndarray[numpy.uint16]]
+        2D pixel planes acquired at different z resolution levels
+
+    Returns
+    -------
+    numpy.ndarray[numpy.uint16]
+        projected image
 
     Note
     ----
-    When no `min_value` or `max_value` is provided the result is equivalent to
-    the corresponding method in ImageJ: Image > Type > 8-bit.
+    It's assumed that all `zplanes` have same data type and dimensions.
     '''
-    if min_value is not None:
-        if not isinstance(min_value, int):
-            raise TypeError('Argument "min_value" must have type int.')
-        min_value = min_value
-    else:
-        min_value = np.min(img)
-    if max_value is not None:
-        if not isinstance(max_value, int):
-            raise TypeError('Argument "max_value" must have type int.')
-        max_value = max_value
-    else:
-        max_value = np.max(img)
-    in_range = (min_value, max_value)
-    img_rescaled = rescale_intensity(
-                    img, out_range='uint8', in_range=in_range).astype(np.uint8)
-    return img_rescaled
+    dims = zplanes[0].shape
+    dtype = zplanes[0].dtype
+    stack = np.zeros((len(zplanes), dims[0], dims[1]), dtype=dtype)
+    for z in xrange(len(zplanes)):
+        stack[z, :, :] = zplanes[z]
+    return np.max(stack, axis=0)
 
 
 def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
-    '''
-    Shift and crop an image according to the calculated values shift and
+    '''Shifts and crops an image according to the calculated values shift and
     overhang values.
 
     Parameters
@@ -234,8 +295,7 @@ def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
 
 
 def find_border_objects(img):
-    '''
-    Find the objects at the border of a labeled image.
+    '''Finds the objects at the border of a labeled image.
 
     Parameters
     ----------
@@ -260,8 +320,7 @@ def find_border_objects(img):
 
 
 def correct_illumination(img, mean, std, log_transform=True):
-    '''
-    Correct fluorescence microscopy image for illumination artifacts.
+    '''Corrects fluorescence microscopy image for illumination artifacts.
 
     Parameters
     ----------

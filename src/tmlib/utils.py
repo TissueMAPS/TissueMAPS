@@ -5,7 +5,6 @@ import datetime
 import re
 import os
 import inspect
-import types  # require for type checks
 from types import *
 import logging
 
@@ -13,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_datetimestamp():
-    '''
-    Create a datetimestamp in the form "year-month-day_hour:minute:second".
+    '''Creates a datetimestamp in the form "year-month-day_hour-minute-second".
     
     Returns
     -------
@@ -26,8 +24,7 @@ def create_datetimestamp():
 
 
 def create_timestamp():
-    '''
-    Create a timestamp in the form "hour:minute:second".
+    '''Creates a timestamp in the form "hour-minute-second".
 
     Returns
     -------
@@ -39,9 +36,7 @@ def create_timestamp():
 
 
 def regex_from_format_string(format_string):
-    '''
-    Convert a format string of the sort "{name}_bla/something_{number}"
-    to a named regular expression a la "P<name>.*_bla/something_P<number>\d+".
+    '''Converts a format string with keywords into a named regular expression.
 
     Parameters
     ----------
@@ -50,8 +45,14 @@ def regex_from_format_string(format_string):
 
     Returns
     -------
-    str
-        named regular expression pattern
+    _sre.SRE_Pattern
+        compiled named regular expression pattern
+
+    Examples
+    --------
+    >>>r = regex_from_format_string("{directory}/{filename}")
+    >>>r.search("foo/bar.txt").groupdict()
+    {'directory': 'foo', 'filename': 'bar.txt'}
     '''
     # Extract the names of all placeholders from the format string
     format_string = re.sub(r'\.', '\.', format_string)  # escape dot
@@ -63,17 +64,13 @@ def regex_from_format_string(format_string):
 
     regex = format_string
     for pl_name, pl_regex in zip(placeholder_names, placeholder_regexes):
-        if re.search(r'number', pl_name):
-            regex = re.sub(pl_regex, '(?P<%s>\d+)' % pl_name, regex)
-        else:
-            regex = re.sub(pl_regex, '(?P<%s>.*)' % pl_name, regex)
+        regex = re.sub(pl_regex, '(?P<%s>.*)' % pl_name, regex)
 
-    return regex
+    return re.compile(regex)
 
 
 def indices(data, item):
-    '''
-    Determine all indices of an item in a list.
+    '''Determines all indices of an item in a list.
 
     Parameters
     ----------
@@ -100,12 +97,11 @@ def indices(data, item):
 
 
 def flatten(data):
-    '''
-    Transform a list of lists into a flat list.
+    '''Transforms a list of lists into a flat list.
 
     Parameters
     ----------
-    data: dataist[list]
+    data: List[list]
 
     Returns
     -------
@@ -115,12 +111,11 @@ def flatten(data):
 
 
 def common_substring(data):
-    '''
-    Find longest common substring across a collection of strings.
+    '''Finds longest common substring across a collection of strings.
 
     Parameters
     ----------
-    data: dataist[str]
+    data: List[str]
 
     Returns
     -------
@@ -137,8 +132,7 @@ def common_substring(data):
 
 
 def list_directory_tree(start_dir):
-    '''
-    Capture the whole directory tree downstream of `start_dir`.
+    '''Captures the whole directory tree downstream of `start_dir`.
 
     Parameters
     ----------
@@ -148,12 +142,11 @@ def list_directory_tree(start_dir):
     for root, dirs, files in os.walk(start_dir):
         level = root.replace(start_dir, '').count(os.sep)
         indent = ' ' * 4 * (level)
-        print('{}{}/'.format(indent, os.path.basename(root)))
+        print '{}{}/'.format(indent, os.path.basename(root))
 
 
 def is_number(s):
-    '''
-    Check whether a string can be represented by a number.
+    '''Checks whether a string can be represented by a number.
 
     Parameters
     ----------
@@ -179,8 +172,7 @@ def is_number(s):
 
 
 def map_letter_to_number(letter):
-    '''
-    Map capital letter to number.
+    '''Maps capital letter to number.
 
     Parameters
     ----------
@@ -201,8 +193,7 @@ def map_letter_to_number(letter):
 
 
 def map_number_to_letter(number):
-    '''
-    Map number to capital letter.
+    '''Maps number to capital letter.
 
     Parameters
     ----------
@@ -223,8 +214,7 @@ def map_number_to_letter(number):
 
 
 def missing_elements(data, start=None, end=None):
-    '''
-    Determine missing elements in a sequence of integers.
+    '''Determines missing elements in a sequence of integers.
 
     Parameters
     ----------
@@ -247,7 +237,7 @@ def missing_elements(data, start=None, end=None):
     if not end:
         end = len(data)-1
 
-    if end - start <= 1: 
+    if end - start <= 1:
         if data[end] - data[start] > 1:
             for d in range(data[start] + 1, data[end]):
                 yield d
@@ -269,8 +259,7 @@ def missing_elements(data, start=None, end=None):
 
 
 def assert_type(**expected):
-    '''
-    Decorator function that asserts that the type of function arguments.
+    '''Decorator function that asserts that the type of function arguments.
 
     Parameters
     ----------
@@ -327,8 +316,10 @@ def assert_type(**expected):
                     et_strings = expected_type
                 else:
                     raise TypeError(
-                                'Expected types have to provided as either '
-                                'a string of a list of strings.')
+                        'Expected types for function "%s" have to provided as '
+                        'either a string of a list of strings.'
+                        % func.__name__
+                    )
 
                 # Users provide the types as strings. The advantage is that
                 # the corresponding object doesn't have to be imported by the
@@ -349,20 +340,29 @@ def assert_type(**expected):
                             path_parts = ets.split('.')
                             fullname = '.'.join(path_parts[:-1])
                             module = importlib.import_module(fullname)
-                            ett = getattr(module, path_parts[-1])
+                            try:
+                                ett = getattr(module, path_parts[-1])
+                            except AttributeError:
+                                raise AttributeError(
+                                    'Custom type %s does not exist.' % fullname
+                                )
                         except ImportError:
                             raise ImportError(
-                                'Import of custom type "%s" failed.' % ets)
+                                'Import of custom type "%s" failed.' % ets
+                            )
                     if not isinstance(ett, type):
                         raise TypeError(
-                                'Type of "%s" could not be determined' % ett)
+                            'Type of "%s" could not be determined' % ett
+                        )
                     et_types.append(ett)
 
                 # No we have a type object that we can use for the check
                 if not any([isinstance(args[index], ett) for ett in et_types]):
                     options = ' or '.join([ets for ets in et_strings])
-                    raise TypeError('Argument "%s" must have type %s.' %
-                                    (expected_name, options))
+                    raise TypeError(
+                        'Argument "%s" must have type %s.'
+                        % (expected_name, options)
+                    )
             return func(*args, **kwargs)
 
         wrapper.__name__ = func.__name__
@@ -373,9 +373,8 @@ def assert_type(**expected):
 
 
 def assert_path_exists(*expected):
-    '''
-    Decorator function that asserts that a path to a file or directory on disk
-    specified by a function argument exists.
+    '''Decorator function that asserts that a path to a file or directory on
+    disk specified by a function argument exists.
 
     Parameters
     ----------
@@ -434,8 +433,7 @@ def assert_path_exists(*expected):
 
 class autocreate_directory_property(object):
 
-    '''
-    Decorator class that acts like a property.
+    '''Decorator class that acts like a property.
     The value represents a path to a directory on disk. The directory is
     automatically created when it doesn't exist. Once created the value
     is cached, so that there is no reattempt to create the directory.
@@ -453,14 +451,14 @@ class autocreate_directory_property(object):
     --------
     from tmlib.utils import autocreate_directory_property
     
-    class AutocreateExample(object):
+    class Foo(object):
 
         @autocreate_directory_property
         def my_new_directory(self):
             return '/tmp/blabla'
 
-    example = AutocreateExample()
-    example.my_new_directory
+    foo = Foo()
+    foo.my_new_directory
     '''
     def __init__(self, func):
         self.__doc__ = func.__doc__
@@ -471,23 +469,28 @@ class autocreate_directory_property(object):
             return self
         value = obj.__dict__[self.func.__name__] = self.func(obj)
         if not isinstance(value, basestring):
-            raise TypeError('Value of property "%s" must have type basestring.'
-                            % value)
+            raise TypeError(
+                'Value of property "%s" must have type basestring: %s'
+                % (self.func.__name__, value)
+            )
         if not value:
-            raise ValueError('Value of property "%s" cannot be empty.'
-                             % value)
+            raise ValueError(
+                'Value of property "%s" cannot be empty.'
+                % self.func.__name__
+            )
         if not os.path.exists(os.path.dirname(value)):
-            raise OSError('Value of property "%s" must be a valid path.'
-                          % value)
+            raise OSError(
+                'Value of property "%s" must be a valid path: %s'
+                % (self.func.__name__, value)
+            )
         if not os.path.exists(value):
-            logger.debug('create directory: %s')
+            logger.debug('create directory: %s', value)
             os.mkdir(value)
         return value
 
 
 def same_docstring_as(ref_func):
-    '''
-    Decorator function that sets the docstring of the decorate function
+    '''Decorator function that sets the docstring of the decorate function
     to the one of `ref_func`.
     This is helpful for methods of derived classes that should "inherit"
     the docstring of the abstract method in the base class.
@@ -506,8 +509,7 @@ def same_docstring_as(ref_func):
 
 
 def notimplemented(func):
-    '''
-    Decorator function for abstract methods that are not implemented in the
+    '''Decorator function for abstract methods that are not implemented in the
     derived class.
 
     Raises
@@ -516,6 +518,7 @@ def notimplemented(func):
         when decorated function (method) is called
     '''
     func.__doc__ = 'Not implemented.'
+    func.is_climethod = False  # removes method from command line interface
 
     def wrapper(obj, *args, **kwargs):
         raise NotImplementedError(
@@ -525,51 +528,4 @@ def notimplemented(func):
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
     return wrapper
-
-
-class set_default(object):
-
-    '''
-    Decorator class for methods of :py:class:`tmlib.args.Args`.
-    '''
-
-    def __init__(self, type=None, help=None, default=None):
-        '''
-        Parameters
-        ----------
-        type: type
-            the type that the argument should have
-        help: str
-            help message that gives specifics about the argument
-        default:
-            default value for the argument
-
-        Raises
-        ------
-        TypeError
-        '''
-        self.type = type
-        self.help = help
-        self.default = default
-        if self.default is None:
-            self.required = True
-        else:
-            self.required = False
-
-    def __call__(self, obj):
-        attr_name = '_%s' % obj.__name__
-
-        def getter(cls):
-            if not hasattr(cls, attr_name):
-                if self.default is None:
-                    raise ValueError(
-                            'Argument "%s" is required.' % obj.__name__)
-                setattr(cls, attr_name, self.default)
-            setattr(cls, '%s_type' % attr_name, self.type)
-            setattr(cls, '%s_help' % attr_name, self.help)
-            return obj(cls)
-        getter.__name__ = obj.__name__
-        getter.__doc__ = obj.__doc__
-
-        return property(getter)
 

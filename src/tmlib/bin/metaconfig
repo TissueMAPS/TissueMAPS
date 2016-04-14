@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-from tmlib.metaconfig.cli import Metaconfig
-from tmlib.metaconfig.argparser import parser
+from tmlib.workflow.metaconfig.cli import Metaconfig
 
 
 if __name__ == '__main__':
 
-    Metaconfig.main(parser)
+    Metaconfig.main()
