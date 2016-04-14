@@ -228,10 +228,10 @@ class WorkflowStage(State):
         step_name = step_description.name
         logger.debug('load step interface "%s"', step_name)
         api_class = get_step_api(step_name)
-        kwargs = dict()
-        for name, value in step_description.extra_args.iterargitems():
-            kwargs[name] = value
-        if hasattr(step_description, 'extra_args'):
+        if getattr(step_description, 'extra_args', None):
+            kwargs = dict()
+            for name, value in step_description.extra_args.iterargitems():
+                kwargs[name] = value
             api_instance = api_class(
                 self.experiment_id, self.verbosity, **kwargs
             )

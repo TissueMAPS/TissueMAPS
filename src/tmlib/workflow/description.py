@@ -10,6 +10,7 @@ from tmlib.workflow.registry import get_step_api
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import ExtraArguments
+from tmlib.workflow.args import ArgumentMeta
 
 
 class WorkflowDescription(object):
@@ -266,6 +267,7 @@ class WorkflowStepDescription(object):
         batch_args_cls, submission_args_cls, extra_args_cls = get_step_args(name)
         self.batch_args = batch_args_cls(**batch_args)
         self.submission_args = submission_args_cls(**submission_args)
+        self._extra_args = None
         if extra_args_cls is not None:
             self.extra_args = extra_args_cls(**extra_args)
 
