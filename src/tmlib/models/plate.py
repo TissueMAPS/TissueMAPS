@@ -93,7 +93,11 @@ class Plate(Model, DateMixIn):
     # Table columns
     name = Column(String, index=True)
     description = Column(Text)
-    experiment_id = Column(Integer, ForeignKey('experiments.id'))
+    experiment_id = Column(
+        Integer, ForeignKey(
+            'experiments.id', onupdate='CASCADE', ondelete='CASCADE'
+        )
+    )
 
     # Relationships to other tables
     experiment = relationship(
