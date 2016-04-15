@@ -179,13 +179,12 @@ def get_step_args(name):
         implemented any
     '''
     pkg_name = '.'.join(__name__.split('.')[:-1])
-    args_module_name = '%s.%s.args' % (pkg_name, name)
+    module_name = '%s.%s.args' % (pkg_name, name)
     try:
-        args_module = importlib.import_module(args_module_name)
-    except ImportError:
-        raise ImportError(
-            'Step "%s" must implement module "%s"'
-            % (name, args_module)
+        module = importlib.import_module(module_name)
+    except ImportError as error:
+        raise ValueError(
+            'Import of module "%s" failed: %s' % (module_name, str(error))
         )
     # Once the module has been loaded, the argument collection classes
     # are available in the register
@@ -209,14 +208,15 @@ def get_step_api(name):
         api class
     '''
     pkg_name = '.'.join(__name__.split('.')[:-1])
-    api_module_name = '%s.%s.api' % (pkg_name, name)
+    module_name = '%s.%s.api' % (pkg_name, name)
     try:
-        api_module = importlib.import_module(api_module_name)
-    except ImportError:
+        module = importlib.import_module(module_name)
+    except ImportError as error:
         raise ImportError(
-            'Step "%s" must implement module "%s"'
-            % (step_name, args_module)
+            'Import of module "%s" failed: %s' % (module_name, str(error))
         )
+    except:
+        raise
     return _step_register[name]['api']
 
 
@@ -236,6 +236,8 @@ def get_workflow_description(name):
     module_name = '%s.%s' % (pkg_name, name)
     try:
         module = importlib.import_module(module_name)
-    except ImportError:
-        raise ValueError('Unknown workflow type "%s".', name)
+    except ImportError as error:
+        raise ImportError(
+            'Import of module "%s" failed: %s' % (module_name, str(error))
+        )
     return _workflow_register[name]

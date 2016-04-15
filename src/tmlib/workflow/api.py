@@ -16,7 +16,7 @@ from gc3libs.session import Session as GC3PieSession
 
 import tmlib.models
 from tmlib import utils
-from tmlib.workflow.utils import get_task_data
+from tmlib.workflow.utils import get_task_data_from_db
 from tmlib.workflow.utils import print_task_status
 from tmlib.workflow.utils import log_task_failure
 from tmlib.readers import JsonReader
@@ -82,7 +82,7 @@ class BasicClusterRoutines(object):
                         get_recursive(t, duration) for t in _task.tasks
                     ])
                     if d == 0.0:
-                        return datetime.timedelta(seconds=0)
+                        return None
                     else:
                         return d
                 else:
@@ -184,7 +184,8 @@ class BasicClusterRoutines(object):
             logger.info('progress...')
             engine.progress()
 
-            status_data = get_task_data(jobs)
+            # status_data = get_task_data_from_engine(jobs)
+            status_data = get_task_data_from_db(jobs)
             print_task_status(status_data, monitoring_depth)
 
             if break_next:
@@ -195,7 +196,7 @@ class BasicClusterRoutines(object):
                 break_next = True
                 engine.progress()  # one more iteration to update status_data
 
-        status_data = get_task_data(jobs)
+        status_data = get_task_data_from_db(jobs)
         log_task_failure(status_data, logger)
 
         return status_data

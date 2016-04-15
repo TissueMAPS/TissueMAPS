@@ -1,11 +1,8 @@
 import gc3libs
+import numpy as np
 from prettytable import PrettyTable
-from tmlib.workflow.workflow import Workflow
-from tmlib.workflow.workflow import ParallelWorkflowStage
-from tmlib.workflow.workflow import SequentialWorkflowStage
-from tmlib.workflow.workflow import WorkflowStep
-from tmlib.workflow.jobs import RunJobCollection
-from tmlib.workflow.jobs import CollectJob
+
+import tmlib.models as tm
 
 
 def format_stats_data(stats):
@@ -39,7 +36,7 @@ def format_timestamp(elapsed_time):
     Parameters
     ----------
     elapsed_time: float
-        timestamp
+        elapsed time in seconds
 
     Returns
     -------
@@ -47,13 +44,14 @@ def format_timestamp(elapsed_time):
         formatted timestamp
     '''
     return '{:d}:{:02d}:{:02d}'.format(
-                *reduce(
-                    lambda ll, b: divmod(ll[0], b) + ll[1:],
-                    [(int(elapsed_time),), 60, 60]
-                ))
+        *reduce(
+            lambda ll, b: divmod(ll[0], b) + ll[1:],
+            [(int(elapsed_time),), 60, 60]
+        )
+    )
 
 
-def get_task_data(task, description=None):
+def get_task_data_from_engine(task):
     '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
 
@@ -63,8 +61,12 @@ def get_task_data(task, description=None):
         * ``"is_done"`` (*bool*): whether the task is done
         * ``"failed"`` (*bool*): whether the task failed, i.e. terminated
           with non-zero exitcode
-        * ``"status_code"`` (*int*): status code returned by the program
+        * ``"exitcode"`` (*int*): status code returned by the program
         * ``"percent_done"`` (*float*): percent of subtasks that are *done*
+        * ``"time"`` (*datetime.timedelta*): duration
+        * ``"memory"`` (*float*): amount of used memory in MB
+        * ``"cpu_time"`` (*datetime.timedelta*): used cpu time
+        * ``"type"`` (*str*): type of the task object
 
     Parameters
     ----------
@@ -95,32 +97,14 @@ def get_task_data(task, description=None):
             'exitcode': task_.execution.exitcode,
             'percent_done': 0.0,  # fix later, if possible
             'time': task_.execution.get('duration', None),
-            'memory': task_.execution.get('max_used_memory', None)
+            'memory': task_.execution.get('max_used_memory', None),
+            'cpu_time': task_.execution.get('used_cpu_time', None)
         }
 
-        if isinstance(task_, WorkflowStep):
-            job_type = 'step'
-            data['name'] = '  ' + data['name']
-        elif (isinstance(task_, ParallelWorkflowStage) or
-                isinstance(task_, SequentialWorkflowStage)):
-            job_type = 'stage'
-            data['name'] = ' ' + data['name']
-        elif isinstance(task_, Workflow):
-            job_type = 'workflow'
-        elif isinstance(task, CollectJob):
-            job_type = 'phase/job'
-            data['name'] = '   ' + data['name']
-        elif isinstance(task_, RunJobCollection):
-            job_type = 'phase'
-            data['name'] = '   ' + data['name']
-        else:
-            job_type = 'job'
-            data['name'] = '    ' + data['name']
-
-        data['type'] = job_type
+        data['type'] = type(task_).__name__
 
         done = 0.0
-        if isinstance(task_, gc3libs.workflow.TaskCollection):
+        if hasattr(task_, 'tasks'):
             for child in task_.tasks:
                 if (child.execution.state == gc3libs.Run.State.TERMINATED):
                     done += 1
@@ -134,30 +118,129 @@ def get_task_data(task, description=None):
                 else:
                     total = len(task_.tasks)
                 data['percent_done'] = done / total * 100
+                data['time'] = np.sum([
+                    t.execution.get(
+                        'duration',
+                        gc3libs.quantity.Duration(0, gc3libs.quantity.seconds)
+                    )
+                    for t in task_.tasks
+                ])
+                if data['time'].amount(gc3libs.quantity.seconds) == 0:
+                    data['time'] = None
+                else:
+                    data['time'] = gc3libs.quantity.Duration.to_timedelta(
+                        data['time']
+                    )
+                data['cpu_time'] = np.sum([
+                    t.execution.get(
+                        'used_cpu_time',
+                        gc3libs.quantity.Duration(0, gc3libs.quantity.seconds)
+                    )
+                    for t in task_.tasks
+                ])
+                if data['cpu_time'].amount(gc3libs.quantity.seconds) == 0:
+                    data['cpu_time'] = None
+                else:
+                    data['cpu_time'] = gc3libs.quantity.Duration.to_timedelta(
+                        data['cpu_time']
+                    )
             else:
                 data['percent_done'] = 0
-        elif isinstance(task_, gc3libs.Task):
+
+        else:
             # For an individual task it is difficult to estimate to which
             # extent the task has been completed. For simplicity and
             # consistency, we just set "percent_done" to 100% once the job
             # is TERMINATED and 0% otherwise
             if task_.execution.state == gc3libs.Run.State.TERMINATED:
                 data['percent_done'] = 100
-        else:
-            raise NotImplementedError(
-                'Unhandled task class %r' % (task_.__class__))
+                if data['time'] is not None:
+                    data['time'] = gc3libs.quantity.Duration.to_timedelta(
+                        data['time']
+                    )
+                if data['cpu_time'] is not None:
+                    data['cpu_time'] = gc3libs.quantity.Duration.to_timedelta(
+                        data['cpu_time']
+                    )
+                if data['memory'] is not None:
+                    data['memory'] = data['memory'].amount(
+                        gc3libs.quantity.Memory.MB
+                    )
 
-        # if task_.execution.state == gc3libs.Run.State.TERMINATED:
-        #     if not data['time']:
-        #         # In case duration is not provided, e.g. on localhost
-        #         data['time'] = format_timestamp(
-        #                 task_.execution.state_last_changed -
-        #                 task_.execution.timestamp['SUBMITTED']
-        #         )
-
-        if isinstance(task_, gc3libs.workflow.TaskCollection):
+        if hasattr(task_, 'tasks'):
             # loop recursively over subtasks
             data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
+
+        return data
+
+    return get_info(task, 0)
+
+
+def get_task_data_from_db(task):
+    '''Provides the following data for each task and recursively for each
+    subtask in form of a mapping:
+
+        * ``"name"`` (*str*): name of task
+        * ``"state"`` (*g3clibs.Run.State*): state of the task
+        * ``"is_live"`` (*bool*): whether the task is currently processed
+        * ``"is_done"`` (*bool*): whether the task is done
+        * ``"failed"`` (*bool*): whether the task failed, i.e. terminated
+          with non-zero exitcode
+        * ``"percent_done"`` (*float*): percent of subtasks that are *done*
+        * ``"exitcode"`` (*int*): status code returned by the program
+        * ``"time"`` (*datetime.timedelta*): duration
+        * ``"memory"`` (*float*): amount of used memory in MB
+        * ``"cpu_time"`` (*datetime.timedelta*): used cpu time
+        * ``"type"`` (*str*): type of the task object
+
+    Parameters
+    ----------
+    task: gc3libs.workflow.TaskCollection or gc3libs.Task
+        submitted GC3Pie task that should be monitored
+
+    Returns
+    -------
+    dict
+        information about each task and its subtasks
+    '''
+    def get_info(task_, i):
+        is_live_states = {
+            gc3libs.Run.State.SUBMITTED,
+            gc3libs.Run.State.RUNNING,
+            gc3libs.Run.State.STOPPED
+        }
+        data = dict()
+        with tm.utils.Session() as session:
+            task_info = session.query(tm.Task).get(task_.persistent_id)
+            data['is_done'] = task_info.state == gc3libs.Run.State.TERMINATED
+            data['failed'] = task_info.exitcode != 0
+            data['name'] = task_info.name
+            data['state'] = task_info.state
+            data['time'] = task_info.time
+            data['memory'] = task_info.memory
+            data['cpu_time'] = task_info.cpu_time
+            data['type'] = task_info.type
+            data['exitcode'] = task_info.exitcode
+            data['id'] = task_info.id
+
+            if hasattr(task_, 'tasks'):
+                done = 0.0
+                for t in task_.tasks:
+                    t_info = session.query(tm.Task).get(t.persistent_id)
+                    if t_info.state == gc3libs.Run.State.TERMINATED:
+                        done += 1
+                if len(task_.tasks) > 0:
+                    data['percent_done'] = done / len(task_.tasks) * 100
+                else:
+                    data['percent_done'] = 0
+            else:
+                if task_info.state == gc3libs.Run.State.TERMINATED:
+                    data['percent_done'] = 100
+                else:
+                    data['percent_done'] = 0
+
+            if hasattr(task_, 'tasks'):
+                data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
 
         return data
 
@@ -182,23 +265,24 @@ def print_task_status(task_data, monitoring_depth):
             data['type'],
             data['state'],
             '%.2f' % data['percent_done'],
+            data['exitcode'] if data['exitcode'] is not None else '',
             data['time'] if data['time'] is not None else '',
             data['memory'] if data['memory'] is not None else '',
-            data['exitcode'] if data['exitcode'] is not None else '',
+            data['cpu_time'] if data['cpu_time'] is not None else '',
             data['id']
         ])
         if i < monitoring_depth:
             for subtd in data.get('subtasks', list()):
                 add_row_recursively(subtd, table, i+1)
     x = PrettyTable([
-            'Name', 'Type', 'State', 'Done (%)',
-            'Time (HH:MM:SS)', 'Memory (KB)', 'ExitCode', 'ID'
+            'Name', 'Type', 'State', 'Done (%)', 'ExitCode',
+            'Time (HH:MM:SS)', 'Memory (MB)', 'CPU Time (HH:MM:SS)', 'ID'
     ])
     x.align['Name'] = 'l'
     x.align['Type'] = 'l'
     x.align['State'] = 'l'
     x.align['Done (%)'] = 'r'
-    x.align['Memory (KB)'] = 'r'
+    x.align['Memory (MB)'] = 'r'
     x.align['ID'] = 'r'
     x.padding_width = 1
     add_row_recursively(task_data, x, 0)
@@ -218,9 +302,10 @@ def log_task_status(task_data, logger, monitoring_depth):
         recursion depth for subtask querying
     '''
     def log_recursive(data, i):
-        logger.info('%s: %s (%.2f %%)',
-                    data['name'], data['state'],
-                    data['percent_done'])
+        logger.info(
+            '%s: %s (%.2f %%)',
+            data['name'], data['state'], data['percent_done']
+        )
         if i < monitoring_depth:
             for subtd in data.get('subtasks', list()):
                 log_recursive(subtd, i+1)
@@ -239,8 +324,10 @@ def log_task_failure(task_data, logger):
     '''
     def log_recursive(data, i):
         if data['failed']:
-            logger.error('%s (id: %s) failed with exitcode %s',
-                         data['name'], data['id'], data['exitcode'])
+            logger.error(
+                '%s (id: %s) failed with exitcode %s',
+                 data['name'], data['id'], data['exitcode']
+            )
         for subtd in data.get('subtasks', list()):
             log_recursive(subtd, i+1)
     log_recursive(task_data, 0)

@@ -45,8 +45,6 @@ class JtProject(object):
     '''
     def __init__(self, step_location, pipe_name, pipe=None, handles=None):
         '''
-        Initialize an instance of class Jtproject.
-
         Parameters
         ----------
         step_location: str
@@ -62,19 +60,6 @@ class JtProject(object):
         self.pipe_name = pipe_name
         self.pipe = pipe
         self.handles = handles
-
-    @property
-    def experiment(self):
-        '''
-        Returns
-        -------
-        str
-            name of the corresponding experiment
-        '''
-        self._experiment = os.path.basename(
-            os.path.dirname(os.path.dirname(self.step_location))
-        )
-        return self._experiment
 
     @property
     def pipe(self):
@@ -320,38 +305,21 @@ class JtProject(object):
             if f not in handles_files:
                 os.remove(f)
 
-    def __iter__(self):
-        '''
-        Convert the attributes of the class into a mapping of key-value pairs::
-
-            {
-                "experiment": str,
-                "name": str,
-                "pipe": {
-                    "name": str,
-                    "description": dict
-                }
-                "handles": [
-                    {
-                        "name": str,
-                        "description": dict
-                    },
-                    ...
-                ]
-            }
+    def as_dict(self):
+        '''Returns the attributes as key-value pairs.
 
         Returns
         -------
         dict
         '''
-        yield('experiment', self.experiment)
-        yield('name', self.pipe_name)
-        yield('pipe', self.pipe)
-        yield('handles', self.handles)
+        attrs = dict()
+        attrs['name'] = self.pipe_name
+        attrs['pipe'] = self.pipe
+        attrs['handles'] = self.handles
+        return attrs
 
     def save(self):
-        '''
-        Save Jterator project:
+        '''Saves a Jterator project:
         Update the content of *.pipe* and *.handles* files on disk
         according to modifications to the pipeline and module descriptions.
         '''
@@ -363,8 +331,7 @@ class JtProject(object):
         self._modify_handles()
 
     def create(self, repo_dir=None, skel_dir=None):
-        '''
-        Create a Jterator project:
+        '''Creates a Jterator project:
         Create the project folder and an empty "handles" subfolder as well as
         a skeleton *.pipe* file, i.e. a pipeline descriptor file with all
         required main keys but an empty module list.

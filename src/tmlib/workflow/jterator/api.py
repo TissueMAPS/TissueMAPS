@@ -216,7 +216,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         Parameters
         ----------
-        args: tmlib.metaconfig.args.JteratorInitArgs
+        args: tmlib.workflow.jterator.args.BatchArguments
             step-specific arguments
         job_ids: Set[int], optional
             subset of jobs for which descriptions should be generated
