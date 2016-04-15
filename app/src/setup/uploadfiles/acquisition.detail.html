@@ -1,0 +1,113 @@
+<h4>Upload files</h4>
+
+<div class="row">
+  <div class="col-xs-12">
+    <div class="file-drop-zone well"
+         ngf-drop="acquisitionDetailCtrl.dropFiles($files)"
+         ng-model="acquisitionDetailCtrl.newFiles"
+         ngf-drag-over-class="file-drop-zone-hover"
+         ngf-multiple="true"
+         ngf-allow-dir="true"
+         ngf-keep="true"
+         ngf-accept="'image/*'">
+
+      <div ng-show="!acquisitionDetailCtrl.newFiles.length">
+        <p>Drag your files here</p>
+        <i class="fa fa-file-o"></i>
+      </div>
+      <div ng-show="acquisitionDetailCtrl.newFiles.length">
+        <p>You have added {{acquisitionDetailCtrl.newFiles.length}} files.</p>
+        <p>You can add additional files by dragging them onto this area.</p>
+      </div>
+    </div>
+    <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
+
+    <button class="btn btn-primary"
+      ng-click="acquisitionDetailCtrl.uploadFiles()"
+      ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+      Upload files
+    </button>
+    <button class="btn"
+      ng-click="acquisitionDetailCtrl.clearFiles()"
+      ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+      Clear files
+    </button>
+  </div>
+  <!-- <div class="col-xs-7"> -->
+  <!--   <button class="btn btn-primary" -->
+  <!--     ng-click="acquisitionDetailCtrl.uploadFiles()" -->
+  <!--     ng-show="acquisitionDetailCtrl.newFiles.length"> -->
+  <!--     Upload files -->
+  <!--   </button> -->
+  <!--   <button class="btn" -->
+  <!--     ng-click="acquisitionDetailCtrl.clearFiles()" -->
+  <!--     ng-show="acquisitionDetailCtrl.newFiles.length"> -->
+  <!--     Clear files -->
+  <!--   </button> -->
+
+  <!--   <div class="file-overview-container" perfect-scrollbar> -->
+  <!--     <table class="file-overview"> -->
+  <!--       <thead> -->
+  <!--         <th width="75%">Name</th> -->
+  <!--         <th>Size</th> -->
+  <!--       </thead> -->
+  <!--       <tbody> -->
+  <!--       <tr ng-repeat="f in acquisitionDetailCtrl.newFiles"> -->
+  <!--         <td><b>{{ f.name }}</b></td> -->
+  <!--         <td>{{ f.size | fsize }}</td> -->
+  <!--       </tr> -->
+  <!--       </tbody> -->
+  <!--     </table> -->
+  <!--   </div> -->
+  <!-- </div> -->
+</div>
+
+<div class="row">
+  <div class="col-xs-12">
+    <div id="upload-list" collapse="uploadListCollapsed" >
+      <!-- <div class="well"> -->
+        <h4>Upload queue</h4>
+
+        <!-- <div class="pull-right"> -->
+        <!--   <button type="button" class="btn btn-warning btn-s" ng-click="fileCtrl.cancelAllUploads()" ng-disabled="!newFiles.length" disabled="disabled"> -->
+        <!--     <i class="fa fa-ban"></i> Cancel all -->
+        <!--   </button> -->
+        <!--   <button type="button" class="btn btn-danger btn-s" ng-click="fileCtrl.removeAllFiles()" ng-disabled="!newFiles.length"> -->
+        <!--     <i class="fa fa-trash-o"></i> Remove all -->
+        <!--   </button> -->
+        <!-- </div> -->
+
+        <div class="upload-queue-container">
+          <table class="table upload-queue">
+            <thead>
+              <th width="30%">Name</th>
+              <th width="10%">Size</th>
+              <th width="10%">Progress</th>
+              <th width="10%">Status</th>
+            </thead>
+            <tbody>
+            <tr ng-repeat="f in acquisitionDetailCtrl.newFiles">
+              <td><b>{{ f.name }}</b></td>
+              <td>{{ f.size | fsize }}</td>
+              <td>
+                <span ng-show="f.progress">
+                  {{ f.progress }} %
+                </span>
+              </td>
+              <td>{{ f.status }}</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+<!--         <div class="progress" style=""> -->
+<!--           <div class="progress-bar" role="progressbar" ng-style="{ 'width': acquisitionDetailCtrl.getProgressPercentage() + '%' }" style="width: 0%;"> -->
+<!--           </div> -->
+<!--         </div> -->
+
+      <!-- </div> -->
+    </div>
+  </div>
+</div>
+
+

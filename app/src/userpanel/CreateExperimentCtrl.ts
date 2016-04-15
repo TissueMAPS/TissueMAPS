@@ -24,7 +24,7 @@ class CreateExperimentCtrl {
             plateAcquisitionMode: opt.plateAcquisitionMode
         }).then((exp) => {
             this._$state.go('experiment.list', {}, {
-                reload: true
+                reload: 'experiment.list'
             });
         }).catch((err) => {
             this.error = err;

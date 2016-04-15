@@ -1,0 +1,36 @@
+<h2>{{::plateDetailCtrl.plate.name}}</h2>
+
+<div ui-view ng-init="plate = plateDetailCtrl.plate">
+  <div ng-show="plate.description" class="well">{{:: plate.description }}</div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading">Acquisitions</div>
+    <div class="panel-body">
+      <div class="list-group">
+        <li class="list-group-item"
+            ng-repeat="aq in plate.acquisitions">
+
+          <span>{{::aq.name}}</span>
+          <span ng-show="aq.description" style="color: gray;">- {{::aq.description}}</span>
+
+          <span>({{aq.status}})</span>
+
+          <button ui-sref="acquisition.detail({acquisitionid: aq.id})" class="pull-right">
+            Upload files
+          </button>
+
+          <button ng-click="plateDetailCtrl.deleteAcquisition(aq)" class="pull-right">
+            Delete
+          </button>
+
+          <span class="badge">files: {{aq.files.length}}</span>
+        </li>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button ui-sref="acquisition.create" class="btn btn-default">
+          Add new acquisition
+      </button>
+    </div>
+  </div>
+</div>

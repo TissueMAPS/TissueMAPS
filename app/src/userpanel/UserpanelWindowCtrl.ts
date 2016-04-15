@@ -21,6 +21,12 @@ class UserpanelWindowCtrl {
         });
     }
 
+    modifyExperiment(e: Experiment) {
+        this._$state.go('setup', {
+            experimentid: e.id
+        });
+    }
+
     viewExperiment(e: Experiment) {
         // this._viewerApp.viewExperiment(e);
         this._$state.go('viewer', {

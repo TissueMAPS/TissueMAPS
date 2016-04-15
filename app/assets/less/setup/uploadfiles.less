@@ -1,0 +1,52 @@
+@import "../libs/lesshat/lesshat-prefixed";
+@import "../variables.less";
+
+.upload-files {
+    .breadcrumbs {
+        margin: 0;
+        padding: 10px 0;
+        li {
+            display: inline-block;
+        }
+    }
+
+    .file-drop-zone {
+        border: dotted 4px gray;
+        height: 225px;
+        width: 60%;
+        text-align: center;
+        font-weight: bold;
+        color: gray;
+        font-size: 1.5em;
+        padding: 45px;
+
+        .fa {
+            font-size: 3em;
+        }
+    }
+
+    .file-drop-zone-hover {
+        background-color: lightgray;
+    }
+
+    .file-overview-container {
+        // For perect-scrollbar
+        position: relative;
+        max-height: 225px;
+        width: 400px;
+        overflow-x: hidden;
+    }
+
+    .file-overview {
+        width: 100%;
+    }
+
+    .upload-queue-container {
+        // For perect-scrollbar
+        position: relative;
+    }
+
+    .upload-queue {
+        width: 90%;
+    }
+}

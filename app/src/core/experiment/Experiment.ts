@@ -10,6 +10,7 @@ interface SerializedExperiment {
     description: string;
     channels: SerializedChannel[];
     mapobject_info: SerializedMapObjectInfo[];
+    status: string;
 }
 
 interface CreateExperimentArgs {
@@ -28,6 +29,7 @@ class Experiment {
     name: string;
     description: string;
     channels: Channel[] = [];
+    status: string;
 
     private _mapObjectInfo: {[objectName: string]: MapObjectInfo} = {};
 
@@ -38,6 +40,7 @@ class Experiment {
         this.id = args.id;
         this.name = args.name;
         this.description = args.description;
+        this.status = args.status;
 
         args.mapobject_info.forEach((i) => {
             this._mapObjectInfo[i.mapobject_type_name] =
@@ -113,7 +116,7 @@ class Experiment {
             return true;
         })
         .catch((resp) => {
-            return false;
+            return resp.data.error;
         });
     }
 
@@ -132,7 +135,7 @@ class Experiment {
             deferredExp.resolve(new Experiment(resp.data.experiment));
         })
         .catch((resp) => {
-            deferredExp.reject(resp.error);
+            deferredExp.reject(resp.data.error);
         });
         return deferredExp.promise;
     }

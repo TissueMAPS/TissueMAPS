@@ -1,3 +1,67 @@
-.setup-view {
+@import "../libs/lesshat/lesshat-prefixed";
+@import "../variables.less";
+
+.setup-window {
+    height: 100%;
+
+    .header {
+        background: darken(@panel-bg-color, 10%);
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+        h3 {
+            margin: 10px 0;
+        }
+    }
+
+    .stage-indicator-container {
+        background: @panel-bg-color;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    ul.stage-indicators {
+        margin: 0;
+        padding: 0;
+    }
+
+    .stage-indicator {
+        display: inline-block;
+        background: @panel-fg;
+        padding: 15px 20px;
+        border: 1px solid black;
+
+        &.active {
+            background-color: @flashy-blue;
+        }
+    }
+
+    .stage-view-container {
+        height: 100%;
+    }
+
+    .stage-view {
+        height: 100%;
+        background: darken(white, 5%);
+        position: relative; // perf scrollbar
+
+        > div {
+            // Disable horizontal scrolling with perf scrolblar
+            overflow-x: hidden;
+        }
+        // overflow-y: scroll;
+    }
 
 }
+
+.setup-window-content {
+    .lh-box-shadow(1px 1px 4px 0 black);
+    height: 100%;
+
+    .row:last-child {
+        height: 100%;
+    }
+}
+

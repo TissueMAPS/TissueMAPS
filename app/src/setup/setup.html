@@ -1,5 +1,28 @@
-<div class="setup-window">
-  <div ui-view="headersection" class="row"></div>
-
-  <div ui-view="mainsection" class="row"></div>
+<div class="row setup-window">
+  <div class="col-xs-9 setup-window-content">
+    <div class="row">
+      <div class="col-xs-12 header">
+        <h3>{{ setupCtrl.experiment.name }} ({{setupCtrl.experiment.status}})</h3>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-xs-12 stage-indicator-container">
+        <ul class="stage-indicators">
+          <li class="stage-indicator" ng-class="{active: setupCtrl.inUploadFiles}">Upload files</li>
+          <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          <li class="stage-indicator" ng-class="{active: setupCtrl.inImagePreprocessing}">Image preprocessing</li>
+          <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          <li class="stage-indicator" ng-class="{active: setupCtrl.inPyramidCreation}">Pyramid creation</li>
+          <i class="fa fa-arrow-right" aria-hidden="true"></i>
+          <li class="stage-indicator" ng-class="{active: setupCtrl.inImageAnalysis}">Image analysis</li>
+        </ul>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-xs-12 stage-view" perfect-scrollbar>
+        <div ui-view="stage-view"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xs-3"></div>
 </div>

@@ -20,7 +20,9 @@
         'ui.slider',
         'ui.bootstrap',
         'ui.router',
-        'tmaps.auth'
+        'tmaps.auth',
+        'ngFileUpload',
+        'ui.router.breadcrumbs'
     ]);
 
     // Declare the main module.

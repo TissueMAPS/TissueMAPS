@@ -12,6 +12,11 @@
     <ul class="list-group">
       <li class="list-group-item" ng-repeat="e in userpanelCtrl.experiments | filter:experimentQuery">
         {{ e.name }}
+
+
+        <button class="btn btn-primary" ng-click="userpanelCtrl.modifyExperiment(e)">
+          Modify
+        </button>
         <button class="btn btn-success" ng-click="userpanelCtrl.viewExperiment(e)">
           View
         </button>
@@ -21,6 +26,9 @@
       </li>
     </ul>
   </div>
+
+  <div class="panel-footer">
+    <button ui-sref="^.create" class="btn btn-large">Create new experiment</button>
+  </div>
 </div>
 
-<button ui-sref="^.create" class="btn btn-large">Create new experiment</button>

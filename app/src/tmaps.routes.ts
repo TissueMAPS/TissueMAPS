@@ -1,13 +1,16 @@
 angular.module('tmaps.ui')
+.value('lastUsed', {
+    experiment: null,
+    viewer: null
+})
 .config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
              function($stateProvider, $urlRouterProvider, $locationProvider) {
 
     // For any unmatched url redirect to root
-    // $urlRouterProvider.otherwise('/login');
+    $urlRouterProvider.otherwise('/login');
 
     $stateProvider
     .state('viewer', {
-        // url: '/viewer?loadex=expids&state=stateid&snapshot=snapshotid',
         url: '/viewer/:experimentid',
         reloadOnSearch: false,
         views: {
@@ -16,56 +19,43 @@ angular.module('tmaps.ui')
         data: {
             loginRequired: true
         },
-        onEnter: ['application', '$stateParams', '$state', 
-                  function(app, $stateParams, $state) {
-
-            // Check if some experiments should be added
-            var experimentId = $stateParams.experimentid;
-            var wasExperimentIdSupplied =
-                experimentId !== undefined && experimentId !== '';
-            if (wasExperimentIdSupplied) {
-                var viewerToBeShown = _(app.viewers).find((viewer) => {
-                    return viewer.experiment.id === experimentId;
-                });
-                var viewerToBeShownExists = viewerToBeShown !== undefined;
-                if (viewerToBeShownExists) {
-                    app.showViewer(viewerToBeShown);
+        resolve: {
+            'experiment': ['$stateParams', '$state', 'lastUsed', '$q',
+                           ($stateParams, $state, lastUsed, $q) => {
+                var experimentId = $stateParams.experimentid;
+                var wasExperimentIdSupplied =
+                    experimentId !== undefined && experimentId !== '';
+                if (wasExperimentIdSupplied) {
+                    return Experiment.get(experimentId)
+                    .then((exp) => {
+                        lastUsed.experiment = exp;
+                        return exp;
+                    })
+                    .catch((err) => {
+                        $state.go('userpanel');
+                    });
+                } else if (lastUsed.experiment) {
+                    return lastUsed.experiment;
                 } else {
-                    Experiment.get(experimentId).then(function(exp) {
-                        var newViewer = new Viewer(exp);
-                        app.addViewer(newViewer);
-                        app.showViewer(newViewer);
+                    return $q.reject().catch(() => {
+                        $state.go('userpanel');
                     });
                 }
+            }]
+        },
+        onEnter: ['application', 'experiment',
+                  function(app, experiment) {
+            var viewerToBeShown = _(app.viewers).find((viewer) => {
+                return viewer.experiment.id === experiment.id;
+            });
+            var viewerToBeShownExists = viewerToBeShown !== undefined;
+            if (viewerToBeShownExists) {
+                app.showViewer(viewerToBeShown);
             } else {
-                var availableViewers = app.viewers;
-                if (availableViewers.length > 0)  {
-                    app.showViewer(availableViewers[0]);
-                } else {
-                    $state.go('userpanel');
-                }
+                var newViewer = new Viewer(experiment);
+                app.addViewer(newViewer);
+                app.showViewer(newViewer);
             }
-            // Check if the app should load an app state
-            //var stateID = $stateParams.state;
-            //var snapshotID = $stateParams.snapshot;
-
-            //if (angular.isDefined(stateID)) {
-            //    appstateService.loadStateFromId(stateID);
-            //} else if (angular.isDefined(snapshotID)) {
-            //    appstateService.loadSnapshotFromId(snapshotID);
-            //} else {
-            //    //
-            //}
-
-            // Check if some experiments should be added
-            // var experimentIDs = $stateParams.loadex;
-            // if (angular.isDefined(experimentIDs)) {
-            //     _(experimentIDs.split(',')).each(function(experimentID) {
-            //         Experiment.get(experimentID).then(function(exp) {
-            //             app.addExperiment(exp);
-            //         });
-            //     });
-            // }
         }],
         onExit: ['application', function(app) {
             app.hide();
@@ -76,7 +66,7 @@ angular.module('tmaps.ui')
         views: {
             'content-view': {
                 template: 
-                  '<div class="content-view" ui-view></div>' +
+                  '<div class="content-view container" ui-view></div>' +
                   '<div class="logo-container">' +
                     '<img width=400 height=400 src="/resources/img/tmaps_logo.png" alt=""/>' +
                   '</div>'
@@ -98,23 +88,21 @@ angular.module('tmaps.ui')
             loginRequired: true
         },
         templateUrl: '/src/userpanel/userpanel.html',
-        redirectTo: 'experiment-list'
+        redirectTo: 'userpanel.experiment.list'
 
     })
-    .state('experiment', {
-        parent: 'userpanel',
+    .state('userpanel.experiment', {
         url: '/experiments',
         views: {
             'userpanel-main': { template: '<ui-view></ui-view>' }
         },
         abstract: true,
     })
-    .state('experiment.list', {
+    .state('userpanel.experiment.list', {
         url: '',
-        parent: 'experiment',
         templateUrl: '/src/userpanel/experiment.list.html'
     })
-    .state('experiment.create', {
+    .state('userpanel.experiment.create', {
         url: '/create',
         templateUrl: '/src/userpanel/experiment.create.html',
         controller: 'CreateExperimentCtrl',
@@ -122,14 +110,141 @@ angular.module('tmaps.ui')
     })
     .state('setup', {
         parent: 'content',
-        url: '/setup',
+        url: '/setup/:experimentid',
         data: {
             loginRequired: true
         },
-        templateUrl: '/src/setup/setup.html'
+        templateUrl: '/src/setup/setup.html',
+        controller: 'SetupCtrl',
+        controllerAs: 'setupCtrl',
+        resolve: {
+            'experiment': ['$stateParams', '$state', 'lastUsed', '$q',
+                           ($stateParams, $state, lastUsed, $q) => {
+                var experimentId = $stateParams.experimentid;
+                var wasExperimentIdSupplied =
+                    experimentId !== undefined && experimentId !== '';
+                if (wasExperimentIdSupplied) {
+                    return Experiment.get(experimentId)
+                    .then((exp) => {
+                        lastUsed.experiment = exp;
+                        return exp;
+                    })
+                    .catch((err) => {
+                        $state.go('userpanel');
+                    });
+                } else if (lastUsed.experiment) {
+                    return lastUsed.experiment;
+                } else {
+                    return $q.reject().catch(() => {
+                        $state.go('userpanel');
+                    });
+                }
+            }]
+        },
+        onEnter: function() {
+            console.log('Enter setup');
+        }
+    })
+    .state('setup.uploadfiles', {
+        url: '/uploadfiles',
+        views: {
+            'stage-view': {
+                templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
+            }
+        }
+        // redirectTo: 'plate'
+    })
+    .state('plate', {
+        parent: 'setup.uploadfiles',
+        url: '/plates',
+        templateUrl: '/src/setup/uploadfiles/plate.html',
+        controller: 'PlateListCtrl',
+        controllerAs: 'plateListCtrl',
+        onEnter: () => {
+            console.log('Enter plate');
+        },
+        resolve: {
+            plates: ['$http', 'experiment', '$state', '$q',
+                     ($http, experiment, $state, $q) => {
+                var def = $q.defer();
+                Plate.getAll(experiment.id).then((plates) => {
+                    def.resolve(plates);
+                })
+                .catch((error) => {
+                    $state.go('userpanel');
+                    def.reject(error);
+                })
+                return def.promise;
+            }]
+        },
+        breadcrumb: {
+            // class: 'highlight',
+            text: 'plates',
+            stateName: 'plate'
+        }
+    })
+    .state('plate.create', {
+        url: '/create',
+        templateUrl: '/src/setup/uploadfiles/plate.create.html',
+        controller: 'PlateCreateCtrl',
+        controllerAs: 'createCtrl',
+        breadcrumb: {
+            class: 'highlight',
+            text: 'create plate',
+            stateName: 'plate.create'
+        }
+    })
+    .state('plate.detail', {
+        url: '/:plateid',
+        templateUrl: '/src/setup/uploadfiles/plate.detail.html',
+        controller: 'PlateDetailCtrl',
+        controllerAs: 'plateDetailCtrl',
+        resolve: {
+            plate: ['$http', '$stateParams', ($http, $stateParams) => {
+                var plateId = $stateParams.plateid;
+                return Plate.get(plateId);
+            }]
+        },
+        breadcrumb: {
+            class: 'highlight',
+            text: 'plate',
+            stateName: 'plate.detail'
+        }
+    })
+    .state('acquisition', {
+        abstract: true,
+        parent: 'plate.detail',
+        url: '/acquisitions',
+        template: '<ui-view></ui-view>',
+    })
+    .state('acquisition.create', {
+        url: '/create',
+        templateUrl: '/src/setup/uploadfiles/acquisition.create.html',
+        controller: 'AcquisitionCreateCtrl',
+        controllerAs: 'createCtrl',
+        breadcrumb: {
+            class: 'highlight',
+            text: 'create acquisition',
+            stateName: 'acquisition.create'
+        }
+    })
+    .state('acquisition.detail', {
+        url: '/:acquisitionid',
+        templateUrl: '/src/setup/uploadfiles/acquisition.detail.html',
+        controller: 'AcquisitionDetailCtrl',
+        controllerAs: 'acquisitionDetailCtrl',
+        resolve: {
+            acquisition: ['$stateParams', function($stateParams) {
+                var acquisitionId = $stateParams.acquisitionid;
+                return Acquisition.get(acquisitionId);
+            }]
+        },
+        breadcrumb: {
+            class: 'highlight',
+            text: 'upload',
+            stateName: 'acquisition.detai'
+        }
     });
-
-
 
 }]);
 

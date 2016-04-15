@@ -1,8 +1,9 @@
 <div class="appbar">
   <ul class="button-list" ng-show="appCtrl.isUserAuthenticated()">
-    <li class="logo">
-      <img width=24 height=24 src="/resources/img/tmaps_logo.png" alt=""/>
-    </li><li ui-sref="userpanel">
+    <!-- <li class="logo"> -->
+    <!--   <img width=24 height=24 src="/resources/img/tmaps_logo.png" alt=""/> -->
+    <!-- </li> -->
+    <li ui-sref="userpanel">
     <i class="fa fa-user"></i>
       <!-- </li> -->
       <!-- <li -->
@@ -48,7 +49,7 @@
 
     <div ng-show="appCtrl.isUserAuthenticated()">
       <a ui-sref="userpanel">
-        <b>{{ appCtrl.getUser().name}}</b>
+        <b>{{ appCtrl.getUser().name }}</b>
       </a>
       <a ng-click="appCtrl.logout()">(logout)</a>
     </div>
