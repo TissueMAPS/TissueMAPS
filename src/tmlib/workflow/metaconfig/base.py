@@ -157,8 +157,6 @@ class MetadataHandler(object):
                     # Sometimes an image doesn't have any plane elements.
                     # Let's create them for consistency.
                     pixels = self._create_channel_planes(pixels)
-                    metadata['height'].append(pixels.SizeY)
-                    metadata['width'].append(pixels.SizeX)
                     n_planes = pixels.plane_count  # update plane count
 
                 # Each metadata element represents an image, which could
@@ -191,6 +189,7 @@ class MetadataHandler(object):
 
                     i += 1
 
+        import ipdb; ipdb.set_trace()
         self.metadata = pd.DataFrame(metadata)
         length = self.metadata.shape[0]
         self.metadata['date'] = np.empty((length, ), dtype=str)
