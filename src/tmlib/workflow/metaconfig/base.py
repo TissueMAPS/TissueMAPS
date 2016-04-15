@@ -189,7 +189,6 @@ class MetadataHandler(object):
 
                     i += 1
 
-        import ipdb; ipdb.set_trace()
         self.metadata = pd.DataFrame(metadata)
         length = self.metadata.shape[0]
         self.metadata['date'] = np.empty((length, ), dtype=str)
