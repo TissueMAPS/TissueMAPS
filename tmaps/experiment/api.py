@@ -1,39 +1,34 @@
 import json
 import os.path as p
 
-from flask import jsonify, request, send_file, current_app
+from flask import jsonify, send_file, current_app, request
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
-import numpy as np
-
-from tmlib.models import Experiment, ChannelLayer
+from tmlib.models import Experiment, ChannelLayer, Plate, Acquisition
+from tmaps.util import get
 
 from tmaps.extensions import db
 from tmaps.api import api
-from tmaps.response import (
-    MALFORMED_REQUEST_RESPONSE,
-    RESOURCE_NOT_FOUND_RESPONSE,
-    NOT_AUTHORIZED_RESPONSE
+from tmaps.error import (
+    MalformedRequestError
 )
 
 
 @api.route('/channel_layers/<channel_layer_id>/tiles/<path:filename>', methods=['GET'])
-def get_image_tile(channel_layer_id, filename):
+@get(ChannelLayer)
+def get_image_tile(channel_layer, filename):
     """Send a tile image for a specific layer.
     This route is accessed by openlayers."""
-    ch = db.session.query(ChannelLayer).get_with_hash(channel_layer_id)
 
-    if ch is None:
-        return RESOURCE_NOT_FOUND_RESPONSE
-
-    filepath = p.join(ch.location, filename)
+    filepath = p.join(channel_layer.location, filename)
     return send_file(filepath)
 
 
 @api.route('/experiments/<experiment_id>/features', methods=['GET'])
 @jwt_required()
-def get_features(experiment_id):
+@get(Experiment, check_ownership=True)
+def get_features(experiment):
     """
     Send a list of feature objects.
 
@@ -52,16 +47,8 @@ def get_features(experiment_id):
     }
 
     """
-
-    ex = db.session.query(Experiment).get_with_hash(experiment_id)
-    if not ex:
-        return RESOURCE_NOT_FOUND_RESPONSE
-
-    if not ex.belongs_to(current_identity):
-        return NOT_AUTHORIZED_RESPONSE
-
     features = {}
-    for t in ex.mapobject_types:
+    for t in experiment.mapobject_types:
         features[t.name] = [{'name': f.name} for f in t.features]
 
     return jsonify({
@@ -87,8 +74,9 @@ def get_experiments():
 
 
 @api.route('/experiments/<experiment_id>', methods=['GET'])
+@get(Experiment)
 @jwt_required()
-def get_experiment(experiment_id):
+def get_experiment(experiment):
     """
     Get an experiment by id.
 
@@ -98,14 +86,8 @@ def get_experiment(experiment_id):
     }
 
     """
-    e = db.session.query(Experiment).get_with_hash(experiment_id)
-    if not e:
-        return RESOURCE_NOT_FOUND_RESPONSE
-    if not e.belongs_to(current_identity):
-        return NOT_AUTHORIZED_RESPONSE
-
     return jsonify({
-        'experiment': e
+        'experiment': experiment
     })
 
 
@@ -143,17 +125,124 @@ def create_experiment():
 
 @api.route('/experiments/<experiment_id>', methods=['DELETE'])
 @jwt_required()
-def delete_experiment(experiment_id):
-    e = db.session.query(Experiment).get_with_hash(experiment_id)
-    if not e:
-        return RESOURCE_NOT_FOUND_RESPONSE
-    if not e.belongs_to(current_identity):
-        return NOT_AUTHORIZED_RESPONSE
-
-    db.session.delete(e)
+@get(Experiment, check_ownership=True)
+def delete_experiment(experiment):
+    db.session.delete(experiment)
     db.session.commit()
 
-    return 'Deletion ok', 200
+    return jsonify(message='Deletion ok')
+
+
+@api.route('/plates/<plate_id>', methods=['GET'])
+@jwt_required()
+@get(Plate, check_ownership=True)
+def get_plate(plate):
+    return jsonify(plate=plate)
+
+
+@api.route('/experiments/<experiment_id>/plates', methods=['GET'])
+@jwt_required()
+@get(Experiment, check_ownership=True)
+def get_plates(experiment):
+    return jsonify(plates=experiment.plates)
+
+
+@api.route('/plates/<plate_id>', methods=['DELETE'])
+@jwt_required()
+@get(Plate, check_ownership=True)
+def delete_plate(plate):
+    db.session.delete(plate)
+    db.session.commit()
+
+    return jsonify(message='Deletion ok')
+
+
+@api.route('/experiments/<experiment_id>/plates', methods=['POST'])
+@jwt_required()
+@get(Experiment, check_ownership=True)
+def create_plate(experiment):
+    """
+    Create a new plate for the experiment with id `experiment_id`.
+
+    Request
+    -------
+
+    {
+        name: string,
+        description: string
+    }
+
+    Response
+    --------
+
+    Plate object
+
+    """
+    data = json.loads(request.data)
+    pl_name = data.get('name')
+    pl_desc = data.get('description', '')
+
+    if not pl_name:
+        raise MalformedRequestError()
+
+    pl = Plate(
+        name=pl_name, description=pl_desc,
+        experiment_id=experiment.id)
+    db.session.add(pl)
+    db.session.commit()
+
+    return jsonify(plate=pl)
+
+
+@api.route('/plates/<plate_id>/acquisitions', methods=['POST'])
+@jwt_required()
+@get(Plate, check_ownership=True)
+def create_acquisition(plate):
+    """
+    Create a new acquisition for the plate with id `plate_id`.
+
+    Request
+    {
+        name: string,
+        description: string
+    }
+
+    Response
+    --------
+
+    Acquisition object
+
+    """
+    data = json.loads(request.data)
+    name = data.get('name')
+    desc = data.get('description', '')
+
+    if not name:
+        raise MalformedRequestError()
+
+    aq = Acquisition(
+        name=name, description=desc,
+        plate_id=plate.id)
+    db.session.add(aq)
+    db.session.commit()
+
+    return jsonify(acquisition=aq)
+
+
+@api.route('/acquisitions/<acquisition_id>', methods=['DELETE'])
+@jwt_required()
+@get(Acquisition, check_ownership=True)
+def delete_acquisition(acquisition):
+    db.session.delete(acquisition)
+    db.session.commit()
+    return jsonify(message='Deletion ok')
+
+
+@api.route('/acquisitions/<acquisition_id>', methods=['GET'])
+@jwt_required()
+@get(Acquisition, check_ownership=True)
+def get_acquisition(acquisition):
+    return jsonify(acquisition=acquisition)
 
 
 # @api.route('/experiments/<exp_id>/convert-images', methods=['POST'])

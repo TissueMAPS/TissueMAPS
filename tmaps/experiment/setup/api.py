@@ -1,75 +1,21 @@
-# import json
+import json
 
-# from tmaps.api import api
-# from flask.ext.jwt import jwt_required
-# from flask.ext.jwt import current_identity
-# from flask import jsonify, request
-# from werkzeug import secure_filename
+from flask.ext.jwt import jwt_required
+from flask.ext.jwt import current_identity
+from flask import jsonify, request
 
-# from tmaps.extensions.gc3pie import gc3pie_engine
-# from tmaps.experiment import Experiment
-# from tmaps.experiment.setup import Plate, PlateSource, PlateAcquisition
-# # from tmaps.experiment.setup import Task
-# from tmaps.extensions import db
-# from tmaps.response import *
+from tmlib.models import Experiment, Plate
 
+from tmaps.serialize import json_encoder
+from tmaps.model import encode_pk
+from tmaps.extensions import db
+from tmaps.api import api
+from tmaps.response import (
+    MALFORMED_REQUEST_RESPONSE,
+    NOT_AUTHORIZED_RESPONSE,
+    RESOURCE_NOT_FOUND_RESPONSE
+)
 
-# # @api.route('/tasks/<int:task_id>', methods=['GET'])
-# # @jwt_required()
-# # def get_task_info(task_id):
-# #     task = Task.get(task_id)
-# #     return jsonify(gc3pie_engine.get_task_data(task))
-
-
-# @api.route('/experiments/<experiment_id>/plate-sources', methods=['GET'])
-# @jwt_required()
-# def get_plate_sources(experiment_id):
-#     e = Experiment.get(experiment_id)
-#     if not e.belongs_to(current_identity):
-#         return NOT_AUTHORIZED_RESPONSE
-
-#     return jsonify(plate_sources=[pl.as_dict() for pl in e.plate_sources])
-
-
-# @api.route('/experiments/<experiment_id>/plate-sources',
-#                  methods=['POST'])
-# @jwt_required()
-# def create_plate_source(experiment_id):
-#     """
-#     Create a new plate source directory for the experiment with id `experiment_id`.
-
-#     Request
-#     -------
-
-#     {
-#         name: string,
-#         description: string
-#     }
-
-#     Response
-#     --------
-
-#     PlateSource object
-
-#     """
-#     data = json.loads(request.data)
-#     pls_name = data.get('name')
-#     pls_desc = data.get('description', '')
-
-#     if not pls_name:
-#         return MALFORMED_REQUEST_RESPONSE
-
-#     e = Experiment.get(experiment_id)
-#     if not e:
-#         return RESOURCE_NOT_FOUND_RESPONSE
-
-#     if not e.belongs_to(current_identity):
-#         return NOT_AUTHORIZED_RESPONSE
-
-#     pls = PlateSource.create(
-#         name=pls_name, description=pls_desc, experiment=e)
-
-#     return jsonify(pls.as_dict())
 
 
 # @api.route('/plate-sources/<int:pls_id>/acquisitions', methods=['POST'])
