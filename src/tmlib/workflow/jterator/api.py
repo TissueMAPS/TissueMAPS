@@ -399,6 +399,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # to decide similar to illumination correction.
         channel_info = self.project.pipe['description']['input']['channels']
         with tm.utils.Session() as session:
+            image_metadata = pd.DataFrame(
+                session.query(
+                    tm.ChannelImageFile.tpoint, tm.ChannelImageFile.zplane
+                ).
+                join(tm.Channel).
+                filter(tm.Channel.experiment_id == self.experiment_id).
+                distinct(
+                    tm.ChannelImageFile.tpoint, tm.ChannelImageFile.zplane
+                ).
+                all()
+            )
             for channel_name, file_ids in batch['image_file_ids'].iteritems():
                 logger.info('load images for channel "%s"', channel_name)
                 if channel_info[channel_name]['correct']:
@@ -412,24 +423,36 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         one()
                     stats = stats_file.get()
 
-                arrays = list()
+                images = list()
                 for fid in file_ids:
                     image_file = session.query(tm.ChannelImageFile).\
                         get(fid)
                     logger.info('load image "%s"', image_file.name)
-                    image = image_file.get()
+                    img = image_file.get()
                     if channel_info[channel_name]['correct']:
                         logger.info('correct image "%s"', image_file.name)
-                        image = image.correct(stats)
+                        img = img.correct(stats)
                     logger.debug('align image "%s"', image_file.name)
-                    image = image.align()  # shifted and cropped!
-                    arrays.append(image.pixels)
+                    img = img.align()  # shifted and cropped!
+                    images.append(img)
 
-                if len(arrays) > 1:
-                    logger.info('stack images along third axis')
-                    store['pipe'][channel_name] = np.dstack(arrays)
+                if len(images) > 1:
+                    if len(np.unique(image_metadata.tpoint)) == 1:
+                        logger.info('3D images')
+                        pixels = [img.pixels for img in images]
+                        store['pipe'][channel_name] = np.dstack(pixels)
+                    elif len(np.unique(image_metadata.zplane)) == 1:
+                        logger.info('time series of 2D images')
+                        pixels = [img.pixels for img in images]
+                        store['pipe'][channel_name] = pixels
+                    else:
+                        logger.info('time series of 3D images')
+                        pixels = collection.defaultdict(list)
+                        for img in images:
+                            pixels[img.tpoint].append(img.pixels)
+                        store['pipe'][channel_name] = pixels.values()
                 else:
-                    store['pipe'][channel_name] = arrays[0]
+                    store['pipe'][channel_name] = images[0].pixels
 
         # Execute modules
         logger.info('run pipeline')
