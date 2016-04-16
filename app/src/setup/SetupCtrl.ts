@@ -24,8 +24,7 @@ class SetupCtrl {
         switch(experiment.status) {
             case 'WAITING':
                 console.log('REDIRECT');
-                // FIXME: enable 
-                // this._$state.go('plate');
+                this._$state.go('plate');
                 this.currentStage = 'uploadfiles';
                 break;
             default:
