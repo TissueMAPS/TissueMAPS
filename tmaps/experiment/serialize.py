@@ -68,8 +68,9 @@ def encode_acquisition(obj, encoder):
         'name': obj.name,
         'description': obj.description,
         'plate_id': encode_pk(obj.plate_id),
+        'status': obj.status,
         'microscope_image_files':
-            [f.name for f in obj.microscope_image_files],
+            [{'name': f.name} for f in obj.microscope_image_files],
         'microscope_metadata_files':
-            [f.name for f in obj.microscope_image_files]
+            [{'name': f.name} for f in obj.microscope_image_files]
     }

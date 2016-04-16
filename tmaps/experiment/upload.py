@@ -41,15 +41,13 @@ def register_upload(acquisition):
     Response 200 or 500
 
     """
-    # 1) Create the plate directory if it doesn't exist already
-    # 2) Save the plate upload directory in the db.
     data = json.loads(request.data)
 
     if data is None or len(data.get('files', [])) == 0:
         raise MalformedRequestError(
-            'No files supplied. Cannot register upload.'
-        )
+            'No files supplied. Cannot register upload.')
 
+    # Delete any old files
     for f in acquisition.microscope_image_files:
         db.session.delete(f)
     db.session.commit()
@@ -104,7 +102,8 @@ def upload_file(acquisition):
     file_objs = [fl for fl in acquisition.microscope_image_files if fl.name == filename]
 
     if len(file_objs) != 1:
-        raise ResourceNotFoundError('This file was not registered.')
+        raise ResourceNotFoundError(
+            'This file was not registered and therefrore won\'t be saved.')
     file_obj = file_objs[0]
 
     f.save(file_obj.location)
@@ -118,6 +117,7 @@ def upload_file(acquisition):
     # if len(remaining_files) == 0:
     #     acquisition.status = FileUploadStatus.COMPLETE
 
+    db.session.commit()
     return jsonify(message='Upload ok')
 
 

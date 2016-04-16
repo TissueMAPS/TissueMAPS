@@ -78,4 +78,3 @@ class InternalServerError(APIException):
     def __init__(self, message=default_message):
         super(InternalServerError, self).__init__(
             message=message, status_code=500)
-
