@@ -19,6 +19,12 @@
     .tm-resize-handle {
         cursor: ns-resize;
     }
+
+    &:first-child {
+        .sidebar-section-title {
+            border-top: none;
+        }
+    }
 }
 
 .sidebar-section-title {
@@ -46,6 +52,9 @@
 }
 
 .sidebar-section-content {
+    border-top: 1px solid #626262;
+    border-bottom: 1px solid #222222;
+
     height: calc(~'100% - @{sidebar-section-title-height}');
     padding: @sidebar-section-padding;
     // If the browser window is resized so that the content

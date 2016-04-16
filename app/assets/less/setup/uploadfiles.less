@@ -11,9 +11,8 @@
     }
 
     .file-drop-zone {
-        border: dotted 4px gray;
+        border: dotted 2px gray;
         height: 225px;
-        width: 60%;
         text-align: center;
         font-weight: bold;
         color: gray;
@@ -25,20 +24,10 @@
         }
     }
 
+    .file-drop-zone-container {}
+
     .file-drop-zone-hover {
         background-color: lightgray;
-    }
-
-    .file-overview-container {
-        // For perect-scrollbar
-        position: relative;
-        max-height: 225px;
-        width: 400px;
-        overflow-x: hidden;
-    }
-
-    .file-overview {
-        width: 100%;
     }
 
     .upload-queue-container {
@@ -48,5 +37,21 @@
 
     .upload-queue {
         width: 90%;
+    }
+
+    .already-added-files-container {
+        padding-right: 15px;
+    }
+
+    .already-added-files {
+        position: relative;
+        height: 225px;
+        border: dotted 2px gray;
+        padding-left: 10px;
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
     }
 }

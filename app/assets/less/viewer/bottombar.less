@@ -7,6 +7,8 @@
     padding-right: @sidebar-width + 5px;
     text-align: center;
 
+    .panel-horizontal();
+
     line-height: @viewer-bottom-height;
 
     .z-plane-indicator {
@@ -25,5 +27,6 @@
         position: absolute;
         height: 100%;
         .ui-panel-gradient(bottom, @panel-bg-color, 0%, 90%);
+        border-left: 1px solid #626262;
     }
 }

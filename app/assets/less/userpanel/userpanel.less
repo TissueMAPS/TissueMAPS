@@ -1,6 +1,10 @@
 @import "../variables.less";
 @import "../ui.less";
 
+.userpanel {
+    padding-left: 0;
+}
+
 .userpanel-sidebar {
     overflow-x: hidden;
     overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
@@ -13,14 +17,17 @@
     color: @font-color-light;
 
     background-color: @panel-bg-color;
-    .ui-panel-gradient(right, @panel-bg-color, 2%, 98%);
+    // .ui-panel-gradient(right, @panel-bg-color, 2%, 98%);
+
+    border-left: 1px solid #626262;
+    border-right: 1px solid #222222;
 }
 
 .nav-sidebar {
 }
 
 .nav-sidebar > li {
-    .ui-panel-gradient(right, #333, 2%, 98%);
+    // .ui-panel-gradient(right, #333, 2%, 98%);
     border-top: 1px solid #232323;
 
     &:last-child {
@@ -43,7 +50,7 @@
 .userpanel-main {
 
     background: darken(white, 5%);
-    .lh-box-shadow(1px 1px 4px 0 black);
+    padding-right: 15px;
 
     height: 100vh;
 

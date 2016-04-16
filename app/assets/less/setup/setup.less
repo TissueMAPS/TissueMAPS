@@ -5,7 +5,9 @@
     height: 100%;
 
     .header {
-        background: darken(@panel-bg-color, 10%);
+        border-top: 1px solid #626262;
+        background: #333;
+        border-bottom: 1px solid #222222;
         color: @font-color-light;
         padding-top: 5px;
         padding-bottom: 5px;
@@ -16,7 +18,9 @@
     }
 
     .stage-indicator-container {
-        background: @panel-bg-color;
+        border-top: 1px solid #626262;
+        background: #444;
+        border-bottom: 1px solid #222222;
         color: @font-color-light;
         padding-top: 5px;
         padding-bottom: 5px;
@@ -29,7 +33,7 @@
 
     .stage-indicator {
         display: inline-block;
-        background: @panel-fg;
+        background: #555555;
         padding: 15px 20px;
         border: 1px solid black;
 
@@ -43,9 +47,11 @@
     }
 
     .stage-view {
+        padding-right: 15px;
         height: 100%;
         background: darken(white, 5%);
         position: relative; // perf scrollbar
+        border-top: 1px solid #626262;
 
         > div {
             // Disable horizontal scrolling with perf scrolblar
@@ -57,8 +63,8 @@
 }
 
 .setup-window-content {
-    .lh-box-shadow(1px 1px 4px 0 black);
     height: 100%;
+    padding-left: 0;
 
     .row:last-child {
         height: 100%;
