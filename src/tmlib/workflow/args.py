@@ -148,6 +148,8 @@ class Argument(object):
         kwargs['required'] = self.required
         parser.add_argument(*flags, **kwargs)
 
+def __str__(self):
+    return '<Argument(name=%r, type=%r)>' % (self.name, self.type)
 
 class ArgumentMeta(ABCMeta):
 
