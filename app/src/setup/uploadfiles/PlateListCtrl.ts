@@ -12,8 +12,8 @@ class PlateListCtrl {
     deletePlate(plate: Plate) {
         Plate.delete(plate.id)
         .then((resp) => {
-            this._$state.go('.', {}, {
-                reload: '.'
+            this._$state.go('plate', {}, {
+                reload: 'plate'
             });
         })
         .catch((error) => {

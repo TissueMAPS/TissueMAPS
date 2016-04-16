@@ -1,29 +1,31 @@
+interface MicroscopeFile {
+    name: string;
+}
+
 interface SerializedAcquisition {
     id: string;
     name: string;
     description: string;
     plate_id: string;
-    microscope_image_files: string[];
-    microscope_metadata_files: string[];
+    status: string;
+    microscope_image_files: MicroscopeFile[];
+    microscope_metadata_files: MicroscopeFile[];
 }
 
 interface AcquisitionArgs {
     id: string;
     name: string;
     description: string;
-    microscopeImageFiles: string[];
-    microscopeMetadataFiles: string[];
+    status: string;
+    files: MicroscopeFile[];
 }
 
 class Acquisition {
     id: string;
     name: string;
     description: string;
-
-    microscopeImageFiles: string[];
-    microscopeMetadataFiles: string[];
-
-    status: string = 'WAITING';
+    status: string;
+    files: MicroscopeFile[];
 
     private _uploader: any;
 
@@ -38,9 +40,9 @@ class Acquisition {
         return new Acquisition({
             id: aq.id,
             name: aq.name,
+            status: aq.status,
             description: aq.description,
-            microscopeImageFiles: aq.microscope_image_files,
-            microscopeMetadataFiles: aq.microscope_metadata_files
+            files: aq.microscope_image_files.concat(aq.microscope_metadata_files)
         });
     }
 
@@ -97,7 +99,8 @@ class Acquisition {
                 evt.config.file.status = 'UPLOADING';
             }).success((data, status, headers, config) => {
                 config.file.progress = 100;
-                config.file.status = 'UPLOADED';
+                config.file.status = 'COMPLETE';
+                this.files.push(<MicroscopeFile>{name: config.file.name});
                 fileDef.resolve(config.file);
             }).error((data, status, headers, config) => {
                 config.file.status = 'FAILED';
@@ -109,6 +112,10 @@ class Acquisition {
         return filePromises;
     }
 
+    clearFiles() {
+        this.files.splice(0, this.files.length);
+    }
+
     private _registerUpload(newFiles) {
         var fileNames = _(newFiles).pluck('name');
         var url = '/api/acquisitions/' + this.id + '/register-upload';
@@ -117,6 +124,7 @@ class Acquisition {
         var $q = $injector.get<ng.IQService>('$q');
         return $http.put(url, { files: fileNames })
         .then((resp) => {
+            this.clearFiles();
             return resp.status === 200;
         })
         .catch((resp) => {
@@ -125,6 +133,7 @@ class Acquisition {
     }
 
     cancelAllUploads(files) {
+        this.clearFiles();
         files.forEach((f) => {
             if (f.upload !== undefined) {
                 f.upload.abort();
@@ -139,12 +148,9 @@ class Acquisition {
             var promises = this._uploadRegisteredFiles(newFiles);
             return $q.all(promises).then((files) => {
                 var allFilesUploaded = _.chain(files).map((f: any) => {
-                    console.log('File uploaded:' , f);
-                    return f.status === 'UPLOADED';
+                    return f.status === 'COMPLETE';
                 }).all().value();
                 if (allFilesUploaded) {
-                    this.microscopeImageFiles = <string[]> _.pluck(files, 'name');
-                    console.log('All files uploaded:' , f);
                     this.status = 'COMPLETE';
                 }
                 return allFilesUploaded;

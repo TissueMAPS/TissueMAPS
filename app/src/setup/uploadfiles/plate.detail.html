@@ -1,4 +1,4 @@
-<h2>{{::plateDetailCtrl.plate.name}}</h2>
+<h2>Plate: {{::plateDetailCtrl.plate.name}}</h2>
 
 <div ui-view ng-init="plate = plateDetailCtrl.plate">
   <div ng-show="plate.description" class="well">{{:: plate.description }}</div>
@@ -22,8 +22,6 @@
           <button ng-click="plateDetailCtrl.deleteAcquisition(aq)" class="pull-right">
             Delete
           </button>
-
-          <span class="badge">files: {{aq.files.length}}</span>
         </li>
       </div>
     </div>

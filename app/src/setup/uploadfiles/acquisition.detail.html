@@ -1,71 +1,60 @@
-<h4>Upload files</h4>
+<div ng-init="aq = acquisitionDetailCtrl.acquisition">
+  <h2>
+    Acquisition: {{:: aq.name }}
+    (<span>{{aq.status}}</span>)
+  </h2>
 
-<div class="row">
-  <div class="col-xs-12">
-    <div class="file-drop-zone well"
-         ngf-drop="acquisitionDetailCtrl.dropFiles($files)"
-         ng-model="acquisitionDetailCtrl.newFiles"
-         ngf-drag-over-class="file-drop-zone-hover"
-         ngf-multiple="true"
-         ngf-allow-dir="true"
-         ngf-keep="true"
-         ngf-accept="'image/*'">
+  <div class="row">
+    <div class="col-md-6 file-drop-zone-container">
+      Upload new files:
+      <div class="file-drop-zone well"
+        ngf-drop="acquisitionDetailCtrl.dropFiles($files)"
+        ng-model="acquisitionDetailCtrl.newFiles"
+        ngf-drag-over-class="file-drop-zone-hover"
+        ngf-multiple="true"
+        ngf-allow-dir="true"
+        ngf-keep="true"
+        ngf-accept="'image/*'">
 
-      <div ng-show="!acquisitionDetailCtrl.newFiles.length">
-        <p>Drag your files here</p>
-        <i class="fa fa-file-o"></i>
+        <div ng-show="!acquisitionDetailCtrl.newFiles.length">
+          <p>Drag your files here</p>
+          <i class="fa fa-file-o"></i>
+        </div>
+        <div ng-show="acquisitionDetailCtrl.newFiles.length">
+          <p>You have added {{acquisitionDetailCtrl.newFiles.length}} files to the upload queue.</p>
+          <p>You can add additional files by dragging them onto this area.</p>
+        </div>
       </div>
-      <div ng-show="acquisitionDetailCtrl.newFiles.length">
-        <p>You have added {{acquisitionDetailCtrl.newFiles.length}} files.</p>
-        <p>You can add additional files by dragging them onto this area.</p>
+      <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
+
+      <button class="btn btn-primary"
+        ng-click="acquisitionDetailCtrl.uploadFiles()"
+        ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+        Upload files
+      </button>
+      <button class="btn"
+        ng-click="acquisitionDetailCtrl.clearFiles()"
+        ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+        Clear files
+      </button>
+    </div>
+    <div class="col-md-6 already-added-files-container">
+      Already added files:
+
+      <div class="already-added-files" perfect-scrollbar>
+        <ul>
+          <li ng-repeat="f in aq.files">
+          file {{:: f.name}}
+          </li>
+        </ul>
       </div>
     </div>
-    <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
-
-    <button class="btn btn-primary"
-      ng-click="acquisitionDetailCtrl.uploadFiles()"
-      ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
-      Upload files
-    </button>
-    <button class="btn"
-      ng-click="acquisitionDetailCtrl.clearFiles()"
-      ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
-      Clear files
-    </button>
   </div>
-  <!-- <div class="col-xs-7"> -->
-  <!--   <button class="btn btn-primary" -->
-  <!--     ng-click="acquisitionDetailCtrl.uploadFiles()" -->
-  <!--     ng-show="acquisitionDetailCtrl.newFiles.length"> -->
-  <!--     Upload files -->
-  <!--   </button> -->
-  <!--   <button class="btn" -->
-  <!--     ng-click="acquisitionDetailCtrl.clearFiles()" -->
-  <!--     ng-show="acquisitionDetailCtrl.newFiles.length"> -->
-  <!--     Clear files -->
-  <!--   </button> -->
 
-  <!--   <div class="file-overview-container" perfect-scrollbar> -->
-  <!--     <table class="file-overview"> -->
-  <!--       <thead> -->
-  <!--         <th width="75%">Name</th> -->
-  <!--         <th>Size</th> -->
-  <!--       </thead> -->
-  <!--       <tbody> -->
-  <!--       <tr ng-repeat="f in acquisitionDetailCtrl.newFiles"> -->
-  <!--         <td><b>{{ f.name }}</b></td> -->
-  <!--         <td>{{ f.size | fsize }}</td> -->
-  <!--       </tr> -->
-  <!--       </tbody> -->
-  <!--     </table> -->
-  <!--   </div> -->
-  <!-- </div> -->
-</div>
-
-<div class="row">
-  <div class="col-xs-12">
-    <div id="upload-list" collapse="uploadListCollapsed" >
-      <!-- <div class="well"> -->
+  <div class="row">
+    <div class="col-xs-12">
+      <div id="upload-list" collapse="uploadListCollapsed" >
+        <!-- <div class="well"> -->
         <h4>Upload queue</h4>
 
         <!-- <div class="pull-right"> -->
@@ -100,14 +89,15 @@
           </table>
         </div>
 
-<!--         <div class="progress" style=""> -->
-<!--           <div class="progress-bar" role="progressbar" ng-style="{ 'width': acquisitionDetailCtrl.getProgressPercentage() + '%' }" style="width: 0%;"> -->
-<!--           </div> -->
-<!--         </div> -->
+        <!--         <div class="progress" style=""> -->
+        <!--           <div class="progress-bar" role="progressbar" ng-style="{ 'width': acquisitionDetailCtrl.getProgressPercentage() + '%' }" style="width: 0%;"> -->
+        <!--           </div> -->
+        <!--         </div> -->
 
-      <!-- </div> -->
+        <!-- </div> -->
+      </div>
     </div>
   </div>
+
+
 </div>
-
-

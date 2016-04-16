@@ -1,6 +1,6 @@
 class AcquisitionDetailCtrl {
 
-    newFiles: string[];
+    newFiles: MicroscopeFile[];
 
     static $inject = ['acquisition', '$state'];
 
