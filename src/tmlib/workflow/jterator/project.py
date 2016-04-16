@@ -204,8 +204,9 @@ class Project(object):
 
     def _create_pipe_file(self, repo_dir):
         pipe_file = os.path.join(
-                        self.step_location,
-                        '%s%s' % (self.pipe_name, PIPE_SUFFIX))
+            self.step_location,
+            '%s%s' % (self.pipe_name, PIPE_SUFFIX)
+        )
         pipe_skeleton = {
             'project': {
                 'description': str()
@@ -217,8 +218,8 @@ class Project(object):
             },
             'pipeline': list()
         }
-        with YamlWriter() as writer:
-            writer.write(pipe_file, pipe_skeleton, use_ruamel=True)
+        with YamlWriter(pipe_file) as f:
+            f.write(pipe_skeleton, use_ruamel=True)
 
     def _create_handles_folder(self):
         handles_dir = os.path.join(self.step_location, 'handles')
@@ -287,8 +288,8 @@ class Project(object):
                 # If file doesn't yet exist, create it and add content
                 else:
                     mod_handles_content = self.handles[i]['description']
-                with YamlWriter() as writer:
-                    writer.write(handles_file, mod_handles_content)
+                with YamlWriter(handles_file) as f:
+                    f.write(mod_handles_content)
         # Remove .handles file that are no longer in the pipeline
         existing_handles_files = glob.glob(
             os.path.join(self.step_location, 'handles', '*%s' % HANDLES_SUFFIX)
@@ -319,7 +320,7 @@ class Project(object):
 
     def save(self):
         '''Saves a Jterator project:
-        Update the content of *.pipe* and *.handles* files on disk
+        Updates the content of *.pipe* and *.handles* files on disk
         according to modifications to the pipeline and module descriptions.
         '''
         if not os.path.exists(self.step_location):

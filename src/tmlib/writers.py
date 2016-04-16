@@ -105,9 +105,7 @@ class XmlWriter(Writer):
 
 class JsonWriter(Writer):
 
-    '''
-    Class for writing data to file on disk in JSON format.
-    '''
+    '''Class for writing data to file on disk in JSON format.'''
 
     @same_docstring_as(Writer.__init__)
     def __init__(self, filename):

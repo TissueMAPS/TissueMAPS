@@ -50,8 +50,8 @@ class Submission(Model, DateMixIn):
 
     def __repr__(self):
         return (
-            '<Submission(id=%r, experiment=%r)>'
-            % (self.id, self.experiment.name)
+            '<Submission(id=%r, task=%r, experiment=%r)>'
+            % (self.id, self.task.name, self.experiment.name)
         )
 
 
@@ -172,3 +172,4 @@ class Task(Model):
             '<Task(id=%r, name=%r, submission_id=%r)>'
             % (self.id, self.name, self.submission_id)
         )
+
