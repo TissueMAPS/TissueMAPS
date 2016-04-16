@@ -4,6 +4,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 import tmlib.workflow
+from tmlib.utils import assert_type
 from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow.registry import get_step_args
 from tmlib.workflow.registry import get_step_api
@@ -23,45 +24,14 @@ class WorkflowDescription(object):
 
     See also
     --------
-    :py:class:`tmlib.tmaps.description.WorkflowStageDescription`
-    :py:class:`tmlib.tmaps.description.WorkflowStepDescription`
+    :py:class:`tmlib.workflow.description.WorkflowStageDescription`
+    :py:class:`tmlib.workflow.description.WorkflowStepDescription`
     '''
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, stages=None, type=None):
-        '''
-        Parameters
-        ----------
-        stages: List[tmlib.tmaps.description.WorkflowStageDescription]
-            description of each stage of the workflow
-        type: str
-            workflow type
-
-        Raises
-        ------
-        tmlib.errors.WorkflowDescriptionError
-            when an unknown workflow descriptor is provided
-        '''
-        self._type = None
+    def __init__(self):
         self.stages = list()
-
-    @property
-    def stages(self):
-        '''List[tmlib.tmaps.description.WorkflowStageDescription]: description
-        of each stage of the workflow
-        '''
-        return self._stages
-
-    @stages.setter
-    def stages(self, value):
-        if not isinstance(value, list):
-            raise TypeError('Attribute "stages" must have type list.')
-        if not all([isinstance(v, WorkflowStageDescription) for v in value]):
-            raise TypeError(
-                'Elements of "steps" must have type WorkflowStageDescription.'
-            )
-        self._stages = value
 
     @abstractmethod
     def add_stage(self, stage_description):
@@ -69,46 +39,15 @@ class WorkflowDescription(object):
 
         Parameters
         ----------
-        stage_description: tmlib.tmaps.description.WorkflowStageDescription
+        stage_description: tmlib.workflow.description.WorkflowStageDescription
             description of the stage that should be added
 
         Raises
         ------
         TypeError
             when `stage_description` doesn't have type
-            :py:class:`tmlib.tmaps.description.WorkflowStageDescription`
+            :py:class:`tmlib.workflow.description.WorkflowStageDescription`
         '''
-
-    @property
-    def type(self):
-        '''str: workflow type
-
-        Note
-        ----
-        There must be a corresponding module in :py:mod:`tmlib.workflow`.
-
-        Raises
-        ------
-        AttributeError
-            when attribute cannot be determined from class name
-        '''
-        # TODO: redo this logic; register workflows
-        if self._type is None:
-            match = re.match(
-                '(\w+)WorkflowDescription', self.__class__.__name__
-            )
-            if not match:
-                raise AttributeError(
-                    'Attribute "type" could not be determined from class name'
-                )
-            self._type = match.group(1).lower()
-        return self._type
-
-    @type.setter
-    def type(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "type" must have type basestring.')
-        self._type = str(value)
 
     def as_dict(self):
         '''Returns attributes as key-value pairs.
@@ -120,6 +59,7 @@ class WorkflowDescription(object):
         description = dict()
         description['type'] = self.type
         description['stages'] = [s.as_dict() for s in self.stages]
+        return description
 
     def jsonify(self):
         '''Returns attributes as key-value pairs endcoded as JSON.
@@ -139,7 +79,8 @@ class WorkflowStageDescription(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, mode, steps=None):
+    @assert_type(name='basestring', mode='basestring')
+    def __init__(self, name, mode):
         '''
         Parameters
         ----------
@@ -149,56 +90,19 @@ class WorkflowStageDescription(object):
             mode of workflow stage submission, i.e. whether steps are submitted
             simultaneously or one after another
             (options: ``{"sequential", "parallel"}``) 
-        steps: list, optional
-            description of individual steps as a mappings of key-value pairs
 
         Raises
         ------
         TypeError
             when `name` or `steps` have the wrong type
         '''
-        if not isinstance(name, basestring):
-            raise TypeError('Argument "name" must have type basestring')
         self.name = str(name)
-        if steps is not None:
-            if not isinstance(steps, list):
-                raise TypeError('Argument "steps" must have type list.')
-            if not steps:
-                raise ValueError('Argument "steps" cannot be empty.')
-        self.steps = list()
         self.mode = mode
-
-    @property
-    def mode(self):
-        '''str: mode of workflow stage submission
-        '''
-        return self._mode
-
-    @mode.setter
-    def mode(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError('Attribute "mode" must have type basestring.')
-        if value not in {'parallel', 'sequential'}:
+        if self.mode not in {'parallel', 'sequential'}:
             raise ValueError(
                 'Attribute "mode" must be either "parallel" or "sequential"'
             )
-        self._mode = str(value)
-
-    @property
-    def steps(self):
-        '''List[tmlib.tmaps.description.WorkflowStepDescription]: description
-        of each step that is part of the workflow stage
-        '''
-        return self._steps
-
-    @steps.setter
-    def steps(self, value):
-        if not isinstance(value, list):
-            raise TypeError('Attribute "steps" must have type list')
-        if not all([isinstance(v, WorkflowStepDescription) for v in value]):
-            raise TypeError(
-                'Elements of "steps" must have type WorkflowStepDescription')
-        self._steps = value
+        self.steps = list()
 
     @abstractmethod
     def add_step(self, step_description):
@@ -206,14 +110,14 @@ class WorkflowStageDescription(object):
 
         Parameters
         ----------
-        step_description: tmlib.tmaps.description.WorkflowStepDescription
+        step_description: tmlib.workflow.description.WorkflowStepDescription
             description of the step that should be added
 
         Raises
         ------
         TypeError
             when `step_description` doesn't have type
-            :py:class:`tmlib.tmaps.description.WorkflowStepDescription`
+            :py:class:`tmlib.workflow.description.WorkflowStepDescription`
         '''
 
     def as_dict(self):
@@ -227,6 +131,7 @@ class WorkflowStageDescription(object):
         description['name'] = self.name
         description['mode'] = self.mode
         description['steps'] = [s.as_dict() for s in self.steps]
+        return description
 
     def jsonify(self):
         '''Returns the attributes as key-value pairs encoded as JSON.
@@ -322,7 +227,13 @@ class WorkflowStepDescription(object):
         '''
         description = dict()
         description['name'] = self.name
-        # TODO: serialize argument collection (only key-value pairs):w
+        description['batch_args'] = self.batch_args.as_list()
+        description['submission_args'] = self.submission_args.as_list()
+        if self.extra_args is not None:
+            description['extra_args'] = self.extra_args.as_list()
+        else:
+            description['extra_args'] = None
+        return description
 
     def jsonify(self):
         '''Returns attributes as key-value pairs encoded as JSON.

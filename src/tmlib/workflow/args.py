@@ -115,26 +115,6 @@ class Argument(object):
             )
         setattr(instance, self._attr_name, value)
 
-    def as_dict(self):
-        '''Returns attributes as key-value pairs.
-
-        Returns
-        -------
-        dict
-            name and value of attributes of the instance
-        '''
-        description = dict()
-        for name, value in vars(self).iteritems():
-            if name.startswith('_'):
-                continue
-            if isinstance(value, types.FunctionType):
-                continue
-            # set() is not JSON serializable
-            if isinstance(value, set):
-                value = list(value)
-            description[name] = value
-        return description
-
     def add_to_argparser(self, parser):
         '''Adds the argument to an argument parser for use in a command line
         interface.
@@ -153,7 +133,7 @@ class Argument(object):
         kwargs = dict()
         if self.flag is not None:
             flags.append('-%s' % self.flag)
-        kwargs['help'] = self.help.replace('\n', ' ')
+        kwargs['help'] = re.sub(r'\s+', ' ', self.help).strip()
         if self.type == bool:
             if self.default:
                 kwargs['action'] = 'store_false'
@@ -305,23 +285,29 @@ class ArgumentCollection(object):
                 value.add_to_argparser(parser)
         return parser
 
-    def as_dict(self):
+    def as_list(self):
         '''Returns class attributes of type
-        :py:class:`tmlib.workflow.args.Argument` as key-value pairs.
+        :py:class:`tmlib.workflow.args.Argument` as an array of key-value pairs.
 
         Returns
         -------
-        Dict[str, tmlib.workflow.args.Argument]
-            name and instance of each argument in the collection
+        List[dict]
+            description of each argument
         '''
-        arguments = dict()
-        for name in dir(self):
-            if name.startswith('_'):
-                continue
-            value = getattr(self.__class__, name)
-            if isinstance(value, Argument):
-                arguments[name] = value.as_dict()
-        return arguments
+        description = list()
+        for arg in self.iterargs():
+            argument = {
+                'name': arg.name,
+                'help': re.sub(r'\s+', ' ', arg.help).strip(),
+                'default': arg.default,
+                'type': arg.type
+            }
+            if arg.choices is not None:
+               argument['choices'] = list(arg.choices)
+            else:
+                argument['choices'] = None
+            description.append(argument)
+        return description
 
     @assert_type(collection='tmlib.workflow.args.ArgumentCollection')
     def union(self, collection):

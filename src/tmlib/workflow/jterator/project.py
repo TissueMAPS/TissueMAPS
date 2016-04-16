@@ -1,6 +1,8 @@
 import os
 import re
 import glob
+import ruamel.yaml
+import yaml
 import logging
 import shutil
 from natsort import natsorted
@@ -16,8 +18,8 @@ HANDLES_SUFFIX = '.handles.yaml'
 PIPE_SUFFIX = '.pipe.yaml'
 
 
-def list_jtprojects(directory):
-    '''List Jterator projects in a given directory.
+def list_projects(directory):
+    '''Lists Jterator projects in a given directory.
     A Jterator project is defined as a folder containing a `.pipe` file.
 
     Parameters
@@ -36,7 +38,7 @@ def list_jtprojects(directory):
     return projects
 
 
-class JtProject(object):
+class Project(object):
 
     '''A Jterator project is defined as a folder containing a `.pipe` file.
     The class holds information about the project, in particular on the content
@@ -63,12 +65,7 @@ class JtProject(object):
 
     @property
     def pipe(self):
-        '''
-        Returns
-        -------
-        dict
-            name and description of the pipeline
-        '''
+        '''dict: name and description of the pipeline'''
         if self._pipe is None:
             self._pipe = self._create_pipe()
         return self._pipe
@@ -79,12 +76,7 @@ class JtProject(object):
 
     @property
     def handles(self):
-        '''
-        Returns
-        -------
-        List[dict]
-            name and description of modules
-        '''
+        '''List[dict]: name and description of modules'''
         if self._handles is None:
             self._handles = self._create_handles()
         return self._handles
@@ -314,8 +306,15 @@ class JtProject(object):
         '''
         attrs = dict()
         attrs['name'] = self.pipe_name
-        attrs['pipe'] = self.pipe
-        attrs['handles'] = self.handles
+        attrs['pipe'] = yaml.safe_load(
+            ruamel.yaml.dump(self.pipe, Dumper=ruamel.yaml.RoundTripDumper)
+        )
+        attrs['handles'] = [
+            yaml.safe_load(
+                ruamel.yaml.dump(h, Dumper=ruamel.yaml.RoundTripDumper)
+            )
+            for h in self.handles
+        ]
         return attrs
 
     def save(self):
@@ -379,16 +378,15 @@ class JtProject(object):
         shutil.rmtree(self.step_location)
 
 
-class JtAvailableModules(object):
+class AvailableModules(object):
 
-    '''
-    A class for holding information about available Jterator modules
+    '''Container for information about Jterator modules available
     in the `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
     '''
 
     def __init__(self, repo_dir):
         '''
-        Initialize an instance of class JtAvailableModules.
+        Initialize an instance of class AvailableModules.
 
         Parameters
         ----------
@@ -470,7 +468,7 @@ class JtAvailableModules(object):
 
     def _get_corresponding_handles_file(self, module_name):
         handles_dir = os.path.join(self.repo_dir, 'handles')
-        search_string = '^%s\.handle.yml$' % module_name
+        search_string = '^%s\%s$' % (module_name, HANDLES_SUFFIX)
         regexp_pattern = re.compile(search_string)
         handles_files = natsorted([
             os.path.join(handles_dir, f)
@@ -538,6 +536,14 @@ class JtAvailableModules(object):
                 self._pipe_registration.append(element)
         return self._pipe_registration
 
-    def __iter__(self):
-        yield('modules', self.handles)
-        yield('registration', self.pipe_registration)
+    def as_dict(self):
+        '''Returns attributes as key-value pairs
+
+        Returns
+        -------
+        dict
+        '''
+        attrs = dict()
+        attrs['modules'] = self.handles
+        attrs['registration'] = self.pipe_registration
+        return attrs

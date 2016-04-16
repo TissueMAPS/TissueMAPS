@@ -17,7 +17,7 @@ from tmlib.errors import PipelineDescriptionError
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.workflow.jterator.utils import complete_path
 from tmlib.workflow.jterator.utils import get_module_path
-from tmlib.workflow.jterator.project import JtProject
+from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.checkers import PipelineChecker
 from tmlib.workflow.registry import api
@@ -56,7 +56,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         super(ImageAnalysisPipeline, self).__init__(experiment_id, verbosity)
         self.pipe_name = pipeline
         self.engines = {'Python': None, 'R': None}
-        self.project = JtProject(
+        self.project = Project(
             step_location=self.step_location, pipe_name=self.pipe_name,
             pipe=pipe, handles=handles
         )
@@ -72,16 +72,16 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     @property
     def project(self):
-        '''tmlib.jterator.project.JtProject: jterator project
+        '''tmlib.jterator.project.Project: jterator project
         '''
         return self._project
 
     @project.setter
     def project(self, value):
-        if not isinstance(value, JtProject):
+        if not isinstance(value, Project):
             raise TypeError(
                 'Attribute "project" must have type '
-                'tmlib.jterator.project.JtProject'
+                'tmlib.jterator.project.Project'
             )
         self._project = value
 
@@ -231,7 +231,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
-        channel_names = self.project.pipe['description']['input']['channels'].keys()
+        channel_names = [
+            ch['name']
+            for ch in self.project.pipe['description']['input']['channels']
+        ]
 
         with tm.utils.Session() as session:
 
@@ -398,6 +401,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # TODO: Make the alignment optional and give the user the possibility
         # to decide similar to illumination correction.
         channel_info = self.project.pipe['description']['input']['channels']
+        channel_names = [
+            ch['name']
+            for ch in self.project.pipe['description']['input']['channels']
+        ]
         with tm.utils.Session() as session:
             image_metadata = pd.DataFrame(
                 session.query(
@@ -412,7 +419,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
             )
             for channel_name, file_ids in batch['image_file_ids'].iteritems():
                 logger.info('load images for channel "%s"', channel_name)
-                if channel_info[channel_name]['correct']:
+                index = channel_names.index(channel_name)
+                if channel_info[index]['correct']:
                     logger.info('load illumination statistics')
                     stats_file = session.query(tm.IllumstatsFile).\
                         join(tm.Channel).\
@@ -429,7 +437,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         get(fid)
                     logger.info('load image "%s"', image_file.name)
                     img = image_file.get()
-                    if channel_info[channel_name]['correct']:
+                    if channel_info[index]['correct']:
                         logger.info('correct image "%s"', image_file.name)
                         img = img.correct(stats)
                     logger.debug('align image "%s"', image_file.name)

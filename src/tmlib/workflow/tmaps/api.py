@@ -100,6 +100,6 @@ class WorkflowManager(BasicClusterRoutines):
         workflow_description_class = get_workflow_description(
             description['type']
         )
-        return workflow_description_class(**description)
+        return workflow_description_class(description['stages'])
 
 

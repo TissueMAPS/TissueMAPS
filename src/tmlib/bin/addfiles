@@ -8,7 +8,7 @@ import sqlalchemy.orm.exc
 
 import tmlib.models
 from tmlib.models.status import FileUploadStatus
-from tmlib.workflow.metaconfig import import_microscope_type_specific_module
+from tmlib.workflow.metaconfig import import_micrsocope_type_module
 
 
 class RemoteFileCopy(object):
@@ -100,7 +100,7 @@ if __name__ == '__main__':
                 'Source directory does not exist: %s' % args.source_directory
             )
         microscope_type = acquisition.plate.experiment.microscope_type
-        module = import_microscope_type_specific_module(microscope_type)
+        module = import_micrsocope_type_module(microscope_type)
         r_image = re.compile(module.IMAGE_FILE_REGEX_PATTERN)
         r_metadata = re.compile(module.METADATA_FILE_REGEX_PATTERN)
         image_file_names = [

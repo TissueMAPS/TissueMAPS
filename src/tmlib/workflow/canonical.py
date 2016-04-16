@@ -15,6 +15,7 @@ import logging
 
 from tmlib.utils import same_docstring_as
 from tmlib.utils import flatten
+from tmlib.utils import assert_type
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.workflow.description import WorkflowStepDescription
@@ -23,14 +24,14 @@ from tmlib.workflow.registry import workflow
 
 logger = logging.getLogger(__name__)
 
-#: Implemented workflow stages:
-#: For more information please refer to the corresponding section in
-#: :ref:`introduction <workflow>`
+#: List[str]: names of workflow stages
 STAGES = [
     'image_conversion', 'image_preprocessing',
     'pyramid_creation', 'image_analysis'
 ]
 
+#: Dict[str, str]: mode for each workflow stage, i.e. whether setps of a stage
+#: should be submitted in parallel or sequentially
 STAGE_MODES = {
     'image_conversion': 'sequential',
     'image_preprocessing': 'parallel',
@@ -38,6 +39,7 @@ STAGE_MODES = {
     'image_analysis': 'sequential'
 }
 
+#: collections.OrderedDict[str, List[str]]: names of steps within each stage
 STEPS_PER_STAGE = OrderedDict({
     'image_conversion':
         ['metaextract', 'metaconfig', 'imextract'],
@@ -49,7 +51,7 @@ STEPS_PER_STAGE = OrderedDict({
         ['jterator']
 })
 
-#: Dependencies between individual workflow stages.
+#: collections.OrderedDict[str, Set[str]]: dependencies between workflow stages
 INTER_STAGE_DEPENDENCIES = OrderedDict({
     'image_conversion': {
 
@@ -65,7 +67,7 @@ INTER_STAGE_DEPENDENCIES = OrderedDict({
     }
 })
 
-#: Dependencies between individual workflow steps within one stage.
+#: Dict[str, Set[str]: dependencies between workflow steps within one stage
 INTRA_STAGE_DEPENDENCIES = {
     'metaextract': {
 
@@ -79,87 +81,26 @@ INTRA_STAGE_DEPENDENCIES = {
 }
 
 
-def check_stage_name(stage_name):
-    '''Checks whether a described stage is known.
-
-    Parameters
-    ----------
-    stage_name: str
-        name of the stage
-
-    Raises
-    ------
-    tmlib.errors.WorkflowDescriptionError
-        when `stage_name` is unknown
-
-    See also
-    --------
-    :py:const:`tmlib.tmaps.canonical.STAGES`
-    '''
-    known_names = STAGES
-    if stage_name not in known_names:
-        raise WorkflowDescriptionError(
-            'Unknown stage "%s". Known stages are: "%s"'
-            % (stage_name, '", "'.join(known_names))
-        )
-
-
-def check_step_name(step_name, stage_name=None):
-    '''Checks whether a described step is known.
-
-    Parameters
-    ----------
-    step_name: str
-        name of the step
-    stage_name: str, optional
-        name of the corresponding stage
-
-    Raises
-    ------
-    tmlib.errors.WorkflowDescriptionError
-        when `step_name` is unknown or when step with name `step_name` is not
-        part of stage with name `stage_name`
-
-    Note
-    ----
-    When `stage_name` is provided, it is also checked whether `step_name` is a
-    valid step within stage named `stage_name`.
-
-    See also
-    --------
-    :py:const:`tmlib.tmaps.canonical.STEPS_PER_STAGE`
-    '''
-    if stage_name:
-        known_names = STEPS_PER_STAGE[stage_name]
-        if step_name not in known_names:
-            raise WorkflowDescriptionError(
-                'Unknown step "%s" for stage "%s". Known steps are: "%s"'
-                % (step_name, stage_name, '", "'.join(known_names))
-            )
-    else:
-        known_names = flatten(STEPS_PER_STAGE.values())
-        if step_name not in known_names:
-            raise WorkflowDescriptionError(
-                'Unknown step "%s". Known steps are: "%s"'
-                % (step_name, '", "'.join(known_names))
-            )
-
-
 @workflow('canonical')
 class CanonicalWorkflowDescription(WorkflowDescription):
 
     '''Description of the canonical `TissueMAPS` workflow.'''
 
-    def __init__(self, **kwargs):
+    def __init__(self, stages=None):
         '''
         Parameters
         ----------
         **kwargs: dict, optional
             workflow description as a mapping of as key-value pairs
         '''
-        super(CanonicalWorkflowDescription, self).__init__(**kwargs)
-        if kwargs:
-            for stage in kwargs.get('stages', list()):
+        super(CanonicalWorkflowDescription, self).__init__()
+        if stages is not None:
+            for stage in stages:
+                self.add_stage(CanonicalWorkflowStageDescription(**stage))
+        else:
+            for name in STAGES:
+                mode = STAGE_MODES[name]
+                stage = {'name': name, 'mode': mode}
                 self.add_stage(CanonicalWorkflowStageDescription(**stage))
 
     def add_stage(self, stage_description):
@@ -188,9 +129,20 @@ class CanonicalWorkflowDescription(WorkflowDescription):
                 raise WorkflowDescriptionError(
                     'Stage "%s" already exists.' % stage_description.name
                 )
-        check_stage_name(stage_description.name)
+        if stage_description.name not in STAGES:
+            raise WorkflowDescriptionError(
+                'Unknown stage "%s". Implemented stages are: "%s"'
+                % (stage_description.name, '", "'.join(STAGES))
+            )
         for step in stage_description.steps:
-            check_step_name(step.name, stage_description.name)
+            implemented_steps = STEPS_PER_STAGE[stage_description.name]
+            if step.name not in implemented_steps:
+                raise WorkflowDescriptionError(
+                    'Unknown step "%s" for stage "%s". '
+                    'Implemented steps are: "%s"'
+                    % (step.name, stage_description.name,
+                        '", "'.join(implemented_steps))
+                )
         stage_names = [s.name for s in self.stages]
         if stage_description.name in INTER_STAGE_DEPENDENCIES:
             for dep in INTER_STAGE_DEPENDENCIES[stage_description.name]:
@@ -233,13 +185,14 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
         **kwargs: dict, optional
             description of a workflow stage in form of key-value pairs
         '''
-        check_stage_name(name)
-        super(CanonicalWorkflowStageDescription, self).__init__(
-            name, mode, steps
-        )
+        super(CanonicalWorkflowStageDescription, self).__init__(name, mode)
         if steps is not None:
-            for s in steps:
-                self.add_step(CanonicalWorkflowStepDescription(**s))
+            for step in steps:
+                self.add_step(CanonicalWorkflowStepDescription(**step))
+        else:
+            for name in STEPS_PER_STAGE[self.name]:
+                step = {'name': name}
+                self.add_step(CanonicalWorkflowStepDescription(**step))
 
     def add_step(self, step_description):
         '''Adds an additional step to the stage.
@@ -267,6 +220,12 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
                 raise WorkflowDescriptionError(
                     'Step "%s" already exists.' % step_description.name
                 )
+        steps = STEPS_PER_STAGE[self.name]
+        if step_description.name not in steps:
+            raise WorkflowDescriptionError(
+                'Unknown step "%s" for stage "%s". Known steps are: "%s"'
+                % (step_description.name, self.name, '", "'.join(steps))
+            )
         name = step_description.name
         step_names = [s.name for s in self.steps]
         if name in INTRA_STAGE_DEPENDENCIES:
@@ -285,7 +244,6 @@ class CanonicalWorkflowStepDescription(WorkflowStepDescription):
     @same_docstring_as(WorkflowStepDescription.__init__)
     def __init__(self, name, batch_args=dict(), submission_args=dict(),
             extra_args=dict()):
-        check_step_name(name)
         super(CanonicalWorkflowStepDescription, self).__init__(
             name, batch_args, submission_args, extra_args
         )

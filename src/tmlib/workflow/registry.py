@@ -50,6 +50,7 @@ def workflow(workflow_type):
     tmlib.workflow.description.WorkflowDescription
     '''
     def decorator(cls):
+        cls.type = workflow_type
         _workflow_register[workflow_type] = cls
         return cls
     return decorator

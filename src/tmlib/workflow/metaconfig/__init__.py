@@ -13,8 +13,8 @@ logo = '''
 SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager', 'default'}
 
 
-def import_microscope_type_specific_module(microscope_type):
-    '''Load the module specific to an implemented microscope type.
+def import_microscope_type_module(microscope_type):
+    '''Imports the module for an implemented `microscope_type`.
 
     Parameters
     ----------
@@ -40,6 +40,25 @@ def import_microscope_type_specific_module(microscope_type):
     return importlib.import_module(module_name)
 
 
+def get_microscope_type_regex(microscope_type):
+    '''Gets regular expression patterns for the identification of microscope
+    image files and microscope metadata files for a given
+    `microscope_type`.
+
+    Paramaters
+    ----------
+    microscope_type: str
+        microscope type
+
+    Returns
+    -------
+    Tuple[str]
+        regex pattern for image and metadata files
+    '''
+    module = import_microscope_type_specific_module(microscope_type)
+    return (module.IMAGE_FILE_REGEX_PATTERN, module.METADATA_FILE_REGEX_PATTERN)
+
+
 def metadata_reader_factory(microscope_type):
     '''Return the implementation
     of the :py:class:`tmlib.workflow.metaconfig.default.MetadataReader`
@@ -54,7 +73,7 @@ def metadata_reader_factory(microscope_type):
     -------
     tmlib.workflow.metaconfig.default.MetadataReader
     '''
-    module = import_microscope_type_specific_module(microscope_type)
+    module = import_microscope_type_module(microscope_type)
     class_name = '%sMetadataReader' % microscope_type.capitalize()
     return getattr(module, class_name)
 
@@ -73,6 +92,6 @@ def metadata_handler_factory(microscope_type):
     -------
     tmlib.workflow.metaconfig.default.MetadataHandler
     '''
-    module = import_microscope_type_specific_module(microscope_type)
+    module = import_microscope_type_module(microscope_type)
     class_name = '%sMetadataHandler' % microscope_type.capitalize()
     return getattr(module, class_name)
