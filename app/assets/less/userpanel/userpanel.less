@@ -15,6 +15,7 @@
     padding: 0;
     padding-top: 40px;
     color: @font-color-light;
+    .panel-horizontal();
 
     background-color: @panel-bg-color;
     // .ui-panel-gradient(right, @panel-bg-color, 2%, 98%);
@@ -29,6 +30,7 @@
 .nav-sidebar > li {
     // .ui-panel-gradient(right, #333, 2%, 98%);
     border-top: 1px solid #232323;
+    background-color: #444;
 
     &:last-child {
         border-bottom: 1px solid #232323;
@@ -51,6 +53,7 @@
 
     background: darken(white, 5%);
     padding-right: 15px;
+    .panel-horizontal();
 
     height: 100vh;
 
@@ -61,6 +64,7 @@
     .list-group-item {
         button {
             float: right;
+            margin-left: 4px;
             padding: 0 5px;
             height: 1.4em;
         }

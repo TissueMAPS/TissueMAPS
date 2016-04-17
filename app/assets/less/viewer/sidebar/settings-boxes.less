@@ -60,6 +60,7 @@
 .channel-section, .selection-section, .object-section, .saved-result-section {
     .tm-selectable-tab-content {
         white-space: nowrap;
+        overflow: hidden;
         input[type=text] {
             .no-input-style();
         }
@@ -95,6 +96,13 @@
          * Necessary hack due to overflow-behavior.
          */
         right: @sidebar-section-padding + 1;
+    }
+
+
+    .tm-selectable-tab-content {
+        span:last-child {
+            margin-left: -5px;
+        }
     }
 }
 

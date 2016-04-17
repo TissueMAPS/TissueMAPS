@@ -29,7 +29,7 @@
 
         li:extend(.ui-button-flat all) {
             border: none;
-            border-right: 1px solid black;
+            .panel-vertical();
             float: left;
             height: 100%;
             width: @toolbar-width + 1px;
@@ -37,7 +37,6 @@
             // on 100% height
             line-height: @appbar-height;
             text-align: center;
-            border-left: none !important;
             @background-color: @topleft-button-color;
         }
 
