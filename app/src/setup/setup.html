@@ -1,24 +1,35 @@
 <div class="row setup-window">
   <div class="col-md-12 setup-window-content">
 
-    <div class="col-md-12 header">
-      <h3>{{ setupCtrl.experiment.name }} ({{setupCtrl.experiment.status}})</h3>
+    <div class="row">
+      <div class="col-md-12 header">
+        <h3>{{ setupCtrl.experiment.name }} ({{setupCtrl.experiment.status}})</h3>
+      </div>
     </div>
 
-    <div class="col-md-12 stage-indicator-container">
-      <ul class="stage-indicators">
-        <li class="stage-indicator" ng-class="{active: setupCtrl.inUploadFiles}">Upload files</li>
-        <i class="fa fa-arrow-right" aria-hidden="true"></i>
-        <li class="stage-indicator" ng-class="{active: setupCtrl.inImagePreprocessing}">Image preprocessing</li>
-        <i class="fa fa-arrow-right" aria-hidden="true"></i>
-        <li class="stage-indicator" ng-class="{active: setupCtrl.inPyramidCreation}">Pyramid creation</li>
-        <i class="fa fa-arrow-right" aria-hidden="true"></i>
-        <li class="stage-indicator" ng-class="{active: setupCtrl.inImageAnalysis}">Image analysis</li>
-      </ul>
+    <div class="row">
+      <div class="col-md-12 stage-indicator-container">
+        <ul class="stage-indicators">
+          <li class="stage-indicator" ng-class="{active: setupCtrl.inUploadFiles}"
+            ui-sref="setupCtrl.goToUploadFiles()">upload files</li>
+          <li class="stage-indicator" ng-repeat="stage in setupCtrl.workflowDescription.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
+            ng-click="setupCtrl.goToStage(stage)">
+            {{::stage.name.replace('_', ' ')}}
+          </li>
+        </ul>
+      </div>
     </div>
 
-    <div class="col-md-12 stage-view" perfect-scrollbar>
-      <div ui-view="stage-view"></div>
+    <div class="row">
+      <div class="col-md-12 stage-view">
+        <div ui-view="stage-view"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <button ng-click="setupCtrl.goToNextStage()" class="btn btn-primary">Next</button>
+      </div>
     </div>
 
   </div>

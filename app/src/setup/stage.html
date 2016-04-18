@@ -1,0 +1,17 @@
+<h1>{{:: stageCtrl.stage.name }}</h1>
+
+<form ng-init="stage = stageCtrl.stage">
+    <div ng-repeat="step in stage.steps">
+        <h3>{{:: step.name }}</h3>
+
+        <div class="well">
+            <h4>Batch arguments</h4>
+            <tm-argument-input arg="arg" ng-repeat="arg in step.batch_args"
+                arg-collection="setupCtrl.args[stage.name][step.name].batch_args"></tm-argument-input>
+
+            <h4>Submit arguments</h4>
+            <tm-argument-input arg="arg" ng-repeat="arg in step.submission_args"
+                arg-collection="setupCtrl.args[stage.name][step.name].submission_args"></tm-argument-input>
+        </div>
+    </div>
+</form>
