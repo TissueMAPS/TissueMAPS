@@ -71,13 +71,6 @@ if __name__ == '__main__':
             as time points or multiplexing iterations (default: multiplexing)
         '''
     )
-    parser.add_argument(
-        '-o', '--output_dir', type=valid_dir, default=os.getcwd(),
-        help='''
-            directory where key file will be stored
-            (defaults to current working directory)
-        '''
-    )
 
     args = parser.parse_args()
 
