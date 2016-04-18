@@ -119,32 +119,3 @@ def upload_file(acquisition):
 
     db.session.commit()
     return jsonify(message='Upload ok')
-
-
-# @api.route('/acquisitions/<int:aq_id>/upload-status', methods=['GET'])
-# @jwt_required()
-# def get_upload_status(aq_id):
-#     """
-#     When GETing to this address, the server will respond as soon as all files
-#     from the previous register step were uploaded.
-
-#     """
-#     file_key = 'acquisition:%d:upload:files' % aq_id
-#     registered_flag_key = 'acquisition:%d:upload:registered' % aq_id
-
-#     time_started = datetime.datetime.utcnow()
-#     time_delta = datetime.timedelta(seconds=5)
-
-#     while True:
-#         now = datetime.datetime.utcnow()
-#         if now - time_started > time_delta:
-#             # Deregister experiment, this will cause all uploads to fail
-#             # until a new upload is registered.
-#             redis_store.set(registered_flag_key, False)
-#             return 'Upload takes too long, aborting...', 500
-
-#         remaining_files = redis_store.smembers(file_key)
-#         # redis_store.publish('log', remaining_files)
-#         if len(remaining_files) == 0:
-#             redis_store.delete(file_key)
-#             return 'All files uploaded', 200
