@@ -59,26 +59,33 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
 
     if filter_name == 'average':
         smoothed_image = cv2.blur(
-                                image, (filter_size, filter_size))
+            image, (filter_size, filter_size)
+        )
     elif filter_name == 'gaussian':
         smoothed_image = cv2.GaussianBlur(
-                                image, (filter_size, filter_size), sigma)
+            image, (filter_size, filter_size), sigma
+        )
     elif filter_name == 'gaussian-bilateral':
         smoothed_image = cv2.bilateralFilter(
-                                image, filter_size, sigma_color, sigma_space)
+            image, filter_size, sigma_color, sigma_space
+        )
     elif filter_name == 'median':
         # smoothed_image = cv2.medianBlur(image, filter_size)
         # TODO: the cv2 filter_name has some problems related to filter_size
         # consider mahotas (http://mahotas.readthedocs.org/en/latest/api.html?highlight=median#mahotas.median_filter)
         smoothed_image = skimage.filters.rank.median(
-                                image, skimage.morphology.disk(filter_size))
+            image, skimage.morphology.disk(filter_size)
+        )
     elif filter_name == 'median-bilateral':
         smoothed_image = skimage.filters.rank.mean_bilateral(
-                                image, skimage.morphology.disk(filter_size),
-                                s0=sigma_space, s1=sigma_space)
+            image, skimage.morphology.disk(filter_size),
+            s0=sigma_space, s1=sigma_space
+        )
     else:
-        raise ValueError('Unknown filter_name. Implemented filters are:\n'
-                         '"average", "gaussian", "median", and "bilateral"')
+        raise ValueError(
+            'Unknown filter_name. Implemented filters are:\n'
+            '"average", "gaussian", "median", and "bilateral"'
+        )
 
     output = {'smoothed_image': smoothed_image.astype(input_dtype)}
     if plot:

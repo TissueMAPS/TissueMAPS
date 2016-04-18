@@ -137,7 +137,7 @@ class Features(object):
 
     def plot(self):
         # TODO
-        pass
+        return str()
 
 
 class Intensity(Features):
@@ -170,7 +170,6 @@ class Intensity(Features):
             extracted feature values for each object in `label_image`
         '''
         # Create an empty dataset in case no objects were detected
-        logger.info('extract intensity features ')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()

@@ -41,7 +41,7 @@ PLOT_POSITION_MAPPING = {
 
 #: The factor by which the size of an image should be reduced for plotting.
 #: This helps reducing the amount of data that has to be send to the client.
-IMAGE_RESIZE_FACTOR = 4
+IMAGE_RESIZE_FACTOR = 1
 
 
 def _check_position_argument(position):
@@ -56,8 +56,7 @@ def _check_position_argument(position):
 
 
 def create_histogram_plot(data, position, color='grey'):
-    '''
-    Create a histogram plot.
+    '''Creates a histogram plot.
 
     Parameters
     ----------
@@ -87,8 +86,7 @@ def create_histogram_plot(data, position, color='grey'):
 
 
 def create_scatter_plot(y_data, x_data, position, color='grey', marker_size=4):
-    '''
-    Create a scatter plot.
+    '''Creates a scatter plot.
 
     Parameters
     ----------
@@ -125,8 +123,7 @@ def create_scatter_plot(y_data, x_data, position, color='grey', marker_size=4):
 
 
 def create_line_plot(y_data, x_data, position, color='grey', line_width=4):
-    '''
-    Create a line plot.
+    '''Creates a line plot.
 
     Parameters
     ----------
@@ -165,8 +162,7 @@ def create_line_plot(y_data, x_data, position, color='grey', line_width=4):
 
 
 def create_intensity_image_plot(image, position, clip=True, clip_value=None):
-    '''
-    Create a heatmap plot for an intensity image.
+    '''Creates a heatmap plot for an intensity image.
     Intensity values will be encode with greyscale colors.
 
     Paramters
@@ -232,8 +228,7 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
 
 
 def create_mask_image_plot(mask, position, colorscale=None):
-    '''
-    Create a heatmap plot for a mask image.
+    '''Creates a heatmap plot for a mask image.
     Unique object labels will be encoded with RGB colors.
 
     Paramters
