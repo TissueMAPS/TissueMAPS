@@ -1,13 +1,11 @@
 import numpy as np
-import pandas as pd
 
 from sklearn.grid_search import GridSearchCV
 from sklearn import svm, cross_validation
 
-from tmlib.models import MapobjectType, Feature, FeatureValue
-from tmaps.tool.result import LabelResult
+from tmlib.models import MapobjectType
 from tmaps.extensions import db
-from tools.classifier import ClassifierResult
+from tmaps.tool.result import ScalarLabelResult
 
 
 class SVMTool():
@@ -34,16 +32,7 @@ class SVMTool():
 
         # Get features
         feature_names = set(payload['selected_features'])
-        feature_values = db.session.query(
-            Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
-            join(FeatureValue).\
-            filter(
-                (Feature.name.in_(feature_names)) &
-                (Feature.mapobject_type_id == mapobject_type.id)).all()
-        feature_df_long = pd.DataFrame(feature_values)
-        feature_df_long.columns = ['feature', 'mapobject', 'value']
-        feature_df = pd.pivot_table(
-            feature_df_long, values='value', index='mapobject', columns='feature')
+        feature_df = mapobject_type.get_feature_value_matrix(feature_names)
 
         # Get classes:
         Xs = []
@@ -74,20 +63,16 @@ class SVMTool():
         gs = GridSearchCV(clf, searchspace, cv=folds)
         gs.fit(X_train, y_train)
 
-        best_params = gs.best_params_
-        best_score = gs.best_score_
-
         y_pred = gs.predict(X_pred)
 
         all_object_ids = training_ids + X_pred.index.tolist()
         all_object_labels = y_train.tolist() + y_pred.tolist()
 
-        unique_labels = list(set(all_object_labels))
-
-        response = ClassifierResult(
+        response = ScalarLabelResult(
             ids=all_object_ids, labels=all_object_labels,
             mapobject_type=mapobject_type, session=session, attributes={
-                'labels': unique_labels
+                'best_params': gs.best_params_,
+                'best_score': gs.best_score_
             })
 
         return response

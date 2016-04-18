@@ -1,3 +1,5 @@
+import numpy as np
+
 from sqlalchemy import Integer, ForeignKey, Column, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSON
@@ -19,9 +21,8 @@ class LabelResult(Model):
     mapobject_type = relationship(
         'MapobjectType', backref='label_results')
 
-    def __init__(self, ids, labels, mapobject_type, session, result_type,
-                 attributes=None):
-        self.result_type = result_type
+    def __init__(self, ids, labels, mapobject_type, session, attributes=None):
+        self.result_type = self.__class__.__name__
         self.mapobject_type_id = mapobject_type.id
         self.tool_session_id = session.id
         self.attributes = attributes
@@ -66,3 +67,22 @@ class LabelResultLabel(Model):
 
     label_result = relationship('LabelResult', backref='labels')
     mapobject = relationship('Mapobject', backref='labels')
+
+
+class ScalarLabelResult(LabelResult):
+    def __init__(self, ids, labels, mapobject_type, session, attributes={}):
+        attributes.update({
+            'labels': list(set(labels))
+        })
+        super(ScalarLabelResult, self).__init__(
+            ids, labels, mapobject_type, session, attributes=attributes)
+
+
+class ContinuousLabelResult(LabelResult):
+    def __init__(self, ids, labels, mapobject_type, session, attributes={}):
+        attributes.update({
+            'min': np.min(labels),
+            'max': np.max(labels)
+        })
+        super(ContinuousLabelResult, self).__init__(
+            ids, labels, mapobject_type, session, attributes=attributes)

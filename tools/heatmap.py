@@ -4,11 +4,7 @@ from matplotlib import cm
 
 from tmlib.models import Feature, FeatureValue, MapobjectType
 from tmaps.extensions import db
-from tmaps.tool.result import LabelResult
-
-class HeatmapResult(LabelResult):
-    def __init__(self, *args, **kwargs):
-        super(HeatmapResult, self).__init__(*args, result_type='HeatmapResult', **kwargs)
+from tmaps.tool.result import ContinuousLabelResult
 
 class HeatmapTool():
     def process_request(self, payload, session, experiment):
@@ -36,15 +32,9 @@ class HeatmapTool():
         mapobject_ids = [q.mapobject_id for q in query_result]
         values = [q.value for q in query_result]
 
-        minval = np.min(values)
-        maxval = np.max(values)
-
-        response = HeatmapResult(
+        response = ContinuousLabelResult(
             ids=mapobject_ids, labels=values, mapobject_type=mapobject_type,
-            session=session, attributes={
-                'min': minval,
-                'max': maxval
-            }
+            session=session
         )
 
         return response
