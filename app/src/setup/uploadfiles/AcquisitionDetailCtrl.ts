@@ -14,7 +14,15 @@ class AcquisitionDetailCtrl {
 
     uploadFiles() {
         if (this.newFiles.length !== 0) {
-            this.acquisition.uploadFiles(this.newFiles);
+            this.acquisition.uploadFiles(this.newFiles)
+            .then((ok) => {
+                if (ok) {
+                    console.log('All files uploaded');
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+            });
         }
     }
 
