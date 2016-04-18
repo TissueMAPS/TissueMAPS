@@ -329,7 +329,7 @@ function [output_mask, fig] = separate_mask(input_mask, input_image, cutting_pas
 
     % jtlib.plotting.save_figure(fig, varargin{2})
 
-    mask = logical(sum(selected_clumps, 3));
+    mask = logical(sum(selected_clumps, 3))
     ds_mask = imresize(uint8(mask), 1/jtlib.plotting.IMAGE_RESIZE_FACTOR);
     ds_cut = imresize(logical(sum(cut_mask, 3)), 1/jtlib.plotting.IMAGE_RESIZE_FACTOR);
     ds_mask(ds_cut) = 2;
@@ -341,6 +341,12 @@ function [output_mask, fig] = separate_mask(input_mask, input_image, cutting_pas
 
     colorscale = {{0, 'rgb(0,0,0)'}, {0.5, 'rgb(255, 255, 255)'}, {1, 'rgb(255, 0, 0)'}};
 
+    overlay_plot = jtlib.plotting.create_overlay_image_plot( ...
+        input_image, output_mask, 'ul' ...
+    );
+    mask_plot = jtlib.plotting.create_mask_image_plot( ...
+        output_mask, 'ur' ...
+    );
     cut_plot = struct( ...
                 'type', 'heatmap', ...
                 'z', ds_mask, ...
@@ -358,17 +364,11 @@ function [output_mask, fig] = separate_mask(input_mask, input_image, cutting_pas
                 'showlegend', false, ...
                 'yaxis', pos{1}, ...
                 'xaxis', pos{2} ...
-    )
+    );
 
-    plots = {
-        jtlib.plotting.create_overlay_image_plot(input_image, output_mask, 'ul'),
-        jtlib.plotting.create_mask_image_plot(output_mask, 'ur'),
-        cut_plot
-
-    };
+    plots = {overlay_plot, mask_plot, cut_plot};
 
     fig = jtlib.plotting.create_figure(plots);
-    % jtlib.plotting.save_figure(fig, varargin{2});
 
     if test_mode
         if selection_test_mode
