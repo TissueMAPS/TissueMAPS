@@ -12,47 +12,47 @@ input:
     help: Grayscale image that should be used find optimal cut lines.
 
   - name: cutting_passes
-    type: Scalar
+    type: Numeric
     value: 2
     help: Number of cutting rounds that should be applied.
 
   - name: min_cut_area
-    type: Scalar
+    type: Numeric
     value: 2000
     help: >
       Minimal area of a cut fragment that should be tolerated, cuts that would
       result in a smaller fragment will not be performed. 
 
   - name: max_solidity
-    type: Scalar
+    type: Numeric
     value: 0.92
     help: >
       Maximal solidity value for a continuous pixel region
       to be considered a clump.
 
   - name: min_formfactor
-    type: Scalar
+    type: Numeric
     value: 0.30
     help: >
       Minimal (negative) form factor value for a continuous pixel region
       to be considered a clump.
 
   - name: min_area
-    type: Scalar
+    type: Numeric
     value: 5000
     help: >
       Minimal area value for a continuous pixel region
       to be considered a clump.
 
   - name: max_area
-    type: Scalar
+    type: Numeric
     value: 50000
     help: >
       Maximal area value for a continuous pixel region
       to be considered a clump.
 
   - name: selection_test_mode
-    type: Scalar
+    type: Boolean
     value: false
     options:
       - false
@@ -63,29 +63,29 @@ input:
       and `max_area` (results will be shown for the last cutting pass).
 
   - name: filter_size
-    type: Scalar
+    type: Numeric
     value: 2
     help: >
       Size of the smoothing filter that is applied to the mask prior to
       perimeter analysis.
 
   - name: sliding_window_size
-    type: Scalar
+    type: Numeric
     value: 9
     help: Size of the sliding window used for perimeter analysis.
 
   - name: min_angle
-    type: Scalar
+    type: Numeric
     value: 6
     help: Minimal equivalent angle of the concave region.
 
   - name: min_radius
-    type: Scalar
+    type: Numeric
     value: 30
     help: Maximal radius of the circle fitting into concave regions.
 
   - name: perimeter_test_mode
-    type: Scalar
+    type: Boolean
     value: false
     options:
       - false
@@ -96,7 +96,7 @@ input:
       (results will be shown for the last cutting pass).
 
   - name: plot
-    type: Scalar
+    type: Plot
     value:
     options: [true, false]
     help: Should a figure be created?

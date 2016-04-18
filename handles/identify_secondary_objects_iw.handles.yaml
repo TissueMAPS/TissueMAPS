@@ -19,14 +19,14 @@ input:
       threshold levels for manual fine-tuning.
 
   - name: min_threshold
-    type: Scalar
+    type: Numeric
     value: 120
     help: >
       Minimal threshold level. Lower boundary for pixel values to still be
       considered part of objects.
 
   - name: plot
-    type: Scalar
+    type: Plot
     value:
     options: [true, false]
     help: Should a figure be created?

@@ -7,30 +7,30 @@ input:
       help: Labeled image in which objects should be filtered.
 
     - name: feature
-      type: Scalar
+      type: Character
       value: 
       help: >
         Name of the region property based on which <i>label_image</i> should be filtered.
 
     - name: threshold
-      type: Scalar
+      type: Numeric
       value: 
       help: Threshold level for values of <i>feature</i>.
 
     - name: remove
-      type: Scalar
+      type: Character
       value:
       options: [above, below]
       help: Whether values "above" or "below" <i>threshold</i> should be removed.
 
     - name: relabel
-      type: Scalar
+      type: Boolean
       value:
       options: [true, false]
       help: Whether objects should be relabeled after filtering.
 
     - name: plot
-      type: Scalar
+      type: Plot
       value:
       options: [true, false]
       help: Should a figure be created?
