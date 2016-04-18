@@ -3,6 +3,7 @@ import os
 import logging
 import random
 
+import pandas as pd
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 from geoalchemy2.functions import GenericFunction
@@ -217,6 +218,38 @@ class MapobjectType(Model, DateMixIn):
             z for z, n in n_points_in_tile_per_z.items()
             if n <= n_points_per_tile_limit
         ])
+
+    def get_feature_value_matrix(self, feature_names):
+        '''Get a wide format pandas data frame of feature values.
+
+        Parameters
+        ----------
+        feature_names: List[string]
+            A list of feature names. These features will be used as the
+            labels of the data frame.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A data frame with features as columns and rows as mapobjects.
+            The index of this data frame is set to the mapobject ids.
+            As such the DF can be indexed using the syntax:
+            feature_values_of_mapobject_x = df.loc[x]
+
+        '''
+        from tmlib.models import Feature, FeatureValue
+        session = Session.object_session(self)
+        feature_values = session.query(
+            Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
+            join(FeatureValue).\
+            filter(
+                (Feature.name.in_(set(feature_names))) &
+                (Feature.mapobject_type_id == self.id)).all()
+        feature_df_long = pd.DataFrame(feature_values)
+        feature_df_long.columns = ['feature', 'mapobject', 'value']
+        feature_df = pd.pivot_table(
+            feature_df_long, values='value', index='mapobject', columns='feature')
+        return feature_df
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
