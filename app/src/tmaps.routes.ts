@@ -9,6 +9,29 @@ angular.module('tmaps.ui')
     // For any unmatched url redirect to root
     $urlRouterProvider.otherwise('/login');
 
+    var getExperiment = ['$stateParams', '$state', 'lastUsed', '$q',
+                           ($stateParams, $state, lastUsed, $q) => {
+        var experimentId = $stateParams.experimentid;
+        var wasExperimentIdSupplied =
+            experimentId !== undefined && experimentId !== '';
+        if (wasExperimentIdSupplied) {
+            return Experiment.get(experimentId)
+            .then((exp) => {
+                lastUsed.experiment = exp;
+                return exp;
+            })
+            .catch((err) => {
+                $state.go('userpanel');
+            });
+        } else if (lastUsed.experiment) {
+            return lastUsed.experiment;
+        } else {
+            return $q.reject().catch(() => {
+                $state.go('userpanel');
+            });
+        }
+    }];
+
     $stateProvider
     .state('viewer', {
         url: '/viewer/:experimentid',
@@ -20,28 +43,7 @@ angular.module('tmaps.ui')
             loginRequired: true
         },
         resolve: {
-            'experiment': ['$stateParams', '$state', 'lastUsed', '$q',
-                           ($stateParams, $state, lastUsed, $q) => {
-                var experimentId = $stateParams.experimentid;
-                var wasExperimentIdSupplied =
-                    experimentId !== undefined && experimentId !== '';
-                if (wasExperimentIdSupplied) {
-                    return Experiment.get(experimentId)
-                    .then((exp) => {
-                        lastUsed.experiment = exp;
-                        return exp;
-                    })
-                    .catch((err) => {
-                        $state.go('userpanel');
-                    });
-                } else if (lastUsed.experiment) {
-                    return lastUsed.experiment;
-                } else {
-                    return $q.reject().catch(() => {
-                        $state.go('userpanel');
-                    });
-                }
-            }]
+            'experiment': getExperiment
         },
         onEnter: ['application', 'experiment',
                   function(app, experiment) {
@@ -123,27 +125,9 @@ angular.module('tmaps.ui')
         controller: 'SetupCtrl',
         controllerAs: 'setupCtrl',
         resolve: {
-            'experiment': ['$stateParams', '$state', 'lastUsed', '$q',
-                           ($stateParams, $state, lastUsed, $q) => {
-                var experimentId = $stateParams.experimentid;
-                var wasExperimentIdSupplied =
-                    experimentId !== undefined && experimentId !== '';
-                if (wasExperimentIdSupplied) {
-                    return Experiment.get(experimentId)
-                    .then((exp) => {
-                        lastUsed.experiment = exp;
-                        return exp;
-                    })
-                    .catch((err) => {
-                        $state.go('userpanel');
-                    });
-                } else if (lastUsed.experiment) {
-                    return lastUsed.experiment;
-                } else {
-                    return $q.reject().catch(() => {
-                        $state.go('userpanel');
-                    });
-                }
+            'experiment': getExperiment,
+            'workflowDescription': ['experiment', (experiment) => {
+                return experiment.workflowDescription;
             }]
         },
         onEnter: function() {
@@ -151,13 +135,30 @@ angular.module('tmaps.ui')
         }
     })
     .state('setup.uploadfiles', {
-        url: '/uploadfiles',
+        url: '/stages/uploadfiles',
         views: {
             'stage-view': {
                 templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
             }
         }
-        // redirectTo: 'plate'
+    })
+    .state('setup.stage', {
+        url: '/stages/:stageName',
+        views: {
+            'stage-view': {
+                templateUrl: '/src/setup/stage.html',
+                controller: 'StageCtrl',
+                controllerAs: 'stageCtrl'
+            }
+        },
+        resolve: {
+            'stage': ['workflowDescription', '$stateParams', (workflowDescription, $stateParams) => {
+                var stage = _.find(workflowDescription.stages, (st: any) => {
+                    return st.name === $stateParams.stageName;
+                });
+                return stage;
+            }]
+        }
     })
     .state('plate', {
         parent: 'setup.uploadfiles',

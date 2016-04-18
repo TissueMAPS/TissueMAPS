@@ -1,0 +1,12 @@
+<div class="form-group">
+    <label>{{:: arg.name }}</label>
+    <input ng-if="isScalar" type="{{inputType}}" ng-model="argCollection[arg.name]">
+    <div ng-if="!isScalar">
+        <select ng-model="argCollection[arg.name]">
+            <option ng-repeat="choice in arg.choices" ng-value="choice">{{choice}}</option>
+        </select>
+    </div>
+    <p class="help-block">
+        {{:: arg.help }}
+    </p>
+</div>

@@ -139,4 +139,17 @@ class Experiment {
         });
         return deferredExp.promise;
     }
+
+    get workflowDescription() {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var deferredExp = $q.defer();
+        return $http.get('/api/experiments/' + this.id + '/workflow_description')
+        .then((resp: {data: {workflow_description: any}}) => {
+            return resp.data.workflow_description;
+        })
+        .catch((resp) => {
+            $q.reject(resp.data.error);
+        });
+    }
 }
