@@ -255,6 +255,21 @@ class Plate(Model, DateMixIn):
         )
         return (y_offset, x_offset)
 
+    def belongs_to(self, user):
+        '''Determines whether the plate belongs to a given `user`.
+
+        Parameters
+        ----------
+        user: tmlib.user.User
+            `TissueMAPS` user
+
+        Returns
+        -------
+        bool
+            whether plate belongs to `user`
+        '''
+        return self.experiment.user_id == user.id
+
     def as_dict(self):
         '''Returns attributes as key-value pairs.
 

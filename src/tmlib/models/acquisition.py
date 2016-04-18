@@ -145,6 +145,21 @@ class Acquisition(Model, DateMixIn):
                 [md.name for md in self.microscope_metadata_files]
         }
 
+    def belongs_to(self, user):
+        '''Determines whether the acquisition belongs to a given `user`.
+
+        Parameters
+        ----------
+        user: tmlib.user.User
+            `TissueMAPS` user
+
+        Returns
+        -------
+        bool
+            whether acquisition belongs to `user`
+        '''
+        return self.plate.belongs_to(user)
+
     def __repr__(self):
         return '<Acquisition(id=%r, name=%r)>' % (self.id, self.name)
 
