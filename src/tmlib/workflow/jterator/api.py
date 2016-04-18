@@ -295,8 +295,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     'site_id': site.id,
                     'plot': args.plot
                 })
-
-        # job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
+        if job_ids is None:
+            job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
             # TODO: objects
         return job_descriptions
 
