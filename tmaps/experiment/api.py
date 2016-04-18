@@ -5,6 +5,7 @@ from flask import jsonify, send_file, current_app, request
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
+import tmlib.workflow.registry
 from tmlib.models import Experiment, ChannelLayer, Plate, Acquisition
 from tmlib.workflow.canonical import CanonicalWorkflowDescription
 from tmaps.util import get
@@ -108,6 +109,19 @@ def get_workflow_description(experiment):
     desc = CanonicalWorkflowDescription()
     return jsonify({
         'workflow_description': desc.as_dict()
+    })
+
+
+@api.route('/experiments/<experiment_id>/workflow', methods=['POST'])
+@get(Experiment)
+@jwt_required()
+def submit_workflow(experiment):
+    data = json.loads(request.data)
+    WorkflowType = tmlib.workflow.registry.get_workflow_description(data['type'])
+    wf = WorkflowType(stages=data['stages'])
+    print wf
+    return jsonify({
+        'message': 'ok'
     })
 
 
