@@ -162,8 +162,9 @@ class ChannelLayer(Model):
                     plate = [
                         p for p in experiment.plates
                         if p.id == experiment.plate_grid[r, c]
-                    ][0]
-                    sizes[(r, c)] = plate.image_size
+                    ]
+                    if plate and plate[0].image_size is not None:
+                        sizes[(r, c)] = plate[0].image_size
             if len(set(sizes.values())) > 1:
                 # TODO
                 raise ValueError('Dimensions must be the same for all plates.')

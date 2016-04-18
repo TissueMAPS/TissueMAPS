@@ -224,6 +224,8 @@ class Plate(Model, DateMixIn):
         if len(self.wells) == 0:
             return None
         offset = self.experiment.well_spacer_size
+        if len(self.wells) == 0:
+            return None
         well_size = self.wells[0].image_size
         rows = len(self.nonempty_rows)
         cols = len(self.nonempty_columns)
