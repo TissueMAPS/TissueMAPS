@@ -6,6 +6,7 @@ from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 from tmlib.models import Experiment, ChannelLayer, Plate, Acquisition
+from tmlib.workflow.canonical import CanonicalWorkflowDescription
 from tmaps.util import get
 
 from tmaps.extensions import db
@@ -91,6 +92,25 @@ def get_experiment(experiment):
     })
 
 
+@api.route('/experiments/<experiment_id>/workflow_description', methods=['GET'])
+@get(Experiment)
+@jwt_required()
+def get_workflow_description(experiment):
+    """
+    Get the workflow description for this experiment.
+
+    Response:
+    {
+        workflow_description: a serialized workflow description
+    }
+
+    """
+    desc = CanonicalWorkflowDescription()
+    return jsonify({
+        'workflow_description': desc.as_dict()
+    })
+
+
 @api.route('/experiments', methods=['POST'])
 @jwt_required()
 def create_experiment():
@@ -104,7 +124,7 @@ def create_experiment():
 
     if any([var is None for var in [name, microscope_type, plate_format,
                                     plate_acquisition_mode]]):
-        return MALFORMED_REQUEST_RESPONSE
+        raise MalformedRequestError()
 
     e = Experiment(
         name=name,
@@ -243,7 +263,6 @@ def delete_acquisition(acquisition):
 @get(Acquisition, check_ownership=True)
 def get_acquisition(acquisition):
     return jsonify(acquisition=acquisition)
-
 
 # @api.route('/experiments/<exp_id>/convert-images', methods=['POST'])
 # @jwt_required()
