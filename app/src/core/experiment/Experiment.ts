@@ -152,4 +152,17 @@ class Experiment {
             $q.reject(resp.data.error);
         });
     }
+
+    submitWorkflow(workflowArgs) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $http.post('/api/experiments/' + this.id + '/workflow', workflowArgs)
+        .then((resp) => {
+            console.log(resp);
+            return resp.data;
+        })
+        .catch((resp) => {
+            $q.reject(resp.data.error);
+        });
+    }
 }

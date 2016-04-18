@@ -11,7 +11,7 @@
       <div class="col-md-12 stage-indicator-container">
         <ul class="stage-indicators">
           <li class="stage-indicator" ng-class="{active: setupCtrl.inUploadFiles}"
-            ui-sref="setupCtrl.goToUploadFiles()">upload files</li>
+            ng-click="setupCtrl.goToUploadFiles()">upload files</li>
           <li class="stage-indicator" ng-repeat="stage in setupCtrl.workflowDescription.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
             ng-click="setupCtrl.goToStage(stage)">
             {{::stage.name.replace('_', ' ')}}
@@ -20,15 +20,21 @@
       </div>
     </div>
 
-    <div class="row">
-      <div class="col-md-12 stage-view">
-        <div ui-view="stage-view"></div>
-      </div>
-    </div>
-
-    <div class="row">
+    <div class="row stage-view-container">
       <div class="col-md-12">
-        <button ng-click="setupCtrl.goToNextStage()" class="btn btn-primary">Next</button>
+        <div class="row">
+          <div class="col-md-12 stage-view">
+            <ui-view name="stage-view"></ui-view>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-12">
+            <button ng-click="setupCtrl.goToNextStage()" class="btn btn-primary">
+              {{ setupCtrl.submitButtonText }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
