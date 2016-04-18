@@ -10,12 +10,6 @@ from tmaps.serialize import json_encoder
 from tmaps.model import encode_pk
 from tmaps.extensions import db
 from tmaps.api import api
-from tmaps.response import (
-    MALFORMED_REQUEST_RESPONSE,
-    NOT_AUTHORIZED_RESPONSE,
-    RESOURCE_NOT_FOUND_RESPONSE
-)
-
 
 
 # @api.route('/plate-sources/<int:pls_id>/acquisitions', methods=['POST'])
