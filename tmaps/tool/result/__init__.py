@@ -1,1 +1,1 @@
-from label import LabelResult
+from label import LabelResult, ContinuousLabelResult, ScalarLabelResult

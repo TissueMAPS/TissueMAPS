@@ -71,6 +71,7 @@ def create_app(config_overrides={}):
 
     # Import and register blueprints
     from api import api
+
     app.register_blueprint(api, url_prefix='/api')
 
     # @app.after_request

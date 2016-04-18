@@ -1,4 +1,4 @@
-from tmaps.experiment import Experiment, Channel, ChannelLayer
+from tmlib.models import Experiment, Channel, ChannelLayer, Plate, Acquisition
 from tmaps.serialize import json_encoder
 from tmaps.model import encode_pk
 
@@ -22,7 +22,7 @@ def encode_experiment(obj, encoder):
         'status': obj.status,
         'channels': map(encoder.default, obj.channels),
         'mapobject_info': mapobject_info,
-        'plates': [pl.as_dict() for pl in obj.plates]
+        'plates': obj.plates
     }
 
 
@@ -47,4 +47,30 @@ def encode_channel_layer(obj, encoder):
             'width': image_width,
             'height': image_height
         }
+    }
+
+
+@json_encoder(Plate)
+def encode_plate(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'description': obj.description,
+        'experiment_id': encode_pk(obj.experiment_id),
+        'acquisitions': obj.acquisitions
+    }
+
+
+@json_encoder(Acquisition)
+def encode_acquisition(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'description': obj.description,
+        'plate_id': encode_pk(obj.plate_id),
+        'status': obj.status,
+        'microscope_image_files':
+            [{'name': f.name} for f in obj.microscope_image_files],
+        'microscope_metadata_files':
+            [{'name': f.name} for f in obj.microscope_image_files]
     }
