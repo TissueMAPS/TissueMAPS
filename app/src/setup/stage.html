@@ -12,6 +12,11 @@
             <h4>Submit arguments</h4>
             <tm-argument-input arg="arg" ng-repeat="arg in step.submission_args"
                 arg-collection="setupCtrl.args[stage.name][step.name].submission_args"></tm-argument-input>
+
+            <h4>Extra arguments</h4>
+            <tm-argument-input arg="arg" ng-repeat="arg in step.extra_args"
+                arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
         </div>
     </div>
 </form>
+
