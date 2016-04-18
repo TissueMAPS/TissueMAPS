@@ -9,7 +9,8 @@ from tmlib.workflow.registry import submission_args
 class ImextractBatchArguments(BatchArguments):
 
     batch_size = Argument(
-        type=int, default=10, help='number of images to process per job'
+        type=int, default=10, help='number of images to process per job',
+        flag='b'
     )
 
 
