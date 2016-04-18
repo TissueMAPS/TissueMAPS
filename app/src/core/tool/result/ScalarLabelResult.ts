@@ -1,4 +1,4 @@
-class ClassifierResult extends LabelResult {
+class ScalarLabelResult extends LabelResult {
     colors: Color[] = [
         '#a6cee3',
         '#1f78b4',

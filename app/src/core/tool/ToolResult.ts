@@ -7,18 +7,17 @@ abstract class ToolResult {
 
     constructor(public name: string, public session: ToolSession) {}
 
-    // TODO: Solve this via some registration mechanism.
     static createToolResult(session: ToolSession, result: ServerToolResponse) {
         var time = (new Date()).toLocaleTimeString();
         var resultName = session.tool.name + ' at ' + time;
-        switch (result.result_type) {
-            case 'ClassifierResult':
-                return new ClassifierResult(resultName, session, result.payload);
-            case 'HeatmapResult':
-                return new HeatmapResult(resultName, session, result.payload);
-            default:
-                console.log('Can\'t handle result:', result);
-                break;
+        var resultCls = window[result.result_type];
+        if (resultCls !== undefined) {
+            return new resultCls(resultName, session, result.payload);
+        } else {
+            throw new Error(
+                'No client-side result class found that can handle results of class: ' +
+                result.result_type
+            );
         }
     }
 };

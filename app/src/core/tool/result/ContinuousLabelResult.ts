@@ -1,4 +1,4 @@
-class HeatmapResult extends LabelResult {
+class ContinuousLabelResult extends LabelResult {
     /**
      * Return a function that maps a label that was assigned to a map
      * object to a color which can be used to colorize the

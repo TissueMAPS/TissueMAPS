@@ -84,13 +84,11 @@
         "app/src/core/tool/ToolSession.ts",
         "app/src/core/tool/ToolCtrl.ts",
         "app/src/core/tool/ToolResult.ts",
-        "app/src/core/tool/result/LayerResult.ts",
-        "app/src/core/tool/result/PlotResult.ts",
-        "app/src/core/tool/result/LabelResult.ts",
-        "app/src/core/tool/result/LabelResultLayer.ts",
 
-        "app/src/core/tool/result/HeatmapResult.ts",
-        "app/src/core/tool/result/ClassifierResult.ts",
+        "app/src/core/tool/result/LayerResult.ts",
+        "app/src/core/tool/result/LabelResult.ts",
+        "app/src/core/tool/result/ContinuousLabelResult.ts",
+        "app/src/core/tool/result/ScalarLabelResult.ts",
 
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
