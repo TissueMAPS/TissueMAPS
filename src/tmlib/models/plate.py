@@ -224,6 +224,8 @@ class Plate(Model, DateMixIn):
         if len(self.wells) == 0:
             return None
         offset = self.experiment.well_spacer_size
+        if len(self.wells) == 0:
+            return None
         well_size = self.wells[0].image_size
         rows = len(self.nonempty_rows)
         cols = len(self.nonempty_columns)
@@ -254,6 +256,21 @@ class Plate(Model, DateMixIn):
             plate_coordinate[1] * experiment.plate_spacer_size
         )
         return (y_offset, x_offset)
+
+    def belongs_to(self, user):
+        '''Determines whether the plate belongs to a given `user`.
+
+        Parameters
+        ----------
+        user: tmlib.user.User
+            `TissueMAPS` user
+
+        Returns
+        -------
+        bool
+            whether plate belongs to `user`
+        '''
+        return self.experiment.user_id == user.id
 
     def as_dict(self):
         '''Returns attributes as key-value pairs.

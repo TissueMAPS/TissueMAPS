@@ -10,3 +10,6 @@ class FileUploadStatus(object):
 
     #: Upload is complete
     COMPLETE = 'COMPLETE'
+
+    #: Upload has failed
+    FAILED = 'FAILED'
