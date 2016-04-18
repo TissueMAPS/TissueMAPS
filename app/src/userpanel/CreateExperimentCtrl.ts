@@ -23,8 +23,8 @@ class CreateExperimentCtrl {
             microscopeType: opt.microscopeType,
             plateAcquisitionMode: opt.plateAcquisitionMode
         }).then((exp) => {
-            this._$state.go('experiment.list', {}, {
-                reload: 'experiment.list'
+            this._$state.go('userpanel.experiment.list', {}, {
+                reload: 'userpanel.experiment.list'
             });
         }).catch((err) => {
             this.error = err;
