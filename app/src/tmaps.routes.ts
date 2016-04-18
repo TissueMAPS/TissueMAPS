@@ -61,20 +61,25 @@ angular.module('tmaps.ui')
             app.hide();
         }]
     })
-    .state('content', {
+    .state('logo-backdrop', {
         abstract: true,
         views: {
-            'content-view': {
+            'logo-backdrop': {
                 template: 
-                  '<div class="content-view container" ui-view></div>' +
+                  '<ui-view></ui-view>' +
                   '<div class="logo-container">' +
                     '<img width=400 height=400 src="/resources/img/tmaps_logo.png" alt=""/>' +
                   '</div>'
             }
         }
     })
+    .state('content', {
+        parent: 'logo-backdrop',
+        abstract: true,
+        template: '<div class="content-view container" ui-view></div>'
+    })
     .state('login', {
-        parent: 'content',
+        parent: 'logo-backdrop',
         url: '/login',
         templateUrl: '/src/auth/login.html',
         data: {
