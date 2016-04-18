@@ -63,9 +63,9 @@ def get_task_data_from_engine(task):
           with non-zero exitcode
         * ``"exitcode"`` (*int*): status code returned by the program
         * ``"percent_done"`` (*float*): percent of subtasks that are *done*
-        * ``"time"`` (*datetime.timedelta*): duration
+        * ``"time"`` (*str*): duration as "HH:MM:SS"
         * ``"memory"`` (*float*): amount of used memory in MB
-        * ``"cpu_time"`` (*datetime.timedelta*): used cpu time
+        * ``"cpu_time"`` (*str*): used cpu time as "HH:MM:SS"
         * ``"type"`` (*str*): type of the task object
 
     Parameters
@@ -128,9 +128,9 @@ def get_task_data_from_engine(task):
                 if data['time'].amount(gc3libs.quantity.seconds) == 0:
                     data['time'] = None
                 else:
-                    data['time'] = gc3libs.quantity.Duration.to_timedelta(
+                    data['time'] = str(gc3libs.quantity.Duration.to_timedelta(
                         data['time']
-                    )
+                    ))
                 data['cpu_time'] = np.sum([
                     t.execution.get(
                         'used_cpu_time',
@@ -141,9 +141,9 @@ def get_task_data_from_engine(task):
                 if data['cpu_time'].amount(gc3libs.quantity.seconds) == 0:
                     data['cpu_time'] = None
                 else:
-                    data['cpu_time'] = gc3libs.quantity.Duration.to_timedelta(
+                    data['cpu_time'] = str(gc3libs.quantity.Duration.to_timedelta(
                         data['cpu_time']
-                    )
+                    ))
             else:
                 data['percent_done'] = 0
 
@@ -155,13 +155,13 @@ def get_task_data_from_engine(task):
             if task_.execution.state == gc3libs.Run.State.TERMINATED:
                 data['percent_done'] = 100
                 if data['time'] is not None:
-                    data['time'] = gc3libs.quantity.Duration.to_timedelta(
+                    data['time'] = str(gc3libs.quantity.Duration.to_timedelta(
                         data['time']
-                    )
+                    ))
                 if data['cpu_time'] is not None:
-                    data['cpu_time'] = gc3libs.quantity.Duration.to_timedelta(
+                    data['cpu_time'] = str(gc3libs.quantity.Duration.to_timedelta(
                         data['cpu_time']
-                    )
+                    ))
                 if data['memory'] is not None:
                     data['memory'] = data['memory'].amount(
                         gc3libs.quantity.Memory.MB
@@ -188,9 +188,9 @@ def get_task_data_from_db(task):
           with non-zero exitcode
         * ``"percent_done"`` (*float*): percent of subtasks that are *done*
         * ``"exitcode"`` (*int*): status code returned by the program
-        * ``"time"`` (*datetime.timedelta*): duration
+        * ``"time"`` (*str*): duration as "HH:MM:SS"
         * ``"memory"`` (*float*): amount of used memory in MB
-        * ``"cpu_time"`` (*datetime.timedelta*): used cpu time
+        * ``"cpu_time"`` (*str*): used cpu time as "HH:MM:SS"
         * ``"type"`` (*str*): type of the task object
 
     Parameters
@@ -216,12 +216,17 @@ def get_task_data_from_db(task):
             data['failed'] = task_info.exitcode != 0
             data['name'] = task_info.name
             data['state'] = task_info.state
-            data['time'] = task_info.time
             data['memory'] = task_info.memory
-            data['cpu_time'] = task_info.cpu_time
             data['type'] = task_info.type
             data['exitcode'] = task_info.exitcode
             data['id'] = task_info.id
+            data['time'] = task_info.time
+            # Convert timedeltas to string to make it JSON serializable
+            if data['time'] is not None:
+                data['time'] = str(data['time'])
+            data['cpu_time'] = task_info.cpu_time
+            if data['cpu_time'] is not None:
+                data['cpu_time'] = str(data['cpu_time'])
 
             if hasattr(task_, 'tasks'):
                 done = 0.0
