@@ -208,6 +208,8 @@ class MapobjectType(Model, DateMixIn):
 
                 if n_points_in_tile is not None:
                     n_points_in_tile_samples.append(n_points_in_tile)
+                else:
+                    n_points_in_tile_samples.append(0)
 
             n_points_in_tile_per_z[z] = int(
                 float(sum(n_points_in_tile_samples)) /
