@@ -1,4 +1,4 @@
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy import Integer, ForeignKey, Column, String
 
 from tmaps.model import Model
@@ -9,10 +9,15 @@ class ToolSession(Model):
 
     uuid = Column(String(50), index=True, unique=True)
 
-    experiment_id = \
-        Column(Integer, ForeignKey('experiments.id'))
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
-    tool_id = Column(Integer, ForeignKey('tools.id'))
+    tool_id = Column(
+        Integer,
+        ForeignKey('tools.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
     # TODO: Tool session should be linked to an saved experiment state.
     # appstate_id = Column(Integer, ForeignKey('appstates.id'))
@@ -22,12 +27,16 @@ class ToolSession(Model):
     #         'tool_instances', cascade='all, delete-orphan'))
 
     experiment = relationship(
-        'Experiment', uselist=False, cascade='all, delete-orphan',
-        single_parent=True, backref='tool_sessions')
+        'Experiment', uselist=False,
+        single_parent=True,
+        backref=backref('tool_sessions', cascade='all, delete-orphan')
+    )
 
     tool = relationship(
-        'Tool', uselist=False, cascade='all, delete-orphan',
-        single_parent=True, backref='sessions')
+        'Tool', uselist=False,
+        single_parent=True,
+        backref=backref('sessions', cascade='all, delete-orphan')
+    )
 
     def set(key, value):
         pass

@@ -70,7 +70,8 @@ class SVMTool():
 
         response = ScalarLabelResult(
             ids=all_object_ids, labels=all_object_labels,
-            mapobject_type=mapobject_type, session=session, attributes={
+            mapobject_type_id=mapobject_type.id,
+            session_id=session.id, attributes={
                 'best_params': gs.best_params_,
                 'best_score': gs.best_score_
             })

@@ -54,7 +54,7 @@ class ClassifierTool(object):
 
         response = LabelResult(
             ids=all_object_ids, labels=all_object_labels,
-            mapobject_type=mapobject_type, session=session)
+            mapobject_type_id=mapobject_type.id, session_id=session_id)
 
         return response
 

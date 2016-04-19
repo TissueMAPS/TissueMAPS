@@ -29,8 +29,9 @@ class ClusterTool():
         ids = X.index.tolist()
 
         response = ScalarLabelResult(
-            ids=ids, labels=predicted_labels, mapobject_type=mapobject_type,
-            session=session)
+            ids=ids, labels=predicted_labels,
+            mapobject_type_id=mapobject_type.id,
+            session_id=session.id)
 
         return response
 

@@ -1,7 +1,7 @@
 import numpy as np
 
 from sqlalchemy import Integer, ForeignKey, Column, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.dialects.postgresql import JSON
 
 from tmaps.serialize import json_encoder
@@ -10,21 +10,32 @@ from tmaps.model import Model
 
 
 class LabelResult(Model):
-    __tablename__ = 'result_labelresults'
+    __tablename__ = 'label_results'
 
     result_type = Column(String)
     attributes = Column(JSON)
-    tool_session_id = \
-        Column(Integer, ForeignKey('tool_sessions.id'))
+    tool_session_id = Column(
+        Integer,
+        ForeignKey('tool_sessions.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
     mapobject_type_id = Column(
-        Integer, ForeignKey('mapobject_types.id'))
-    mapobject_type = relationship(
-        'MapobjectType', backref='label_results')
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
-    def __init__(self, ids, labels, mapobject_type, session, attributes=None):
+    tool_session = relationship(
+        'ToolSession',
+        backref=backref('tool_sessions', cascade='all, delete-orphan')
+    )
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('label_results', cascade='all, delete-orphan')
+    )
+
+    def __init__(self, ids, labels, mapobject_type_id, session_id, attributes=None):
         self.result_type = self.__class__.__name__
-        self.mapobject_type_id = mapobject_type.id
-        self.tool_session_id = session.id
+        self.mapobject_type_id = mapobject_type_id
+        self.tool_session_id = session_id
         self.attributes = attributes
 
         db.session.add(self)
@@ -57,32 +68,43 @@ def encode_tool(obj, encoder):
 
 
 class LabelResultLabel(Model):
-    __tablename__ = 'result_labelresult_labels'
+    __tablename__ = 'label_result_labels'
 
-    mapobject_id = Column(
-        Integer, ForeignKey('mapobjects.id'))
-    label_result_id = \
-        Column(Integer, ForeignKey('result_labelresults.id'))
     label = Column(JSON)
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
+    label_result_id = Column(
+        Integer,
+        ForeignKey('label_results.id', onupdate='CASCADE', ondelete='CASCADE')
+    )
 
-    label_result = relationship('LabelResult', backref='labels')
-    mapobject = relationship('Mapobject', backref='labels')
+    label_result = relationship(
+        'LabelResult',
+        backref=backref('labels', cascade='all, delete-orphan')
+    )
+    mapobject = relationship(
+        'Mapobject',
+        backref=backref('labels', cascade='all, delete-orphan')
+    )
 
 
 class ScalarLabelResult(LabelResult):
-    def __init__(self, ids, labels, mapobject_type, session, attributes={}):
+
+    def __init__(self, ids, labels, mapobject_type_id, session_id, attributes={}):
         attributes.update({
             'labels': list(set(labels))
         })
         super(ScalarLabelResult, self).__init__(
-            ids, labels, mapobject_type, session, attributes=attributes)
+            ids, labels, mapobject_type_id, session_id, attributes=attributes)
 
 
 class ContinuousLabelResult(LabelResult):
-    def __init__(self, ids, labels, mapobject_type, session, attributes={}):
+    def __init__(self, ids, labels, mapobject_type_id, session_id, attributes={}):
         attributes.update({
             'min': np.min(labels),
             'max': np.max(labels)
         })
         super(ContinuousLabelResult, self).__init__(
-            ids, labels, mapobject_type, session, attributes=attributes)
+            ids, labels, mapobject_type_id, session_id, attributes=attributes)

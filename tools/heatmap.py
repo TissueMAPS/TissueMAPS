@@ -35,8 +35,9 @@ class HeatmapTool():
         values = [q.value for q in query_result]
 
         response = ContinuousLabelResult(
-            ids=mapobject_ids, labels=values, mapobject_type=mapobject_type,
-            session=session
+            ids=mapobject_ids, labels=values,
+            mapobject_type_id=mapobject_type.id,
+            session_id=session.id
         )
 
         return response

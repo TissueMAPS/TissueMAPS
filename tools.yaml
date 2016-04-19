@@ -1,0 +1,19 @@
+records:
+    - class: tmaps.tool.Tool
+      args:
+          name: SVMTool
+          description: Support Vector Machine classifier tool.
+          icon: SVM
+          full_class_path: tools.classifier.SVMTool
+    - class: tmaps.tool.Tool
+      args:
+          name: ClusterTool
+          description: K-means clustering
+          icon: CLU
+          full_class_path: tools.ClusterTool
+    - class: tmaps.tool.Tool
+      args:
+          name: HeatmapTool
+          description: Heatmap Tool.
+          icon: HM
+          full_class_path: tools.HeatmapTool
