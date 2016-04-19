@@ -144,7 +144,8 @@ class MapobjectType(Model, DateMixIn):
                 ((MapobjectType.is_static) |
                  (MapobjectOutline.tpoint == tpoint) &
                  (MapobjectOutline.zplane == zplane)) &
-                (MapobjectOutline.intersection_filter(x, y, z, maxzoom))).\
+                (MapobjectOutline.intersection_filter(x, y, z, maxzoom))
+            ).\
             all()
 
         return outlines
@@ -222,13 +223,12 @@ class MapobjectType(Model, DateMixIn):
         ])
 
     def get_feature_value_matrix(self, feature_names):
-        '''Get a wide format pandas data frame of feature values.
+        '''Gets a wide format pandas data frame of feature values.
 
         Parameters
         ----------
-        feature_names: List[string]
-            A list of feature names. These features will be used as the
-            labels of the data frame.
+        feature_names: List[str]
+            names of features that will be used as labels of the data frame
 
         Returns
         -------
@@ -250,7 +250,9 @@ class MapobjectType(Model, DateMixIn):
         feature_df_long = pd.DataFrame(feature_values)
         feature_df_long.columns = ['feature', 'mapobject', 'value']
         feature_df = pd.pivot_table(
-            feature_df_long, values='value', index='mapobject', columns='feature')
+            feature_df_long, values='value',
+            index='mapobject', columns='feature'
+        )
         return feature_df
 
     def __repr__(self):
@@ -366,7 +368,7 @@ class MapobjectOutline(Model):
 
     @staticmethod
     def create_tile(x, y, z, maxzoom):
-        """Calculate the bounding box of a tile.
+        """Calculates the bounding box of a tile.
 
         Parameters
         ----------
@@ -389,6 +391,16 @@ class MapobjectOutline(Model):
         minx = x0
         maxx = x0 + size
         miny = -y0 - size
+        # NOTE: Someshow the requests for vector tiles issued by openlayers
+        # do not exactly correspond to the ones issued for image tiles.
+        # Therefore, a mapobject might be visible but the tile that intersects
+        # the mapobject's outline was not requested. This results in the the
+        # mapobject not being loaded. By increasing the tile size at the left
+        # and upper boundary artifically, these mapobjects get loaded anyway.
+        # This should be fixed in a more sophisticated manner.
+        # ...but hey it works, so what do you care?
+        # (Since you're reading this, it may actually not)
+        maxy = maxy+500
         maxy = -y0
         return (minx, miny, maxx, maxy)
 
