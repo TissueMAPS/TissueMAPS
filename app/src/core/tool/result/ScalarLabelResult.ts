@@ -19,7 +19,11 @@ class ScalarLabelResult extends LabelResult {
     getLabelColorMapper() {
         return (label) => {
             var idx = this.attributes.labels.indexOf(label);
-            return this.colors[idx];
+            if (idx % 2 == 0) {
+                return this.colors[idx];
+            } else {
+                return this.colors[this.colors.length - idx];
+            }
         };
     }
 }
