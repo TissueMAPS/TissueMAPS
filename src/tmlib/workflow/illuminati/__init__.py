@@ -1,8 +1,15 @@
 from tmlib import __version__
 
-logo = u'''
+
+__fullname__ = 'Pyramid image builder'
+
+__description__ = '''Creation of pyramids for interactive, web-based
+    visualization of images.
+'''
+
+__logo__ = u'''
    .
-   I        illuminati (tmlib %s)
-  LLU       Pyramid image builder.
+   I        {name} ({version})
+  LLU       {fullname}
  MINATI     https://github.com/TissueMAPS/TmLibrary
-''' % __version__
+'''.format(name=__name__, version=__version__, fullname=__fullname__)

@@ -1,7 +1,6 @@
 import logging
 
 from tmlib.utils import assert_type
-from tmlib.workflow.jterator import logo
 from tmlib.workflow.cli import CommandLineInterface
 from tmlib.workflow.cli import climethod
 from tmlib.workflow.args import Argument
@@ -10,10 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 class Jterator(CommandLineInterface):
-
-    '''Apply a sequence of algorithms to a set of images in order to
-    segment the images and extract features for the identified objects.
-    '''
 
     @assert_type(api_instance='tmlib.workflow.jterator.api.ImageAnalysisPipeline')
     def __init__(self, api_instance):

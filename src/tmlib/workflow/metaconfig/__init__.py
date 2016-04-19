@@ -1,13 +1,20 @@
 import importlib
 from tmlib import __version__
 
-logo = '''
+__fullname__ = 'Configuration of image metadata'
+
+__description__ = '''Configuration of extracted OMEXML metadata
+    and integration with additional microscope-specific information about
+    the image acquisition process.
+'''
+
+__logo__ = '''
             _                     __ _
-  _ __  ___| |_ __ _ __ ___ _ _  / _(_)__ _         metaconfig (tmlib %s)
- | '  \/ -_)  _/ _` / _/ _ \ ' \|  _| / _` |        Configure OMEXML metadata.
+  _ __  ___| |_ __ _ __ ___ _ _  / _(_)__ _         {name} ({version})
+ | '  \/ -_)  _/ _` / _/ _ \ ' \|  _| / _` |        {fullname}
  |_|_|_\___|\__\__,_\__\___/_||_|_| |_\__, |        https://github.com/TissueMAPS/TmLibrary
                                       |___/
-''' % __version__
+'''.format(name=__name__, version=__version__, fullname=__fullname__)
 
 
 SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager', 'default'}

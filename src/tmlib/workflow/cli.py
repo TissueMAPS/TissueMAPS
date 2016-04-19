@@ -8,6 +8,7 @@ import inspect
 import socket
 import argparse
 import types
+import importlib
 import collections
 from cached_property import cached_property
 from abc import ABCMeta
@@ -60,8 +61,12 @@ class CliMeta(ABCMeta):
         super(CliMeta, cls).__init__(clsname, bases, attrs)
         if '__abstract__' in vars(cls).keys():
             return
+        pkg_name = '.'.join(cls.__module__.split('.')[:-1])
+        pkg = importlib.import_module(pkg_name)
+        cls.__doc__ = pkg.__description__
+        cls.__logo__ = pkg.__logo__
         parser = argparse.ArgumentParser()
-        parser.description = cls.__doc__
+        parser.description = pkg.__description__
         parser.version = __version__
         # The parser for each step receives at least two arguments, which are
         # passed to the corresponding API class.
@@ -264,10 +269,10 @@ class CommandLineInterface(object):
             self._submission_args = self._submission_args_class(**vars(cli_args))
         method(**method_args)
 
-    @abstractmethod
-    def _print_logo():
+    @classmethod
+    def _print_logo(cls):
         '''Prints the step-specific logo to standard output (console).'''
-        pass
+        print cls.__logo__
 
     @climethod(
         help='''cleans up the output of a previous submission, i.e. removes
@@ -485,7 +490,6 @@ class CommandLineInterface(object):
             raise AttributeError(
                 'Argument "job_id" is required when "phase" is set to "run".'
             )
-        import ipdb; ipdb.set_trace()
         jobs = self.create_jobs(
             duration=self._submission_args.duration,
             memory=self._submission_args.memory,
