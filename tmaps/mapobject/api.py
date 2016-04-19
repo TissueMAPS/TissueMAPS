@@ -12,11 +12,6 @@ from tmaps.extensions import db
 
 from tmaps.mapobject import MapobjectOutline, MapobjectType
 from tmaps.experiment import Experiment
-from tmaps.response import (
-    MALFORMED_REQUEST_RESPONSE,
-    RESOURCE_NOT_FOUND_RESPONSE,
-    NOT_AUTHORIZED_RESPONSE
-)
 
 
 @api.route('/experiments/<experiment_id>/mapobjects/<object_name>', methods=['GET'])

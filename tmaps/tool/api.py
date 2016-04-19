@@ -11,11 +11,6 @@ from tmaps.tool import Tool, ToolSession
 from tmaps.tool.result import LabelResult
 from tmaps.api import api
 from tmaps.experiment import Experiment
-from tmaps.response import (
-    MALFORMED_REQUEST_RESPONSE,
-    RESOURCE_NOT_FOUND_RESPONSE,
-    NOT_AUTHORIZED_RESPONSE
-)
 
 
 def _create_mapobject_feature(obj_id, geometry_obj):
