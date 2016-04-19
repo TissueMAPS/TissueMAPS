@@ -672,9 +672,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def collect_job_output(self, batch):
         '''Calculates the zoom level at which mapobjects should be represented
-        on the map by centroid points rather than the entire outline polygons
-        and computes for each mapobject type statistics over features of
-        children mapobjects, e.g. the mean area of cells per well.
+        on the map by centroid points rather than the outline polygons
+        and computes for each static mapobject type, such as "Wells",
+        statistics over features of intersecting child mapobjects, such as
+        "Cells", for example mean area of cells per well.
 
         Parameters
         ----------
@@ -775,7 +776,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         'mapobjects of  type "%s"', mapobject_type.name
                     )
 
-                    import ipdb; ipdb.set_trace()
                     # For each parent mapobject calculate statistics on
                     # features of children, i.e. mapobjects that intersect
                     # with the parent
@@ -785,25 +785,26 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             'process parent mapobject #%d of type "%s"', i,
                             parent_type.name
                         )
+                        df = pd.DataFrame(
+                            session.query(
+                                tm.FeatureValue.value,
+                                tm.FeatureValue.feature_id
+                            ).
+                            join(
+                                tm.Mapobject, tm.MapobjectOutline
+                            ).
+                            filter(
+                                tm.Mapobject.mapobject_type_id
+                                == mapobject_type.id,
+                                tm.MapobjectOutline.geom_poly.intersects(
+                                    parent.outlines[0].geom_poly
+                                )
+                            ).
+                            all()
+                        )
                         count = 0
                         for feature in mapobject_type.features:
-                            feature_values = session.query(
-                                    tm.FeatureValue.value
-                                ).\
-                                join(
-                                    tm.Feature, tm.MapobjectType,
-                                    tm.Mapobject, tm.MapobjectOutline
-                                ).\
-                                filter(
-                                    tm.MapobjectType.id == mapobject_type.id,
-                                    tm.Feature.id == feature.id,
-                                    tm.MapobjectOutline.geom_poly.intersects(
-                                        parent.outlines[0].geom_poly
-                                    )
-                                ).\
-                                all()
-                            # TODO: check that number of feature values
-                            # for one feature equals object count
+                            index = df.feature_id == feature.id
                             for statistic, function in moments.iteritems():
                                 logger.debug(
                                     'compute value of feature "%s"',
@@ -813,7 +814,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     tm.FeatureValue(
                                         feature_id=parent_features[count].id,
                                         mapobject_id=parent.id,
-                                        value=function(feature_values)
+                                        value=function(df.loc[index, 'value'])
                                     )
                                 )
                                 count += 1
