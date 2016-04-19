@@ -48,17 +48,37 @@ class Argument(object):
         '''
         self.type = type
         self.help = help
-        if default is not None:
-            if not isinstance(default, self.type):
-                raise TypeError(
-                    'Argument "default" must have type %s' % self.type.__name__
-                )
+        self.required = required
         self.default = default
+        if self.default is not None:
+            if self.type == str:
+                if not isinstance(self.default, basestring):
+                    raise TypeError(
+                        'Argument "default" must have type basestring.'
+                    )
+            else:
+                if not isinstance(self.default, self.type):
+                    raise TypeError(
+                        'Argument "default" must have type %s.'
+                        % self.type.__name__
+                    )
+            self.required = False
         self.choices = choices
         if self.choices is not None:
             self.choices = set(choices)
+            if self.type == str:
+                if not all([isinstance(c, basestring) for c in self.choices]):
+                    raise TypeError(
+                        'Elements of argument "choices" must have type '
+                        'basestring.'
+                    )
+            else:
+                if not all([isinstance(c, self.type) for c in self.choices]):
+                    raise TypeError(
+                        'Elements of argument "choices" must have type %s.'
+                        % self.type.__name__
+                    )
         self.flag = flag
-        self.required = required
         formatted_help_message = self.help.replace('\n', ' ').split(' ')
         formatted_help_message[0] = formatted_help_message[0].lower()
         formatted_help_message = ' '.join(formatted_help_message)
@@ -108,11 +128,17 @@ class Argument(object):
             'set argument "%s" as attribute "%s" of instance of class "%s"',
             self.name, self._attr_name, instance.__class__.__name__
         )
-        if not isinstance(value, self.type) and value is not None:
-            raise TypeError(
-                'Argument "%s" must have type %s.'
-                % (self.name, self.type.__name__)
-            )
+        if self.type == str:
+            if not isinstance(value, basestring) and value is not None:
+                raise TypeError(
+                    'Argument "%s" must have type basestring.'
+                )
+        else:
+            if not isinstance(value, self.type) and value is not None:
+                raise TypeError(
+                    'Argument "%s" must have type %s.'
+                    % (self.name, self.type.__name__)
+                )
         setattr(instance, self._attr_name, value)
 
     def add_to_argparser(self, parser):
@@ -303,7 +329,8 @@ class ArgumentCollection(object):
                 'name': arg.name,
                 'help': re.sub(r'\s+', ' ', arg.help).strip(),
                 'default': arg.default,
-                'type': arg.type
+                'type': arg.type,
+                'required': arg.required
             }
             if arg.choices is not None:
                argument['choices'] = list(arg.choices)
