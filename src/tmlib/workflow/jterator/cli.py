@@ -47,6 +47,3 @@ class Jterator(CommandLineInterface):
         logger.info('check pipe and handle descriptor files')
         self.api_instance.check_pipeline()
 
-    @staticmethod
-    def _print_logo():
-        print logo

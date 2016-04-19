@@ -775,6 +775,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         'mapobjects of  type "%s"', mapobject_type.name
                     )
 
+                    import ipdb; ipdb.set_trace()
                     # For each parent mapobject calculate statistics on
                     # features of children, i.e. mapobjects that intersect
                     # with the parent
