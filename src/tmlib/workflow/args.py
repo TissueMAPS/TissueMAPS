@@ -197,7 +197,8 @@ class ArgumentCollection(object):
         **kwargs: dict, optional
             keyword arguments to overwrite
         '''
-        for name, value in vars(self.__class__).iteritems():
+        for name in dir(self):
+            value = getattr(self.__class__, name)
             if isinstance(value, Argument):
                 if name in kwargs:
                     setattr(self, name, kwargs[name])

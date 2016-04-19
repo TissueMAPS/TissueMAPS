@@ -76,9 +76,9 @@ class CliMeta(ABCMeta):
         # Extra arguments are added to the main parser as well because they
         # also need to be parssed to the constructor of the API class.
         step_name = cls.__name__.lower()
-        batch_args, submission_args, extra_args = get_step_args(step_name)
-        if extra_args is not None:
-            for arg in extra_args.iterargs():
+        BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(step_name)
+        if ExtraArgs is not None:
+            for arg in ExtraArgs.iterargs():
                 arg.add_to_argparser(parser)
         subparsers = parser.add_subparsers(dest='method', help='methods')
         subparsers.required = True
@@ -120,10 +120,10 @@ class CliMeta(ABCMeta):
                 if arg.flag is not None:
                     flags[attr_name].append(arg.flag)
 
-        add_step_specific_method_args(step_name, 'init', batch_args)
-        setattr(cls, '_batch_args_class', batch_args)
-        add_step_specific_method_args(step_name, 'submit', submission_args)
-        setattr(cls, '_submission_args_class', submission_args)
+        add_step_specific_method_args(step_name, 'init', BatchArgs)
+        setattr(cls, '_batch_args_class', BatchArgs)
+        add_step_specific_method_args(step_name, 'submit', SubmissionArgs)
+        setattr(cls, '_submission_args_class', SubmissionArgs)
         api = get_step_api(step_name)
         setattr(cls, '_api_class', api)
         setattr(cls, '_parser', parser)
@@ -485,6 +485,7 @@ class CommandLineInterface(object):
             raise AttributeError(
                 'Argument "job_id" is required when "phase" is set to "run".'
             )
+        import ipdb; ipdb.set_trace()
         jobs = self.create_jobs(
             duration=self._submission_args.duration,
             memory=self._submission_args.memory,

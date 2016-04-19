@@ -432,7 +432,7 @@ class PyramidBuilder(ClusterRoutines):
                         column=t['column'], level=batch['level'],
                         channel_layer_id=layer.id
                     )
-                    logger.info('creating tile: %s', tile_file.name)
+                    logger.debug('creating tile: %s', tile_file.name)
                     tile = layer.extract_tile_from_image(
                         image_store[file.name], t['y_offset'], t['x_offset']
                     )
