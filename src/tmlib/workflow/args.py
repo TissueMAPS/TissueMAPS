@@ -329,7 +329,7 @@ class ArgumentCollection(object):
                 'name': arg.name,
                 'help': re.sub(r'\s+', ' ', arg.help).strip(),
                 'default': arg.default,
-                'type': arg.type,
+                'type': arg.type.__name__,
                 'required': arg.required
             }
             if arg.choices is not None:
