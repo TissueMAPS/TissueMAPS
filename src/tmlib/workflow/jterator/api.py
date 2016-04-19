@@ -717,16 +717,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.info('compute statistics over features of children mapobjects')
         with tm.utils.Session() as session:
 
-            logger.debug('delete existing features for static mapobject types')
-            session.query(tm.Feature).\
-                join(tm.MapobjectType).\
+            logger.info('delete existing features for static mapobject types')
+            mapobject_type_ids = session.query(tm.MapobjectType.id).\
                 filter(
                     tm.MapobjectType.experiment_id == self.experiment_id,
                     tm.MapobjectType.is_static
                 ).\
-                delete()
+                all()
 
-        # TODO: this has to be optimized; it takes forever
+            session.query(tm.Feature).\
+                filter(tm.Feature.mapobject_type_id.in_(mapobject_type_ids)).\
+                delete()
 
         mapobject_names = {'Sites', 'Wells'}
         moments = {'Mean': np.nanmean, 'Std': np.nanstd}
@@ -768,6 +769,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     mapobject_type_id=parent_type.id
                                 )
                             )
+                    parent_features.append(
+                        tm.Feature(
+                            name='Count-{type}'.format(type=mapobject_type.name),
+                            mapobject_type_id=parent_type.id
+                        )
+                    )
                     session.add_all(parent_features)
                     session.flush()
 
@@ -788,7 +795,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         df = pd.DataFrame(
                             session.query(
                                 tm.FeatureValue.value,
-                                tm.FeatureValue.feature_id
+                                tm.FeatureValue.feature_id,
+                                tm.FeatureValue.mapobject_id
                             ).
                             join(
                                 tm.Mapobject, tm.MapobjectOutline
@@ -818,6 +826,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     )
                                 )
                                 count += 1
+                        new_feature_values.append(
+                            tm.FeatureValue(
+                                feature_id=parent_features[count].id,
+                                mapobject_id=parent.id,
+                                value=len(np.unique(df.mapobject_id))
+                            )
+                        )
                     session.add_all(new_feature_values)
 
 
