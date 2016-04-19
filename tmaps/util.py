@@ -15,7 +15,8 @@ def get(model_cls, check_ownership=False):
     def decorator(f):
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
-            model_arg = model_cls.__name__.lower()
+            # NOTE: This assumes a certain naiming convention!
+            model_arg = model_cls.__tablename__[:-1]
             model_id_arg = model_arg + '_id'
             url_args = request.url_rule.arguments
             if model_id_arg in url_args:
