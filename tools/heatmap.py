@@ -25,9 +25,11 @@ class HeatmapTool():
         # Get features
         query_result = db.session.query(
             FeatureValue.mapobject_id, FeatureValue.value).\
-            join(Feature).\
-            join(MapobjectType).\
-            filter(Feature.name == selected_feature).all()
+            join(Feature, MapobjectType).\
+            filter(
+                Feature.name == selected_feature,
+                MapobjectType.id == mapobject_type.id
+            ).all()
 
         mapobject_ids = [q.mapobject_id for q in query_result]
         values = [q.value for q in query_result]
