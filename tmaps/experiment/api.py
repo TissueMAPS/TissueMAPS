@@ -8,8 +8,9 @@ from flask.ext.jwt import current_identity
 import tmlib.workflow.registry
 from tmlib.models import Experiment, ChannelLayer, Plate, Acquisition
 from tmlib.workflow.canonical import CanonicalWorkflowDescription
-from tmaps.util import get
+from tmlib.workflow.tmaps.api import WorkflowManager
 
+from tmaps.util import get
 from tmaps.extensions import db
 from tmaps.api import api
 from tmaps.error import (
@@ -118,8 +119,12 @@ def get_workflow_description(experiment):
 def submit_workflow(experiment):
     data = json.loads(request.data)
     WorkflowType = tmlib.workflow.registry.get_workflow_description(data['type'])
-    wf = WorkflowType(stages=data['stages'])
-    print wf
+    wfd = WorkflowType(stages=data['stages'])
+    manager = WorkflowManager()
+    wf = manager.create_workflow(wfd)
+    manager.submit_jobs()
+
+    # TODO: submit
     return jsonify({
         'message': 'ok'
     })
