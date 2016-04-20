@@ -220,7 +220,9 @@ class PyramidBuilder(ClusterRoutines):
                             # illumination artifacts and aligned, this then
                             # automatically translates to the subsequent levels
                             description.update({
-                                'image_file_ids': [f.id for f in image_files],
+                                'image_file_ids': [
+                                    f.id for f in image_file_subset
+                                ],
                                 'align': args.align,
                                 'illumcorr': args.illumcorr,
                                 'clip': args.clip,
