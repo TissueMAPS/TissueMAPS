@@ -391,6 +391,7 @@ class MapobjectOutline(Model):
         minx = x0
         maxx = x0 + size
         miny = -y0 - size
+        maxy = -y0
         # NOTE: Someshow the requests for vector tiles issued by openlayers
         # do not exactly correspond to the ones issued for image tiles.
         # Therefore, a mapobject might be visible but the tile that intersects
@@ -400,8 +401,8 @@ class MapobjectOutline(Model):
         # This should be fixed in a more sophisticated manner.
         # ...but hey it works, so what do you care?
         # (Since you're reading this, it may actually not)
-        maxy = maxy+500
-        maxy = -y0
+        maxy = maxy + 512
+        minx = minx - 512
         return (minx, miny, maxx, maxy)
 
     @staticmethod
@@ -438,14 +439,14 @@ class MapobjectOutline(Model):
             minx=minx, maxy=maxy, miny=miny)
 
         spatial_filter = (MapobjectOutline.geom_poly.ST_Intersects(tile))
-        if x != 0:
-            spatial_filter = spatial_filter & \
-                not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
-                     ST_Intersects(left_border))
-        if y != 0:
-            spatial_filter = spatial_filter & \
-                not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
-                     ST_Intersects(top_border))
+        # if x != 0:
+        #     spatial_filter = spatial_filter & \
+        #         not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
+        #              ST_Intersects(left_border))
+        # if y != 0:
+        #     spatial_filter = spatial_filter & \
+        #         not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
+        #              ST_Intersects(top_border))
 
         return spatial_filter
 
