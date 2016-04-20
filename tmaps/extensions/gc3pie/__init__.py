@@ -1,4 +1,4 @@
-from flask_gc3pie import GC3PieEngine, GC3PieTask
+from flask_gc3pie import GC3PieEngine
 
 gc3pie_engine = GC3PieEngine()
 

@@ -120,7 +120,7 @@ def submit_workflow(experiment):
     data = json.loads(request.data)
     WorkflowType = tmlib.workflow.registry.get_workflow_description(data['type'])
     wfd = WorkflowType(stages=data['stages'])
-    manager = WorkflowManager()
+    manager = WorkflowManager(experiment.id, 1)
     wf = manager.create_workflow(wfd)
     manager.submit_jobs()
 
