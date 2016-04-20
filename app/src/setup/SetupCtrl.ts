@@ -1,9 +1,6 @@
 class SetupCtrl {
 
     currentStage;
-    args: any = {};
-
-    private _workflowDescription: any;
 
     static $inject = ['experiment', 'workflowDescription', '$state'];
 
@@ -29,6 +26,59 @@ class SetupCtrl {
         });
     }
 
+    private _checkArgsForStage(stage): boolean {
+        var submissionArgsAreValid, batchArgsAreValid, extraArgsAreValid;
+        var isValid: boolean;
+
+        function checkArgs(args) {
+            return _.chain(args).map((arg) => {
+                var isValid;
+                if (arg.required) {
+                    isValid = arg.value !== undefined
+                        && arg.value !== null
+                        && arg.value !== '';
+                } else {
+                    isValid = true;
+                }
+                return isValid;
+            }).all().value();
+        }
+
+        var areStagesOk: boolean[] =  stage.steps.map((step) => {
+            batchArgsAreValid = checkArgs(step.batch_args);
+            submissionArgsAreValid = checkArgs(step.submission_args);
+
+            if (step.extra_args) {
+                extraArgsAreValid = checkArgs(step.extra_args);
+            } else {
+                extraArgsAreValid = true;
+            }
+
+            return batchArgsAreValid && submissionArgsAreValid && extraArgsAreValid;
+        });
+        return _.all(areStagesOk);
+    }
+
+    private _areAllStagesOk(): boolean {
+        return _.all(this.workflowDescription.stages.map((st) => {
+            return this._checkArgsForStage(st);
+        }))
+    }
+
+    private _isLastStage(stage): boolean {
+        var stages = this.workflowDescription.stages;
+        var idx = stages.indexOf(stage);
+        return idx === stages.length - 1;
+    }
+
+    canProceedToNextStage(): boolean {
+        if (this._isLastStage(this.currentStage)) {
+            return this._areAllStagesOk();
+        } else {
+            return this._checkArgsForStage(this.currentStage);
+        }
+    }
+
     goToNextStage() {
         var stages = this.workflowDescription.stages;
         if (this.currentStage.name == 'uploadfiles') {
@@ -40,7 +90,12 @@ class SetupCtrl {
             if (idx >= 0) {
                 var inLastStage = idx == stages.length - 1
                 if (inLastStage) {
-                    this._submitWorkflow();
+                    if (this._areAllStagesOk()) {
+                        console.log('SUBMIT');
+                        this._submitWorkflow();
+                    } else {
+                        console.log('SOME STAGES NOT OK, CANNOT SUBMIT');
+                    }
                 } else {
                     var newStage = stages[idx + 1];
                     this.currentStage = newStage;
@@ -55,13 +110,30 @@ class SetupCtrl {
     }
 
     private _submitWorkflow() {
-        var desc = $.extend(true, {}, this._workflowDescription);
+        var desc = $.extend(true, {}, this.workflowDescription);
         desc.stages.forEach((stage) => {
             stage.steps.forEach((step) => {
-                step.batch_args = this.args[stage.name][step.name].batch_args;
-                step.submission_args = this.args[stage.name][step.name].submission_args;
-                var extraArgs = this.args[stage.name][step.name].extra_args;
-                step.extra_args = _.isEmpty(extraArgs) ? null : extraArgs;
+                var batchArgs = {};
+                step.batch_args.forEach((arg) => {
+                    batchArgs[arg.name] = arg.value;
+                });
+                step.batch_args = batchArgs;
+
+                var submissionArgs = {};
+                step.submission_args.forEach((arg) => {
+                    submissionArgs[arg.name] = arg.value;
+                });
+                step.submission_args = submissionArgs;
+
+                if (step.extra_args) {
+                    var extraArgs = {};
+                    step.extra_args.forEach((arg) => {
+                        extraArgs[arg.name] = arg.value;
+                    });
+                    step.extra_args = extraArgs;
+                } else {
+                    step.extra_args = null;
+                }
             });
         });
         this.experiment.submitWorkflow(desc);
@@ -79,31 +151,9 @@ class SetupCtrl {
                 public workflowDescription: any,
                 private _$state) {
         // TODO: remove
-        this.currentStage = workflowDescription.stages[0];
-        this._workflowDescription = $.extend(true, {}, workflowDescription);
         console.log(workflowDescription);
-        window['args'] = this.args;
-        workflowDescription.stages.forEach((stage) => {
-            this.args[stage.name] = {};
-            stage.steps.forEach((step) => {
-                this.args[stage.name][step.name] = {
-                    batch_args: {},
-                    submission_args: {},
-                    extra_args: {}
-                };
-                step.batch_args.forEach((arg) => {
-                    this.args[stage.name][step.name].batch_args[arg.name] = arg.default;
-                });
-                step.submission_args.forEach((arg) => {
-                    this.args[stage.name][step.name].submission_args[arg.name] = arg.default;
-                });
-                if (step.extra_args) {
-                    step.extra_args.forEach((arg) => {
-                        this.args[stage.name][step.name].extra_args[arg.name] = arg.default;
-                    });
-                }
-            });
-        });
+        this.currentStage = workflowDescription.stages[0];
+        window['wfd'] = this.workflowDescription;
         switch(experiment.status) {
             case 'WAITING':
                 console.log('REDIRECT');

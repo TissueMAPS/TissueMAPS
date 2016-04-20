@@ -11,14 +11,14 @@ angular.module('tmaps.ui').directive('tmArgumentInput', function() {
     return {
         restrict: 'E',
         scope: {
-            argCollection: '=',
             arg: '='
         },
         controller: ['$scope', function($scope) {
             var inputType, isScalar;
 
-            $scope.argCollection[$scope.arg.name] = $scope.arg.default;
             $scope.isScalar = $scope.arg.choices === null;
+            $scope.arg.value = $scope.arg.default;
+            $scope.arg.required = $scope.arg.required || $scope.arg.default !== null;
 
             if ($scope.isScalar) {
                 if ($scope.arg.type == 'int') {

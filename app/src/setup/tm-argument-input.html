@@ -1,8 +1,8 @@
 <div class="form-group">
     <label>{{:: arg.name }}</label>
-    <input ng-if="isScalar" type="{{inputType}}" ng-model="argCollection[arg.name]">
+    <input ng-if="isScalar" type="{{inputType}}" ng-model="arg.value">
     <div ng-if="!isScalar">
-        <select ng-model="argCollection[arg.name]">
+        <select ng-model="arg.value">
             <option ng-repeat="choice in arg.choices" ng-value="choice">{{choice}}</option>
         </select>
     </div>

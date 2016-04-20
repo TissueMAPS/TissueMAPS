@@ -30,7 +30,7 @@
 
         <div class="row">
           <div class="col-md-12">
-            <button ng-click="setupCtrl.goToNextStage()" class="btn btn-primary">
+            <button ng-click="setupCtrl.goToNextStage()" ng-disabled="!setupCtrl.canProceedToNextStage()" class="btn btn-primary">
               {{ setupCtrl.submitButtonText }}
             </button>
           </div>
