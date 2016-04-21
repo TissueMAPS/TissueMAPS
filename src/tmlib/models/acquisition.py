@@ -116,8 +116,7 @@ class Acquisition(Model, DateMixIn):
         '''str: upload status based on the status of microscope files'''
         child_status = set([
             f.upload_status for f in self.microscope_image_files
-        ])
-        child_status.union(set([
+        ]).union(set([
             f.upload_status for f in self.microscope_metadata_files
         ]))
         if fus.UPLOADING in child_status:
