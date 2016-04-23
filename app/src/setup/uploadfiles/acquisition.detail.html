@@ -9,12 +9,11 @@
       Upload new files:
       <div class="file-drop-zone well"
         ngf-drop="acquisitionDetailCtrl.dropFiles($files)"
-        ng-model="acquisitionDetailCtrl.newFiles"
         ngf-drag-over-class="file-drop-zone-hover"
         ngf-multiple="true"
         ngf-allow-dir="true"
-        ngf-keep="true"
-        ngf-accept="'image/*'">
+        ngf-keep="false"
+        ngf-accept="'*'">
 
         <div ng-show="!acquisitionDetailCtrl.newFiles.length">
           <p>Drag your files here</p>

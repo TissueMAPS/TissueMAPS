@@ -1,14 +1,40 @@
 class AcquisitionDetailCtrl {
 
-    newFiles: MicroscopeFile[];
+    newFiles: MicroscopeFile[] = [];
 
-    static $inject = ['acquisition', '$state'];
+    static $inject = ['acquisition', '$state', '$http', '$q'];
 
-    constructor(public acquisition: Acquisition, private _$state) {}
+    constructor(public acquisition: Acquisition, private _$state,
+                private _$http, private _$q) {}
+
+    filterValidFiles(files: {name: string;}[]) {
+        return this._$http.post('/api/acquisitions/' + this.acquisition.id + '/file-validity-check', {
+            files: files.map((f) => {
+                return {name: f.name};
+            })
+        })
+        .then((resp) => {
+            var isValid = resp.data.is_valid;
+            var validFiles = [];
+            for (var i = 0; i < files.length; i++) {
+                if (isValid[i]) {
+                    validFiles.push(files[i]);
+                }
+            }
+            return validFiles;
+        })
+        .catch((resp) => {
+            return this._$q.reject(resp.data.error);
+        });
+    }
 
     dropFiles(files) {
-        _(files).each(function(f) {
-            f.status = 'WAITING';
+        this.filterValidFiles(files)
+        .then((validFiles) => {
+            validFiles.forEach((f) => {
+                f.status = 'WAITING';
+                this.newFiles.push(f);
+            });
         });
     }
 

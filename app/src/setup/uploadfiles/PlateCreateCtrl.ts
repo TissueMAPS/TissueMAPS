@@ -15,7 +15,7 @@ class PlateCreateCtrl {
         })
         .then((plate) => {
             this._$state.go('plate', {}, {
-                reload: 'plate'
+                reload: 'setup'
             });
         })
         .catch((error) => {

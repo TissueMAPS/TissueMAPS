@@ -10,9 +10,7 @@
     <div class="row">
       <div class="col-md-12 stage-indicator-container">
         <ul class="stage-indicators">
-          <li class="stage-indicator" ng-class="{active: setupCtrl.inUploadFiles}"
-            ng-click="setupCtrl.goToUploadFiles()">upload files</li>
-          <li class="stage-indicator" ng-repeat="stage in setupCtrl.workflowDescription.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
+          <li class="stage-indicator" ng-repeat="stage in setupCtrl.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
             ng-click="setupCtrl.goToStage(stage)">
             {{::stage.name.replace('_', ' ')}}
           </li>

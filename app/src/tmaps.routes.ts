@@ -125,9 +125,21 @@ angular.module('tmaps.ui')
         controller: 'SetupCtrl',
         controllerAs: 'setupCtrl',
         resolve: {
-            'experiment': getExperiment,
-            'workflowDescription': ['experiment', (experiment) => {
+            experiment: getExperiment,
+            workflowDescription: ['experiment', (experiment) => {
                 return experiment.workflowDescription;
+            }],
+            plates: ['$http', 'experiment', '$state', '$q',
+                     ($http, experiment, $state, $q) => {
+                var def = $q.defer();
+                Plate.getAll(experiment.id).then((plates) => {
+                    def.resolve(plates);
+                })
+                .catch((error) => {
+                    $state.go('userpanel');
+                    def.reject(error);
+                })
+                return def.promise;
             }]
         },
         onEnter: function() {
@@ -140,7 +152,7 @@ angular.module('tmaps.ui')
             'stage-view': {
                 templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
             }
-        }
+        },
     })
     .state('setup.stage', {
         url: '/stages/:stageName',
@@ -156,7 +168,13 @@ angular.module('tmaps.ui')
                 var stage = _.find(workflowDescription.stages, (st: any) => {
                     return st.name === $stateParams.stageName;
                 });
-                return stage;
+                if (stage !== undefined) {
+                    return stage;
+                } else {
+                    return {
+                        name: 'uploadfiles'
+                    };
+                }
             }]
         }
     })
@@ -166,23 +184,6 @@ angular.module('tmaps.ui')
         templateUrl: '/src/setup/uploadfiles/plate.html',
         controller: 'PlateListCtrl',
         controllerAs: 'plateListCtrl',
-        onEnter: () => {
-            console.log('Enter plate');
-        },
-        resolve: {
-            plates: ['$http', 'experiment', '$state', '$q',
-                     ($http, experiment, $state, $q) => {
-                var def = $q.defer();
-                Plate.getAll(experiment.id).then((plates) => {
-                    def.resolve(plates);
-                })
-                .catch((error) => {
-                    $state.go('userpanel');
-                    def.reject(error);
-                })
-                return def.promise;
-            }]
-        },
         breadcrumb: {
             // class: 'highlight',
             text: 'plates',

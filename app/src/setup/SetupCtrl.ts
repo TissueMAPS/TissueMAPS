@@ -1,32 +1,26 @@
 class SetupCtrl {
 
     currentStage;
+    stages;
 
-    static $inject = ['experiment', 'workflowDescription', '$state'];
-
-    get inUploadFiles() {
-        return this.currentStage.name === 'uploadfiles';
-    }
+    static $inject = ['experiment', 'workflowDescription', 'plates', '$state'];
 
     isInStage(stage) {
         return this.currentStage.name === stage.name;
     }
 
-    goToUploadFiles() {
-        this.currentStage = {
-            name: 'uploadfiles'
-        };
-        this._$state.go('plate');
-    }
-
     goToStage(stage) {
         this.currentStage = stage;
-        this._$state.go('setup.stage', {
-            stageName: stage.name
-        });
+        if (stage.name === 'uploadfiles') {
+            this._$state.go('plate');
+        } else {
+            this._$state.go('setup.stage', {
+                stageName: stage.name
+            });
+        }
     }
 
-    private _checkArgsForStage(stage): boolean {
+    private _checkArgsForWorkflowStage(stage): boolean {
         var submissionArgsAreValid, batchArgsAreValid, extraArgsAreValid;
         var isValid: boolean;
 
@@ -59,52 +53,62 @@ class SetupCtrl {
         return _.all(areStagesOk);
     }
 
+    private _isUploadStageOk() {
+        var atLeastOnePlate = this.plates.length > 0;
+        var allPlatesReady = _.all(this.plates.map((pl) => {
+            return pl.isReadyForProcessing;
+        }));
+        var isUploadStageOk = atLeastOnePlate && allPlatesReady;
+        return isUploadStageOk;
+    }
+
+    private _areWorkflowStagesOk() {
+        var areWorkflowStagesOk = _.all(this.workflowDescription.stages.map((st) => {
+            return this._checkArgsForWorkflowStage(st);
+        }));
+        return areWorkflowStagesOk;
+    }
+
     private _areAllStagesOk(): boolean {
-        return _.all(this.workflowDescription.stages.map((st) => {
-            return this._checkArgsForStage(st);
-        }))
+        return this._isUploadStageOk() && this._areWorkflowStagesOk();
     }
 
     private _isLastStage(stage): boolean {
-        var stages = this.workflowDescription.stages;
-        var idx = stages.indexOf(stage);
-        return idx === stages.length - 1;
+        var idx = this.stages.indexOf(stage);
+        return idx === this.stages.length - 1;
     }
 
     canProceedToNextStage(): boolean {
         if (this._isLastStage(this.currentStage)) {
             return this._areAllStagesOk();
         } else {
-            return this._checkArgsForStage(this.currentStage);
+            if (this.currentStage.name !== 'uploadfiles') {
+                return this._checkArgsForWorkflowStage(this.currentStage);
+            } else {
+                return this._isUploadStageOk();
+            }
         }
     }
 
     goToNextStage() {
-        var stages = this.workflowDescription.stages;
-        if (this.currentStage.name == 'uploadfiles') {
-            this._$state.go('setup.stage', {
-                stageName: this.workflowDescription.stages[0].name
-            });
-        } else {
-            var idx = stages.indexOf(this.currentStage);
-            if (idx >= 0) {
-                var inLastStage = idx == stages.length - 1
-                if (inLastStage) {
-                    if (this._areAllStagesOk()) {
-                        console.log('SUBMIT');
-                        this._submitWorkflow();
-                    } else {
-                        console.log('SOME STAGES NOT OK, CANNOT SUBMIT');
-                    }
+        var idx = this.stages.indexOf(this.currentStage);
+        if (idx >= 0) {
+            var inLastStage = idx == this.stages.length - 1
+            if (inLastStage) {
+                if (this._areAllStagesOk()) {
+                    console.log('SUBMIT');
+                    this._submitWorkflow();
                 } else {
-                    var newStage = stages[idx + 1];
-                    this.currentStage = newStage;
-                    this._$state.go('setup.stage', {
-                        stageName: newStage.name
-                    }, {
-                        reload: 'setup.stage'
-                    });
+                    console.log('SOME STAGES NOT OK, CANNOT SUBMIT');
                 }
+            } else {
+                var newStage = this.stages[idx + 1];
+                this.currentStage = newStage;
+                this._$state.go('setup.stage', {
+                    stageName: newStage.name
+                }, {
+                    reload: 'setup.stage'
+                });
             }
         }
     }
@@ -140,7 +144,7 @@ class SetupCtrl {
     }
 
     get submitButtonText() {
-        if (this.currentStage.name === 'image_analysis') {
+        if (this._isLastStage(this.currentStage)) {
             return 'Submit';
         } else {
             return 'Next';
@@ -149,22 +153,24 @@ class SetupCtrl {
 
     constructor(public experiment: Experiment,
                 public workflowDescription: any,
+                public plates: Plate[],
                 private _$state) {
-        // TODO: remove
-        console.log(workflowDescription);
-        this.currentStage = workflowDescription.stages[0];
-        window['wfd'] = this.workflowDescription;
-        switch(experiment.status) {
-            case 'WAITING':
-                console.log('REDIRECT');
-                // this._$state.go('plate');
-                // this.currentStage = 'uploadfiles';
-                break;
-            default:
-                throw new Error(
-                    'Unknown experiment status: ' + experiment.status
-                );
-        }
+        var uploadStage = {
+            name: 'uploadfiles'
+        };
+        this.currentStage = uploadStage;
+        this.stages = [uploadStage].concat(workflowDescription.stages);
+        // console.log(experiment);
+        // switch(experiment.status) {
+        //     case 'WAITING':
+        //         this._$state.go('plate');
+        //         this.currentStage.name = 'uploadfiles';
+        //         break;
+        //     default:
+        //         throw new Error(
+        //             'Unknown experiment status: ' + experiment.status
+        //         );
+        // }
     }
 
     // switch(experiment.status) {

@@ -93,4 +93,12 @@ class Plate {
         });
         return def.promise;
     }
+
+    get isReadyForProcessing() {
+        var hasMinOneAcquisition = this.acquisitions.length > 0; 
+        var allAcquisitionsReady = _.all(this.acquisitions.map((aq) => {
+            return aq.status === 'COMPLETE';
+        }));
+        return hasMinOneAcquisition && allAcquisitionsReady;
+    }
 }
