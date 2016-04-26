@@ -144,7 +144,7 @@ class MetadataExtractor(ClusterRoutines):
                         'Extraction of OMEXML failed! Error message:\n%s'
                         % stderr
                     )
-                img_file.omexml = stdout
+                img_file.omexml = unicode(stdout)
 
     @notimplemented
     def collect_job_output(self, batch):
