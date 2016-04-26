@@ -4,11 +4,6 @@ module.exports = function(gulp, opt) {
     var es = require('event-stream');
     var revReplace = require('gulp-rev-replace');
 
-    gulp.task('copy-src', function() {
-        return gulp.src('./app/src/**/*.ts', {base: './'})
-            .pipe(gulp.dest(opt.destFolder));
-    });
-
     gulp.task('copy', function() {
         // Copy all angular templates 
         var s1 = gulp.src('./app/src/**/*.html', {base: './app'})
@@ -26,11 +21,17 @@ module.exports = function(gulp, opt) {
         /**
          * If the build runs in dev mode the index should just be copied over
          * to the build directory.
+         * Furthermore, all source files should be copied as well such that
+         * the source code can be inspected using the debugger.
          */
         var s5;
-        if (!opt.prod) {
+        if (opt.dev) {
            s5 = gulp.src('./app/index.html', {base: './app'})
                .pipe(gulp.dest(opt.destFolder));
+           var s6 = gulp.src('./app/src/**/*.ts', {base: './'})
+               .pipe(gulp.dest(opt.destFolder));
+
+            return es.merge(s1, s2, s3, s4, s5, s6);
         /**
          * If the build runs in production mode then we need to
          * replace all references to javascript files in the index with the files
@@ -49,9 +50,10 @@ module.exports = function(gulp, opt) {
                 .pipe(revReplace({manifest: libsManifest}))
                 .pipe(revReplace({manifest: styleManifest}))
                 .pipe(gulp.dest(opt.destFolder));
-            }
 
-        return es.merge(s1, s2, s3, s4, s5);
+            return es.merge(s1, s2, s3, s4, s5);
+        }
+
     });
 
 };
