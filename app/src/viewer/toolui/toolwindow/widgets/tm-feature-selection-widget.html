@@ -10,7 +10,7 @@
       <form>
         <ul class="list-group">
           <li
-            ng-repeat="tab in featureWidget.featureTabsForChosenName | filter:featureWidget.featureQuery"
+            ng-repeat="tab in featureWidget.featureTabsForChosenType | filter:featureWidget.featureQuery"
             class="list-group-item" ng-class="{selected: tab.selected}"
             ng-click="featureWidget.toggleFeatureSelection(tab)">
 

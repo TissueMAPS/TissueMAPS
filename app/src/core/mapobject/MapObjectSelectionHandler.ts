@@ -69,6 +69,12 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             s.selectionLayer.visible = true;
         });
 
+        this._activeMapObjectType = t;
+
+        this._hideSegmentationLayersExceptForType(t);
+    }
+
+    private _hideSegmentationLayersExceptForType(t: string) {
         // Hide all other segmentation layers (mapobject outlines)
         // form the map and only display the one for the active mapobject type.
         for (var t2 in this._segmentationLayers) {
@@ -79,8 +85,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (this._segmentationLayers[t] !== undefined) {
             this._segmentationLayers[t].visible = true;
         }
-
-        this._activeMapObjectType = t;
     }
 
     /**
@@ -94,7 +98,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (sel === null) {
             this._activeSelection = null;
         } else {
+            // TODO: show segm layres
             this._activeSelection = sel;
+            this._hideSegmentationLayersExceptForType(sel.mapObjectType);
         }
     }
 

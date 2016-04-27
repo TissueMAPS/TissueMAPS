@@ -1,7 +1,7 @@
 interface SVMScope extends ToolWindowContentScope {
     svm: SVMToolCtrl;
     featureWidget: FeatureSelectionWidgetCtrl;
-    objectNameWidget: ObjectNameWidgetCtrl;
+    mapobjectTypeWidget: MapobjectTypeWidgetCtrl;
     classSelectionWidget: ClassSelectionWidgetCtrl;
 }
 
@@ -30,7 +30,7 @@ class SVMToolCtrl extends ToolCtrl {
         });
 
         this.sendRequest({
-            chosen_object_type: this.$scope.objectNameWidget.selectedName,
+            chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
             selected_features: selectedFeatures,
             kernel: 'rbf',
             training_classes: trainingClasses

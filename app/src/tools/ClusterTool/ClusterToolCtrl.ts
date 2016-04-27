@@ -1,6 +1,6 @@
 interface ClusterScope extends ToolWindowContentScope {
     featureWidget: FeatureSelectionWidgetCtrl;
-    objectNameWidget: ObjectNameWidgetCtrl;
+    mapobjectTypeWidget: MapobjectTypeWidgetCtrl;
 }
 
 class ClusterToolCtrl extends ToolCtrl {
@@ -16,7 +16,7 @@ class ClusterToolCtrl extends ToolCtrl {
     doCluster() {
         var selectedFeatures = this.$scope.featureWidget.selectedFeatures;
         this.sendRequest({
-            chosen_object_type: this.$scope.objectNameWidget.selectedName,
+            chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
             selected_features: selectedFeatures,
             k: this.nClusters
         });

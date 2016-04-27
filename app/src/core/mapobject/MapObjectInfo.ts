@@ -1,5 +1,5 @@
 class MapObjectInfo {
-    constructor(public mapObjectName: string,
+    constructor(public mapobjectTypeName: string,
                 public features: Feature[]) {
     }
 }

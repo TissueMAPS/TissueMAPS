@@ -112,7 +112,7 @@
         "app/src/viewer/toolui/ToolUICtrl.ts",
         "app/src/viewer/toolui/toolwindow/tmToolWindow.ts",
 
-        "app/src/viewer/toolui/toolwindow/widgets/tmObjectNameWidget.ts",
+        "app/src/viewer/toolui/toolwindow/widgets/tmMapobjectTypeWidget.ts",
         "app/src/viewer/toolui/toolwindow/widgets/tmFeatureSelectionWidget.ts",
         "app/src/viewer/toolui/toolwindow/widgets/tmClassSelectionWidget.ts",
 

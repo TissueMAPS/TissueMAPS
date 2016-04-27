@@ -32,9 +32,9 @@ class ClassSelectionWidgetCtrl {
 
     private get _selectedMapobjectType() {
         var parentScope = this.$scope.$parent;
-        var objectTypeWidget: ObjectNameWidgetCtrl =
-            parentScope['objectNameWidget'];
-        return objectTypeWidget.selectedName;
+        var objectTypeWidget: MapobjectTypeWidgetCtrl =
+            parentScope['mapobjectTypeWidget'];
+        return objectTypeWidget.selectedType;
     }
 
     private _classes: Class[] = [];
