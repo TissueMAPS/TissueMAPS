@@ -20,13 +20,19 @@ class ObjectNameWidgetCtrl {
     static $inject = ['$scope'];
 
     mapObjectNames: string[] = [];
-    selectedName: string;
 
-    constructor($scope: any) {
-        this.selectedName = $scope.viewer.mapObjectSelectionHandler.activeMapObjectType;
-        this.mapObjectNames = $scope.viewer.experiment.mapobjectTypes.map((t) => {
+    constructor(private _$scope: any) {
+        this.mapObjectNames = this._$scope.viewer.experiment.mapobjectTypes.map((t) => {
             return t.name;
         });
+    }
+
+    get selectedName() {
+        return this._$scope.viewer.mapObjectSelectionHandler.activeMapObjectType;
+    }
+
+    set selectedName(t: string) {
+        this._$scope.viewer.mapObjectSelectionHandler.activeMapObjectType = t;
     }
 }
 
