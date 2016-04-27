@@ -118,9 +118,6 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     addMapObjectType(t: MapObjectType) {
-        // Check if this is the first time a type is added (null is always in the dict,
-        // therefore we check if the length is 1).
-        var isFirstTypeAdded = _(this._selectionsByType).keys().length === 1;
         this._selectionsByType[t] = [];
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = t;
@@ -130,7 +127,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             experimentId: this.viewer.experiment.id,
             zlevel: 0,
             size: this.viewport.mapSize,
-            visible: isFirstTypeAdded
+            visible: false
         });
         this.viewport.addLayer(segmLayer);
     }
