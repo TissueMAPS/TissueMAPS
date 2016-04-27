@@ -59,6 +59,13 @@ class Viewer {
     set currentResult(r: ToolResult) {
         this.deleteCurrentResult();
         this._currentResult = r;
+        this._hideAllSavedResults();
+    }
+
+    private _hideAllSavedResults() {
+        this.savedResults.forEach((r) => {
+            r.hide(this);
+        });
     }
 
     private _deleteResult(res: ToolResult) {
