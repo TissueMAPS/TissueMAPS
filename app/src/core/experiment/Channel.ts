@@ -43,6 +43,9 @@ class Channel implements Layer {
 
         args.layers.forEach((l) => {
             this._layers[l.zplane] = new ChannelLayer(l);
+            if (l.zplane !== 0) {
+                this._layers[l.zplane].visible = false;
+            }
         });
         this.visible = args.visible;
     }
@@ -128,7 +131,7 @@ class Channel implements Layer {
     }
 
     /**
-     * @property {number} min - The upper bound used when stretching intensity
+     * @property {number} max - The upper bound used when stretching intensity
      * according to the formula I' = (I - min) / (max - min) * 255.
      * @default 255
      */
