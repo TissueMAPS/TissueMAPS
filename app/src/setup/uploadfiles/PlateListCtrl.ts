@@ -10,7 +10,7 @@ class PlateListCtrl {
                 private _$state: any) {}
 
     deletePlate(plate: Plate) {
-        Plate.delete(plate.id)
+        (new PlateDAO()).delete(plate.id)
         .then((resp) => {
             this._$state.go('plate', {}, {
                 reload: 'plate'

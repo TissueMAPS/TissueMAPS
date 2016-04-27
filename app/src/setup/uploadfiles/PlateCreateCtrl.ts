@@ -9,7 +9,8 @@ class PlateCreateCtrl {
                 private _$state) {}
 
     createPlate(name: string, description: string) {
-        Plate.create(this.experiment.id, {
+        (new PlateDAO()).create({
+            experiment_id: this.experiment.id,
             name: name,
             description: description
         })

@@ -83,7 +83,6 @@ class Channel implements Layer {
      * @param {number} z - The new currently active z plane.
      */
     setZplane(z: number) {
-        console.log('channel: ', z);
         if (z == this._currentZplane) {
             return;
         }

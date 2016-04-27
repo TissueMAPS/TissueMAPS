@@ -7,8 +7,6 @@ class ContinuousLabelResult extends LabelResult {
     getLabelColorMapper() {
         return (label) => {
             var normLabel = (label - this.attributes.min) / this.attributes.max;
-            console.log(this.attributes);
-            console.log(normLabel);
             if (normLabel <= 0.5) {
                 normLabel *= 2;
                 var rescaledLabel = 255 * normLabel;

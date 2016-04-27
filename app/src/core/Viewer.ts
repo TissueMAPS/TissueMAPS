@@ -34,9 +34,9 @@ class Viewer {
         // TODO: The process of adding the layers could be made nicer.
         // The view should be set independent of 'ChannelLayers' etc.
         this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this);
-        this.experiment.mapObjectNames.forEach((name) => {
-            this.mapObjectSelectionHandler.addMapObjectType(name);
-            this.mapObjectSelectionHandler.addNewSelection(name);
+        this.experiment.mapobjectTypes.forEach((t) => {
+            this.mapObjectSelectionHandler.addMapObjectType(t.name);
+            this.mapObjectSelectionHandler.addNewSelection(t.name);
         });
 
         //// DEBUG

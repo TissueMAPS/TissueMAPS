@@ -26,7 +26,7 @@ angular.module('tmaps.ui')
                 var wasExperimentIdSupplied =
                     experimentId !== undefined && experimentId !== '';
                 if (wasExperimentIdSupplied) {
-                    return Experiment.get(experimentId)
+                    return (new ExperimentDAO()).get(experimentId)
                     .then((exp) => {
                         lastUsed.experiment = exp;
                         return exp;
@@ -129,7 +129,7 @@ angular.module('tmaps.ui')
                 var wasExperimentIdSupplied =
                     experimentId !== undefined && experimentId !== '';
                 if (wasExperimentIdSupplied) {
-                    return Experiment.get(experimentId)
+                    return (new ExperimentDAO()).get(experimentId)
                     .then((exp) => {
                         lastUsed.experiment = exp;
                         return exp;
@@ -172,7 +172,9 @@ angular.module('tmaps.ui')
             plates: ['$http', 'experiment', '$state', '$q',
                      ($http, experiment, $state, $q) => {
                 var def = $q.defer();
-                Plate.getAll(experiment.id).then((plates) => {
+                (new PlateDAO()).getAll({
+                    experiment_id: experiment.id
+                }).then((plates) => {
                     def.resolve(plates);
                 })
                 .catch((error) => {
@@ -207,7 +209,7 @@ angular.module('tmaps.ui')
         resolve: {
             plate: ['$http', '$stateParams', ($http, $stateParams) => {
                 var plateId = $stateParams.plateid;
-                return Plate.get(plateId);
+                return (new PlateDAO()).get(plateId);
             }]
         },
         breadcrumb: {
@@ -241,7 +243,7 @@ angular.module('tmaps.ui')
         resolve: {
             acquisition: ['$stateParams', function($stateParams) {
                 var acquisitionId = $stateParams.acquisitionid;
-                return Acquisition.get(acquisitionId);
+                return (new AcquisitionDAO()).get(acquisitionId);
             }]
         },
         breadcrumb: {

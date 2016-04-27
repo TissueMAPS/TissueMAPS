@@ -21,7 +21,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         null: []
     };
 
-    private _activeMapObjectType: MapObjectType = null;
+    private _activeMapObjectType: string = null;
     private _activeSelection: MapObjectSelection = null;
     private _outlineLayers: {[objectType: string]: VectorLayer;} = {};
 
@@ -49,7 +49,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._activeMapObjectType;
     }
 
-    set activeMapObjectType(t: MapObjectType) {
+    set activeMapObjectType(t: string) {
         if (!this._isValidType(t)) {
             return;
         }
@@ -102,7 +102,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._activeSelection;
     }
 
-    get supportedMapObjectTypes(): MapObjectType[] {
+    get supportedMapObjectTypes(): string[] {
         return _.chain(this._selectionsByType).keys().difference(['null']).value();
     }
 
@@ -117,7 +117,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._selectionsByType[type];
     }
 
-    addMapObjectType(t: MapObjectType) {
+    addMapObjectType(t: string) {
         // Check if this is the first time a type is added (null is always in the dict,
         // therefore we check if the length is 1).
         var isFirstTypeAdded = _(this._selectionsByType).keys().length === 1;
@@ -207,7 +207,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         }
     };
 
-    private _isValidType(t: MapObjectType) {
+    private _isValidType(t: string) {
         if (t === undefined || this._selectionsByType[t] === undefined) {
             console.log('Not a valid type: ', t);
             return false;

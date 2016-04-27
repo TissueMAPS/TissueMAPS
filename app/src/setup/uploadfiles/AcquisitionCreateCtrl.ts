@@ -7,7 +7,8 @@ class AcquisitionCreateCtrl {
     constructor(public plate: Plate, private _$http, private _$state) {}
 
     createAcquisition(name: string, description: string) {
-        Acquisition.create(this.plate.id, {
+        (new AcquisitionDAO()).create({
+            plate_id: this.plate.id,
             name: name,
             description: description
         })
