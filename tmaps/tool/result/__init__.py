@@ -1,1 +1,4 @@
-from label import LabelResult, ContinuousLabelResult, ScalarLabelResult
+from label import (
+    LabelResult, ContinuousLabelResult, ScalarLabelResult,
+    SupervisedClassifierResult
+)

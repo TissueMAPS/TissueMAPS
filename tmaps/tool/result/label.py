@@ -9,6 +9,9 @@ from tmaps.extensions import db
 from tmaps.model import Model
 
 
+# TODO: This should be a subtype of ToolResult
+# Only the labelling-specific stuff should be on this 
+# model
 class LabelResult(Model):
     __tablename__ = 'label_results'
 
@@ -32,7 +35,7 @@ class LabelResult(Model):
         backref=backref('label_results', cascade='all, delete-orphan')
     )
 
-    def __init__(self, ids, labels, mapobject_type_id, session_id, attributes=None):
+    def __init__(self, ids, labels, mapobject_type_id, session_id, attributes={}):
         self.result_type = self.__class__.__name__
         self.mapobject_type_id = mapobject_type_id
         self.tool_session_id = session_id
@@ -91,20 +94,40 @@ class LabelResultLabel(Model):
 
 
 class ScalarLabelResult(LabelResult):
+    """A tool result that assigns each mapobject a discrete value."""
 
-    def __init__(self, ids, labels, mapobject_type_id, session_id, attributes={}):
-        attributes.update({
-            'labels': list(set(labels))
-        })
+    def __init__(self, ids, labels, mapobject_type_id, session_id):
         super(ScalarLabelResult, self).__init__(
-            ids, labels, mapobject_type_id, session_id, attributes=attributes)
+            ids, labels, mapobject_type_id, session_id
+        )
+        self.attributes['labels'] = list(set(labels))
 
 
 class ContinuousLabelResult(LabelResult):
-    def __init__(self, ids, labels, mapobject_type_id, session_id, attributes={}):
-        attributes.update({
+    """A tool result that assigns each mapobject a (pseudo)-continuous value.
+    Assigning each cell a numeric value based on its area would be an example
+    for such a result."""
+    def __init__(self, ids, labels, mapobject_type_id, session_id):
+        super(ContinuousLabelResult, self).__init__(
+            ids, labels, mapobject_type_id, session_id
+        )
+        self.attributes.update({
             'min': np.min(labels),
             'max': np.max(labels)
         })
-        super(ContinuousLabelResult, self).__init__(
-            ids, labels, mapobject_type_id, session_id, attributes=attributes)
+
+
+class SupervisedClassifierResult(ScalarLabelResult):
+    """A result of a supervised classifier like an SVM.
+    Results of such classifiers have specific colors associated with class
+    labels.
+
+    """
+    def __init__(self, *args, **kwargs):
+        color_map = kwargs.pop('color_map')
+        if not color_map:
+            raise ValueError('ClassifierResult needs a color_map attribute')
+        super(SupervisedClassifierResult, self).__init__(*args, **kwargs)
+        self.attributes.update({
+            'color_map': color_map
+        })

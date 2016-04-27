@@ -11,14 +11,17 @@ def json_encoder(obj_type):
 
 
 class TmJSONEncoder(flask.json.JSONEncoder):
-    def default(self, obj):
-        if type(obj) in _serializers:
-            return _serializers[type(obj)](obj, self)
+    def _serialize_as_type(self, obj, t):
+        if t is None:
+            return None
+        elif t in _serializers:
+            return _serializers[t](obj, self)
         else:
-            for cls in type(obj).__bases__:
-                if cls in _serializers:
-                    return _serializers[cls](obj, self)
-        return flask.json.JSONEncoder.default(self, obj)
+            return self._serialize_as_type(obj, t.__base__)
 
-
-
+    def default(self, obj):
+        serialized = self._serialize_as_type(obj, type(obj))
+        if serialized is not None:
+            return serialized
+        else:
+            return flask.json.JSONEncoder.default(self, obj)

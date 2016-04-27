@@ -5,7 +5,7 @@ from sklearn import svm, cross_validation
 
 from tmlib.models import MapobjectType
 from tmaps.extensions import db
-from tmaps.tool.result import ScalarLabelResult
+from tmaps.tool.result import SupervisedClassifierResult
 
 
 class SVMTool():
@@ -19,7 +19,7 @@ class SVMTool():
                 {
                     "name": str,
                     "object_ids": List[int],
-                    "color": {r: int, g: int, b: int, a: float}
+                    "color": str  # hex string, e.g. #ffffff
                 }
             ]
         }
@@ -46,6 +46,9 @@ class SVMTool():
             y = np.repeat(cls['name'], len(ids))
             ys.append(y)
 
+        color_map = \
+            {cls['name']: cls['color'] for cls in payload['training_classes']}
+
         y_train = np.concatenate(ys)
         X_train = np.vstack(Xs)
 
@@ -68,12 +71,10 @@ class SVMTool():
         all_object_ids = training_ids + X_pred.index.tolist()
         all_object_labels = y_train.tolist() + y_pred.tolist()
 
-        response = ScalarLabelResult(
+        response = SupervisedClassifierResult(
             ids=all_object_ids, labels=all_object_labels,
             mapobject_type_id=mapobject_type.id,
-            session_id=session.id, attributes={
-                'best_params': gs.best_params_,
-                'best_score': gs.best_score_
-            })
+            session_id=session.id, color_map=color_map
+        )
 
         return response
