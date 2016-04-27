@@ -44,46 +44,29 @@ angular.module('tmaps.ui')
                 if (newSession === undefined) {
                     return;
                 }
-                if (oldSession !== undefined && newSession.uuid === oldSession.uuid) {
+                var clickedOnSameToolButtonAgain =
+                    oldSession !== undefined && newSession.uuid === oldSession.uuid;
+                if (clickedOnSameToolButtonAgain) {
                     return;
                 }
 
-                var oldContent = elem.children().get(0);
-                if (oldContent) {
-                    toolWindowDOMCache[oldSession.uuid] = oldContent;
-                    oldContent.remove();
-                }
-
-                var cachedDOMElement = toolWindowDOMCache[newSession.uuid];
-                var hasCachedDOMElement = cachedDOMElement !== undefined;
-
-                if (!hasCachedDOMElement) {
-                    var templateUrl = newSession.tool.templateUrl;
-                    $templateRequest(templateUrl).then(function(resp) {
-                        var newScope = scope.$new();
-                        var toolCtrl = $controller(newSession.tool.controller, {
-                            'viewer': scope.viewer,
-                            '$scope': newScope
-                        });
-                        toolCtrl.sendRequest = function(payload) {
-                            return scope.viewer.sendToolRequest(newSession, payload);
-                        }.bind(toolCtrl);
-                        newScope['toolCtrl'] = toolCtrl;
-                        var newContent = $compile(resp)(newScope)
-                        elem.append(newContent);
+                var oldContent = elem.children();
+                oldContent.remove();
+                var templateUrl = newSession.tool.templateUrl;
+                $templateRequest(templateUrl).then(function(resp) {
+                    var newScope = scope.$new();
+                    var toolCtrl = $controller(newSession.tool.controller, {
+                        'viewer': scope.viewer,
+                        '$scope': newScope
                     });
-                } else {
-                    elem.append(toolWindowDOMCache[newSession.uuid]);
-                }
+                    toolCtrl.sendRequest = function(payload) {
+                        return scope.viewer.sendToolRequest(newSession, payload);
+                    }.bind(toolCtrl);
+                    newScope['toolCtrl'] = toolCtrl;
+                    var newContent = $compile(resp)(newScope)
+                    elem.append(newContent);
+                });
 
-            });
-
-            scope.$on('$destroy', function() {
-                var currentSession = scope.toolUICtrl.currentSession;
-                var currentContent = elem.children().get(0);
-                if (currentContent) {
-                    toolWindowDOMCache[currentSession.id] = currentContent;
-                }
             });
         }
     };
