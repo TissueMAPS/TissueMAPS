@@ -24,7 +24,8 @@ class SVMToolCtrl extends ToolCtrl {
         this.$scope.classSelectionWidget.classes.forEach((cls) => {
             trainingClasses.push({
                 name: cls.name,
-                object_ids: cls.mapobjectIds
+                object_ids: cls.mapobjectIds,
+                color: cls.color.toHex()
             });
         });
 

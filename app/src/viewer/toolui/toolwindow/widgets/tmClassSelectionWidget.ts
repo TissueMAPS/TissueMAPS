@@ -13,6 +13,7 @@ angular.module('tmaps.ui')
 interface Class {
     name: string;
     mapobjectIds: number[];
+    color: Color;
 }
 
 class ClassSelectionWidgetCtrl {
@@ -39,8 +40,10 @@ class ClassSelectionWidgetCtrl {
     private _classes: Class[] = [];
 
     /**
-     * To be called from the controller using this widget, e.g.:
-     * var theClasses = $scope.classSelectionWidget.classes;
+     * Step through all selection controllers and check if the selections
+     * should be used during training.
+     * If yes, then the mapobjects contained in the selection should
+     * be added to the class object.
      */
     private _computeClasses() {
         var clsMap = {};
@@ -49,12 +52,15 @@ class ClassSelectionWidgetCtrl {
             ctrls.forEach((ctrl) => {
                 if (ctrl.useAsClass) {
                     if (clsMap[ctrl.className] === undefined) {
-                        clsMap[ctrl.className] = [];
+                        clsMap[ctrl.className] = {
+                            mapobjectIds: [],
+                            color: ctrl.selection.color
+                        };
                     }
                     var mapobjectIds = ctrl.selection.mapObjects.map((o) => {
                         return o.id;
                     });
-                    Array.prototype.push.apply(clsMap[ctrl.className], mapobjectIds); 
+                    Array.prototype.push.apply(clsMap[ctrl.className].mapobjectIds, mapobjectIds); 
                 }
             });
         }
@@ -63,7 +69,8 @@ class ClassSelectionWidgetCtrl {
         for (var clsName in clsMap) {
             classes.push({
                 name: clsName,
-                mapobjectIds: clsMap[clsName]
+                mapobjectIds: clsMap[clsName].mapobjectIds,
+                color: clsMap[clsName].color
             });
         }
 

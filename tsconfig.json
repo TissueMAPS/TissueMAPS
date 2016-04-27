@@ -93,6 +93,7 @@
         "app/src/core/tool/result/LabelResult.ts",
         "app/src/core/tool/result/ContinuousLabelResult.ts",
         "app/src/core/tool/result/ScalarLabelResult.ts",
+        "app/src/core/tool/result/SupervisedClassifierResult.ts",
 
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
