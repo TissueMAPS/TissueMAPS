@@ -197,7 +197,7 @@ class ImageExtractor(ClusterRoutines):
             cycle_ids = np.unique(metadata.cycle_id)
             site_group = metadata.groupby('site_id')
             for i, sg in site_group:
-                if not all(np.unique(sg.cycle_id.values) == cycle_ids):
+                if len(np.setdiff1d(cycle_ids, sg.cycle_id.values)) > 0:
                     sites_to_omit = session.query(tm.ChannelImageFile).\
                         filter(tm.ChannelImageFile.id.in_(sg.id.values)).\
                         all()

@@ -93,13 +93,15 @@ class ImageRegistrator(ClusterRoutines):
                                 filter(tm.Site.id == s).\
                                 filter(tm.Cycle.id == cycle.id).\
                                 filter(tm.Channel.wavelength == args.ref_wavelength).\
+                                filter(~tm.ChannelImageFile.omitted).\
                                 all()
 
                             if not files:
-                                raise ValueError(
-                                    'No channel image files found for site %d '
-                                    'and cycle %d.' % (s, cycle.id)
+                                logger.warning(
+                                    'no files for site %d and cycle %d',
+                                    s, cycle.id
                                 )
+                                continue
 
                             ids = [f.id for f in files]
                             if cycle.index == args.ref_cycle:
