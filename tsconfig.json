@@ -75,7 +75,6 @@
         "app/src/core/visual/PointVisual.ts",
 
         "app/src/core/mapobject/MapObject.ts",
-        "app/src/core/mapobject/MapObjectInfo.ts",
         "app/src/core/mapobject/Feature.ts",
         "app/src/core/mapobject/MapObjectSelection.ts",
         "app/src/core/mapobject/MapObjectSelectionHandler.ts",
