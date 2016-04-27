@@ -131,7 +131,6 @@ class Viewport implements Serializable<Viewport> {
 
     goToMapObject(obj: MapObject) {
         console.log('TODO: Get outline polygon from server for the following mapobject:');
-        console.log(obj);
         // this.map.getView().fit(<ol.geom.SimpleGeometry> feat.getGeometry(), this.map.getSize(), {
         //     padding: [100, 100, 100, 100]
         // });

@@ -23,7 +23,6 @@ class SetupCtrl {
     constructor(public experiment: Experiment, private _$state) {
         switch(experiment.status) {
             case 'WAITING':
-                console.log('REDIRECT');
                 this._$state.go('plate');
                 this.currentStage = 'uploadfiles';
                 break;

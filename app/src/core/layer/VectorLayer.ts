@@ -40,7 +40,6 @@ class VectorLayer extends BaseLayer<ol.layer.Vector> {
             this._visuals.push(v);
             var src = this._olLayer.getSource();
             var feat = v.olFeature
-            console.log(feat);
             src.addFeature(feat);
         } else {
             console.log('Warning: trying to add undefined or null Visual.');
