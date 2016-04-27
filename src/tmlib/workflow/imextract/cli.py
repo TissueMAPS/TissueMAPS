@@ -19,7 +19,3 @@ class Imextract(CommandLineInterface):
         '''
         super(Imextract, self).__init__(api_instance)
 
-    @notimplemented
-    def collect(self, args):
-        pass
-

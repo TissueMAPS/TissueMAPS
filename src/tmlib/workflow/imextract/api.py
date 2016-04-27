@@ -1,9 +1,10 @@
 import os
 import numpy as np
+import pandas as pd
 import logging
 import collections
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib.utils import notimplemented
 from tmlib.readers import BFImageReader
 from tmlib.image import ChannelImage
@@ -47,11 +48,11 @@ class ImageExtractor(ClusterRoutines):
         '''
         job_count = 0
         job_descriptions = collections.defaultdict(list)
-        with tmlib.models.utils.Session() as session:
-            file_mappings = session.query(tmlib.models.ImageFileMapping).\
-                join(tmlib.models.Acquisition).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+        with tm.utils.Session() as session:
+            file_mappings = session.query(tm.ImageFileMapping).\
+                join(tm.Acquisition).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
                 all()
 
             batches = self._create_batches(file_mappings, args.batch_size)
@@ -76,7 +77,7 @@ class ImageExtractor(ClusterRoutines):
                         'channel_image_files': [
                             os.path.join(
                                 fmapping.cycle.channel_images_location,
-                                tmlib.models.ChannelImageFile.FILENAME_FORMAT.
+                                tm.ChannelImageFile.FILENAME_FORMAT.
                                 format(
                                     t=fmapping.tpoint,
                                     w=fmapping.site.well.name,
@@ -91,6 +92,11 @@ class ImageExtractor(ClusterRoutines):
                         fmapping.id for fmapping in batch
                     ]
                 })
+
+            job_descriptions['collect'] = {
+                'inputs': dict(),
+                'outputs': dict()
+            }
 
         return job_descriptions
 
@@ -107,8 +113,8 @@ class ImageExtractor(ClusterRoutines):
             file_mapping_ids = batch['image_file_mapping_ids']
             for i, fid in enumerate(file_mapping_ids):
                 filenames = batch['inputs']['microscope_image_files'][i]
-                with tmlib.models.utils.Session() as session:
-                    fmapping = session.query(tmlib.models.ImageFileMapping).\
+                with tm.utils.Session() as session:
+                    fmapping = session.query(tm.ImageFileMapping).\
                         get(fid)
                     planes = list()
                     for j, f in enumerate(filenames):
@@ -136,7 +142,7 @@ class ImageExtractor(ClusterRoutines):
                     img = ChannelImage(np.max(stack, axis=0))
                     # Write plane (2D single-channel image) to file
                     image_file = session.get_or_create(
-                        tmlib.models.ChannelImageFile,
+                        tm.ChannelImageFile,
                         tpoint=fmapping.tpoint, zplane=fmapping.zplane,
                         site_id=fmapping.site_id, cycle_id=fmapping.cycle_id,
                         channel_id=fmapping.channel_id
@@ -146,33 +152,58 @@ class ImageExtractor(ClusterRoutines):
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tmlib.models.ChannelImageFile`,
-        :py:class:`tmlib.models.IllumstatsFile`,
-        :py:class:`tmlib.models.ChannelLayer`, and
-        :py:class:`tmlib.models.MapobjectsType` as well as all children for
+        :py:class:`tm.ChannelImageFile`,
+        :py:class:`tm.IllumstatsFile`,
+        :py:class:`tm.ChannelLayer`, and
+        :py:class:`tm.MapobjectsType` as well as all children for
         the processed experiment.
         '''
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            cycle_ids = session.query(tmlib.models.Cycle.id).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+            cycle_ids = session.query(tm.Cycle.id).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
                 all()
             cycle_ids = [p[0] for p in cycle_ids]
 
         if cycle_ids:
 
-            with tmlib.models.utils.Session() as session:
+            with tm.utils.Session() as session:
 
                 logger.info('delete existing channel image files')
-                session.query(tmlib.models.ChannelImageFile).\
-                    filter(tmlib.models.ChannelImageFile.cycle_id.in_(cycle_ids)).\
+                session.query(tm.ChannelImageFile).\
+                    filter(tm.ChannelImageFile.cycle_id.in_(cycle_ids)).\
                     delete()
 
-    @notimplemented
     def collect_job_output(self, batch):
-        pass
+        '''Omits channel image files that do not exist across all cycles.
 
+        Parameters
+        ----------
+        batch: dict
+            job description
+        '''
+        with tm.utils.Session() as session:
+            metadata = pd.DataFrame(
+                session.query(
+                    tm.ChannelImageFile.id,
+                    tm.ChannelImageFile.site_id,
+                    tm.ChannelImageFile.cycle_id
+                ).
+                join(tm.Channel).
+                filter(tm.Channel.experiment_id == self.experiment_id).
+                all()
+            )
+            cycle_ids = np.unique(metadata.cycle_id)
+            site_group = metadata.groupby('site_id')
+            for i, sg in site_group:
+                if not all(np.unique(sg.cycle_id.values) == cycle_ids):
+                    sites_to_omit = session.query(tm.ChannelImageFile).\
+                        filter(tm.ChannelImageFile.id.in_(sg.id.values)).\
+                        all()
+                    for site in sites_to_omit:
+                        site.omitted = True
+                    session.add_all(sites_to_omit)
 
 def factory(experiment_id, verbosity, **kwargs):
     '''Factory function for the instantiation of a `imextract`-specific
