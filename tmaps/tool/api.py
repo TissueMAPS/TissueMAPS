@@ -11,6 +11,11 @@ from tmaps.tool import Tool, ToolSession
 from tmaps.tool.result import LabelResult
 from tmaps.api import api
 from tmaps.experiment import Experiment
+from tmaps.error import (
+    MalformedRequestError,
+    ResourceNotFoundError,
+    NotAuthorizedError
+)
 
 
 def _create_mapobject_feature(obj_id, geometry_obj):
@@ -67,7 +72,7 @@ def process_tool_request(tool_id):
     if not 'payload' in data \
             or not 'experiment_id' in data \
             or not 'session_uuid' in data:
-        return MALFORMED_REQUEST_RESPONSE
+        raise MalformedRequestError()
 
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
@@ -76,9 +81,9 @@ def process_tool_request(tool_id):
     # Check if the user has permissions to access this experiment.
     e = db.session.query(Experiment).get_with_hash(experiment_id)
     if e is None:
-        return RESOURCE_NOT_FOUND_RESPONSE
+        raise ResourceNotFoundError('No such experiment')
     if not e.belongs_to(current_identity):
-        return NOT_AUTHORIZED_RESPONSE
+        raise NotAuthorizedError()
 
     # Instantiate the correct tool plugin class.
     tool = db.session.query(Tool).get_with_hash(tool_id)
@@ -106,8 +111,6 @@ def process_tool_request(tool_id):
 
     return jsonify(response)
 
-
-
 @api.route('/labelresults/<labelresult_id>', methods=['GET'])
 def get_labelresult(labelresult_id):
     # The coordinates of the requested tile
@@ -119,7 +122,10 @@ def get_labelresult(labelresult_id):
 
     # Check arguments for validity and convert to integers
     if any([var is None for var in [x, y, z, zlevel, t]]):
-        return MALFORMED_REQUEST_RESPONSE
+        raise MalformedRequestError(
+            'One of the following request arguments is missing: '
+            'x, t, z, zlevel, t'
+        )
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 

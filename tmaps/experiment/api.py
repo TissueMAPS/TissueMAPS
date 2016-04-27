@@ -5,8 +5,11 @@ from flask import jsonify, send_file, current_app, request
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
-from tmlib.models import Experiment, ChannelLayer, Plate, Acquisition
-from tmaps.util import get
+from tmlib.models import Experiment, ChannelLayer, Plate, Acquisition, Feature
+from tmaps.util import (
+    extract_model_from_path,
+    extract_model_from_body
+)
 
 from tmaps.extensions import db
 from tmaps.api import api
@@ -16,7 +19,7 @@ from tmaps.error import (
 
 
 @api.route('/channel_layers/<channel_layer_id>/tiles/<path:filename>', methods=['GET'])
-@get(ChannelLayer)
+@extract_model_from_path(ChannelLayer)
 def get_image_tile(channel_layer, filename):
     """Send a tile image for a specific layer.
     This route is accessed by openlayers."""
@@ -25,17 +28,24 @@ def get_image_tile(channel_layer, filename):
     return send_file(filepath)
 
 
-@api.route('/experiments/<experiment_id>/features', methods=['GET'])
+@api.route('/features', methods=['GET'])
 @jwt_required()
-@get(Experiment, check_ownership=True)
+@extract_model_from_path(Experiment, check_ownership=True)
 def get_features(experiment):
     """
     Send a list of feature objects.
 
-    Response:
+    Request
+    -------
+
+    Required GET parameters:
+        - experiment_id 
+
+    Response
+    --------
 
     {
-        "features": {
+        "data": {
             mapobject_type_name: [
                 {
                     "name": string 
@@ -47,12 +57,15 @@ def get_features(experiment):
     }
 
     """
-    features = {}
-    for t in experiment.mapobject_types:
-        features[t.name] = [{'name': f.name} for f in t.features]
+    experiment_id = request.args.get('experiment_id')
+    if not experiment_id:
+        raise MalformedRequestError(
+            'The GET parameter "experiment_id" is required.')
+
+    features = db.session.query(Feature).filter_by(experiment_id=experiment_id).all()
 
     return jsonify({
-        'features': features
+        'data': features
     })
 
 
@@ -60,34 +73,36 @@ def get_features(experiment):
 @jwt_required()
 def get_experiments():
     """
-    Get all experiments for the current user
+    Get all experiments for the current user.
 
-    Response:
+    Response
+    --------
     {
-        "experiments": list of experiment objects,
+        "data": list of experiment objects,
     }
 
     """
     return jsonify({
-        'experiments': current_identity.experiments
+        'data': current_identity.experiments
     })
 
 
 @api.route('/experiments/<experiment_id>', methods=['GET'])
-@get(Experiment)
+@extract_model_from_path(Experiment)
 @jwt_required()
 def get_experiment(experiment):
     """
     Get an experiment by id.
 
-    Response:
+    Response
+    --------
     {
-        experiment: an experiment object serialized to json
+        "data": an experiment object serialized to json
     }
 
     """
     return jsonify({
-        'experiment': experiment
+        'data': experiment
     })
 
 
@@ -104,7 +119,7 @@ def create_experiment():
 
     if any([var is None for var in [name, microscope_type, plate_format,
                                     plate_acquisition_mode]]):
-        return MALFORMED_REQUEST_RESPONSE
+        raise MalformedRequestError()
 
     e = Experiment(
         name=name,
@@ -119,14 +134,23 @@ def create_experiment():
     db.session.commit()
 
     return jsonify({
-        'experiment': e
+        'data': e
     })
 
 
 @api.route('/experiments/<experiment_id>', methods=['DELETE'])
 @jwt_required()
-@get(Experiment, check_ownership=True)
+@extract_model_from_path(Experiment, check_ownership=True)
 def delete_experiment(experiment):
+    """Delete an experiment for the current user.
+    
+    Response
+    --------
+    {
+        "message": 'Deletion ok'
+    }
+
+    """
     db.session.delete(experiment)
     db.session.commit()
 
@@ -135,21 +159,26 @@ def delete_experiment(experiment):
 
 @api.route('/plates/<plate_id>', methods=['GET'])
 @jwt_required()
-@get(Plate, check_ownership=True)
+@extract_model_from_path(Plate, check_ownership=True)
 def get_plate(plate):
-    return jsonify(plate=plate)
+    return jsonify(data=plate)
 
 
-@api.route('/experiments/<experiment_id>/plates', methods=['GET'])
+@api.route('/plates', methods=['GET'])
 @jwt_required()
-@get(Experiment, check_ownership=True)
+@extract_model_from_path(Experiment, check_ownership=True)
 def get_plates(experiment):
-    return jsonify(plates=experiment.plates)
+    experiment_id = request.args.get('experiment_id')
+    if not experiment_id:
+        raise MalformedRequestError(
+            'The GET parameter "experiment_id" is required.')
+
+    return jsonify(data=experiment.plates)
 
 
 @api.route('/plates/<plate_id>', methods=['DELETE'])
 @jwt_required()
-@get(Plate, check_ownership=True)
+@extract_model_from_path(Plate, check_ownership=True)
 def delete_plate(plate):
     db.session.delete(plate)
     db.session.commit()
@@ -157,9 +186,8 @@ def delete_plate(plate):
     return jsonify(message='Deletion ok')
 
 
-@api.route('/experiments/<experiment_id>/plates', methods=['POST'])
+@api.route('/plates', methods=['POST'])
 @jwt_required()
-@get(Experiment, check_ownership=True)
 def create_plate(experiment):
     """
     Create a new plate for the experiment with id `experiment_id`.
@@ -169,7 +197,8 @@ def create_plate(experiment):
 
     {
         name: string,
-        description: string
+        description: string,
+        experiment_id: string
     }
 
     Response
@@ -179,24 +208,29 @@ def create_plate(experiment):
 
     """
     data = json.loads(request.data)
-    pl_name = data.get('name')
-    pl_desc = data.get('description', '')
+    name = data.get('name')
+    desc = data.get('description', '')
+    experiment_id = data.get('experiment_id')
 
-    if not pl_name:
-        raise MalformedRequestError()
+    if not name:
+        raise MalformedRequestError(
+            'To create a new plate you need to supply a "name"')
+    if not experiment_id:
+        raise MalformedRequestError(
+            'To create a new plate you need to supply an "experiment_id"')
 
     pl = Plate(
-        name=pl_name, description=pl_desc,
-        experiment_id=experiment.id)
+        name=name, description=desc,
+        experiment_id=experiment_id)
     db.session.add(pl)
     db.session.commit()
 
-    return jsonify(plate=pl)
+    return jsonify(data=pl)
 
 
-@api.route('/plates/<plate_id>/acquisitions', methods=['POST'])
+@api.route('/acquisitions', methods=['POST'])
 @jwt_required()
-@get(Plate, check_ownership=True)
+@extract_model_from_body(Plate, check_ownership=True)
 def create_acquisition(plate):
     """
     Create a new acquisition for the plate with id `plate_id`.
@@ -204,7 +238,8 @@ def create_acquisition(plate):
     Request
     {
         name: string,
-        description: string
+        description: string,
+        plate_id: string
     }
 
     Response
@@ -231,7 +266,7 @@ def create_acquisition(plate):
 
 @api.route('/acquisitions/<acquisition_id>', methods=['DELETE'])
 @jwt_required()
-@get(Acquisition, check_ownership=True)
+@extract_model_from_path(Acquisition, check_ownership=True)
 def delete_acquisition(acquisition):
     db.session.delete(acquisition)
     db.session.commit()
@@ -240,7 +275,7 @@ def delete_acquisition(acquisition):
 
 @api.route('/acquisitions/<acquisition_id>', methods=['GET'])
 @jwt_required()
-@get(Acquisition, check_ownership=True)
+@extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition(acquisition):
     return jsonify(acquisition=acquisition)
 
