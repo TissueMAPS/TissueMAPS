@@ -23,7 +23,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     private _activeMapObjectType: string = null;
     private _activeSelection: MapObjectSelection = null;
-    private _outlineLayers: {[objectType: string]: VectorLayer;} = {};
+    private _segmentationLayers: {[objectType: string]: SegmentationLayer;} = {};
 
     constructor(viewer: Viewer) {
         this.viewer = viewer;
@@ -53,6 +53,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (!this._isValidType(t)) {
             return;
         }
+
         // Hide all other selections on the map
         this.supportedMapObjectTypes.forEach((t2) => {
             if (t2 !== t) {
@@ -62,20 +63,24 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
                 });
             }
         });
+
         // Show only the selections for the just activated type 
         this.getSelectionsForType(t).forEach((s) => {
             s.selectionLayer.visible = true;
         });
-        this._activeMapObjectType = t;
 
-        if (this._outlineLayers[t] !== undefined) {
-            this._outlineLayers[t].visible = true;
-            for (var t2 in this._outlineLayers) {
-                if (t2 !== t) {
-                    this._outlineLayers[t2].visible = false;
-                }
+        // Hide all other segmentation layers (mapobject outlines)
+        // form the map and only display the one for the active mapobject type.
+        for (var t2 in this._segmentationLayers) {
+            if (t2 !== t) {
+                this._segmentationLayers[t2].visible = false;
             }
         }
+        if (this._segmentationLayers[t] !== undefined) {
+            this._segmentationLayers[t].visible = true;
+        }
+
+        this._activeMapObjectType = t;
     }
 
     /**
@@ -132,6 +137,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             size: this.viewport.mapSize,
             visible: isFirstTypeAdded
         });
+        this._segmentationLayers[t] = segmLayer;
         this.viewport.addLayer(segmLayer);
     }
 
