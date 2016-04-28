@@ -550,7 +550,7 @@ class PyramidBuilder(ClusterRoutines):
                     column=t[1], level=batch['level'],
                     channel_layer_id=layer.id
                 )
-                logger.info('create tile: %s', tile_file.name)
+                logger.debug('creating tile: %s', tile_file.name)
                 tile = PyramidTile.create_as_background()
                 tile_file.put(tile)
 
@@ -584,7 +584,7 @@ class PyramidBuilder(ClusterRoutines):
                     column=column, level=level,
                     channel_layer_id=layer.id
                 )
-                logger.info('creating tile: %s', tile_file.name)
+                logger.debug('creating tile: %s', tile_file.name)
                 rows = np.unique([c[0] for c in coordinates])
                 cols = np.unique([c[1] for c in coordinates])
                 # Build the mosaic by loading required higher level tiles
