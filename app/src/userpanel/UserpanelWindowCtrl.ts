@@ -27,6 +27,12 @@ class UserpanelWindowCtrl {
         });
     }
 
+    hasLayers(e: Experiment) {
+        return e.channels.every(function(element, index, array) {
+            return element.layers.length > 0;
+        });
+    }
+
     viewExperiment(e: Experiment) {
         // this._viewerApp.viewExperiment(e);
         this._$state.go('viewer', {
