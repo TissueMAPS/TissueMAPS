@@ -312,51 +312,59 @@ class SegmentedObjects(LabelImage):
 
         Returns
         -------
-        Dict[int, pandas.DataFrame[numpy.int64]]
+        Dict[Tuple[int], pandas.DataFrame[numpy.int64]]
             global *y* and *x* coordinates along the contour of each object,
-            indexable by its one-based label
+            indexable by time point, z-plane and one-based label
         '''
         logger.debug('calculate outlines for mapobject type "%s"', self.key)
 
         # Set border pixels to background to find complete contours of
         # objects at the border of the image
-        image = self.value.copy()
-        image[0, :] = 0
-        image[-1, :] = 0
-        image[:, 0] = 0
-        image[:, -1] = 0
-
+        array = self.value.copy()
+        if len(array.shape) == 2:
+            array = array[..., np.newaxis, np.newaxis]
+        elif len(array.shape) == 3:
+            array = array[..., np.newaxis]
         outlines = dict()
-        for label in self.labels:
-            # We could do this for all objects at once, but doing it for each
-            # object individually ensures that we get the correct number of
-            # objects and that coordinates are in the correct order,
-            # i.e. sorted according to their label.
-            obj_im = image == label
-            contours = skimage.measure.find_contours(
-                obj_im, 0.5, fully_connected='high'
-            )
-            if len(contours) > 1:
-                # It sometimes happens that more than one outline is
-                # identified per object, in particular when the object has
-                # "weird" shape, i.e. many small protrusions.
-                # NOTE: I've tried the OpenCV function as well. It's faster,
-                # but it has even more problems in terms of identifying a
-                # single contour for a given object.
-                # TODO: Don't simply take the first element, but measure some
-                # properties and choose the one that makes the most sense.
-                logger.warn(
-                    '%d contours identified for object #%d',
-                    len(contours), label
-                )
-            contour = contours[0].astype(np.int64)
-            contour = skimage.measure.approximate_polygon(
-                contour, tolerance
-            ).astype(np.int64)
-            outlines[label] = pd.DataFrame({
-                'y': -1 * (contour[:, 0] + offset_y),
-                'x': contour[:, 1] + offset_x
-            })
+        for t in range(array.shape[-1]):
+            for z in range(array[..., t].shape[-1]):
+                image = array[:, :, z, t]
+                image[0, :] = 0
+                image[-1, :] = 0
+                image[:, 0] = 0
+                image[:, -1] = 0
+
+                for label in self.labels:
+                    # We could do this for all objects at once, but doing it
+                    # for each object individually ensures that we get the
+                    # correct number of objects and that coordinates are in the
+                    # correct order, i.e. sorted according to their label.
+                    obj_im = image == label
+                    contours = skimage.measure.find_contours(
+                        obj_im, 0.5, fully_connected='high'
+                    )
+                    if len(contours) > 1:
+                        # It sometimes happens that more than one outline is
+                        # identified per object, in particular when the object
+                        # has  "weird" shape, i.e. many small protrusions.
+                        # NOTE: I've tried the OpenCV function as well.
+                        # It's faster, but it has even more problems
+                        # in terms of identifying a single contour for a given
+                        # object.
+                        # TODO: Don't simply take the first element, but measure some
+                        # properties and choose the one that makes the most sense.
+                        logger.warn(
+                            '%d contours identified for object #%d',
+                            len(contours), label
+                        )
+                    contour = contours[0].astype(np.int64)
+                    contour = skimage.measure.approximate_polygon(
+                        contour, tolerance
+                    ).astype(np.int64)
+                    outlines[(t, z, label)] = pd.DataFrame({
+                        'y': -1 * (contour[:, 0] + offset_y),
+                        'x': contour[:, 1] + offset_x
+                    })
         return outlines
 
     @property
@@ -364,6 +372,7 @@ class SegmentedObjects(LabelImage):
         '''pandas.Series[bool]: ``True`` if object lies at the border of
         the image and ``False`` otherwise
         '''
+        # TODO: 3D
         return pd.Series(
             map(bool, find_border_objects(self.value)),
             name='is_border', index=self.labels

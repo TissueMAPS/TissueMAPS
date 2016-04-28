@@ -458,7 +458,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         pixels = collection.defaultdict(list)
                         for img in images:
                             pixels[img.tpoint].append(img.pixels)
-                        store['pipe'][channel_name] = pixels.values()
+                        store['pipe'][channel_name] = np.stack(
+                            pixels.values(), axis=-1
+                        )
                 else:
                     store['pipe'][channel_name] = images[0].pixels
 
@@ -568,7 +570,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     mapobject_ids[mapobject_type.name][label] = mapobject.id
 
         with tm.utils.Session() as session:
-            fid = batch['image_file_ids'].values()[0]  # TODO: 3D and time
+            fid = batch['image_file_ids'].values()[0]
             image_file = session.query(tm.ChannelImageFile).get(fid)
             y_offset, x_offset = image_file.site.offset
             y_offset += image_file.site.intersection.lower_overhang
@@ -584,25 +586,24 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     mapobject_type.name
                 )
                 outlines = segm_objs.calc_outlines(y_offset, x_offset)
-                for label in segm_objs.labels:
+                for t, z, label in outlines.keys():
                     mapobject = session.query(tm.Mapobject).\
                         get(mapobject_ids[mapobject_type.name][label])
-                    logger.debug('add outline for mapobject #%d', label)
+                    logger.debug('add outlines for mapobject #%d', label)
                     geom_poly = 'POLYGON((%s))' % ','.join([
                         '%d %d' % (coordinate.x, coordinate.y)
-                        for i, coordinate in outlines[label].iterrows()
+                        for i, coordinate in outlines[t, z, label].iterrows()
                     ])
-                    centroid = np.mean(outlines[label])
+                    centroid = np.mean(outlines[t, z, label])
                     geom_centroid = 'POINT(%.2f %.2f)' % (
                         centroid.x, centroid.y
                     )
                     mapobject_outline = session.get_or_create(
                         tm.MapobjectOutline,
-                        tpoint=image_file.tpoint, zplane=image_file.zplane,
+                        tpoint=t, zplane=z,
                         mapobject_id=mapobject.id, geom_poly=geom_poly,
                         geom_centroid=geom_centroid
                     )
-                    # TODO: 3D and time
                     session.add(mapobject_outline)
                     session.flush()
 
@@ -698,6 +699,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             for mapobject_type in mapobject_types:
 
+                # TODO: tpoints and zplanes
                 mapobject_outlines = session.query(tm.MapobjectOutline).\
                     join(tm.Mapobject).\
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type.id).\
