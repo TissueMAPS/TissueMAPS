@@ -371,6 +371,8 @@ class ChannelLayer(Model):
             if f.tpoint == self.tpoint and f.zplane == self.zplane
         ]
         for file in image_files:
+            if file.omitted:
+                continue
             y_offset_site, x_offset_site = file.site.offset
             row_indices = self._calc_tile_indices(
                 y_offset_site, file.site.image_size[0],
