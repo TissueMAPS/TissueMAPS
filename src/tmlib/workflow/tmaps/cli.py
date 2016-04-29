@@ -9,6 +9,7 @@ from tmlib.logging_utils import map_logging_verbosity
 from tmlib.logging_utils import configure_logging
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.errors import NotSupportedError
+from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow import cli
 
 logger = logging.getLogger(__name__)
@@ -84,17 +85,19 @@ class Tmaps(object):
         stage: str
             stage at which workflow should be submitted
         '''
-        raise NotSupportedError(
-         'Resubmission of workflows is not yet supported'
-        )
         self._print_logo()
         api = self.api_instance
         session = api.create_gc3pie_session()
         logger.debug('load jobs from session "%s"', session.name)
         job_ids = session.list_ids()
         workflow = session.load(int(job_ids[-1]))
-        start_index
-        logger.info('resubmit workflow at stage "%s"', stage)
+        stage_names = [s.name for s in api.description.stages]
+        try:
+            start_index = stage_names.index(stage)
+            workflow.update_stage(start_index)
+        except IndexError:
+            raise WorkflowDescriptionError('Unknown stage "%s".' % stage)
+        logger.info('resubmit workflow at stage #%d "%s"', start_index, stage)
         logger.debug('add session to engine store')
         engine = api.create_gc3pie_engine()
         engine._store = session.store

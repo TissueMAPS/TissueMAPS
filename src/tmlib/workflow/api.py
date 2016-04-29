@@ -167,7 +167,7 @@ class BasicClusterRoutines(object):
 
         logger.debug('add jobs %s to engine', jobs)
         engine.add(jobs)
-        # engine.redo(jobs, start_index)
+        engine.redo(jobs, start_index)
 
         # periodically check the status of submitted jobs
         t_submitted = datetime.datetime.now()

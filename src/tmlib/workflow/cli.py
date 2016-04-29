@@ -540,7 +540,7 @@ class CommandLineInterface(object):
         session = api.create_gc3pie_session()
         logger.debug('load jobs from session "%s"', session.name)
         task_ids = session.list_ids()
-        task = session.load(int(task_ids[-1]))
+        jobs = session.load(int(task_ids[-1]))
         # Select an individual job based on "phase" and "job_id"
         if phase == 'run':
             job_index = 0

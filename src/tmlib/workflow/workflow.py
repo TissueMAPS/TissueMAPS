@@ -311,7 +311,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
         )
         self.waiting_time = waiting_time
 
-    def _update_step(self, index):
+    def update_step(self, index):
         '''Updates the indexed step, i.e. creates new jobs for it.
 
         Parameters
@@ -373,7 +373,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
                         done+1, self.n_steps, next_step_name
                     )
                 )
-                self._update_step(done+1)
+                self.update_step(done+1)
                 return gc3libs.Run.State.RUNNING
             except Exception as error:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -507,7 +507,7 @@ class Workflow(SequentialTaskCollection, State):
         self._current_task = 0
         self.tasks = self._create_stages()
         # Update the first stage and its first step to start the workflow
-        self._update_stage(0)
+        self.update_stage(0)
 
     def _create_stages(self):
         '''Creates all stages for this workflow.
@@ -549,7 +549,7 @@ class Workflow(SequentialTaskCollection, State):
         '''int: total number of stages'''
         return len(self.description.stages)
 
-    def _update_stage(self, index):
+    def update_stage(self, index):
         '''Updates the indexed stage, i.e. creates new jobs for each step of
         the stage.
 
@@ -560,7 +560,7 @@ class Workflow(SequentialTaskCollection, State):
         '''
         stage = self.description.stages[index]
         if stage.mode == 'sequential':
-            self.tasks[index]._update_step(0)
+            self.tasks[index].update_step(0)
         else:
             self.tasks[index]._update_all_steps()
 
@@ -602,7 +602,7 @@ class Workflow(SequentialTaskCollection, State):
                         done+1, self.n_stages, next_stage_name
                     )
                 )
-                self._update_stage(done+1)
+                self.update_stage(done+1)
                 return gc3libs.Run.State.RUNNING
             except Exception as error:
                 logger.error('transition to next stage failed: %s', error)
