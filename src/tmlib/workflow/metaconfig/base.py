@@ -310,6 +310,10 @@ class MetadataHandler(object):
             captures = match.groupdict()
             if 'z' not in captures.keys():
                 captures['z'] = md.at[i, 'zplane']
+            else:
+                # NOTE: quick and dirty hack for CellVoyager microscope,
+                # which doesn't write the z index into the image file
+                md.at[i, 'zplane'] = captures['z']
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
             lookup[key] = i

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import bioformats
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib.workflow.metaconfig import metadata_handler_factory
 from tmlib.workflow.metaconfig import metadata_reader_factory
 from tmlib.workflow.api import ClusterRoutines
@@ -64,11 +64,11 @@ class MetadataConfigurator(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
-        with tmlib.models.utils.Session() as session:
-            acquisitions = session.query(tmlib.models.Acquisition).\
-                join(tmlib.models.Plate).\
-                join(tmlib.models.Experiment).\
-                filter(tmlib.models.Experiment.id == self.experiment_id).\
+        with tm.utils.Session() as session:
+            acquisitions = session.query(tm.Acquisition).\
+                join(tm.Plate).\
+                join(tm.Experiment).\
+                filter(tm.Experiment.id == self.experiment_id).\
                 all()
             for acq in acquisitions:
                 job_count += 1
@@ -105,36 +105,36 @@ class MetadataConfigurator(ClusterRoutines):
         return job_descriptions
 
     def delete_previous_job_output(self):
-        '''Deletes all instances of class :py:class:`tmlib.models.Cycle`,
-        :py:class:`tmlib.models.Well`, and :py:class:`tmlib.models.Channel` as
+        '''Deletes all instances of class :py:class:`tm.Cycle`,
+        :py:class:`tm.Well`, and :py:class:`tm.Channel` as
         well as all children for the processed experiment.
         '''
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            plate_ids = session.query(tmlib.models.Plate.id).\
+            plate_ids = session.query(tm.Plate.id).\
                 filter_by(experiment_id=self.experiment_id).\
                 all()
             plate_ids = [p[0] for p in plate_ids]
 
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
             logger.info('delete existing cycles')
-            session.query(tmlib.models.Cycle).\
-                filter(tmlib.models.Cycle.plate_id.in_(plate_ids)).\
+            session.query(tm.Cycle).\
+                filter(tm.Cycle.plate_id.in_(plate_ids)).\
                 delete()
 
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
             logger.info('delete existing wells')
-            session.query(tmlib.models.Well).\
-                filter(tmlib.models.Well.plate_id.in_(plate_ids)).\
+            session.query(tm.Well).\
+                filter(tm.Well.plate_id.in_(plate_ids)).\
                 delete()
 
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
             logger.info('delete existing channels')
-            session.query(tmlib.models.Channel).\
-                filter(tmlib.models.Channel.experiment_id == self.experiment_id).\
+            session.query(tm.Channel).\
+                filter(tm.Channel.experiment_id == self.experiment_id).\
                 delete()
 
     def run_job(self, batch):
@@ -169,8 +169,8 @@ class MetadataConfigurator(ClusterRoutines):
             batch['microscope_type']
         )
 
-        with tmlib.models.utils.Session() as session:
-            acquisition = session.query(tmlib.models.Acquisition).\
+        with tm.utils.Session() as session:
+            acquisition = session.query(tm.Acquisition).\
                 get(batch['acquisition_id'])
             metadata_filenames = [
                 f.location for f in acquisition.microscope_metadata_files
@@ -255,14 +255,14 @@ class MetadataConfigurator(ClusterRoutines):
         mdhandler.assign_acquisition_site_indices()
         md = mdhandler.remove_redundant_columns()
         fmap = mdhandler.create_image_file_mapping()
-        with tmlib.models.utils.Session() as session:
-            acquisition = session.query(tmlib.models.Acquisition).\
+        with tm.utils.Session() as session:
+            acquisition = session.query(tm.Acquisition).\
                 get(batch['acquisition_id'])
 
             for w in np.unique(md.well_name):
                 w_index = np.where(md.well_name == w)[0]
                 well = session.get_or_create(
-                    tmlib.models.Well,
+                    tm.Well,
                     plate_id=acquisition.plate.id, name=w
                 )
 
@@ -273,13 +273,13 @@ class MetadataConfigurator(ClusterRoutines):
                     height = md.loc[s_index, 'height'].values[0]
                     width = md.loc[s_index, 'width'].values[0]
                     site = session.get_or_create(
-                        tmlib.models.Site,
+                        tm.Site,
                         y=y, x=x, height=height, width=width, well_id=well.id
                     )
 
                     for index, i in md.ix[s_index].iterrows():
                         session.get_or_create(
-                            tmlib.models.ImageFileMapping,
+                            tm.ImageFileMapping,
                             tpoint=i.tpoint, zplane=i.zplane,
                             site_id=site.id, map=fmap[index],
                             wavelength=i.channel_name,
@@ -295,7 +295,7 @@ class MetadataConfigurator(ClusterRoutines):
 
         Whether acquisition time points will be interpreted as actual
         time points in a time series depends on the value of
-        :py:attribute:`tmlib.models.Experiment.plate_acquisition_mode`.
+        :py:attribute:`tm.Experiment.plate_acquisition_mode`.
 
         Parameters
         ----------
@@ -305,22 +305,22 @@ class MetadataConfigurator(ClusterRoutines):
         t_index = 0
         w_index = 0
         c_index = 0
-        with tmlib.models.utils.Session() as session:
-            for acq in session.query(tmlib.models.Acquisition).\
-                    join(tmlib.models.Plate).\
-                    join(tmlib.models.Experiment).\
-                    filter(tmlib.models.Experiment.id == self.experiment_id):
+        with tm.utils.Session() as session:
+            for acq in session.query(tm.Acquisition).\
+                    join(tm.Plate).\
+                    join(tm.Experiment).\
+                    filter(tm.Experiment.id == self.experiment_id):
                 is_time_series_experiment = \
                     acq.plate.experiment.plate_acquisition_mode == 'series'
                 is_multiplexing_experiment = \
                     acq.plate.experiment.plate_acquisition_mode == 'multiplexing'
                 df = pd.DataFrame(
                     session.query(
-                        tmlib.models.ImageFileMapping.tpoint,
-                        tmlib.models.ImageFileMapping.wavelength,
-                        tmlib.models.ImageFileMapping.zplane
+                        tm.ImageFileMapping.tpoint,
+                        tm.ImageFileMapping.wavelength,
+                        tm.ImageFileMapping.zplane
                     ).
-                    filter(tmlib.models.ImageFileMapping.acquisition_id == acq.id).
+                    filter(tm.ImageFileMapping.acquisition_id == acq.id).
                     all()
                 )
                 tpoints = np.unique(df.tpoint)
@@ -328,7 +328,7 @@ class MetadataConfigurator(ClusterRoutines):
                 zplanes = np.unique(df.zplane)
                 for t in tpoints:
                     cycle = session.get_or_create(
-                        tmlib.models.Cycle,
+                        tm.Cycle,
                         index=c_index, tpoint=t_index, plate_id=acq.plate.id
                     )
 
@@ -336,23 +336,23 @@ class MetadataConfigurator(ClusterRoutines):
                         if is_multiplexing_experiment:
                             name = 'cycle-%d_wavelength-%s' % (c_index, w)
                         channel = session.get_or_create(
-                            tmlib.models.Channel,
+                            tm.Channel,
                             name=name, index=w_index, wavelength=w,
-                            experiment_id=acq.plate.experiment.id
+                            experiment_id=acq.plate.experiment_id
                         )
 
                         for z in zplanes:
-                            file_query = session.query(
-                                tmlib.models.ImageFileMapping
+                            image_file_mappings = session.query(
+                                tm.ImageFileMapping
                                 ).\
                                 filter_by(
                                     tpoint=t, zplane=z, wavelength=w,
                                     acquisition_id=acq.id
                                 )
-                            for im_file_mapping in file_query:
-                                im_file_mapping.tpoint = t_index
-                                im_file_mapping.cycle_id = cycle.id
-                                im_file_mapping.channel_id = channel.id
+                            for ifm in image_file_mappings:
+                                ifm.tpoint = t_index
+                                ifm.cycle_id = cycle.id
+                                ifm.channel_id = channel.id
 
                         if is_multiplexing_experiment:
                             w_index += 1

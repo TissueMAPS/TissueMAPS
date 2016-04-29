@@ -107,8 +107,6 @@ class CellvoyagerMetadataReader(MetadataReader):
         lookup = defaultdict(list)
         r = re.compile(CellvoyagerMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
 
-        y = list()
-        x = list()
         for i, e in enumerate(mlf_elements):
             img = metadata.image(i)
             # A name has to be set as a flag for the handler to update
@@ -132,16 +130,16 @@ class CellvoyagerMetadataReader(MetadataReader):
                 img.Pixels.Channel(0).Name = None
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
-
-            x.append(img.Pixels.Plane(0).PositionX)
-            y.append(img.Pixels.Plane(0).PositionY)
-
+            img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             matches = r.search(img.Name)
             # NOTE: We use a dictionary as reference, which is not serializable
-            # into XML.
+            # into XML. The problem is that the reference is ment to be within
+            # the same XML file, which is not the case.
+            # TODO: Fuck the whole OMEXML bullshit and simply put everything
+            # in a pandas data frame.
             captures = matches.groupdict()
             well_row = utils.map_number_to_letter(
-                            int(e.attrib['{%s}Row' % mlf_ns]))
+                int(e.attrib['{%s}Row' % mlf_ns]))
             well_col = int(e.attrib['{%s}Column' % mlf_ns])
             well_id = '%s%.2d' % (well_row, well_col)
             lookup[well_id].append(captures)
