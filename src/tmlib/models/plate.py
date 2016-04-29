@@ -226,7 +226,11 @@ class Plate(Model, DateMixIn):
         offset = self.experiment.well_spacer_size
         if len(self.wells) == 0:
             return None
-        well_size = self.wells[0].image_size
+        well_dims = np.array([w.image_size for w in self.wells])
+        if not(len(np.unique(well_dims[:, 0])) == 1 and
+                len(np.unique(well_dims[:, 1])) == 1):
+            logger.warning('wells don\'t have equal sizes')
+        well_size = (np.max(well_dims[:, 0]), np.max(well_dims[:, 1]))
         rows = len(self.nonempty_rows)
         cols = len(self.nonempty_columns)
         return (

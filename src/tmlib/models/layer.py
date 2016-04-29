@@ -157,17 +157,14 @@ class ChannelLayer(Model):
                 'since pyramid has not yet been created'
             )
             sizes = dict()
-            for r in xrange(experiment.plate_grid.shape[0]):
-                for c in xrange(experiment.plate_grid.shape[1]):
-                    plate = [
-                        p for p in experiment.plates
-                        if p.id == experiment.plate_grid[r, c]
-                    ]
-                    if plate and plate[0].image_size is not None:
-                        sizes[(r, c)] = plate[0].image_size
-            if len(set(sizes.values())) > 1:
-                # TODO
-                raise ValueError('Dimensions must be the same for all plates.')
+            plate_dims = np.array([p.image_size for p in experiment.plates])
+            if not(len(np.unique(plate_dims[:, 0])) == 1 and
+                    len(np.unique(plate_dims[:, 1]) == 1)):
+                logger.warning('plates don\'t have equal sizes')
+            plate_size = (np.max(plate_dims[:, 0]), np.max(plate_dims[:, 1]))
+            rows, cols = np.where(experiment.plate_grid)
+            for r, c in zip(rows, cols):
+                sizes[(r, c)] = plate_size
             # Introduce spacers between plates
             row_spacer_height = (
                 (experiment.plate_grid.shape[0] - 1) *
@@ -287,6 +284,7 @@ class ChannelLayer(Model):
         # Images at the lower and/or right border of the total overview, wells,
         # or plates represent an exception because in these cases there is
         # no neighboring image to create the tile instead, but an empty spacer.
+        # TODO: include also if neighboring image is missing or omitted
         for i, row in enumerate(row_info['indices']):
             y_offset = row_info['offsets'][i]
             if (y_offset + self.tile_size) > site.image_size[0]:
