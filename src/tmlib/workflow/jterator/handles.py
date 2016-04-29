@@ -9,6 +9,7 @@ The object's attributes are specified as a mapping in a
 `handles` YAML module descriptor file.
 '''
 import sys
+import json
 import numpy as np
 import pandas as pd
 import skimage
@@ -744,7 +745,7 @@ class Attribute(OutputHandle):
 
 class Figure(OutputHandle):
 
-    '''Handle for a figure whose value is a HTML string representing
+    '''Handle for a figure whose value is a JSON string representing
     a figure created by a module.
     '''
 
@@ -764,7 +765,7 @@ class Figure(OutputHandle):
 
     @property
     def value(self):
-        '''str: HTML representation of a figure'''
+        '''str: JSON representation of a figure'''
         return self._value
 
     @value.setter
@@ -774,7 +775,16 @@ class Figure(OutputHandle):
                 'Returned value of "%s" must have type basestring.'
                 % self.name
             )
-        # TODO: Additional checks to make sure the string encodes HTML?
+        if value:
+            try:
+                json.loads(value)
+            except ValueError:
+                raise ValueError(
+                    'Figure "%s" is not valid JSON.' % self.name
+                )
+        else:
+            # minimal valid JSON
+            value = json.dumps(dict())
         self._value = str(value)
 
     def __str__(self):

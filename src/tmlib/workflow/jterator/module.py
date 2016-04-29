@@ -115,7 +115,7 @@ class ImageAnalysisModule(object):
             absolute path to the figure file
         '''
         return os.path.join(
-            figures_dir, '%s_%.5d.html' % (self.name, job_id)
+            figures_dir, '%s_%.5d.json' % (self.name, job_id)
         )
 
     @property
