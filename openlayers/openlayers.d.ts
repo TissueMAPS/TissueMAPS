@@ -695,9 +695,27 @@ declare module olx {
             tierSizeCalculation?: string;
         }
 
-        interface XYZOptions {
-            tileGrid: ol.tilegrid.TileGrid;
+        interface TileImageOptions {
+            attributions?: Array<ol.Attribution>;
+            tileGrid?: ol.tilegrid.TileGrid;
+            tileUrlFunction?: ol.TileUrlFunctionType;
+            crossOrigin?: string;
             url?: string;
+            projection: ol.proj.ProjectionLike;
+            tileClass: any;
+        }
+
+        interface XYZOptions {
+            attributions?: Array<ol.Attribution>;
+            tileGrid?: ol.tilegrid.TileGrid;
+
+            maxZoom?: number;
+
+            tileUrlFunction?: ol.TileUrlFunctionType;
+
+            crossOrigin?: string;
+            url?: string;
+            projection: ol.proj.ProjectionLike;
         }
 
         interface VectorOptions {
@@ -764,6 +782,7 @@ declare module olx {
             url?: string;
             format?: ol.format.Feature;
             tileGrid?: ol.tilegrid.TileGrid;
+            tileUrlFunction?: ol.TileUrlFunctionType;
         }
     }
 
@@ -1062,6 +1081,8 @@ declare module ol {
     }
 
     interface TileLoadFunctionType{ (image: ol.Image, url: string): void }
+
+    interface TileUrlFunctionType{ (tileCoord: ol.TileCoord, pixelRatio: number, proj: ol.proj.Projection): string }
 
     interface ImageLoadFunctionType{ (image: ol.Image, url: string): void }
 
@@ -3924,7 +3945,7 @@ declare module ol {
     module proj {
 
         // Type definitions
-        interface ProjectionLike extends String { }
+        type ProjectionLike = String | ol.proj.Projection;
         interface Units extends String { }
 
         // Methods
@@ -4085,6 +4106,7 @@ declare module ol {
         }
 
         class TileImage {
+            constructor(options: olx.source.TileImageOptions);
         }
 
         class TileJSON {
