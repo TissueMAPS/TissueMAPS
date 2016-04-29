@@ -5,7 +5,6 @@ interface VectorTileLayerOpts {
     visible?: boolean;
     strokeColor?: Color;
     fillColor?: Color;
-    
 }
 
 class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
@@ -52,10 +51,6 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
                             fill: new ol.style.Fill({
                                 color: this.strokeColor.toOlColor()
                             }),
-                                  // ,
-                            // stroke: new ol.style.Stroke({
-                            //     color: this.strokeColor.toOlColor()
-                            // }),
                             radius: 2
                         })
                     })
@@ -74,21 +69,49 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
         // Same extent as zoomify
         var extent = [0, -opt.size.height, opt.size.width, 0];
 
+        // Compute the resolution array, i.e. an array of the number of tiles
+        // per zoom level if the image was square.
+        var imageWidth = opt.size.width;
+        var imageHeight = opt.size.height;
+        var tileSizeIter = 256;
+        var i = 1;
+        var resolutions = [1];
+        while (imageWidth > tileSizeIter || imageHeight > tileSizeIter) {
+            tileSizeIter *= 2;
+            i *= 2;
+            resolutions.push(i);
+        }
+        // e.g. [1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1] for maxzoom == 10
+        resolutions = resolutions.reverse();
+
         var vectorSource = new ol.source.VectorTile({
             url: opt.url,
+            // tileUrlFunction: function(tileCoord, pixelRatio, proj) {
+            //     var z = tileCoord[0];
+            //     var x = tileCoord[1];
+            //     var y = -tileCoord[2]-1;
+            //     console.log('Vector:', z, x, y);
+            //     return opt.url.replace(/{x}/, x.toString())
+            //                   .replace(/{y}/, y.toString())
+            //                   .replace(/{z}/, z.toString());
+            // },
             format: new ol.format.GeoJSON({
                 defaultDataProjection: new ol.proj.Projection({
                     code: 'tm',
                     units: 'pixels',
-                    extent: extent
+                    extent: [0, 0, imageWidth, imageHeight]
                 })
             }),
-            tileGrid: ol.tilegrid.createXYZ({
+            tileGrid: new ol.tilegrid.TileGrid({
                 extent: extent,
-                maxZoom: 22,
+                minZoom: 0,
+                tileSize: 256,
+                resolutions: resolutions,
                 origin: [0, 0]
             })
         });
+
+        console.log(vectorSource);
 
         this._fillColor = opt.fillColor !== undefined ? opt.fillColor : Color.WHITE.withAlpha(0);
         this._strokeColor = opt.strokeColor !== undefined ? opt.strokeColor : Color.WHITE;

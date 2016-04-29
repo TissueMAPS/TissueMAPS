@@ -21,7 +21,7 @@ class SegmentationLayer extends VectorTileLayer {
             size: opt.size,
             url: url,
             strokeColor: Color.WHITE,
-            fillColor: Color.WHITE.withAlpha(0)
+            fillColor: Color.WHITE.withAlpha(0),
         });
 
         this.objectTypeName = objectTypeName;

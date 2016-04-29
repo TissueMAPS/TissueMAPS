@@ -85,7 +85,6 @@ class Viewport implements Serializable<Viewport> {
         };
     }
 
-
     addLayer(layer: Layer) {
         layer.addToMap(this.map);
         this.layers.push(layer);
@@ -98,6 +97,17 @@ class Viewport implements Serializable<Viewport> {
         var height = mapSize.height;
         var center = [width / 2, - height / 2];
         var extent = [0, 0, width, height];
+        
+        // Calculate the maximal resolution from the image size.
+        // This corresponds to max number of squared tiles in either the height
+        // or width of the image.
+        var maxRes = 1;
+        var tileSizeIter = 256;
+        while (width > tileSizeIter || height > tileSizeIter) {
+            tileSizeIter *= 2;
+            maxRes *= 2;
+        }
+        
         var view = new ol.View({
             // We create a custom (dummy) projection that is based on pixels
             projection: new ol.proj.Projection({
@@ -105,6 +115,7 @@ class Viewport implements Serializable<Viewport> {
                 units: 'pixels',
                 extent: extent
             }),
+            resolution: maxRes,
             center: center,
             zoom: 0, // 0 is zoomed out all the way
             // TODO: start such that whole map is in view
@@ -112,6 +123,7 @@ class Viewport implements Serializable<Viewport> {
         });
 
         this.map.setView(view);
+        window['map'] = this.map;
     }
 
     /**

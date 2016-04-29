@@ -47,6 +47,10 @@ class Experiment implements Model {
         });
     }
 
+    get maxZoom(): number {
+        return this.channels[0].layers[0];
+    }
+
     get maxZ(): number {
         var zs = this.channels.map((ch) => {
             return ch.maxZ;
