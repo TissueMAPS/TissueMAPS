@@ -1,11 +1,14 @@
 import json
 import os.path as p
 
+import numpy as np
 from flask import jsonify, send_file, current_app, request
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
-from tmlib.models import Experiment, ChannelLayer, Plate, Acquisition, Feature
+from tmlib.models import (
+    Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile
+)
 from tmaps.util import (
     extract_model_from_path,
     extract_model_from_body
@@ -18,15 +21,25 @@ from tmaps.error import (
 )
 
 
-@api.route('/channel_layers/<channel_layer_id>/tiles/<path:filename>', methods=['GET'])
+@api.route('/channel_layers/<channel_layer_id>/tiles', methods=['GET'])
 @extract_model_from_path(ChannelLayer)
-def get_image_tile(channel_layer, filename):
+def get_image_tile(channel_layer):
     """Send a tile image for a specific layer.
     This route is accessed by openlayers."""
+    x = request.args.get('x')
+    y = request.args.get('y')
+    z = request.args.get('z')
+    if not x or not y or not z:
+        raise MalformedRequestError()
+    else:
+        x = int(x)
+        y = int(y)
+        z = int(z)
 
-    filepath = p.join(channel_layer.location, filename)
-    return send_file(filepath)
-
+    tile_file = db.session.query(PyramidTileFile).filter_by(
+        column=x, row=y, level=z, channel_layer_id=channel_layer.id
+    ).one()
+    return send_file(tile_file.location)
 
 @api.route('/features', methods=['GET'])
 @jwt_required()
