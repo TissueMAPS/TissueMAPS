@@ -329,7 +329,7 @@ function [output_mask, fig] = separate_mask(input_mask, input_image, cutting_pas
 
     % jtlib.plotting.save_figure(fig, varargin{2})
 
-    mask = logical(sum(selected_clumps, 3))
+    mask = logical(sum(selected_clumps, 3));
     ds_mask = imresize(uint8(mask), 1/jtlib.plotting.IMAGE_RESIZE_FACTOR);
     ds_cut = imresize(logical(sum(cut_mask, 3)), 1/jtlib.plotting.IMAGE_RESIZE_FACTOR);
     ds_mask(ds_cut) = 2;

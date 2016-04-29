@@ -17,7 +17,7 @@ def fill_mask(mask, plot=False):
     -------
     Dict[str, numpy.ndarray[numpy.int32] or str]
         "filled_mask": filled binary image
-        "figure": html string in case ``kwargs["plot"] == True``
+        "figure": html string in case `plot` is ``True``
     '''
     filled_mask = ndi.binary_fill_holes(mask)
 

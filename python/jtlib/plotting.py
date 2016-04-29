@@ -41,7 +41,7 @@ PLOT_POSITION_MAPPING = {
 
 #: The factor by which the size of an image should be reduced for plotting.
 #: This helps reducing the amount of data that has to be send to the client.
-IMAGE_RESIZE_FACTOR = 1
+IMAGE_RESIZE_FACTOR = 4
 
 
 def _check_position_argument(position):
@@ -418,7 +418,7 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
     Returns
     -------
     str
-        figure as html string
+        figure as JSON string
 
     Raises
     ------
@@ -509,12 +509,13 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
     fig['layout']['width'] = FIGURE_WIDTH
     fig['layout']['height'] = FIGURE_HEIGHT
 
-    return plotly.offline.plot(
-            fig,
-            output_type='div',
-            include_plotlyjs=True,
-            show_link=False,
-    )
+    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    # return plotly.offline.plot(
+    #         fig,
+    #         output_type='div',
+    #         include_plotlyjs=True,
+    #         show_link=False,
+    # )
 
 
 # def save_figure(fig, figure_file):

@@ -24,81 +24,12 @@ classdef plotting
             'lr', [0, 1] ...
         );
 
-        IMAGE_RESIZE_FACTOR = 1;
+        IMAGE_RESIZE_FACTOR = 4;
 
     end
 
 
     methods (Static, Access=private, Hidden)
-
-    function html = create_plotly_offline(plotlyfig)
-        % grab the bundled dependencies
-        userhome = getuserdir();
-        plotly_config_folder   = fullfile(userhome,'.plotly');
-        plotly_js_folder = fullfile(plotly_config_folder, 'plotlyjs');
-        bundle_name = 'plotly-matlab-offline-bundle.js';
-        bundle_file = fullfile(plotly_js_folder, bundle_name);
-
-        % check that the bundle exists
-        try
-            bundle = fileread(bundle_file);
-        catch
-            error(['Error reading: %s.\nPlease download the required ', ...
-                   'dependencies using: >>getplotlyoffline \n', ...
-                   'or contact support@plot.ly for assistance.'], ...
-                   bundle_file);
-        end
-
-        % handle plot div specs
-        id = char(java.util.UUID.randomUUID);
-        width = [num2str(plotlyfig.layout.width) 'px'];
-        height = [num2str(plotlyfig.layout.height) 'px'];
-
-        if plotlyfig.PlotOptions.ShowLinkText
-            link_text = plotlyfig.PlotOptions.LinkText;
-        else
-            link_text = '';
-        end
-
-        % format the data and layout
-        jdata = m2json(plotlyfig.data);
-        jlayout = m2json(plotlyfig.layout);
-        clean_jdata = escapechars(jdata);
-        clean_jlayout = escapechars(jlayout);
-
-        % template dependencies
-        dep_script = sprintf('<script type="text/javascript">%s</script>', ...
-                             bundle);
-
-        % template environment vars
-        plotly_domain = plotlyfig.UserData.PlotlyDomain;
-        env_script = sprintf(['\n<script type="text/javascript">', ...
-                              'window.PLOTLYENV=window.PLOTLYENV || {};', ...
-                              'window.PLOTLYENV.BASE_URL="%s";', ...
-                              'Plotly.LINKTEXT="%s";', ...
-                              '</script>'], plotly_domain, link_text); 
-
-        % template Plotly.plot
-        script = sprintf(['\n Plotly.plot("%s", %s, %s).then(function(){'...
-                          '\n    $(".%s.loading").remove();' ...
-                          '\n    $(".link--embedview").text("%s");'...
-                          '\n    });'], id, clean_jdata, clean_jlayout, ...
-                          id, link_text);
-
-        plotly_script = sprintf(['\n<div class="%s loading" style=', ...
-                                 'color: rgb(50,50,50);">Drawing...</div>' ... 
-                                 '\n<div id="%s" style="height: %s;',...
-                                 'width: %s;" class="plotly-graph-div">' ...
-                                 '</div> \n<script type="text/javascript">' ...
-                                 '%s \n</script>'], id, id, height, width, ... 
-                                 script);
-
-        % template entire script
-        html = sprintf([dep_script env_script plotly_script]);
-
-        end
-
-    end
 
     methods (Static)
 
@@ -468,8 +399,8 @@ classdef plotting
         end
 
         function fig = create_figure(plots, varargin)
-            % Create a figure based on one or more subplots. Plots will be arranged as
-            % a 2x2 grid.
+            % Create a figure based on one or more subplots.
+            % Plots will be arranged as a 2x2 grid.
             %
             % Parameters
             % ----------
@@ -490,8 +421,8 @@ classdef plotting
             %
             % Returns
             % -------
-            % plotlyfig
-            import json.savejson;
+            % char
+            %     JSON representation of the figure
 
             plot_pos_index = strcmp(varargin, 'plot_positions');
             if any(plot_pos_index)
@@ -574,12 +505,11 @@ classdef plotting
             end
 
             fig = plotlyfig;
-            fig.data = plots;
+            fig.data = data;
             fig.layout = layout;
-            fig.layout.width = jtlib.plotting.FIGURE_WIDTH;
-            fig.layout.height = jtlib.plotting.FIGURE_HEIGHT;
-            fig = jtlib.plotting.create_plotly_offline(fig);  % required a hack
-
+            jdata = escapechars(m2json(fig.data));
+            jlayout = escapechars(m2json(fig.layout));
+            fig = sprintf('{"data": %s, "layout": %s}', jdata, jlayout);
 
         end
 
