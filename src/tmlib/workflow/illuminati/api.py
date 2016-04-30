@@ -4,6 +4,7 @@ import numpy as np
 import collections
 import itertools
 import sqlalchemy.orm
+from sqlalchemy import func
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
@@ -11,6 +12,7 @@ import tmlib.models as tm
 from tmlib import utils
 from tmlib.image import PyramidTile
 from tmlib.image import ChannelImage
+from tmlib.errors import DataIntegrityError
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
@@ -77,6 +79,45 @@ class PyramidBuilder(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
+        # logger.info('performing data integrity tests')
+        # with tm.utils.Session() as session:
+        #     sites_per_well = session.query(
+        #             func.count(tm.Site.id)
+        #         ).\
+        #         join(tm.Well).\
+        #         join(tm.Plate).\
+        #         filter(tm.Plate.experiment_id == self.experiment_id).\
+        #         group_by(tm.Well.id).\
+        #         all()
+        #     if len(set(sites_per_well)) > 1:
+        #         raise DataIntegrityError(
+        #             'The number of sites must be the same for each well!'
+        #         )
+        #     images_per_site = session.query(
+        #             func.count(tm.ChannelImageFile.id)
+        #         ).\
+        #         join(tm.Channel).\
+        #         filter(tm.Channel.experiment_id == self.experiment_id).\
+        #         group_by(tm.Site.id).\
+        #         all()
+        #     if len(set(images_per_site)) > 1:
+        #         raise DataIntegrityError(
+        #             'The number of channel image files must be the same for '
+        #             'each site!'
+        #         )
+        #     wells_per_plate = session.query(
+        #             func.count(tm.Well.id)
+        #         ).\
+        #         join(tm.Plate).\
+        #         filter(tm.Plate.experiment_id == self.experiment_id).\
+        #         group_by(tm.Plate.id).\
+        #         all()
+        #     if len(set(wells_per_plate)) > 1:
+        #         raise DataIntegrityError(
+        #             'The number of wells must be the same for each plate!'
+        #         )
+        #     # TODO: work around these restrictions
+
         logger.debug('create descriptions for "run" jobs')
         job_descriptions = dict()
         job_descriptions['run'] = list()
@@ -101,9 +142,11 @@ class PyramidBuilder(ClusterRoutines):
                 )
 
                 image_files = session.query(tm.ChannelImageFile).\
-                    filter_by(
-                        tpoint=layer.tpoint, zplane=layer.zplane,
-                        channel_id=layer.channel_id
+                    filter(
+                        tm.ChannelImageFile.tpoint==layer.tpoint,
+                        tm.ChannelImageFile.zplane==layer.zplane,
+                        tm.ChannelImageFile.channel_id==layer.channel_id,
+                        ~tm.ChannelImageFile.omitted
                     ).\
                     all()
 
@@ -233,6 +276,8 @@ class PyramidBuilder(ClusterRoutines):
                     if level == layer.maxzoom_level_index:
                         coordinates = layer.get_empty_base_tile_coordinates()
                         # Creation of empty base tiles that don't map to images
+                        # TODO: split over multiple jobs if there are many
+                        # empty tiles
                         job_count += 1
                         job_descriptions['run'].append({
                             'id': job_count,
@@ -463,6 +508,7 @@ class PyramidBuilder(ClusterRoutines):
                             extra_file.site.y, extra_file.site.x
                         ))
                         condition = file_coordinate > extra_file_coordinate
+                        # TODO: handle cases of missing/omitted images
                         # Each batch only processes the overlapping tiles
                         # at the upper and/or left border of images.
                         if all(condition):
