@@ -442,7 +442,7 @@ class PyramidBuilder(ClusterRoutines):
                 else:
                     clip_above = batch['clip_value']
                     logger.info('using provided clip value: %d', clip_above)
-                clip_below = stats.percentile[0.001]
+                clip_below = stats.percentiles[0.001]
             else:
                 clip_above = 2**16  # channel images are 16-bit
                 clip_below = 0
