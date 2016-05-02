@@ -29,7 +29,7 @@ classdef plotting
     end
 
 
-    methods (Static, Access=private, Hidden)
+    % methods (Static, Access=private, Hidden)
 
     methods (Static)
 
