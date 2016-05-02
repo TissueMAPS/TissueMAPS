@@ -98,7 +98,7 @@ class PyramidBuilder(ClusterRoutines):
                 ).\
                 join(tm.Channel).\
                 filter(tm.Channel.experiment_id == self.experiment_id).\
-                group_by(tm.Site.id).\
+                group_by(tm.ChannelImageFile.site_id).\
                 all()
             if len(set(images_per_site)) > 1:
                 raise DataIntegrityError(
@@ -149,7 +149,7 @@ class PyramidBuilder(ClusterRoutines):
                         tm.ChannelImageFile.channel_id==layer.channel_id,
                         ~tm.ChannelImageFile.omitted
                     ).\
-                    order_by(tm.ChannelImageFile.site).\
+                    order_by(tm.ChannelImageFile.site_id).\
                     all()
 
                 for index, level in enumerate(reversed(range(layer.n_levels))):
