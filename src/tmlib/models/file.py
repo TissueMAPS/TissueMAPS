@@ -355,10 +355,11 @@ class ChannelImageFile(File, DateMixIn):
     @hybrid_property
     def name(self):
         '''str: name of the file'''
-        self._name = self.FILENAME_FORMAT.format(
-            t=self.tpoint, w=self.site.well.name, y=self.site.y, x=self.site.x,
-            c=self.channel.index, z=self.zplane
-        )
+        if self._name is None:
+            self._name = self.FILENAME_FORMAT.format(
+                t=self.tpoint, w=self.site.well.name, y=self.site.y, x=self.site.x,
+                c=self.channel.index, z=self.zplane
+            )
         return self._name
 
     @property
