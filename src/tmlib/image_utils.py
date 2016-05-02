@@ -252,14 +252,18 @@ def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
             row_end = bottom + y
             if row_end == 0:
                 row_end = img.shape[0]
+            elif row_end < 0:
+                row_end = img.shape[0] + row_end
             else:
-                row_end = -row_end
+                row_end = img.shape[0] - row_end
             col_start = left - x
             col_end = right + x
             if col_end == 0:
                 col_end = img.shape[1]
+            elif col_end < 0:
+                col_end = img.shape[1] + col_end
             else:
-                col_end = -col_end
+                col_end = img.shape[1] - col_end
             if crop:
                 aligned_im = img[row_start:row_end, col_start:col_end]
             else:
