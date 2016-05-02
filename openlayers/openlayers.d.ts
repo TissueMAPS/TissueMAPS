@@ -4052,6 +4052,9 @@ declare module ol {
 
     module source {
 
+        class NonsquaredTile {
+        }
+
         class BingMaps {
         }
 
