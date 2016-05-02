@@ -38,6 +38,13 @@ Clone the repository from Github::
 Activate the virtual environment and install the required Python packages::
 
     $ workon tmaps
+
+Install pip if necessary::
+
+    $ pip install pip --upgrade
+
+Now, install all requirements::
+
     $ pip install -r $HOME/tmlibrary/requirements-1.txt
     $ pip install -r $HOME/tmlibrary/requirements-2.txt
     $ pip install -r $HOME/tmlibrary/requirements-3.txt
