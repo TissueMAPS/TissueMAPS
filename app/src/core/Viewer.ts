@@ -40,16 +40,16 @@ class Viewer {
         });
 
         //// DEBUG
-        var segmLayer = new SegmentationLayer('DEBUG_TILE', {
-            t: 0,
-            experimentId: this.experiment.id,
-            zlevel: 0,
-            size: this.viewport.mapSize,
-            visible: true
-        });
-        segmLayer.strokeColor = Color.RED;
-        segmLayer.fillColor = Color.WHITE.withAlpha(0);
-        this.viewport.addLayer(segmLayer);
+        // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
+        //     t: 0,
+        //     experimentId: this.experiment.id,
+        //     zlevel: 0,
+        //     size: this.viewport.mapSize,
+        //     visible: true
+        // });
+        // segmLayer.strokeColor = Color.RED;
+        // segmLayer.fillColor = Color.WHITE.withAlpha(0);
+        // this.viewport.addLayer(segmLayer);
     }
 
     get currentResult() {
