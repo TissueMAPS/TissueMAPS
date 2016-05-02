@@ -79,45 +79,46 @@ class PyramidBuilder(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        # logger.info('performing data integrity tests')
-        # with tm.utils.Session() as session:
-        #     sites_per_well = session.query(
-        #             func.count(tm.Site.id)
-        #         ).\
-        #         join(tm.Well).\
-        #         join(tm.Plate).\
-        #         filter(tm.Plate.experiment_id == self.experiment_id).\
-        #         group_by(tm.Well.id).\
-        #         all()
-        #     if len(set(sites_per_well)) > 1:
-        #         raise DataIntegrityError(
-        #             'The number of sites must be the same for each well!'
-        #         )
-        #     images_per_site = session.query(
-        #             func.count(tm.ChannelImageFile.id)
-        #         ).\
-        #         join(tm.Channel).\
-        #         filter(tm.Channel.experiment_id == self.experiment_id).\
-        #         group_by(tm.Site.id).\
-        #         all()
-        #     if len(set(images_per_site)) > 1:
-        #         raise DataIntegrityError(
-        #             'The number of channel image files must be the same for '
-        #             'each site!'
-        #         )
-        #     wells_per_plate = session.query(
-        #             func.count(tm.Well.id)
-        #         ).\
-        #         join(tm.Plate).\
-        #         filter(tm.Plate.experiment_id == self.experiment_id).\
-        #         group_by(tm.Plate.id).\
-        #         all()
-        #     if len(set(wells_per_plate)) > 1:
-        #         raise DataIntegrityError(
-        #             'The number of wells must be the same for each plate!'
-        #         )
-        #     # TODO: work around these restrictions
+        logger.info('performing data integrity tests')
+        with tm.utils.Session() as session:
+            sites_per_well = session.query(
+                    func.count(tm.Site.id)
+                ).\
+                join(tm.Well).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
+                group_by(tm.Well.id).\
+                all()
+            if len(set(sites_per_well)) > 1:
+                raise DataIntegrityError(
+                    'The number of sites must be the same for each well!'
+                )
+            images_per_site = session.query(
+                    func.count(tm.ChannelImageFile.id)
+                ).\
+                join(tm.Channel).\
+                filter(tm.Channel.experiment_id == self.experiment_id).\
+                group_by(tm.Site.id).\
+                all()
+            if len(set(images_per_site)) > 1:
+                raise DataIntegrityError(
+                    'The number of channel image files must be the same for '
+                    'each site!'
+                )
+            wells_per_plate = session.query(
+                    func.count(tm.Well.id)
+                ).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
+                group_by(tm.Plate.id).\
+                all()
+            if len(set(wells_per_plate)) > 1:
+                raise DataIntegrityError(
+                    'The number of wells must be the same for each plate!'
+                )
+            # TODO: are these restrictions still required?
 
+        logger.info('create job descriptions')
         logger.debug('create descriptions for "run" jobs')
         job_descriptions = dict()
         job_descriptions['run'] = list()
@@ -148,6 +149,7 @@ class PyramidBuilder(ClusterRoutines):
                         tm.ChannelImageFile.channel_id==layer.channel_id,
                         ~tm.ChannelImageFile.omitted
                     ).\
+                    order_by(tm.ChannelImageFile.site).\
                     all()
 
                 for index, level in enumerate(reversed(range(layer.n_levels))):
@@ -435,13 +437,15 @@ class PyramidBuilder(ClusterRoutines):
             if batch['clip']:
                 logger.info('clip intensity values')
                 if batch['clip_value'] is None:
-                    clip_value = stats.percentiles[99.999]
-                    logger.info('using default clip value: %d', clip_value)
+                    clip_above = stats.percentiles[99.999]
+                    logger.info('using default clip value: %d', clip_above)
                 else:
-                    clip_value = batch['clip_value']
-                    logger.info('using provided clip value: %d', clip_value)
+                    clip_above = batch['clip_value']
+                    logger.info('using provided clip value: %d', clip_above)
+                clip_below = stats.percentile[0.001]
             else:
-                clip_value = 2**16  # channel images are 16-bit
+                clip_above = 2**16  # channel images are 16-bit
+                clip_below = 0
 
             if batch['illumcorr']:
                 logger.info('correcting images for illumination artifacts')
@@ -463,8 +467,8 @@ class PyramidBuilder(ClusterRoutines):
                     image = image.correct(stats)
                 if batch['align']:
                     image = image.align(crop=False)
-                image = image.clip(clip_value)
-                image = image.scale(clip_value)
+                image = image.clip(clip_below, clip_above)
+                image = image.scale(clip_below, clip_above)
                 image_store[file.name] = image
                 for t in mapped_tiles:
                     name = layer.build_tile_file_name(
@@ -500,8 +504,8 @@ class PyramidBuilder(ClusterRoutines):
                                 image = image.correct(stats)
                             if batch['align']:
                                 image = image.align(crop=False)
-                            image = image.clip(clip_value)
-                            image = image.scale(clip_value)
+                            image = image.clip(clip_below, clip_above)
+                            image = image.scale(clip_below, clip_above)
                             image_store[extra_file.name] = image
 
                         extra_file_coordinate = np.array((
