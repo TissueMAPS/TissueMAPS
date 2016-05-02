@@ -3,18 +3,19 @@ import json
 from flask import jsonify, request
 from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
-from sqlalchemy.sql import text
 
-from tmaps.mapobject import MapobjectOutline
 from tmaps.extensions import db
-from tmaps.tool import Tool, ToolSession
-from tmaps.tool.result import LabelResult
+from tmaps.tool import Tool, ToolSession, Result
 from tmaps.api import api
 from tmaps.experiment import Experiment
 from tmaps.error import (
     MalformedRequestError,
     ResourceNotFoundError,
     NotAuthorizedError
+)
+from tmaps.util import (
+    extract_model_from_path,
+    extract_model_from_body
 )
 
 
@@ -111,8 +112,13 @@ def process_tool_request(tool_id):
 
     return jsonify(response)
 
-@api.route('/labelresults/<labelresult_id>', methods=['GET'])
-def get_labelresult(labelresult_id):
+@api.route('/results/<result_id>/labels', methods=['GET'])
+@extract_model_from_path(Result)
+def get_result_labels(result):
+    """Get all mapobjects together with the labels that were assigned to them
+    for a given tool result and tile coordinate.
+
+    """
     # The coordinates of the requested tile
     x = request.args.get('x')
     y = request.args.get('y')
@@ -129,15 +135,17 @@ def get_labelresult(labelresult_id):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    label_result = db.session.query(LabelResult).get_with_hash(labelresult_id)
+    label_layer = result.layer
 
-    query_res = label_result.mapobject_type.get_mapobject_outlines_within_tile(
-        x, y, z, zplane=zlevel, tpoint=t)
+    query_res = label_layer.mapobject_type.get_mapobject_outlines_within_tile(
+        x, y, z, zplane=zlevel, tpoint=t
+    )
     features = []
+    has_mapobjects_within_tile = len(query_res) > 0
 
-    if len(query_res) > 0:
+    if has_mapobjects_within_tile:
         mapobject_ids = [c[0] for c in query_res]
-        mapobject_id_to_label = label_result.get_labels_for_objects(mapobject_ids)
+        mapobject_id_to_label = label_layer.get_labels_for_objects(mapobject_ids)
 
         for id, geom_geojson_str in query_res:
             feature = {

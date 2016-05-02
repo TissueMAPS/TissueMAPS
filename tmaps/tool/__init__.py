@@ -1,5 +1,10 @@
 # from base import GenericResponse, LayerModResponse, Tool, ClientProxy
-import result
 from tool import Tool
 from session import ToolSession
-import serialize
+
+from result import (
+    Result,
+    LabelLayer,
+    ScalarLabelLayer,
+    ContinuousLabelLayer
+)

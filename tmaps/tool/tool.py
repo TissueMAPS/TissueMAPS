@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Text
 
+from tmaps.serialize import json_encoder
 from tmaps.model import Model
 
 
@@ -28,3 +29,13 @@ class Tool(Model):
             'description': self.description,
             'icon': self.icon
         }
+
+
+@json_encoder(Tool)
+def encode_tool(obj, encoder):
+    return {
+        'id': obj.hash,
+        'name': obj.name,
+        'description': obj.description,
+        'icon': obj.icon
+    }
