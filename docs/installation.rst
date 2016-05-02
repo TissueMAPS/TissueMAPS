@@ -38,6 +38,13 @@ Clone the repository from Github::
 Activate the virtual environment and install the required Python packages::
 
     $ workon tmaps
+
+Install pip if necessary::
+
+    $ pip install pip --upgrade
+
+Now, install all requirements::
+
     $ pip install -r $HOME/tmlibrary/requirements-1.txt
     $ pip install -r $HOME/tmlibrary/requirements-2.txt
     $ pip install -r $HOME/tmlibrary/requirements-3.txt
@@ -53,38 +60,6 @@ Now install the library itself in developer mode (this will allow you to edit co
 
 Dependencies
 ============
-
-.. _vips:
-
-Vips
-----
-
- `VIPS <http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS>`_ is a fast and memory efficient image processing library (`Libvips API <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/index.html>`_). `VIPS` also supports `OpenSlide <http://openslide.org/>`_ and with it many `virtual slide formats <http://openslide.org/formats/>`_.
-
-.. code:: bash
-    
-    $ brew tap homebrew/science
-    $ brew install vips --with-openslide
-
-
-The Python API for `VIPS` is based on `GObject introspection <https://wiki.gnome.org/action/show/Projects/GObjectIntrospection?action=show&redirect=GObjectIntrospection>`_. 
-To use `VIPS` from python, you also need to install the python package `pygobject <https://wiki.gnome.org/action/show/Projects/PyGObject?action=show&redirect=PyGObject>`_.
-  
-.. .. code:: bash
-
-    $ brew install pygobject3
-    $ brew install gobject-introspection
-
-
-In order to be able to use it within the virtual environment, you need to create a soft link::
-
-    $ cd $VIRTUALENVWRAPPER_HOOK_DIR/tmaps/lib/python2.7/site-packages
-    $ ln -s /usr/local/lib/python2.7/site-packages/gi gi
-
-
-The type definitions are therefore automatically loaded and can be used from within Python, but there are also some convenience functions that are added to the `Image` class and some other shortcuts (like the automatic conversions of Python strings like ``'horizontal'`` to the respective C constants). Note, however, that these convenience functions won't show up in the IPython console when TAB completing on the image object. The docs can still be displayed with ``?``, though.
-
-For more information see `VIPS from Python <http://www.vips.ecs.soton.ac.uk/supported/current/doc/html/libvips/using-from-python.html>`_.
 
 .. _opencv:
 
