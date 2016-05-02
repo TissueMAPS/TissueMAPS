@@ -10,7 +10,14 @@ interface SerializedChannelLayer {
     };
 }
 
-type ChannelLayerArgs = SerializedChannelLayer;
+interface ChannelLayerArgs {
+    id: string;
+    tpoint: number;
+    zplane: number;
+    maxZoom: number;
+    imageSize: Size;
+    visible?: boolean;
+}
 
 class ChannelLayer extends ImageTileLayer {
     id: string;
@@ -21,15 +28,16 @@ class ChannelLayer extends ImageTileLayer {
     constructor(args: ChannelLayerArgs) {
         
         var tileLayerArgs = {
-            imageSize: args.image_size,
+            imageSize: args.imageSize,
             url: '/api/channel_layers/' + args.id + '',
-            additiveBlend: true
+            additiveBlend: true,
+            visible: args.visible
         };
         super(tileLayerArgs);
 
         this.id = args.id;
         this.tpoint = args.tpoint;
         this.zplane = args.zplane;
-        this.maxZoom = args.max_zoom;
+        this.maxZoom = args.maxZoom;
     }
 }

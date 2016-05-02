@@ -41,13 +41,19 @@ class Channel implements Layer {
          */
         this.id = args.id;
 
+        var isChannelVisible = args.visible !== undefined ? args.visible : true;
         args.layers.forEach((l) => {
-            this._layers[l.zplane] = new ChannelLayer(l);
-            if (l.zplane !== 0) {
-                this._layers[l.zplane].visible = false;
-            }
+            var isBottomLayer = l.zplane === 0;
+            this._layers[l.zplane] = new ChannelLayer({
+                id: l.id,
+                tpoint: l.tpoint,
+                zplane: l.zplane,
+                maxZoom: l.max_zoom,
+                imageSize: l.image_size,
+                visible: isChannelVisible && isBottomLayer
+            });
         });
-        this.visible = args.visible;
+        this._visible = isChannelVisible;
     }
 
     /**
@@ -91,10 +97,10 @@ class Channel implements Layer {
         }
         var prevLayer = this._layers[this._currentZplane];
         var nextLayer = this._layers[z];
-        if (prevLayer !== undefined) {
+        if (this._visible && prevLayer !== undefined) {
             prevLayer.visible = false;
         }
-        if (nextLayer !== undefined) {
+        if (this._visible && nextLayer !== undefined) {
             nextLayer.visible = true;
         }
         this._currentZplane = z;
@@ -174,7 +180,7 @@ class Channel implements Layer {
 
     /**
      * @property {boolean} visible - If this channel should be visible.
-     * @default 50
+     * @default true
      */
     get visible(): boolean {
         return this._visible;
