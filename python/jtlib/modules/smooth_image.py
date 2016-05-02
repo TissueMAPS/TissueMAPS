@@ -1,4 +1,5 @@
 import cv2
+import mahotas as mh
 import skimage.morphology
 import skimage.filters.rank
 import skimage.measure
@@ -7,8 +8,7 @@ import numpy as np
 
 def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
                  sigma_space=0, plot=False):
-    '''
-    Jterator module for smoothing an image.
+    '''Jterator module for smoothing an image.
 
     For more information on "average", "gaussian" and "bilateral" filters see
     `OpenCV tutorial <http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_smoothed_imageproc/py_filtering/py_filtering.html>`_.
@@ -55,7 +55,7 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
     '''
     input_dtype = image.dtype
     if not str(image.dtype).startswith('uint'):
-        raise TypeError('Image must have unsigned integer type')
+        raise TypeError('Image must have unsigned integer type.')
 
     if filter_name == 'average':
         smoothed_image = cv2.blur(
@@ -70,11 +70,9 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
             image, filter_size, sigma_color, sigma_space
         )
     elif filter_name == 'median':
-        # smoothed_image = cv2.medianBlur(image, filter_size)
-        # TODO: the cv2 filter_name has some problems related to filter_size
-        # consider mahotas (http://mahotas.readthedocs.org/en/latest/api.html?highlight=median#mahotas.median_filter)
-        smoothed_image = skimage.filters.rank.median(
-            image, skimage.morphology.disk(filter_size)
+        # NOTE: the OpenCV median filter can't handle 16-bit images
+        smoothed_image = mh.median_filter(
+            image, np.ones((filter_size, filter_size), dtype=image.dtype)
         )
     elif filter_name == 'median-bilateral':
         smoothed_image = skimage.filters.rank.mean_bilateral(
@@ -100,10 +98,10 @@ def smooth_image(image, filter_name, filter_size, sigma=0, sigma_color=0,
         ]
 
         output['figure'] = plotting.create_figure(
-                                data,
-                                title='''
-                                    smoothed image with %s filter of size %s
-                                ''' % (filter_name, filter_size)
+            data,
+            title='image smoothed with {0} filter (kernel size: {1})'.format(
+                filter_name, filter_size
+            )
         )
     else:
         output['figure'] = str()
