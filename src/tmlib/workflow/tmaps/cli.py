@@ -213,7 +213,7 @@ class Tmaps(object):
             help='number of child tasks that should be monitored'
         )
         resubmit_parser.add_argument(
-            '--stage', '-s', type=str,
+            '--stage', '-s', type=str, required=True,
             help='stage at which workflow should be resubmitted'
         )
 
