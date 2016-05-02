@@ -317,13 +317,13 @@ class Image(object):
         '''
         if self.metadata is None:
             raise AttributeError(
-                    'Image requires attribute "metadata" for alignment.')
+                'Image requires attribute "metadata" for alignment.'
+            )
         md = self.metadata
         pxls = image_utils.shift_and_crop(
             self.pixels, y=md.y_shift, x=md.x_shift,
             bottom=md.upper_overhang, top=md.lower_overhang,
-            right=md.left_overhang, left=md.right_overhang,
-            shift=not(md.is_omitted), crop=crop
+            right=md.left_overhang, left=md.right_overhang, crop=crop
         )
         new_object = self.__class__(pxls, self.metadata)
         new_object.metadata.is_aligned = True
@@ -394,14 +394,16 @@ class ChannelImage(Image):
             pxls = np.zeros((y_dimension, x_dimension), dtype=np.uint16)
         return ChannelImage(pxls, metadata)
 
-    def scale(self, threshold):
-        '''Scale pixel values to 8-bit such that `threshold` is 255.
+    def scale(self, lower, upper):
+        '''Scale pixel values to 8-bit such that the range [`lower`, `upper`]
+        will be mapped to the range [0, 255].
 
         Parameters
         ----------
-        threshold: int
-            value above which pixel values will be set to 255, i.e.
-            the range [0, `threshold`] will be mapped to range [0, 255]
+        lower: int
+            value below which pixel values will be set to 0
+        upper: int
+            value above which pixel values will be set to 255
 
         Returns
         -------
@@ -409,7 +411,7 @@ class ChannelImage(Image):
             image with rescaled pixels
         '''
         if self.is_uint16:
-            pxls = image_utils.map_to_uint8(self.pixels, 0, threshold)
+            pxls = image_utils.map_to_uint8(self.pixels, lower, upper)
             return self.__class__(pxls, self.metadata)
         elif self.is_uint8:
             return self
@@ -418,13 +420,15 @@ class ChannelImage(Image):
                 'Only pixels with unsigned integer type can be scaled.'
             )
 
-    def clip(self, threshold):
-        '''Clip intensity values above `threshold`, i.e. set all pixel values
-        above `threshold` to `threshold`.
+    def clip(self, lower, upper):
+        '''Clip intensity values below `lower` and above `upper`, i.e. set all
+        pixel values below `lower` to `lower` and all above `upper` to `upper`.
 
         Parameters
         ----------
-        threshold: int
+        lower: int
+            value below which pixel values should be clippe
+        upper: int
             value above which pixel values should be clipped
 
         Returns
@@ -432,7 +436,7 @@ class ChannelImage(Image):
         tmlib.image.ChannelImage
             image with clipped pixels
         '''
-        pxls = np.clip(self.pixels, 0, threshold)
+        pxls = np.clip(self.pixels, lower, upper)
         return ChannelImage(pxls, self.metadata)
 
     def smooth(self, sigma):

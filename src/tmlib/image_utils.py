@@ -209,7 +209,7 @@ def mip(zplanes):
     return np.max(stack, axis=0)
 
 
-def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
+def shift_and_crop(img, y, x, bottom, top, right, left, crop=True):
     '''Shifts and crops an image according to the calculated values shift and
     overhang values.
 
@@ -229,9 +229,6 @@ def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
         pixels to crop at the right
     left: int
         pixels to crop at the left
-    shift: bool, optional
-        whether image should be shifted (default: ``True``) - if ``False``
-        all pixel values are set to zero
     crop: bool, optional
         whether image should cropped or rather padded with zero valued pixels
         (default: ``True``)
@@ -247,55 +244,41 @@ def shift_and_crop(img, y, x, bottom, top, right, left, shift=True, crop=True):
         when shift or overhang values are too extreme
     '''
     try:
-        if shift:
-            row_start = top - y
-            row_end = bottom + y
-            if row_end == 0:
-                row_end = img.shape[0]
-            elif row_end < 0:
-                row_end = img.shape[0] + row_end
-            else:
-                row_end = img.shape[0] - row_end
-            col_start = left - x
-            col_end = right + x
-            if col_end == 0:
-                col_end = img.shape[1]
-            elif col_end < 0:
-                col_end = img.shape[1] + col_end
-            else:
-                col_end = img.shape[1] - col_end
-            if crop:
-                aligned_im = img[row_start:row_end, col_start:col_end]
-            else:
-                aligned_im = np.zeros(img.shape, dtype=img.dtype)
-                extracted_im = img[row_start:row_end, col_start:col_end]
-                row_end = top + extracted_im.shape[0]
-                col_end = left + extracted_im.shape[1]
-                aligned_im[top:row_end, left:col_end] = extracted_im
+        row_start = top - y
+        row_end = bottom + y
+        if row_end == 0:
+            row_end = img.shape[0]
+        elif row_end < 0:
+            row_end = img.shape[0] + row_end
         else:
-            row_start = top
-            if bottom == 0:
-                row_end = img.shape[0]
-            else:
-                row_end = -bottom
-            col_start = left
-            if right == 0:
-                col_end = img.shape[1]
-            else:
-                col_end = -right
-            empty_im = np.zeros(img.shape, dtype=img.dtype)
-            if crop:
-                aligned_im = empty_im[row_start:row_end, col_start:col_end]
-            else:
-                aligned_im = empty_im
+            row_end = img.shape[0] - row_end
+        col_start = left - x
+        col_end = right + x
+        if col_end == 0:
+            col_end = img.shape[1]
+        elif col_end < 0:
+            col_end = img.shape[1] + col_end
+        else:
+            col_end = img.shape[1] - col_end
+        if crop:
+            aligned_im = img[row_start:row_end, col_start:col_end]
+        else:
+            aligned_im = np.zeros(img.shape, dtype=img.dtype)
+            extracted_im = img[row_start:row_end, col_start:col_end]
+            row_end = top + extracted_im.shape[0]
+            col_end = left + extracted_im.shape[1]
+            aligned_im[top:row_end, left:col_end] = extracted_im
         return aligned_im
     except IndexError as e:
-        raise IndexError('Shifting and cropping of the image failed!\n'
-                         'Shift or overhang values are incorrect:\n%s'
-                         % str(e))
+        raise IndexError(
+            'Shifting and cropping of the image failed!\n'
+            'Shift or overhang values are incorrect:\n%s' % str(e)
+        )
     except Exception as e:
-        raise Exception('Shifting and cropping of the image failed!\n'
-                        'Reason: %s' % str(e))
+        raise Exception(
+            'Shifting and cropping of the image failed!\n'
+            'Reason: %s' % str(e)
+        )
 
 
 def find_border_objects(img):
