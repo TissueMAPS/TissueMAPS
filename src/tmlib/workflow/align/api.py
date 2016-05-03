@@ -64,13 +64,13 @@ class ImageRegistrator(ClusterRoutines):
                         'Alignment requires more than one cycle.'
                     )
 
-                sites = session.query(tm.Site).\
+                site_ids = session.query(tm.Site.id).\
                     join(tm.Well).\
                     join(tm.Plate).\
                     filter(tm.Plate.id == plate.id).\
+                    order_by(tm.Site.id).\
                     all()
 
-                site_ids = [s.id for s in sites]
                 batches = self._create_batches(site_ids, args.batch_size)
                 for batch in batches:
 
