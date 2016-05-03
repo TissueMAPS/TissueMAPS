@@ -245,18 +245,14 @@ def shift_and_crop(img, y, x, bottom, top, right, left, crop=True):
     '''
     try:
         row_start = top - y
-        if row_start <= 0:
-            row_start = 0
         row_end = bottom + y
-        if row_end <= 0:
+        if row_end == 0:
             row_end = img.shape[0]
         else:
             row_end = -row_end
         col_start = left - x
-        if col_start <= 0:
-            col_start = 0
         col_end = right + x
-        if col_end <= 0:
+        if col_end == 0:
             col_end = img.shape[1]
         else:
             col_end = -col_end
