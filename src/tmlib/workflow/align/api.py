@@ -216,7 +216,7 @@ class ImageRegistrator(ClusterRoutines):
     @notimplemented
     def collect_job_output(self, batch):
         pass
-
+        # TODO: set shifts to zero for sites that were omitted
 
 def factory(experiment_id, verbosity, **kwargs):
     '''Factory function for the instantiation of a `align`-specific
