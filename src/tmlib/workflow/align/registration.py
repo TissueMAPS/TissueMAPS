@@ -1,6 +1,5 @@
 import logging
 import image_registration
-import imreg_dft as ird
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -22,22 +21,13 @@ def calculate_shift(target_image, reference_image):
     Tuple[int]
         shift in y and x direction
     '''
-    transl, _, _ = ird.translation(target_image, reference_image)
-    x = int(transl[1])
-    y = int(transl[0])
+    x, y, a, b = image_registration.chi2_shift(target_image, reference_image)
+    x = int(x)
+    y = int(y)
+    if x < 0:
+        x -= 1
     if y < 0:
-        y -= 10
-    if y > 0:
-        y += 10
-    x *= -1
-    y *= -1
-    # x, y, a, b = image_registration.chi2_shift(target_image, reference_image)
-    # x = int(x)
-    # y = int(y)
-    # if x < 0:
-    #     x -= 1
-    # if y < 0:
-    #     y -= 1
+        y -= 1
     return (y, x)
 
 
