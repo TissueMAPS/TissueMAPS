@@ -1,23 +1,47 @@
-abstract class ToolResult {
+interface ToolResultArgs {
+    id: string;
+    name: string;
+    layer: LabelLayer;
+    plots: Plot[];
+    visible?: boolean;
+}
 
-    visible: boolean;
+class ToolResult {
 
-    abstract show(viewer: Viewer);
-    abstract hide(viewer: Viewer);
+    id: string;
+    name: string;
+    layer: LabelLayer;
+    plots: Plot[];
 
-    constructor(public name: string, public session: ToolSession) {}
+    private _visible: boolean;
+    private _viewer: Viewer = null;
 
-    static createToolResult(session: ToolSession, result: ServerToolResponse) {
-        var time = (new Date()).toLocaleTimeString();
-        var resultName = session.tool.name + ' at ' + time;
-        var resultCls = window[result.result_type];
-        if (resultCls !== undefined) {
-            return new resultCls(resultName, session, result.payload);
-        } else {
-            throw new Error(
-                'No client-side result class found that can handle results of class: ' +
-                result.result_type
-            );
-        }
+    get visible() {
+        return this._visible;
     }
-};
+
+    set visible(doShow: boolean) {
+        this.layer.visible = doShow;
+        this.plots.forEach((pl) => {
+            pl.visible = doShow;
+        });
+        this._visible = doShow;
+    }
+
+    delete() {
+        this._viewer.viewport.removeLayer(this.layer);
+    }
+
+    constructor(args: ToolResultArgs) {
+        this.id = args.id;
+        this.name = args.name;
+        this.layer = args.layer;
+        this.plots = args.plots;
+        this.visible = args.visible !== undefined ? args.visible : false;
+    }
+
+    attachToViewer(viewer: Viewer) {
+        this._viewer = viewer;
+        this._viewer.viewport.addLayer(this.layer);
+    }
+}

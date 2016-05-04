@@ -84,15 +84,18 @@
         "app/src/core/serialize/typedefs.ts",
 
         "app/src/core/tool/Tool.ts",
+        "app/src/core/tool/ToolDAO.ts",
         "app/src/core/tool/ToolSession.ts",
         "app/src/core/tool/ToolCtrl.ts",
         "app/src/core/tool/ToolResult.ts",
+        "app/src/core/tool/ToolResultDAO.ts",
 
-        "app/src/core/tool/result/LayerResult.ts",
-        "app/src/core/tool/result/LabelResult.ts",
-        "app/src/core/tool/result/ContinuousLabelResult.ts",
-        "app/src/core/tool/result/ScalarLabelResult.ts",
-        "app/src/core/tool/result/SupervisedClassifierResult.ts",
+        "app/src/core/tool/LabelLayer.ts",
+        "app/src/core/tool/Plot.ts",
+        "app/src/core/tool/Legend.ts",
+        "app/src/core/tool/result/ContinuousLabelLayer.ts",
+        "app/src/core/tool/result/ScalarLabelLayer.ts",
+        "app/src/core/tool/result/SupervisedClassifierLabelLayer.ts",
 
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",

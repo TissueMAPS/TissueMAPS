@@ -1,5 +1,5 @@
 class CurrentResultCtrl {
-    results: LabelResult[] = [];
+    results: ToolResult[] = [];
 
     static $inject = ['$scope'];
 

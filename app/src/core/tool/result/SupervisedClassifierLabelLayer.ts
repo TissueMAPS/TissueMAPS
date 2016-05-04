@@ -1,4 +1,4 @@
-class SupervisedClassifierResult extends LabelResult {
+class SupervisedClassifierLabelLayer extends LabelLayer {
     getLabelColorMapper() {
         var colorMap = this.attributes.color_map;
         // Convert from hex strings to Color objects
@@ -8,5 +8,9 @@ class SupervisedClassifierResult extends LabelResult {
         return (label) => {
             return colorMap[label];
         };
+    }
+
+    getLegend() {
+        return new SampleLegend();
     }
 }

@@ -22,7 +22,7 @@ class Viewer {
         this.id = makeUUID();
         this.experiment = experiment;
         this.viewport = new Viewport();
-        this.tools = Tool.getAll();
+        this.tools = (new ToolDAO()).getAll();
 
         this.viewport.initMap(this.experiment.channels[0].layers[0].imageSize)
 
@@ -64,13 +64,13 @@ class Viewer {
 
     private _hideAllSavedResults() {
         this.savedResults.forEach((r) => {
-            r.hide(this);
+            r.visible = false;
         });
     }
 
     private _deleteResult(res: ToolResult) {
         // TODO: Also completely remove the result
-        res.hide(this);
+        res.visible = false;
     }
 
     deleteSavedResult(res: ToolResult) {
@@ -155,14 +155,15 @@ class Viewer {
             var sessionUUID = data.session_uuid;
             var toolId = data.tool_id;
             console.log('ToolService: HANDLE REQUEST.');
-            var result = ToolResult.createToolResult(session, data);
+            var result = (new ToolResultDAO()).fromJSON(data.result);
+            result.attachToViewer(this);
             session.isRunning = false;
-            session.results.push(data.payload);
+            session.results.push(result);
             this.currentResult = result;
-            result.show(this);
+            result.visible = true;
 
             console.log('ToolService: DONE.');
-            return data.payload;
+            return data.result;
         },
         (err) => {
             // this.viewer.viewport.elementScope.then((vpScope) => {

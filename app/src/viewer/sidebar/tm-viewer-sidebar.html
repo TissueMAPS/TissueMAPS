@@ -60,9 +60,9 @@
 
                 <tm-selectable-tab-content>
                   <span class="inline-layer-control" tm-stop-click>
-                      <i ng-show="result.visible" ng-click="result.hide(viewer)"
+                      <i ng-show="result.visible" ng-click="result.visible = false"
                           class="fa fa-eye"></i>
-                      <i ng-hide="result.visible" ng-click="result.show(viewer)"
+                      <i ng-hide="result.visible" ng-click="result.visible = true"
                           class="fa fa-circle-thin"></i>
                   </span>
                   <span class="inline-layer-control" tm-stop-click>

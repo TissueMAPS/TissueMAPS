@@ -24,24 +24,7 @@ interface ServerToolRequest {
 interface ServerToolResponse {
     tool_id: number;
     session_uuid: any;
-    result_type: string;
-    payload: any;
-}
-
-/**
- * Interface for a serialized tool.
- * Objects adhering to this interface are sent 
- * as part of `GetToolsResponse`.
- */
-interface GetToolResponse {
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
-}
-
-interface GetToolsResponse {
-    tools: GetToolResponse[];
+    result: SerializedToolResult;
 }
 
 /**
@@ -112,26 +95,5 @@ class Tool {
         var sess = new ToolSession(this);
         this.sessions.push(sess);
         return sess;
-    }
-
-    /**
-     * Get all tools for this user.
-     * @todo Currently all tools are returned, regardless of which user
-     * requested them.
-     * @returns Promise.<Array.<Tool>>
-     */
-    static getAll(): ng.IPromise<Tool[]> {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        return $http.get('/api/tools').then((resp) => {
-            var data = <GetToolsResponse> resp.data;
-            return _.map(data.tools, (t) => {
-                return new Tool({
-                    id: t.id,
-                    name: t.name,
-                    description: t.description,
-                    icon: t.icon
-                });
-            });
-        });
     }
 }
