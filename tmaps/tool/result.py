@@ -11,6 +11,8 @@ from tmaps.extensions import db
 class Result(Model):
     __tablename__ = 'results'
 
+    name = Column(String)
+
     tool_session_id = Column(
         Integer,
         ForeignKey('tool_sessions.id', onupdate='CASCADE', ondelete='CASCADE')
@@ -29,21 +31,30 @@ class Result(Model):
         backref=backref('label_results', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tool_session, layer, plots=[]):
+    def __init__(self, mapobject_type, tool_session, layer, name=None, plots=[]):
         """A persisted result object that can be interpreted and visualized by the
         client.
 
         Parameters
         ----------
+        mapobject_type : tmlib.models.MapobjectType
+            the mapobject type to whose objects this result is linked
         tool_session : tmaps.tool.ToolSession
             tool session to which this result is linked
         layer : tmaps.tool.LabelLayer
             the object that represents the client-side representation of a
             tool result on the map
+        name : str, optional
+            a descriptive name for this result
         plots : List[tmaps.tool.Plot], optional
             additional plots that should be visualized client-side
 
         """
+        if name is None:
+            self.name = '%s result' % tool_session.tool.name
+        else:
+            self.name = name
+        self.mapobject_type_id = mapobject_type.id
         self.tool_session_id = tool_session.id
 
         db.session.add(self)
@@ -51,20 +62,20 @@ class Result(Model):
 
         # Add layer
         layer.result_id = self.id
-        db.session.flush(layer)
+        db.session.add(layer)
 
         # Add plots
         for plot in plots:
             plot.result_id = self.id
-            db.session.flush(plot)
 
-        db.session.commit()
+        db.session.add_all(plots)
 
 
 @json_encoder(Result)
 def encode_result(obj, encoder):
     return {
         'id': obj.hash,
+        'name': obj.name,
         'layer': obj.layer,
         'plots': map(encoder.default, obj.plots)
     }
@@ -74,33 +85,30 @@ class LabelLayer(Model):
     __tablename__ = 'label_layers'
 
     type = Column(String)
-
+    attributes = Column(JSON)
     result_id = Column(
         Integer,
         ForeignKey('results.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    attributes = Column(JSON)
 
     result = relationship(
         'Result',
-        backref=backref('layer', cascade='all, delete-orphan')
+        backref=backref('layer', cascade='all, delete-orphan', uselist=False)
     )
 
-    result_type = Column(String)
-    attributes = Column(JSON)
-
-    def __init__(self, labels):
+    def __init__(self, labels, extra_attributes={}):
         """A layer that associates with each mapobject a certain value.
 
         Parameters
         ----------
         labels : dict[number, dict]
             a dictionary that maps a mapobject id to some value
+        extra_attributes : dict
+            a dictionary with extra attributes to be saved
 
         """
-
-        self.type == self.__class__.__name__
-        self.attributes = {}
+        self.type = self.__class__.__name__
+        self.attributes = extra_attributes
 
         db.session.add(self)
         db.session.flush()
@@ -110,11 +118,10 @@ class LabelLayer(Model):
             pl = LabelLayerLabel(
                 mapobject_id=mapobject_id,
                 label=label,
-                label_result_id=self.id)
+                label_layer_id=self.id)
             label_objs.append(pl)
 
         db.session.add_all(label_objs)
-        db.session.commit()
 
     def get_labels_for_objects(self, mapobject_ids):
         return dict(
@@ -128,13 +135,14 @@ class LabelLayer(Model):
 def encode_label_layer(obj, encoder):
     return {
         'id': obj.hash,
+        'name': 'TODO:NAME',
         'type': obj.type,
         'attributes': obj.attributes
     }
 
 
 class ScalarLabelLayer(LabelLayer):
-    def __init__(self, labels):
+    def __init__(self, labels, extra_attributes={}):
         """A tool layer that assigns each mapobject a discrete value like a number
         of a string.
 
@@ -142,14 +150,20 @@ class ScalarLabelLayer(LabelLayer):
         ----------
         labels : dict[number, int | float | str]
             a dictionary that maps a mapobject id to some discrete value
+        extra_attributes : dict
+            a dictionary with extra attributes to be saved
 
         """
-        super(ScalarLabelLayer, self).__init__(labels)
-        self.attributes['unique_labels'] = list(set(labels))
+        extra_attributes.update({
+            'unique_labels': list(set(labels.values()))
+        })
+        super(ScalarLabelLayer, self).__init__(
+            labels, extra_attributes=extra_attributes
+        )
 
 
-class SupervisedClassifierResult(ScalarLabelLayer):
-    def __init__(self, labels, color_map):
+class SupervisedClassifierLabelLayer(ScalarLabelLayer):
+    def __init__(self, labels, color_map, extra_attributes={}):
         """A result of a supervised classifier like an SVM.
         Results of such classifiers have specific colors associated with class
         labels.
@@ -160,14 +174,20 @@ class SupervisedClassifierResult(ScalarLabelLayer):
             a dictionary that maps a mapobject id to some discrete value
         color_map : dict[int | float | str, str]
             a map from labels to color strings of the format '#ffffff'
+        extra_attributes : dict
+            a dictionary with extra attributes to be saved
 
         """
-        super(SupervisedClassifierResult, self).__init__(labels)
-        self.attributes['color_map'] = color_map
+        extra_attributes.update({
+            'color_map': color_map
+        })
+        super(SupervisedClassifierLabelLayer, self).__init__(
+            labels, extra_attributes=extra_attributes
+        )
 
 
 class ContinuousLabelLayer(LabelLayer):
-    def __init__(self, labels):
+    def __init__(self, labels, extra_attributes={}):
         """A tool result that assigns each mapobject a (pseudo)-continuous value.
         Assigning each cell a numeric value based on its area would be an
         example for such a layer.
@@ -176,13 +196,17 @@ class ContinuousLabelLayer(LabelLayer):
         ---------
         labels : dict[number, float]
             a dictionary that maps a mapobject id to some continuous value
+        extra_attributes : dict
+            a dictionary with extra attributes to be saved
 
         """
-        super(ContinuousLabelLayer, self).__init__(labels)
-        self.attributes.update({
-            'min': np.min(labels),
-            'max': np.max(labels)
+        extra_attributes.update({
+            'min': np.min(labels.values()),
+            'max': np.max(labels.values())
         })
+        super(ContinuousLabelLayer, self).__init__(
+            labels, extra_attributes=extra_attributes
+        )
 
 
 class LabelLayerLabel(Model):
@@ -199,7 +223,7 @@ class LabelLayerLabel(Model):
     )
     laber_layer = relationship(
         'LabelLayer',
-        backref=backref('layer', cascade='all, delete-orphan')
+        backref=backref('labels', cascade='all, delete-orphan')
     )
     mapobject = relationship(
         'Mapobject',

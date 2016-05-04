@@ -6,5 +6,6 @@ from result import (
     Result,
     LabelLayer,
     ScalarLabelLayer,
-    ContinuousLabelLayer
+    ContinuousLabelLayer,
+    SupervisedClassifierLabelLayer
 )

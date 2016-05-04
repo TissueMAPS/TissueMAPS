@@ -5,7 +5,7 @@ from sklearn import svm, cross_validation
 
 from tmlib.models import MapobjectType
 from tmaps.extensions import db
-from tmaps.tool.result import SupervisedClassifierResult
+from tmaps.tool import SupervisedClassifierLabelLayer, Result
 
 
 class SVMTool():
@@ -70,11 +70,14 @@ class SVMTool():
 
         all_object_ids = training_ids + X_pred.index.tolist()
         all_object_labels = y_train.tolist() + y_pred.tolist()
+        labels = dict(zip(all_object_ids, all_object_labels))
 
-        response = SupervisedClassifierResult(
-            ids=all_object_ids, labels=all_object_labels,
-            mapobject_type_id=mapobject_type.id,
-            session_id=session.id, color_map=color_map
+        result = Result(
+            mapobject_type=mapobject_type,
+            tool_session=session,
+            layer=SupervisedClassifierLabelLayer(
+                labels=labels, color_map=color_map
+            )
         )
 
-        return response
+        return result

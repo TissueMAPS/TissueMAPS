@@ -5,7 +5,7 @@ from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 from tmaps.extensions import db
-from tmaps.tool import Tool, ToolSession, Result
+from tmaps.tool import Tool, ToolSession, LabelLayer
 from tmaps.api import api
 from tmaps.experiment import Experiment
 from tmaps.error import (
@@ -36,37 +36,13 @@ def _create_mapobject_feature(obj_id, geometry_obj):
 def get_tools():
     # TODO: Only return tools for the current user
     return jsonify({
-        'tools': db.session.query(Tool).all()
+        'data': db.session.query(Tool).all()
     })
 
 
 @api.route('/tools/<tool_id>/request', methods=['POST'])
 @jwt_required()
 def process_tool_request(tool_id):
-    """
-    Process a generic tool request sent by the client.
-    POST payload should have the format:
-
-    {
-        experiment_id: string,
-        payload: dict
-    }
-
-    The server searches for the Tool with id `tool_id` and call its
-    request method passing it the argument `payload` as well as the tool
-    instance object that was saved in the database when the window was opened on
-    the client.
-    The tool has access to trans-request storage via the instance property
-    'data_storage'. Also, a h5 dataset can be retrieved via experiment instance
-    property: 'self.experiment_dataset'.
-
-    Returns:
-
-    {
-        return_value: object
-    }
-
-    """
     data = json.loads(request.data)
 
     # Check if the request is valid.
@@ -103,18 +79,21 @@ def process_tool_request(tool_id):
     # Execute the tool plugin.
     tool_result = tool_inst.process_request(payload, session, e)
 
+    # Commit all results that may have been added to the db
+    db.session.commit()
+
     response = {
-        'result_type': tool_result.__class__.__name__,
-        'payload': tool_result,
+        'result': tool_result,
         'session_uuid': session_uuid,
         'tool_id': tool_id
     }
 
     return jsonify(response)
 
-@api.route('/results/<result_id>/labels', methods=['GET'])
-@extract_model_from_path(Result)
-def get_result_labels(result):
+
+@api.route('/labellayers/<label_layer_id>/tiles', methods=['GET'])
+@extract_model_from_path(LabelLayer)
+def get_result_labels(label_layer):
     """Get all mapobjects together with the labels that were assigned to them
     for a given tool result and tile coordinate.
 
@@ -135,9 +114,8 @@ def get_result_labels(result):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    label_layer = result.layer
-
-    query_res = label_layer.mapobject_type.get_mapobject_outlines_within_tile(
+    mapobject_type = label_layer.result.mapobject_type
+    query_res = mapobject_type.get_mapobject_outlines_within_tile(
         x, y, z, zplane=zlevel, tpoint=t
     )
     features = []
