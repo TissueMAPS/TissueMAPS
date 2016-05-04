@@ -13,25 +13,24 @@ Python was chosen as programming language because it represents a good trade-off
 - `simpleITK <http://www.simpleitk.org/>`_
 - `openCV <http://opencv.org/>`_
 - `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
-- `vigra <http://ukoethe.github.io/vigra/doc/vigra/PythonBindingsTutorial.html>`_
 
 This makes it easy to combine algorithms from different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
 
 - Matlab: `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ 
 - R: `rpy2 <http://rpy.sourceforge.net/>`_
 - Java: `Py4J <https://www.py4j.org/>`_
-- Julia: `pyjulia <https://github.com/JuliaLang/pyjulia>`_
+.. - Julia: `pyjulia <https://github.com/JuliaLang/pyjulia>`_
 
 .. _main-ideas:
 
 Main ideas
 ==========
 
-- *Simple module development and testing*: A module represents a file (a Python module) that contains a function with the same name as the file.
+- *Simple module development and testing*: A module represents a file that contains a function with the same name as the file.
 - *Short list of dependencies*: Writing a module only requires the `NumPy <http://www.numpy.org/>`_ package.
-- *Independence of individual processing steps*: Module arguments are either NumPy arrays, scalars (integer and floating point numbers and strings), or a sequence of scalars. Modules don't perform IO. They are therefore unit testable.
-- *separation of GUI handling from the actual image processing*: Modules don't interact with a GUI. They can, however, generate and return a HTML representation of a figure which can be visualized in a browser.
-- *Cross-language compatibility*: Restricting module input/output to NumPy arrays and build-in Python types facilitates interfaces to other languages.
+- *Independence of individual processing steps*: Module arguments are either `NumPy` arrays, scalars (integer and floating point numbers and strings), or a sequence of scalars. Modules don't perform IO. They are therefore unit testable.
+- *Separation of GUI handling from the actual image processing*: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be visualized in a browser.
+- *Cross-language compatibility*: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
 
 
 .. _pipeline:
@@ -104,7 +103,7 @@ Modules don't perform disk IO! Special modules are available for storing data ge
 Figures
 -------
 
-Figures are generated using the `plotly <https://plot.ly/api/>`_ library and returned by modules as HTML strings.
+Figures are generated using the `plotly <https://plot.ly/api/>`_ library and returned by modules as JSON strings.
 
 
 .. _module-expamples:
