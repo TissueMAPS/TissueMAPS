@@ -86,8 +86,8 @@ if __name__ == '__main__':
                 one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(
-                'Acquisition "%s" with parent plate "%s" and experiment "%s" '
-                'does not exist!'
+                'Acquisition "%s" does not exist for plate "%s" and '
+                'experiment "%s"!'
                 % (args.acquisition_name, args.plate_name, args.experiment_name)
             )
         except:
@@ -112,13 +112,13 @@ if __name__ == '__main__':
         for f in os.listdir(args.source_directory):
             if r_image.search(f):
                 name = os.path.basename(f)
+                # Skip already inserted files.
                 if name not in image_file_names:
                     print 'register image file "%s"' % name
-                    file = tmlib.models.MicroscopeImageFile(
+                    file = session.get_or_create(
+                        tmlib.models.MicroscopeImageFile,
                         name=name, acquisition_id=acquisition.id
                     )
-                    session.add(file)
-                    session.flush()
             elif r_metadata.search(f):
                 name = os.path.basename(f)
                 if name not in metdata_file_names:

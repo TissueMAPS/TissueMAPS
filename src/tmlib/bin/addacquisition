@@ -10,19 +10,23 @@ def add_acquisition(experiment_name, plate_name, acquisition_name):
         try:
             plate = session.query(tmlib.models.Plate).\
                 join(tmlib.models.Experiment).\
-                filter(tmlib.models.Experiment.name == experiment_name).\
+                filter(
+                    tmlib.models.Experiment.name == experiment_name,
+                    tmlib.models.Plate.name == plate_name
+                ).\
                 one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(
-                'Plate "%s" with parent experiment "%s" does not exist!'
+                'Plate "%s" does not exist for experiment "%s"!'
                 % (plate_name, experiment_name)
             )
         except:
             raise
-        acquisition = tmlib.models.Acquisition(
+        acquisition = session.get_or_create(
+            tmlib.models.Acquisition,
             name=acquisition_name, plate_id=plate.id
         )
-        session.add(acquisition)
+        return acquisition.id
 
 
 if __name__ == '__main__':

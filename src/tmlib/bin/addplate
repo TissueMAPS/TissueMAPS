@@ -6,7 +6,6 @@ import tmlib.models
 
 
 def add_plate(plate_name, experiment_name):
-    # TODO: authentication
     with tmlib.models.utils.Session() as session:
         try:
             experiment = session.query(tmlib.models.Experiment).\
@@ -17,11 +16,11 @@ def add_plate(plate_name, experiment_name):
             )
         except:
             raise
-        plate = tmlib.models.Plate(
+        plate = session.get_or_create(
+            tmlib.models.Plate,
             name=plate_name, experiment_id=experiment.id
         )
-        session.add(plate)
-
+        return plate.id
 
 if __name__ == '__main__':
 
