@@ -19,11 +19,8 @@ abstract class LabelLayer extends VectorTileLayer {
     abstract getLegend(): Legend;
 
     constructor(args: LabelLayerArgs) {
-        this.id = args.id;
-        this.attributes = args.attributes;
-
-        var colorMapper = this.getLabelColorMapper();
-        var styleFunc = function(feature, style) {
+        var styleFunc = (feature, style) => {
+            var colorMapper = this.getLabelColorMapper();
             var geomType = feature.getGeometry().getType();
             var label = feature.get('label');
             var fillColor: ol.Color;
@@ -66,5 +63,8 @@ abstract class LabelLayer extends VectorTileLayer {
             visible: args.visible,
             size: size
         });
+
+        this.id = args.id;
+        this.attributes = args.attributes;
     }
 }

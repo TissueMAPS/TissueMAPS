@@ -23,6 +23,13 @@ abstract class HTTPDataAccessObject<T extends Model> {
 
     abstract fromJSON(json: any): T;
 
+    /**
+     * Query the server for a single specific model object.
+     * someDAO.get(1).then((obj) => { .... });
+     * @param {number} id - The id of the object to be fetched.
+     * @returns {ng.IPromise<T[} | APIError>} Either a an object wrapped
+     *          in a promise or an object of type APIError.
+     */
     get(id: number): ng.IPromise<T | APIError> {
         return this._$http.get(this.url + '/' + id)
         .then((resp: any) => {
@@ -33,6 +40,14 @@ abstract class HTTPDataAccessObject<T extends Model> {
         });
     }
 
+    /**
+     * Query the server for a list of model objects that satisfy a number
+     * of constraints. Example:
+     * someDAO.getAll({ parent_id: 2 }).then((objs) => { .... });
+     * @param {Object} params - A map of query parameters.
+     * @returns {ng.IPromise<T[} | APIError>} Either a list of objects wrapped
+     *          in a promise or an object of type APIError.
+     */
     getAll(params?: any): ng.IPromise<T[] | APIError> {
         var queryUrl;
         if (params !== undefined) {
@@ -58,6 +73,14 @@ abstract class HTTPDataAccessObject<T extends Model> {
         });
     }
 
+    /**
+     * Create a server-side object.
+     * Example:
+     * someDAO.create({name: 'some name', prop2: 'some other property'});
+     * @param {Object} data - The body of the object to be created.
+     * @returns {ng.IPromise<T | APIError>} Either a the created object wrapped
+     *          in a promise or an object of type APIError.
+     */
     create(data: any): ng.IPromise<T | APIError> {
         return this._$http.post(this.url, data)
         .then((resp: {data: any}) => {
@@ -68,6 +91,12 @@ abstract class HTTPDataAccessObject<T extends Model> {
         });
     }
 
+    /**
+     * Delete a server-side object given its id.
+     * @param {number} id - The id of the object to be deleted.
+     * @returns {ng.IPromise<T | APIError>} Either boolean indicator flag wrapped
+     *          in a promise or an object of type APIError.
+     */
     delete(id: string): ng.IPromise<boolean | APIError> {
         return this._$http.delete(this.url + id)
         .then((resp) => {

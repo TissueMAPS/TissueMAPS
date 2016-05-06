@@ -93,8 +93,10 @@
         "app/src/core/tool/LabelLayer.ts",
         "app/src/core/tool/Plot.ts",
         "app/src/core/tool/Legend.ts",
+        "app/src/core/tool/result/ContinuousLabelLegend.ts",
         "app/src/core/tool/result/ContinuousLabelLayer.ts",
         "app/src/core/tool/result/ScalarLabelLayer.ts",
+        "app/src/core/tool/result/ScalarLabelLegend.ts",
         "app/src/core/tool/result/SupervisedClassifierLabelLayer.ts",
 
         "app/src/AppCtrl.ts",

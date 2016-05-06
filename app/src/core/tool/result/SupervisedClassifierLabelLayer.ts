@@ -11,6 +11,9 @@ class SupervisedClassifierLabelLayer extends LabelLayer {
     }
 
     getLegend() {
-        return new SampleLegend();
+        return new ScalarLabelLegend({
+            colors: _.values(this.attributes.color_map),
+            labels: _.keys(this.attributes.color_map)
+        });
     }
 }

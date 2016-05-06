@@ -105,11 +105,10 @@ class Viewer {
     }
 
     destroy() {
-        var elem = this._getDOMElement();
-        elem.remove();
+        this.element.remove();
     }
 
-    private _getDOMElement(): JQuery {
+    get element(): JQuery {
         if (this._element === null || this._element.length == 0) {
             var $document = $injector.get<ng.IDocumentService>('$document');
             this._element = $document.find('#viewer-'+ this.id);
@@ -118,11 +117,11 @@ class Viewer {
     }
 
     hide() {
-        this._getDOMElement().hide();
+        this.element.hide();
     }
 
     show() {
-        this._getDOMElement().show();
+        this.element.show();
         this.viewport.update();
     }
 

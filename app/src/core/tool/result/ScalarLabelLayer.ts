@@ -28,6 +28,11 @@ class ScalarLabelLayer extends LabelLayer {
     }
     
     getLegend() {
-        return new SampleLegend();
+        return new ScalarLabelLegend({
+            colors: this.colors.map((c) => {
+                return c.toHex();
+            }),
+            labels: <string[]> this.attributes.unique_labels
+        });
     }
 }
