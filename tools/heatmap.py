@@ -15,7 +15,8 @@ class HeatmapTool():
         # Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         mapobject_type = db.session.query(MapobjectType).\
-            filter_by(name=mapobject_type_name).first()
+            filter_by(name=mapobject_type_name, experiment_id=experiment.id).\
+            one()
 
         selected_feature = payload['selected_feature']
 
@@ -25,7 +26,8 @@ class HeatmapTool():
             join(Feature, MapobjectType).\
             filter(
                 Feature.name == selected_feature,
-                MapobjectType.id == mapobject_type.id
+                MapobjectType.id == mapobject_type.id,
+                MapobjectType.experiment_id == experiment.id
             ).all()
 
         mapobject_ids = [q.mapobject_id for q in query_result]
