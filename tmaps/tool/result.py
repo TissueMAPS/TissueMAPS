@@ -17,28 +17,17 @@ class Result(Model):
         Integer,
         ForeignKey('tool_sessions.id', onupdate='CASCADE', ondelete='CASCADE')
     )
-    mapobject_type_id = Column(
-        Integer,
-        ForeignKey(
-            'mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
-    )
     tool_session = relationship(
         'ToolSession',
         backref=backref('tool_sessions', cascade='all, delete-orphan')
     )
-    mapobject_type = relationship(
-        'MapobjectType',
-        backref=backref('label_results', cascade='all, delete-orphan')
-    )
 
-    def __init__(self, mapobject_type, tool_session, layer, name=None, plots=[]):
+    def __init__(self, tool_session, layer, name=None, plots=[]):
         """A persisted result object that can be interpreted and visualized by the
         client.
 
         Parameters
         ----------
-        mapobject_type : tmlib.models.MapobjectType
-            the mapobject type to whose objects this result is linked
         tool_session : tmaps.tool.ToolSession
             tool session to which this result is linked
         layer : tmaps.tool.LabelLayer
@@ -54,7 +43,6 @@ class Result(Model):
             self.name = '%s result' % tool_session.tool.name
         else:
             self.name = name
-        self.mapobject_type_id = mapobject_type.id
         self.tool_session_id = tool_session.id
 
         db.session.add(self)

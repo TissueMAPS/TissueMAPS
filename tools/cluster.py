@@ -30,7 +30,6 @@ class ClusterTool():
         labels = dict(zip(ids, predicted_labels))
 
         result = Result(
-            mapobject_type=mapobject_type,
             tool_session=session,
             layer=ScalarLabelLayer(labels=labels)
         )

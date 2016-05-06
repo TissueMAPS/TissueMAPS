@@ -33,10 +33,9 @@ class HeatmapTool():
 
         labels = dict(zip(mapobject_ids, values))
 
-        response = Result(
-            mapobject_type=mapobject_type,
+        result = Result(
             tool_session=session,
             layer=ContinuousLabelLayer(labels=labels)
         )
 
-        return response
+        return result

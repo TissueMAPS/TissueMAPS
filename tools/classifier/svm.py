@@ -73,7 +73,6 @@ class SVMTool():
         labels = dict(zip(all_object_ids, all_object_labels))
 
         result = Result(
-            mapobject_type=mapobject_type,
             tool_session=session,
             layer=SupervisedClassifierLabelLayer(
                 labels=labels, color_map=color_map

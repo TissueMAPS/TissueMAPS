@@ -114,7 +114,7 @@ def get_result_labels(label_layer):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    mapobject_type = label_layer.result.mapobject_type
+    mapobject_type = label_layer.labels[0].mapobject.mapobject_type
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
         x, y, z, zplane=zlevel, tpoint=t
     )
