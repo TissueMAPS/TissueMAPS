@@ -56,7 +56,7 @@ def calculate_overhang(y_shifts, x_shifts):
         bottom = 0
     neg = y_shifts < 0
     if any(neg):
-        top = np.abs(np.max(y_shifts[neg]))
+        top = np.abs(np.min(y_shifts[neg]))
     else:
         top = 0
 
@@ -69,7 +69,7 @@ def calculate_overhang(y_shifts, x_shifts):
         right = 0
     neg = x_shifts < 0
     if any(neg):
-        left = np.abs(np.max(x_shifts[neg]))
+        left = np.abs(np.min(x_shifts[neg]))
     else:
         left = 0
 
