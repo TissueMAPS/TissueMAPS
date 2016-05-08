@@ -10,6 +10,6 @@ input:
 output:
 
     - name: objects
-      type: Objects
+      type: LabelImage
       key:
       help: Name that should be given to the objects in <i>label_image</i>.

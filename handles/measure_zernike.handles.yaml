@@ -2,7 +2,7 @@
 input:
 
     - name: label_image
-      type: Objects
+      type: LabelImage
       key: 
       help: >
         Labeled image containing the objects

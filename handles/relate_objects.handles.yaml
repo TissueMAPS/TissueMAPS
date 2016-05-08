@@ -2,12 +2,12 @@
 input:
 
     - name: parents_image
-      type: Objects
+      type: LabelImage
       key: 
       help: Label image containing parent objects.
 
     - name: children_image
-      type: Objects
+      type: LabelImage
       key: 
       help: Label image containing children objects.
 

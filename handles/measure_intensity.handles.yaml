@@ -14,11 +14,6 @@ input:
       help: >
         Greyscale image whose pixel values should be used for the measurement.
 
-    - name: channel_name
-      type: Channel
-      value:
-      help: Name of the channel corresponding to <i>intensity_image</i>.
-
     - name: plot
       type: Plot
       value:
@@ -29,7 +24,8 @@ output:
 
     - name: measurements
       type: Measurement
-      ref: objects_name
+      objects_ref: objects_name
+      channel_ref: intensity_image
       help: Extracted intensity features.
 
     - name: figure
