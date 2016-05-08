@@ -530,7 +530,7 @@ class AvailableModules(object):
                     'name': name,
                     'description': {
                         'handles': new_handles_path,
-                        'module': filename,
+                        'source': filename,
                         'active': True
                     }
                 }
