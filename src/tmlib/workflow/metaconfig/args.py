@@ -9,7 +9,7 @@ from tmlib.workflow.registry import submission_args
 class MetaconfigBatchArguments(BatchArguments):
 
     keep_zplanes = Argument(
-        type=bool, default=False, help='keep individual focal planes'
+        type=bool, default=False, help='keep individual focal planes', flag='z'
     )
 
     regex = Argument(
