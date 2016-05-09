@@ -78,6 +78,9 @@ class Argument(object):
                         'Elements of argument "choices" must have type %s.'
                         % self.type.__name__
                     )
+        else:
+            if self.type == bool:
+                self.choices = {True, False}
         self.flag = flag
         formatted_help_message = self.help.replace('\n', ' ').split(' ')
         formatted_help_message[0] = formatted_help_message[0].lower()
