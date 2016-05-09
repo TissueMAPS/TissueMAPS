@@ -49,13 +49,11 @@ Pipeline descriptor file
 
 Jterator allows only very simplistic types of work-flow -  *pipeline* (somewhat similar to a UNIX-world pipeline). 
 
-Example of a *.pipe.yml* YAML descriptor file:
+Example of a *.pipe.yaml* YAML descriptor file:
 
 .. code-block:: yaml
 
     description: An example project that does nothing.
-    
-    lib: ''
 
     input:
 
@@ -80,8 +78,8 @@ Example of a *.pipe.yml* YAML descriptor file:
             active: true
 
 
-Handle files can in principle reside at any location and their path has to be provided in the pipeline descriptor file. The path to a handle file can be absolute or relative to the working directory (as in the example above). Module files must reside within this repository. The path to the local copy of the repository can either be provided by setting the ``JTLIB`` environment variable or by setting a value for the ``lib`` key within the pipeline descriptor file.  
-All *channels* specified in **input** will be loaded by the program and the corresponding images made available to modules in the pipeline.
+Handle files can in principle reside at any location. The path to the files has to be provided in the pipeline descriptor file. This path can be absolute or relative to the project directory (as in the example above). Module files must reside within the repository. The path to the local copy of the repository can either be provided by setting the ``JTLIB`` environment variable or by setting a value for the ``lib`` key within the pipeline descriptor file.  
+All *channels* and *mapobject_types* specified in **input** will be loaded by the program and the corresponding images made available to modules in the pipeline.
 
 .. _modules:
 
@@ -205,18 +203,18 @@ Input and output of modules is described in module-specific *handles* files:
     input:
 
         - name: string_example
-          type: Scalar
+          type: Character
           value: mystring
 
         - name: integer_example
-          type: Scalar
+          type: Numeric
           value: 1
           options:
             - 1
             - 2
 
         - name: pipeline_input_example
-          type: Image
+          type: IntensityImage
           key: a.unique.string
 
         - name: array_example
@@ -227,7 +225,7 @@ Input and output of modules is described in module-specific *handles* files:
             - 4.6
 
         - name: boolean_example
-          type: Scalar
+          type: Boolean
           value: true
 
         - name: plot
@@ -237,7 +235,7 @@ Input and output of modules is described in module-specific *handles* files:
     output:
 
         - name: pipeline_output_example
-          type: Image
+          type: LabelImage
           key: another.unique.string
 
         - name: figure
@@ -276,7 +274,7 @@ This approach also works for `Matlab function files <http://ch.mathworks.com/hel
 Coding style
 ------------
 
-For Python, we encourage following `PEP 0008 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_. For Matlab and R we recommend following Google's style guidelines, see ` Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
+For Python, we encourage following `PEP 0008 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_. For Matlab and R we recommend following Google's style guidelines, see `Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
 
 
 ... _figures:
