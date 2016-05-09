@@ -6,6 +6,7 @@
 
     .header {
         border-top: 1px solid #626262;
+        height: @setup-window-header-height;
         background: #333;
         border-bottom: 1px solid #222222;
         color: @font-color-light;
@@ -19,6 +20,7 @@
 
     .stage-indicator-container {
         border-top: 1px solid #626262;
+        height: @stage-indicator-container-height;
         background: #444;
         border-bottom: 1px solid #222222;
         color: @font-color-light;
@@ -45,12 +47,12 @@
     .stage-view-container {
         padding-bottom: 15px;
         border-top: 1px solid #626262;
+        height: calc(~'100% - @{stage-indicator-container-height} - @{setup-window-header-height}');
+        overflow-y: scroll;
     }
-
 }
 
 .setup-window-content {
-    overflow-y: scroll;
     height: 100%;
 }
 

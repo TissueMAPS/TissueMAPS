@@ -1,14 +1,14 @@
 <div class="row setup-window">
   <div class="col-md-12 setup-window-content">
 
-    <div class="row">
-      <div class="col-md-12 header">
+    <div class="row header">
+      <div class="col-md-12">
         <h3>{{ setupCtrl.experiment.name }} ({{setupCtrl.experiment.status}})</h3>
       </div>
     </div>
 
-    <div class="row">
-      <div class="col-md-12 stage-indicator-container">
+    <div class="row stage-indicator-container">
+      <div class="col-md-12">
         <ul class="stage-indicators">
           <li class="stage-indicator" ng-repeat="stage in setupCtrl.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
             ng-click="setupCtrl.goToStage(stage)">
