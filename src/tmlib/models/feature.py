@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import Column, String, Integer, Float, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
@@ -34,6 +34,7 @@ class Feature(Model):
 
     # Table columns
     name = Column(String, index=True)
+    is_aggregate = Column(Boolean, index=True)
     mapobject_type_id = Column(
         Integer,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
@@ -45,7 +46,7 @@ class Feature(Model):
         backref=backref('features', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, mapobject_type_id):
+    def __init__(self, name, mapobject_type_id, is_aggregate=False):
         '''
         Parameters
         ----------
@@ -53,9 +54,13 @@ class Feature(Model):
             name of the feature
         mapobject_type_id: int
             ID of parent mapobject type
+        is_aggregate: bool, optional
+            whether the feature is an aggregate calculated based on another
+            feature
         '''
         self.name = name
         self.mapobject_type_id = mapobject_type_id
+        self.is_aggregate = is_aggregate
 
     def __repr__(self):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
