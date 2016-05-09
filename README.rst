@@ -209,14 +209,14 @@ Input and output of modules is described in module-specific *handles* files:
           value: mystring
 
         - name: integer_example
-          type: Scalar
+          type: Numeric
           value: 1
           options:
             - 1
             - 2
 
         - name: pipeline_input_example
-          type: Image
+          type: IntensityImage
           key: a.unique.string
 
         - name: array_example
@@ -225,9 +225,15 @@ Input and output of modules is described in module-specific *handles* files:
             - 2.3
             - 1.7
             - 4.6
+        - name: string_example
+          type: Character
+          value: whatever
+          options:
+            - something
+            - something else
 
         - name: boolean_example
-          type: Scalar
+          type: Boolean
           value: true
 
         - name: plot
@@ -237,7 +243,7 @@ Input and output of modules is described in module-specific *handles* files:
     output:
 
         - name: pipeline_output_example
-          type: Image
+          type: LabelImage
           key: another.unique.string
 
         - name: figure
@@ -276,7 +282,7 @@ This approach also works for `Matlab function files <http://ch.mathworks.com/hel
 Coding style
 ------------
 
-For Python, we encourage following `PEP 0008 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_. For Matlab and R we recommend following Google's style guidelines, see ` Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
+For Python, we encourage following `PEP 0008 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_. For Matlab and R we recommend following Google's style guidelines, see `Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
 
 
 ... _figures:
