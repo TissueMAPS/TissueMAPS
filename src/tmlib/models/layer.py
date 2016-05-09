@@ -83,7 +83,7 @@ class ChannelLayer(Model):
         '''
         return 256
 
-    @cached_property
+    @property
     def zoom_factor(self):
         '''int: factor by which resolution increases per pyramid level'''
         return self.channel.experiment.zoom_factor
@@ -131,6 +131,7 @@ class ChannelLayer(Model):
         level and the last element the highest resolution (maximally zoomed in)
         level
         '''
+        # NOTE: This could also be calculated based on maxzoom_level only
         levels = list()
         for i, img_size in enumerate(self.image_size):
             height, width = img_size
@@ -161,6 +162,8 @@ class ChannelLayer(Model):
             if not(len(np.unique(plate_dims[:, 0])) == 1 and
                     len(np.unique(plate_dims[:, 1]) == 1)):
                 logger.warning('plates don\'t have equal sizes')
+            # Take the size of the plate which contains the most wells. The
+            # other plates should then be filled with empty tiles.
             plate_size = (np.max(plate_dims[:, 0]), np.max(plate_dims[:, 1]))
             rows, cols = np.where(experiment.plate_grid)
             for r, c in zip(rows, cols):

@@ -3,6 +3,7 @@ import shutil
 import logging
 import sqlalchemy
 import sqlalchemy.orm
+import sqlalchemy.pool
 
 logger = logging.getLogger(__name__)
 
@@ -11,13 +12,20 @@ DATABASE_URI = os.environ['TMAPS_DB_URI']
 
 
 def create_db_engine():
-    '''Creates a database engine.
+    '''Creates a database engine with a connection pool size of ``2``.
 
     Returns
     -------
     sqlalchemy.engine.base.Engine
     '''
-    return sqlalchemy.create_engine(DATABASE_URI)
+    # This creates a default Pool.
+    # If this creates problems, consider using a different poolclass,
+    # e.g. sqlalchemy.pool.AssertionPool and/or changing settings, such as
+    # pool_size or max_overflow.
+    return sqlalchemy.create_engine(
+        DATABASE_URI,
+        poolclass=sqlalchemy.pool.QueuePool, pool_size=5, max_overflow=10
+    )
 
 
 def delete_location(path):
@@ -59,12 +67,12 @@ def remove_location_upon_delete(cls):
 
 
 def exec_func_after_insert(func):
-    """
+    '''
     @exec_func_after_insert(lambda target: do_something())
     SomeClass(db.Model):
     ...
 
-    """
+    '''
     def class_decorator(cls):
         def after_insert_callback(mapper, connection, target):
             func(mapper, connection, target)
@@ -81,7 +89,7 @@ class Query(sqlalchemy.orm.query.Query):
         super(Query, self).__init__(*args, **kwargs)
 
     def delete(self):
-        '''Performs a bulk delete query
+        '''Performs a bulk delete query.
 
         Returns
         -------
@@ -113,9 +121,9 @@ class Query(sqlalchemy.orm.query.Query):
 
 class Session(object):
 
-    '''Create a session scope for interaction with the database.
+    '''A session scope for interaction with the database.
     All changes get automatically committed at the end of the interaction.
-    In case an error occurs, a rollback is issued.
+    In case of an error, a rollback is issued.
 
     Examples
     --------
@@ -203,6 +211,10 @@ class Session(object):
     def delete(self, *args, **kwargs):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.delete`'''
         return self._sqla_session.delete(*args, **kwargs)
+
+    def scalar(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.scalar`'''
+        return self._sqla_session.scalar(*args, **kwargs)
 
     def get_or_create(self, model, **kwargs):
         '''Get an instance of a model class if it already exists or

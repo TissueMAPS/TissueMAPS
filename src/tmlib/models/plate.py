@@ -173,15 +173,14 @@ class Plate(Model, DateMixIn):
         '''numpy.ndarray[int]: IDs of wells arranged according to their
         relative position within the plate
         '''
-        cooridinates = [w.coordinate for w in self.wells]
         height, width = self.dimensions
         grid = np.zeros((height, width), dtype=int)
-        for i, c in enumerate(cooridinates):
-            grid[c[0], c[1]] = self.wells[i].id
+        for w in self.wells:
+            grid[w.y, w.x] = w.id
         return grid
 
     @cached_property
-    def empty_wells_coordinates(self):
+    def _empty_wells_coordinates(self):
         '''List[Tuple[int]]: y, x coordinates of each empty wells in the plate,
         i.e. wells that were not imaged
         '''

@@ -2,7 +2,8 @@
 '''
 from lxml import etree
 from sqlalchemy.types import TypeDecorator, UnicodeText
-
+from geoalchemy2 import Geometry
+from geoalchemy2.functions import GenericFunction
 
 class XML(TypeDecorator):
 
@@ -31,3 +32,13 @@ class XML(TypeDecorator):
         if value is not None:
             value = etree.fromstring(value)
         return value
+
+
+class ST_Expand(GenericFunction):
+
+    '''Implementation of the Postgis function
+    `ST_Expand <http://postgis.net/docs/ST_Expand.html>`_.
+    '''
+
+    name = 'ST_Expand'
+    type = Geometry
