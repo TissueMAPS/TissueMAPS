@@ -10,6 +10,6 @@ input:
 output:
 
     - name: objects
-      type: LabelImage
+      type: SegmentedObjects
       key:
-      help: Name that should be given to the objects in <i>label_image</i>.
+      help: Name that should be given to the objects in "label_image".

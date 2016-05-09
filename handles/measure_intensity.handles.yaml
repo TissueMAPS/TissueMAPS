@@ -2,7 +2,7 @@
 input:
 
     - name: label_image
-      type: LabelImage
+      type: SegmentedObjects
       key:
       help: >
         Labeled image containing the objects
@@ -24,7 +24,7 @@ output:
 
     - name: measurements
       type: Measurement
-      objects_ref: objects_name
+      objects_ref: label_image
       channel_ref: intensity_image
       help: Extracted intensity features.
 
