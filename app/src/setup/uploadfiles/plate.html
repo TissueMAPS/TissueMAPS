@@ -17,9 +17,9 @@
             <span ng-hide="pl.isReadyForProcessing">(NOT READY)</span>
           </span>
           - {{ pl.acquisitions.length }} acquisitions
-          <a ng-click="plateListCtrl.deletePlate(pl)" class="pull-right">
-            <i class="fa fa-times"></i>
-          </a>
+          <button ng-click="plateListCtrl.deletePlate(pl)" class="pull-right">
+            Delete
+          </button>
         </li>
       </ul>
     </div>

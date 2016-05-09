@@ -1,5 +1,6 @@
 interface Stage {
     name: string;
+    steps: any[];
 }
 
 class SetupCtrl {
@@ -191,7 +192,8 @@ class SetupCtrl {
                 public plates: Plate[],
                 private _$state) {
         var uploadStage = {
-            name: 'uploadfiles'
+            name: 'uploadfiles',
+            steps: null
         };
         this.currentStage = uploadStage;
         this.stages = [uploadStage].concat(this.experiment.workflowDescription.stages);

@@ -22,7 +22,7 @@ class UserpanelWindowCtrl {
     }
 
     modifyExperiment(e: Experiment) {
-        this._$state.go('setup', {
+        this._$state.go('plate', {
             experimentid: e.id
         });
     }

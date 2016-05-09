@@ -19,12 +19,12 @@ class CreateExperimentCtrl {
         return (new ExperimentDAO()).create({
             name: opt.name,
             description: opt.description,
-            plateFormat: parseInt(opt.plateFormat),
-            microscopeType: opt.microscopeType,
-            plateAcquisitionMode: opt.plateAcquisitionMode
+            plate_format: parseInt(opt.plateFormat),
+            microscope_type: opt.microscopeType,
+            plate_acquisition_mode: opt.plateAcquisitionMode
         }).then((exp) => {
             this._$state.go('userpanel.experiment.list', {}, {
-                reload: 'userpanel.experiment.list'
+                reload: 'userpanel'
             });
         }).catch((err) => {
             this.error = err;

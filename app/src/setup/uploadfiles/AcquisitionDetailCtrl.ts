@@ -5,7 +5,9 @@ class AcquisitionDetailCtrl {
     static $inject = ['acquisition', '$state', '$http', '$q'];
 
     constructor(public acquisition: Acquisition, private _$state,
-                private _$http, private _$q) {}
+                private _$http, private _$q) {
+        acquisition.fetchExistingFiles();
+    }
 
     filterValidFiles(files: {name: string;}[]) {
         return this._$http.post('/api/acquisitions/' + this.acquisition.id + '/file-validity-check', {
