@@ -242,12 +242,14 @@ Input and output of modules is described in module-specific *handles* files:
           type: Figure
 
 
-Each item (*handle*) in the array of inputs describes an argument that is passed to the module function and each item in the array of outputs describes a key-value pair in the mapping that should be returned by the function.
+Each item (*handle*) in the array of inputs describes an argument that is passed to the module function and each item in the array of outputs describes a key-value pair of the mapping that should be returned by the function.
 
-Handles can have different *types* and each type is mirrored by a Python class. Constant input arguments have a "value" key, which represents the actual argument. Images can be piped between modules and have a "key" key, which serves as a lookup for the actual value, i.e. the image, in an in-memory key-value store. The value for that YAML key (a bit confusing) must be a hashable, i.e. a string that's unique within the pipeline. Since the names of handles files are unique, best practice is to use handle filenames as a namespace and combine them with the name of the output handle to create a unique hashable identifier.
+The *type* descriped in the YAML file is mirrored by a Python class. Constant input arguments have a "value" key, which represents the actual argument. Images can be piped between modules and have a "key" key, which serves as a lookup for the actual value, i.e. the image, in an in-memory key-value store. The value for that YAML key must be a hashable, i.e. a string that's unique within the pipeline. Since the names of handles files are unique, best practice is to use handle filenames as a namespace and combine them with the name of the output handle to create a unique hashable identifier.
 
 
-The ``Plot`` input handle type and ``Figure`` output handle type should be used to implement plotting functionality. The program will set ``plot`` to ``false`` when running in headless mode on the cluster.
+The ``Plot`` input handle type and ``Figure`` output handle type are used to implement plotting functionality. The program will set ``plot`` to ``false`` when running in headless mode on the cluster.
+
+Segmented objects and extracted featuresneed to be registered in the database. This is automatically handled by jterator and achieved via the ``SegmentedObjects`` and ``Measurement`` handle types. To be able to store measurement for a given mapobject type, objects need to be registered via the `register_objects.py` module.
 
 
 .. _developer-documentation:
