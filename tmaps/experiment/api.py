@@ -348,7 +348,7 @@ def get_acquisition(acquisition):
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition_image_files(acquisition):
-     return jsonify(
+    return jsonify(
         data=[{'name': f.name} for f in acquisition.microscope_image_files]
     )
 
