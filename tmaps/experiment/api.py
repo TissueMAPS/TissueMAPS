@@ -283,7 +283,7 @@ def create_plate(experiment):
 
     pl = Plate(
         name=name, description=desc,
-        experiment_id=decode_pk(experiment.id)
+        experiment_id=experiment.id
     )
     db.session.add(pl)
     db.session.commit()
