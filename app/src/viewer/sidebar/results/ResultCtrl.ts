@@ -1,5 +1,5 @@
 class ResultCtrl {
-    result: LabelResult;
+    result: ToolResult;
 
     private _opacityInput: number;
 
@@ -9,14 +9,14 @@ class ResultCtrl {
 
     set opacityInput(v: number) {
         this._opacityInput = v;
-        this.result.opacity = v / 100;
+        this.result.layer.opacity = v / 100;
     }
 
     static $inject = ['$scope'];
 
     constructor($scope: any) {
         this.result = $scope.result;
-        this.opacityInput = this.result.opacity * 100;
+        this.opacityInput = this.result.layer.opacity * 100;
     }
 }
 

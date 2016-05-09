@@ -11,7 +11,7 @@ class FeatureSelectionWidgetCtrl {
     featureQuery: { name: string; } = {
         name: undefined
     };
-    selectedObjectName: string;
+    selectedMapobjectType: string;
 
     private _featureTabsByName: {[objName: string]: FeatureTab[];} = {};
 
@@ -25,14 +25,14 @@ class FeatureSelectionWidgetCtrl {
 
         var parentScope = <ToolWindowContentScope>this.$scope.$parent;
         var experiment = parentScope.viewer.experiment;
-        experiment.mapObjectNames.forEach((objectName) => {
-            var featureTabs = _.map(experiment.getMapObjectInfo(objectName).features, (f) => {
+        experiment.mapobjectTypes.forEach((type) => {
+            var featureTabs = type.features.map((f) => {
                 return {
                     name: f.name,
                     selected: false
                 };
             });
-            this._featureTabsByName[objectName] = featureTabs;
+            this._featureTabsByName[type.name] = featureTabs;
         });
     }
 
@@ -58,7 +58,7 @@ class FeatureSelectionWidgetCtrl {
             // s.t. it is not required to deselect the other feature first.
             var isSingleSelection = this.maxSelections == 1;
             if (isSingleSelection) {
-                this.featureTabsForChosenName.forEach((tab) => {
+                this.featureTabsForChosenType.forEach((tab) => {
                     this.deselectFeature(tab);
                 });
                 tab.selected = true;
@@ -79,12 +79,12 @@ class FeatureSelectionWidgetCtrl {
         }
     }
 
-    get featureTabsForChosenName() {
-        return this._featureTabsByName[this.selectedObjectName];
+    get featureTabsForChosenType() {
+        return this._featureTabsByName[this.selectedMapobjectType];
     }
 
     get selectedFeatures() {
-        return _.chain(this.featureTabsForChosenName)
+        return _.chain(this.featureTabsForChosenType)
         .filter((t) => {
             return t.selected;
         }).map((f) => {
@@ -125,7 +125,7 @@ angular.module('tmaps.ui')
         scope: {
             name: '@name',
             maxSelections: '@maxSelections',
-            selectedObjectName: '='
+            selectedMapobjectType: '='
         }
     };
 });

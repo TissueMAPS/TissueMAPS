@@ -16,7 +16,7 @@ class CreateExperimentCtrl {
 
     createExperiment() {
         var opt = this.opt;
-        return Experiment.create({
+        return (new ExperimentDAO()).create({
             name: opt.name,
             description: opt.description,
             plateFormat: parseInt(opt.plateFormat),

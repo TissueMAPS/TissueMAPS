@@ -7,7 +7,8 @@ class PlateDetailCtrl {
     constructor(public plate: Plate, private _$state) {}
 
     createAcquisition(name: string, description: string) {
-        Acquisition.create(this.plate.id, {
+        (new AcquisitionDAO()).create({
+            plate_id: this.plate.id,
             name: name,
             description: description
         })
@@ -22,7 +23,7 @@ class PlateDetailCtrl {
     }
 
     deleteAcquisition(acq: Acquisition) {
-        Acquisition.delete(acq.id)
+        (new AcquisitionDAO()).delete(acq.id)
         .then((resp) => {
             this._$state.go('plate.detail', {}, {
                 reload: 'plate.detail'

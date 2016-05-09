@@ -15,7 +15,6 @@ class ViewerCtrl {
         return this.$scope.viewer.currentZplane;
     }
     set currentZplane(z) {
-        console.log(z);
         this.$scope.viewer.currentZplane = Math.floor((z - this.zStep) / this.zStep);
     }
 

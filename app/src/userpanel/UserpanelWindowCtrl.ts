@@ -16,14 +16,20 @@ class UserpanelWindowCtrl {
                 private _dialogService: DialogService) {
         this.user = _session.getUser();
 
-        Experiment.getAll().then((exps) => {
-            this.experiments = exps;
+        (new ExperimentDAO()).getAll().then((exps) => {
+            this.experiments = <Experiment[]>exps;
         });
     }
 
     modifyExperiment(e: Experiment) {
         this._$state.go('setup', {
             experimentid: e.id
+        });
+    }
+
+    hasLayers(e: Experiment) {
+        return e.channels.every(function(element, index, array) {
+            return element.layers.length > 0;
         });
     }
 
@@ -37,7 +43,7 @@ class UserpanelWindowCtrl {
     deleteExperiment(e: Experiment) {
         this._dialogService.warning('Are you sure you want to delete this experiment?')
         .then((answer) => {
-            return Experiment.delete(e.id)
+            return (new ExperimentDAO()).delete(e.id)
             .then((ok) => {
                 if (ok) {
                     var idx = this.experiments.indexOf(e);
@@ -52,7 +58,6 @@ class UserpanelWindowCtrl {
             });
         });
     }
-    
 }
 
 angular.module('tmaps.ui').controller('UserpanelWindowCtrl', UserpanelWindowCtrl);

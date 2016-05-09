@@ -7,7 +7,7 @@ angular.module('tmaps.ui')
         }],
         controllerAs: 'viewportCtrl',
         bindToController: true,
-        template: '<div class="map-container"></div>',
+        templateUrl: '/src/viewer/viewport.html',
         link: function(scope, elem, attr) {
             /**
              * Call the viewport instance of this viewer to create the openlayers map.

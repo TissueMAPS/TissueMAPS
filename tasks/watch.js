@@ -16,7 +16,7 @@ module.exports = function (gulp, opt) {
          * from within their editor/IDE.
          */
         if (opt.watchTs) {
-            gulp.watch('app/src/**/*.ts', ['make-script', 'copy-src']);
+            gulp.watch('app/src/**/*.ts', ['make-script', 'copy']);
         }
         if (opt.watchOl) {
             gulp.watch('app/assets/libs/ol3/src/**/*.js', function() {

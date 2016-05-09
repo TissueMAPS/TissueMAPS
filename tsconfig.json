@@ -47,6 +47,7 @@
         "app/src/core/Viewer.ts",
         "app/src/core/Viewport.ts",
         "app/src/core/Application.ts",
+        "app/src/core/HTTPDataAccessObject.ts",
 
         "app/src/core/appstate/Appstate.ts",
         "app/src/core/appstate/AppstateService.ts",
@@ -56,8 +57,11 @@
         "app/src/core/appstate/api.ts",
 
         "app/src/core/experiment/Experiment.ts",
+        "app/src/core/experiment/ExperimentDAO.ts",
         "app/src/core/experiment/Plate.ts",
+        "app/src/core/experiment/PlateDAO.ts",
         "app/src/core/experiment/Acquisition.ts",
+        "app/src/core/experiment/AcquisitionDAO.ts",
         "app/src/core/experiment/Channel.ts",
         "app/src/core/experiment/ChannelLayer.ts",
 
@@ -71,7 +75,6 @@
         "app/src/core/visual/PointVisual.ts",
 
         "app/src/core/mapobject/MapObject.ts",
-        "app/src/core/mapobject/MapObjectInfo.ts",
         "app/src/core/mapobject/Feature.ts",
         "app/src/core/mapobject/MapObjectSelection.ts",
         "app/src/core/mapobject/MapObjectSelectionHandler.ts",
@@ -81,14 +84,20 @@
         "app/src/core/serialize/typedefs.ts",
 
         "app/src/core/tool/Tool.ts",
+        "app/src/core/tool/ToolDAO.ts",
         "app/src/core/tool/ToolSession.ts",
         "app/src/core/tool/ToolCtrl.ts",
         "app/src/core/tool/ToolResult.ts",
+        "app/src/core/tool/ToolResultDAO.ts",
 
-        "app/src/core/tool/result/LayerResult.ts",
-        "app/src/core/tool/result/LabelResult.ts",
-        "app/src/core/tool/result/ContinuousLabelResult.ts",
-        "app/src/core/tool/result/ScalarLabelResult.ts",
+        "app/src/core/tool/LabelLayer.ts",
+        "app/src/core/tool/Plot.ts",
+        "app/src/core/tool/Legend.ts",
+        "app/src/core/tool/result/ContinuousLabelLegend.ts",
+        "app/src/core/tool/result/ContinuousLabelLayer.ts",
+        "app/src/core/tool/result/ScalarLabelLayer.ts",
+        "app/src/core/tool/result/ScalarLabelLegend.ts",
+        "app/src/core/tool/result/SupervisedClassifierLabelLayer.ts",
 
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
@@ -107,7 +116,7 @@
         "app/src/viewer/toolui/ToolUICtrl.ts",
         "app/src/viewer/toolui/toolwindow/tmToolWindow.ts",
 
-        "app/src/viewer/toolui/toolwindow/widgets/tmObjectNameWidget.ts",
+        "app/src/viewer/toolui/toolwindow/widgets/tmMapobjectTypeWidget.ts",
         "app/src/viewer/toolui/toolwindow/widgets/tmFeatureSelectionWidget.ts",
         "app/src/viewer/toolui/toolwindow/widgets/tmClassSelectionWidget.ts",
 

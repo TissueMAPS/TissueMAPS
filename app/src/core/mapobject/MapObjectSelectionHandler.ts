@@ -21,9 +21,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         null: []
     };
 
-    private _activeMapObjectType: MapObjectType = null;
+    private _activeMapObjectType: string = null;
     private _activeSelection: MapObjectSelection = null;
-    private _outlineLayers: {[objectType: string]: VectorLayer;} = {};
+    private _segmentationLayers: {[objectType: string]: SegmentationLayer;} = {};
 
     constructor(viewer: Viewer) {
         this.viewer = viewer;
@@ -49,10 +49,11 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._activeMapObjectType;
     }
 
-    set activeMapObjectType(t: MapObjectType) {
+    set activeMapObjectType(t: string) {
         if (!this._isValidType(t)) {
             return;
         }
+
         // Hide all other selections on the map
         this.supportedMapObjectTypes.forEach((t2) => {
             if (t2 !== t) {
@@ -62,19 +63,27 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
                 });
             }
         });
+
         // Show only the selections for the just activated type 
         this.getSelectionsForType(t).forEach((s) => {
             s.selectionLayer.visible = true;
         });
+
         this._activeMapObjectType = t;
 
-        if (this._outlineLayers[t] !== undefined) {
-            this._outlineLayers[t].visible = true;
-            for (var t2 in this._outlineLayers) {
-                if (t2 !== t) {
-                    this._outlineLayers[t2].visible = false;
-                }
+        this._hideSegmentationLayersExceptForType(t);
+    }
+
+    private _hideSegmentationLayersExceptForType(t: string) {
+        // Hide all other segmentation layers (mapobject outlines)
+        // form the map and only display the one for the active mapobject type.
+        for (var t2 in this._segmentationLayers) {
+            if (t2 !== t) {
+                this._segmentationLayers[t2].visible = false;
             }
+        }
+        if (this._segmentationLayers[t] !== undefined) {
+            this._segmentationLayers[t].visible = true;
         }
     }
 
@@ -89,7 +98,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (sel === null) {
             this._activeSelection = null;
         } else {
+            // TODO: show segm layres
             this._activeSelection = sel;
+            this._hideSegmentationLayersExceptForType(sel.mapObjectType);
         }
     }
 
@@ -102,7 +113,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._activeSelection;
     }
 
-    get supportedMapObjectTypes(): MapObjectType[] {
+    get supportedMapObjectTypes(): string[] {
         return _.chain(this._selectionsByType).keys().difference(['null']).value();
     }
 
@@ -117,10 +128,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._selectionsByType[type];
     }
 
-    addMapObjectType(t: MapObjectType) {
-        // Check if this is the first time a type is added (null is always in the dict,
-        // therefore we check if the length is 1).
-        var isFirstTypeAdded = _(this._selectionsByType).keys().length === 1;
+    addMapObjectType(t: string) {
         this._selectionsByType[t] = [];
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = t;
@@ -130,8 +138,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             experimentId: this.viewer.experiment.id,
             zlevel: 0,
             size: this.viewport.mapSize,
-            visible: isFirstTypeAdded
+            visible: false
         });
+        this._segmentationLayers[t] = segmLayer;
         this.viewport.addLayer(segmLayer);
     }
 
@@ -207,7 +216,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         }
     };
 
-    private _isValidType(t: MapObjectType) {
+    private _isValidType(t: string) {
         if (t === undefined || this._selectionsByType[t] === undefined) {
             console.log('Not a valid type: ', t);
             return false;

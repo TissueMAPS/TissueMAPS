@@ -22,7 +22,7 @@ class Viewer {
         this.id = makeUUID();
         this.experiment = experiment;
         this.viewport = new Viewport();
-        this.tools = Tool.getAll();
+        this.tools = (new ToolDAO()).getAll();
 
         this.viewport.initMap(this.experiment.channels[0].layers[0].imageSize)
 
@@ -34,9 +34,9 @@ class Viewer {
         // TODO: The process of adding the layers could be made nicer.
         // The view should be set independent of 'ChannelLayers' etc.
         this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this);
-        this.experiment.mapObjectNames.forEach((name) => {
-            this.mapObjectSelectionHandler.addMapObjectType(name);
-            this.mapObjectSelectionHandler.addNewSelection(name);
+        this.experiment.mapobjectTypes.forEach((t) => {
+            this.mapObjectSelectionHandler.addMapObjectType(t.name);
+            this.mapObjectSelectionHandler.addNewSelection(t.name);
         });
 
         //// DEBUG
@@ -59,11 +59,18 @@ class Viewer {
     set currentResult(r: ToolResult) {
         this.deleteCurrentResult();
         this._currentResult = r;
+        this._hideAllSavedResults();
+    }
+
+    private _hideAllSavedResults() {
+        this.savedResults.forEach((r) => {
+            r.visible = false;
+        });
     }
 
     private _deleteResult(res: ToolResult) {
         // TODO: Also completely remove the result
-        res.hide(this);
+        res.visible = false;
     }
 
     deleteSavedResult(res: ToolResult) {
@@ -98,11 +105,10 @@ class Viewer {
     }
 
     destroy() {
-        var elem = this._getDOMElement();
-        elem.remove();
+        this.element.remove();
     }
 
-    private _getDOMElement(): JQuery {
+    get element(): JQuery {
         if (this._element === null || this._element.length == 0) {
             var $document = $injector.get<ng.IDocumentService>('$document');
             this._element = $document.find('#viewer-'+ this.id);
@@ -111,11 +117,11 @@ class Viewer {
     }
 
     hide() {
-        this._getDOMElement().hide();
+        this.element.hide();
     }
 
     show() {
-        this._getDOMElement().show();
+        this.element.show();
         this.viewport.update();
     }
 
@@ -148,14 +154,15 @@ class Viewer {
             var sessionUUID = data.session_uuid;
             var toolId = data.tool_id;
             console.log('ToolService: HANDLE REQUEST.');
-            var result = ToolResult.createToolResult(session, data);
+            var result = (new ToolResultDAO()).fromJSON(data.result);
+            result.attachToViewer(this);
             session.isRunning = false;
-            session.results.push(data.payload);
+            session.results.push(result);
             this.currentResult = result;
-            result.show(this);
+            result.visible = true;
 
             console.log('ToolService: DONE.');
-            return data.payload;
+            return data.result;
         },
         (err) => {
             // this.viewer.viewport.elementScope.then((vpScope) => {

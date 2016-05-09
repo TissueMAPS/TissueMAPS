@@ -1,18 +1,3 @@
-interface SerializedMapObjectInfo {
-    mapobject_type_name: string;
-    features: {name: string; }[];
-}
-
-
-interface SerializedExperiment {
-    id: string;
-    name: string;
-    description: string;
-    channels: SerializedChannel[];
-    mapobject_info: SerializedMapObjectInfo[];
-    status: string;
-}
-
 interface CreateExperimentArgs {
     name: string;
     description: string;
@@ -23,15 +8,22 @@ interface CreateExperimentArgs {
 
 type ExperimentArgs = SerializedExperiment;
 
+interface MapobjectType {
+    id: string;
+    name: string;
+    features: Feature[];
+}
 
-class Experiment {
+class Experiment implements Model {
     id: string;
     name: string;
     description: string;
+    plateFormat: string;
+    microscopeType: string;
+    mapobjectTypes: MapobjectType[];
+    plateAcquisitionMode: string;
     channels: Channel[] = [];
     status: string;
-
-    private _mapObjectInfo: {[objectName: string]: MapObjectInfo} = {};
 
     constructor(args: ExperimentArgs) {
 
@@ -41,11 +33,10 @@ class Experiment {
         this.name = args.name;
         this.description = args.description;
         this.status = args.status;
-
-        args.mapobject_info.forEach((i) => {
-            this._mapObjectInfo[i.mapobject_type_name] =
-                new MapObjectInfo(i.mapobject_type_name, i.features);
-        });
+        this.plateFormat = args.plate_format;
+        this.microscopeType = args.microscope_type;
+        this.plateAcquisitionMode = args.plate_acquisition_mode;
+        this.mapobjectTypes = args.mapobject_types;
 
         args.channels.forEach((ch) => {
             var isFirstChannel = this.channels.length == 0;
@@ -56,23 +47,10 @@ class Experiment {
         });
     }
 
-    getMapObjectInfo(objectName: string) {
-        return this._mapObjectInfo[objectName];
+    get maxZoom(): number {
+        return this.channels[0].layers[0];
     }
 
-    get mapObjectNames() {
-        return _.keys(this._mapObjectInfo); 
-    }
-
-    // serialize(): ng.IPromise<SerializedExperiment> {
-    //     var ser: SerializedExperiment = {
-    //         id: this.id,
-    //         name: this.name,
-    //         description: this.description,
-    //         channels: this.channels
-    //     };
-    //     return $injector.get<ng.IQService>('$q').when(ser);
-    // }
     get maxZ(): number {
         var zs = this.channels.map((ch) => {
             return ch.maxZ;

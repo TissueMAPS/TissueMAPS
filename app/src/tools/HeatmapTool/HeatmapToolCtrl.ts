@@ -1,6 +1,6 @@
 interface HeatmapScope extends ToolWindowContentScope {
     featureWidget: FeatureSelectionWidgetCtrl;
-    objectNameWidget: ObjectNameWidgetCtrl;
+    mapobjectTypeWidget: MapobjectTypeWidgetCtrl;
 }
 
 class HeatmapToolCtrl extends ToolCtrl {
@@ -16,7 +16,7 @@ class HeatmapToolCtrl extends ToolCtrl {
         var selectedFeature = this.$scope.featureWidget.selectedFeatures[0];
 
         this.sendRequest({
-            chosen_object_type: this.$scope.objectNameWidget.selectedName,
+            chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
             selected_feature: selectedFeature
         });
     }

@@ -2,8 +2,7 @@
 class Application {
 
     viewers: Viewer[] = [];
-
-    private _activeViewerNumber = 0;
+    activeViewer: Viewer;
 
     static $inject = ['$q'];
 
@@ -33,6 +32,7 @@ class Application {
         });
         this.show();
         viewer.show();
+        this.activeViewer = viewer;
         return viewer;
     }
 

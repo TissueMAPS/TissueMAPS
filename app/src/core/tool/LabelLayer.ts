@@ -1,53 +1,26 @@
-abstract class LayerResult extends ToolResult implements Layer {
-    protected _layer: VectorTileLayer;
-
-    get opacity() {
-        return this._layer.opacity;
-    }
-
-    set opacity(v: number) {
-        this._layer.opacity = v;
-    }
-
-    get visible() {
-        return this._layer.visible;
-    }
-
-    set visible(val: boolean) {
-        this._layer.visible = val;
-    }
-
-    addToMap(map: ol.Map) {
-        this._layer.addToMap(map);
-    }
-    
-    removeFromMap(map: ol.Map) {
-        this._layer.removeFromMap(map);
-    }
-
-    show(viewer: Viewer) {
-        this._layer.visible = true;
-    }
-    
-    hide(viewer: Viewer) {
-        this._layer.visible = false;
-    }
+interface LabelColorMapper {
+    (label: any): Color;
 }
 
-interface LabelResultLayerArgs {
-    labelResultId: number;
+interface LabelLayerArgs {
+    id: string;
+    attributes: any;
     t: number;
     zlevel: number;
-    size: Size;
-    labelColorMapper: LabelColorMapper;
     visible?: boolean;
 }
 
+abstract class LabelLayer extends VectorTileLayer {
+    
+    id: string;
+    attributes: any;
 
-class LabelResultLayer extends VectorTileLayer {
-    constructor(args: LabelResultLayerArgs) {
-        var colorMapper = args.labelColorMapper;
-        var styleFunc = function(feature, style) {
+    abstract getLabelColorMapper(): LabelColorMapper;
+    abstract getLegend(): Legend;
+
+    constructor(args: LabelLayerArgs) {
+        var styleFunc = (feature, style) => {
+            var colorMapper = this.getLabelColorMapper();
             var geomType = feature.getGeometry().getType();
             var label = feature.get('label');
             var fillColor: ol.Color;
@@ -79,13 +52,19 @@ class LabelResultLayer extends VectorTileLayer {
                 throw new Error('Unknown geometry type for feature');
             }
         };
-        var url = '/api/labelresults/' + args.labelResultId + '?x={x}&y={y}&z={z}&t=' + args.t + '&zlevel=' + args.zlevel;
+        var url = '/api/labellayers/' + args.id + '/tiles?x={x}&y={y}&z={z}&t=' + args.t + '&zlevel=' + args.zlevel;
+
+        var app = $injector.get<Application>('application');
+        var size = app.activeViewer.viewport.mapSize;
 
         super({
             style: styleFunc,
             url: url,
             visible: args.visible,
-            size: args.size
+            size: size
         });
+
+        this.id = args.id;
+        this.attributes = args.attributes;
     }
 }

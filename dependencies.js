@@ -25,7 +25,8 @@
     'bower_components/momentjs/moment.js',
     'bower_components/ng-websocket/ng-websocket.js',
     'bower_components/ng-file-upload/ng-file-upload.min.js',
-    'bower_components/angular-ui-router-breadcrumbs/dist/angular-ui-router-breadcrumbs.min.js'
+    'bower_components/angular-ui-router-breadcrumbs/dist/angular-ui-router-breadcrumbs.min.js',
+    'bower_components/plotlyjs/plotly.js'
 ];
 
 module.exports = dependencies.map(function(path) {

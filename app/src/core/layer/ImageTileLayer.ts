@@ -10,7 +10,7 @@ interface OlImageTileLayer extends ol.layer.Tile {
     getAdditiveBlend(): boolean;
 }
 
-interface OlImageTileLayerArgs extends olx.layer.LayerOptions {
+interface OlImageTileLayerArgs extends olx.layer.TileOptions {
     color?: number[];  // for example: [1, 0, 0] == red
     additiveBlend?: boolean;
     min?: number;
@@ -47,40 +47,58 @@ class ImageTileLayer extends BaseLayer<OlImageTileLayer> {
     constructor(args: ImageTileLayerArgs) {
         super();
 
-        // Add trailing slash if not already present
-        // var pyramidPath = args.pyramidPath;
-        // if (pyramidPath.substr(pyramidPath.length - 1) !== '/') {
-        //     pyramidPath += '/';
-        // }
-        // this.pyramidPath = pyramidPath;
         this.imageSize = args.imageSize;
+        var imageWidth = args.imageSize.width;
+        var imageHeight = args.imageSize.height;
+        var extent = [0, -imageHeight, imageWidth, 0];
 
-        // Some default properties
-        var _olLayerColor: number[];
-        if (args.color !== undefined) {
-            _olLayerColor = args.color.toNormalizedRGBArray();
-        } else {
-            _olLayerColor = [1, 1, 1];
+        // Compute the resolution array, i.e. an array of the number of tiles
+        // per zoom level if the image was square.
+        var tileSizeIter = 256;
+        var i = 1;
+        var resolutions = [1];
+        while (imageWidth > tileSizeIter || imageHeight > tileSizeIter) {
+            tileSizeIter *= 2;
+            i *= 2;
+            resolutions.push(i);
+        }
+        // e.g. [1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1] for maxzoom == 10
+        resolutions = resolutions.reverse();
+
+        var url = args.url;
+        if (url.match(/\/$/) === null) {
+            url += '/';
+        }
+        url += 'tiles?x={x}&y={y}&z={z}';
+
+        var imageSource = new ol.source.TileImage({
+            url: url,
+            crossOrigin: 'anonymous',
+            projection: null,
+            tileGrid: new ol.tilegrid.TileGrid({
+                extent: extent,
+                minZoom: 0,
+                tileSize: 256,
+                resolutions: resolutions,
+                origin: [0, 0]
+            }),
+            tileClass: ol.source.NonsquaredTile
+        });
+
+        var olLayerArgs = {
+            brightness: args.brightness !== undefined ? args.brightness : 0,
+            opacity: args.opacity !== undefined ? args.opacity : 1,
+            min: args.min !== undefined ? args.min : 0,
+            max: args.max !== undefined ? args.max : 1,
+            additiveBlend: args.additiveBlend !== undefined ? args.additiveBlend : false,
+            visible: args.visible !== undefined ? args.visible : true,
+            color: args.color !== undefined ? args.color.toNormalizedRGBArray() : [1, 1, 1],
+            // preload: Infinity,
+            source: imageSource
         }
 
-        var _olLayerArgs: OlImageTileLayerArgs = _.defaults(args, {
-            brightness: 0,
-            opacity: 1,
-            min: 0,
-            max: 1,
-            additiveBlend: true,
-            visible: true
-        });
-        _olLayerArgs.color = _olLayerColor;
-
-        _olLayerArgs.source = new ol.source.Zoomify({
-            size:  [this.imageSize.width, this.imageSize.height],
-            url: args.url,
-            crossOrigin: 'anonymous'
-        });
-
         // Create the underlying openlayers layer object
-        this._olLayer = <OlImageTileLayer> new ol.layer.Tile(_olLayerArgs);
+        this._olLayer = <OlImageTileLayer> new ol.layer.Tile(olLayerArgs);
     }
 
     get color(): Color {
@@ -145,5 +163,6 @@ class ImageTileLayer extends BaseLayer<OlImageTileLayer> {
     //         });
     //     });
     // }
-
 }
+
+

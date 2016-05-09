@@ -2,16 +2,6 @@ interface MicroscopeFile {
     name: string;
 }
 
-interface SerializedAcquisition {
-    id: string;
-    name: string;
-    description: string;
-    plate_id: string;
-    status: string;
-    microscope_image_files: MicroscopeFile[];
-    microscope_metadata_files: MicroscopeFile[];
-}
-
 interface AcquisitionArgs {
     id: string;
     name: string;
@@ -34,52 +24,6 @@ class Acquisition {
 
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 20000000});
-    }
-
-    static fromJSON(aq: SerializedAcquisition) {
-        return new Acquisition({
-            id: aq.id,
-            name: aq.name,
-            status: aq.status,
-            description: aq.description,
-            files: aq.microscope_image_files.concat(aq.microscope_metadata_files)
-        });
-    }
-
-    static get(id: string) {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        return $http.get('/api/acquisitions/' + id)
-        .then((resp: {data: {acquisition: SerializedAcquisition;}}) => {
-            return Acquisition.fromJSON(resp.data.acquisition);
-        })
-        .catch((resp) => {
-            return resp.data.error;
-        })
-    }
-
-    static create(plateId: string, args: {name: string; description: string;}) {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        var def = $q.defer();
-        $http.post('/api/plates/' + plateId + '/acquisitions', args)
-        .then((resp: {data: {acquisition: SerializedAcquisition}}) => {
-            def.resolve(Acquisition.fromJSON(resp.data.acquisition));
-        })
-        .catch((resp) => {
-            def.reject(resp.data.error);
-        });
-        return def.promise;
-    }
-
-    static delete(id: string): ng.IPromise<boolean> {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        return $http.delete('/api/acquisitions/' + id)
-        .then((resp) => {
-            return true;
-        })
-        .catch((resp) => {
-            return resp.data.error;
-        });
     }
 
     private _uploadRegisteredFiles(newFiles) {
@@ -157,5 +101,4 @@ class Acquisition {
             });
         });
     }
-
 }
