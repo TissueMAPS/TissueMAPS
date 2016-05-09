@@ -19,13 +19,17 @@ import tmlib.workflow.metaconfig
 from tmaps.extensions.redis import redis_store
 from tmaps.api import api
 from tmaps.extensions import db
-from tmaps.util import get
+from tmaps.util import (
+    extract_model_from_path,
+    extract_model_from_body
+)
 from tmaps.error import *
+
 
 @api.route('/acquisitions/<acquisition_id>/register-upload',
                  methods=['PUT'])
 @jwt_required()
-@get(Acquisition, check_ownership=True)
+@extract_model_from_path(Acquisition, check_ownership=True)
 def register_upload(acquisition):
     """
     Tell the server that an upload for this acquisition is imminent.
@@ -89,7 +93,7 @@ def register_upload(acquisition):
 
 @api.route('/acquisitions/<acquisition_id>/file-validity-check', methods=['POST'])
 @jwt_required()
-@get(Acquisition, check_ownership=True)
+@extract_model_from_path(Acquisition, check_ownership=True)
 def file_validity_check(acquisition):
     data = json.loads(request.data)
     if not 'files' in data:
@@ -120,7 +124,7 @@ def file_validity_check(acquisition):
 
 @api.route('/acquisitions/<acquisition_id>/upload-file', methods=['POST'])
 @jwt_required()
-@get(Acquisition, check_ownership=True)
+@extract_model_from_path(Acquisition, check_ownership=True)
 def upload_file(acquisition):
     # file_key = 'acquisition:%d:upload:files' % acquisition.id
     # registered_flag_key = 'acquisition:%d:upload:registered' % acquisition.id

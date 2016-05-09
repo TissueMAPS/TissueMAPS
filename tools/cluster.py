@@ -1,5 +1,5 @@
 from scipy.cluster.vq import kmeans, vq
-from tmaps.tool.result import ScalarLabelResult
+from tmaps.tool import ScalarLabelLayer, Result
 
 
 class ClusterTool():
@@ -12,7 +12,6 @@ class ClusterTool():
         }
 
         """
-
         # Get mapobject
         mapobject_name = payload['chosen_object_type']
         mapobject_type = [t for t in experiment.mapobject_types
@@ -28,12 +27,14 @@ class ClusterTool():
         predicted_labels = self._perform_clustering(X, k)
         ids = X.index.tolist()
 
-        response = ScalarLabelResult(
-            ids=ids, labels=predicted_labels,
-            mapobject_type_id=mapobject_type.id,
-            session_id=session.id)
+        labels = dict(zip(ids, predicted_labels))
 
-        return response
+        result = Result(
+            tool_session=session,
+            layer=ScalarLabelLayer(labels=labels)
+        )
+
+        return result
 
     def _perform_clustering(self, X, k):
         """Cluster map objects of a given type based on a set of selected features.

@@ -4,15 +4,11 @@ tissueMAPS server
 Initial setup (OSX)
 -------------
 
-Install all flask packages:
+Install `tmlib` and server-specific packages:
 
     $ cd TissueMAPS/server
-    $ mkvirtualenv tmaps
+    $ workon tmaps  # created when TmLibrary was installed
     $ pip install -r tmaps/requirements/requirements.txt
-
-### Postgres
-
-Install the postgres database server.
 
 
 #### Via postgres.app (easiest)
@@ -45,21 +41,27 @@ Start postgres:
 
 This starts postgres with the default config file at `/usr/local/var/postgres/postgresql.conf` on port 5432.
 
+### Config file creation
+
+You now have to create a new config file where all the settings for the
+TissueMAPS server are stored. There are template files that can be copied and
+adjusted.
+
+    $ cp config/dev.py.template config/dev.py
+    
+Fill in the content of this template as needed. Then, set the environment
+variable `TMAPS_SETTINGS` to point to this config file.
+
+    $ export TMAPS_SETTINGS=config/dev.py
+
+You can have multiple configs and switch between them by resetting this
+environment variable.
+
 ### Initial database creation
 
-Now, create a new database called 'tissuemaps' using pgadmin3 or the createdb cli tool.
+Create a new database called 'tissuemaps' using pgadmin3 or the createdb cli tool.
 
-    $ createdb tissuemaps
-
-Make sure that the database access information is set in `tmaps/config/dev.py` accordingly.
-Depending on your setup, this could look something like this:
-
-    POSTGRES_DB_USER = 'your name'
-    POSTGRES_DB_PASSWORD = 'your pw'
-    POSTGRES_DB_NAME = 'tissuemaps'
-    POSTGRES_DB_HOST = 'localhost'
-    POSTGRES_DB_PORT = 5432
-    DEBUG = True
+Make sure that the database access information is set in the config file accordingly (variable `SQLALCHEMY_DATABASE_URI`).
 
 If you installed postgres via postgres.app there is already a databaser superuser with the same username/pw combination as your system's user.
 If you installed postgres via brew, you need to create the user account specified in your `config/dev.py` file:
@@ -68,13 +70,9 @@ If you installed postgres via brew, you need to create the user account specifie
 
 Finally, initialize all tables with:
 
-    $ python manage.py create_tables
+    $ python manage.py db createtables
 
-Add some dummy data (like a user with name 'testuser'):
-
-    $ python manage.py populate_db
-
-There is also a small shortcut script to recreate the drop and repopulate the db after you change the schema:
+There is also a small shortcut script to recreate the db after you change the schema:
 
     $ sh scripts/recreate_db.sh
 
@@ -87,19 +85,3 @@ Database migrations # TODO
 Create a new migration:
 
     $ python manage.py migrate init
-
-
-Required structure of experimental data
----------------------------------------
-
-Folder structure:
-
-    {experiment_name}/
-        data.h5
-        id_tables/
-            ROW00001_COL000001.npy
-            ...
-        id_pyramids/ (currently 'layermod_src/')
-        layers/
-
-For structure of `data.h5` see [datafusion]().

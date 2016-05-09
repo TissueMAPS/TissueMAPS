@@ -1,10 +1,7 @@
-import numpy as np
-import matplotlib
-from matplotlib import cm
-
 from tmlib.models import Feature, FeatureValue, MapobjectType
 from tmaps.extensions import db
-from tmaps.tool.result import ContinuousLabelResult
+from tmaps.tool import ContinuousLabelLayer, Result
+
 
 class HeatmapTool():
     def process_request(self, payload, session, experiment):
@@ -18,7 +15,8 @@ class HeatmapTool():
         # Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         mapobject_type = db.session.query(MapobjectType).\
-            filter_by(name=mapobject_type_name).first()
+            filter_by(name=mapobject_type_name, experiment_id=experiment.id).\
+            one()
 
         selected_feature = payload['selected_feature']
 
@@ -28,16 +26,18 @@ class HeatmapTool():
             join(Feature, MapobjectType).\
             filter(
                 Feature.name == selected_feature,
-                MapobjectType.id == mapobject_type.id
+                MapobjectType.id == mapobject_type.id,
+                MapobjectType.experiment_id == experiment.id
             ).all()
 
         mapobject_ids = [q.mapobject_id for q in query_result]
         values = [q.value for q in query_result]
 
-        response = ContinuousLabelResult(
-            ids=mapobject_ids, labels=values,
-            mapobject_type_id=mapobject_type.id,
-            session_id=session.id
+        labels = dict(zip(mapobject_ids, values))
+
+        result = Result(
+            tool_session=session,
+            layer=ContinuousLabelLayer(labels=labels)
         )
 
-        return response
+        return result

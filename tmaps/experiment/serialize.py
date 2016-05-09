@@ -1,16 +1,13 @@
-from tmlib.models import Experiment, Channel, ChannelLayer, Plate, Acquisition
+from tmlib.models import (
+    Experiment, Channel, ChannelLayer, Plate, Acquisition,
+    Feature, MapobjectType
+)
 from tmaps.serialize import json_encoder
 from tmaps.model import encode_pk
 
 
 @json_encoder(Experiment)
 def encode_experiment(obj, encoder):
-    mapobject_info = []
-    for t in obj.mapobject_types:
-        mapobject_info.append({
-            'mapobject_type_name': t.name,
-            'features': [{'name': f.name} for f in t.features]
-        })
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
@@ -21,8 +18,8 @@ def encode_experiment(obj, encoder):
         'plate_acquisition_mode': obj.plate_acquisition_mode,
         'status': obj.status,
         'channels': map(encoder.default, obj.channels),
-        'mapobject_info': mapobject_info,
-        'plates': obj.plates
+        'mapobject_types': map(encoder.default, obj.mapobject_types),
+        'plates': [p.id for p in obj.plates]
     }
 
 
@@ -43,6 +40,7 @@ def encode_channel_layer(obj, encoder):
         'id': encode_pk(obj.id),
         'zplane': obj.zplane,
         'tpoint': obj.tpoint,
+        'max_zoom': obj.maxzoom_level_index,
         'image_size': {
             'width': image_width,
             'height': image_height
@@ -57,7 +55,7 @@ def encode_plate(obj, encoder):
         'name': obj.name,
         'description': obj.description,
         'experiment_id': encode_pk(obj.experiment_id),
-        'acquisitions': obj.acquisitions
+        'acquisitions': [a.id for a in obj.acquisitions]
     }
 
 
@@ -73,4 +71,21 @@ def encode_acquisition(obj, encoder):
             [{'name': f.name} for f in obj.microscope_image_files],
         'microscope_metadata_files':
             [{'name': f.name} for f in obj.microscope_image_files]
+    }
+
+
+@json_encoder(Feature)
+def encode_feature(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name
+    }
+
+
+@json_encoder(MapobjectType)
+def encode_mapobject_type(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'features': map(encoder.default, obj.features)
     }

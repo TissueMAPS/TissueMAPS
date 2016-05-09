@@ -1,12 +1,14 @@
-from flask import jsonify
+import sqlalchemy
+from flask import jsonify, current_app
+
 from tmaps.serialize import json_encoder
 from api import api
-import sqlalchemy
 
 
 def register_error(cls):
     @api.errorhandler(cls)
     def handle_invalid_usage(error):
+        current_app.logger.error(error)
         response = jsonify(error=error)
         response.status_code = error.status_code
         return response
@@ -20,6 +22,7 @@ def handle_integrity_error(error):
         'status_code': 500,
         'type': error.__class__.__name__
     })
+    current_app.logger.error('IntegrityError: ' + error.message)
     response.status_code = 500
     return response
 
@@ -29,6 +32,9 @@ class APIException(Exception):
     def __init__(self, message, status_code):
         self.message = message
         self.status_code = status_code
+
+    def __str__(self):
+        return '%s: %s' % (self.__class__.__name__, self.message)
 
 
 @json_encoder(APIException)
