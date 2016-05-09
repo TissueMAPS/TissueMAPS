@@ -1,19 +1,19 @@
 records:
     - class: tmaps.tool.Tool
       args:
-          name: SVMTool
-          description: Support Vector Machine classifier tool.
-          icon: SVM
-          full_class_path: tools.classifier.SVMTool
+          name: RandomForest
+          description: Supervised classification using the Random Forest classifier.
+          icon: RAF
+          full_class_path: tools.SVM
     - class: tmaps.tool.Tool
       args:
-          name: ClusterTool
-          description: K-means clustering
+          name: Kmeans
+          description: Unsupervised classification using k-means clustering.
           icon: CLU
-          full_class_path: tools.ClusterTool
+          full_class_path: tools.Kmeans
     - class: tmaps.tool.Tool
       args:
-          name: HeatmapTool
-          description: Heatmap Tool.
+          name: Heatmap
+          description: Color coding of feature values.
           icon: HM
-          full_class_path: tools.HeatmapTool
+          full_class_path: tools.Heatmap

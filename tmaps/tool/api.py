@@ -56,8 +56,7 @@ def process_tool_request(tool_id):
     instance object that was saved in the database when the window was opened on
     the client.
     The tool has access to trans-request storage via the instance property
-    'data_storage'. Also, a h5 dataset can be retrieved via experiment instance
-    property: 'self.experiment_dataset'.
+    'data_storage'.
 
     Returns:
 
