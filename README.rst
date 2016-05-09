@@ -205,7 +205,7 @@ Input and output of modules is described in module-specific *handles* files:
     input:
 
         - name: string_example
-          type: Scalar
+          type: Character
           value: mystring
 
         - name: integer_example
@@ -225,12 +225,6 @@ Input and output of modules is described in module-specific *handles* files:
             - 2.3
             - 1.7
             - 4.6
-        - name: string_example
-          type: Character
-          value: whatever
-          options:
-            - something
-            - something else
 
         - name: boolean_example
           type: Boolean
