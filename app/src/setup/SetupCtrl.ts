@@ -1,15 +1,19 @@
+interface Stage {
+    name: string;
+}
+
 class SetupCtrl {
 
-    currentStage;
-    stages;
+    currentStage: Stage;
+    stages: Stage[];
 
-    static $inject = ['experiment', 'workflowDescription', 'plates', '$state'];
+    static $inject = ['experiment', 'plates', '$state'];
 
-    isInStage(stage) {
+    isInStage(stage: Stage) {
         return this.currentStage.name === stage.name;
     }
 
-    goToStage(stage) {
+    goToStage(stage: Stage) {
         this.currentStage = stage;
         if (stage.name === 'uploadfiles') {
             this._$state.go('plate');
@@ -20,7 +24,7 @@ class SetupCtrl {
         }
     }
 
-    private _checkArgsForWorkflowStage(stage): boolean {
+    private _checkArgsForWorkflowStage(stage: Stage): boolean {
         var submissionArgsAreValid, batchArgsAreValid, extraArgsAreValid;
         var isValid: boolean;
 
@@ -38,7 +42,7 @@ class SetupCtrl {
             }).all().value();
         }
 
-        var areStagesOk: boolean[] =  stage.steps.map((step) => {
+        var areStepsOk: boolean[] =  stage.steps.map((step) => {
             batchArgsAreValid = checkArgs(step.batch_args);
             submissionArgsAreValid = checkArgs(step.submission_args);
 
@@ -50,7 +54,7 @@ class SetupCtrl {
 
             return batchArgsAreValid && submissionArgsAreValid && extraArgsAreValid;
         });
-        return _.all(areStagesOk);
+        return _.all(areStepsOk);
     }
 
     private _isUploadStageOk() {
@@ -63,7 +67,8 @@ class SetupCtrl {
     }
 
     private _areWorkflowStagesOk() {
-        var areWorkflowStagesOk = _.all(this.workflowDescription.stages.map((st) => {
+        var areWorkflowStagesOk =
+            _.all(this.experiment.workflowDescription.stages.map((st) => {
             return this._checkArgsForWorkflowStage(st);
         }));
         return areWorkflowStagesOk;
@@ -80,28 +85,45 @@ class SetupCtrl {
 
     canProceedToNextStage(): boolean {
         if (this._isLastStage(this.currentStage)) {
+            return false;
+        } else if (this.currentStage.name === 'uploadfiles') {
+            return this._isUploadStageOk();
+        } else {
+            return this._checkArgsForWorkflowStage(this.currentStage);
+        }
+    }
+
+    submit() {
+        var idx = this.stages.indexOf(this.currentStage);
+        var notInUploadFiles = idx > 0;
+        if (notInUploadFiles) {
+            var isStageOk = this._checkArgsForWorkflowStage(this.currentStage);
+            if (isStageOk) {
+                var stagesToBeSubmitted = [];
+                for (var i = 1; i <= idx;  i++) {
+                    stagesToBeSubmitted.push(this.stages[i]);
+                }
+                this._submitStages(stagesToBeSubmitted);
+            }
+        }
+    }
+
+    canSubmit(): boolean {
+        if (this.currentStage.name === 'uploadfiles') {
+            // Submit button should not be pressable from upload files stage
+            return false;
+        } else if (this._isLastStage(this.currentStage)) {
             return this._areAllStagesOk();
         } else {
-            if (this.currentStage.name !== 'uploadfiles') {
-                return this._checkArgsForWorkflowStage(this.currentStage);
-            } else {
-                return this._isUploadStageOk();
-            }
+            return this._checkArgsForWorkflowStage(this.currentStage);
         }
     }
 
     goToNextStage() {
         var idx = this.stages.indexOf(this.currentStage);
         if (idx >= 0) {
-            var inLastStage = idx == this.stages.length - 1
-            if (inLastStage) {
-                if (this._areAllStagesOk()) {
-                    console.log('SUBMIT');
-                    this._submitWorkflow();
-                } else {
-                    console.log('SOME STAGES NOT OK, CANNOT SUBMIT');
-                }
-            } else {
+            var inLastStage = idx == this.stages.length - 1;
+            if (!inLastStage) {
                 var newStage = this.stages[idx + 1];
                 this.currentStage = newStage;
                 this._$state.go('setup.stage', {
@@ -110,12 +132,25 @@ class SetupCtrl {
                     reload: 'setup.stage'
                 });
             }
+        } else {
+            throw new Error(
+                'Cannot proceed to next stage from unknown stage ' + this.currentStage
+            );
         }
     }
 
-    private _submitWorkflow() {
-        var desc = $.extend(true, {}, this.workflowDescription);
-        desc.stages.forEach((stage) => {
+    private _submitStages(stages: Stage[]) {
+        // Copy the original workflow description object and populate it with
+        // all the values taht were filled in by the user.
+        var desc = $.extend(true, {}, this.experiment.workflowDescription);
+        desc.stages = [];
+        stages.forEach((stage) => {
+            // Copy the stage so that we don't modify the argument when
+            // modifying the structure of the stage.
+            // The structure of the stage objects that were originally sent to the client
+            // have a different structure than the ones that are passed back
+            // to the server.
+            stage = $.extend(true, {}, stage);
             stage.steps.forEach((step) => {
                 var batchArgs = {};
                 step.batch_args.forEach((arg) => {
@@ -139,6 +174,7 @@ class SetupCtrl {
                     step.extra_args = null;
                 }
             });
+            desc.stages.push(stage);
         });
         this.experiment.submitWorkflow(desc);
     }
@@ -152,14 +188,13 @@ class SetupCtrl {
     }
 
     constructor(public experiment: Experiment,
-                public workflowDescription: any,
                 public plates: Plate[],
                 private _$state) {
         var uploadStage = {
             name: 'uploadfiles'
         };
         this.currentStage = uploadStage;
-        this.stages = [uploadStage].concat(workflowDescription.stages);
+        this.stages = [uploadStage].concat(this.experiment.workflowDescription.stages);
         // console.log(experiment);
         // switch(experiment.status) {
         //     case 'WAITING':

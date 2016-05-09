@@ -21,6 +21,7 @@ interface SerializedExperiment {
     channels: SerializedChannel[];
     mapobject_types: SerializedMapobjectType[];
     plates: SerializedPlate[];
+    workflow_description: any;
 }
 
 class ExperimentDAO extends HTTPDataAccessObject<Experiment> {

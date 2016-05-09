@@ -126,9 +126,6 @@ angular.module('tmaps.ui')
         controllerAs: 'setupCtrl',
         resolve: {
             experiment: getExperiment,
-            workflowDescription: ['experiment', (experiment) => {
-                return experiment.workflowDescription;
-            }],
             plates: ['$http', 'experiment', '$state', '$q',
                      ($http, experiment, $state, $q) => {
                 var def = $q.defer();
@@ -166,8 +163,8 @@ angular.module('tmaps.ui')
             }
         },
         resolve: {
-            'stage': ['workflowDescription', '$stateParams', (workflowDescription, $stateParams) => {
-                var stage = _.find(workflowDescription.stages, (st: any) => {
+            'stage': ['experiment', '$stateParams', (experiment, $stateParams) => {
+                var stage = _.find(experiment.workflowDescription.stages, (st: any) => {
                     return st.name === $stateParams.stageName;
                 });
                 if (stage !== undefined) {

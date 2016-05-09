@@ -20,3 +20,14 @@
     </div>
 </form>
 
+<button ng-click="setupCtrl.submit()"
+    ng-disabled="!setupCtrl.canSubmit()"
+    class="btn btn-primary">
+    Submit
+</button>
+
+<button ng-click="setupCtrl.goToNextStage()"
+    ng-disabled="!setupCtrl.canProceedToNextStage()"
+    class="btn btn-primary">
+    Next
+</button>
