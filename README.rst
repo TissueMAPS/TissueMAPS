@@ -49,13 +49,11 @@ Pipeline descriptor file
 
 Jterator allows only very simplistic types of work-flow -  *pipeline* (somewhat similar to a UNIX-world pipeline). 
 
-Example of a *.pipe.yml* YAML descriptor file:
+Example of a *.pipe.yaml* YAML descriptor file:
 
 .. code-block:: yaml
 
     description: An example project that does nothing.
-    
-    lib: ''
 
     input:
 
@@ -80,8 +78,8 @@ Example of a *.pipe.yml* YAML descriptor file:
             active: true
 
 
-Handle files can in principle reside at any location and their path has to be provided in the pipeline descriptor file. The path to a handle file can be absolute or relative to the working directory (as in the example above). Module files must reside within this repository. The path to the local copy of the repository can either be provided by setting the ``JTLIB`` environment variable or by setting a value for the ``lib`` key within the pipeline descriptor file.  
-All *channels* specified in **input** will be loaded by the program and the corresponding images made available to modules in the pipeline.
+Handle files can in principle reside at any location. The path to the files has to be provided in the pipeline descriptor file. This path can be absolute or relative to the project directory (as in the example above). Module files must reside within the repository. The path to the local copy of the repository can either be provided by setting the ``JTLIB`` environment variable or by setting a value for the ``lib`` key within the pipeline descriptor file.  
+All *channels* and *mapobject_types* specified in **input** will be loaded by the program and the corresponding images made available to modules in the pipeline.
 
 .. _modules:
 
