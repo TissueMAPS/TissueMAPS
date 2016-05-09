@@ -43,6 +43,29 @@ def get_tools():
 @api.route('/tools/<tool_id>/request', methods=['POST'])
 @jwt_required()
 def process_tool_request(tool_id):
+    """
+    Process a generic tool request sent by the client.
+    POST payload should have the format:
+
+    {
+        experiment_id: string,
+        payload: dict
+    }
+
+    The server searches for the Tool with id `tool_id` and call its
+    request method passing it the argument `payload` as well as the tool
+    instance object that was saved in the database when the window was opened on
+    the client.
+    The tool has access to trans-request storage via the instance property
+    'data_storage'.
+
+    Returns:
+
+    {
+        return_value: object
+    }
+
+    """
     data = json.loads(request.data)
 
     # Check if the request is valid.

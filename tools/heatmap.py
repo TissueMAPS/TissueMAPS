@@ -26,7 +26,8 @@ class HeatmapTool():
                 Feature.name == selected_feature,
                 MapobjectType.id == mapobject_type.id,
                 MapobjectType.experiment_id == experiment.id
-            ).all()
+            ).\
+            all()
 
         mapobject_ids = [q.mapobject_id for q in query_result]
         values = [q.value for q in query_result]

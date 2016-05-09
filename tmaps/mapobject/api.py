@@ -39,6 +39,7 @@ def get_mapobjects_tile(experiment_id, object_name):
 
     if object_name == 'DEBUG_TILE':
         maxzoom = ex.channels[0].layers[0].maxzoom_level_index
+        print 'MAXZOOM', maxzoom
         minx, miny, maxx, maxy = MapobjectOutline.create_tile(x, y, z, maxzoom)
         return jsonify({
             'type': 'Feature',
