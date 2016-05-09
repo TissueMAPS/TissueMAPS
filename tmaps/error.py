@@ -53,7 +53,30 @@ class MalformedRequestError(APIException):
 
     def __init__(self, message=default_message):
         super(MalformedRequestError, self).__init__(
-            message=message, status_code=400)
+            message=message, status_code=400
+        )
+
+
+@register_error
+class MissingGETParameterError(MalformedRequestError):
+    def __init__(self, *params):
+        super(MissingGETParameterError, self).__init__(
+            message=(
+                'The following GET parameters are required but were missing'
+                ' in the request: %s.' % params.join(', ')
+            )
+        )
+
+
+@register_error
+class MissingPOSTParameterError(MalformedRequestError):
+    def __init__(self, *params):
+        super(MissingPOSTParameterError, self).__init__(
+            message=(
+                'The following POST parameters are required but were missing'
+                ' in the request body: %s.' % params.join(', ')
+            )
+        )
 
 
 @register_error
@@ -63,17 +86,19 @@ class NotAuthorizedError(APIException):
 
     def __init__(self, message=default_message):
         super(NotAuthorizedError, self).__init__(
-            message=message, status_code=401)
+            message=message, status_code=401
+        )
 
 
 @register_error
 class ResourceNotFoundError(APIException):
-
-    default_message = 'The requested resource was not found.'
-
-    def __init__(self, message=default_message):
+    def __init__(self, model):
         super(ResourceNotFoundError, self).__init__(
-            message=message, status_code=404)
+            message=(
+                'The requested resource with type %s was not found.' % model
+            ),
+            status_code=404
+        )
 
 
 @register_error

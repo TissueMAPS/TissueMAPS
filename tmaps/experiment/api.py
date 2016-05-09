@@ -16,10 +16,15 @@ from tmaps.util import (
     extract_model_from_path,
     extract_model_from_body
 )
+from tmaps.model import decode_pk
 from tmaps.extensions import db
 from tmaps.api import api
 from tmaps.error import (
-    MalformedRequestError
+    MalformedRequestError,
+    MissingGETParameterError,
+    MissingPOSTParameterError,
+    ResourceNotFoundError,
+    NotAuthorizedError
 )
 
 
@@ -103,8 +108,8 @@ def get_experiments():
 
 
 @api.route('/experiments/<experiment_id>', methods=['GET'])
-@extract_model_from_path(Experiment)
 @jwt_required()
+@extract_model_from_path(Experiment)
 def get_experiment(experiment):
     """
     Get an experiment by id.
@@ -121,28 +126,9 @@ def get_experiment(experiment):
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow_description', methods=['GET'])
-@extract_model_from_path(Experiment)
-@jwt_required()
-def get_workflow_description(experiment):
-    """
-    Get the workflow description for this experiment.
-
-    Response:
-    {
-        workflow_description: a serialized workflow description
-    }
-
-    """
-    desc = CanonicalWorkflowDescription()
-    return jsonify({
-        'workflow_description': desc.as_dict()
-    })
-
-
 @api.route('/experiments/<experiment_id>/workflow', methods=['POST'])
-@extract_model_from_path(Experiment)
 @jwt_required()
+@extract_model_from_path(Experiment)
 def submit_workflow(experiment):
     data = json.loads(request.data)
     WorkflowType = tmlib.workflow.registry.get_workflow_description(data['type'])
@@ -217,12 +203,41 @@ def get_plate(plate):
 
 @api.route('/plates', methods=['GET'])
 @jwt_required()
-@extract_model_from_path(Experiment, check_ownership=True)
-def get_plates(experiment):
+def get_plates():
+    """
+    Get all plates for a specific experiment.
+
+    Request
+    -------
+
+    Required GET parameters:
+        - experiment_id
+
+    Response
+    --------
+
+    {
+        "data": [
+            {
+                "id": string,
+                "name": string,
+                "description": string,
+                "experiment_id": number,
+                "acquisition": Object
+            },
+            ...
+        ]
+    }
+
+    """
     experiment_id = request.args.get('experiment_id')
     if not experiment_id:
-        raise MalformedRequestError(
-            'The GET parameter "experiment_id" is required.')
+        raise MissingGETParameterError('experiment_id')
+    experiment = db.session.query(Experiment).get_with_hash(experiment_id)
+    if not experiment:
+        raise ResourceNotFoundError('Experiment')
+    if not experiment.belongs_to(current_identity):
+        raise NotAuthorizedError()
 
     return jsonify(data=experiment.plates)
 
@@ -239,6 +254,7 @@ def delete_plate(plate):
 
 @api.route('/plates', methods=['POST'])
 @jwt_required()
+@extract_model_from_body(Experiment, check_ownership=True)
 def create_plate(experiment):
     """
     Create a new plate for the experiment with id `experiment_id`.
@@ -261,18 +277,14 @@ def create_plate(experiment):
     data = json.loads(request.data)
     name = data.get('name')
     desc = data.get('description', '')
-    experiment_id = data.get('experiment_id')
 
     if not name:
-        raise MalformedRequestError(
-            'To create a new plate you need to supply a "name"')
-    if not experiment_id:
-        raise MalformedRequestError(
-            'To create a new plate you need to supply an "experiment_id"')
+        raise MissingPOSTParameterError('name')
 
     pl = Plate(
         name=name, description=desc,
-        experiment_id=experiment_id)
+        experiment_id=decode_pk(experiment.id)
+    )
     db.session.add(pl)
     db.session.commit()
 
@@ -304,15 +316,16 @@ def create_acquisition(plate):
     desc = data.get('description', '')
 
     if not name:
-        raise MalformedRequestError()
+        raise MissingPOSTParameterError('name')
 
     aq = Acquisition(
         name=name, description=desc,
-        plate_id=plate.id)
+        plate_id=plate.id
+    )
     db.session.add(aq)
     db.session.commit()
 
-    return jsonify(acquisition=aq)
+    return jsonify(data=aq)
 
 
 @api.route('/acquisitions/<acquisition_id>', methods=['DELETE'])
@@ -328,7 +341,25 @@ def delete_acquisition(acquisition):
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition(acquisition):
-    return jsonify(acquisition=acquisition)
+    return jsonify(data=acquisition)
+
+
+@api.route('/acquisitions/<acquisition_id>/image_files', methods=['GET'])
+@jwt_required()
+@extract_model_from_path(Acquisition, check_ownership=True)
+def get_acquisition_image_files(acquisition):
+     return jsonify(
+        data=[{'name': f.name} for f in acquisition.microscope_image_files]
+    )
+
+
+@api.route('/acquisitions/<acquisition_id>/metadata_files', methods=['GET'])
+@jwt_required()
+@extract_model_from_path(Acquisition, check_ownership=True)
+def get_acquisition_metadata_files(acquisition):
+    return jsonify(
+        data=[{'name': f.name} for f in acquisition.microscope_metadata_files]
+    )
 
 # @api.route('/experiments/<exp_id>/convert-images', methods=['POST'])
 # @jwt_required()
