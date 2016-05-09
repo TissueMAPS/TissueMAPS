@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import skimage
 import logging
+import shapely.geometry
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
@@ -296,7 +297,7 @@ class SegmentedObjects(LabelImage):
         '''List[int]: unique object identifier labels'''
         return map(int, np.unique(self.value[self.value > 0]))
 
-    def calc_outlines(self, offset_y, offset_x, tolerance=1):
+    def calc_outlines(self, offset_y, offset_x, tolerance=2):
         '''Calculates the global map coordinates for each object outline.
 
         Parameters
@@ -306,10 +307,12 @@ class SegmentedObjects(LabelImage):
         offset_x: int
             horizontal offset that needs to be added along the *x* axis
         tolerance: int
-            accuracy of polygon approximation; the larger the value the less
-            accurate the polygon will be approximated, i.e. the less coordinate
-            values will be used to describe its contour; if ``0`` the original
-            contour is used (default: ``1``)
+            accuracy of polygon approximation; tolerance distance in pixels of
+            points on the contour of the appoximated polygon to the orginal
+            cooridinate points; the higher the value the less accurate the
+            polygon will be approximated, i.e. the less coordinate values will
+            be used to describe its contour; if ``0`` the original contour is
+            used (default: ``2``)
 
         Returns
         -------
@@ -349,23 +352,27 @@ class SegmentedObjects(LabelImage):
                         # identified per object, in particular when the object
                         # has  "weird" shape, i.e. many small protrusions.
                         # NOTE: I've tried the OpenCV function as well.
-                        # It's faster, but it has even more problems
-                        # in terms of identifying a single contour for a given
-                        # object.
-                        # TODO: Don't simply take the first element, but measure some
-                        # properties and choose the one that makes the most sense.
+                        # It's faster, but it has even more problems in terms
+                        # of identifying a single contour for a given object.
+                        # TODO: Don't simply take the first element in case
+                        # multiple objects are identified, but measure some
+                        # properties and choose the one that makes the most
+                        # sense (i.e. testing their validity with shapely).
                         logger.warn(
                             '%d contours identified for object #%d',
                             len(contours), label
                         )
                     contour = contours[0].astype(np.int64)
-                    contour = skimage.measure.approximate_polygon(
-                        contour, tolerance
-                    ).astype(np.int64)
-                    outlines[(t, z, label)] = pd.DataFrame({
-                        'y': -1 * (contour[:, 0] + offset_y),
-                        'x': contour[:, 1] + offset_x
-                    })
+                    # Add offset caused by alignment and invert the y-axis
+                    # as required by Openlayers.
+                    contour[:, 0] = -1 * (contour[:, 0] + offset_y)
+                    contour[:, 1] = contour[:, 1] + offset_x
+                    poly = shapely.geometry.Polygon(np.fliplr(contour))
+                    poly = poly.simplify(
+                        tolerance=tolerance, preserve_topology=True
+                    )
+                    outlines[(t, z, label)] = poly
+
         return outlines
 
     @property
