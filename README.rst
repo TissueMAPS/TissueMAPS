@@ -279,7 +279,7 @@ Coding style
 For Python, we encourage following `PEP 0008 Python style guide <https://www.python.org/dev/peps/pep-0008/>`_. For Matlab and R we recommend following Google's style guidelines, see `Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
 
 
-... _figures:
+.. _figures:
 
 Figures
 -------
@@ -287,7 +287,7 @@ Figures
 The plotting library `plotly <https://plot.ly/api/>`_ is used to generate interactive plots for visualization of module results in the web-based user interface. The advantage of this library is that is has a uniform API and generates identical outputs across different languages (Python, Matlab, R, Julia). Each module creates only one figure. If you have the feeling that you need more than one figure, it's an indication that you should break down your code into multiple modules.
 
 
-... _documentation:
+.. _documentation:
 
 Documentation
 -------------
