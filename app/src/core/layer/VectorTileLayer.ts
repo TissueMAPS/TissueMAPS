@@ -86,15 +86,6 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
 
         var vectorSource = new ol.source.VectorTile({
             url: opt.url,
-            // tileUrlFunction: function(tileCoord, pixelRatio, proj) {
-            //     var z = tileCoord[0];
-            //     var x = tileCoord[1];
-            //     var y = -tileCoord[2]-1;
-            //     console.log('Vector:', z, x, y);
-            //     return opt.url.replace(/{x}/, x.toString())
-            //                   .replace(/{y}/, y.toString())
-            //                   .replace(/{z}/, z.toString());
-            // },
             format: new ol.format.GeoJSON({
                 defaultDataProjection: new ol.proj.Projection({
                     code: 'tm',
@@ -110,8 +101,6 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
                 origin: [0, 0]
             })
         });
-
-        console.log(vectorSource);
 
         this._fillColor = opt.fillColor !== undefined ? opt.fillColor : Color.WHITE.withAlpha(0);
         this._strokeColor = opt.strokeColor !== undefined ? opt.strokeColor : Color.WHITE;
