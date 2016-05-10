@@ -12,13 +12,13 @@ def config(tmpdir_factory):
     """Session-wide test `Flask` application."""
 
     cfg = {}
-    cfg['GC3PIE_SESSION_DIR'] = str(tmpdir_factory.mktemp('gc3pie'))
     cfg['TMAPS_STORAGE'] = str(tmpdir_factory.mktemp('experiments'))
     if 'TMAPS_DB_URI' not in os.environ:
         raise Exception(
             'No URI to the testing db found in the environment. '
             'To set it issue the command:\n'
-            '    $ export TMAPS_DB_URI=postgresql://{user}:{password}@{host}:5432/tissuemaps_test')
+            '    $ export TMAPS_DB_URI=postgresql://{user}:{password}@{host}:5432/tissuemaps_test'
+        )
     else:
         cfg['POSTGRES_DATABASE_URI'] = os.environ['TMAPS_DB_URI']
 
@@ -40,9 +40,14 @@ def engine(config, request):
         engine.dispose()
 
 
-@pytest.fixture(scope='session')
+@pytest.yield_fixture(scope='session')
 def Session(engine):
-    return sessionmaker(bind=engine)
+    smaker = sessionmaker(bind=engine)
+
+    try:
+        yield smaker
+    finally:
+        smaker.close_all()
 
 
 @pytest.yield_fixture(scope='function')
