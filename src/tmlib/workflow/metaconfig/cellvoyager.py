@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 IMAGE_FILE_REGEX_PATTERN = '[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.'
 
 #: Supported extensions for metadata files
-METADATA_FILE_REGEX_PATTERN = '\.(mlf|mrf)$'
+METADATA_FILE_REGEX_PATTERN = r'.*\.(mlf|mrf)$'
 
 
 class CellvoyagerMetadataHandler(MetadataHandler):
