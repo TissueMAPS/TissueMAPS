@@ -68,10 +68,13 @@ class WorkflowManager(BasicClusterRoutines):
             session.flush()
             submission_id = submission.id
 
+        if workflow_description is None:
+            workflow_description = self.description
+
         return Workflow(
             experiment_id=self.experiment_id,
             verbosity=self.verbosity,
-            description=self.description,
+            description=workflow_description,
             waiting_time=waiting_time,
             submission_id=submission_id
         )
