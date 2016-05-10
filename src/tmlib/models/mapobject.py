@@ -222,7 +222,7 @@ class MapobjectType(Model, DateMixIn):
             if n <= n_points_per_tile_limit
         ])
 
-    def get_feature_value_matrix(self, feature_names):
+    def get_feature_value_matrix(self, feature_names): 
         '''Gets a wide format pandas data frame of feature values.
 
         Parameters
@@ -246,7 +246,9 @@ class MapobjectType(Model, DateMixIn):
             join(FeatureValue).\
             filter(
                 (Feature.name.in_(set(feature_names))) &
-                (Feature.mapobject_type_id == self.id)).all()
+                (Feature.mapobject_type_id == self.id)
+            ).\
+            all()
         feature_df_long = pd.DataFrame(feature_values)
         feature_df_long.columns = ['feature', 'mapobject', 'value']
         feature_df = pd.pivot_table(

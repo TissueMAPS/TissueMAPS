@@ -134,7 +134,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             matches = r.search(img.Name)
             # NOTE: We use a dictionary as reference, which is not serializable
             # into XML. The problem is that the reference is ment to be within
-            # the same XML file, which is not the case.
+            # the same XML file, which is not the case here.
             # TODO: Fuck the whole OMEXML bullshit and simply put everything
             # in a pandas data frame.
             captures = matches.groupdict()

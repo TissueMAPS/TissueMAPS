@@ -416,7 +416,8 @@ class ImageAnalysisModule(object):
 
     def run(self, engine=None):
         '''Executes a module, i.e. evaluate the corresponding function with
-        the keyword arguments provided by `handles`.
+        the keyword arguments provided by
+        :py:class:`tmlib.workflow.jterator.handles`.
 
         Parameters
         ----------
