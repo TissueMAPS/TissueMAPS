@@ -14,13 +14,11 @@ class HeatmapTool():
         """
         # Get mapobject
         mapobject_type_name = payload['chosen_object_type']
-        mapobject_type = db.session.query(MapobjectType).\
-            filter_by(name=mapobject_type_name, experiment_id=experiment.id).\
-            one()
+        mapobject_type = experiment.get_mapobject_type(mapobject_type_name)
 
         selected_feature = payload['selected_feature']
 
-        # Get features
+        # Get feature
         query_result = db.session.query(
             FeatureValue.mapobject_id, FeatureValue.value).\
             join(Feature, MapobjectType).\
