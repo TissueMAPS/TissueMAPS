@@ -1,5 +1,7 @@
 from scipy.cluster.vq import kmeans, vq
 from tmaps.tool import ScalarLabelLayer, Result
+from tmaps.extensions import db
+from tmlib.models import MapobjectType
 
 
 class ClusterTool():
