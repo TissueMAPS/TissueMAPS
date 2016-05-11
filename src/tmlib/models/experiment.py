@@ -4,7 +4,7 @@ import logging
 import itertools
 from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
@@ -260,6 +260,33 @@ class Experiment(Model, DateMixIn):
         (requires that upload of images is complete)
         '''
         return all([pls.is_ready_for_processing for pls in self.plate_sources])
+
+    def get_mapobject_type(self, name):
+        '''
+        Return a mapobject type belonging to this experiment by name.
+
+        Parameters
+        ----------
+        name : str
+            the name of the mapobject_type to be returned
+
+        Returns
+        -------
+        tmlib.models.MapobjectType
+
+        Raises
+        ------
+        sqlalchemy.orm.exc.MultipleResultsFound
+           when multiple mapobject types with this name were found
+        sqlalchemy.orm.exc.NoResultFound
+           when no mapobject type with this name was found
+
+        '''
+        from tmlib.models import MapobjectType
+        session = Session.object_session(self)
+        return session.query(MapobjectType).\
+            filter_by(name=name, experiment_id=self.id).\
+            one()
 
     def as_dict(self):
         '''Returns attributes as key-value pairs.
