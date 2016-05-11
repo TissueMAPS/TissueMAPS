@@ -188,7 +188,7 @@ class CommandLineInterface(object):
         level = map_logging_verbosity(arguments.verbosity)
         logger.setLevel(level)
         logger.debug('processing on node: %s', socket.gethostname())
-        logger.debug('running program: %s' % cls._parser.prog)
+        logger.debug('running program: %s' % cls.__name__.lower())
 
         # Silence some chatty loggers
         gc3libs_logger = logging.getLogger('gc3.gc3libs')

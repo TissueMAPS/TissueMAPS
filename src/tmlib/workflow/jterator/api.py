@@ -412,7 +412,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         one()
                     stats = stats_file.get()
 
-
                 image_files = session.query(tm.ChannelImageFile).\
                     join(tm.Channel).\
                     filter(
@@ -595,8 +594,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         with tm.utils.Session() as session:
             site = session.query(tm.Site).get(batch['site_id'])
             y_offset, x_offset = site.offset
-            y_offset += site.intersection.lower_overhang
-            x_offset += site.intersection.right_overhang
+            if site.intersection is not None:
+                y_offset += site.intersection.lower_overhang
+                x_offset += site.intersection.right_overhang
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
 
                 mapobject_type = session.query(tm.MapobjectType).\
@@ -641,11 +641,20 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     'add features for mapobject of type "%s"',
                     mapobject_type.name
                 )
-                features = session.get_or_create_all(
-                    tm.Feature,
-                    [{'name': fname, 'mapobject_type_id': mapobject_type.id}
-                     for fname in segm_objs.measurements]
-                )
+                # TODO: get_or_create_all() may fail???
+                # features = session.get_or_create_all(
+                #     tm.Feature,
+                #     [{'name': fname, 'mapobject_type_id': mapobject_type.id}
+                #      for fname in segm_objs.measurements]
+                # )
+                features = list()
+                for fname in segm_objs.measurements:
+                    features.append(
+                        session.get_or_create(
+                            tm.Feature,
+                            name=fname, mapobject_type_id=mapobject_type.id
+                        )
+                    )
                 logger.debug(
                     'delete existing feature values for mapobject type "%s"',
                     mapobject_type.name
@@ -678,16 +687,22 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     if len(segm_objs.value.shape) > 2:
                         tpoints = range(segm_objs.value.shape[2])
                     else:
-                        tpoints = [1]
+                        tpoints = [0]
                     for f in features:
+                        logger.debug('add feature "%s"' % f.name)
                         for t in tpoints:
+                            # TODO: time points
+                            fvalue = segm_objs.measurements.loc[label, f.name]
+                            # if len(fvalue) > 1:
+                            #     raise ValueError(
+                            #         'Too many values for feature "%s" and '
+                            #         'label %d!' % (f.name, label)
+                            #     )
                             feature_values.append(
                                 tm.FeatureValue(
                                     tpoint=t, feature_id=f.id,
                                     mapobject_id=mapobject.id,
-                                    value=float(
-                                        segm_objs.measurements.loc[label, f.name]
-                                    )
+                                    value=float(fvalue)
                                 )
                             )
                     session.add_all(feature_values)
@@ -752,7 +767,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 )
                 mapobject_type.min_poly_zoom = min_poly_zoom
 
-        # TODO: do this in parallel in a separate step
+        # TODO: do this in parallel in a separate workflow step
         logger.info('compute statistics over features of children mapobjects')
         with tm.utils.Session() as session:
 
@@ -762,12 +777,20 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 delete()
 
         with tm.utils.Session() as session:
+            # For now, calculate moments only for "static" mapobjects,
+            # such as "Wells" or "Sites"
             parent_types = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id).\
-                all()
-            moments = {'Mean': np.nanmean, 'Std': np.nanstd}
+                filter_by(
+                    experiment_id=self.experiment_id, is_static=True
+                )
+
+            moments = {
+                'Mean': np.nanmean, 'Std': np.nanstd, 'Median': np.nanmedian
+            }
             for parent_type in parent_types:
 
+                # Moments are computed only over "non-static" mapobjects,
+                # i.e. segmented objects within a pipeline
                 child_types = session.query(tm.MapobjectType).\
                     filter_by(
                         experiment_id=self.experiment_id, is_static=False
@@ -778,7 +801,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     parent_type.name
                 )
 
-                # Create the entries for the new parent features,
+                # Create the database entries for the new parent features,
                 # e.g. mean area of cells per well
                 for child_type in child_types:
                     if child_type.name == parent_type.name:
@@ -817,20 +840,20 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     )
 
                     # For each parent mapobject calculate statistics on
-                    # features of children, i.e. mapobjects that intersect
-                    # with the parent
+                    # features of children, i.e. mapobjects that are covered
+                    # by the parent mapobject
                     new_feature_values = list()
                     for i, parent in enumerate(parent_type.mapobjects):
                         logger.debug(
                             'process parent mapobject #%d of type "%s"', i,
                             parent_type.name
                         )
-                        # TODO: tpoints and zplanes
                         df = pd.DataFrame(
                             session.query(
                                 tm.FeatureValue.value,
                                 tm.FeatureValue.feature_id,
-                                tm.FeatureValue.mapobject_id
+                                tm.FeatureValue.mapobject_id,
+                                tm.FeatureValue.tpoint
                             ).
                             join(
                                 tm.Mapobject, tm.MapobjectOutline
@@ -844,6 +867,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             all()
                         )
                         if df.empty:
+                            # This means that this parent object doesn't cover
+                            # any children objects.
+                            # TODO: prevent this loop in the first place
                             continue
 
                         count = 0
@@ -854,21 +880,27 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     'compute value of feature "%s"',
                                     parent_features[count].name
                                 )
-                                new_feature_values.append(
-                                    tm.FeatureValue(
-                                        feature_id=parent_features[count].id,
-                                        mapobject_id=parent.id,
-                                        value=function(df.loc[index, 'value'])
+                                for t in np.unique(df.loc[index, 'tpoint']):
+                                    val = function(df.loc[index, 'value'])
+                                    new_feature_values.append(
+                                        tm.FeatureValue(
+                                            feature_id=parent_features[count].id,
+                                            mapobject_id=parent.id,
+                                            value=val, tpoint=t
+                                        )
                                     )
-                                )
                                 count += 1
-                        new_feature_values.append(
-                            tm.FeatureValue(
-                                feature_id=parent_features[count].id,
-                                mapobject_id=parent.id,
-                                value=len(np.unique(df.mapobject_id))
+                        # Also compute the number of children objects
+                        for t in np.unique(df.tpoint):
+                            index = df.tpoint == t
+                            val = len(np.unique(df.loc[index, 'mapobject_id']))
+                            new_feature_values.append(
+                                tm.FeatureValue(
+                                    feature_id=parent_features[count].id,
+                                    mapobject_id=parent.id,
+                                    value=val, tpoint=t
+                                )
                             )
-                        )
                     session.add_all(new_feature_values)
 
                     # TODO: delete features that don't have any values
