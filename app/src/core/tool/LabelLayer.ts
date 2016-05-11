@@ -15,17 +15,25 @@ abstract class LabelLayer extends VectorTileLayer {
     id: string;
     attributes: any;
 
+    private _colorMapper: LabelColorMapper = null;
+
     abstract getLabelColorMapper(): LabelColorMapper;
     abstract getLegend(): Legend;
 
+    get colorMapper() {
+        if (this._colorMapper === null) {
+            this._colorMapper = this.getLabelColorMapper();
+        }
+        return this._colorMapper;
+    }
+
     constructor(args: LabelLayerArgs) {
         var styleFunc = (feature, style) => {
-            var colorMapper = this.getLabelColorMapper();
             var geomType = feature.getGeometry().getType();
             var label = feature.get('label');
             var fillColor: ol.Color;
             if (label !== undefined) {
-                fillColor = colorMapper(label).toOlColor();
+                fillColor = this.colorMapper(label).toOlColor();
             } else {
                 throw new Error('Feature has no property "label"!');
             }
