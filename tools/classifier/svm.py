@@ -54,12 +54,11 @@ class SVMTool():
         X_pred = feature_df[~feature_df.index.isin(training_ids)]
 
         n_examples = len(y_train)
-        n_folds = min(n_examples / 2, 10)
+        n_folds = min(n_examples / 2, 3)
 
         folds = cross_validation.StratifiedKFold(y_train, n_folds=n_folds)
         searchspace = [
-            {'kernel': ['rbf'], 'C': np.linspace(0.1, 1, 10), 'gamma': [0.001, 0, 1]},
-            {'kernel': ['linear'], 'C': np.linspace(0.1, 1, 10)}
+            {'kernel': ['linear'], 'C': np.linspace(0.1, 1, 5)}
         ]
         clf = svm.SVC()
         gs = GridSearchCV(clf, searchspace, cv=folds)
