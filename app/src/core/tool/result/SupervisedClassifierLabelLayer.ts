@@ -1,9 +1,9 @@
 class SupervisedClassifierLabelLayer extends LabelLayer {
     getLabelColorMapper() {
-        var colorMap = this.attributes.color_map;
+        var colorMap = {};
         // Convert from hex strings to Color objects
-        for (var label in colorMap) {
-            colorMap[label] = Color.fromHex(colorMap[label]);
+        for (var label in this.attributes.color_map) {
+            colorMap[label] = Color.fromHex(this.attributes.color_map[label]);
         }
         return (label) => {
             return colorMap[label];
