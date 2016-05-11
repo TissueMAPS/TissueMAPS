@@ -13,9 +13,12 @@ class ClusterTool():
 
         """
         # Get mapobject
-        mapobject_name = payload['chosen_object_type']
-        mapobject_type = [t for t in experiment.mapobject_types
-                          if t.name == mapobject_name][0]
+        mapobject_type_name = payload['chosen_object_type']
+        mapobject_type = db.session.query(MapobjectType).\
+            filter_by(
+                name=mapobject_type_name, experiment_id=experiment.id
+            ).\
+            one()
 
         # Get features
         feature_names = set(payload['selected_features'])

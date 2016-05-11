@@ -28,7 +28,10 @@ class SVMTool():
         # Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         mapobject_type = db.session.query(MapobjectType).\
-            filter_by(name=mapobject_type_name).first()
+            filter_by(
+                name=mapobject_type_name, experiment_id=experiment.id
+            ).\
+            one()
 
         # Get features
         feature_names = set(payload['selected_features'])
