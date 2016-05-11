@@ -56,7 +56,8 @@ class MapobjectType(Model, DateMixIn):
     _min_poly_zoom = Column('min_poly_zoom', Integer)
     experiment_id = Column(
         Integer,
-        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     #: Relationship to other tables

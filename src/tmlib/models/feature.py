@@ -37,7 +37,8 @@ class Feature(Model):
     is_aggregate = Column(Boolean, index=True)
     mapobject_type_id = Column(
         Integer,
-        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -97,7 +98,8 @@ class FeatureValue(Model):
     tpoint = Column(Integer, index=True)
     feature_id = Column(
         Integer,
-        ForeignKey('features.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('features.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     mapobject_id = Column(
         Integer,
