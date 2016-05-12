@@ -4,7 +4,9 @@ import shutil
 import logging
 import numpy as np
 import pandas as pd
+import collections
 import geoalchemy2.shape
+import skimage.draw
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
@@ -20,6 +22,7 @@ from tmlib.workflow.jterator.utils import complete_path
 from tmlib.workflow.jterator.utils import get_module_path
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
+from tmlib.workflow.jterator.handles import SegmentedObjects
 from tmlib.workflow.jterator.checkers import PipelineChecker
 from tmlib.workflow.registry import api
 
@@ -420,7 +423,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         tm.ChannelImageFile.site_id == batch['site_id']
                     ).\
                     all()
-                images = list()
+                images = collections.defaultdict(list)
                 for f in image_files:
                     logger.info('load image "%s"', f.name)
                     img = f.get()
@@ -429,27 +432,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         img = img.correct(stats)
                     logger.debug('align image "%s"', f.name)
                     img = img.align()  # shifted and cropped!
-                    images.append(img)
+                    images[f.tpoint].append(img.pixels)
 
-                if len(images) > 1:
-                    if len(np.unique(image_metadata.tpoint)) == 1:
-                        logger.info('3D images')
-                        pixels = [img.pixels for img in images]
-                        store['pipe'][channel_name] = np.dstack(pixels)
-                    elif len(np.unique(image_metadata.zplane)) == 1:
-                        logger.info('time series of 2D images')
-                        pixels = [img.pixels for img in images]
-                        store['pipe'][channel_name] = pixels
-                    else:
-                        logger.info('time series of 3D images')
-                        pixels = collection.defaultdict(list)
-                        for img in images:
-                            pixels[img.tpoint].append(img.pixels)
-                        store['pipe'][channel_name] = np.stack(
-                            pixels.values(), axis=-1
-                        )
-                else:
-                    store['pipe'][channel_name] = images[0].pixels
+                zstacks = list()
+                for zplanes in images.itervalues():
+                    zstacks.append(np.dstack(zplanes))
+                store['pipe'][channel_name] = np.stack(zstacks, axis=-1)
 
             for mapobject_type_name in mapobject_type_names:
                 mapobject_metadata = pd.DataFrame(
@@ -472,22 +460,30 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 )
                 dims = store['pipe'].values()[0].shape
                 labeled_pixels = np.zeros(dims, dtype=np.int32)
-                for label, t, z, polygon in mapobject_metadata.iterrows():
+                y_offset = image_files[0].site.intersection.lower_overhang
+                x_offset = image_files[0].site.intersection.right_overhang
+                for i, (label, t, z, polygon) in mapobject_metadata.iterrows():
                     shape = geoalchemy2.shape.to_shape(polygon)
-                    coordinates = np.array(shape.exterior.coords)
-                    # NOTE: Coordinates are stored as x-y pairs with an
-                    # inverted y-axis.
+                    coordinates = np.array(shape.exterior.coords).astype(int)
+                    # NOTE: y-axis is inverted
                     coordinates[:, 1] *= -1
-                    labeled_pixels[np.fliplr(coordinates), z, t] = label
+                    x, y = np.split(coordinates, 2, axis=1)
+                    x -= x_offset
+                    y -= y_offset
+                    y, x = skimage.draw.polygon(y, x)
+                    labeled_pixels[y, x, z, t] = label
                 # Add the labeled image to the pipeline and create a handle
                 # object for allowing adding measurements to the objects.
                 handle = SegmentedObjects(
                     name=mapobject_type_name, key=mapobject_type_name
                 )
-                handle.value = np.squeeze(labeled_pixels)
+                handle.value = labeled_pixels
                 store['pipe'][handle.key] = handle.value
                 store['segmented_objects'][handle.key] = handle
 
+        # Remove obsolete image dimensions
+        for name, img in store['pipe'].iteritems():
+            store['pipe'][name] = np.squeeze(img)
         # Execute modules
         logger.info('run pipeline')
         for i, module in enumerate(self.pipeline):
