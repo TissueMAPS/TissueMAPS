@@ -1,5 +1,4 @@
 interface ViewerScope extends ViewerWindowScope {
-    // FIXME: Remove this.
     viewer: Viewer;
     viewerCtrl: ViewerCtrl;
 }
