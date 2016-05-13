@@ -2,8 +2,6 @@
 //     experiment: SerializedExperiment;
 //     viewport: SerializedViewport;
 // }
-
-// TODO: Rename to Viewer
 class Viewer {
     id: string;
 
@@ -18,6 +16,9 @@ class Viewer {
     mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
 
+    // TODO: A viewer should mayble be creatable without an experiment.
+    // The initialization process of loading an experiment would be done by a
+    // separate function.
     constructor(experiment: Experiment) {
         this.id = makeUUID();
         this.experiment = experiment;
