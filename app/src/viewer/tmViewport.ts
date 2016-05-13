@@ -1,10 +1,21 @@
+interface ViewportScope extends ViewerScope {
+    viewport: Viewport;
+    viewportCtrl: ViewportCtrl;
+}
+
+class ViewportCtrl {
+    static $inject = ['$scope'];
+    constructor(private _$scope: ViewportScope) {
+        this._$scope.viewport = this._$scope.viewer.viewport;
+    }
+}
+angular.module('tmaps.ui').controller('ViewportCtrl', ViewportCtrl);
+
 angular.module('tmaps.ui')
 .directive('tmViewport', [function() {
     return {
         restrict: 'EA',
-        controller: ['$scope', function($scope) {
-            $scope.viewport = $scope.viewer.viewport;
-        }],
+        controller: 'ViewportCtrl',
         controllerAs: 'viewportCtrl',
         bindToController: true,
         templateUrl: '/src/viewer/viewport.html',

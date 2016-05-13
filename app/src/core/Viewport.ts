@@ -1,3 +1,5 @@
+// FIXME: This belongs to the serialization process that 
+// is currently not functional.
 interface MapState {
     zoom: number;
     center: ol.Coordinate;
@@ -5,6 +7,9 @@ interface MapState {
     rotation: number;
 }
 
+
+// FIXME: This belongs to the serialization process that 
+// is currently not functional.
 interface SerializedViewport extends Serialized<Viewport> {
     // TODO: Create separate interface for serialized layer options.
     // The color object on channelLayerOptions isn't a full Color object
@@ -13,14 +18,13 @@ interface SerializedViewport extends Serialized<Viewport> {
     mapState: MapState;
 }
 
-interface ViewportElementScope extends ng.IScope {
-    viewport: Viewport;
-    // TODO: Set type to that of ViewportCtrl
-    viewportCtrl: any;
-    viewer: Viewer;
-}
 
 class ResetViewControl extends ol.control.Control {
+    /**
+     * Create a object of class ResetViewControl
+     * @class ResetViewControl
+     * @classdesc A control that resets the map view to the original position.
+     */
     constructor(args?: any) {
         args = args || {};
         var button = document.createElement('button');
@@ -47,18 +51,27 @@ class ResetViewControl extends ol.control.Control {
 
 
 class Viewport implements Serializable<Viewport> {
-
+    /**
+     * The underlying openlayers map.
+     * This object should not be accessed from outside this class.
+     */
     map: ol.Map;
 
+    /**
+     * All layers currently visualized by this viewport.
+     */
     layers: Layer[] = [];
 
-    private _$q: ng.IQService;
-    private _$rootScope: ng.IRootScopeService;
-
+    /**
+     * Constructor for a viewport.
+     * @class Viewport
+     * @classdesc A viewport is basically a wrapper around an openlayers map object
+     * and stores layer objects which themselves are ultimately wrappers of openlayers
+     * layer objects.
+     * Before a viewport object can be used the methods `renderMap` and `initMap`
+     * have to be called.
+     */
     constructor() {
-        this._$q = $injector.get<ng.IQService>('$q');
-        this._$rootScope = $injector.get<ng.IRootScopeService>('$rootScope');
-
         this.map = new ol.Map({
             layers: [],
             controls: ol.control.defaults().extend(<ol.control.Control[]>[
@@ -72,10 +85,13 @@ class Viewport implements Serializable<Viewport> {
             renderer: 'webgl',
             logo: false
         });
-
         window['map'] = this.map;
     }
 
+    /**
+     * Get the map size.
+     * @returns {Size} The map size.
+     */
     get mapSize(): Size {
         // [minx miny maxx maxy]
         var ext = this.map.getView().getProjection().getExtent();
@@ -85,11 +101,24 @@ class Viewport implements Serializable<Viewport> {
         };
     }
 
+    /**
+     * Add a layer to this viewport.
+     * @param {Layer} layer - The layed to be added.
+     */
     addLayer(layer: Layer) {
         layer.addToMap(this.map);
         this.layers.push(layer);
     }
 
+    /**
+     * In order for the visualization to work correctly, the valid resolutions
+     * (i.e. zoom levels) that can be viewed has to be computed based on the
+     * final map size.
+     * This method further sets the openlayers view and as such has to be called
+     * before anything is displayed.
+     * @param {Size} mapSize - The size that the map should have.
+     * Nothing outside this area will be displayed.
+     */
     initMap(mapSize: Size) {
         // Center the view in the iddle of the image
         // (Note the negative sign in front of half the height)
@@ -109,7 +138,6 @@ class Viewport implements Serializable<Viewport> {
         }
         
         var view = new ol.View({
-            // We create a custom (dummy) projection that is based on pixels
             projection: new ol.proj.Projection({
                 code: 'tm',
                 units: 'pixels',
@@ -117,13 +145,10 @@ class Viewport implements Serializable<Viewport> {
             }),
             resolution: maxRes,
             center: center,
-            zoom: 0, // 0 is zoomed out all the way
-            // TODO: start such that whole map is in view
-
+            zoom: 0 // 0 is zoomed out all the way
         });
 
         this.map.setView(view);
-        window['map'] = this.map;
     }
 
     /**
@@ -137,10 +162,17 @@ class Viewport implements Serializable<Viewport> {
         this.layers.splice(idx, 1);
     }
 
+    /**
+     * Update the map size (useful when the browser window changed).
+     */
     update() {
         this.map.updateSize();
     }
 
+    /**
+     * Move the focus to a given mapobject.
+     * @param {MapObject} obj - The mapobject that should be brought in view.
+     */
     goToMapObject(obj: MapObject) {
         console.log('TODO: Get outline polygon from server for the following mapobject:');
         // this.map.getView().fit(<ol.geom.SimpleGeometry> feat.getGeometry(), this.map.getSize(), {
@@ -148,6 +180,8 @@ class Viewport implements Serializable<Viewport> {
         // });
     }
 
+    // FIXME: This belongs to the serialization process that 
+    // is currently not functional.
     serialize() {
         return <any>{};
             // var v = map.getView();
@@ -173,18 +207,12 @@ class Viewport implements Serializable<Viewport> {
             // });
     }
 
-    private getTemplate(templateUrl): ng.IPromise<string> {
-        var deferred = this._$q.defer();
-        $injector.get<ng.IHttpService>('$http')({method: 'GET', url: templateUrl, cache: true})
-        .then(function(result) {
-            deferred.resolve(result.data);
-        })
-        .catch(function(error) {
-            deferred.reject(error);
-        });
-        return deferred.promise;
-    }
-
+    /**
+     * Inject the openlayers map into the DOM.
+     * This method should be called when the container element is ready
+     * (e.g. inside a directive containing the viewport container: tmViewport)
+     * @param {Element} element - Where the map should be injected.
+     */
     renderMap(element: Element) {
         this.map.setTarget(element);
     }
