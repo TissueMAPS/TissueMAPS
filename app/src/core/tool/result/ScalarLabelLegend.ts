@@ -8,7 +8,6 @@ class ScalarLabelLegend extends Legend {
     constructor(args: ScalarLabelLegendArgs) {
         var labels = args.labels;
         var colors = args.colors;
-
         var annotations = [];
         var data = [];
 
@@ -27,11 +26,16 @@ class ScalarLabelLegend extends Legend {
                 }
             });
 
+            if (i % 2 == 0) {
+                var color = colors[i];
+            } else {
+                var color = colors[colors.length - i];
+            }
             data.push({
                 x: [0],
                 y: [10],
                 type: 'bar',
-                color: colors[i]
+                marker: {color: color}
             })
         }
 
