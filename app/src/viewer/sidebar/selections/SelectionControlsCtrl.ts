@@ -1,4 +1,4 @@
-interface SelectionSettingsControlsScope extends ViewportElementScope {
+interface SelectionSettingsControlsScope extends ViewportScope {
     selectionBox: any;
 }
 
