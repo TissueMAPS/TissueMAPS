@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 import skimage
 import logging
+import collections
+import skimage.draw
 import shapely.geometry
 from abc import ABCMeta
 from abc import abstractproperty
@@ -289,23 +291,24 @@ class SegmentedObjects(LabelImage):
             name that should be assigned to the objects
         '''
         super(SegmentedObjects, self).__init__(name, key, help)
-        self._features = list()
-        self._attributes = list()
+        self._features = collections.defaultdict(list)
+        self._attributes = collections.defaultdict(list)
 
     @property
     def labels(self):
         '''List[int]: unique object identifier labels'''
         return map(int, np.unique(self.value[self.value > 0]))
 
-    def calc_outlines(self, offset_y, offset_x, tolerance=2):
-        '''Calculates the global map coordinates for each object outline.
+    def to_polygons(self, y_offset, x_offset, tolerance=2):
+        '''Creates a polygon representation for each segmented object based
+        on the global map coordinates of its contour.
 
         Parameters
         ----------
-        offset_y: int
-            vertical offset that needs to be added along the *y* axis
-        offset_x: int
-            horizontal offset that needs to be added along the *x* axis
+        y_offset: int
+            vertical offset that needs to be added to y-coordinates
+        x_offset: int
+            horizontal offset that needs to be added to x-coordinates
         tolerance: int
             accuracy of polygon approximation; tolerance distance in pixels of
             points on the contour of the appoximated polygon to the orginal
@@ -316,9 +319,9 @@ class SegmentedObjects(LabelImage):
 
         Returns
         -------
-        Dict[Tuple[int], pandas.DataFrame[numpy.int64]]
-            global *y* and *x* coordinates along the contour of each object,
-            indexable by time point, z-plane and one-based label
+        Dict[Tuple[int], shapely.geometry.polygon.Polygon]
+            polygon for each segmented object hashable by
+            time point, z-plane and one-based label
         '''
         logger.debug('calculate outlines for mapobject type "%s"', self.key)
 
@@ -329,7 +332,7 @@ class SegmentedObjects(LabelImage):
             array = array[..., np.newaxis, np.newaxis]
         elif len(array.shape) == 3:
             array = array[..., np.newaxis]
-        outlines = dict()
+        polygons = dict()
         for t in range(array.shape[-1]):
             for z in range(array[..., t].shape[-1]):
                 image = array[:, :, z, t]
@@ -350,10 +353,8 @@ class SegmentedObjects(LabelImage):
                     if len(contours) > 1:
                         # It sometimes happens that more than one outline is
                         # identified per object, in particular when the object
-                        # has  "weird" shape, i.e. many small protrusions.
-                        # NOTE: I've tried the OpenCV function as well.
-                        # It's faster, but it has even more problems in terms
-                        # of identifying a single contour for a given object.
+                        # has a "weird" shape, i.e. many small protrusions.
+                        # NOTE: The OpenCV function as well is even worse.
                         # TODO: Don't simply take the first element in case
                         # multiple objects are identified, but measure some
                         # properties and choose the one that makes the most
@@ -363,37 +364,80 @@ class SegmentedObjects(LabelImage):
                             len(contours), label
                         )
                     contour = contours[0].astype(np.int64)
-                    # Add offset caused by alignment and invert the y-axis
-                    # as required by Openlayers.
-                    contour[:, 0] = -1 * (contour[:, 0] + offset_y)
-                    contour[:, 1] = contour[:, 1] + offset_x
+                    # Add offset required due to alignment and
+                    # invert the y-axis as required by Openlayers.
+                    contour[:, 0] = -1 * (contour[:, 0] + y_offset)
+                    contour[:, 1] = contour[:, 1] + x_offset
                     poly = shapely.geometry.Polygon(np.fliplr(contour))
                     poly = poly.simplify(
                         tolerance=tolerance, preserve_topology=True
                     )
-                    outlines[(t, z, label)] = poly
+                    polygons[(t, z, label)] = poly
+        return polygons
 
-        return outlines
+    def from_polygons(self, polygons, dimensions, y_offset, x_offset):
+        '''Creates a label image representation of segmented objects based
+        on the local site coordinates of each object's contour.
+
+        Parameters
+        ----------
+        polygons: Dict[Tuple[int], shapely.geometry.polygon.Polygon]
+            polygon for each segmented object hashable by
+            time point, z-plane and one-based label
+        dimensions: Tuple[int]
+            dimensions of the label image that should be created
+        y_offset: int
+            vertical offset that needs to be added to y-coordinates
+        x_offset: int
+            horizontal offset that needs to be added to x-coordinates
+
+        Returns
+        -------
+        numpy.ndarray[numpy.int32]
+            label image
+
+        Note
+        ----
+        Sets the created label image as attribute `value`.
+        '''
+        array = np.zeros(dimensions, dtype=np.int32)
+        for (t, z, label), poly in polygons.iteritems():
+            coordinates = np.array(poly.exterior.coords).astype(int)
+            # NOTE: y-axis is inverted
+            coordinates[:, 1] *= -1
+            x, y = np.split(coordinates, 2, axis=1)
+            x -= x_offset
+            y -= y_offset
+            y, x = skimage.draw.polygon(y, x)
+            array[y, x, z, t] = label
+        self.value = np.squeeze(array)
+        return self.value
 
     @property
     def is_border(self):
-        '''pandas.Series[bool]: ``True`` if object lies at the border of
+        '''List[pandas.Series[bool]]: ``True`` if object lies at the border of
         the image and ``False`` otherwise
         '''
-        # TODO: 3D
-        return pd.Series(
-            map(bool, find_border_objects(self.value)),
-            name='is_border', index=self.labels
-        )
+        # TODO: 3D and time series
+        return [
+            pd.Series(
+                map(bool, find_border_objects(self.value)),
+                name='is_border', index=self.labels
+            )
+        ]
 
     @property
     def attributes(self):
-        '''pandas.DataFrame: attributes for segmented objects
+        '''List[pandas.DataFrame]: attributes for segmented objects at each
+        time point
         '''
         if self._attributes:
-            return pd.concat(self._attributes, axis=1)
+            attribute_values = list()
+            for t in sorted(attribute_values.keys()):
+                attribute_values.append(self._attributes[t])
+            return [pd.concat(v, axis=1) for v in attribute_values]
         else:
-            return pd.DataFrame()
+            return [pd.DataFrame()]
 
     def add_attribute(self, attribute):
         '''Adds an additional attribute.
@@ -401,7 +445,7 @@ class SegmentedObjects(LabelImage):
         Parameters
         ----------
         attribute: tmlib.workflow.jterator.handles.Attribute
-            attribute for each segmented object
+            attribute for each segmented object at each time point
 
         See also
         --------
@@ -412,17 +456,21 @@ class SegmentedObjects(LabelImage):
                 'Argument "attribute" must have type '
                 'tmlib.workflow.jterator.handles.Attribute.'
             )
-        self._attributes.append(attribute.value)
+        for t, v in enumerate(attribute.value):
+            self._attributes[t].append(v)
 
     @property
     def measurements(self):
-        '''pandas.DataFrame[numpy.float]: features extracted for
-        segmented objects
+        '''List[pandas.DataFrame[numpy.float]]: features extracted for
+        segmented objects at each time point
         '''
         if self._features:
-            return pd.concat(self._features, axis=1)
+            feature_values = list()
+            for t in sorted(self._features.keys()):
+                feature_values.append(self._features[t])
+            return [pd.concat(v, axis=1) for v in feature_values]
         else:
-            return pd.DataFrame()
+            return [pd.DataFrame()]
 
     def add_measurement(self, measurement):
         '''Adds an additional measurement.
@@ -441,19 +489,17 @@ class SegmentedObjects(LabelImage):
                 'Argument "measurement" must have type '
                 'tmlib.workflow.jterator.handles.Measurement.'
             )
-        if any(measurement.value.index != np.array(self.labels)):
+        val = measurement.value
+        if any([any(v.index != np.array(self.labels)) for v in val]):
             raise IndexError(
-                'The index of "measurement" must match the object labels.'
+                'Index of "measurement" must match object labels.'
             )
-        if len(np.unique(measurement.value.columns)) != len(measurement.value.columns):
+        if any([len(np.unique(v.columns)) != len(v.columns) for v in val]):
             raise ValueError(
-                'The column names of "measurement" must be unique.'
+                'Column names of "measurement" must be unique.'
             )
-        self._features.append(measurement.value)
-
-    # TODO: generate label image from outlines, i.e. fill the outline polygon
-    # with corresponding color (label)
-    # => draw outlines and fill holes ndi.binary_fill_holes()
+        for t, v in enumerate(measurement.value):
+            self._features[t].append(v)
 
     def __str__(self):
         return '<SegmentedObjects(name=%r, key=%r)>' % (self.name, self.key)
@@ -662,26 +708,32 @@ class Measurement(OutputHandle):
             help message (default: ``""``)
         '''
         super(Measurement, self).__init__(name, help)
+        # TODO: should be a list of data frames, one for each time point
         self.objects_ref = objects_ref
         self.channel_ref = channel_ref
 
     @property
     def value(self):
-        '''pandas.DataFrame[numpy.float]: features extracted for each segmented
-        object
+        '''List[pandas.DataFrame[numpy.float]]: features extracted for each
+        segmented object
         '''
         return self._value
 
     @value.setter
     def value(self, value):
-        if not isinstance(value, pd.DataFrame):
+        if not isinstance(value, list):
             raise TypeError(
-                'Returned value of "%s" must have type pandas.DataFrame.'
+                'Returned value of "%s" must have type list.'
                 % self.name
             )
-        if value.values.dtype != float:
+        if not all([isinstance(v, pd.DataFrame) for v in value]):
             raise TypeError(
-                'Returned value of "%s" must have data type float.'
+                'Elements of returned value of "%s" must have type '
+                'pandas.DataFrame.' % self.name
+            )
+        if any([v.values.dtype != float for v in value]):
+            raise TypeError(
+                'Measurement values of "%s" must have data type float.'
                 % self.name
             )
         self._value = value

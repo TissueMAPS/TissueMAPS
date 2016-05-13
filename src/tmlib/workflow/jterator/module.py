@@ -401,9 +401,10 @@ class ImageAnalysisModule(object):
                 channel_name = self._get_reference_channel_name(handle)
                 if channel_name is not None:
                     new_names = list()
-                    for name in handle.value.columns:
+                    for name in handle.value[0].columns:
                         new_names.append('%s_%s' % (name, channel_name))
-                    handle.value.columns = new_names
+                    for t in range(len(handle.value)):
+                        handle.value[t].columns = new_names
                 obj_handle = store['segmented_objects'][object_name]
                 obj_handle.add_measurement(handle)
             elif isinstance(handle, hdls.Attribute):
