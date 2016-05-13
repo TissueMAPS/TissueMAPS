@@ -11,25 +11,23 @@ def measure_zernike(label_image, plot=False):
     Parameters
     ----------
     label_image: numpy.ndarray[int32]
-        labeled image; pixels with the same label encode an object
+        labeled image
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    Dict[str, pandas.DataFrame[float] or str]
+    Dict[str, List[pandas.DataFrame[float]] or str]
         "measurements": extracted Zernike features
-        "figure": html string in case `plot` is ``True``
+        "figure": JSON string in case `plot` is ``True``
 
     See also
     --------
     :py:class:`jtlib.features.Zernike`
     '''
-    f = jtlib.features.Zernike(
-                    label_image=label_image
-    )
+    f = jtlib.features.Zernike(label_image=label_image)
 
-    outputs = {'measurements': f.extract()}
+    outputs = {'measurements': [f.extract()]}
 
     if plot:
         outputs['figure'] = f.plot()

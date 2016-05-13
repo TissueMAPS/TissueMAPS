@@ -17,20 +17,19 @@ def measure_tas(label_image, intensity_image, plot=False):
 
     Returns
     -------
-    Dict[str, pandas.DataFrame[float] or str]
+    Dict[str, List[pandas.DataFrame[float]] or str]
         "measurements": extracted TAS features
-        "figure": html string in case `plot` is ``True``
+        "figure": JSON string in case `plot` is ``True``
 
     See also
     --------
     :py:class:`jtlib.features.TAS`
     '''
     f = jtlib.features.TAS(
-            label_image=label_image,
-            intensity_image=intensity_image
+        label_image=label_image, intensity_image=intensity_image
     )
 
-    outputs = {'measurements': f.extract()}
+    outputs = {'measurements': [f.extract()]}
 
     if plot:
         outputs['figure'] = f.plot()

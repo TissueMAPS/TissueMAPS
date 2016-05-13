@@ -19,7 +19,12 @@ logger = logging.getLogger(__name__)
 
 class Features(object):
 
-    '''Abstract base class for the extraction of features from images.'''
+    '''Abstract base class for the extraction of features from images.
+
+    Warning
+    -------
+    This is currently only implemented for 2D images!
+    '''
 
     __metaclass__ = ABCMeta
 
@@ -40,8 +45,13 @@ class Features(object):
             when `intensity_image` doesn't have unsigned integer type
         ValueError
             when `intensity_image` and `label_image` don't have identical shape
+            or when `label_image` is not 2D
         '''
         self.label_image = label_image
+        if len(label_image.shape) > 2:
+            raise ValueError(
+                'Feature extraction is only implemented for 2D images.'
+            )
         self.intensity_image = intensity_image
         if self.intensity_image is not None:
             if not str(self.intensity_image.dtype).startswith('uint'):
@@ -80,7 +90,9 @@ class Features(object):
         Returns
         -------
         pandas.DataFrame[float]
-            extracted feature values for each object in `label_image`
+            extracted feature values for each mapobject; *n*x*p* data frame
+            where *n* is the number of objects detected in `label_image` and
+            *p* is the number of features
 
         Note
         ----
@@ -170,6 +182,7 @@ class Intensity(Features):
             extracted feature values for each object in `label_image`
         '''
         # Create an empty dataset in case no objects were detected
+        logger.info('extract intensity features')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
@@ -224,6 +237,7 @@ class Morphology(Features):
             extracted feature values for each object in `label_image`
         '''
         # Create an empty dataset in case no objects were detected
+        logger.info('extract morphology features')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
@@ -245,8 +259,7 @@ class Morphology(Features):
 
 class Haralick(Features):
 
-    '''
-    Class for calculating Haralick texture features based on Haralick [1]_.
+    '''Class for calculating Haralick texture features based on Haralick [1]_.
 
     References
     ----------
@@ -306,6 +319,7 @@ class Haralick(Features):
         :py:func:`mahotas.features.haralick`
         '''
         # Create an empty dataset in case no objects were detected
+        logger.info('extract Haralick features')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
@@ -378,6 +392,7 @@ class TAS(Features):
         :py:func:`mahotas.features.haralick`
         '''
         # Create an empty dataset in case no objects were detected
+        logger.info('extract Threshold Adjacency Statistics features')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
@@ -441,6 +456,7 @@ class Gabor(Features):
         :py:func:`centrosome.filter.gabor`
         '''
         # Create an empty dataset in case no objects were detected
+        logger.info('extract Gabor features')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
@@ -507,6 +523,7 @@ class Hu(Features):
             extracted feature values for each object in `label_image`
         '''
         # Create an empty dataset in case no objects were detected
+        logger.info('extract Hu features')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()
@@ -559,6 +576,7 @@ class Zernike(Features):
             extracted feature values for each object in `label_image`
         '''
         # Create an empty dataset in case no objects were detected
+        logger.info('extract Zernike features')
         features = dict()
         for i, name in enumerate(self.names):
             features[name] = list()

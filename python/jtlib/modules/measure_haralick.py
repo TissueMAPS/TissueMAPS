@@ -17,10 +17,9 @@ def measure_haralick(label_image, intensity_image, plot=False):
 
     Returns
     -------
-    Dict[str, pandas.DataFrame[float] or str]
+    Dict[str, List[pandas.DataFrame[float]] or str]
         * "measurements": extracted Haralick features
-        * "figure": html string in case `plot` is ``True``
-
+        * "figure": JSON string in case `plot` is ``True``
     See also
     --------
     :py:class:`jtlib.features.Haralick`
@@ -30,7 +29,7 @@ def measure_haralick(label_image, intensity_image, plot=False):
             intensity_image=intensity_image
     )
 
-    outputs = {'measurements': f.extract()}
+    outputs = {'measurements': [f.extract()]}
 
     if plot:
         outputs['figure'] = f.plot()
