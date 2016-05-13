@@ -15,13 +15,13 @@ abstract class LabelLayer extends VectorTileLayer {
     id: string;
     attributes: any;
 
-    private _colorMapper: LabelColorMapper = null;
+    private _colorMapper: LabelColorMapper;
 
     abstract getLabelColorMapper(): LabelColorMapper;
     abstract getLegend(): Legend;
 
     get colorMapper() {
-        if (this._colorMapper === null) {
+        if (this._colorMapper === undefined) {
             this._colorMapper = this.getLabelColorMapper();
         }
         return this._colorMapper;
