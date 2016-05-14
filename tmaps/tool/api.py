@@ -92,10 +92,12 @@ def process_tool_request(tool_id):
 
     # Load or create the persistent tool session.
     session = db.session.query(ToolSession).\
-        filter_by(uuid=session_uuid).first()
+        filter_by(uuid=session_uuid).\
+        first()
     if session is None:
         session = ToolSession(
-            experiment_id=e.id, uuid=session_uuid, tool_id=tool.id)
+            experiment_id=e.id, uuid=session_uuid, tool_id=tool.id
+        )
         db.session.add(session)
         db.session.commit()
 
