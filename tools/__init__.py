@@ -1,3 +1,4 @@
-import classifier
-from heatmap import HeatmapTool
-from cluster import ClusterTool
+from classifier.svm import SVM
+from classifier.randomforest import RandomForest
+from heatmap import Heatmap
+from cluster import KMeans
