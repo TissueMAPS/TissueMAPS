@@ -1,0 +1,17 @@
+<div>
+  <p><tm-mapobject-type-widget></tm-mapobject-type-widget></p>
+
+  <p>
+    <label>Select feature</label>
+    <tm-feature-selection-widget
+      max-selections="1"
+      selected-mapobject-type="mapobjectTypeWidget.selectedType">
+    </tm-feature-selection-widget>
+  </p>
+
+  <p>
+    <button class="btn btn-primary"
+      ng-disabled="featureWidget.selectedFeatures.length == 0"
+      ng-click="toolCtrl.submit()">Submit</button>
+  </p>
+</div>
