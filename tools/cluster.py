@@ -1,11 +1,11 @@
 from scipy.cluster.vq import kmeans, vq
-from pyspark.ml.clustering import KMeans
+from pyspark.ml.clustering import KMeans as KMeansClassifier
 
 from tmaps.tool.result import ScalarLabelResult
 from tools.classifier.classifier import UnsupervisedClassifier
 
 
-class Kmeans(UnsupervisedClassifier):
+class KMeans(UnsupervisedClassifier):
 
     def classify_sklearn(self, feature_data, k):
         # Compute the cluster centroids
@@ -19,7 +19,7 @@ class Kmeans(UnsupervisedClassifier):
         return zip(feature_data.index.tolist(), predictions.tolist())
 
     def classify_spark(self, feature_data, k):
-        kmeans = KMeans(k=k, seed=1)
+        kmeans = KMeansClassifier(k=k, seed=1)
         model = kmeans.fit(feature_data)
         predictions = model.transform(feature_data).\
             select('prediction', 'mapobject_id')

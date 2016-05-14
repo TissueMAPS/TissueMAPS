@@ -6,7 +6,7 @@ from tmlib.models import Feature, FeatureValue, MapobjectType
 from tmaps.extensions import db
 from tmaps.tool.result import ContinuousLabelResult
 
-class HeatmapTool():
+class Heatmap():
     def process_request(self, payload, session, experiment):
         """
         {
