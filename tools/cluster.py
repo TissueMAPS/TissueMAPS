@@ -5,7 +5,7 @@ from tmaps.tool.result import ScalarLabelResult
 from tools.classifier.classifier import UnsupervisedClassifier
 
 
-class Kmeans(UnsupervisedClassifier):
+class KMeans(UnsupervisedClassifier):
 
     def classify_sklearn(self, feature_data, k):
         # Compute the cluster centroids

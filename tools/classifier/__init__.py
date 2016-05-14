@@ -1,1 +1,1 @@
-from svm import SVMTool
+from svm import SVM

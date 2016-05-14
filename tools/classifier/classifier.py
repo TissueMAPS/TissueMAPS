@@ -3,11 +3,17 @@ import pandas as pd
 from abc import ABCMeta
 from abc import abstractmethod
 from pyspark.sql import DataFrameReader
+from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer
+from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+from pyspark.ml.classification import RandomForestClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 from tmlib.models import FeatureValue, Feature, MapobjectType
 from tmaps.extensions import db
-from tmaps.tool.result import LabelResult
-
+from tmaps.extensions import sqlc
+from tmaps.tool import Result
+from tmaps.tool import ScalarLabelLayer
+from tmaps.tool import SupervisedClassifierLabelLayer
 
 class ToolRequestHandler(object):
 
@@ -45,7 +51,7 @@ class Classifier(ToolRequestHandler):
         # script via the command line with spark-submit
         db_url = 'postgresql://localhost:5432/tissuemaps?user=markus&password=123'
         props = {'user': 'markus', 'password': '123'}
-        return DataFrameReader(sqlContext).jdbc(
+        return DataFrameReader(sqlc).jdbc(
             url='jdbc:%s' % db_url, table=table_name , properties=props
         ).cache()
 
@@ -115,6 +121,7 @@ class Classifier(ToolRequestHandler):
         features = self.read_table_spark('features')
         mapobjects = self.read_table_spark('mapobjects')
         mapobject_types = self.read_table_spark('mapobject_types')
+        feature_names = feature_names
 
         for i, name in enumerate(feature_names):
             df = feature_values.\
@@ -166,7 +173,7 @@ class SupervisedClassifier(Classifier):
             subset of `feature_data` for selected mapobjects with additional
             column "label"
         '''
-        labels = sqlContext.createDataFrame(
+        labels = sqlc.createDataFrame(
             labeled_mapobjects, schema=['mapobject_id', 'label']
         )
         labeled_data = feature_data.join(
@@ -236,7 +243,7 @@ class SupervisedClassifier(Classifier):
         '''
         pass
 
-    def process_request(self, payload, tool_session, experiment):
+    def process_request(self, payload, tool_session, experiment, use_spark=True):
         #m Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         feature_names = set(payload['selected_features'])
@@ -267,7 +274,9 @@ class SupervisedClassifier(Classifier):
 
         return Result(
             tool_session=tool_session,
-            layer=SupervisedClassifierLabelLayer(labels=dict(predicted_labels))
+            layer=SupervisedClassifierLabelLayer(
+                labels=dict(predicted_labels), color_map=color_map
+            )
         )
 
 
@@ -311,20 +320,21 @@ class UnsupervisedClassifier(Classifier):
         '''
         pass
 
-    def process_request(self, payload, tool_session, experiment):
+    def process_request(self, payload, tool_session, experiment, use_spark=True):
         mapobject_type_name = payload['chosen_object_type']
-        feature_names = set(payload['selected_features'])
+        feature_names = payload['selected_features']
+        k = payload['k']
 
         if use_spark:
             feature_data = self.format_feature_data_spark(
                 experiment.id, mapobject_type_name, feature_names
             )
-            predicted_labels = self.classify_spark(feature_data)
+            predicted_labels = self.classify_spark(feature_data, k)
         else:
             feature_data = self.format_feature_data_sklearn(
                 experiment.id, mapobject_type_name, feature_names
             )
-            predicted_labels = self.classify_sklearn(feature_data)
+            predicted_labels = self.classify_sklearn(feature_data, k)
 
         return Result(
             tool_session=tool_session,

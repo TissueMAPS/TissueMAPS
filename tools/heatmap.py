@@ -3,7 +3,7 @@ from tmaps.extensions import db
 from tmaps.tool import ContinuousLabelLayer, Result
 
 
-class HeatmapTool():
+class Heatmap():
     def process_request(self, payload, session, experiment):
         """
         {
