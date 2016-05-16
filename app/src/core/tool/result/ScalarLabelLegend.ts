@@ -1,6 +1,6 @@
 interface ScalarLabelLegendArgs {
     labels: string[];
-    colors: string[];
+    colors: Color[];
 }
 
 class ScalarLabelLegend extends Legend {
@@ -8,10 +8,10 @@ class ScalarLabelLegend extends Legend {
     constructor(args: ScalarLabelLegendArgs) {
         var labels = args.labels;
         var colors = args.colors;
-
         var annotations = [];
         var data = [];
 
+        var color;
         for (var i = 0; i < labels.length; i++) {
             annotations.push({
                 x: 0.60,
@@ -31,7 +31,9 @@ class ScalarLabelLegend extends Legend {
                 x: [0],
                 y: [10],
                 type: 'bar',
-                color: colors[i]
+                marker: {
+                    color: colors[i].toHex()
+                }
             })
         }
 
