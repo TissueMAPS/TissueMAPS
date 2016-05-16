@@ -28,10 +28,19 @@ class ScalarLabelLayer extends LabelLayer {
     }
     
     getLegend() {
+        var colors = [];
+        var uniqueLabels = this.attributes.unique_labels;
+        uniqueLabels.forEach((l) => {
+            var idx = uniqueLabels.indexOf(l);
+            if (idx % 2 == 0) {
+                colors.push(this.colors[idx]);
+            } else {
+                colors.push(this.colors[this.colors.length - idx]);
+            }
+        })
+
         return new ScalarLabelLegend({
-            colors: this.colors.map((c) => {
-                return c.toHex();
-            }),
+            colors: colors,
             labels: <string[]> this.attributes.unique_labels
         });
     }
