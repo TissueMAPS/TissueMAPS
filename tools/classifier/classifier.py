@@ -244,7 +244,7 @@ class SupervisedClassifier(Classifier):
         '''
         pass
 
-    def process_request(self, payload, tool_session, experiment, use_spark=True):
+    def process_request(self, payload, tool_session, experiment, use_spark=False):
         #m Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
@@ -324,7 +324,7 @@ class UnsupervisedClassifier(Classifier):
         '''
         pass
 
-    def process_request(self, payload, tool_session, experiment, use_spark=True):
+    def process_request(self, payload, tool_session, experiment, use_spark=False):
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         k = payload['k']
