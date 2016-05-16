@@ -11,7 +11,6 @@ class SVM(SupervisedClassifier):
         n_samples = labeled_feature_data.shape[0]
         n_folds = min(n_samples / 2, 10)
 
-
         X = labeled_feature_data.drop('label')
         y = labeled_feature_data.label
         folds = cross_validation.StratifiedKFold(y, n_folds=n_folds)

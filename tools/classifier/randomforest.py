@@ -2,7 +2,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.grid_search import GridSearchCV
 from sklearn import cross_validation
 from pyspark.ml import Pipeline
-from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer
+from pyspark.ml.feature import StringIndexer
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.feature import VectorIndexer
+from pyspark.ml.feature import IndexToString
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
@@ -34,13 +37,25 @@ class RandomForest(SupervisedClassifier):
 
     def classify_spark(self, unlabeled_feature_data, labeled_feature_data):
         feature_indexer = VectorIndexer(
-            inputCol='features', outputCol='indexedFeatures', maxCategories=2
-        )
-        fi_model = feature_indexer.fit(training_set)
+                inputCol='features', outputCol='indexedFeatures', maxCategories=2
+            ).\
+            fit(labeled_feature_data)
         label_indexer = StringIndexer(
-            inputCol='label', outputCol='indexedLabel'
-        )
-        li_model = label_indexer.fit(training_set)
+                inputCol='label', outputCol='indexedLabel'
+            ).\
+            fit(labeled_feature_data)
+
+        label_df = label_indexer.transform(labeled_feature_data)
+        label_mapping = {
+            r.indexedLabel: r.label
+            for r in label_df.select('label','indexedLabel').distinct().collect()
+        }
+        # TODO: How can this be achieved with IndexToString() when prediction
+        # is done on unlabeled dataset?
+        # label_converter = IndexToString(
+        #     inputCol='prediction', outputCol='predictedLabel',
+        #     labels=label_indexer.labels
+        # )
 
         rf = RandomForestClassifier(
             labelCol='indexedLabel', featuresCol='indexedFeatures'
@@ -50,18 +65,19 @@ class RandomForest(SupervisedClassifier):
             addGrid(rf.numTrees, [10, 20, 30]).\
             build()
 
-        pipeline = Pipeline(stages=[fi_model, li_model, rf])
+        pipeline = Pipeline(
+            stages=[feature_indexer, label_indexer, rf]
+        )
         evaluator = MulticlassClassificationEvaluator(
-            labelCol='indexedLabel', predictionCol='prediction', metricName='f1'
+            labelCol='indexedLabel', predictionCol='prediction',
+            metricName='f1'
         )
         crossval = CrossValidator(
             estimator=pipeline, estimatorParamMaps=grid,
             evaluator=evaluator, numFolds=3
         )
-        model = crossval.fit(training_set)
-        test_set = assembler.transform(data)
-        predictions = model.transform(test_set).\
-            select('prediction', 'mapobject_id')
-        result = predictions.collect()
-        return [(r.mapobject_id, r.prediction) for r in result]
+        model = crossval.fit(labeled_feature_data)
+        predictions = model.transform(unlabeled_feature_data)
+        result = predictions.select('mapobject_id', 'prediction').collect()
+        return [(r.mapobject_id, label_mapping[r.prediction]) for r in result]
 

@@ -10,7 +10,8 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 from tmlib.models import FeatureValue, Feature, MapobjectType
 from tmaps.extensions import db
-from tmaps.extensions import sqlc
+from tmaps.extensions.spark import sqlc
+from tmaps.extensions.spark import db_url
 from tmaps.tool import Result
 from tmaps.tool import ScalarLabelLayer
 from tmaps.tool import SupervisedClassifierLabelLayer
@@ -49,10 +50,10 @@ class Classifier(ToolRequestHandler):
         # Export the environment variable 'SPARK_CLASSPATH' when working in the
         # pyspark shell or use '--driver-class-path' flag when submitting the
         # script via the command line with spark-submit
-        db_url = 'postgresql://localhost:5432/tissuemaps?user=markus&password=123'
-        props = {'user': 'markus', 'password': '123'}
+        # db_url = 'postgresql://localhost:5432/tissuemaps?user=markus&password=123'
+        # props = {'user': 'markus', 'password': '123'}
         return DataFrameReader(sqlc).jdbc(
-            url='jdbc:%s' % db_url, table=table_name , properties=props
+            url='jdbc:%s' % db_url, table=table_name
         ).cache()
 
     def format_feature_data_sklearn(self, experiment_id, mapobject_type_name,
@@ -246,10 +247,13 @@ class SupervisedClassifier(Classifier):
     def process_request(self, payload, tool_session, experiment, use_spark=True):
         #m Get mapobject
         mapobject_type_name = payload['chosen_object_type']
-        feature_names = set(payload['selected_features'])
+        feature_names = payload['selected_features']
         labeled_mapobjects = list()
+        color_map = dict()
         for cls in payload['training_classes']:
-            labeled_mapobjects.append((cls['object_id'], cls['name']))
+            labels = [(i, cls['name']) for i in cls['object_ids']]
+            labeled_mapobjects.extend(labels)
+            color_map[cls['name']] = cls['color']
 
         if use_spark:
             unlabeled_feature_data = self.format_feature_data_spark(

@@ -1,7 +1,6 @@
 from scipy.cluster.vq import kmeans, vq
 from pyspark.ml.clustering import KMeans as KMeansClassifier
 
-from tmaps.tool.result import ScalarLabelResult
 from tools.classifier.classifier import UnsupervisedClassifier
 
 
