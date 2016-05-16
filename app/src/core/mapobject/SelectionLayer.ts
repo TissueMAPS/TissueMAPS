@@ -2,6 +2,7 @@
 
 declare type SelectionId = number;
 
+// FIXME: Deprecated
 class MarkerImageVisual extends Visual {
     // mapObjectMarkers: {};
     color: Color;
@@ -60,7 +61,10 @@ class SelectionLayer extends VectorLayer {
 
     constructor(name: string, opt: SelectionLayerOpts) {
 
-        super({ visible: opt.visible });
+        super({
+            visible: opt.visible,
+            zIndex: 100
+        });
 
         this.name = name;
 
