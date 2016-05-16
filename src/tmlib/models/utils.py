@@ -192,6 +192,10 @@ class Session(object):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add`'''
         return self._sqla_session.add(*args, **kwargs)
 
+    def bulk_save_objects(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_save_objects`'''
+        return self._sqla_session.bulk_save_objects(*args, **kwargs)
+
     def add_all(self, *args, **kwargs):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add_all`'''
         return self._sqla_session.add_all(*args, **kwargs)
@@ -298,36 +302,3 @@ class Session(object):
                 raise
         return instances
 
-    # def delete_bulk(self, model, *criterion):
-    #     '''Deletes all matching instances of class `model` en bulk.
-
-    #     Parameters
-    #     ----------
-    #     model: tmlib.model.Model
-    #         an implementation of the :py:class:`tmlib.models.Model`
-    #         abstract base class
-    #     *criterion: List[sqlalchemy.sql.elements.BinaryExpression]
-    #         filter criterion that can be passed to
-    #         :py:method:`sqlalchemy.orm.query.Query.filter`
-
-    #     Note
-    #     ----
-    #     Also removes locations of instances on the file system. 
-    #     '''
-    #     instances = self.query(model).filter(*criterion).all()
-    #     locations = [getattr(inst, 'location', None) for inst in instances]
-    #     # For performance reasons delete all rows via raw SQL without updating
-    #     # the session and then enforce the session to update afterwards.
-    #     if instances:
-    #         logger.info(
-    #             'delete %d instances of class %s from database',
-    #             len(instances), model.__name__
-    #         )
-    #         self.query(model).filter(*criterion).\
-    #             delete(synchronize_session=False)
-    #         self._sqla_session.expire_all()
-    #     if locations:
-    #         logger.info('remove corresponding locations on disk')
-    #         for loc in locations:
-    #             if loc is not None:
-    #                 delete_location(loc)
