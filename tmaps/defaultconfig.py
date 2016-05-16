@@ -1,7 +1,7 @@
 import logging
 import datetime
 
-DEBUG = True
+DEBUG = False
 
 # Override this key with a secret one
 SECRET_KEY = 'default_secret_key'
