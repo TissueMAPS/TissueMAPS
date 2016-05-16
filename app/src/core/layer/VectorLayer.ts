@@ -4,6 +4,7 @@
 interface VectorLayerArgs {
     visuals?: Visual[];
     visible?: boolean;
+    zIndex?: number;
 }
 
 /**
@@ -23,7 +24,8 @@ class VectorLayer extends BaseLayer<ol.layer.Vector> {
 
         this._olLayer = new ol.layer.Vector({
             source: vectorSource,
-            visible: args.visible === undefined ? true : false
+            visible: args.visible === undefined ? true : false,
+            zIndex: args.zIndex
         });
 
         if (args.visuals !== undefined) {

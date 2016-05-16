@@ -1,5 +1,7 @@
 // OpenLayers 3. See http://openlayers.org/
 // License: https://raw.githubusercontent.com/openlayers/ol3/master/LICENSE.md
+// Version: deploy-21-gb78535c
+
 (function (root, factory) {
   if (typeof exports === "object") {
     module.exports = factory();
@@ -50244,7 +50246,8 @@ ol.render.ReplayType = {
   IMAGE: 'Image',
   LINE_STRING: 'LineString',
   POLYGON: 'Polygon',
-  TEXT: 'Text'
+  TEXT: 'Text',
+  POINT: 'Point'
 };
 
 
@@ -50254,6 +50257,7 @@ ol.render.ReplayType = {
  */
 ol.render.REPLAY_ORDER = [
   ol.render.ReplayType.POLYGON,
+  ol.render.ReplayType.POINT,
   ol.render.ReplayType.LINE_STRING,
   ol.render.ReplayType.IMAGE,
   ol.render.ReplayType.TEXT
@@ -52782,6 +52786,9 @@ ol.renderer.vector.renderMultiPolygonGeometry_ = function(replayGroup, geometry,
  * @private
  */
 ol.renderer.vector.renderPointGeometry_ = function(replayGroup, geometry, style, feature) {
+  // Features with point geometries can have an image set on their style.
+  // If such an image is set, it should be drawn with the image renderer.
+  // Otherwise a dedicated point renderer should be used.
   var imageStyle = style.getImage();
   if (imageStyle) {
     if (imageStyle.getImageState() != ol.style.ImageState.LOADED) {
@@ -52791,7 +52798,18 @@ ol.renderer.vector.renderPointGeometry_ = function(replayGroup, geometry, style,
         style.getZIndex(), ol.render.ReplayType.IMAGE);
     imageReplay.setImageStyle(imageStyle);
     imageReplay.drawPoint(geometry, feature);
+  } else {
+    var pointReplay = replayGroup.getReplay(
+        style.getZIndex(), ol.render.ReplayType.POINT);
+    if (pointReplay) {
+      var fillStyle = style.getFill();
+      var strokeStyle = style.getStroke();
+      pointReplay.setFillStrokeStyle(fillStyle, strokeStyle);
+      pointReplay.drawPoint(geometry, feature);
+    }
   }
+
+  // Now, check if text was set on the feature style.
   var textStyle = style.getText();
   if (textStyle) {
     var textReplay = replayGroup.getReplay(
@@ -52811,6 +52829,9 @@ ol.renderer.vector.renderPointGeometry_ = function(replayGroup, geometry, style,
  * @private
  */
 ol.renderer.vector.renderMultiPointGeometry_ = function(replayGroup, geometry, style, feature) {
+  // Features with point geometries can have an image set on their style.
+  // If such an image is set, it should be drawn with the image renderer.
+  // Otherwise a dedicated point renderer should be used.
   var imageStyle = style.getImage();
   if (imageStyle) {
     if (imageStyle.getImageState() != ol.style.ImageState.LOADED) {
@@ -52820,6 +52841,15 @@ ol.renderer.vector.renderMultiPointGeometry_ = function(replayGroup, geometry, s
         style.getZIndex(), ol.render.ReplayType.IMAGE);
     imageReplay.setImageStyle(imageStyle);
     imageReplay.drawMultiPoint(geometry, feature);
+  } else {
+    var pointReplay = replayGroup.getReplay(
+        style.getZIndex(), ol.render.ReplayType.POINT);
+    if (pointReplay) {
+      var fillStyle = style.getFill();
+      var strokeStyle = style.getStroke();
+      pointReplay.setFillStrokeStyle(fillStyle, strokeStyle);
+      pointReplay.drawMultiPoint(geometry, feature);
+    }
   }
   var textStyle = style.getText();
   if (textStyle) {
@@ -54584,6 +54614,14 @@ ol.VectorTile.prototype.getContext = function() {
  * @inheritDoc
  */
 ol.VectorTile.prototype.disposeInternal = function() {
+  var replayGroup = this.replayState_.replayGroup;
+  // FIXME: prepareFrame might have saved the 3d context onto this replay state
+  // in order for clean up to work correctly. Check if a replay group was
+  // created for this tile and if the context was saved.
+  var context3d = this.replayState_['context3d'];
+  if (replayGroup && context3d) {
+    replayGroup.getDeleteResourcesFunction(context3d)();
+  }
   goog.base(this, 'disposeInternal');
 };
 
@@ -65886,12 +65924,33 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
   this.origin_ = ol.extent.getCenter(maxExtent);
 
   /**
+   * The array of indices with which to index into the vertex array to get
+   * the attributes (position & color) of each vertex. 
+   * For three features--i, j, k--this could look as follows:
+   *
+   * [i1 i2 i3 i4 i5 i6
+   *  j1 j2 j3 j4 j5 j6 j7 j8
+   *  k1 k2 k3 k4]
+   *
+   * this.vertices_[i1], this.vertices_[i2], ..., this.verties_[i6]
+   * would yield the attributes for all the vertices of feature1.
+   * Note that the indices can be the same (i.e. i2 == i6) when the positions
+   * of two vertices inside a feature polygon are the same.
+   * For more information see:
+   * http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
+   *
+   * The boundaries between vertices belonging to the different feature polygons
+   * are specified by this.startIndices_ and this.endIndices_.
+   * I.e., this.indices_[this.startIndices_[i]] to this.indices_[this.endIndices_[i]]
+   * are the indices of feature polygon `i`.
+   *  
    * @type {Array.<number>}
    * @private
    */
   this.indices_ = [];
 
   /**
+   * The buffer object for indices created using the indices array.
    * @type {ol.webgl.Buffer}
    * @private
    */
@@ -65934,18 +65993,14 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
   this.verticesBuffer_ = null;
 
   /**
-   * Start index per feature.
-   * Each index specifies where in the `vertices_` array the range of
-   * vertex attributes of a new feature starts.
+   * Where a sequence of indices in this.indices_ starts for each feature.
    * @type {Array.<number>}
    * @private
    */
   this.startIndices_ = [];
 
   /**
-   * End index per feature.
-   * Each index specifies where in the `vertices_` array the range of
-   * vertex attributes of a new feature ends.
+   * Where a sequence of indices in this.indices_ ends for each feature.
    * @type {Array.<number>}
    * @private
    */
@@ -65953,9 +66008,9 @@ ol.render.webgl.PolygonReplay = function(tolerance, maxExtent) {
 
   /**
    * The features whose polygons are rendered by this replay.
-   * In this array a feature at position `i` has its range of vertex attributes
-   * in `vertices_` specified by the start and end indices `startIndices_[i]` and
-   * `endIndices_[i]`.
+   * In this array a feature at position `i` has its vertex attributes
+   * in `vertices_` specified by the range of indices in this.indices_ 
+   * from `startIndices_[i]` and to `endIndices_[i]`.
    * @type {Array.<ol.Feature>}
    * @private
    */
@@ -65985,7 +66040,10 @@ ol.render.webgl.PolygonReplay.prototype.populateVerticesArray_ =
   }
 
   // Add the color property to each vertex
-  // TODO performance: make it more efficient
+  // TODO: Could the colors be saved in a different array?
+  // As it is now, the colors are repeated for every single point!
+  
+  // The positions that may be shared between two different vertices. 
   var vertices = triangulation.vertices;
   for (i = 0, ii = vertices.length / 2; i < ii; ++i) {
     this.vertices_.push(vertices[2 * i]);
@@ -66157,9 +66215,9 @@ ol.render.webgl.PolygonReplay.prototype.replay = function(context,
   // In this case the structure of a vertex attrib array looks like this:
   // [x1 y1 r1 g1 b1 a1 x2 y2 r2 g2 b2 a2....]
   // The total length of attributes for one vertex is therefore calculated as:
-  // (2 positional attributes + 4 color attributes) * 4 bytes per int = 24
+  // (2 positional attributes + 4 color attributes) * 4 bytes per float = 24
   // Offset of color attributes pointer to positional attributes:
-  // 2 positional attributes * 4 bytes per int = 8
+  // 2 positional attributes * 4 bytes per float = 8
   //
   // Enable the vertex attrib position arrays
   gl.enableVertexAttribArray(locations.a_position);
@@ -66323,6 +66381,567 @@ ol.render.webgl.PolygonReplay.prototype.setFillStrokeStyle =
 
 
 
+// This file is automatically generated, do not edit
+goog.provide('ol.render.webgl.pointreplay.shader.Default');
+goog.provide('ol.render.webgl.pointreplay.shader.Default.Locations');
+goog.provide('ol.render.webgl.pointreplay.shader.DefaultFragment');
+goog.provide('ol.render.webgl.pointreplay.shader.DefaultVertex');
+
+goog.require('ol.webgl.shader');
+
+
+/**
+ * @constructor
+ * @extends {ol.webgl.shader.Fragment}
+ * @struct
+ */
+ol.render.webgl.pointreplay.shader.DefaultFragment = function() {
+  goog.base(this, ol.render.webgl.pointreplay.shader.DefaultFragment.SOURCE);
+};
+goog.inherits(ol.render.webgl.pointreplay.shader.DefaultFragment, ol.webgl.shader.Fragment);
+goog.addSingletonGetter(ol.render.webgl.pointreplay.shader.DefaultFragment);
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.pointreplay.shader.DefaultFragment.DEBUG_SOURCE = 'precision mediump float;\nvarying vec4 v_color;\n\n\n\nuniform float u_opacity;\n\nvoid main(void) {\n  gl_FragColor = v_color;\n  gl_FragColor *= u_opacity;\n}\n';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.pointreplay.shader.DefaultFragment.OPTIMIZED_SOURCE = 'precision mediump float;varying vec4 a;uniform float f;void main(void){gl_FragColor=a;gl_FragColor*=f;}';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.pointreplay.shader.DefaultFragment.SOURCE = goog.DEBUG ?
+    ol.render.webgl.pointreplay.shader.DefaultFragment.DEBUG_SOURCE :
+    ol.render.webgl.pointreplay.shader.DefaultFragment.OPTIMIZED_SOURCE;
+
+
+/**
+ * @constructor
+ * @extends {ol.webgl.shader.Vertex}
+ * @struct
+ */
+ol.render.webgl.pointreplay.shader.DefaultVertex = function() {
+  goog.base(this, ol.render.webgl.pointreplay.shader.DefaultVertex.SOURCE);
+};
+goog.inherits(ol.render.webgl.pointreplay.shader.DefaultVertex, ol.webgl.shader.Vertex);
+goog.addSingletonGetter(ol.render.webgl.pointreplay.shader.DefaultVertex);
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.pointreplay.shader.DefaultVertex.DEBUG_SOURCE = 'varying vec4 v_color;\n\n\nattribute vec2 a_position;\nattribute vec4 a_color;\nattribute float a_pointsize;\n\nuniform mat4 u_projectionMatrix;\n\nvoid main(void) {\n  v_color = a_color;\n  gl_Position = u_projectionMatrix * vec4(a_position, 0., 1.);\n  gl_PointSize = a_pointsize;\n}\n\n\n';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.pointreplay.shader.DefaultVertex.OPTIMIZED_SOURCE = 'varying vec4 a;attribute vec2 b;attribute vec4 c;attribute float d;uniform mat4 e;void main(void){a=c;gl_Position=e*vec4(b,0.,1.);gl_PointSize=d;}';
+
+
+/**
+ * @const
+ * @type {string}
+ */
+ol.render.webgl.pointreplay.shader.DefaultVertex.SOURCE = goog.DEBUG ?
+    ol.render.webgl.pointreplay.shader.DefaultVertex.DEBUG_SOURCE :
+    ol.render.webgl.pointreplay.shader.DefaultVertex.OPTIMIZED_SOURCE;
+
+
+/**
+ * @constructor
+ * @param {WebGLRenderingContext} gl GL.
+ * @param {WebGLProgram} program Program.
+ * @struct
+ */
+ol.render.webgl.pointreplay.shader.Default.Locations = function(gl, program) {
+
+  /**
+   * @type {WebGLUniformLocation}
+   */
+  this.u_opacity = gl.getUniformLocation(
+      program, goog.DEBUG ? 'u_opacity' : 'f');
+
+  /**
+   * @type {WebGLUniformLocation}
+   */
+  this.u_projectionMatrix = gl.getUniformLocation(
+      program, goog.DEBUG ? 'u_projectionMatrix' : 'e');
+
+  /**
+   * @type {number}
+   */
+  this.a_color = gl.getAttribLocation(
+      program, goog.DEBUG ? 'a_color' : 'c');
+
+  /**
+   * @type {number}
+   */
+  this.a_pointsize = gl.getAttribLocation(
+      program, goog.DEBUG ? 'a_pointsize' : 'd');
+
+  /**
+   * @type {number}
+   */
+  this.a_position = gl.getAttribLocation(
+      program, goog.DEBUG ? 'a_position' : 'b');
+};
+
+goog.provide('ol.render.webgl.PointReplay');
+
+goog.require('goog.asserts');
+goog.require('goog.object');
+goog.require('ol.color');
+goog.require('ol.extent');
+goog.require('ol.webgl.Buffer');
+goog.require('ol.webgl.Context');
+goog.require('ol.render.VectorContext');
+goog.require('ol.render.webgl.pointreplay.shader.Default');
+
+
+/**
+ * A point replay is in charge of rendering a collection of point geometries.
+ * @constructor
+ * @extends {ol.render.VectorContext}
+ * @param {number} tolerance Tolerance.
+ * @param {ol.Extent} maxExtent Max extent.
+ * @struct
+ */
+ol.render.webgl.PointReplay = function(tolerance, maxExtent) {
+  goog.base(this);
+
+  /**
+   * The point size.
+   * TODO: Make this settable via style.
+   * @private
+   * @type {number}
+   */
+  this.pointSize_ = 10;
+
+  /**
+   * The default fill color to use.
+   * @private
+   * @type {ol.Color}
+   */
+  this.fillColor_ = null;
+
+  /**
+   * @type {!goog.vec.Mat4.Number}
+   * @private
+   */
+  this.projectionMatrix_ = goog.vec.Mat4.createNumberIdentity();
+
+  /**
+   * The origin of the coordinate system for the point coordinates sent to
+   * the GPU.
+   * @private
+   * @type {ol.Coordinate}
+   */
+  this.origin_ = ol.extent.getCenter(maxExtent);
+
+  /**
+   * An array that holds all the vertices of the points rendered by this replay.
+   * Following each point the color of the point is stored. Therefore,
+   * for n vertices the format would look like the following:
+   *
+   * [x1, y1, r1, g1, b1, a1,  // coordinates and colors for point 1
+   *  x2, y2, r2, g2, b2, a2,  // coordinates and colors for point 2
+   *  ...
+   *  xn, yn, rn, gn, bn, an]  // coordinates and colors for point n
+   *
+   * Before a draw call is executed this array is used to populate a vertexBuffer.
+   *
+   * @type {Array.<number>}
+   * @private
+   */
+  this.vertexAttributes_ = [];
+
+  /**
+   * The vertex buffer populated form `vertices_` that is bound as an array buffer. 
+   * @type {ol.webgl.Buffer}
+   * @private
+   */
+  this.vertexAttributesBuffer_ = null;
+
+  /**
+   * @type {Array.<number>}
+   * @private
+   */
+  this.indices_ = [];
+
+  /**
+   * The buffer object for indices created using the indices array.
+   * @type {ol.webgl.Buffer}
+   * @private
+   */
+  this.indicesBuffer_ = null;
+
+  /**
+   * The features whose points are rendered by this replay.
+   * @type {Array.<ol.Feature>}
+   * @private
+   */
+  this.features_ = [];
+
+  /**
+   * @private
+   * @type {ol.render.webgl.pointreplay.shader.Default.Locations}
+   */
+  this.defaultLocations_ = null;
+};
+goog.inherits(ol.render.webgl.PointReplay, ol.render.VectorContext);
+
+
+/**
+ * Populate the vertex array for a point geometry.
+ * @param {ol.Coordinate} coordinate
+ * @param {Array.<number>} fillColor The fill color of the point.
+ * This has to be an array of size 4 and each value has to be between 0 and one.
+ * @param {number} pointSize The size of the point
+ * @private
+ */
+ol.render.webgl.PointReplay.prototype.populateVerticesArray_ =
+    function(coordinate, fillColor, pointSize) {
+  // In this case indices are simply [0, 1, 2, 3, ....]
+  this.indices_.push(this.indices_.length);
+  this.vertexAttributes_.push(coordinate[0]);
+  this.vertexAttributes_.push(coordinate[1]);
+  this.vertexAttributes_.push(fillColor[0]);
+  this.vertexAttributes_.push(fillColor[1]);
+  this.vertexAttributes_.push(fillColor[2]);
+  this.vertexAttributes_.push(fillColor[3]);
+  this.vertexAttributes_.push(pointSize);
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.render.webgl.PointReplay.prototype.drawMultiPoint =
+    function(geometry, feature) {
+  var fillColor = this.getFillColorForFeature_(feature);
+  if (!fillColor) {
+    return;
+  }
+
+  var coordinates = geometry.getCoordinates();
+  var i, n;
+  for (i = 0, n = coordinates.length; i < n; i++) {
+    this.populateVerticesArray_(coordinates[i], fillColor, this.pointSize_);
+  }
+};
+
+
+/**
+ * @private
+ * @param {ol.Feature|ol.render.Feature} feature The feature for which to get the color
+ * @returns {Array.<number>} An array of normalized color components.
+ */
+ol.render.webgl.PointReplay.prototype.getFillColorForFeature_ = function(feature) {
+  var fillColor;
+  if (feature.getStyle() !== null) {
+    var color = feature.getStyle().getFill().getColor();
+    fillColor = this.normalizeColor_(/** @type {ol.Color} */ (color));
+  } else {
+    // Get the default color
+    fillColor = this.fillColor_;
+  }
+  return fillColor;
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.render.webgl.PointReplay.prototype.drawPoint =
+    function(pointGeometry, feature) {
+  var fillColor = this.getFillColorForFeature_(feature);
+  if (!fillColor) {
+    return;
+  }
+
+  // Populate the vertex attribute array with the right values for this
+  // point. 
+  if (fillColor) {
+    var coordinates = pointGeometry.getCoordinates();
+    this.features_.push(/** @type {ol.Feature} */ (feature));
+    this.populateVerticesArray_(coordinates, fillColor, this.pointSize_);
+  } else {
+    console.log('No fill color set for point, won\'t draw!');
+    return;
+  }
+};
+
+
+/**
+ * @param {ol.webgl.Context} context Context.
+ **/
+ol.render.webgl.PointReplay.prototype.finish = function(context) {
+  // Create, bind, and populate the vertices buffer
+  this.vertexAttributesBuffer_ = new ol.webgl.Buffer(this.vertexAttributes_);
+  context.bindBuffer(goog.webgl.ARRAY_BUFFER, this.vertexAttributesBuffer_);
+
+  // Create, bind, and populate the vertices buffer
+  this.indicesBuffer_ = new ol.webgl.Buffer(this.indices_);
+  context.bindBuffer(goog.webgl.ELEMENT_ARRAY_BUFFER, this.indicesBuffer_);
+};
+
+
+/**
+ * @param {ol.webgl.Context} context WebGL context.
+ * @return {function()} Delete resources function.
+ */
+ol.render.webgl.PointReplay.prototype.getDeleteResourcesFunction =
+    function(context) {
+  goog.asserts.assert(this.vertexAttributesBuffer_ !== null,
+      'verticesBuffer must not be null');
+  var verticesBuffer = this.vertexAttributesBuffer_;
+
+  goog.asserts.assert(!goog.isNull(this.indicesBuffer_),
+      'indicesBuffer must not be null');
+  var indicesBuffer = this.indicesBuffer_;
+
+  return function() {
+    context.deleteBuffer(verticesBuffer);
+    context.deleteBuffer(indicesBuffer);
+  };
+};
+
+
+/**
+ * @param {ol.webgl.Context} context Context.
+ * @param {ol.Coordinate} center Center.
+ * @param {number} resolution Resolution.
+ * @param {number} rotation Rotation.
+ * @param {ol.Size} size Size.
+ * @param {number} pixelRatio Pixel ratio.
+ * @param {number} opacity Global opacity.
+ * @param {Object} skippedFeaturesHash Ids of features to skip.
+ * @param {function(ol.Feature): T|undefined} featureCallback Feature callback.
+ * @param {boolean} oneByOne Draw features one-by-one for the hit-detecion.
+ * @param {ol.Extent=} opt_hitExtent Hit extent: Only features intersecting
+ *  this extent are checked.
+ * @return {T|undefined} Callback result.
+ * @template T
+ */
+ol.render.webgl.PointReplay.prototype.replay = function(context,
+    center, resolution, rotation, size, pixelRatio,
+    opacity, skippedFeaturesHash,
+    featureCallback, oneByOne, opt_hitExtent) {
+  var gl = context.getGL();
+
+  // Get the program
+  var fragmentShader, vertexShader;
+  fragmentShader =
+      ol.render.webgl.pointreplay.shader.DefaultFragment.getInstance();
+  vertexShader =
+      ol.render.webgl.pointreplay.shader.DefaultVertex.getInstance();
+  var program = context.getProgram(fragmentShader, vertexShader);
+
+  context.useProgram(program);
+
+  // Get the locations
+  var locations;
+  if (this.defaultLocations_ === null) {
+    locations = new ol.render.webgl.pointreplay.shader.Default
+      .Locations(gl, program);
+    this.defaultLocations_ = locations;
+  } else {
+    locations = this.defaultLocations_;
+  }
+
+  gl.uniform1f(locations.u_opacity, opacity);
+
+  // Bind the indices buffer
+  context.bindBuffer(goog.webgl.ELEMENT_ARRAY_BUFFER, this.indicesBuffer_);
+
+  //// Specify the vertex attributes
+  // In this case the structure of a vertex attrib array looks like this:
+  // [x1 y1 r1 g1 b1 a1 size1
+  //  x2 y2 r2 g2 b2 a2 size2
+  //  ....]
+  
+  // The total length of attributes for one vertex is therefore calculated as:
+  // (2 positional attributes + 4 color attributes + 1 size attribute) * 4 bytes per float = 28
+  var nBytesPerPoint = 28;
+
+  // Bind the vertices buffer s.t. the pointers are set correctly
+  goog.asserts.assert(this.vertexAttributesBuffer_ !== null,
+      'verticesBuffer must not be null');
+  context.bindBuffer(goog.webgl.ARRAY_BUFFER, this.vertexAttributesBuffer_);
+
+  /// Set the pointer for the position attribute
+  // Function signature:
+  // glVertexAttribPointer(index, size, type, normalized, stride, offset)
+  gl.enableVertexAttribArray(locations.a_position);
+  gl.vertexAttribPointer(locations.a_position, 2, goog.webgl.FLOAT,
+    false, nBytesPerPoint, 0);
+
+  /// Set the pointer for the color attribute
+  // Offset of color attributes pointer to positional attributes:
+  // 2 positional attributes * 4 bytes per float = 8
+  var offsetColorAttr = 8;
+  gl.enableVertexAttribArray(locations.a_color);
+  gl.vertexAttribPointer(locations.a_color, 4, goog.webgl.FLOAT,
+    false, nBytesPerPoint, offsetColorAttr);
+
+  /// Set the pointer for the size attribute
+  // Offset of size attribute pointer to positional attributes:
+  // (2 positional attributes + 4 color attributes) * 4 bytes per float = 24
+  var offsetSizeAttr = 24;  // 24
+  gl.enableVertexAttribArray(locations.a_pointsize);
+  gl.vertexAttribPointer(locations.a_pointsize, 1, goog.webgl.FLOAT,
+    false, nBytesPerPoint, offsetSizeAttr);
+
+  // TODO: use RTE to avoid jitter
+  var projectionMatrix = this.projectionMatrix_;
+  ol.vec.Mat4.makeTransform2D(projectionMatrix,
+      0.0, 0.0,
+      pixelRatio * 2 / (resolution * size[0]),
+      pixelRatio * 2 / (resolution * size[1]),
+      -rotation,
+      -center[0], -center[1]);
+  gl.uniformMatrix4fv(locations.u_projectionMatrix, false, projectionMatrix);
+
+  var result;
+  if (!goog.isDef(featureCallback)) {
+    // DRAW FOR VISUALIZATION
+    this.drawReplay_(gl, context, skippedFeaturesHash);
+  } else {
+    // DRAW FOR HIT DETECTION
+    //
+    // Set the blend function to additive blending for hit detection.
+    // In this way one can detect wether a pixel was drawn with a color like (1, 1, 1, 0), i.e.
+    // white with 100% opacity.
+    gl.blendFunc(gl.ONE, gl.ONE);
+    var elementType = context.hasOESElementIndexUint ?
+        goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
+
+    var feature, dontSkipFeature, featureIntersectsHitExtent, featureUid;
+    var featureIndex = this.features_.length - 1;
+    var elementSize = context.hasOESElementIndexUint ? 4 : 2;
+    var featureHasGeometry;
+
+    while (featureIndex >= 0) {
+
+      feature = this.features_[featureIndex];
+
+      featureUid = goog.getUid(feature).toString();
+      dontSkipFeature = !goog.isDef(skippedFeaturesHash[featureUid]);
+      featureHasGeometry = goog.isDefAndNotNull(feature.getGeometry());
+      featureIntersectsHitExtent = !goog.isDef(opt_hitExtent) || ol.extent.intersects(
+          opt_hitExtent, feature.getGeometry().getExtent());
+
+      if (dontSkipFeature && featureHasGeometry && featureIntersectsHitExtent) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        var numItems = 1;
+        var offsetInBytes = featureIndex * elementSize;
+
+        if (numItems > 0) {
+          gl.drawElements(goog.webgl.POINTS, numItems, elementType, offsetInBytes);
+        }
+
+        result = featureCallback(feature);
+        if (result) {
+          return result;
+        }
+      }
+      featureIndex--;
+    }
+
+    // Reset the blend function to the original value
+    gl.blendFuncSeparate(
+      goog.webgl.SRC_ALPHA, goog.webgl.ONE_MINUS_SRC_ALPHA,
+      goog.webgl.ONE, goog.webgl.ONE_MINUS_SRC_ALPHA
+    );
+  }
+
+  // Disable the vertex attrib arrays
+  gl.disableVertexAttribArray(locations.a_position);
+  gl.disableVertexAttribArray(locations.a_color);
+  gl.disableVertexAttribArray(locations.a_pointsize);
+
+  // FIXME get result
+  return result;
+};
+
+/**
+ * @private
+ * @param {WebGLRenderingContext} gl gl.
+ * @param {ol.webgl.Context} context Context.
+ * @param {Object} skippedFeaturesHash Ids of features to skip.
+ */
+ol.render.webgl.PointReplay.prototype.drawReplay_ =
+    function(gl, context, skippedFeaturesHash) {
+  var elementType = context.hasOESElementIndexUint ?
+      goog.webgl.UNSIGNED_INT : goog.webgl.UNSIGNED_SHORT;
+  //  var elementSize = context.hasOESElementIndexUint ? 4 : 2;
+  if (!goog.object.isEmpty(skippedFeaturesHash)) {
+    // TODO: draw by blocks to skip features
+  } else {
+    var numItems = this.indices_.length;
+    gl.drawElements(gl.POINTS, numItems, elementType, 0);
+  }
+};
+
+
+/**
+ * Convert a color to an array of normalized component values that WebGL
+ * understands. This function will divide every color components by 255.
+ * @private
+ * @param {ol.Color|string} color Color.
+ */
+ol.render.webgl.PointReplay.prototype.normalizeColor_ = function(color) {
+  var color_ = ol.color.asArray(/** @type {ol.Color} */ (color));
+  return color_.map(function(c, i) {
+    return i !== 3 ? c / 255.0 : c;
+  });
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.render.webgl.PointReplay.prototype.setFillStrokeStyle =
+    function(fillStyle, strokeStyle) {
+
+  goog.asserts.assert(fillStyle || strokeStyle,
+    'fillStyle or strokeStyle should not be null');
+
+  if (fillStyle) {
+    var fillStyleColor = fillStyle.getColor();
+    var fillColorNormalized;
+    var defaultFillColorNormalized = [0.0, 0.0, 0.0, 1.0];
+    if (fillStyleColor) {
+      // Since the color might be a string, the color has to be convereted to
+      // an array. fillStyle.getColor() could also return a ColorLike
+      // therefore this typecast is necessary.
+      fillColorNormalized = this.normalizeColor_(/** @type {ol.Color} */ (fillStyleColor));
+    } else {
+      fillColorNormalized = defaultFillColorNormalized;
+    }
+    this.fillColor_ = fillColorNormalized;
+  } else {
+    this.fillColor_ = null;
+    // if (strokeStyle) {
+      // NOOP, stroke style is ignored!
+    // } 
+  }
+};
+
 goog.provide('ol.render.webgl.ReplayGroup');
 
 goog.require('goog.asserts');
@@ -66335,6 +66954,7 @@ goog.require('ol.webgl.Context');
 goog.require('ol.render.webgl.LineStringReplay');
 goog.require('ol.render.webgl.PolygonReplay');
 goog.require('ol.render.webgl.ImageReplay');
+goog.require('ol.render.webgl.PointReplay');
 
 
 /**
@@ -66368,7 +66988,7 @@ ol.render.webgl.ReplayGroup = function(
 
   /**
    * ImageReplay and PolygonReplay are supported at this point.
-   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay|ol.render.webgl.PolygonReplay>}
+   * @type {Object.<ol.render.ReplayType, ol.render.webgl.ImageReplay|ol.render.webgl.PolygonReplay|ol.render.webgl.PointReplay>}
    * @private
    */
   this.replays_ = {};
@@ -66595,7 +67215,8 @@ ol.render.webgl.ReplayGroup.prototype.hasFeatureAtCoordinate = function(
 ol.render.webgl.BATCH_CONSTRUCTORS_ = {
   'Image': ol.render.webgl.ImageReplay,
   'LineString': ol.render.webgl.LineStringReplay,
-  'Polygon': ol.render.webgl.PolygonReplay
+  'Polygon': ol.render.webgl.PolygonReplay,
+  'Point': ol.render.webgl.PointReplay
 };
 
 
@@ -68558,365 +69179,10 @@ ol.renderer.webgl.VectorLayer.prototype.renderFeature = function(feature, resolu
   return loading;
 };
 
-// Copyright 2011 The Closure Library Authors. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS-IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-/**
- * @fileoverview Definition of the disposable interface.  A disposable object
- * has a dispose method to to clean up references and resources.
- * @author nnaze@google.com (Nathan Naze)
- */
-
-
-goog.provide('goog.disposable.IDisposable');
-
-
-
-/**
- * Interface for a disposable object.  If a instance requires cleanup
- * (references COM objects, DOM notes, or other disposable objects), it should
- * implement this interface (it may subclass goog.Disposable).
- * @interface
- */
-goog.disposable.IDisposable = function() {};
-
-
-/**
- * Disposes of the object and its resources.
- * @return {void} Nothing.
- */
-goog.disposable.IDisposable.prototype.dispose = goog.abstractMethod;
-
-
-/**
- * @return {boolean} Whether the object has been disposed of.
- */
-goog.disposable.IDisposable.prototype.isDisposed = goog.abstractMethod;
-
-// Copyright 2005 The Closure Library Authors. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS-IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-/**
- * @fileoverview Implements the disposable interface. The dispose method is used
- * to clean up references and resources.
- * @author arv@google.com (Erik Arvidsson)
- */
-
-
-goog.provide('goog.Disposable');
-/** @suppress {extraProvide} */
-goog.provide('goog.dispose');
-/** @suppress {extraProvide} */
-goog.provide('goog.disposeAll');
-
-goog.require('goog.disposable.IDisposable');
-
-
-
-/**
- * Class that provides the basic implementation for disposable objects. If your
- * class holds one or more references to COM objects, DOM nodes, or other
- * disposable objects, it should extend this class or implement the disposable
- * interface (defined in goog.disposable.IDisposable).
- * @constructor
- * @implements {goog.disposable.IDisposable}
- */
-goog.Disposable = function() {
-  if (goog.Disposable.MONITORING_MODE != goog.Disposable.MonitoringMode.OFF) {
-    if (goog.Disposable.INCLUDE_STACK_ON_CREATION) {
-      this.creationStack = new Error().stack;
-    }
-    goog.Disposable.instances_[goog.getUid(this)] = this;
-  }
-  // Support sealing
-  this.disposed_ = this.disposed_;
-  this.onDisposeCallbacks_ = this.onDisposeCallbacks_;
-};
-
-
-/**
- * @enum {number} Different monitoring modes for Disposable.
- */
-goog.Disposable.MonitoringMode = {
-  /**
-   * No monitoring.
-   */
-  OFF: 0,
-  /**
-   * Creating and disposing the goog.Disposable instances is monitored. All
-   * disposable objects need to call the {@code goog.Disposable} base
-   * constructor. The PERMANENT mode must be switched on before creating any
-   * goog.Disposable instances.
-   */
-  PERMANENT: 1,
-  /**
-   * INTERACTIVE mode can be switched on and off on the fly without producing
-   * errors. It also doesn't warn if the disposable objects don't call the
-   * {@code goog.Disposable} base constructor.
-   */
-  INTERACTIVE: 2
-};
-
-
-/**
- * @define {number} The monitoring mode of the goog.Disposable
- *     instances. Default is OFF. Switching on the monitoring is only
- *     recommended for debugging because it has a significant impact on
- *     performance and memory usage. If switched off, the monitoring code
- *     compiles down to 0 bytes.
- */
-goog.define('goog.Disposable.MONITORING_MODE', 0);
-
-
-/**
- * @define {boolean} Whether to attach creation stack to each created disposable
- *     instance; This is only relevant for when MonitoringMode != OFF.
- */
-goog.define('goog.Disposable.INCLUDE_STACK_ON_CREATION', true);
-
-
-/**
- * Maps the unique ID of every undisposed {@code goog.Disposable} object to
- * the object itself.
- * @type {!Object<number, !goog.Disposable>}
- * @private
- */
-goog.Disposable.instances_ = {};
-
-
-/**
- * @return {!Array<!goog.Disposable>} All {@code goog.Disposable} objects that
- *     haven't been disposed of.
- */
-goog.Disposable.getUndisposedObjects = function() {
-  var ret = [];
-  for (var id in goog.Disposable.instances_) {
-    if (goog.Disposable.instances_.hasOwnProperty(id)) {
-      ret.push(goog.Disposable.instances_[Number(id)]);
-    }
-  }
-  return ret;
-};
-
-
-/**
- * Clears the registry of undisposed objects but doesn't dispose of them.
- */
-goog.Disposable.clearUndisposedObjects = function() {
-  goog.Disposable.instances_ = {};
-};
-
-
-/**
- * Whether the object has been disposed of.
- * @type {boolean}
- * @private
- */
-goog.Disposable.prototype.disposed_ = false;
-
-
-/**
- * Callbacks to invoke when this object is disposed.
- * @type {Array<!Function>}
- * @private
- */
-goog.Disposable.prototype.onDisposeCallbacks_;
-
-
-/**
- * If monitoring the goog.Disposable instances is enabled, stores the creation
- * stack trace of the Disposable instance.
- * @const {string}
- */
-goog.Disposable.prototype.creationStack;
-
-
-/**
- * @return {boolean} Whether the object has been disposed of.
- * @override
- */
-goog.Disposable.prototype.isDisposed = function() {
-  return this.disposed_;
-};
-
-
-/**
- * @return {boolean} Whether the object has been disposed of.
- * @deprecated Use {@link #isDisposed} instead.
- */
-goog.Disposable.prototype.getDisposed = goog.Disposable.prototype.isDisposed;
-
-
-/**
- * Disposes of the object. If the object hasn't already been disposed of, calls
- * {@link #disposeInternal}. Classes that extend {@code goog.Disposable} should
- * override {@link #disposeInternal} in order to delete references to COM
- * objects, DOM nodes, and other disposable objects. Reentrant.
- *
- * @return {void} Nothing.
- * @override
- */
-goog.Disposable.prototype.dispose = function() {
-  if (!this.disposed_) {
-    // Set disposed_ to true first, in case during the chain of disposal this
-    // gets disposed recursively.
-    this.disposed_ = true;
-    this.disposeInternal();
-    if (goog.Disposable.MONITORING_MODE != goog.Disposable.MonitoringMode.OFF) {
-      var uid = goog.getUid(this);
-      if (goog.Disposable.MONITORING_MODE ==
-              goog.Disposable.MonitoringMode.PERMANENT &&
-          !goog.Disposable.instances_.hasOwnProperty(uid)) {
-        throw Error(
-            this + ' did not call the goog.Disposable base ' +
-            'constructor or was disposed of after a clearUndisposedObjects ' +
-            'call');
-      }
-      delete goog.Disposable.instances_[uid];
-    }
-  }
-};
-
-
-/**
- * Associates a disposable object with this object so that they will be disposed
- * together.
- * @param {goog.disposable.IDisposable} disposable that will be disposed when
- *     this object is disposed.
- */
-goog.Disposable.prototype.registerDisposable = function(disposable) {
-  this.addOnDisposeCallback(goog.partial(goog.dispose, disposable));
-};
-
-
-/**
- * Invokes a callback function when this object is disposed. Callbacks are
- * invoked in the order in which they were added. If a callback is added to
- * an already disposed Disposable, it will be called immediately.
- * @param {function(this:T):?} callback The callback function.
- * @param {T=} opt_scope An optional scope to call the callback in.
- * @template T
- */
-goog.Disposable.prototype.addOnDisposeCallback = function(callback, opt_scope) {
-  if (this.disposed_) {
-    callback.call(opt_scope);
-    return;
-  }
-  if (!this.onDisposeCallbacks_) {
-    this.onDisposeCallbacks_ = [];
-  }
-
-  this.onDisposeCallbacks_.push(
-      goog.isDef(opt_scope) ? goog.bind(callback, opt_scope) : callback);
-};
-
-
-/**
- * Deletes or nulls out any references to COM objects, DOM nodes, or other
- * disposable objects. Classes that extend {@code goog.Disposable} should
- * override this method.
- * Not reentrant. To avoid calling it twice, it must only be called from the
- * subclass' {@code disposeInternal} method. Everywhere else the public
- * {@code dispose} method must be used.
- * For example:
- * <pre>
- *   mypackage.MyClass = function() {
- *     mypackage.MyClass.base(this, 'constructor');
- *     // Constructor logic specific to MyClass.
- *     ...
- *   };
- *   goog.inherits(mypackage.MyClass, goog.Disposable);
- *
- *   mypackage.MyClass.prototype.disposeInternal = function() {
- *     // Dispose logic specific to MyClass.
- *     ...
- *     // Call superclass's disposeInternal at the end of the subclass's, like
- *     // in C++, to avoid hard-to-catch issues.
- *     mypackage.MyClass.base(this, 'disposeInternal');
- *   };
- * </pre>
- * @protected
- */
-goog.Disposable.prototype.disposeInternal = function() {
-  if (this.onDisposeCallbacks_) {
-    while (this.onDisposeCallbacks_.length) {
-      this.onDisposeCallbacks_.shift()();
-    }
-  }
-};
-
-
-/**
- * Returns True if we can verify the object is disposed.
- * Calls {@code isDisposed} on the argument if it supports it.  If obj
- * is not an object with an isDisposed() method, return false.
- * @param {*} obj The object to investigate.
- * @return {boolean} True if we can verify the object is disposed.
- */
-goog.Disposable.isDisposed = function(obj) {
-  if (obj && typeof obj.isDisposed == 'function') {
-    return obj.isDisposed();
-  }
-  return false;
-};
-
-
-/**
- * Calls {@code dispose} on the argument if it supports it. If obj is not an
- *     object with a dispose() method, this is a no-op.
- * @param {*} obj The object to dispose of.
- */
-goog.dispose = function(obj) {
-  if (obj && typeof obj.dispose == 'function') {
-    obj.dispose();
-  }
-};
-
-
-/**
- * Calls {@code dispose} on each member of the list that supports it. (If the
- * member is an ArrayLike, then {@code goog.disposeAll()} will be called
- * recursively on each of its members.) If the member is not an object with a
- * {@code dispose()} method, then it is ignored.
- * @param {...*} var_args The list.
- */
-goog.disposeAll = function(var_args) {
-  for (var i = 0, len = arguments.length; i < len; ++i) {
-    var disposable = arguments[i];
-    if (goog.isArrayLike(disposable)) {
-      goog.disposeAll.apply(null, disposable);
-    } else {
-      goog.dispose(disposable);
-    }
-  }
-};
-
 goog.provide('ol.renderer.webgl.VectorTileLayer');
 
 goog.require('ol.array');
-goog.require('goog.dispose');
+// goog.require('goog.dispose');
 goog.require('ol.TileState');
 goog.require('ol.extent');
 goog.require('ol.Extent');
@@ -69030,7 +69296,9 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   tilesToDrawByZ[z] = {};
 
   // This function can be called with a zoom level and it will
-  // add loaded tiles to tilesToDrawByZ. It will be used later.
+  // add loaded tiles to tilesToDrawByZ. It will be used later in order to
+  // add already loaded tiles from higher and lower zoom levels to the list
+  // of tiles to be drawn. See below for more details.
   var findLoadedTiles = this.createLoadedTileFinder(source, projection,
       tilesToDrawByZ);
 
@@ -69056,12 +69324,14 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
         continue;
       }
 
-      // If the tilestate is ol.TileState.IDLE or ol.TileState.LOADING the following block is executed.
+      // If the tilestate is ol.TileState.IDLE or ol.TileState.LOADING the
+      // following block is executed:
       // Call the function findLoadedTiles for each parent tile range, i.e.
-      // each tilerange with [z-1, z-2, ..., minZoom] that contains the current tile
-      // range and the current zoom level.
-      // (This function will add tiles to the 'tilesToDrawByZ' hash).
-      // So if a tile is not loaded yet but one of its 'parent tiles' is, the parent tile is loaded instead.
+      // each tilerange with [z-1, z-2, ..., minZoom] that contains the current
+      // tile range and the current zoom level.
+      // This function will add tiles to the 'tilesToDrawByZ' hash.
+      // So if a tile is not loaded yet but one of its parent tiles is, the
+      // parent tile is drawn instead.
       fullyLoaded = tileGrid.forEachTileCoordParentTileRange(
           tile.tileCoord, findLoadedTiles, null, tmpTileRange, tmpExtent);
       // If none was found, the same is done for 'children' tile ranges that 
@@ -69084,6 +69354,7 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
   zs.sort(ol.array.numberSafeCompareFunction);
   var replayables = [];
   var i, ii, currentZ, tileCoordKey, tilesToDraw;
+  var newReplayGroup, oldReplayGroup;
   // For each tile that should be drawn a replay group is created.
   // The replay group is saved on the replayState attribute on the tile itself.
   for (i = 0, ii = zs.length; i < ii; ++i) {
@@ -69091,9 +69362,22 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
     tilesToDraw = tilesToDrawByZ[currentZ];
     for (tileCoordKey in tilesToDraw) {
       tile = tilesToDraw[tileCoordKey];
+
       if (tile.getState() == ol.TileState.LOADED) {
         replayables.push(tile);
-        this.createReplayGroup_(tile, layer, resolution, extent, pixelRatio, context);
+
+        oldReplayGroup = tile.getReplayState().replayGroup;
+        newReplayGroup = this.createReplayGroupIfNecessary_(
+          tile, layer, resolution, extent, pixelRatio, context);
+
+        // Check if there already exists a replay group for this tile and 
+        // if a new one was created due to changed circumstances (changed
+        // view etc.).
+        // In this case, delete the old replay group after the render call.
+        if (newReplayGroup && oldReplayGroup) {
+          frameState.postRenderFunctions.push(
+              oldReplayGroup.getDeleteResourcesFunction(context));
+        }
       }
     }
   }
@@ -69112,25 +69396,31 @@ ol.renderer.webgl.VectorTileLayer.prototype.prepareFrame =
  * @param {ol.Extent} extent Extent.
  * @param {number} pixelRatio Pixel ratio.
  * @param {ol.webgl.Context} context WebGL context.
+ * @return {ol.render.webgl.ReplayGroup | null}
  * @private
  */
-ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
+ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroupIfNecessary_ =
     function(tile, layer, resolution, extent, pixelRatio, context) {
   var revision = layer.getRevision();
   var renderOrder = layer.getRenderOrder() || null;
   var replayState = tile.getReplayState();
+  replayState['context3d'] = context;
 
+  // Check if a new replay group for this tile should be created.
+  // If the layer did not change (revision is the same), the render order was
+  // not altered, and the resolution didn't change, then the previous replay
+  // group should be kept (the 'dirty' will override this behavior).
   if (!replayState.dirty
       && replayState.renderedRevision == revision
       && replayState.renderedRenderOrder == renderOrder
       && replayState.resolution == resolution) {
-    return;
+    return null;
   }
 
   // FIXME dispose of old replayGroup in post render
-  goog.dispose(replayState.replayGroup);
-  replayState.replayGroup = null;
-  replayState.dirty = false;
+  // goog.dispose(replayState.replayGroup);
+  // replayState.replayGroup = null;
+  // replayState.dirty = false;
 
   var tol = ol.renderer.vector.getTolerance(resolution, pixelRatio);
   var replayGroup = new ol.render.webgl.ReplayGroup(
@@ -69139,13 +69429,14 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
 
   var self = this;
   // Callback function that is executed for each feature to be rendered.
-  // This function should be called once for each replaygroup. It will
-  // call the renderFeature function of the vector rendered. This function 
-  // in turn will lookup the feature's type (e.g. Polygon) and will get/request a new 
-  // replay from the replaygroup (e.g. Polygon) replay. The replay is initialized by calling functions like drawPolygonGeometry.
-  // This function will for example triangulate the coordinates and add the 
-  // vertices to an array that can later be bound to a vertex buffer during the 'replay' call that is executed
-  // during composeFrame.
+  // This function should be called once for each ReplayGroup.
+  // It will call the renderFeature function of the vector rendered.
+  // That function in turn will lookup the feature's type (e.g. Polygon)
+  // and will get/request a new replay from the ReplayGroup (e.g. Polygon).
+  // The replay is initialized by calling functions like drawPolygonGeometry.
+  // This will for example triangulate the coordinates and add the vertices to
+  // an array that can later be bound to a vertex buffer during the 'replay'
+  // call that is made during composeFrame.
   var renderFeature = function(feature) {
     var styles;
     var styleFunction = feature.getStyleFunction();
@@ -69174,6 +69465,8 @@ ol.renderer.webgl.VectorTileLayer.prototype.createReplayGroup_ =
   replayState.renderedRenderOrder = renderOrder;
   replayState.resolution = resolution;
   replayState.replayGroup = replayGroup;
+
+  return replayGroup;
 }
 
 /**
@@ -69347,6 +69640,20 @@ ol.renderer.webgl.VectorTileLayer.prototype.forEachFeatureAtCoordinate = functio
   }
 };
 
+/**
+ * @inheritDoc
+ */
+ol.renderer.webgl.VectorTileLayer.prototype.disposeInternal = function() {
+  var renderedTiles = this.renderedTiles_;
+  var i, replayGroup;
+  var nTiles = renderedTiles.length;
+  var context = this.mapRenderer.getContext();
+  for (i = 0; i < nTiles; i++) {
+    replayGroup = renderedTiles[i].getReplayState().replayGroup;
+    replayGroup.getDeleteResourcesFunction(context)();
+  }
+  goog.base(this, 'disposeInternal');
+};
 
 // FIXME check against gl.getParameter(webgl.MAX_TEXTURE_SIZE)
 
@@ -102660,6 +102967,8 @@ ol.source.ImageStatic.prototype.handleImageChange = function(evt) {
   goog.base(this, 'handleImageChange', evt);
 };
 
+goog.provide('ol.source.NonsquaredTile');
+
 goog.require('ol');
 goog.require('ol.ImageTile');
 goog.require('ol.TileState');
@@ -107487,6 +107796,7 @@ goog.require('ol.source.ImageStatic');
 goog.require('ol.source.ImageVector');
 goog.require('ol.source.ImageWMS');
 goog.require('ol.source.MapQuest');
+goog.require('ol.source.NonsquaredTile');
 goog.require('ol.source.OSM');
 goog.require('ol.source.Raster');
 goog.require('ol.source.RasterEvent');

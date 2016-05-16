@@ -4,7 +4,7 @@ class SelectionSettingsCtrl {
 
     static $inject = ['$scope'];
 
-    constructor($scope: ViewportElementScope) {
+    constructor($scope: ViewportScope) {
         this.selHandler = $scope.viewer.mapObjectSelectionHandler;
     }
 

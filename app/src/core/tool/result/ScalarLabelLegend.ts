@@ -1,6 +1,6 @@
 interface ScalarLabelLegendArgs {
     labels: string[];
-    colors: string[];
+    colors: Color[];
 }
 
 class ScalarLabelLegend extends Legend {
@@ -11,6 +11,7 @@ class ScalarLabelLegend extends Legend {
         var annotations = [];
         var data = [];
 
+        var color;
         for (var i = 0; i < labels.length; i++) {
             annotations.push({
                 x: 0.60,
