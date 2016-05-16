@@ -565,6 +565,13 @@ declare module olx {
              * The maximum resolution (exclusive) below which this layer will be visible.
              */
             maxResolution?: number;
+
+            /**
+             * The z-index for layer rendering. At rendering time, the layers
+             * will be ordered, first by Z-index and then by position.
+             * The default Z-index is 0.
+             */
+            zIndex?: number;
         }
 
         interface GroupOptions extends BaseOptions {
