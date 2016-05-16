@@ -5,18 +5,20 @@ interface PlateArgs {
     acquisitions: Acquisition[];
 }
 
-interface CreatePlateArgs {
-    name: string;
-    description: string;
-}
-
 class Plate {
-
     id: string;
     name: string;
     description: string;
     acquisitions: Acquisition[];
 
+    /**
+     * Constructor a new Plate object.
+     *
+     * @class Plate
+     * @classdesc A plate is basically a container for multiple objects
+     * of type Acquisition.
+     * @param {PlateArgs} args - Constructor arguments.
+     */
     constructor(args: PlateArgs) {
         this.id = args.id;
         this.name = args.name;
