@@ -3,7 +3,6 @@ from pyspark.ml.clustering import KMeans as KMeansClassifier
 
 from tools.classifier.classifier import UnsupervisedClassifier
 
-
 class KMeans(UnsupervisedClassifier):
 
     def classify_sklearn(self, feature_data, k):

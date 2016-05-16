@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.grid_search import GridSearchCV
 from sklearn import svm, cross_validation
+from tools.classifier.classifier import SupervisedClassifier
 
 from tools.classifier.classifier import SupervisedClassifier
 

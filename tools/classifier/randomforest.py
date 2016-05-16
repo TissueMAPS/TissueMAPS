@@ -2,10 +2,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.grid_search import GridSearchCV
 from sklearn import cross_validation
 from pyspark.ml import Pipeline
+<<<<<<< HEAD
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.feature import VectorIndexer
 from pyspark.ml.feature import IndexToString
+=======
+from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer
+>>>>>>> 72a63698b7ddb98cdc3310f889de32d0518c9eef
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
@@ -80,4 +84,3 @@ class RandomForest(SupervisedClassifier):
         predictions = model.transform(unlabeled_feature_data)
         result = predictions.select('mapobject_id', 'prediction').collect()
         return [(r.mapobject_id, label_mapping[r.prediction]) for r in result]
-
