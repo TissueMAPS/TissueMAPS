@@ -37,22 +37,11 @@ abstract class LabelLayer extends VectorTileLayer {
             } else {
                 throw new Error('Feature has no property "label"!');
             }
-            if (geomType === 'Polygon') {
+            if (geomType === 'Polygon' || geomType === 'Point') {
                 return [
                     new ol.style.Style({
                         fill: new ol.style.Fill({
                             color: fillColor
-                        })
-                    })
-                ];
-            } else if (geomType === 'Point') {
-                return [
-                    new ol.style.Style({
-                        image: new ol.style.Circle({
-                            fill: new ol.style.Fill({
-                                color: fillColor
-                            }),
-                            radius: 2
                         })
                     })
                 ];

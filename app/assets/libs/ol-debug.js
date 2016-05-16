@@ -1,6 +1,6 @@
 // OpenLayers 3. See http://openlayers.org/
 // License: https://raw.githubusercontent.com/openlayers/ol3/master/LICENSE.md
-// Version: deploy-20-gb751dd4
+// Version: deploy-21-gb78535c
 
 (function (root, factory) {
   if (typeof exports === "object") {
@@ -52786,30 +52786,29 @@ ol.renderer.vector.renderMultiPolygonGeometry_ = function(replayGroup, geometry,
  * @private
  */
 ol.renderer.vector.renderPointGeometry_ = function(replayGroup, geometry, style, feature) {
-  // Note that there are two ways to draw points.
-  // Either a dedicated PointReplay to draw the points directly or, alternatively,
-  // an ImageReplay is used to first create an image of the point (using an
-  // off-screen 2d-canvas). If there is a dedicated PointReplay it should be used.
-  // Otherwise check if the style has an image set.
-  var pointReplay = replayGroup.getReplay(
-      style.getZIndex(), ol.render.ReplayType.POINT);
-  if (pointReplay) {
-    var fillStyle = style.getFill();
-    var strokeStyle = style.getStroke();
-    pointReplay.setFillStrokeStyle(fillStyle, strokeStyle);
-    pointReplay.drawPoint(geometry, feature);
+  // Features with point geometries can have an image set on their style.
+  // If such an image is set, it should be drawn with the image renderer.
+  // Otherwise a dedicated point renderer should be used.
+  var imageStyle = style.getImage();
+  if (imageStyle) {
+    if (imageStyle.getImageState() != ol.style.ImageState.LOADED) {
+      return;
+    }
+    var imageReplay = replayGroup.getReplay(
+        style.getZIndex(), ol.render.ReplayType.IMAGE);
+    imageReplay.setImageStyle(imageStyle);
+    imageReplay.drawPoint(geometry, feature);
   } else {
-    var imageStyle = style.getImage();
-    if (imageStyle) {
-      if (imageStyle.getImageState() != ol.style.ImageState.LOADED) {
-        return;
-      }
-      var imageReplay = replayGroup.getReplay(
-          style.getZIndex(), ol.render.ReplayType.IMAGE);
-      imageReplay.setImageStyle(imageStyle);
-      imageReplay.drawPoint(geometry, feature);
+    var pointReplay = replayGroup.getReplay(
+        style.getZIndex(), ol.render.ReplayType.POINT);
+    if (pointReplay) {
+      var fillStyle = style.getFill();
+      var strokeStyle = style.getStroke();
+      pointReplay.setFillStrokeStyle(fillStyle, strokeStyle);
+      pointReplay.drawPoint(geometry, feature);
     }
   }
+
   // Now, check if text was set on the feature style.
   var textStyle = style.getText();
   if (textStyle) {
@@ -52830,28 +52829,26 @@ ol.renderer.vector.renderPointGeometry_ = function(replayGroup, geometry, style,
  * @private
  */
 ol.renderer.vector.renderMultiPointGeometry_ = function(replayGroup, geometry, style, feature) {
-  // Note that there are two ways to draw points.
-  // Either a dedicated PointReplay to draw the points directly or, alternatively,
-  // an ImageReplay is used to first create an image of the point (using an
-  // off-screen 2d-canvas). If there is a dedicated PointReplay it should be used.
-  // Otherwise check if the style has an image set.
-  var pointReplay = replayGroup.getReplay(
-      style.getZIndex(), ol.render.ReplayType.POINT);
-  if (pointReplay) {
-    var fillStyle = style.getFill();
-    var strokeStyle = style.getStroke();
-    pointReplay.setFillStrokeStyle(fillStyle, strokeStyle);
-    pointReplay.drawMultiPoint(geometry, feature);
+  // Features with point geometries can have an image set on their style.
+  // If such an image is set, it should be drawn with the image renderer.
+  // Otherwise a dedicated point renderer should be used.
+  var imageStyle = style.getImage();
+  if (imageStyle) {
+    if (imageStyle.getImageState() != ol.style.ImageState.LOADED) {
+      return;
+    }
+    var imageReplay = replayGroup.getReplay(
+        style.getZIndex(), ol.render.ReplayType.IMAGE);
+    imageReplay.setImageStyle(imageStyle);
+    imageReplay.drawMultiPoint(geometry, feature);
   } else {
-    var imageStyle = style.getImage();
-    if (imageStyle) {
-      if (imageStyle.getImageState() != ol.style.ImageState.LOADED) {
-        return;
-      }
-      var imageReplay = replayGroup.getReplay(
-          style.getZIndex(), ol.render.ReplayType.IMAGE);
-      imageReplay.setImageStyle(imageStyle);
-      imageReplay.drawMultiPoint(geometry, feature);
+    var pointReplay = replayGroup.getReplay(
+        style.getZIndex(), ol.render.ReplayType.POINT);
+    if (pointReplay) {
+      var fillStyle = style.getFill();
+      var strokeStyle = style.getStroke();
+      pointReplay.setFillStrokeStyle(fillStyle, strokeStyle);
+      pointReplay.drawMultiPoint(geometry, feature);
     }
   }
   var textStyle = style.getText();
