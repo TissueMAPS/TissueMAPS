@@ -122,6 +122,7 @@
 
         "app/src/tools/KMeans/KmeansCtrl.ts",
         "app/src/tools/SVM/SVMCtrl.ts",
+        "app/src/tools/RandomForest/RandomForestCtrl.ts",
         "app/src/tools/Heatmap/HeatmapCtrl.ts",
 
         "app/src/viewer/toolui/toolbar/tmToolbar.ts",
