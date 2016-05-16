@@ -1,6 +1,6 @@
 // OpenLayers 3. See http://openlayers.org/
 // License: https://raw.githubusercontent.com/openlayers/ol3/master/LICENSE.md
-// Version: deploy-25-g123e95b
+// Version: deploy-31-gb71f62b
 
 (function (root, factory) {
   if (typeof exports === "object") {
@@ -66528,7 +66528,7 @@ ol.render.webgl.PointReplay = function(tolerance, maxExtent) {
    * @private
    * @type {number}
    */
-  this.pointSize_ = 10;
+  this.pointSize_ = 4;
 
   /**
    * The default fill color to use.
@@ -66820,9 +66820,7 @@ ol.render.webgl.PointReplay.prototype.replay = function(context,
       if (dontSkipFeature && featureHasGeometry && featureIntersectsHitExtent) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        if (numItems > 0) {
-          gl.drawArrays(goog.webgl.POINTS, featureIndex, 1);
-        }
+        gl.drawArrays(goog.webgl.POINTS, featureIndex, 1);
 
         result = featureCallback(feature);
         if (result) {
