@@ -1,7 +1,14 @@
+/**
+ * A file that was produced by a microscope. This can be a metadata file or
+ * an image file.
+ */
 interface MicroscopeFile {
     name: string;
 }
 
+/**
+ * Constructor arguments for an acquisition.
+ */
 interface AcquisitionArgs {
     id: string;
     name: string;
@@ -13,11 +20,20 @@ class Acquisition {
     id: string;
     name: string;
     description: string;
+    // The upload status
     status: string;
     files: MicroscopeFile[] = [];
 
     private _uploader: any;
 
+    /**
+     * Construct a new acquisition.
+     *
+     * @class Acquisition
+     * @classdesc An acquisition represents a collection of imagefiles and
+     * metadata files produced by a single microscope acquisition run.
+     * @param {AcquisitionArgs} args - Constructor arguments.
+     */
     constructor(args: AcquisitionArgs) {
         _.extend(this, args);
 
@@ -40,6 +56,10 @@ class Acquisition {
         });
     }
 
+    /**
+     * Upload a mutiple files. This method has to be called after the files
+     * have been registered, i.e. created server-side.
+     */
     private _uploadRegisteredFiles(newFiles) {
         var url = '/api/acquisitions/' + this.id + '/upload-file';
         var $q = $injector.get<ng.IQService>('$q');
@@ -70,10 +90,18 @@ class Acquisition {
         return filePromises;
     }
 
+    /**
+     * Clear all files on this object (only client-side).
+     */
     clearFiles() {
         this.files.splice(0, this.files.length);
     }
 
+    /**
+     * Register files to be uploaded. This will create server-side
+     * objects for all the files. Only files that were registered can be 
+     * uploaded.
+     */
     private _registerUpload(newFiles) {
         var fileNames = _(newFiles).pluck('name');
         var url = '/api/acquisitions/' + this.id + '/register-upload';
@@ -90,6 +118,9 @@ class Acquisition {
         });
     }
 
+    /**
+     * Cancel the upload of certain files.
+     */
     cancelAllUploads(files) {
         this.clearFiles();
         files.forEach((f) => {
@@ -99,6 +130,9 @@ class Acquisition {
         });
     }
 
+    /**
+     * Upload an array of files.
+     */
     uploadFiles(newFiles) {
         var $q = $injector.get<ng.IQService>('$q');
         return this._registerUpload(newFiles)
