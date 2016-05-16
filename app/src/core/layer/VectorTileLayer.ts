@@ -31,6 +31,8 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
     }
 
     private _createDefaultStyleFunc() {
+        // Currently a point can't have a stroke and can only
+        // be colorized via a fill color.
         return (feature, style) => {
             var geomType = feature.getGeometry().getType();
             if (geomType === 'Polygon') {
@@ -47,11 +49,8 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
             } else if (geomType === 'Point') {
                 return [
                     new ol.style.Style({
-                        image: new ol.style.Circle({
-                            fill: new ol.style.Fill({
-                                color: this.strokeColor.toOlColor()
-                            }),
-                            radius: 2
+                        fill: new ol.style.Fill({
+                            color: this.strokeColor.toOlColor()
                         })
                     })
                 ];
