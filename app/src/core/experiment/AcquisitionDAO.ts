@@ -9,6 +9,9 @@ interface SerializedAcquisition {
 }
 
 class AcquisitionDAO extends HTTPDataAccessObject<Acquisition> {
+    /**
+     * @classdesc A DataAccessObject for the Acquisition class.
+     */
     constructor() {
         super('/api/acquisitions')
     }

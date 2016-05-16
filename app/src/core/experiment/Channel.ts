@@ -4,6 +4,9 @@ interface SerializedChannel {
     layers: SerializedChannelLayer[];
 }
 
+/**
+ * Channel constructor arguments.
+ */
 interface ChannelArgs extends SerializedChannel {
     visible?: boolean;
 }

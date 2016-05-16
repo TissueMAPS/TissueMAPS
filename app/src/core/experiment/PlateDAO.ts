@@ -7,6 +7,10 @@ interface SerializedPlate {
 }
 
 class PlateDAO extends HTTPDataAccessObject<Plate> {
+    /**
+     * @classdesc An DataAccessObject for querying and creating objects
+     * of type Plate.
+     */
     constructor() {
         super('/api/plates')
     }

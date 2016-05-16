@@ -24,6 +24,10 @@ interface SerializedExperiment {
 }
 
 class ExperimentDAO extends HTTPDataAccessObject<Experiment> {
+    /**
+     * @classdesc An DataAccessObject for querying and creating objects
+     * of type Experiment.
+     */
     constructor() {
         super('/api/experiments')
     }

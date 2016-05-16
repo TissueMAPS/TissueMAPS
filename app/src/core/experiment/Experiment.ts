@@ -1,11 +1,8 @@
-interface CreateExperimentArgs {
-    name: string;
-    description: string;
-    plateFormat: number;
-    microscopeType: string;
-    plateAcquisitionMode: string;
-}
-
+/**
+ * Experiment constructor arguments.
+ * NOTE: This is currently just the serialized experiment and thus
+ * will have underscore-separated variable names
+ */
 type ExperimentArgs = SerializedExperiment;
 
 interface MapobjectType {
@@ -25,6 +22,16 @@ class Experiment implements Model {
     channels: Channel[] = [];
     status: string;
 
+    /**
+     * Construct a new Experiment.
+     * @class Experiment
+     * @classdesc An experiment is the main container for data acquired by a 
+     * microscope. Most of the functionality of TissueMAPS is provided by
+     * the experiment object together with an object of type Viewer.
+     * An experiment should be more of a data container and the viewer should
+     * have the active role in the application.
+     * @param {ExperimentArgs} args - Constructor arguments.
+     */
     constructor(args: ExperimentArgs) {
 
         var $q = $injector.get<ng.IQService>('$q');
@@ -47,10 +54,20 @@ class Experiment implements Model {
         });
     }
 
+    /**
+     * The highest zoom level for any layer of this experiment.
+     * It is assumed that all layers of an experiment have the same max
+     * zoom level.
+     * @type number
+     */
     get maxZoom(): number {
-        return this.channels[0].layers[0];
+        return this.channels[0].layers[0].maxZoom;
     }
 
+    /**
+     * The highest zplane supported by this experiment.
+     * @type number
+     */
     get maxZ(): number {
         var zs = this.channels.map((ch) => {
             return ch.maxZ;
@@ -58,6 +75,10 @@ class Experiment implements Model {
         return Math.max.apply(this, zs);
     }
 
+    /**
+     * The lowest zplane supported by this experiment.
+     * @type number
+     */
     get minZ(): number {
         var zs = this.channels.map((ch) => {
             return ch.minZ;
