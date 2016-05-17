@@ -4,7 +4,7 @@ from tmaps.tool import ContinuousLabelLayer, Result
 
 
 class Heatmap():
-    def process_request(self, payload, session, experiment):
+    def process_request(self, payload, session, experiment, use_spark=False):
         """
         {
             "chosen_object_type": str,

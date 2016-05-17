@@ -11,7 +11,6 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from tmlib.models import FeatureValue, Feature, MapobjectType
 from tmaps.extensions import db
 from tmaps.extensions import spark
-from tmaps.extensions.spark import db_url
 from tmaps.tool import Result
 from tmaps.tool import ScalarLabelLayer
 from tmaps.tool import SupervisedClassifierLabelLayer
