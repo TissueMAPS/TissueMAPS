@@ -1,6 +1,6 @@
 import json
 
-from flask import jsonify, request
+from flask import jsonify, request, current_app
 from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
 
@@ -102,7 +102,8 @@ def process_tool_request(tool_id):
         db.session.commit()
 
     # Execute the tool plugin.
-    tool_result = tool_inst.process_request(payload, session, e)
+    use_spark = current_app.config.get('USE_SPARK', False)
+    tool_result = tool_inst.process_request(payload, session, e, use_spark=use_spark)
 
     # Commit all results that may have been added to the db
     db.session.commit()
