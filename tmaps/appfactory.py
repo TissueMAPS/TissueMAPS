@@ -8,9 +8,9 @@ import gc3libs
 
 from tmaps import defaultconfig
 from tmaps.extensions import db
-from tmaps.extensions.auth import jwt
-from tmaps.extensions.redis import redis_store
-# from tmaps.extensions.gc3pie import gc3pie_engine
+from tmaps.extensions import jwt
+from tmaps.extensions import redis_store
+# from tmaps.extensions import gc3pie_engine
 from tmaps.serialize import TmJSONEncoder
 
 

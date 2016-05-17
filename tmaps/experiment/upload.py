@@ -13,7 +13,7 @@ from tmlib.models import (
 )
 from tmlib.models.status import FileUploadStatus
 
-from tmaps.extensions.redis import redis_store
+from tmaps.extensions import redis_store
 from tmaps.api import api
 from tmaps.extensions import db
 from tmaps.util import (
