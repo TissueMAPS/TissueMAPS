@@ -5,7 +5,6 @@ DEBUG = False
 
 # Override this key with a secret one
 SECRET_KEY = 'default_secret_key'
-HASHIDS_SALT = 'default_secret_salt'
 
 ## Authentication
 JWT_EXPIRATION_DELTA = datetime.timedelta(days=2)
