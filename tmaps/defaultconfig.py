@@ -25,3 +25,9 @@ LOG_N_BACKUPS = 10
 # This should be set to true in the production config when using NGINX
 USE_X_SENDFILE = False
 REDIS_URL = 'redis://localhost:6379'
+
+## Spark
+USE_SPARK = False
+SPARK_APP_NAME = 'tmaps'
+SPARK_MASTER_URL = 'local'
+SPARK_DB_URL = 'postgresql://localhost:5432/tissuemaps'
