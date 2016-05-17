@@ -15,14 +15,7 @@ from tmaps.extensions.spark import db_url
 from tmaps.tool import Result
 from tmaps.tool import ScalarLabelLayer
 from tmaps.tool import SupervisedClassifierLabelLayer
-
-class ToolRequestHandler(object):
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def process_request(self):
-        pass
+from tmaps.tool import ToolRequestHandler
 
 
 class Classifier(ToolRequestHandler):

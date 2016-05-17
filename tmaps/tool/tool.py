@@ -1,4 +1,6 @@
 from sqlalchemy import Column, String, Text
+from abc import ABCMeta
+from abc import abstractmethod
 
 from tmaps.serialize import json_encoder
 from tmaps.model import Model
@@ -39,3 +41,30 @@ def encode_tool(obj, encoder):
         'description': obj.description,
         'icon': obj.icon
     }
+
+
+class ToolRequestHandler(object):
+
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def process_request(self, payload, tool_session, experiment,
+                        use_spark=False):
+        """
+        Process a tool request sent by the client.
+
+        Parameters
+        ----------
+        payload : dict
+            An arbitrary dictionary sent by the client tool.
+        tool_session : tmaps.tool.ToolSession
+            A session of a specific tool. This object enables information
+            to persists over multiple requests (e.g. for iterative classifier
+            training).
+        experiment : tmlib.models.Experiment
+            The experiment from which the request was sent.
+        use_spark : boolean
+            If the tool should try to use Apache Spark for processing.
+
+        """
+        pass
