@@ -10,7 +10,7 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 from tmlib.models import FeatureValue, Feature, MapobjectType
 from tmaps.extensions import db
-from tmaps.extensions.spark import sqlc
+from tmaps.extensions import spark
 from tmaps.extensions.spark import db_url
 from tmaps.tool import Result
 from tmaps.tool import ScalarLabelLayer
@@ -29,32 +29,6 @@ class Classifier(ToolRequestHandler):
 
     __metaclass__ = ABCMeta
 
-    @classmethod
-    def read_table_spark(cls, table_name):
-        '''Reads an SQL table for use with Apache Spark.
-
-        Parameters
-        ----------
-        table_name: str
-            name of the SQL table
-
-        Returns
-        -------
-        pyspark.sql.DataFrame
-
-        Note
-        ----
-        Caches the :py:class:`pyspark.sql.DataFrame` to speed up computations.
-        '''
-        # Download the PostgreSQL JDBC Driver from https://jdbc.postgresql.org/download.html
-        # Export the environment variable 'SPARK_CLASSPATH' when working in the
-        # pyspark shell or use '--driver-class-path' flag when submitting the
-        # script via the command line with spark-submit
-        # db_url = 'postgresql://localhost:5432/tissuemaps?user=markus&password=123'
-        # props = {'user': 'markus', 'password': '123'}
-        return DataFrameReader(sqlc).jdbc(
-            url='jdbc:%s' % db_url, table=table_name
-        ).cache()
 
     def format_feature_data_sklearn(self, experiment_id, mapobject_type_name,
             feature_names):
@@ -118,10 +92,10 @@ class Classifier(ToolRequestHandler):
             "features" column has type
             :py:class:`pyspark.mllib.linalg.DenseVector`
         '''
-        feature_values = self.read_table_spark('feature_values')
-        features = self.read_table_spark('features')
-        mapobjects = self.read_table_spark('mapobjects')
-        mapobject_types = self.read_table_spark('mapobject_types')
+        feature_values = spark.read_table('feature_values')
+        features = spark.read_table('features')
+        mapobjects = spark.read_table('mapobjects')
+        mapobject_types = spark.read_table('mapobject_types')
         feature_names = feature_names
 
         for i, name in enumerate(feature_names):
@@ -174,7 +148,7 @@ class SupervisedClassifier(Classifier):
             subset of `feature_data` for selected mapobjects with additional
             column "label"
         '''
-        labels = sqlc.createDataFrame(
+        labels = spark.sqlctx.createDataFrame(
             labeled_mapobjects, schema=['mapobject_id', 'label']
         )
         labeled_data = feature_data.join(
