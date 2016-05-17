@@ -10,7 +10,8 @@ from tmaps import defaultconfig
 from tmaps.extensions import db
 from tmaps.extensions.auth import jwt
 from tmaps.extensions.redis import redis_store
-from tmaps.extensions.gc3pie import gc3pie_engine
+from tmaps.extensions import gc3pie_engine
+from tmaps.extensions import websocket
 from tmaps.serialize import TmJSONEncoder
 
 
@@ -106,11 +107,14 @@ def create_app(config_overrides={}):
     db.init_app(app)
     redis_store.init_app(app)
     gc3pie_engine.init_app(app)
+    websocket.init_app(app)
 
     ## Import and register blueprints
     from api import api
+    from jtui.api import jtui
 
     app.register_blueprint(api, url_prefix='/api')
+    app.register_blueprint(jtui, url_prefix='/jtui')
 
     # @app.after_request
     # def after_request(response):
