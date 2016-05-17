@@ -14,7 +14,7 @@ from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
-from tools.classifier.classifier import SupervisedClassifier
+from tools.classifier import SupervisedClassifier
 
 
 class RandomForest(SupervisedClassifier):

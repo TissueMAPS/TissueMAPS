@@ -1,7 +1,7 @@
 from scipy.cluster.vq import kmeans, vq
 from pyspark.ml.clustering import KMeans as KMeansClassifier
 
-from tools.classifier.classifier import UnsupervisedClassifier
+from tools.classifier import UnsupervisedClassifier
 
 class KMeans(UnsupervisedClassifier):
 
