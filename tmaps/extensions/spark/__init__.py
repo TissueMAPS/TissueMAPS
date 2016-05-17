@@ -17,7 +17,7 @@ class Spark(object):
 
         spark = Spark()
         app.init_app(app)
-        spark.ctx.parallelize(['spark', 'test']).count()
+        spark.sc.parallelize(['spark', 'test']).count()
 
         Parameters
         ----------
@@ -35,7 +35,7 @@ class Spark(object):
         The relevant configuration keys are:
 
         - USE_SPARK, default False
-            If `USE_SPARK` is falsy, the ctx and sqlctx properties will be
+            If `USE_SPARK` is falsy, the sc and sqlc properties will be
             None.
         - SPARK_MASTER_URL, default 'local'
         - SPARK_DB_URL, default 'postgresql://localhost:5432/tissuemaps'
@@ -68,15 +68,15 @@ class Spark(object):
                 'spark.serializer',
                 'org.apache.spark.serializer.KryoSerializer'
             )
-            ctx = SparkContext(conf=conf)
-            sqlctx = SQLContext(ctx)
+            sc = SparkContext(conf=conf)
+            sqlc = SQLContext(sc)
             app.extensions['spark'] = {
-                'context': ctx,
-                'sqlcontext': sqlctx
+                'context': sc,
+                'sqlcontext': sqlc
             }
 
     @property
-    def ctx(self):
+    def sc(self):
         """
         pyspark.SparkContext
             The spark context. If `USE_SPARK` is set to a falsy value this
@@ -86,7 +86,7 @@ class Spark(object):
         return current_app.extensions.get('spark', {}).get('context')
 
     @property
-    def sqlctx(self):
+    def sqlc(self):
         """
         pyspark.SQLContext
             The spark sql context. If `USE_SPARK` is set to a falsy value

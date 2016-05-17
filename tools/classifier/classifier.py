@@ -140,7 +140,7 @@ class SupervisedClassifier(Classifier):
             subset of `feature_data` for selected mapobjects with additional
             column "label"
         '''
-        labels = spark.sqlctx.createDataFrame(
+        labels = spark.sqlc.createDataFrame(
             labeled_mapobjects, schema=['mapobject_id', 'label']
         )
         labeled_data = feature_data.join(
