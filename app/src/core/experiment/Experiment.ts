@@ -88,59 +88,6 @@ class Experiment implements Model {
         return Math.min.apply(this, zs);
     }
 
-    // TODO: error handling
-    static getAll(): ng.IPromise<Experiment[]> {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        return $http.get('/api/experiments')
-        .then((resp: { data: { experiments: SerializedExperiment[]; } }) => {
-            var exps = resp.data.experiments;
-            return exps.map((e) => {
-                return new Experiment(e);
-            });
-        });
-    }
-
-    // TODO: error handling
-    static get(id: string): ng.IPromise<Experiment> {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        return $http.get('/api/experiments/' + id)
-        .then((resp: {data: {experiment: SerializedExperiment}}) => {
-            return new Experiment(resp.data.experiment);
-        });
-    }
-
-    // TODO: error handling
-    static delete(id: string): ng.IPromise<boolean> {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        return $http.delete('/api/experiments/' + id)
-        .then((resp) => {
-            return true;
-        })
-        .catch((resp) => {
-            return resp.data.error;
-        });
-    }
-
-    static create(args: CreateExperimentArgs) {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        var deferredExp = $q.defer();
-        $http.post('/api/experiments', {
-            name: args.name,
-            description: args.description,
-            plate_format: args.plateFormat,
-            microscope_type: args.microscopeType,
-            plate_acquisition_mode: args.plateAcquisitionMode
-        })
-        .then((resp: {data: {experiment: SerializedExperiment}}) => {
-            deferredExp.resolve(new Experiment(resp.data.experiment));
-        })
-        .catch((resp) => {
-            deferredExp.reject(resp.data.error);
-        });
-        return deferredExp.promise;
-    }
-
     submitWorkflow(workflowArgs) {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
