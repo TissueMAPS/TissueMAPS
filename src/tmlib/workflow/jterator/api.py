@@ -638,11 +638,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     session.add(mapobject_segm)
 
         # Create entries for features
-        with tm.utils.Session() as session:
-            for obj_name, segm_objs in store['segmented_objects'].iteritems():
-                mapobject_type = session.query(tm.MapobjectType).\
-                    filter_by(name=obj_name, experiment_id=self.experiment_id).\
-                    one()
+        # with tm.utils.Session() as session:
+        #     for obj_name, segm_objs in store['segmented_objects'].iteritems():
+                # mapobject_type = session.query(tm.MapobjectType).\
+                #     filter_by(name=obj_name, experiment_id=self.experiment_id).\
+                #     one()
                 logger.info(
                     'add features for mapobject of type "%s"',
                     mapobject_type.name
@@ -680,6 +680,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # values, where n is the number of mapobjects and p the number of
         # extracted features.
         with tm.utils.Session() as session:
+            feature_values = list()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
                 mapobject_type = session.query(tm.MapobjectType).\
                     filter_by(name=obj_name, experiment_id=self.experiment_id).\
@@ -694,7 +695,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     logger.debug('add feature values for mapobject #%d', label)
                     mapobject = session.query(tm.Mapobject).\
                         get(mapobject_ids[mapobject_type.name][label])
-                    feature_values = list()
                     for f in features:
                         logger.debug('add value for feature "%s"' % f.name)
                         for t, measurement in enumerate(segm_objs.measurements):
@@ -706,7 +706,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     value=float(fvalue)
                                 )
                             )
-                    session.add_all(feature_values)
+            logger.info('insert feature values into table')
+            session.bulk_save_objects(feature_values)
 
     def collect_job_output(self, batch):
         '''Performs the following calculations after the pipeline has been
