@@ -27,5 +27,6 @@ USE_X_SENDFILE = False
 REDIS_URL = 'redis://localhost:6379'
 
 ## JTUI
+USE_JTUI = False
 JTUI_REPO_DIR_LOCATION = \
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'jterator')

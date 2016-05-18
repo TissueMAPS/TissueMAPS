@@ -52,4 +52,11 @@ if __name__ == '__main__':
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
-    app.run(port=args.port, debug=True, threaded=args.threaded, gevent=100)
+    use_jtui = app.config.get('USE_JTUI', False)
+    if use_jtui:
+        if args.threaded:
+            app.run(port=args.port, debug=True, gevent=100, threaded=True)
+        else:
+            app.run(port=args.port, debug=True, gevent=100)
+    else:
+        app.run(port=args.port, debug=True, threaded=args.threaded)

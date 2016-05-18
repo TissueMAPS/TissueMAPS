@@ -106,15 +106,19 @@ def create_app(config_overrides={}):
     jwt.init_app(app)
     db.init_app(app)
     redis_store.init_app(app)
-    gc3pie_engine.init_app(app)
+    # gc3pie_engine.init_app(app)
     websocket.init_app(app)
 
     ## Import and register blueprints
     from api import api
-    from jtui.api import jtui
-
     app.register_blueprint(api, url_prefix='/api')
-    app.register_blueprint(jtui, url_prefix='/jtui')
+
+    use_jtui = app.config.get('USE_JTUI', False)
+    if use_jtui:
+        from jtui.api import jtui
+        from tmaps.extensions import websocket
+        websocket.init_app(app)
+        app.register_blueprint(jtui, url_prefix='/jtui')
 
     # @app.after_request
     # def after_request(response):
