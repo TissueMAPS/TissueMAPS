@@ -33,7 +33,6 @@ from __future__ import absolute_import
 __docformat__ = 'reStructuredText'
 __version__ = '$Revision$'
 
-
 # 3rd party imports
 from flask import current_app
 from flask import _app_ctx_stack as stack
@@ -42,8 +41,6 @@ import gc3libs
 import logging
 
 from tmlib.workflow import engine as tmlib_engine
-from tmaps.model import Model
-from tmaps.extensions import db
 
 
 class GC3Pie(object):
@@ -58,7 +55,6 @@ class GC3PieEngine(object):
     in the given `session`.
 
     """
-
     def __init__(self, *args, **kwargs):
         if len(args) > 0 or len(kwargs) > 0:
             self.init_app(*args, **kwargs)
