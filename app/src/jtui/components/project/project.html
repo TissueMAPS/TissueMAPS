@@ -1,0 +1,236 @@
+<!-- <div ui-view="pipe"></div> -->
+
+<div class="left-pane">
+
+  <div class="left-pane-header">
+
+    <div class="sidebar">
+      <div class="sidebar-section channel-section">
+        <div class="sidebar-section-title">
+          <span>
+            Pipeline
+          </span>
+        </div> 
+      </div>
+    </div>
+
+  </div>
+
+  <div class="left-pane-content" perfect-scrollbar>
+
+    <uib-accordion close-others="false">
+
+      <uib-accordion-group  class="accordion-content"
+                        is-open="project.viewProps.open.project">
+
+        <uib-accordion-heading>
+          <div>
+            Project
+            <i class="pull-right fa"
+               ng-class="{'fa fa-sort-desc': project.viewProps.open.project}"></i>
+          </div>
+        </uib-accordion-heading>
+
+          <p>
+            <b>Description</b>
+          </p>
+          <textarea class="form-control" ng-model="project.pipe.description.project.description"
+          placeholder="text">
+          </textarea>
+
+      </uib-accordion-group>
+
+      <uib-accordion-group  class="accordion-content"
+                        is-open="project.viewProps.open.jobs">
+
+        <uib-accordion-heading>
+          <div>
+            Input
+            <i  class="pull-right fa"
+                ng-class="{'fa fa-sort-desc': project.viewProps.open.jobs}"></i>
+          </div>
+        </uib-accordion-heading>
+
+        <p>
+          Select <b>channels</b> for processing:
+        </p>
+        
+        <p></p>
+      
+        <div class="col-sm-12">
+          <form class="form-horizontal">
+            <div class="form-group" ng-repeat="channel in project.pipe.description.input.channels">
+
+              <select class="form-control" id="channelName" ng-model="channel.name" ng-options="n for n in getSelectableChannelNames($index)">
+              </select>
+
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" ng-model="channel.correct">
+                  Correct images for illumination artifacts
+                </label>
+              </div>
+
+              <!-- TODO: give user opportunity to look at the metadata of a layer -->
+
+            </div> 
+          </form>
+        </div>
+
+        <div btn-group>
+          <button type="button" class="btn btn-jtui"
+                  ng-click="addChannel()"
+                  uib-tooltip="add channel">
+            <i class="fa fa-plus"></i>
+          </button>
+
+          <button type="button" class="btn btn-jtui"
+                  ng-click="removeChannel()"
+                  uib-tooltip="remove channel">
+            <i class="fa fa-minus"></i>
+          </button>
+
+          <button type="button" class="btn btn-jtui"
+                  ng-click="listJobs()"
+                  uib-tooltip="list jobs">
+            <i class="fa fa-list-ol"></i>
+          </button>
+
+          <button type="button" class="btn btn-jtui"
+                  ng-click="showLayersInTmaps()"
+                  uib-tooltip="view layers in TissueMAPS">
+            <i class="fa fa-map"></i>
+          </button>
+
+        </div>
+
+      </uib-accordion-group>
+
+
+      <!-- pipeline -->
+      <uib-accordion-group  class="accordion-content"
+          is-open="project.viewProps.open.pipeline">
+
+        <uib-accordion-heading>
+          <div>
+            Pipeline
+            <i  class="pull-right fa"
+                ng-class="{'fa fa-sort-desc': project.viewProps.open.pipeline}">
+            </i>
+          </div>
+        </uib-accordion-heading>
+
+        <p>
+          Define the <b>modules</b> and the order in which they should be processed:
+        </p>
+
+        <div>
+
+          <div  class="list-group"
+                ui-sortable
+                ng-model="project.pipe.description.pipeline"
+                ng-drop="true"
+                ng-drop-success="onDropCompleteAdd($data, $event)">
+
+            <li ng-repeat="m in project.pipe.description.pipeline"
+                ui-sref="project.module({moduleName:m.name})"
+                class="list-group-item"
+                ng-class="{active: $stateParams.moduleName == m.name}">
+
+                <span type="button" >
+                    <span ng-show="m.active"
+                          ng-click="deactivateModule($index, $event)"
+                          class="fa fa-eye" aria-label="Left Align"
+                          tm-stop-click>
+                    </span>
+                    <span ng-hide="m.active"
+                          ng-click="activateModule($index, $event)"
+                          class="fa fa-eye-slash"
+                          aria-label="Left Align"
+                          tm-stop-click>
+                    </span>
+                    &nbsp;
+                </span>
+
+                <span editable-text="m.name"
+                      onbeforesave="storeModuleName(m.name, $data)"
+                      onaftersave="editModuleName($index, m.name)"
+                      buttons="no">
+                      {{ m.name }}
+                </span>
+
+                <i class="fa fa-trash-o" style="float: right"
+                    ng-click="removeModule(m, $parent, $event)"
+                    tm-stop-click></i>
+
+            </li>
+
+          </div>
+
+          <div class="list-group-item-dashed"
+               ui-sortable
+               ng-if="project.pipe.description.pipeline.length == 0"
+               ng-model="project.pipe.description.pipeline"
+               ng-drop="true"
+               ng-drop-success="onDropCompleteAdd($data, $event)">
+            <i>Empty pipeline:</i>
+            <p></p>
+            <i>Drag modules and drop them here.</i>
+          </div>
+
+        </div>
+
+        <p></p>
+
+
+      </uib-accordion-group>
+
+    </uib-accordion>
+
+    <div btn-group>
+      <button type="button" class="btn btn-jtui"
+              ng-click="getHelpForPipeline()"
+              uib-tooltip="help">
+        <i class="fa fa-question"></i>
+      </button>
+
+      <button type="button" class="btn btn-jtui"
+              ng-click="checkProject()"
+              uib-tooltip="check">
+        <i class="fa fa-check"></i>
+      </button>
+
+      <button type="button" class="btn btn-jtui"
+              ng-click="saveProject()"
+              uib-tooltip="save">
+        <i class="fa fa-floppy-o"></i>
+      </button>
+
+      <button type="button" class="btn btn-jtui"
+              ng-click="run()"
+              uib-tooltip="run">
+        <i class="fa fa-play"></i>
+      </button>
+
+      <button type="button" class="btn btn-jtui"
+              ng-click="submit()"
+              uib-tooltip="submit">
+        <!-- <i class="fa fa-sitemap"></i> -->
+        <i class="fa fa-forward"></i>
+        <!-- <i class="fa fa-share-alt"></i> -->
+        <!-- <i class="fa fa-cogs"></i> -->
+      </button>
+
+      <button type="button" class="btn btn-jtui"
+              ng-click="kill()"
+              uib-tooltip="kill">
+        <i class="fa fa-stop"></i>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div ui-view="handles"></div>
+<div ui-view="runner"></div>
+

@@ -1,0 +1,173 @@
+<div class="right-side-pane">
+
+  <div class="right-side-pane-header">
+
+    <div class="sidebar">
+      <div class="sidebar-section channel-section">
+        <div class="sidebar-section-title">
+          <span>
+              Module Output
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+      <!-- <div class="sidebar-input-text">
+        <div class="input-group">
+          <span class="input-group-addon">
+            <i class="fa fa-search fa-fw"></i>
+          </span>
+          <input class="form-control" ng-model="searchOutput.jobId" placeholder="job id">
+        </div>
+      </div> -->
+
+  <div class="right-side-pane-content">
+
+    <div class="panel panel-default">
+
+      <div class="panel-heading" style="font-size: 16px;">
+        Status
+      </div>
+
+      <div class="panel-body">
+
+        <i ng-hide="state == 'RUNNING' || state == ''" class="fa fa-cog fa-fw"></i>
+        <i ng-show="state == 'RUNNING'" class="fa fa-cog fa-spin fa-fw"></i>
+        <i>{{ state }}</i>
+
+        <uib-progressbar max="100" value="progress" type="{{ type }}">
+        </uib-progressbar>
+
+        <div ng-show="outputAvailable">
+
+          <div btn-group>
+
+            <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="goToPreviousJob()"
+                    uib-tooltip="previous job">
+                <i class="fa fa-chevron-left"></i>
+            </button>
+
+            <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="showJobLog()"
+                    uib-tooltip="job log report">
+                <i class="fa fa-terminal"></i>
+            </button>
+
+            <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="goToNextJob()"
+                    uib-tooltip="next job">
+                <i class="fa fa-chevron-right"></i>
+            </button>
+            
+          </div>
+
+          <!-- TODO: go to specific job -->
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="panel panel-default">
+
+      <div class="panel-heading" style="font-size: 16px;">
+
+        Output
+
+        <span ng-show="outputAvailable">
+          job {{ jobs.currentId }}
+        </span>
+
+      </div>
+
+      <div class="panel-body">
+
+          <div btn-group>
+
+            <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="showSourceCode()"
+                    uib-tooltip="source code">
+                <i class="fa fa-code"></i>
+            </button>
+
+            <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="reportBug()"
+                    uib-tooltip="report a bug">
+                <i class="fa fa-bug"></i>
+            </button>
+
+            <span ng-show="outputAvailable">
+
+              <!-- TODO: type "danger" for module that failed -->
+
+              <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="showOutput()"
+                    uib-tooltip="stdout / stderr">
+                <i class="fa fa-terminal"></i>
+              </button>
+
+              <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="showFigure()"
+                    uib-tooltip="interactive figure">
+                <i class="fa fa-expand"></i>
+              </button>
+
+              <!-- <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="goFullScreenViaWatcher()"
+                    uib-tooltip="fullscreen">
+                <i class="fa fa-expand"></i>
+              </button> -->
+
+            </span>
+            
+          </div>
+
+          <p></p>
+
+          <div ng-show="outputAvailable">
+
+            <div ng-bind-html="showThumbnail()">
+            </div>
+
+            <!-- When modal is repeatedly closed, the figure is rendered correctly ??? -->
+            <!-- <div ng-bind-html="showFigure()">
+            </div> -->
+
+            <!-- <div ng-bind-html="showThumbnail()"
+               class="figure">
+            </div> -->
+
+          </div>
+
+          <div ng-hide="outputAvailable" class="glyphicon glyphicon-none">
+          </div>
+
+        </div>
+
+      </div>
+      
+    </div>
+
+  </div>
+
+</div>
+
+<!-- <div ng-show="isFullScreen"
+     ng-bind-html="getFigure()"
+     class="figure"
+     fullscreen="isFullScreen"
+     only-watched-property>
+</div> -->

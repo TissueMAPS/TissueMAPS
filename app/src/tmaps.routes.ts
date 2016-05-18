@@ -33,6 +33,11 @@ angular.module('tmaps.ui')
     }];
 
     $stateProvider
+    .state('jtui', {
+        url: '/jtui',
+        parent: 'logo-backdrop',
+        templateUrl: '/src/jtui/jtui.html'
+    })
     .state('viewer', {
         url: '/viewer/:experimentid',
         reloadOnSearch: false,

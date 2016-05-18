@@ -1,0 +1,42 @@
+@import "lesshat/lesshat-prefixed";
+@import "variables.less";
+@import "bootstrap/variables.less";
+@import "bootstrap/mixins/buttons.less";
+
+.jtui {
+  .main-pane {
+
+      height: 100%;
+
+    .glyphicon-none:before {
+      content: "\2122";
+      color: transparent !important;
+    }
+
+    .label-pos {
+      text-align: left;
+    }
+
+    div.spacer {
+        font-size: 0; 
+        height: 20px;
+        line-height: 0;
+    }
+    
+  }
+
+  .text-output {
+    text-indent: -31px;
+    margin-left: 31px;
+  }
+
+  .ng-hide {
+    /* !important is used so that the behavior is not overridden by other css*/
+    /* https://docs.angularjs.org/api/ng/directive/ngHide */
+    display: block!important;
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+}
+
