@@ -20,7 +20,7 @@ def get_mapobjects_tile(experiment_id, object_name):
     ex = db.session.query(Experiment).get_with_hash(experiment_id)
     if not ex:
         return RESOURCE_NOT_FOUND_RESPONSE
-    # TODO: Requests should have a auth token 
+    # TODO: Requests should have a auth token
     # if not ex.belongs_to(current_identity):
     #     return NOT_AUTHORIZED_RESPONSE
 
@@ -66,7 +66,7 @@ def get_mapobjects_tile(experiment_id, object_name):
     features = []
 
     if len(query_res) > 0:
-        # Try to estimate how many points there are in total within 
+        # Try to estimate how many points there are in total within
         # the polygons of this tile.
         for mapobject_id, geom_geojson_str in query_res:
             feature = {
