@@ -28,8 +28,7 @@ REDIS_URL = 'redis://localhost:6379'
 
 ## Spark
 USE_SPARK = False
-SPARK_APP_NAME = 'tmaps'
-SPARK_MASTER_URL = 'local'
+SPARK_MASTER = 'local'
 SPARK_DB_URL = 'postgresql://localhost:5432/tissuemaps'
 
 ## JTUI

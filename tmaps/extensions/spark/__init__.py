@@ -1,3 +1,5 @@
+import os
+import sys
 from flask import current_app
 
 
@@ -37,38 +39,94 @@ class Spark(object):
         - USE_SPARK, default False
             If `USE_SPARK` is falsy, the sc and sqlc properties will be
             None.
-        - SPARK_MASTER_URL, default 'local'
+        - SPARK_MASTER, default 'local'
         - SPARK_DB_URL, default 'postgresql://localhost:5432/tissuemaps'
             User information should be provided according to the following
             syntax:
             'postgresql://localhost:5432/tissuemaps?user=USER&password=PW'
-        - SPARK_APP_NAME, default 'spark'
+        - SPARK_APP_NAME, default 'tissuemaps'
 
         Parameters
         ----------
         app : flask.Flask
             A flask application object.
 
+        Note
+        ----
+        Requires a JDBC driver for PostgreSQL. Download the driver from
+        https://jdbc.postgresql.org/download.html and place it into
+        /usr/share/java.
         """
-        from pyspark import SparkConf
-        from pyspark import SparkContext
-        from pyspark.sql import SQLContext
 
-        app.config.setdefault('SPARK_MASTER_URL', 'local')
-        app.config.setdefault(
-            'SPARK_DB_URL', 'postgresql://localhost:5432/tissuemaps')
-        app.config.setdefault('SPARK_APP_NAME', 'spark')
         use_spark = app.config.get('USE_SPARK')
+        app.config.setdefault('SPARK_MASTER', 'local')
+        app.config.setdefault(
+            'SPARK_DB_URL', 'postgresql://localhost:5432/tissuemaps'
+        )
+        app.config.setdefault(
+            'SPARK_HOME', '/usr/local/Cellar/apache-spark/1.6.0/libexec')
+
+        def create_spark_context(spark_home, spark_master):
+            '''Create a Spark Context.
+
+            Parameters
+            ----------
+            spark_home: str
+                path to the directory where Spark was installed on the local
+                machine
+            spark_master: str
+                name of the Spark master node
+                (e.g. ``"local"`` or ``"yarn-client"``)
+
+            Returns
+            -------
+            pyspark.context.SparkContext
+                configured Spark Context
+
+            Note
+            ----
+            Requires the following softlinks:
+                * "py4j-src.zip" in $SPARK_HOME/python/lib
+
+            Warning
+            -------
+            When Spark was not installed and configured via elasticluster,
+            the hadoop/yarn configuration must be manually set up.
+            '''
+            if 'SPARK_HOME' not in os.environ:
+                os.environ['SPARK_HOME'] = spark_home
+            spark_home = os.environ['SPARK_HOME']
+            os.environ.setdefault('MASTER', spark_master)
+
+            spark_home_python = os.path.join(spark_home, 'python')
+            sys.path.insert(0, spark_home_python)
+            sys.path.insert(0, os.path.join(spark_home_python, 'pyspark'))
+            # Requires softlink to the actual file
+            sys.path.insert(0, os.path.join(spark_home_python, 'lib', 'py4j-src.zip'))
+            spark_pythonpath = '{path}:{path}/pyspark'.format(
+                path=spark_home_python
+            )
+            if 'PYTHONPATH' in os.environ:
+                if spark_pythonpath not in os.environ['PYTHONPATH']:
+                    os.environ['PYTHONPATH'] += ':' + spark_pythonpath
+            else:
+                os.environ['PYTHONPATH'] = spark_pythonpath
+
+            from pyspark import SparkConf
+            from pyspark import SparkContext
+            conf = SparkConf()
+            conf.setAppName('tmaps')
+            # conf.set(
+            #     'spark.serializer',
+            #     'org.apache.spark.serializer.KryoSerializer'
+            # )
+            return SparkContext(conf=conf)
 
         if use_spark:
-            conf = SparkConf()
-            conf.setAppName(app.config['SPARK_APP_NAME'])
-            conf.setMaster(app.config['SPARK_MASTER_URL'])
-            conf.set(
-                'spark.serializer',
-                'org.apache.spark.serializer.KryoSerializer'
-            )
-            sc = SparkContext(conf=conf)
+            spark_home = app.config.get('SPARK_HOME')
+            spark_master = app.config.get('SPARK_MASTER')
+            sc = create_spark_context(spark_home, spark_master)
+            from pyspark.sql import SQLContext
             sqlc = SQLContext(sc)
             app.extensions['spark'] = {
                 'context': sc,
@@ -99,8 +157,8 @@ class Spark(object):
         from pyspark.sql import DataFrameReader
 
         db_url = current_app.config.get('SPARK_DB_URL')
-        kwargs.setdefault('url', db_url)
-        return DataFrameReader(self.sqlctx).jdbc(*args, **kwargs)
+        kwargs.setdefault('url', 'jdbc:%s' % db_url)
+        return DataFrameReader(self.sqlc).jdbc(*args, **kwargs)
 
     def read_table(self, table_name):
         """Reads an SQL table for use with Apache Spark.
@@ -108,7 +166,7 @@ class Spark(object):
         Parameters
         ----------
         table_name : str
-            Name of the SQL table
+            Name of the SQL table or aliased SQL query
 
         Returns
         -------
