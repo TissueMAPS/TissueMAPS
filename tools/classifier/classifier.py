@@ -84,31 +84,46 @@ class Classifier(ToolRequestHandler):
             "features" column has type
             :py:class:`pyspark.mllib.linalg.DenseVector`
         '''
-        feature_values = spark.read_table('feature_values')
-        features = spark.read_table('features')
-        mapobjects = spark.read_table('mapobjects')
-        mapobject_types = spark.read_table('mapobject_types')
-        feature_names = feature_names
+        def build_feature_values_query(experiment_id, mapobject_type_name, feature_name):
+            # We run the actual query in SQL, since has way better performance
+            # compared to loading the table and then filtering it via Spark
+            # TODO: find a way around parsing raw SQL statements
+            return '''
+                (SELECT v.value, v.mapobject_id FROM feature_values AS v
+                JOIN features AS f ON f.id=v.feature_id
+                JOIN mapobject_types AS t ON t.id=f.mapobject_type_id
+                WHERE f.name=\'{feature_name}\'
+                AND t.name=\'{mapobject_type_name}\'
+                AND t.experiment_id={experiment_id}
+                ) as t
+            '''.format(**locals())
 
+        # feature_values = spark.read_table('feature_values')
+        # features = spark.read_table('features')
+        # mapobjects = spark.read_table('mapobjects')
+        # mapobject_types = spark.read_table('mapobject_types')
         for i, name in enumerate(feature_names):
-            df = feature_values.\
-                join(features, features.id==feature_values.feature_id).\
-                join(mapobjects, mapobjects.id==feature_values.mapobject_id).\
-                join(mapobject_types, mapobject_types.id==features.mapobject_type_id).\
-                filter(features.name == name).\
-                filter(mapobject_types.name == mapobject_type_name).\
-                filter(mapobject_types.experiment_id == experiment_id)
+            query = build_feature_values_query(
+                experiment_id, mapobject_type_name, name
+            )
+            df = spark.read_table(query)
+            # df = feature_values.\
+            #     join(features, features.id==feature_values.feature_id).\
+            #     join(mapobjects, mapobjects.id==feature_values.mapobject_id).\
+            #     join(mapobject_types, mapobject_types.id==features.mapobject_type_id).\
+            #     filter(features.name == name).\
+            #     filter(mapobject_types.name == mapobject_type_name).\
+            #     filter(mapobject_types.experiment_id == experiment_id)
             if i == 0:
                 data = df.select(
-                    feature_values.value.alias(name),
-                    feature_values.mapobject_id
+                    df.value.alias(name),
+                    df.mapobject_id
                 )
             else:
                 df = df.select(
-                    feature_values.value.alias(name),
-                    feature_values.mapobject_id.alias('%s_mapobject_id' % name)
+                    df.value.alias(name),
+                    df.mapobject_id.alias('%s_mapobject_id' % name)
                 )
-                ref_name = feature_names[0]
                 on = data['mapobject_id'] == df['%s_mapobject_id' % name]
                 data = data.join(df, on, 'inner').drop('%s_mapobject_id' % name)
 
@@ -167,10 +182,10 @@ class SupervisedClassifier(Classifier):
             subset of `feature_data` for selected mapobjects with additional
             column "label"
         '''
-        labeled_mapobjects = np.array(labeled_mapobjects)
-        ids = labeled_mapobjects[:, 0]
-        labels = labeled_mapobjects[:, 1]
-        labeled_feature_data = feature_data[~feature_data.index.isin(ids)]
+        labeled_mapobjects = dict(labeled_mapobjects)
+        ids = labeled_mapobjects.keys()
+        labels = labeled_mapobjects.values()
+        labeled_feature_data = feature_data[feature_data.index.isin(ids)].copy()
         labeled_feature_data['label'] = labels
         return labeled_feature_data
 
