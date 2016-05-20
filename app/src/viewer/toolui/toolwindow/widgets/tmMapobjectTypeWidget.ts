@@ -2,10 +2,7 @@ angular.module('tmaps.ui')
 .directive('tmMapobjectTypeWidget', () => {
     var template = 
         '<label>Object type: </label>' +
-        '<select ng-model="mapobjectTypeWidget.selectedType">' +
-          '<option value="{{::t}}" ng-repeat="t in mapobjectTypeWidget.mapobjectTypeNames">' +
-          '{{::t}}' +
-          '</option>' +
+        '<select ng-model="mapobjectTypeWidget.selectedType" ng-options="t for t in mapobjectTypeWidget.mapobjectTypeNames">' +
         '</select>';
     return {
         restrict: 'E',
