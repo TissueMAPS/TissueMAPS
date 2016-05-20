@@ -22,7 +22,7 @@ class UserpanelWindowCtrl {
     }
 
     modifyExperiment(e: Experiment) {
-        this._$state.go('setup', {
+        this._$state.go('plate', {
             experimentid: e.id
         });
     }
@@ -38,7 +38,13 @@ class UserpanelWindowCtrl {
         this._$state.go('viewer', {
             experimentid: e.id
         });
-    };
+    }
+
+    editPipelines(e: Experiment) {
+        this._$state.go('jtui', {
+            experimentid: e.id
+        });
+    }
 
     deleteExperiment(e: Experiment) {
         this._dialogService.warning('Are you sure you want to delete this experiment?')

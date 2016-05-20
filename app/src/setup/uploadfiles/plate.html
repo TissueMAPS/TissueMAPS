@@ -13,13 +13,13 @@
         <li class="list-group-item" ng-repeat="pl in plateListCtrl.plates">
           <a ui-sref=".detail({plateid: pl.id})">{{::pl.name}}</a>
           <span class="plate-status-indicator">
-            <span ng-show="pl.isReadyForProcessing">(all files uplodaded)</span>
-            <span ng-hide="pl.isReadyForProcessing">(not ready)</span>
+            <span ng-show="pl.isReadyForProcessing">(READY)</span>
+            <span ng-hide="pl.isReadyForProcessing">(NOT READY)</span>
           </span>
           - {{ pl.acquisitions.length }} acquisitions
-          <a ng-click="plateListCtrl.deletePlate(pl)" class="pull-right">
-            <i class="fa fa-times"></i>
-          </a>
+          <button ng-click="plateListCtrl.deletePlate(pl)" class="pull-right">
+            Delete
+          </button>
         </li>
       </ul>
     </div>
@@ -29,5 +29,10 @@
       </button>
     </div>
   </div>
-
 </div>
+
+<button ng-click="setupCtrl.goToNextStage()"
+    ng-disabled="!setupCtrl.canProceedToNextStage()"
+    class="btn btn-primary">
+  Next
+</button>

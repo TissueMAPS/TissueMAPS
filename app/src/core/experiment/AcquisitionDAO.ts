@@ -21,8 +21,7 @@ class AcquisitionDAO extends HTTPDataAccessObject<Acquisition> {
             id: aq.id,
             name: aq.name,
             status: aq.status,
-            description: aq.description,
-            files: aq.microscope_image_files.concat(aq.microscope_metadata_files)
+            description: aq.description
         });
     }
 }

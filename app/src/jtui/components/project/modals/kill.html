@@ -1,0 +1,32 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="$dismiss('Cancel')" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Kill running jobs</h2>
+
+</div>
+
+<div class="modal-body">
+
+  <div ng-show="killed">
+    <uib-alert type="success">
+      <i class="fa fa-thumbs-o-up"></i>
+      Running jobs got killed!
+    </uib-alert>
+  </div>
+
+  <div ng-hide="killed">
+    <uib-alert type="danger">
+      <i class="fa fa-thumbs-o-down"></i>
+      Killing jobs failed!
+    </uib-alert>
+    {{ error }}
+  </div>
+
+</div>
+
+<div class="modal-footer">
+
+</div>

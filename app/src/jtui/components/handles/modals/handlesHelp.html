@@ -1,0 +1,33 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="$dismiss('Cancel')" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Module source code</h2>
+
+</div>
+
+<div class="modal-body">
+
+  <div ng-if="help.error">
+    <uib-alert type="danger">
+      <i class="fa fa-thumbs-o-down"></i>
+        File not found!
+    </uib-alert>
+  </div>
+
+  <div btf-markdown="help">
+  </div>
+
+</div>
+
+<div class="modal-footer">
+
+  <button type="button" ng-click="$dismiss('No')"
+          class="btn btn-default" data-dismiss="modal">
+     <i class="fa fa-times"></i>
+  </button>
+
+</div>
+

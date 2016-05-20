@@ -1,0 +1,108 @@
+@import "lesshat/lesshat-prefixed";
+@import "variables.less";
+@import "bootstrap/variables.less";
+
+// @panel-bg: #e6e6e6;
+@panel-bg: #393939; // color for panels that are all the way to the back
+@panel-bg2: #F2F2F2; // light background
+@panel-fg: #535353; // color for panels on top of the background
+@panel-fg2: #727272; // color for elements on panels
+
+@font-color-light: #dddddd;
+@font-color-dark: #101010;
+@panel-font-color: contrast(@panel-fg, @font-color-light, @font-color-dark);
+
+// the color when some ui element is selected and active
+@panel-selection-color: mix(lighten(@panel-fg, 5%), darkslategray, 30%);
+@font-color-on-selection: contrast(@panel-selection-color, @panel-bg, #dddddd);
+
+/******************************************************************************
+ *                                  SIDEBAR                                   *
+ ******************************************************************************/
+@sidebar-section-title-height: 30px;
+@sidebar-section-title-color: @panel-fg2;
+@sidebar-section-padding: 20px;
+
+
+/******************************************************************************
+ *                                   TOPBAR                                   *
+ ******************************************************************************/
+@top-container-height: 30px;
+@topbar-height: 30px;
+@topbar-tabs-height: 30px;
+@topleft-button-color: @panel-fg2;
+@gradient-spacer-width: 3vw;
+
+/******************************************************************************
+ *                                  TOOLBAR                                   *
+ ******************************************************************************/
+// Although there is no toolbar in JtUI, tm-toolbar wants to know how wide its
+// first button should be.
+@toolbar-width: 30px;
+
+/******************************************************************************
+ *                                  LEFT SIDE PANE                            *
+ ******************************************************************************/
+@left-side-pane-width: 20vw;
+
+/******************************************************************************
+ *                                  LEFT PANE                                 *
+ ******************************************************************************/
+@left-pane-width: 25vw;
+@left-pane-bg: #f7f7f7; // #ef8a62; // #FFF0D8;
+
+/******************************************************************************
+ *                                  RIGHT PANE                                *
+ ******************************************************************************/
+@right-pane-width: 25vw;
+// @right-pane-height: 50vh;
+@right-pane-bg: #f7f7f7; // #67a9cf; // #E2EBF4;
+
+/******************************************************************************
+ *                                  LEFT SIDE PANE                            *
+ ******************************************************************************/
+@right-side-pane-width: 30vw;
+// @right-side-pane-height: calc(~'100% - @{topbar-height}');
+
+
+// Customized bootstrap list group
+// -------------------------------
+
+//** Background color on `.jtui-list-group-item`
+@jtui-list-group-bg:                 @panel-bg2; // #fff;
+//** `.jtui-list-group-item` border color
+@jtui-list-group-border:             #ddd;
+
+//** Background color of single list items on hover
+@jtui-list-group-hover-bg:           #f5f5f5;
+//** Text color of active list items
+@jtui-list-group-active-color:       @component-active-color;
+//** Background color of active list items
+@jtui-list-group-active-bg:          @component-active-bg;
+//** Border color of active list elements
+@jtui-list-group-active-border:      @jtui-list-group-active-bg;
+//** Text color for content within active list items
+@jtui-list-group-active-text-color:  lighten(@jtui-list-group-active-bg, 40%);
+
+//** Text color of disabled list items
+@jtui-list-group-disabled-color:      @gray-light;
+//** Background color of disabled list items
+@jtui-list-group-disabled-bg:         @gray-lighter;
+//** Text color for content within disabled list items
+@jtui-list-group-disabled-text-color: @jtui-list-group-disabled-color;
+
+@jtui-list-group-link-color:         #555;
+@jtui-list-group-link-hover-color:   @jtui-list-group-link-color;
+@jtui-list-group-link-heading-color: #333;
+
+
+// Customized bootstrap button
+// ---------------------------
+
+@btn-jtui-bg:                       @panel-bg2;
+@btn-jtui-color:                    @btn-default-color;
+@btn-jtui-border:                   @btn-default-border;
+
+@btn-help-bg:                       @panel-bg2;
+@btn-help-color:                    @btn-default-color;
+@btn-help-border:                   @btn-default-border;

@@ -31,7 +31,9 @@ class ScalarLabelLegend extends Legend {
                 x: [0],
                 y: [10],
                 type: 'bar',
-                marker: {color: color}
+                marker: {
+                    color: colors[i].toHex()
+                }
             })
         }
 

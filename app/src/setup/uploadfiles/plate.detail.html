@@ -10,14 +10,10 @@
         <li class="list-group-item"
             ng-repeat="aq in plate.acquisitions">
 
-          <span>{{::aq.name}}</span>
+            <a ui-sref="acquisition.detail({acquisitionid: aq.id})">{{::aq.name}}</a>
           <span ng-show="aq.description" style="color: gray;">- {{::aq.description}}</span>
 
           <span>({{aq.status}})</span>
-
-          <button ui-sref="acquisition.detail({acquisitionid: aq.id})" class="pull-right">
-            Upload files
-          </button>
 
           <button ng-click="plateDetailCtrl.deleteAcquisition(aq)" class="pull-right">
             Delete

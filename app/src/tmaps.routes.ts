@@ -9,6 +9,29 @@ angular.module('tmaps.ui')
     // For any unmatched url redirect to root
     $urlRouterProvider.otherwise('/login');
 
+    var getExperiment = ['$stateParams', '$state', 'lastUsed', '$q',
+                           ($stateParams, $state, lastUsed, $q) => {
+        var experimentId = $stateParams.experimentid;
+        var wasExperimentIdSupplied =
+            experimentId !== undefined && experimentId !== '';
+        if (wasExperimentIdSupplied) {
+            return (new ExperimentDAO()).get(experimentId)
+            .then((exp) => {
+                lastUsed.experiment = exp;
+                return exp;
+            })
+            .catch((err) => {
+                $state.go('userpanel');
+            });
+        } else if (lastUsed.experiment) {
+            return lastUsed.experiment;
+        } else {
+            return $q.reject().catch(() => {
+                $state.go('userpanel');
+            });
+        }
+    }];
+
     $stateProvider
     .state('viewer', {
         url: '/viewer/:experimentid',
@@ -20,28 +43,7 @@ angular.module('tmaps.ui')
             loginRequired: true
         },
         resolve: {
-            'experiment': ['$stateParams', '$state', 'lastUsed', '$q',
-                           ($stateParams, $state, lastUsed, $q) => {
-                var experimentId = $stateParams.experimentid;
-                var wasExperimentIdSupplied =
-                    experimentId !== undefined && experimentId !== '';
-                if (wasExperimentIdSupplied) {
-                    return (new ExperimentDAO()).get(experimentId)
-                    .then((exp) => {
-                        lastUsed.experiment = exp;
-                        return exp;
-                    })
-                    .catch((err) => {
-                        $state.go('userpanel');
-                    });
-                } else if (lastUsed.experiment) {
-                    return lastUsed.experiment;
-                } else {
-                    return $q.reject().catch(() => {
-                        $state.go('userpanel');
-                    });
-                }
-            }]
+            'experiment': getExperiment
         },
         onEnter: ['application', 'experiment',
                   function(app, experiment) {
@@ -123,52 +125,7 @@ angular.module('tmaps.ui')
         controller: 'SetupCtrl',
         controllerAs: 'setupCtrl',
         resolve: {
-            'experiment': ['$stateParams', '$state', 'lastUsed', '$q',
-                           ($stateParams, $state, lastUsed, $q) => {
-                var experimentId = $stateParams.experimentid;
-                var wasExperimentIdSupplied =
-                    experimentId !== undefined && experimentId !== '';
-                if (wasExperimentIdSupplied) {
-                    return (new ExperimentDAO()).get(experimentId)
-                    .then((exp) => {
-                        lastUsed.experiment = exp;
-                        return exp;
-                    })
-                    .catch((err) => {
-                        $state.go('userpanel');
-                    });
-                } else if (lastUsed.experiment) {
-                    return lastUsed.experiment;
-                } else {
-                    return $q.reject().catch(() => {
-                        $state.go('userpanel');
-                    });
-                }
-            }]
-        },
-        onEnter: function() {
-            console.log('Enter setup');
-        }
-    })
-    .state('setup.uploadfiles', {
-        url: '/uploadfiles',
-        views: {
-            'stage-view': {
-                templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
-            }
-        }
-        // redirectTo: 'plate'
-    })
-    .state('plate', {
-        parent: 'setup.uploadfiles',
-        url: '/plates',
-        templateUrl: '/src/setup/uploadfiles/plate.html',
-        controller: 'PlateListCtrl',
-        controllerAs: 'plateListCtrl',
-        onEnter: () => {
-            console.log('Enter plate');
-        },
-        resolve: {
+            experiment: getExperiment,
             plates: ['$http', 'experiment', '$state', '$q',
                      ($http, experiment, $state, $q) => {
                 var def = $q.defer();
@@ -184,6 +141,48 @@ angular.module('tmaps.ui')
                 return def.promise;
             }]
         },
+        onEnter: function() {
+            console.log('Enter setup');
+        }
+    })
+    .state('setup.uploadfiles', {
+        url: '/stages/uploadfiles',
+        views: {
+            'stage-view': {
+                templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
+            }
+        },
+    })
+    .state('setup.stage', {
+        url: '/stages/:stageName',
+        views: {
+            'stage-view': {
+                templateUrl: '/src/setup/stage.html',
+                controller: 'StageCtrl',
+                controllerAs: 'stageCtrl'
+            }
+        },
+        resolve: {
+            'stage': ['experiment', '$stateParams', (experiment, $stateParams) => {
+                var stage = _.find(experiment.workflowDescription.stages, (st: any) => {
+                    return st.name === $stateParams.stageName;
+                });
+                if (stage !== undefined) {
+                    return stage;
+                } else {
+                    return {
+                        name: 'uploadfiles'
+                    };
+                }
+            }]
+        }
+    })
+    .state('plate', {
+        parent: 'setup.uploadfiles',
+        url: '/plates',
+        templateUrl: '/src/setup/uploadfiles/plate.html',
+        controller: 'PlateListCtrl',
+        controllerAs: 'plateListCtrl',
         breadcrumb: {
             // class: 'highlight',
             text: 'plates',
@@ -251,7 +250,54 @@ angular.module('tmaps.ui')
             text: 'upload',
             stateName: 'acquisition.detai'
         }
-    });
+    })
+    .state('jtui', {
+        url: '/jtui/:experimentid',
+        resolve: {
+            experiment: getExperiment
+        },
+        data: {
+            loginRequired: true
+        },
+        parent: 'logo-backdrop',
+        templateUrl: '/src/jtui/jtui.html'
+    })
+    .state('project', {
+        parent: 'jtui',
+        url: '/projects/:projectName',
+        resolve: {
+            project: ['experiment', 'projectService', '$stateParams',
+                        function(experiment, projectService, $stateParams) {
 
+                        return projectService.getProject(
+                                    experiment.id,
+                                    $stateParams.projectName);
+            }],
+            channels: ['experiment', 'projectService', '$stateParams',
+                        function(experiment, projectService, $stateParams) {
+
+                        return projectService.getChannels(experiment.id);
+            }]
+        },
+        views: {
+            'project': {
+                templateUrl: 'components/project/project.html',
+                controller: 'ProjectCtrl'
+            }
+        }
+    })
+    .state('project.module', {
+        url: '/:moduleName',
+        views: {
+            'handles': {
+                templateUrl: 'components/handles/handles.html',
+                controller: 'HandlesCtrl'
+            },
+            'runner': {
+                templateUrl: 'components/runner/runner.html',
+                controller: 'RunnerCtrl'
+            }
+        }
+    });
 }]);
 

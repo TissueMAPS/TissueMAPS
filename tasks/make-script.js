@@ -46,18 +46,27 @@ module.exports = function(gulp, opt) {
          */
         var copy;
         if (opt.dev) {
-            copy = gulp.src('./app/src/**/*.ts', {base: './app'})
+            var copyTs = gulp.src('./app/src/**/*.ts', {base: './app'})
                 .pipe(gulp.dest(opt.destFolder));
+            var copyJs = gulp.src('./app/src/**/*.js', {base: './app'})
+                .pipe(gulp.dest(opt.destFolder));
+            copy = es.merge(copyTs, copyJs);
         }
 
         // Only produce declaration files in case of dev mode.
         tsProject.config.declaration = opt.dev;
 
         /**
-         * Compile the application source code.
-         * In case of production execution mode the source code will be uglified and revved.
+         * Compile the application code.
+         * In case of production execution mode the source code will be
+         * uglified and revved.
+         *
+         * The application code is built in two stages: first, all source code
+         * that is written in TypeScript is compiled and uglified etc.
+         * Second, all JavaScript code (mainly JtUI) is concatenated and
+         * similarly uglified/revved/etc.
          */
-        var src = tsProject.src()
+        var tsSrc = tsProject.src()
             .pipe(sourcemaps.init())
             .pipe(typescript({
                 outFile: 'script.js',
@@ -88,12 +97,44 @@ module.exports = function(gulp, opt) {
             .pipe(_if(opt.reload, livereload()));
 
         /**
+         * Compile the JtUI application source code.
+         * In case of production execution mode the source code will be uglified and revved.
+         */
+        var jsSrc = gulp.src('app/src/**/*.js')
+            .pipe(sourcemaps.init())
+            .pipe(concat('script-jtui.js'))
+            .pipe(_if(opt.prod,
+                uglify({
+                    mangle: true,
+                    compress: true,
+                    preserveComments: {
+                        license: true
+                    }
+                })
+            ))
+            .pipe(_if(opt.prod, rev()))
+            .pipe(_if(opt.prod, banner(opt.banner)))
+            // Produce source maps (won't work with banner)
+            .pipe(_if(opt.dev, 
+                sourcemaps.write('.', {
+                    sourceRoot: '/app/src/'
+                })
+            ))
+            .pipe(gulp.dest(opt.destFolder))
+            .pipe(_if(opt.prod, rev.manifest()))
+            .pipe(_if(opt.prod, rename('rev-manifest-jtui.json')))
+            .pipe(gulp.dest(opt.destFolder))
+            .pipe(_if(opt.reload, livereload()));
+
+        var src = es.merge(jsSrc, tsSrc);
+
+        /**
          * Compile the library code.
          * In case of production mode also apply revving and uglifying.
          */
         var libs;
         if (opt.prod) {
-            libs = gulp.src(dependencies)
+            libs = gulp.src(dependencies.js)
                 .pipe(concat('libs.js'))
                 .pipe(uglify({
                         mangle: false,
@@ -109,7 +150,7 @@ module.exports = function(gulp, opt) {
                 .pipe(rename('rev-manifest-libs.json'))
                 .pipe(gulp.dest(opt.destFolder));
         } else {
-            libs = gulp.src(dependencies)
+            libs = gulp.src(dependencies.js)
                 .pipe(concat('libs.js'))
                 .pipe(gulp.dest(opt.destFolder));
         }
@@ -120,4 +161,6 @@ module.exports = function(gulp, opt) {
             return es.merge(src, libs);
         }
     });
+
+
 };

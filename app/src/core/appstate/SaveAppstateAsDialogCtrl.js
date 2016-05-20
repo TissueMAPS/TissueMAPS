@@ -1,11 +1,11 @@
-angular.module('tmaps.main.appstate')
-.controller('SaveAppstateAsDialogCtrl',
-            function() {
+// angular.module('tmaps.main.appstate')
+// .controller('SaveAppstateAsDialogCtrl',
+//             function() {
 
-    this.saveinfo = {
-        name: '',
-        description: ''
-    };
+//     this.saveinfo = {
+//         name: '',
+//         description: ''
+//     };
 
-});
+// });
 

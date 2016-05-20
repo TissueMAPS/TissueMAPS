@@ -14,7 +14,6 @@ interface AcquisitionArgs {
     name: string;
     description: string;
     status: string;
-    files: MicroscopeFile[];
 }
 
 class Acquisition {
@@ -22,8 +21,8 @@ class Acquisition {
     name: string;
     description: string;
     // The upload status
-    status: string; 
-    files: MicroscopeFile[];
+    status: string;
+    files: MicroscopeFile[] = [];
 
     private _uploader: any;
 
@@ -40,6 +39,21 @@ class Acquisition {
 
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 20000000});
+    }
+
+    fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $q.all({
+            imageFiles: $http.get('/api/acquisitions/' + this.id + '/image_files'),
+            metaDataFiles: $http.get('/api/acquisitions/' + this.id + '/metadata_files')
+        }).then((responses: any) => {
+            var imageFiles = responses.imageFiles.data.data
+            var metaDataFiles = responses.metaDataFiles.data.data
+            var files = Array.prototype.concat(imageFiles, metaDataFiles)
+            this.files = files;
+            return files;
+        });
     }
 
     /**

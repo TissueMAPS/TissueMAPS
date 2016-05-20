@@ -8,7 +8,7 @@ module.exports = function(gulp, opt) {
     var _if = require('gulp-if');
     var rev = require('gulp-rev');
     var rename = require('gulp-rename');
-    var banner = require('gulp-banner');
+    var dependencies = require('../dependencies');
 
     // Compile LESS files
     gulp.task('make-style', function() {
@@ -16,16 +16,8 @@ module.exports = function(gulp, opt) {
             'app/assets/less/style.less'
         ])
         .pipe(less());
-
-        var additionalStyles = gulp.src([
-            'app/assets/libs/unmanaged/ng-color-picker/color-picker.css',
-            'app/assets/libs/bower_components/perfect-scrollbar/css/perfect-scrollbar.css',
-            'app/assets/libs/bower_components/fontawesome/css/font-awesome.css',
-            'app/assets/css/jquery-ui.css',
-            'app/assets/css/ol.css'
-        ]);
-
-        return es.merge(additionalStyles, appStyle)
+        var additionalStyles = gulp.src(dependencies.css);
+        appStyle = es.merge(additionalStyles, appStyle)
         .pipe(concat('style.css'))
             // Production
             .pipe(_if(opt.prod, rev()))
@@ -37,6 +29,23 @@ module.exports = function(gulp, opt) {
             .pipe(gulp.dest(opt.destFolder))
             // Development
             .pipe(_if(opt.reload, livereload()));
-    });
 
+        var jtuiStyle = gulp.src([
+            'app/assets/jtui/style.less'
+        ])
+        .pipe(less())
+        .pipe(rename('style-jtui.css'))
+            // Production
+            .pipe(_if(opt.prod, rev()))
+            // .pipe(banner(opt.banner))
+        .pipe(gulp.dest(opt.destFolder))
+            // Production
+            .pipe(_if(opt.prod, rev.manifest()))
+            .pipe(_if(opt.prod, rename('rev-manifest-style-jtui.json')))
+            .pipe(gulp.dest(opt.destFolder))
+            // Development
+            .pipe(_if(opt.reload, livereload()));
+
+        return es.merge(appStyle, jtuiStyle);
+    });
 };

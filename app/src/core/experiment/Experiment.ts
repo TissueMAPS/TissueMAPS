@@ -20,6 +20,7 @@ class Experiment implements Model {
     mapobjectTypes: MapobjectType[];
     plateAcquisitionMode: string;
     channels: Channel[] = [];
+    workflowDescription: any;
     status: string;
 
     /**
@@ -44,6 +45,7 @@ class Experiment implements Model {
         this.microscopeType = args.microscope_type;
         this.plateAcquisitionMode = args.plate_acquisition_mode;
         this.mapobjectTypes = args.mapobject_types;
+        this.workflowDescription = args.workflow_description;
 
         args.channels.forEach((ch) => {
             var isFirstChannel = this.channels.length == 0;
@@ -84,5 +86,18 @@ class Experiment implements Model {
             return ch.minZ;
         });
         return Math.min.apply(this, zs);
+    }
+
+    submitWorkflow(workflowArgs) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $http.post('/api/experiments/' + this.id + '/workflow', workflowArgs)
+        .then((resp) => {
+            console.log(resp);
+            return resp.data;
+        })
+        .catch((resp) => {
+            $q.reject(resp.data.error);
+        });
     }
 }

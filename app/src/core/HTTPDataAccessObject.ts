@@ -98,7 +98,7 @@ abstract class HTTPDataAccessObject<T extends Model> {
      *          in a promise or an object of type APIError.
      */
     delete(id: string): ng.IPromise<boolean | APIError> {
-        return this._$http.delete(this.url + id)
+        return this._$http.delete(this.url + '/' + id)
         .then((resp) => {
             return true;
         })

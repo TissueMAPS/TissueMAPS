@@ -1,0 +1,95 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="$dismiss('Cancel')" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Jobs</h2>
+
+</div>
+
+<div class="modal-body">
+
+  <table st-table="joblist" class="table table-striped" ng-hide="error">
+
+    <thead>
+      <tr>
+        <th>job id</th>
+        <th>layer name</th>
+        <th>plate</th>
+        <th>well</th>
+        <th>well position</th>
+        <th>time point</th>
+        <th>channel</th>
+        <th>z plane</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr ng-repeat="(job_id, metadata) in joblist">
+        <td>{{job_id}}</td>
+        <td>
+          <p ng-repeat="md in metadata">
+            {{md.name}}
+          </p>
+        </td>
+        <td>
+          <p ng-repeat="md in metadata">
+            {{md.plate}}
+          </p>
+        </td>
+        <td>
+          <p ng-repeat="md in metadata">
+            {{md.well_name}}
+          </p>
+        </td>
+        <td>
+          <p ng-repeat="md in metadata">
+            ({{md.well_position_y}}, {{md.well_position_x}})
+          </p>
+        </td>
+        <td>
+          <p ng-repeat="md in metadata">
+            {{md.tpoint}}
+          </p>
+        </td>
+        <td>
+          <p ng-repeat="md in metadata">
+            {{md.channel}}
+          </p>
+        </td>
+        <td>
+          <p ng-repeat="md in metadata">
+            {{md.zplane}}
+          </p>
+        </td>
+      </tr>
+    </tbody>
+    
+  </table>
+
+  <div ng-show="error">
+
+    <uib-alert type="danger">
+      <i class="fa fa-thumbs-o-down"></i>
+      Joblist creation failed!
+    </uib-alert>
+    <p>
+      Error message:
+    </p>
+    <pre>
+      {{ errorMessage }}
+    </pre>
+
+  </div>
+
+</div>
+
+<div class="modal-footer">
+
+  <button type="button" ng-click="$dismiss('No')"
+          class="btn btn-default" data-dismiss="modal">
+     <i class="fa fa-times"></i>
+  </button>
+
+</div>

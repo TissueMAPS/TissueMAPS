@@ -20,6 +20,10 @@ module.exports = function(gulp, opt) {
                     proxy('/auth', {
                         target: 'http://localhost:5002',
                         changeOrigin: false
+                    }),
+                    proxy('/jtui', {
+                        target: 'http://localhost:5002',
+                        changeOrigin: false
                     })
                 ];
             }

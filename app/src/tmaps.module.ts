@@ -43,7 +43,9 @@
 
         'ngColorPicker',
         'ngSanitize',
-        'ngWebsocket'
+        'ngWebsocket',
+
+        'jtui'
     ]);
 
     tmaps.config(['$httpProvider', function($httpProvider) {

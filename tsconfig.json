@@ -160,6 +160,8 @@
         "app/src/userpanel/CreateExperimentCtrl.ts",
 
         "app/src/setup/SetupCtrl.ts",
+        "app/src/setup/StageCtrl.ts",
+
         "app/src/setup/uploadfiles/PlateListCtrl.ts",
         "app/src/setup/uploadfiles/PlateCreateCtrl.ts",
         "app/src/setup/uploadfiles/PlateDetailCtrl.ts",

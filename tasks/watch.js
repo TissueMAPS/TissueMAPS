@@ -24,6 +24,7 @@ module.exports = function (gulp, opt) {
             });
         }
         gulp.watch('app/src/**/*.js', ['make-script']);
+        gulp.watch('app/assets/jtui/**/*.less', ['make-style']);
         gulp.watch('app/assets/less/**/*.less', ['make-style']);
         gulp.watch('app/assets/css/**/*.css', ['make-style']);
         gulp.watch('app/**/*.+(png|ico|jpg)', ['copy']);
