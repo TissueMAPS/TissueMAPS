@@ -80,7 +80,7 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
             var entry = this._entries[mapObject.id];
             this._layer.removeVisual(entry.markerVisual);
             delete this._entries[mapObject.id];
-            this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
+            this._$rootScope.$emit('change:MapObjectSelection', this);
         };
     }
 
@@ -92,7 +92,7 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
                 markerPosition: markerPos,
                 markerVisual: visual
             };
-            this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
+            this._$rootScope.$emit('change:MapObjectSelection', this);
             this._layer.addVisual(visual);
         }
     }
@@ -114,7 +114,7 @@ class MapObjectSelection implements Serializable<MapObjectSelection> {
             var o = this._entries[k].mapObject;
             this.removeMapObject(o);
         }
-        this._$rootScope.$broadcast('mapObjectSelectionChanged', this);
+        this._$rootScope.$emit('change:MapObjectSelection', this);
     }
 
     serialize() {
