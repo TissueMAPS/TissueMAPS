@@ -146,7 +146,10 @@ class Viewer {
         };
         console.log('ToolService: START REQUEST.');
         session.isRunning = true;
-        return $http.post(url, request).then(
+        var timeoutInMinutes = 120;
+        return $http.post(url, request, {
+            timeout: timeoutInMinutes * 1000 * 60
+        }).then(
         (resp) => {
             // TODO: Send event to Viewer messagebox
             // vpScope.$broadcast('toolRequestDone');
