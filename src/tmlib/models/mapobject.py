@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import random
+import collections
 
 import pandas as pd
 from sqlalchemy.sql import func
@@ -382,14 +383,14 @@ class MapobjectOutline(Model):
         ----------
         mapobject_id: int
             ID of parent mapobject
-        geom_poly: str, optional
-            EWKT polygon geometry (default: ``None``)
-        geom_centroid: str, optional
-            EWKT point geometry (default: ``None``)
         tpoint: int, optional
             time point index (default: ``None``)
         zplane: int, optional
             z-plane index (default: ``None``)
+        geom_poly: str, optional
+            EWKT polygon geometry (default: ``None``)
+        geom_centroid: str, optional
+            EWKT point geometry (default: ``None``)
         '''
         self.tpoint = tpoint
         self.zplane = zplane
@@ -486,37 +487,44 @@ class MapobjectSegmentation(Model):
         therefore only partially represented on the corresponding image
     label: int
         one-based object identifier number which is unique per site
+    tpoint: int, optional
+        time point index (default: ``None``)
+    zplane: int, optional
+        z-plane index (default: ``None``)
+    geom_poly: str, optional
+        EWKT polygon geometry (default: ``None``)
     site_id: int
         ID of the parent site
     site: tmlib.models.Site
         site to which the segmentation belongs
-    mapobject_outline_id: int
+    mapobject_id: int
         ID of the parent corresponding mapobject outline
-    mapobject_outline: tmlib.models.MapobjectOutline
-        mapobject outline to which the segmentation belongs
+    mapobject: tmlib.models.Mapobject
+        mapobject to which the segmentation belongs
     '''
 
     #: str: name of the corresponding database table
     __tablename__ = 'mapobject_segmentations'
 
     __table_args__ = (
-        UniqueConstraint('label', 'site_id', 'mapobject_outline_id'),
+        UniqueConstraint('label', 'tpoint', 'zplane', 'site_id', 'mapobject_id'),
     )
 
     # Table columns
     is_border = Column(Boolean, index=True)
     label = Column(Integer, index=True)
     pipeline = Column(String, index=True)
+    tpoint = Column(Integer, index=True)
+    zplane = Column(Integer, index=True)
+    geom_poly = Column(Geometry('POLYGON'))
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
-        primary_key=True,
         index=True
     )
-    mapobject_outline_id = Column(
+    mapobject_id = Column(
         Integer,
-        ForeignKey('mapobject_outlines.id', onupdate='CASCADE', ondelete='CASCADE'),
-        primary_key=True,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
@@ -527,14 +535,15 @@ class MapobjectSegmentation(Model):
             'mapobject_segmentations', cascade='all, delete-orphan'
         )
     )
-    mapobject_outline = relationship(
-        'MapobjectOutline',
+    mapobject= relationship(
+        'Mapobject',
         backref=backref(
             'segmentation', cascade='all, delete-orphan', uselist=False
         )
     )
 
-    def __init__(self, pipeline, label, site_id, mapobject_outline_id):
+    def __init__(self, pipeline, label, tpoint, zplane, is_border, geom_poly,
+            site_id, mapobject_id):
         '''
         Parameters
         ----------
@@ -543,20 +552,36 @@ class MapobjectSegmentation(Model):
             were segmented
         label: int
             one-based object identifier number which is unique per site
+        tpoint: int, optional
+            time point index (default: ``None``)
+        zplane: int, optional
+            z-plane index (default: ``None``)
+        is_border: bool
+            whether the object touches at the border of a *site* and is
+            therefore only partially represented on the corresponding image
+        geom_poly: str, optional
+            EWKT polygon geometry (default: ``None``)
         site_id: int
             ID of the parent site
-        mapobject_outline_id: int
-            ID of the parent corresponding mapobject outline
+        mapobject_id: int
+            ID of the parent corresponding mapobject
         '''
         self.pipeline = pipeline
         self.label = label
+        self.tpoint = tpoint
+        self.zplane = zplane
+        self.geom_poly = geom_poly
         self.site_id = site_id
-        self.mapobject_outline_id = mapobject_outline_id
+        self.mapobject_id = mapobject_id
+        self.is_border = is_border
+
+    # TODO: allow segmentations with point geometry as an alternative to
+    # polygons (may be useful for small objects)
 
     def __repr__(self):
         return (
             '<MapobjectSegmentation('
-                'id=%d, site_id=%r, mapobject_outline_id=%r, label=%r'
+                'id=%d, tlabel=%r, tpoint=%r, zplane=%r, site_id=%r, mapobject_id=%r'
             ')>'
-            % (self.id, self.site_id, self.mapobject_outline_id, self.label)
+            % (self.id, self.label, self.tpoint, self.zplane, self.site_id, self.mapobject_id)
         )

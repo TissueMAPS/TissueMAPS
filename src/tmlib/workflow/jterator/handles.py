@@ -17,6 +17,7 @@ import logging
 import collections
 import skimage.draw
 import shapely.geometry
+from geoalchemy2.shape import to_shape
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
@@ -319,9 +320,12 @@ class SegmentedObjects(LabelImage):
 
         Returns
         -------
-        Dict[Tuple[int], shapely.geometry.polygon.Polygon]
-            polygon for each segmented object hashable by
-            time point, z-plane and one-based label
+        Dict[Tuple[int], Tuple[shapely.geometry.polygon.Polygon]]]
+            mapobject outline (simplified polygon with inverted y-axis
+            and global map coordinates) and segmentation
+            (original polygon with site-specific coordinates)
+            for each identified object hashable by time point, z-plane and
+            one-based label
         '''
         logger.debug('calculate outlines for mapobject type "%s"', self.key)
 
@@ -364,32 +368,30 @@ class SegmentedObjects(LabelImage):
                             len(contours), label
                         )
                     contour = contours[0].astype(np.int64)
+                    segm_poly = shapely.geometry.Polygon(np.fliplr(contour))
                     # Add offset required due to alignment and
                     # invert the y-axis as required by Openlayers.
                     contour[:, 0] = -1 * (contour[:, 0] + y_offset)
                     contour[:, 1] = contour[:, 1] + x_offset
-                    poly = shapely.geometry.Polygon(np.fliplr(contour))
-                    poly = poly.simplify(
+                    outline_poly = shapely.geometry.Polygon(np.fliplr(contour))
+                    outline_poly = outline_poly.simplify(
                         tolerance=tolerance, preserve_topology=True
                     )
-                    polygons[(t, z, label)] = poly
+                    polygons[(t, z, label)] = (outline_poly, segm_poly)
         return polygons
 
-    def from_polygons(self, polygons, dimensions, y_offset, x_offset):
+
+    def from_polygons(self, polygons, dimensions):
         '''Creates a label image representation of segmented objects based
-        on the local site coordinates of each object's contour.
+        on site-specific coordinates of object contours.
 
         Parameters
         ----------
-        polygons: Dict[Tuple[int], shapely.geometry.polygon.Polygon]
+        polygons: Dict[Tuple[int], shapely.geometry.polygon.Polygon]]
             polygon for each segmented object hashable by
-            time point, z-plane and one-based label
+            time point, z-plane and site-specific label
         dimensions: Tuple[int]
             dimensions of the label image that should be created
-        y_offset: int
-            vertical offset that needs to be added to y-coordinates
-        x_offset: int
-            horizontal offset that needs to be added to x-coordinates
 
         Returns
         -------
@@ -398,16 +400,13 @@ class SegmentedObjects(LabelImage):
 
         Note
         ----
-        Sets the created label image as attribute `value`.
+        Coordinates are relative to aligned and cropped images.
         '''
         array = np.zeros(dimensions, dtype=np.int32)
         for (t, z, label), poly in polygons.iteritems():
+            poly = to_shape(poly)
             coordinates = np.array(poly.exterior.coords).astype(int)
-            # NOTE: y-axis is inverted
-            coordinates[:, 1] *= -1
             x, y = np.split(coordinates, 2, axis=1)
-            x -= x_offset
-            y -= y_offset
             y, x = skimage.draw.polygon(y, x)
             array[y, x, z, t] = label
         self.value = np.squeeze(array)

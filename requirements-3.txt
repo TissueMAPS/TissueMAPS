@@ -26,6 +26,7 @@ pytz==2015.4
 PyYAML>=3.11
 rpy2>=2.7.4
 scikit-image>=0.11.3
+shapely>=1.5.15
 sphinxcontrib-autoprogram==0.1.2
 sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12

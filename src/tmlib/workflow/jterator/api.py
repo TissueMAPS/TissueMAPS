@@ -5,7 +5,6 @@ import logging
 import numpy as np
 import pandas as pd
 import collections
-import geoalchemy2.shape
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
@@ -315,7 +314,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             mapobject_type_ids = session.query(tm.MapobjectType.id).\
                 join(tm.Mapobject).\
-                join(tm.MapobjectOutline).\
                 join(tm.MapobjectSegmentation).\
                 filter(
                     tm.MapobjectType.experiment_id == self.experiment_id,
@@ -448,38 +446,26 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # Load outlins of mapobjects of the specified types and reconstruct
             # the label images required by modules.
             for mapobject_type_name in mapobject_type_names:
-                mapobject_metadata = pd.DataFrame(
-                    session.query(
-                        tm.MapobjectSegmentation.label,
-                        tm.MapobjectOutline.tpoint,
-                        tm.MapobjectOutline.zplane,
-                        tm.MapobjectOutline.geom_poly
-                    ).
-                    select_from(tm.MapobjectOutline).
-                    join(tm.Mapobject).
-                    join(tm.MapobjectType).
-                    join(tm.MapobjectSegmentation).
+                segmentations = session.query(tm.MapobjectSegmentation).\
+                    join(tm.Mapobject).\
+                    join(tm.MapobjectType).\
                     filter(
                         tm.MapobjectType.name == mapobject_type_name,
                         tm.MapobjectSegmentation.site_id == batch['site_id'],
                         tm.MapobjectType.experiment_id == self.experiment_id
-                    ).
+                    ).\
                     all()
-                )
                 dims = store['pipe'].values()[0].shape
-                labeled_pixels = np.zeros(dims, dtype=np.int32)
-                y_offset = image_files[0].site.intersection.lower_overhang
-                x_offset = image_files[0].site.intersection.right_overhang
-                outlines = dict()
-                for i, (label, t, z, polygon) in mapobject_metadata.iterrows():
-                    poly = geoalchemy2.shape.to_shape(polygon)
-                    outlines[(t, z, label)] = poly
                 # Add the labeled image to the pipeline and create a handle
                 # object to later add measurements for the objects.
                 handle = SegmentedObjects(
                     name=mapobject_type_name, key=mapobject_type_name
                 )
-                handle.from_polygons(outlines, dims, y_offset, x_offset)
+                polygons = {
+                    (s.tpoint, s.zplane, s.label): s.geom_poly
+                    for s in segmentations
+                }
+                handle.from_polygons(polygons, dims)
                 store['pipe'][handle.key] = handle.value
                 store['segmented_objects'][handle.key] = handle
 
@@ -535,9 +521,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     tm.MapobjectType,
                     name=obj_name, experiment_id=self.experiment_id,
                 )
-                logger.info(
-                    'add mapobjects of type "%s"', mapobject_type.name
-                )
 
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case
@@ -547,26 +530,31 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     'mapobject_types', list()
                 )
                 if mapobject_type.name not in inputs:
-                    mapobjects = session.query(tm.Mapobject).\
-                        join(
-                            tm.MapobjectOutline,
-                            tm.MapobjectSegmentation
-                        ).\
+                    prior_mapobject_ids = session.query(tm.Mapobject.id).\
+                        join(tm.MapobjectSegmentation).\
                         filter(
                             tm.Mapobject.mapobject_type_id == mapobject_type.id,
                             tm.MapobjectSegmentation.site_id == batch['site_id'],
                             tm.MapobjectSegmentation.pipeline == self.pipe_name
                         ).\
                         all()
-                    logger.debug(
+                    logger.info(
                         'delete existing mapobjects of type "%s"',
                         mapobject_type.name
                     )
-                    # NOTE: We delete objects individually rather than on-bulk
-                    # to ensure that the session is in sync.
-                    for m in mapobjects:
-                        session.delete(m)
+                    if prior_mapobject_ids:
+                        session.query(tm.Mapobject).\
+                            filter(tm.Mapobject.id.in_(prior_mapobject_ids)).\
+                            delete()
 
+        with tm.utils.Session() as session:
+            mapobject_ids = dict()
+            for obj_name, segm_objs in store['segmented_objects'].iteritems():
+
+                logger.debug('add mapobject type "%s"', obj_name)
+                mapobject_type = session.query(tm.MapobjectType).\
+                    filter_by(name=obj_name, experiment_id=self.experiment_id).\
+                    one()
                 # Get existing mapobjects for this site in case they were
                 # created by a previous pipeline or create new mapobjects in
                 # case they didn't exist (or got just deleted).
@@ -575,10 +563,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     logger.debug('add mapobject #%d', label)
                     try:
                         mapobject = session.query(tm.Mapobject).\
-                            join(
-                                tm.MapobjectOutline,
-                                tm.MapobjectSegmentation
-                            ).\
+                            join(tm.MapobjectSegmentation).\
                             filter(
                                 tm.Mapobject.mapobject_type_id == mapobject_type.id,
                                 tm.MapobjectSegmentation.site_id == batch['site_id'],
@@ -603,6 +588,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 y_offset += site.intersection.lower_overhang
                 x_offset += site.intersection.right_overhang
 
+            mapobject_outlines = list()
+            mapobject_segmentations = list()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
                 mapobject_type = session.query(tm.MapobjectType).\
                     filter_by(name=obj_name, experiment_id=self.experiment_id).\
@@ -612,29 +599,35 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     mapobject_type.name
                 )
                 polygons = segm_objs.to_polygons(y_offset, x_offset)
-                for (t, z, label), poly in polygons.iteritems():
+                for (t, z, label), (outline, segmentation) in polygons.iteritems():
                     mapobject = session.query(tm.Mapobject).\
                         get(mapobject_ids[mapobject_type.name][label])
-                    logger.debug('add outlines for mapobject #%d', label)
-                    mapobject_outline = session.get_or_create(
-                        tm.MapobjectOutline,
-                        tpoint=t, zplane=z,
-                        mapobject_id=mapobject.id,
-                        geom_poly=poly.wkt,
-                        geom_centroid=poly.centroid.wkt
-                    )
-                    session.add(mapobject_outline)
-                    session.flush()
 
-                    mapobject_segm = tm.MapobjectSegmentation(
-                        pipeline=self.pipe_name, label=label,
-                        site_id=batch['site_id'],
-                        mapobject_outline_id=mapobject_outline.id
+                    logger.debug('add outlines for mapobject #%d', label)
+                    mapobject_outlines.append(
+                        tm.MapobjectOutline(
+                            tpoint=t, zplane=z,
+                            mapobject_id=mapobject.id,
+                            geom_poly=outline.wkt,
+                            geom_centroid=outline.centroid.wkt
+                        )
                     )
-                    mapobject_segm.is_border = bool(
-                        segm_objs.is_border[t][label]
+
+                    logger.debug('add segmentations for mapobject #%d', label)
+                    mapobject_segmentations.append(
+                        tm.MapobjectSegmentation(
+                            pipeline=self.pipe_name,
+                            label=label,
+                            tpoint=t, zplane=z,
+                            geom_poly=segmentation.wkt,
+                            site_id=batch['site_id'],
+                            mapobject_id=mapobject.id,
+                            is_border=bool(segm_objs.is_border[t][label]),
+                        )
                     )
-                    session.add(mapobject_segm)
+
+            session.bulk_save_objects(mapobject_outlines)
+            session.bulk_save_objects(mapobject_segmentations)
 
         # Create entries for features
         with tm.utils.Session() as session:
@@ -665,14 +658,15 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     'delete existing feature values for mapobject type "%s"',
                     mapobject_type.name
                 )
-                current_feature_ids = [f.id for f in features]
-                current_mapobject_ids = mapobject_ids[mapobject_type.name].values()
-                feature_values = session.query(tm.FeatureValue).\
-                    filter(
-                        tm.FeatureValue.feature_id.in_(current_feature_ids),
-                        tm.FeatureValue.mapobject_id.in_(current_mapobject_ids)
-                    ).\
-                    delete()
+                fids = [f.id for f in features]
+                mids = mapobject_ids[mapobject_type.name].values()
+                if fids and mids:
+                    feature_values = session.query(tm.FeatureValue).\
+                        filter(
+                            tm.FeatureValue.feature_id.in_(fids),
+                            tm.FeatureValue.mapobject_id.in_(mids)
+                        ).\
+                        delete()
 
         # Create an entry for each measured featured value.
         # This is quite a heavy write operation, since we have nxp feature
@@ -697,6 +691,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     for f in features:
                         logger.debug('add value for feature "%s"' % f.name)
                         for t, measurement in enumerate(segm_objs.measurements):
+                            if measurement.empty:
+                                continue
                             fvalue = measurement.loc[label, f.name]
                             feature_values.append(
                                 tm.FeatureValue(
