@@ -14,7 +14,7 @@ class KMeans(UnsupervisedClassifier):
         # Assign each example/obs to its nearest centroid
         # and return a vector of length N indicating the cluster to which
         # each observation is to be assigned (as an integer).
-        predictions, _ = vq(feature, centroids)
+        predictions, _ = vq(feature_data, centroids)
         return zip(feature_data.index.tolist(), predictions.tolist())
 
     def classify_spark(self, feature_data, k):
