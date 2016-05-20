@@ -1,5 +1,5 @@
 interface SVMScope extends ToolWindowContentScope {
-    svm: SVMToolCtrl;
+    svm: SVMCtrl;
     featureWidget: FeatureSelectionWidgetCtrl;
     mapobjectTypeWidget: MapobjectTypeWidgetCtrl;
     classSelectionWidget: ClassSelectionWidgetCtrl;
