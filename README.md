@@ -1,6 +1,34 @@
 TissueMAPS server
 =================
 
+REST API design
+---------------
+
+The TissueMAPS server provides a REST API that is used by the TissueMAPS
+client. The structure of the API is as follows and should be kept when
+adding any functionality. As an example, consider the `Experiment` resource:
+
+- `GET /api/experiments` will get all experiments for the current user. The
+  response payload will have a `data` attribute with a list of serialized experiments.
+- `GET /api/experiments/0` will get the experiment with id 0. The response
+  payload will have a `data` attribute consisting of a single experiment (no
+  list!).
+- `GET /api/experiments?id=0` is the same as the query above but will return a
+  list. Properties (here *id*) can be comma-separated lists.
+- `POST /api/experiments` will create a new experiment for the current user.
+  Required data is provided using the request payload. The response will
+  contain a data attribute with the serialized experiment (with a newly created
+  id).
+- `PUT /api/experiments/0/some-action` will call a specific action for the
+  experiment with id 0.
+
+Note that there is no nesting of resources, e.g. the route
+`/api/experiments/0/plates` does not exist.
+Instead this query would look like this: `GET /api/plates?experiment_id=0`.
+Also, if a plate for experiment 0 should be created the query should look like
+this: `POST /api/plates { "experiment_id": 0, ... }.
+
+
 Setup (development) for OSX
 ---------------------------
 
