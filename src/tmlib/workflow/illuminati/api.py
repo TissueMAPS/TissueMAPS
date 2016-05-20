@@ -773,11 +773,12 @@ class PyramidBuilder(ClusterRoutines):
                 session.add_all(mapobject_outlines)
                 session.flush()
 
-                min_poly_zoom = mapobject_type.calculate_min_poly_zoom(
+                min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
                     layer.maxzoom_level_index,
                     mapobject_outline_ids=[o.id for o in mapobject_outlines]
                 )
-                mapobject_type.min_poly_zoom = min_poly_zoom
+                mapobject_type.min_poly_zoom = min_zoom
+                mapobject_type.max_poly_zoom = max_zoom
 
 
 def factory(experiment_id, verbosity, **kwargs):
