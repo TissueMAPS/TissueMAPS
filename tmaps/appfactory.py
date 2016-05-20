@@ -11,7 +11,6 @@ from tmaps.extensions import db
 from tmaps.extensions import jwt
 from tmaps.extensions import redis_store
 from tmaps.extensions import gc3pie_engine
-from tmaps.extensions import spark
 from tmaps.serialize import TmJSONEncoder
 
 
@@ -107,7 +106,10 @@ def create_app(config_overrides={}):
     db.init_app(app)
     redis_store.init_app(app)
     # gc3pie_engine.init_app(app)
-    spark.init_app(app)
+
+    if app.config.get('USE_SPARK', False):
+        from tmaps.extensions import spark
+        spark.init_app(app)
 
     ## Import and register blueprints
     from api import api
