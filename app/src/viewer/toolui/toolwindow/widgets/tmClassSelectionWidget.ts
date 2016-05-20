@@ -135,6 +135,10 @@ class ClassSelectionCtrl {
                 this._$scope.classSelectionWidget.recomputeClasses();
             }
         })
+        _$scope.$watch('sel.selection.mapObjects.length', () => {
+            console.log('NEW VAL');
+            this._$scope.classSelectionWidget.recomputeClasses();
+        });
     }
 }
 angular.module('tmaps.ui').controller('ClassSelectionCtrl', ClassSelectionCtrl);
