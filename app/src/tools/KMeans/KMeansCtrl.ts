@@ -3,7 +3,7 @@ interface ClusterScope extends ToolWindowContentScope {
     mapobjectTypeWidget: MapobjectTypeWidgetCtrl;
 }
 
-class ClusterToolCtrl extends ToolCtrl {
+class KMeansCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
     nClusters: number = 2;

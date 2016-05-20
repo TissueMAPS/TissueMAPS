@@ -3,7 +3,7 @@ interface HeatmapScope extends ToolWindowContentScope {
     mapobjectTypeWidget: MapobjectTypeWidgetCtrl;
 }
 
-class HeatmapToolCtrl extends ToolCtrl {
+class HeatmapCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
     constructor(public $scope: SVMScope,

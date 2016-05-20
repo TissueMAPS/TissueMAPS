@@ -5,7 +5,7 @@ interface SVMScope extends ToolWindowContentScope {
     classSelectionWidget: ClassSelectionWidgetCtrl;
 }
 
-class SVMToolCtrl extends ToolCtrl {
+class SVMCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
     kernelOptions = ['rbf', 'linear'];
