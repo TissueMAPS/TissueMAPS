@@ -2,71 +2,60 @@
 @import "variables.less";
     
 .jtui {
-  /* left side pain: available modules */
-  .left-side-pane {
-    position: absolute;
-    border-right: 1px solid black;
-    padding: 0;
-    width: @left-side-pane-width;
-    height: 100%;
-    background: #3a3f41;
-    overflow: hidden;
-
-    .left-side-pane-header {
-      padding: 0;
-      overflow: auto;
+    /* left side pain: available modules */
+    .left-side-pane {
+        position: absolute;
+        border-right: 1px solid black;
+        width: @left-side-pane-width;
+        height: 100%;
+        background: #3a3f41;
+        overflow: hidden;
+        color: @font-color-light;
     }
 
-    .left-side-pane-content {
-      padding: @sidebar-section-padding;
-      color: @font-color-light;
-      position: relative;
-      height: calc(~'100% - @{topbar-height}');
-      overflow: hidden;
+    .sidebar {
+        width: @left-side-pane-width;
+    }
 
-      .left-side-pane-subcontent {
+    .modules-section {
+        height: 100%;
+    }
+
+    .module-list-container {
         position: relative;
         height: calc(~'100% - @{topbar-height} - 10%');
         overflow: auto;
-      }
-    }
 
-    .list-group {
-      // No need to set list-style: none; since .list-group-item is block level
-      margin-bottom: 20px;
-      padding-left: 0; // reset padding because ul and ol
-    }
+        ul.list-group {
+            // No need to set list-style: none; since .list-group-item is block level
+            margin-bottom: 20px;
+            padding-left: 0; // reset padding because ul and ol
+        }
 
-    // Individual list items
-    //
-    // Use on `li`s or `div`s within the `.list-group` parent.
+        // Individual list items
+        // Use on `li`s or `div`s within the `.list-group` parent.
+        .list-group-item {
+            position: relative;
+            display: block;
+            padding: 10px 15px;
+            margin-bottom: 3px;
+            background-color: @panel-fg;
+            border: 1px solid @panel-fg2;
+            .border-top-radius(@list-group-border-radius);
+            .border-bottom-radius(@list-group-border-radius);
+            overflow: hidden;
+        }
 
-    .list-group-item {
-      position: relative;
-      display: block;
-      padding: 10px 15px;
-      margin-bottom: 3px;
-      background-color: @panel-fg;
-      border: 1px solid @panel-fg2;
-      .border-top-radius(@list-group-border-radius);
-      .border-bottom-radius(@list-group-border-radius);
-      overflow: hidden;
+        .list-group-item-cloned {
+            position: relative;
+            display: block;
+            padding: 10px 15px;
+            margin-bottom: 3px;
+            background-color: @panel-fg;
+            border: 1px solid #337ab7;
+            .border-top-radius(@list-group-border-radius);
+            .border-bottom-radius(@list-group-border-radius);
+            overflow: hidden;
+        }
     }
-
-    .list-group-item-cloned {
-      position: relative;
-      display: block;
-      padding: 10px 15px;
-      margin-bottom: 3px;
-      background-color: @panel-fg;
-      border: 1px solid #337ab7;
-      .border-top-radius(@list-group-border-radius);
-      .border-bottom-radius(@list-group-border-radius);
-      overflow: hidden;
-    }
-  }
 }
-
-
-
-

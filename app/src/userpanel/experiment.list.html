@@ -14,11 +14,17 @@
         {{ e.name }}
 
 
-        <button class="btn btn-primary" ng-click="userpanelCtrl.modifyExperiment(e)">
+        <button ng-show="userpanelCtrl.hasLayers(e)" class="btn btn-success"
+            ng-click="userpanelCtrl.viewExperiment(e)">
+          View
+        </button>
+        <button class="btn btn-primary"
+            ng-click="userpanelCtrl.modifyExperiment(e)">
           Modify
         </button>
-        <button ng-show="userpanelCtrl.hasLayers(e)" class="btn btn-success" ng-click="userpanelCtrl.viewExperiment(e)">
-          View
+        <button class="btn btn-default"
+            ng-click="userpanelCtrl.editPipelines(e)">
+          Pipelines
         </button>
         <button class="btn btn-danger" ng-click="userpanelCtrl.deleteExperiment(e)">
           Delete

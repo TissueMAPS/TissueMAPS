@@ -33,11 +33,6 @@ angular.module('tmaps.ui')
     }];
 
     $stateProvider
-    .state('jtui', {
-        url: '/jtui',
-        parent: 'logo-backdrop',
-        templateUrl: '/src/jtui/jtui.html'
-    })
     .state('viewer', {
         url: '/viewer/:experimentid',
         reloadOnSearch: false,
@@ -255,7 +250,54 @@ angular.module('tmaps.ui')
             text: 'upload',
             stateName: 'acquisition.detai'
         }
-    });
+    })
+    .state('jtui', {
+        url: '/jtui/:experimentid',
+        resolve: {
+            experiment: getExperiment
+        },
+        data: {
+            loginRequired: true
+        },
+        parent: 'logo-backdrop',
+        templateUrl: '/src/jtui/jtui.html'
+    })
+    .state('project', {
+        parent: 'jtui',
+        url: '/projects/:projectName',
+        resolve: {
+            project: ['experiment', 'projectService', '$stateParams',
+                        function(experiment, projectService, $stateParams) {
 
+                        return projectService.getProject(
+                                    experiment.id,
+                                    $stateParams.projectName);
+            }],
+            channels: ['experiment', 'projectService', '$stateParams',
+                        function(experiment, projectService, $stateParams) {
+
+                        return projectService.getChannels(experiment.id);
+            }]
+        },
+        views: {
+            'project': {
+                templateUrl: 'components/project/project.html',
+                controller: 'ProjectCtrl'
+            }
+        }
+    })
+    .state('project.module', {
+        url: '/:moduleName',
+        views: {
+            'handles': {
+                templateUrl: 'components/handles/handles.html',
+                controller: 'HandlesCtrl'
+            },
+            'runner': {
+                templateUrl: 'components/runner/runner.html',
+                controller: 'RunnerCtrl'
+            }
+        }
+    });
 }]);
 
