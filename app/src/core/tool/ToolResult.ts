@@ -43,6 +43,15 @@ class ToolResult {
         }
     }
 
+    /**
+     * Construct a new ToolResult.
+     *
+     * @class ToolResult
+     * @classdesc A tool result is basically a container for a labellayer as
+     * well as potential plots. These results will show up in the interface as
+     * tabs that can be marked as visible or invisible.
+     * @param {ToolResultArgs} args - Constructor arguments.
+     */
     constructor(args: ToolResultArgs) {
         this.id = args.id;
         this.name = args.name;

@@ -2,7 +2,8 @@
 
 declare type SelectionId = number;
 
-// FIXME: Deprecated
+// FIXME: Deprecated. In the current state the markers are set directly via
+// SelectionLayer.
 class MarkerImageVisual extends Visual {
     // mapObjectMarkers: {};
     color: Color;

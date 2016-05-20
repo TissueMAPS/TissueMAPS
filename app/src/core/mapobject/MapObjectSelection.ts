@@ -1,4 +1,3 @@
-
 type MapObjectSelectionId = number;
 
 interface SelectionEntry {

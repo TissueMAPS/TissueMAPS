@@ -1,12 +1,15 @@
+/**
+ * Everything that can be added and removed to the viewport.
+ */
 interface Layer {
-    // Change to this:
-    // addToViewport(vp: Viewport);
-    // removeFromViewport(vp: Viewport);
     addToMap(map: ol.Map);
     removeFromMap(map: ol.Map);
     visible: boolean;
 }
 
+/**
+ * A class that wraps a openlayers layer.
+ */
 class BaseLayer<LayerT extends ol.layer.Layer> implements Layer {
     protected _olLayer: LayerT;
 

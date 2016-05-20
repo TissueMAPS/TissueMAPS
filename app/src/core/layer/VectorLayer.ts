@@ -8,7 +8,8 @@ interface VectorLayerArgs {
 }
 
 /**
- * Layer class for Visuals, i.e. visualizable objects.
+ * Layer class for Visuals, i.e. visualizable objects like marker symbols
+ * or single outlines that highlight a specific cell.
  * This is a wrapper around an openlayers vector layer.
  */
 class VectorLayer extends BaseLayer<ol.layer.Vector> {
