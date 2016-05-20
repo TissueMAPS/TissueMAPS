@@ -602,12 +602,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
             if site.intersection is not None:
                 y_offset += site.intersection.lower_overhang
                 x_offset += site.intersection.right_overhang
-            for obj_name, segm_objs in store['segmented_objects'].iteritems():
 
+            for obj_name, segm_objs in store['segmented_objects'].iteritems():
                 mapobject_type = session.query(tm.MapobjectType).\
                     filter_by(name=obj_name, experiment_id=self.experiment_id).\
                     one()
-
                 logger.info(
                     'add outlines for mapobjects of type "%s"',
                     mapobject_type.name
@@ -638,11 +637,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     session.add(mapobject_segm)
 
         # Create entries for features
-        # with tm.utils.Session() as session:
-        #     for obj_name, segm_objs in store['segmented_objects'].iteritems():
-                # mapobject_type = session.query(tm.MapobjectType).\
-                #     filter_by(name=obj_name, experiment_id=self.experiment_id).\
-                #     one()
+        with tm.utils.Session() as session:
+            for obj_name, segm_objs in store['segmented_objects'].iteritems():
+                mapobject_type = session.query(tm.MapobjectType).\
+                    filter_by(name=obj_name, experiment_id=self.experiment_id).\
+                    one()
                 logger.info(
                     'add features for mapobject of type "%s"',
                     mapobject_type.name
@@ -758,16 +757,18 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type.id).\
                     all()
 
-                min_poly_zoom = mapobject_type.calculate_min_poly_zoom(
-                    layer.maxzoom_level_index,
-                    mapobject_outline_ids=[o.id for o in mapobject_outlines]
-                )
+                min_poly_zoom, max_poly_zoom = \
+                    mapobject_type.calculate_min_max_poly_zoom(
+                        layer.maxzoom_level_index,
+                        mapobject_outline_ids=[o.id for o in mapobject_outlines]
+                    )
 
                 logger.info(
                     'zoom level for mapobjects of type "%s": %d',
                     mapobject_type.name, min_poly_zoom
                 )
                 mapobject_type.min_poly_zoom = min_poly_zoom
+                mapobject_type.max_poly_zoom = max_poly_zoom
 
         # TODO: do this in parallel in a separate workflow step
         logger.info('compute statistics over features of children mapobjects')

@@ -34,6 +34,8 @@ class MapobjectType(Model, DateMixIn):
     ----------
     name: str
         name of the map objects type
+    max_poly_zoom: int
+        zoom level where mapobjects are no longer visualized
     min_poly_zoom: int
         zoom level where visualization should switch from centroids
         to outlines
@@ -53,6 +55,7 @@ class MapobjectType(Model, DateMixIn):
     # Table columns
     name = Column(String, index=True, nullable=False)
     is_static = Column(Boolean, index=True)
+    _max_poly_zoom = Column('max_poly_zoom', Integer)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
     experiment_id = Column(
         Integer,
@@ -98,6 +101,16 @@ class MapobjectType(Model, DateMixIn):
     def min_poly_zoom(self, value):
         self._min_poly_zoom = value
 
+    @hybrid_property
+    def max_poly_zoom(self):
+        '''int: zoom level at which mapobjects are no longer visualized
+        '''
+        return self._max_poly_zoom
+
+    @max_poly_zoom.setter
+    def max_poly_zoom(self, value):
+        self._max_poly_zoom = value
+
     def get_mapobject_outlines_within_tile(self, x, y, z, tpoint, zplane):
         '''Get outlines of all objects that fall within a given pyramid tile,
         defined by their `y`, `x`, `z` coordinates.
@@ -119,19 +132,28 @@ class MapobjectType(Model, DateMixIn):
 
         Returns
         -------
-        Tuple[int, str]
+        List[Tuple[int, str]]
             GeoJSON string for each selected map object
+
+        Note
+        ----
+        If `z` > `min_poly_zoom` mapobjects are represented by polygons.
+        If `min_poly_zoom` > `z` > `max_poly_zoom`, mapobjects are represented
+        by points and if `z` < `max_poly_zoom` they are not displayed at all.
         '''
 
         maxzoom = self.experiment.channels[0].layers[0].maxzoom_level_index
 
         session = Session.object_session(self)
 
-        do_simplify = z < self.min_poly_zoom
+        do_simplify = self.max_poly_zoom <= z < self.min_poly_zoom
+        do_nothing = z < self.max_poly_zoom
         if do_simplify:
             select_stmt = session.query(
                 MapobjectOutline.mapobject_id,
                 MapobjectOutline.geom_centroid.ST_AsGeoJSON())
+        elif do_nothing:
+            return list()
         else:
             select_stmt = session.query(
                 MapobjectOutline.mapobject_id,
@@ -151,10 +173,11 @@ class MapobjectType(Model, DateMixIn):
 
         return outlines
 
-    def calculate_min_poly_zoom(self, maxzoom_level, mapobject_outline_ids,
+    def calculate_min_max_poly_zoom(self, maxzoom_level, mapobject_outline_ids,
                                 n_sample=10, n_points_per_tile_limit=3000):
         '''Calculates the minimum zoom level above which mapobjects are
-        represented on the map as polygons instead of centroids.
+        represented on the map as polygons instead of centroids and the
+        maximum zoom level below which mapobjects are no longer visualized.
 
         Parameters
         ----------
@@ -170,8 +193,8 @@ class MapobjectType(Model, DateMixIn):
 
         Returns
         -------
-        int
-            minimal zoom level
+        Tuple[int]
+            minimal and maximal zoom level
         '''
         session = Session.object_session(self)
 
@@ -218,10 +241,13 @@ class MapobjectType(Model, DateMixIn):
                 len(n_points_in_tile_samples)
             )
 
-        return min([
+        min_poly_zoom = min([
             z for z, n in n_points_in_tile_per_z.items()
             if n <= n_points_per_tile_limit
         ])
+        # TODO: calculate the optimal zoom level
+        max_poly_zoom = 0
+        return (min_poly_zoom, max_poly_zoom)
 
     def get_feature_value_matrix(self, feature_names): 
         '''Gets a wide format pandas data frame of feature values.
@@ -286,7 +312,8 @@ class Mapobject(Model):
     # Table columns
     mapobject_type_id = Column(
         Integer,
-        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -334,11 +361,12 @@ class MapobjectOutline(Model):
     # Table columns
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
-    geom_poly = Column(Geometry('POLYGON'))
-    geom_centroid = Column(Geometry('POINT'))
+    geom_poly = Column(Geometry('POLYGON'), index=True)
+    geom_centroid = Column(Geometry('POINT'), index=True)
     mapobject_id = Column(
         Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -482,12 +510,14 @@ class MapobjectSegmentation(Model):
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
-        primary_key=True
+        primary_key=True,
+        index=True
     )
     mapobject_outline_id = Column(
         Integer,
         ForeignKey('mapobject_outlines.id', onupdate='CASCADE', ondelete='CASCADE'),
-        primary_key=True
+        primary_key=True,
+        index=True
     )
 
     # Relationships to other tables
