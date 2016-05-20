@@ -1,6 +1,6 @@
 import json
 
-from flask import jsonify, request
+from flask import jsonify, request, current_app
 from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
 
@@ -43,6 +43,29 @@ def get_tools():
 @api.route('/tools/<tool_id>/request', methods=['POST'])
 @jwt_required()
 def process_tool_request(tool_id):
+    """
+    Process a generic tool request sent by the client.
+    POST payload should have the format:
+
+    {
+        experiment_id: string,
+        payload: dict
+    }
+
+    The server searches for the Tool with id `tool_id` and call its
+    request method passing it the argument `payload` as well as the tool
+    instance object that was saved in the database when the window was opened on
+    the client.
+    The tool has access to trans-request storage via the instance property
+    'data_storage'.
+
+    Returns:
+
+    {
+        return_value: object
+    }
+
+    """
     data = json.loads(request.data)
 
     # Check if the request is valid.
@@ -69,15 +92,18 @@ def process_tool_request(tool_id):
 
     # Load or create the persistent tool session.
     session = db.session.query(ToolSession).\
-        filter_by(uuid=session_uuid).first()
+        filter_by(uuid=session_uuid).\
+        first()
     if session is None:
         session = ToolSession(
-            experiment_id=e.id, uuid=session_uuid, tool_id=tool.id)
+            experiment_id=e.id, uuid=session_uuid, tool_id=tool.id
+        )
         db.session.add(session)
         db.session.commit()
 
     # Execute the tool plugin.
-    tool_result = tool_inst.process_request(payload, session, e)
+    use_spark = current_app.config.get('USE_SPARK', False)
+    tool_result = tool_inst.process_request(payload, session, e, use_spark=use_spark)
 
     # Commit all results that may have been added to the db
     db.session.commit()

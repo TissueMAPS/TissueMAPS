@@ -3,8 +3,8 @@ from tmaps.extensions import db
 from tmaps.tool import ContinuousLabelLayer, Result
 
 
-class HeatmapTool():
-    def process_request(self, payload, session, experiment):
+class Heatmap():
+    def process_request(self, payload, session, experiment, use_spark=False):
         """
         {
             "chosen_object_type": str,
@@ -26,7 +26,8 @@ class HeatmapTool():
                 Feature.name == selected_feature,
                 MapobjectType.id == mapobject_type.id,
                 MapobjectType.experiment_id == experiment.id
-            ).all()
+            ).\
+            all()
 
         mapobject_ids = [q.mapobject_id for q in query_result]
         values = [q.value for q in query_result]
