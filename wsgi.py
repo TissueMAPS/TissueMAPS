@@ -22,11 +22,11 @@ from tmaps.appfactory import create_app
 from tmaps import log
 
 logo = """
-  _____ _                    __  __    _    ____  ____  
- |_   _(_)___ ___ _   _  ___|  \/  |  / \  |  _ \/ ___| 
-   | | | / __/ __| | | |/ _ \ |\/| | / _ \ | |_) \___ \ 
+  _____ _                    __  __    _    ____  ____
+ |_   _(_)___ ___ _   _  ___|  \/  |  / \  |  _ \/ ___|
+   | | | / __/ __| | | |/ _ \ |\/| | / _ \ | |_) \___ \
    | | | \__ \__ \ |_| |  __/ |  | |/ ___ \|  __/ ___) |
-   |_| |_|___/___/\__,_|\___|_|  |_/_/   \_\_|   |____/ 
+   |_| |_|___/___/\__,_|\___|_|  |_/_/   \_\_|   |____/
 
 """
 
@@ -52,4 +52,11 @@ if __name__ == '__main__':
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
-    app.run(port=args.port, debug=True, threaded=args.threaded)
+    use_jtui = app.config.get('USE_JTUI', False)
+    if use_jtui:
+        if args.threaded:
+            app.run(port=args.port, debug=True, gevent=100, threaded=True)
+        else:
+            app.run(port=args.port, debug=True, gevent=100)
+    else:
+        app.run(port=args.port, debug=True, threaded=args.threaded)

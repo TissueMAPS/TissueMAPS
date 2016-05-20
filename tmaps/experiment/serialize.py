@@ -4,6 +4,7 @@ from tmlib.models import (
 )
 from tmaps.serialize import json_encoder
 from tmaps.model import encode_pk
+from tmlib.workflow.canonical import CanonicalWorkflowDescription
 
 
 @json_encoder(Experiment)
@@ -19,7 +20,9 @@ def encode_experiment(obj, encoder):
         'status': obj.status,
         'channels': map(encoder.default, obj.channels),
         'mapobject_types': map(encoder.default, obj.mapobject_types),
-        'plates': [p.id for p in obj.plates]
+        'plates': [p.id for p in obj.plates],
+        # TODO: Load the previous one if it exists
+        'workflow_description': CanonicalWorkflowDescription().as_dict()
     }
 
 
@@ -55,7 +58,7 @@ def encode_plate(obj, encoder):
         'name': obj.name,
         'description': obj.description,
         'experiment_id': encode_pk(obj.experiment_id),
-        'acquisitions': [a.id for a in obj.acquisitions]
+        'acquisitions': map(encoder.default, obj.acquisitions)
     }
 
 
@@ -66,11 +69,7 @@ def encode_acquisition(obj, encoder):
         'name': obj.name,
         'description': obj.description,
         'plate_id': encode_pk(obj.plate_id),
-        'status': obj.status,
-        'microscope_image_files':
-            [{'name': f.name} for f in obj.microscope_image_files],
-        'microscope_metadata_files':
-            [{'name': f.name} for f in obj.microscope_image_files]
+        'status': obj.status
     }
 
 

@@ -74,12 +74,7 @@ def extract_model_from_body(*model_classes, **kw):
                 model_cls = key_model_map[key]
                 obj = db.session.query(model_cls).get_with_hash(id)
                 if obj is None:
-                    raise ResourceNotFoundError(
-                        'The resource of type %s with id "%s" was not found.' % (
-                            model_cls.__name__,
-                            id
-                        )
-                    )
+                    raise ResourceNotFoundError(model_cls.__name__)
                 # Optionally check if the user has access to this object
                 if check_ownership:
                     if not obj.belongs_to(current_identity):
@@ -124,12 +119,7 @@ def extract_model_from_path(model_cls, check_ownership=False):
                     model_arg: obj
                 })
                 if obj is None:
-                    raise ResourceNotFoundError(
-                        'The resource of type %s with id "%s" was not found.' % (
-                            model_cls.__name__,
-                            model_id
-                        )
-                    )
+                    raise ResourceNotFoundError(model_cls.__name__)
                 if check_ownership:
                     if not obj.belongs_to(current_identity):
                         raise NotAuthorizedError(

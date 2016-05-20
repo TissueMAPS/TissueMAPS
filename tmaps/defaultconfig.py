@@ -1,3 +1,4 @@
+import os
 import logging
 import datetime
 
@@ -24,3 +25,8 @@ LOG_N_BACKUPS = 10
 # This should be set to true in the production config when using NGINX
 USE_X_SENDFILE = False
 REDIS_URL = 'redis://localhost:6379'
+
+## JTUI
+USE_JTUI = False
+JTUI_REPO_DIR_LOCATION = \
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'jterator')
