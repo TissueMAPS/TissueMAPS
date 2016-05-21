@@ -120,7 +120,7 @@
         "app/src/viewer/toolui/toolwindow/widgets/tmFeatureSelectionWidget.ts",
         "app/src/viewer/toolui/toolwindow/widgets/tmClassSelectionWidget.ts",
 
-        "app/src/tools/KMeans/KmeansCtrl.ts",
+        "app/src/tools/KMeans/KMeansCtrl.ts",
         "app/src/tools/SVM/SVMCtrl.ts",
         "app/src/tools/RandomForest/RandomForestCtrl.ts",
         "app/src/tools/Heatmap/HeatmapCtrl.ts",
