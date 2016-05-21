@@ -45,10 +45,14 @@ module.exports = function(gulp, opt) {
             var scriptManifest = gulp.src(opt.destFolder + '/rev-manifest-script.json');
             var libsManifest = gulp.src(opt.destFolder + '/rev-manifest-libs.json');
             var styleManifest = gulp.src(opt.destFolder + '/rev-manifest-style.json');
+            var scriptManifestJtUI = gulp.src(opt.destFolder + '/rev-manifest-jtui.json');
+            var styleManifestJtUI = gulp.src(opt.destFolder + '/rev-manifest-style-jtui.json');
             s5 = gulp.src('./app/index.html')
                 .pipe(revReplace({manifest: scriptManifest}))
                 .pipe(revReplace({manifest: libsManifest}))
                 .pipe(revReplace({manifest: styleManifest}))
+                .pipe(revReplace({manifest: scriptManifestJtUI}))
+                .pipe(revReplace({manifest: styleManifestJtUI}))
                 .pipe(gulp.dest(opt.destFolder));
 
             return es.merge(s1, s2, s3, s4, s5);
