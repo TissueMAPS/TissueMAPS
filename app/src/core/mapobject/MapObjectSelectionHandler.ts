@@ -25,6 +25,10 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _activeSelection: MapObjectSelection = null;
     private _segmentationLayers: {[objectType: string]: SegmentationLayer;} = {};
 
+    /**
+     * @classdesc A manager class that handles mapobject selections and how
+     * objects are added to them.
+     */
     constructor(viewer: Viewer) {
         this.viewer = viewer;
         this.viewport = viewer.viewport;

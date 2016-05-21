@@ -20,7 +20,7 @@ class Channel implements Layer {
     private _visible: boolean;
 
     /**
-     * Constructor a new Channel.
+     * Construct a new Channel.
      *
      * @class Channel
      * @classdesc A channel represents a collection of layers acquired at

@@ -7,6 +7,10 @@ interface VectorTileLayerOpts {
     fillColor?: Color;
 }
 
+/**
+ * A vector layer that gets its openlayers features from tile requests sent to the
+ * server.
+ */
 class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
 
     private _fillColor: Color;
