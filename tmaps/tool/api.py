@@ -5,7 +5,7 @@ from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 from tmaps.extensions import db
-from tmaps.tool import Tool, ToolSession, LabelLayer
+from tmaps.tool import Tool, ToolSession, LabelLayer, LabelLayerLabel
 from tmaps.api import api
 from tmaps.experiment import Experiment
 from tmaps.error import (
@@ -149,7 +149,17 @@ def get_result_labels(label_layer):
 
     if has_mapobjects_within_tile:
         mapobject_ids = [c[0] for c in query_res]
-        mapobject_id_to_label = label_layer.get_labels_for_objects(mapobject_ids)
+        # mapobject_id_to_label = label_layer.get_labels_for_objects(mapobject_ids)
+        mapobject_id_to_label = dict(
+            db.session.query(
+                LabelLayerLabel.mapobject_id, LabelLayerLabel.label
+            ).
+            filter(
+                LabelLayerLabel.mapobject_id.in_(mapobject_ids),
+                LabelLayerLabel.label_layer_id == label_layer.id
+            ).
+            all()
+        )
 
         for id, geom_geojson_str in query_res:
             feature = {
