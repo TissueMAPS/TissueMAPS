@@ -40,11 +40,11 @@ class Spark(object):
             If `USE_SPARK` is falsy, the sc and sqlc properties will be
             None.
         - SPARK_MASTER, default 'local'
+        - SPARK_HOME, deault '/usr/local/Cellar/apache-spark/1.6.0/libexec'
         - SPARK_DB_URL, default 'postgresql://localhost:5432/tissuemaps'
             User information should be provided according to the following
             syntax:
             'postgresql://localhost:5432/tissuemaps?user=USER&password=PW'
-        - SPARK_APP_NAME, default 'tissuemaps'
 
         Parameters
         ----------
