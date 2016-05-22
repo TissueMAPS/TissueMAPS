@@ -23,10 +23,10 @@ def _create_mapobject_feature(obj_id, geometry_obj):
     """Create a GeoJSON feature object given a object id of type int
     and a object that represents a GeoJSON geometry definition."""
     return {
-        "type": "Feature",
-        "geometry": geometry_obj,
-        "properties": {
-            "id": str(obj_id)
+        'type': 'Feature',
+        'geometry': geometry_obj,
+        'properties': {
+            'id': str(obj_id)
         }
     }
 
@@ -93,7 +93,7 @@ def process_tool_request(tool_id):
     # Load or create the persistent tool session.
     session = db.session.query(ToolSession).\
         filter_by(uuid=session_uuid).\
-        first()
+        one_or_none()
     if session is None:
         session = ToolSession(
             experiment_id=e.id, uuid=session_uuid, tool_id=tool.id
@@ -153,16 +153,16 @@ def get_result_labels(label_layer):
 
         for id, geom_geojson_str in query_res:
             feature = {
-                "type": "Feature",
-                "geometry": json.loads(geom_geojson_str),
-                "properties": {
-                    "label": mapobject_id_to_label[id],
-                    "id": id
+                'type': 'Feature',
+                'geometry': json.loads(geom_geojson_str),
+                'properties': {
+                    'label': mapobject_id_to_label[id],
+                    'id': id
                 }
             }
             features.append(feature)
 
     return jsonify({
-        "type": "FeatureCollection",
-        "features": features
+        'type': 'FeatureCollection',
+        'features': features
     })

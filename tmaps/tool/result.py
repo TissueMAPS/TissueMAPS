@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from sqlalchemy import Integer, ForeignKey, Column, String
 from sqlalchemy.orm import relationship, backref
@@ -7,6 +8,8 @@ from tmaps.serialize import json_encoder
 from tmaps.model import Model
 from tmaps.extensions import db
 
+logger = logging.getLogger(__name__)
+
 
 class Result(Model):
     __tablename__ = 'results'
@@ -15,7 +18,8 @@ class Result(Model):
 
     tool_session_id = Column(
         Integer,
-        ForeignKey('tool_sessions.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('tool_sessions.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     tool_session = relationship(
         'ToolSession',
@@ -44,7 +48,7 @@ class Result(Model):
         else:
             self.name = name
         self.tool_session_id = tool_session.id
-
+        logger.info('create persistent result for tool "%s"', self.name)
         db.session.add(self)
         db.session.flush()
 
@@ -72,11 +76,12 @@ def encode_result(obj, encoder):
 class LabelLayer(Model):
     __tablename__ = 'label_layers'
 
-    type = Column(String)
+    type = Column(String, index=True)
     attributes = Column(JSON)
     result_id = Column(
         Integer,
-        ForeignKey('results.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('results.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     result = relationship(
@@ -101,22 +106,21 @@ class LabelLayer(Model):
         db.session.add(self)
         db.session.flush()
 
-        label_objs = []
-        for mapobject_id, label in labels.items():
-            pl = LabelLayerLabel(
-                mapobject_id=mapobject_id,
-                label=label,
-                label_layer_id=self.id)
-            label_objs.append(pl)
-
-        db.session.add_all(label_objs)
+        logger.info('create label layer labels')
+        label_objs = [
+            {'mapobject_id': mapobject_id,
+             'label': label,
+             'label_layer_id': self.id}
+            for mapobject_id, label in labels.items()
+        ]
+        db.session.bulk_insert_mappings(LabelLayerLabel, label_objs)
 
     def get_labels_for_objects(self, mapobject_ids):
-        return dict(
-            [(l.mapobject_id, l.label)
+        return dict([
+            (l.mapobject_id, l.label)
              for l in self.labels
-             if l.mapobject_id in set(mapobject_ids)]
-        )
+             if l.mapobject_id in set(mapobject_ids)
+        ])
 
 
 @json_encoder(LabelLayer)
@@ -203,11 +207,13 @@ class LabelLayerLabel(Model):
     label = Column(JSON)
     mapobject_id = Column(
         Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     label_layer_id = Column(
         Integer,
-        ForeignKey('label_layers.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('label_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     laber_layer = relationship(
         'LabelLayer',
@@ -222,16 +228,17 @@ class LabelLayerLabel(Model):
 class Plot(Model):
     __tablename__ = 'plots'
 
-    type = Column(String)
+    type = Column(String, index=True)
+    attributes = Column(JSON)
     result_id = Column(
         Integer,
-        ForeignKey('results.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('results.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     result = relationship(
         'Result',
         backref=backref('plots', cascade='all, delete-orphan')
     )
-    attributes = Column(JSON)
 
     def __init__(self, attributes):
         """A persisted plot that belongs to a persisted tool result.

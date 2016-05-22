@@ -9,7 +9,7 @@ from tmaps.model import Model
 class Tool(Model):
     __tablename__ = 'tools'
 
-    name = Column(String(120))
+    name = Column(String(120), index=True)
     icon = Column(String(120))
     description = Column(Text)
     full_class_path = Column(String(120))
@@ -48,8 +48,7 @@ class ToolRequestHandler(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def process_request(self, payload, tool_session, experiment,
-                        use_spark=False):
+    def process_request(self, payload, tool_session, experiment, use_spark=False):
         """
         Process a tool request sent by the client.
 
