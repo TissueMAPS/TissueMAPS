@@ -88,7 +88,9 @@ class Project(object):
     def _get_pipe_file(self, directory=None):
         if not directory:
             directory = self.step_location
-        pipe_files = glob.glob(os.path.join(directory, '*%s' % PIPE_SUFFIX))
+        pipe_files = glob.glob(
+            os.path.join(directory, '%s%s' % (self.pipe_name, PIPE_SUFFIX))
+        )
         if len(pipe_files) == 1:
             return pipe_files[0]
         elif len(pipe_files) > 1:
