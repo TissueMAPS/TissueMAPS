@@ -7,5 +7,6 @@ from result import (
     LabelLayerLabel,
     ScalarLabelLayer,
     ContinuousLabelLayer,
+    HeatmapLabelLayer,
     SupervisedClassifierLabelLayer
 )

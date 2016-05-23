@@ -1,5 +1,5 @@
 import json
-
+import logging
 from flask import jsonify, request, current_app
 from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
@@ -17,6 +17,9 @@ from tmaps.util import (
     extract_model_from_path,
     extract_model_from_body
 )
+from tmlib.models import MapobjectType
+
+logger = logging.getLogger(__name__)
 
 
 def _create_mapobject_feature(obj_id, geometry_obj):
@@ -66,6 +69,7 @@ def process_tool_request(tool_id):
     }
 
     """
+    logger.info('process tool request')
     data = json.loads(request.data)
 
     # Check if the request is valid.
@@ -104,7 +108,6 @@ def process_tool_request(tool_id):
     # Execute the tool plugin.
     use_spark = current_app.config.get('USE_SPARK', False)
     tool_result = tool_inst.process_request(payload, session, e, use_spark=use_spark)
-
     # Commit all results that may have been added to the db
     db.session.commit()
 
@@ -124,6 +127,7 @@ def get_result_labels(label_layer):
     for a given tool result and tile coordinate.
 
     """
+    logger.info('get result tiles for label layer "%s"', label_layer.type)
     # The coordinates of the requested tile
     x = request.args.get('x')
     y = request.args.get('y')
@@ -140,37 +144,32 @@ def get_result_labels(label_layer):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    mapobject_type = label_layer.labels[0].mapobject.mapobject_type
+    # TODO: how can we get mapobject type for HeatmapLabelLayer???
+    # mapobject_type = label_layer.labels[0].mapobject.mapobject_type
+    mapobject_type = db.session.query(MapobjectType).\
+        get(label_layer.mapobject_type_id)
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
         x, y, z, zplane=zlevel, tpoint=t
     )
+
     features = []
     has_mapobjects_within_tile = len(query_res) > 0
 
     if has_mapobjects_within_tile:
         mapobject_ids = [c[0] for c in query_res]
-        # mapobject_id_to_label = label_layer.get_labels_for_objects(mapobject_ids)
-        mapobject_id_to_label = dict(
-            db.session.query(
-                LabelLayerLabel.mapobject_id, LabelLayerLabel.label
-            ).
-            filter(
-                LabelLayerLabel.mapobject_id.in_(mapobject_ids),
-                LabelLayerLabel.label_layer_id == label_layer.id
-            ).
-            all()
-        )
+        mapobject_id_to_label = label_layer.get_labels_for_objects(mapobject_ids)
 
-        for id, geom_geojson_str in query_res:
-            feature = {
+        features = [
+            {
                 'type': 'Feature',
                 'geometry': json.loads(geom_geojson_str),
                 'properties': {
                     'label': mapobject_id_to_label[id],
                     'id': id
-                }
+                 }
             }
-            features.append(feature)
+            for id, geom_geojson_str in query_res
+        ]
 
     return jsonify({
         'type': 'FeatureCollection',

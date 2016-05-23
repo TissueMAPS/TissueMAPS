@@ -4,6 +4,7 @@ from abc import abstractmethod
 
 from tmaps.serialize import json_encoder
 from tmaps.model import Model
+from tmaps.extensions import spark
 
 
 class Tool(Model):
@@ -46,6 +47,72 @@ def encode_tool(obj, encoder):
 class ToolRequestHandler(object):
 
     __metaclass__ = ABCMeta
+
+    @staticmethod
+    def _build_feature_values_query(experiment_id, mapobject_type_name, feature_name):
+        # We run the actual query in SQL, since has way better performance
+        # compared to loading the table and then filtering it via Spark
+        # TODO: find a way around parsing raw SQL statements
+        return '''
+            (SELECT v.value, v.mapobject_id FROM feature_values AS v
+            JOIN features AS f ON f.id=v.feature_id
+            JOIN mapobject_types AS t ON t.id=f.mapobject_type_id
+            WHERE f.name=\'{feature_name}\'
+            AND t.name=\'{mapobject_type_name}\'
+            AND t.experiment_id={experiment_id}
+            ) as t
+        '''.format(**locals())
+
+    def get_feature_values_spark(self, experiment_id, mapobject_type_name, feature_name):
+        """Selects all values from table "feature_values" for mapobjects of
+        a given `mapboject_type` and for the feature with the given name.
+
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the corresponding experiment
+        mapobject_type_name: str
+            name of the parent mapobject type
+        feature_name: str
+            name of the parent feature
+
+        Returns
+        -------
+        pyspark.sql.DataFrame
+            data frame with columns "mapobject_id" and "value"
+        """
+        query = self._build_feature_values_query(
+            experiment_id, mapobject_type_name, feature_name
+        )
+        return spark.read_table(query)
+    
+    def get_feature_values_sklearn(self, experiment_id, mapobject_type_name, feature_name):
+        """Selects all values from table "feature_values" for mapobjects of
+        a given `mapboject_type` and for the feature with the given name.
+
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the corresponding experiment
+        mapobject_type_name: str
+            name of the parent mapobject type
+        feature_name: str
+            name of the parent feature
+
+        Returns
+        -------
+        pandas.DataFrame
+            data frame with columns "mapobject_id" and "value"
+        """
+        feature_values = db.session.query(
+                FeatureValue.mapobject_id, FeatureValue.value
+            ).\
+            join(FeatureValue).\
+            filter(
+                (Feature.name.in_(feature_names)) &
+                (Feature.mapobject_type_id == mapobject_type.id)).\
+            all()
+        return pd.DataFrame(feature_values, columns=['mapobject_id', 'value'])
 
     @abstractmethod
     def process_request(self, payload, tool_session, experiment, use_spark=False):

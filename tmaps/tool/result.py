@@ -8,6 +8,8 @@ from tmaps.serialize import json_encoder
 from tmaps.model import Model
 from tmaps.extensions import db
 
+from tmlib.models import FeatureValue
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,6 +80,18 @@ class LabelLayer(Model):
 
     type = Column(String, index=True)
     attributes = Column(JSON)
+
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('label_layers', cascade='all, delete-orphan')
+    )
+
     result_id = Column(
         Integer,
         ForeignKey('results.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -89,38 +103,77 @@ class LabelLayer(Model):
         backref=backref('layer', cascade='all, delete-orphan', uselist=False)
     )
 
-    def __init__(self, labels, extra_attributes={}):
+    def __init__(self, mapobject_type_id, labels, extra_attributes={}):
         """A layer that associates with each mapobject a certain value.
 
         Parameters
         ----------
-        labels : dict[number, dict]
+        labels : dict[number, dict], optional
             a dictionary that maps a mapobject id to some value
-        extra_attributes : dict
+        extra_attributes : dict, optional
             a dictionary with extra attributes to be saved
 
         """
         self.type = self.__class__.__name__
         self.attributes = extra_attributes
+        self.mapobject_type_id = mapobject_type_id
 
         db.session.add(self)
         db.session.flush()
 
-        logger.info('create label layer labels')
-        label_objs = [
-            {'mapobject_id': mapobject_id,
-             'label': label,
-             'label_layer_id': self.id}
-            for mapobject_id, label in labels.items()
-        ]
-        db.session.bulk_insert_mappings(LabelLayerLabel, label_objs)
+        if labels:
+            logger.info('create label layer labels')
+            label_objs = [
+                {'mapobject_id': mapobject_id,
+                 'label': label,
+                 'label_layer_id': self.id}
+                for mapobject_id, label in labels.items()
+            ]
+            db.session.bulk_insert_mappings(LabelLayerLabel, label_objs)
 
     def get_labels_for_objects(self, mapobject_ids):
-        return dict([
-            (l.mapobject_id, l.label)
-             for l in self.labels
-             if l.mapobject_id in set(mapobject_ids)
-        ])
+        """Returns the labels for the given `mapobjects` from the corresponding
+        database table.
+
+        Parameters
+        ----------
+        mapobject_ids: List[int]
+            IDs of selected mapobjects
+
+        Returns
+        -------
+        Dict[int, float or int]
+            mapping of `mapobject` ID to label
+
+        Note
+        ----
+        In case of the "Heatmap" tool where labels represent feature values,
+        the values are directly selected from the "feature_values" table and
+        not stored in "label_layer_labels".
+
+        """
+        if self.type == 'HeatmapLabelLayer':
+            return dict(
+                db.session.query(
+                    FeatureValue.mapobject_id, FeatureValue.value
+                ).
+                filter(
+                    FeatureValue.feature_id == self.attributes['feature_id'],
+                    FeatureValue.mapobject_id.in_(mapobject_ids)
+                ).
+                all()
+            )
+        else:
+            return dict(
+                db.session.query(
+                    LabelLayerLabel.mapobject_id, LabelLayerLabel.label
+                ).
+                filter(
+                    LabelLayerLabel.mapobject_id.in_(mapobject_ids),
+                    LabelLayerLabel.label_layer_id == self.id
+                ).
+                all()
+            )
 
 
 @json_encoder(LabelLayer)
@@ -134,7 +187,7 @@ def encode_label_layer(obj, encoder):
 
 
 class ScalarLabelLayer(LabelLayer):
-    def __init__(self, labels, extra_attributes={}):
+    def __init__(self, mapobject_type_id, labels, extra_attributes={}):
         """A tool layer that assigns each mapobject a discrete value like a number
         of a string.
 
@@ -150,12 +203,12 @@ class ScalarLabelLayer(LabelLayer):
             'unique_labels': list(set(labels.values()))
         })
         super(ScalarLabelLayer, self).__init__(
-            labels, extra_attributes=extra_attributes
+            mapobject_type_id, labels, extra_attributes=extra_attributes
         )
 
 
 class SupervisedClassifierLabelLayer(ScalarLabelLayer):
-    def __init__(self, labels, color_map, extra_attributes={}):
+    def __init__(self, mapobject_type_id, labels, color_map, extra_attributes={}):
         """A result of a supervised classifier like an SVM.
         Results of such classifiers have specific colors associated with class
         labels.
@@ -174,12 +227,12 @@ class SupervisedClassifierLabelLayer(ScalarLabelLayer):
             'color_map': color_map
         })
         super(SupervisedClassifierLabelLayer, self).__init__(
-            labels, extra_attributes=extra_attributes
+            mapobject_type_id, labels, extra_attributes=extra_attributes
         )
 
 
 class ContinuousLabelLayer(LabelLayer):
-    def __init__(self, labels, extra_attributes={}):
+    def __init__(self, mapobject_type_id, labels, extra_attributes={}):
         """A tool result that assigns each mapobject a (pseudo)-continuous value.
         Assigning each cell a numeric value based on its area would be an
         example for such a layer.
@@ -188,17 +241,23 @@ class ContinuousLabelLayer(LabelLayer):
         ---------
         labels : dict[number, float]
             a dictionary that maps a mapobject id to some continuous value
-        extra_attributes : dict
+        extra_attributes : dict, optional
             a dictionary with extra attributes to be saved
 
         """
-        extra_attributes.update({
-            'min': np.min(labels.values()),
-            'max': np.max(labels.values())
-        })
         super(ContinuousLabelLayer, self).__init__(
-            labels, extra_attributes=extra_attributes
+            mapobject_type_id, labels, extra_attributes=extra_attributes
         )
+
+
+class HeatmapLabelLayer(LabelLayer):
+    def __init__(self, mapobject_type_id, extra_attributes):
+        if not 'feature_id' in extra_attributes:
+            raise ValueError(
+                'Heatmap tool requires "feature_id" attribute.'
+            )
+        super(HeatmapLabelLayer, self).__init__(
+            mapobject_type_id, dict(), extra_attributes)
 
 
 class LabelLayerLabel(Model):

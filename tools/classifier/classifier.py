@@ -21,7 +21,6 @@ class Classifier(ToolRequestHandler):
 
     __metaclass__ = ABCMeta
 
-
     def format_feature_data_sklearn(self, experiment_id, mapobject_type_name,
             feature_names):
         '''Load feature values from database and bring the dataset into the
@@ -44,7 +43,7 @@ class Classifier(ToolRequestHandler):
             to items of `feature_names` and rows are mapobjects indexable by
             `mapobject_ids`
         '''
-        mapobject_type = db.session.query(MapobjectType).\
+        mapobject_type_id = db.session.query(MapobjectType.id).\
             filter_by(name=mapobject_type_name, experiment_id=experiment_id).\
             one()
         feature_values = db.session.query(
@@ -53,13 +52,13 @@ class Classifier(ToolRequestHandler):
             join(FeatureValue).\
             filter(
                 (Feature.name.in_(feature_names)) &
-                (Feature.mapobject_type_id == mapobject_type.id)).\
+                (Feature.mapobject_type_id == mapobject_type_id)).\
             all()
         feature_df_long = pd.DataFrame(feature_values)
-        feature_df_long.columns = ['feature', 'mapobject', 'value']
+        feature_df_long.columns = ['features', 'mapobject', 'value']
         return pd.pivot_table(
             feature_df_long, values='value', index='mapobject',
-            columns='feature'
+            columns='features'
         )
 
     def format_feature_data_spark(self, experiment_id, mapobject_type_name,
@@ -84,29 +83,14 @@ class Classifier(ToolRequestHandler):
             "features" column has type
             :py:class:`pyspark.mllib.linalg.DenseVector`
         '''
-        def build_feature_values_query(experiment_id, mapobject_type_name, feature_name):
-            # We run the actual query in SQL, since has way better performance
-            # compared to loading the table and then filtering it via Spark
-            # TODO: find a way around parsing raw SQL statements
-            return '''
-                (SELECT v.value, v.mapobject_id FROM feature_values AS v
-                JOIN features AS f ON f.id=v.feature_id
-                JOIN mapobject_types AS t ON t.id=f.mapobject_type_id
-                WHERE f.name=\'{feature_name}\'
-                AND t.name=\'{mapobject_type_name}\'
-                AND t.experiment_id={experiment_id}
-                ) as t
-            '''.format(**locals())
-
         # feature_values = spark.read_table('feature_values')
         # features = spark.read_table('features')
         # mapobjects = spark.read_table('mapobjects')
         # mapobject_types = spark.read_table('mapobject_types')
         for i, name in enumerate(feature_names):
-            query = build_feature_values_query(
+            df = self.get_feature_values_spark(
                 experiment_id, mapobject_type_name, name
             )
-            df = spark.read_table(query)
             # df = feature_values.\
             #     join(features, features.id==feature_values.feature_id).\
             #     join(mapobjects, mapobjects.id==feature_values.mapobject_id).\
@@ -229,6 +213,11 @@ class SupervisedClassifier(Classifier):
         #m Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
+
+        mapobject_type_id = db.session.query(MapobjectType.id).\
+            filter_by(name=mapobject_type_name, experiment_id=experiment.id).\
+            one()
+
         labeled_mapobjects = list()
         color_map = dict()
         for cls in payload['training_classes']:
@@ -260,6 +249,7 @@ class SupervisedClassifier(Classifier):
         return Result(
             tool_session=tool_session,
             layer=SupervisedClassifierLabelLayer(
+                mapobject_type_id=mapobject_type_id,
                 labels=dict(predicted_labels), color_map=color_map
             )
         )
@@ -310,6 +300,10 @@ class UnsupervisedClassifier(Classifier):
         feature_names = payload['selected_features']
         k = payload['k']
 
+        mapobject_type_id = db.session.query(MapobjectType.id).\
+            filter_by(name=mapobject_type_name, experiment_id=experiment.id).\
+            one()
+
         if use_spark:
             feature_data = self.format_feature_data_spark(
                 experiment.id, mapobject_type_name, feature_names
@@ -323,5 +317,8 @@ class UnsupervisedClassifier(Classifier):
 
         return Result(
             tool_session=tool_session,
-            layer=ScalarLabelLayer(labels=dict(predicted_labels))
+            layer=ScalarLabelLayer(
+                mapobject_type_id=mapobject_type_id,
+                labels=dict(predicted_labels)
+            )
         )
