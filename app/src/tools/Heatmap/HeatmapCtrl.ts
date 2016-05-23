@@ -6,7 +6,7 @@ interface HeatmapScope extends ToolWindowContentScope {
 class HeatmapCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
-    constructor(public $scope: SVMScope,
+    constructor(public $scope: HeatmapScope,
                 public viewer: Viewer) {
         super();
     }

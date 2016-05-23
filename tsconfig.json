@@ -98,6 +98,7 @@
         "app/src/core/tool/result/ScalarLabelLayer.ts",
         "app/src/core/tool/result/ScalarLabelLegend.ts",
         "app/src/core/tool/result/SupervisedClassifierLabelLayer.ts",
+        "app/src/core/tool/result/HeatmapLabelLayer.ts",
 
         "app/src/AppCtrl.ts",
         "app/src/tmAppbar.ts",
