@@ -80,9 +80,8 @@ def get_border_ids(im):
     return [i for i in object_ids if i in border_ids]
 
 
-def label_image(im):
-    '''
-    Label connected components in an image with a unique value.
+def label_image(im, n=8):
+    '''Label connected components in an image with a unique value.
     For more information see
     `mahotas docs <http://mahotas.readthedocs.org/en/latest/labeled.html#labeling-images>`_.
 
@@ -90,6 +89,8 @@ def label_image(im):
     ----------
     im: numpy.ndarray[bool or int]
         binary image that should be labeled
+    neighborhood: int, optional
+        4 or 8 neighbourhood (default: ``8``)
 
     Returns
     -------
@@ -100,10 +101,23 @@ def label_image(im):
     ------
     TypeError
         when `im` is not binary
+    ValueError
+        when `n` is not ``4`` or ``8``
+
+    Note
+    ----
+    Be careful when selecting 4-neighbourhood when working with Matlab, which
+    uses a 8-neighbourhood by default.
     '''
     if not(all([e in {False, True, 0, 1} for e in np.unique(im)])):
-        raise TypeError('Image must be binary')
-    labeled_image, n_objects = mh.label(im)
+        raise TypeError('Image must be binary.')
+    if not n in {4, 8}:
+        raise ValueError('Only 4 and 8 neighbourhood supported.')
+    if n == 8:
+        strel = np.ones((3, 3), bool)
+        labeled_image, n_objects = mh.label(im, strel)
+    else:
+        labeled_image, n_objects = mh.label(im)
     return labeled_image
 
 
