@@ -53,7 +53,6 @@ function [output_label_image, fig] = identify_secondary_objects_iw(input_label_i
         error('Argument "intensity_image" must have type uint8 or uint16.')
     end
 
-
     if isa(input_label_image, 'logical')
         error('Argument "input_label_image" must be a labeled image.')
     end
@@ -74,7 +73,7 @@ function [output_label_image, fig] = identify_secondary_objects_iw(input_label_i
     % secondary objects and create a mapping from new to original labels.
     relabeled_image = bwlabel(input_label_image > 0);
     obj_ids = unique(input_label_image(input_label_image > 0));
-    mapping = zeros(length(obj_ids));
+    mapping = zeros(length(obj_ids), 1);
     for i = 1:length(obj_ids)
         obj = obj_ids(i);
         new_label = relabeled_image(input_label_image == obj);
@@ -83,6 +82,13 @@ function [output_label_image, fig] = identify_secondary_objects_iw(input_label_i
 
     output_label_image = segmentSecondary(rescaled_input_image, relabeled_image, relabeled_image, ...
                                           correction_factors, min_threshold, max_threshold);
+
+    % Make sure labels are correct
+    unique_input_labels = unique(input_label_image);
+    unique_output_labels = unique(output_label_image);
+    if setdiff(unique_input_labels, unique_output_labels)
+        error('Incorrect number of labels.')
+    end
 
     % Map object labels back.
     final_output_label_image = zeros(size(output_label_image));

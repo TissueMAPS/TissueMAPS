@@ -157,7 +157,6 @@ function [secondaryLabelMatrixImage, editedPrimaryBinaryImage, thresholdArray] =
         originalSegmentationHasBackground = false;
     end
 
-
     numThresholdsToTest = length(thresholdCorrection);
     thresholdArray = cell(numThresholdsToTest,1); % [modified by PLab to include multiple thresholds]
 
