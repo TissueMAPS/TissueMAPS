@@ -1,8 +1,10 @@
+import logging
 from scipy.cluster.vq import kmeans, vq
 from pyspark.ml.clustering import KMeans as KMeansClassifier
 
 from tools.classifier import UnsupervisedClassifier
 
+logger = logging.getLogger(__name__)
 
 class KMeans(UnsupervisedClassifier):
 
@@ -18,10 +20,13 @@ class KMeans(UnsupervisedClassifier):
         return zip(feature_data.index.tolist(), predictions.tolist())
 
     def classify_spark(self, feature_data, k):
+        logger.info('perform clustering via Spark on cluster')
         kmeans = KMeansClassifier(k=k, seed=1)
         model = kmeans.fit(feature_data)
         predictions = model.transform(feature_data).\
             select('prediction', 'mapobject_id')
+        logger.info('collect predicted labels')
         result = predictions.collect()
+        logger.info('return predicted labels')
         return [(r.mapobject_id, r.prediction) for r in result]
 

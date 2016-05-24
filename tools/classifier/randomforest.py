@@ -5,7 +5,6 @@ from pyspark.ml import Pipeline
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.feature import VectorIndexer
-from pyspark.ml.feature import IndexToString
 from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 from pyspark.ml.classification import RandomForestClassifier

@@ -4,7 +4,9 @@ from session import ToolSession
 from result import (
     Result,
     LabelLayer,
+    LabelLayerLabel,
     ScalarLabelLayer,
     ContinuousLabelLayer,
+    HeatmapLabelLayer,
     SupervisedClassifierLabelLayer
 )
