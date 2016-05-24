@@ -767,7 +767,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 mapobject_type.min_poly_zoom = min_poly_zoom
                 mapobject_type.max_poly_zoom = max_poly_zoom
 
-        # TODO: consider dingo this in parallel in a separate workflow step
+        # TODO: for non-static objects do this in parallel in a separate
+        # workflow step
         logger.info('compute statistics over features of children mapobjects')
         with tm.utils.Session() as session:
 
@@ -839,6 +840,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         'mapobjects of type "%s"', child_type.name
                     )
 
+                    tpoints = session.query(tm.FeatureValue.tpoint).\
+                        join(tm.Feature).\
+                        join(tm.MapobjectType).\
+                        filter(tm.MapobjectType.experiment_id == self.experiment_id).\
+                        distinct().\
+                        all()[0]
                     # For each parent mapobject calculate statistics on
                     # features of children, i.e. mapobjects that are covered
                     # by the parent mapobject
@@ -865,12 +872,16 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 )
                             ).
                             all(),
+                            columns = [
+                                'value', 'feature_id', 'mapobject_id', 'tpoint'
+                            ]
                         )
-                        df.columns = [
-                            'value', 'feature_id', 'mapobject_id', 'tpoint'
-                        ]
-                        # NOTE: when the dataframe is empty, the calculated
-                        # values will be NAN
+                        # NOTE: some precautions in case the dataframe is empty
+                        if df.empty:
+                            df['value'] = df['value'].astype(float)
+                            df['feature_id'] = df['feature_id'].astype(int)
+                            df['mapobject_id'] = df['mapobject_id'].astype(int)
+                            df['tpoint'] = df['tpoint'].astype(int)
 
                         count = 0
                         for feature in child_type.features:
@@ -880,10 +891,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     'compute value of feature "%s"',
                                     parent_features[count].name
                                 )
-                                for t in np.unique(df.loc[index, 'tpoint']):
+                                for t in tpoints:
                                     val = function(df.loc[index, 'value'])
                                     new_feature_values.append(
-                                        tm.FeatureValue(
+                                        dict(
                                             feature_id=parent_features[count].id,
                                             mapobject_id=parent.id,
                                             value=val, tpoint=t
@@ -891,17 +902,19 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     )
                                 count += 1
                         # Also compute the number of children objects
-                        for t in np.unique(df.tpoint):
+                        for t in tpoints:
                             index = df.tpoint == t
                             val = len(np.unique(df.loc[index, 'mapobject_id']))
                             new_feature_values.append(
-                                tm.FeatureValue(
+                                dict(
                                     feature_id=parent_features[count].id,
                                     mapobject_id=parent.id,
                                     value=val, tpoint=t
                                 )
                             )
-                    session.add_all(new_feature_values)
+                    session.bulk_insert_mappings(
+                        tm.FeatureValue, new_feature_values
+                    )
 
                     # TODO: delete features that don't have any values
                     # ids = [f.id for f in parent_features]
