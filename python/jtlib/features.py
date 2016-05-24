@@ -428,17 +428,25 @@ class Gabor(Features):
             intensity image
         theta_range: int, optional
             number of angles to define the orientations of the Gabor
-            filters (default: 4)
-        frequencies: Set[float], optional
-            frequencies of the Gabor filters
+            filters (default: ``4``)
+        frequencies: Set[int], optional
+            frequencies of the Gabor filters (default: ``{1, 5, 10}``)
         '''
         super(Gabor, self).__init__(label_image, intensity_image)
         self.theta_range = theta_range
         self.frequencies = frequencies
+        if not isinstance(theta_range, int):
+            raise TypeError(
+                'Argument "theta_range" must have type int.'
+            )
+        if not all([isinstance(f, int) for f in self.frequencies]):
+            raise TypeError(
+                'Elements of argument "frequencies" must have type int.'
+            )
 
     @property
     def _feature_names(self):
-        return ['frequency-%.2f' % f for f in self.frequencies]
+        return ['frequency-%d' % f for f in self.frequencies]
 
     def extract(self):
         '''Extracts Gabor texture features by filtering the intensity image with
