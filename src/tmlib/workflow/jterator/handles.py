@@ -8,6 +8,7 @@ scope of the module or retrieving data from the store when required by modules.
 The object's attributes are specified as a mapping in a
 `handles` YAML module descriptor file.
 '''
+import re
 import sys
 import json
 import numpy as np
@@ -688,6 +689,7 @@ class Measurement(OutputHandle):
     measured for the referenced segmented objects.
     '''
 
+    _NAME_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
     @assert_type(
         objects_ref='basestring', channel_ref=['basestring', 'types.NoneType']
     )
@@ -735,6 +737,14 @@ class Measurement(OutputHandle):
                 'Measurement values of "%s" must have data type float.'
                 % self.name
             )
+        for v in value:
+            for name in v.columns:
+                if self._NAME_PATTERN.search(name):
+                    raise ValueError(
+                        'Feature name "%s" must only contain '
+                        'alphanumerical characters including underscores '
+                        'and hyphens.' % name
+                    )
         self._value = value
 
     def __str__(self):
