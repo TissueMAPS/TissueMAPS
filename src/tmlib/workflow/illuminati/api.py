@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import collections
 import itertools
+import shapely.geometry
 import sqlalchemy.orm
 from sqlalchemy import func
 from gc3libs.quantity import Duration
@@ -757,17 +758,13 @@ class PyramidBuilder(ClusterRoutines):
                     ll = (ul[0] + obj.image_size[1], ul[1])
                     ur = (ul[0], ul[1] - obj.image_size[0])
                     lr = (ll[0], ul[1] - obj.image_size[0])
-                    polygon = 'POLYGON((%s))' % ','.join([
-                        '%d %d' % ur, '%d %d' % ul, '%d %d' % ll, '%d %d' % lr,
-                        '%d %d' % ur
-                    ])
-                    centroid = 'POINT(%.2f %.2f)' % (
-                        np.mean([ul[0], ll[0]]), np.mean([ul[1], ur[1]])
-                    )
+                    contour = np.array([ur, ul, ll, lr, ur])
+                    polygon = shapely.geometry.Polygon(contour)
                     mapobject_outlines.append(
                         tm.MapobjectOutline(
                             mapobject_id=mapobject.id,
-                            geom_poly=polygon, geom_centroid=centroid
+                            geom_poly=polygon.wkt,
+                            geom_centroid=polygon.centroid.wkt
                         )
                     )
                 session.add_all(mapobject_outlines)
