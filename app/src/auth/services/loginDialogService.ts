@@ -1,9 +1,9 @@
 angular.module('tmaps.auth')
-.service('loginDialogService', ['$modal', '$rootScope', function($modal, $rootScope) {
+.service('loginDialogService', ['$uibModal', '$rootScope', function($uibModal, $rootScope) {
 
     this.showDialog = function() {
 
-        var instance = $modal.open({
+        var instance = $uibModal.open({
             templateUrl: '/templates/main/auth/login-dialog.html',
             controller: 'LoginDialogCtrl',
             controllerAs: 'login'

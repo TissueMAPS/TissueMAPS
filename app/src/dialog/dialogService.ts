@@ -1,12 +1,12 @@
 class DialogService {
-    static $inject = ['$modal', '$q'];
+    static $inject = ['$uibModal', '$q'];
 
-    constructor(private _$modal, private _$q) {
+    constructor(private _$uibModal, private _$q) {
 
     }
 
     private showDialog(title, message) {
-        var instance = this._$modal.open({
+        var instance = this._$uibModal.open({
             templateUrl: '/src/dialog/dialog.html',
             controller: 'DialogCtrl',
             controllerAs: 'dialog',

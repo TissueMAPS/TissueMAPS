@@ -1,7 +1,7 @@
 (function() {
     // Modules
     angular.module('tmaps.auth', [
-        'ui.bootstrap'
+        'ngAnimate', 'ui.bootstrap'
     ]);
 
     /**
@@ -11,11 +11,12 @@
      */
     angular.module('tmaps.toolwindow', []); // TODO: remove this
     angular.module('tmaps.core', [
-        'ui.bootstrap',
+        'ngAnimate', 'ui.bootstrap',
         'tmaps.auth'
     ]);
 
     angular.module('tmaps.ui', [
+        'ngAnimate',
         'tmaps.core',
         'ui.slider',
         'ui.bootstrap',
@@ -27,6 +28,7 @@
 
     // Declare the main module.
     var tmaps = angular.module('tmaps', [
+        'ngAnimate',
         'tmaps.core',
         'tmaps.ui',
         'tmaps.toolwindow',  // TODO: remove this
