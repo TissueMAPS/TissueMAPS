@@ -605,7 +605,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
                     logger.debug('add outlines for mapobject #%d', label)
                     mapobject_outlines.append(
-                        tm.MapobjectOutline(
+                        dict(
                             tpoint=t, zplane=z,
                             mapobject_id=mapobject.id,
                             geom_poly=outline.wkt,
@@ -615,7 +615,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
                     logger.debug('add segmentations for mapobject #%d', label)
                     mapobject_segmentations.append(
-                        tm.MapobjectSegmentation(
+                        dict(
                             pipeline=self.pipe_name,
                             label=label,
                             tpoint=t, zplane=z,
@@ -626,8 +626,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         )
                     )
 
-            session.bulk_save_objects(mapobject_outlines)
-            session.bulk_save_objects(mapobject_segmentations)
+            session.bulk_insert_mappings(
+                tm.MapobjectOutline, mapobject_outlines
+            )
+            session.bulk_insert_mappings(
+                tm.MapobjectSegmentation, mapobject_segmentations
+            )
 
         # Create entries for features
         with tm.utils.Session() as session:
@@ -695,14 +699,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 continue
                             fvalue = measurement.loc[label, f.name]
                             feature_values.append(
-                                tm.FeatureValue(
+                                dict(
                                     tpoint=t, feature_id=f.id,
                                     mapobject_id=mapobject.id,
                                     value=float(fvalue)
                                 )
                             )
             logger.info('insert feature values into table')
-            session.bulk_save_objects(feature_values)
+            session.bulk_insert_mappings(tm.FeatureValue, feature_values)
 
     def collect_job_output(self, batch):
         '''Performs the following calculations after the pipeline has been
@@ -711,10 +715,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
               by centroid points rather than the outline polygons.
             - Statistics over features of child mapobjects, i.e. mapobjects
               that are contained by a given mapobject of another type, such as
-              the average area of cells within a  well.
-            - Population context statistics, i.e. the density of mapobjects
-              in the neighborhood of a given mapobject of the same type, such
-              as the number of cells that touch a given cell.
+              the average area of cells within a well.
 
         Parameters
         ----------
@@ -766,7 +767,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 mapobject_type.min_poly_zoom = min_poly_zoom
                 mapobject_type.max_poly_zoom = max_poly_zoom
 
-        # TODO: do this in parallel in a separate workflow step
+        # TODO: consider dingo this in parallel in a separate workflow step
         logger.info('compute statistics over features of children mapobjects')
         with tm.utils.Session() as session:
 
@@ -835,7 +836,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
                     logger.debug(
                         'compute statistics on features of child '
-                        'mapobjects of  type "%s"', child_type.name
+                        'mapobjects of type "%s"', child_type.name
                     )
 
                     # For each parent mapobject calculate statistics on
@@ -863,13 +864,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     parent.outlines[0].geom_poly
                                 )
                             ).
-                            all()
+                            all(),
                         )
-                        if df.empty:
-                            # This means that this parent object doesn't cover
-                            # any children objects.
-                            # TODO: prevent this loop in the first place
-                            continue
+                        df.columns = [
+                            'value', 'feature_id', 'mapobject_id', 'tpoint'
+                        ]
+                        # NOTE: when the dataframe is empty, the calculated
+                        # values will be NAN
 
                         count = 0
                         for feature in child_type.features:
