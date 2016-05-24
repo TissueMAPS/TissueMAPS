@@ -1,5 +1,5 @@
 {
-  "name": "TissueMAPS",
+  "name": "tissuemaps",
   "version": "0.0.0",
   "author": "Robin Hafen <robin.hafen@gmail.com>",
   "contributors": [
@@ -22,8 +22,8 @@
     "angular-ui-slider": "~0.1.0",
     "angular-ui-sortable": "~0.13.3",
     "angular-route": "~1.3.15",
-    "angular": "~1.3.15",
-    "angular-ui-bootstrap-bower": "~0.12.1",
+    "angular": "~1.4.0",
+    "angular-ui-bootstrap-bower": "~1.3.3",
     "fontawesome": "~4.3.0",
     "perfect-scrollbar": "~0.6.1",
     "underscore": "~1.8.3",
@@ -53,6 +53,7 @@
     "angular-mocks": "~1.3.15"
   },
   "resolutions": {
-    "angular": "~1.3.15"
+    "angular": "~1.4.0"
+
   }
 }
