@@ -66,15 +66,15 @@ Example of a *.pipe.yaml* YAML descriptor file:
     pipeline:
 
         -   source: my_python_module.py
-            handle: handles/my_python_module.handle.yml
+            handles: handles/my_python_module.handle.yml
             active: true
 
         -   source: my_r_module.r
-            handle: handles/my_r_module.handle.yml
+            handles: handles/my_r_module.handle.yml
             active: true
 
         -   source: my_m_module.m
-            handle: handles/my_m_module.handle.yml
+            handles: handles/my_m_module.handle.yml
             active: true
 
 
