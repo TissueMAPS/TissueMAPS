@@ -196,6 +196,10 @@ class Session(object):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_save_objects`'''
         return self._sqla_session.bulk_save_objects(*args, **kwargs)
 
+    def bulk_insert_mappings(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_insert_mappings`'''
+        return self._sqla_session.bulk_insert_mappings(*args, **kwargs)
+
     def add_all(self, *args, **kwargs):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add_all`'''
         return self._sqla_session.add_all(*args, **kwargs)
