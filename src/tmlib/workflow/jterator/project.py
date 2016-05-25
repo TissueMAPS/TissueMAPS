@@ -11,6 +11,7 @@ from tmlib.workflow.jterator.utils import get_module_directories
 from tmlib.readers import YamlReader
 from tmlib.writers import YamlWriter
 from tmlib.errors import PipelineOSError
+from tmlib.errors import PipelineDescriptionError
 
 logger = logging.getLogger(__name__)
 
@@ -163,13 +164,31 @@ class Project(object):
                 'name': self._get_descriptor_name(pipe_file),
                 'description': f.read()
             }
+        if 'pipeline' not in pipe['description']:
+            raise PipelineDescriptionError(
+                'Pipeline descriptor file "%s" must contain key "pipeline".'
+                % pipe_file
+            )
         if pipe['description']['pipeline']:
+            if not isinstance(pipe['description']['pipeline'], list):
+                raise PipelineDescriptionError(
+                    'Pipeline description in "%s" must be an array.'
+                    % pipe_file
+                )
             # Add module 'name' to pipeline for display in the interface
             for i, module in enumerate(pipe['description']['pipeline']):
+                if 'handles' not in pipe['description']['pipeline'][i]:
+                    raise PipelineDescriptionError(
+                        'Element #%d of "pipeline" array in pipeline '
+                        'descriptor file "%s" must contain key "handles".'
+                        % (i, pipe_file)
+                    )
                 pipe['description']['pipeline'][i]['name'] = \
                     self._get_descriptor_name(
                         pipe['description']['pipeline'][i]['handles']
                     )
+        else:
+            logger.warn('no pipeline description provided in "%s"', pipe_file)
         return pipe
 
     @property
@@ -213,8 +232,8 @@ class Project(object):
             'project': {
                 'description': str()
             },
-            'images': {
-                'planes': [
+            'input': {
+                'channels': [
                     {'name': str(), 'correct': True}
                 ]
             },
