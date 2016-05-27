@@ -1,6 +1,7 @@
-@import "lesshat/lesshat-prefixed";
+// @import "lesshat/lesshat-prefixed";
 @import "variables.less";
-    
+@import "bootstrap/mixins/list-group.less";
+
 .jtui {
     /* left side pain: available modules */
     .left-side-pane {
@@ -8,23 +9,13 @@
         border-right: 1px solid black;
         width: @left-side-pane-width;
         height: 100%;
-        background: #3a3f41;
-        overflow: hidden;
+        background: @panel-bg-color;
         color: @font-color-light;
     }
 
-    .sidebar {
-        width: @left-side-pane-width;
-    }
+    .pane-subcontent {
 
-    .modules-section {
-        height: 100%;
-    }
-
-    .module-list-container {
-        position: relative;
-        height: calc(~'100% - @{topbar-height} - 10%');
-        overflow: auto;
+        height: calc(~'100% - @{top-container-height} - 30px');
 
         ul.list-group {
             // No need to set list-style: none; since .list-group-item is block level

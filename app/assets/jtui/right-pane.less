@@ -1,58 +1,23 @@
-@import "lesshat/lesshat-prefixed";
 @import "variables.less";
-@import "bootstrap/variables.less";
 
 .jtui {
-  .right-pane {
-    background: white;  //@right-pane-bg;
-    position: absolute;
-    margin-left: calc(~'@{left-side-pane-width} + @{left-pane-width}');
-    width: @right-pane-width;
-    // height: calc(~'50% - 1/2 * @{topbar-height}');
-    height: calc(~'100% - @{topbar-height}');
-    overflow: hidden;
 
-    .right-pane-header {
-      padding: 0;
-      overflow: auto;
-    }
+    .right-pane {
+        background: white;
+        position: absolute;
+        margin-left: calc(~'@{left-side-pane-width} + @{left-pane-width}');
+        border-right: 1px solid black;
+        width: @right-pane-width;
+        height: 100%;
 
-    .right-pane-content {
-      padding: @sidebar-section-padding;
-      height: calc(~'100% - @{topbar-height}');
-      position: relative;
-      overflow: auto;
-    }
+        .error-input {
+            background-color: @brand-danger;
+        }
 
-    .accordion-content {
-      background: lighten(@right-pane-bg, 5%);
-    }
+        .error-text {
+            color: @brand-danger;
+        }
 
-    .argument-list {
-      padding: 10px;
-      display: block;
     }
-
-    .btn-jtui {
-      .button-variant(@btn-jtui-color; @btn-jtui-bg; @btn-jtui-border);
-    }
-
-    .btn-jtui-li {
-      .button-variant(@btn-jtui-color; @btn-jtui-bg; @btn-jtui-border);
-      float: right;
-    }
-
-    .btn-help {
-      .button-variant(@btn-help-color; @btn-help-bg; @btn-help-border);
-    }
-
-    .error-input {
-      background-color: @brand-danger;
-    }
-
-    .error-text {
-      color: @brand-danger;
-    }
-  }
 }
 

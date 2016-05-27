@@ -1,90 +1,15 @@
-@import "lesshat/lesshat-prefixed";
 @import "variables.less";
-@import "bootstrap/variables.less";
 
 @sidebar-size: 5%;
 
 .jtui {
-  .right-side-pane {
-    background: white;  //@right-pane-bg;
-    margin-left: calc(~'@{left-side-pane-width} + @{left-pane-width} + @{right-pane-width}');
-    position: absolute;
-    border-left: 1px solid black;
-    width: @right-side-pane-width;
-    height: calc(~'100vh - @{topbar-height}');
-    // height: 100vh;
-    overflow: auto;
 
-    .right-side-pane-header {
-      padding: 0;
-      overflow: auto;
-    }
-
-    .right-side-pane-content {
-      padding: @sidebar-section-padding;
-      height: calc(~'100% - @{topbar-height}');
-      position: relative;
-      overflow: auto;
-    }
-
-    .panel-body-top-sidebar {
-        width: calc(~'100% - 2 * @{sidebar-size}');
-        box-sizing: border-box;
-        margin-left: @sidebar-size;
-        text-align: center;
-    }
-
-
-    .panel-body-bottom-sidebar {
-        box-sizing: border-box;
-        // margin-top: 100%;
-        text-align: center;
-    }
-
-    .panel-body-subcontent {
-        width: calc(~'100% - 2 * @{sidebar-size}');
-        // height: calc(~'100% - 2 * @{sidebar-size}');
+    .right-side-pane {
+        background: white;
+        margin-left: calc(~'@{left-side-pane-width} + @{left-pane-width} + @{right-pane-width}');
+        position: absolute;
+        width: @right-side-pane-width;
         height: 100%;
-        float: right;
-        box-sizing: border-box;
-    }
-
-    .panel-body-left-sidebar {
-        width: @sidebar-size;
-        height: 100%;
-        margin-top: 30%;
-        float: left;
-        box-sizing: border-box;
-    }
-
-    .panel-body-right-sidebar {
-        // vertical-align: middle;
-        width: @sidebar-size;
-        height: 100%;
-        margin-top: 30%;
-        float: right;
-        box-sizing: border-box;
-    }
-
-    .panel-heading {
-   
-      .success {
-        color: @brand-success;
-      }
-
-      .failure {
-        color: @brand-danger;
-      }
-    }
-
-
-    .btn-jtui {
-      .button-variant(@btn-jtui-color; @btn-jtui-bg; @btn-jtui-border);
-    }
-
-    .btn-help {
-      .button-variant(@btn-help-color; @btn-help-bg; @btn-help-border);
-    }
 
     .figure {
       // width: 100%;

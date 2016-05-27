@@ -1,42 +1,77 @@
-@import "lesshat/lesshat-prefixed";
 @import "variables.less";
-@import "bootstrap/variables.less";
 @import "bootstrap/mixins/buttons.less";
 
 .jtui {
-  .main-pane {
 
-      height: 100%;
+    .main-pane {
 
-    .glyphicon-none:before {
-      content: "\2122";
-      color: transparent !important;
+        .pane-header {
+            padding: 5px;
+            border-bottom: 1px solid black;
+            background: @panel-fg;
+            position: relative;
+            font-weight: bold;
+            font-size: 14;
+            color: @font-color-light;
+            font-size: 16px;
+        }
+
+        .pane-content {
+            padding: 5px;
+            position: relative;
+            width: 100%;
+            height: calc(~'100% - @{top-container-height}');
+            overflow: hidden;
+        }
+
+        .pane-subcontent {
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .glyphicon-none:before {
+          content: "\2122";
+          color: transparent !important;
+        }
+
+        .label-pos {
+          text-align: left;
+        }
+
+        div.spacer {
+            font-size: 0; 
+            height: 20px;
+            line-height: 0;
+        }
+
     }
 
-    .label-pos {
-      text-align: left;
+    .btn-jtui {
+        .button-variant(@btn-jtui-color; @btn-jtui-bg; @btn-jtui-border);
     }
 
-    div.spacer {
-        font-size: 0; 
-        height: 20px;
-        line-height: 0;
+    .btn-jtui-li {
+        .button-variant(@btn-jtui-color; @btn-jtui-bg; @btn-jtui-border);
+        float: right;
     }
-    
-  }
 
-  .text-output {
-    text-indent: -31px;
-    margin-left: 31px;
-  }
+    .btn-help {
+        .button-variant(@btn-help-color; @btn-help-bg; @btn-help-border);
+    }
 
-  .ng-hide {
-    /* !important is used so that the behavior is not overridden by other css*/
-    /* https://docs.angularjs.org/api/ng/directive/ngHide */
-    display: block!important;
-    position: absolute;
-    top: -9999px;
-    left: -9999px;
-  }
+    .text-output {
+        text-indent: -31px;
+        margin-left: 31px;
+    }
+
+    .ng-hide {
+        /* !important is used so that the behavior is not overridden by other css*/
+        /* https://docs.angularjs.org/api/ng/directive/ngHide */
+        display: block!important;
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
 }
 

@@ -1,37 +1,10 @@
-@import "lesshat/lesshat-prefixed";
-@import "variables.less";
+@import "../less/variables.less";
 @import "bootstrap/variables.less";
+@import "bootstrap/mixins/border-radius.less";
+@import "bootstrap/mixins/list-group.less";
 
-// @panel-bg: #e6e6e6;
-@panel-bg: #393939; // color for panels that are all the way to the back
 @panel-bg2: #F2F2F2; // light background
-@panel-fg: #535353; // color for panels on top of the background
-@panel-fg2: #727272; // color for elements on panels
-
-@font-color-light: #dddddd;
-@font-color-dark: #101010;
-@panel-font-color: contrast(@panel-fg, @font-color-light, @font-color-dark);
-
-// the color when some ui element is selected and active
-@panel-selection-color: mix(lighten(@panel-fg, 5%), darkslategray, 30%);
-@font-color-on-selection: contrast(@panel-selection-color, @panel-bg, #dddddd);
-
-/******************************************************************************
- *                                  SIDEBAR                                   *
- ******************************************************************************/
-@sidebar-section-title-height: 30px;
-@sidebar-section-title-color: @panel-fg2;
-@sidebar-section-padding: 20px;
-
-
-/******************************************************************************
- *                                   TOPBAR                                   *
- ******************************************************************************/
-@top-container-height: 30px;
-@topbar-height: 30px;
-@topbar-tabs-height: 30px;
-@topleft-button-color: @panel-fg2;
-@gradient-spacer-width: 3vw;
+@jtui-pane-header-height: 20px;
 
 /******************************************************************************
  *                                  TOOLBAR                                   *
@@ -55,14 +28,12 @@
  *                                  RIGHT PANE                                *
  ******************************************************************************/
 @right-pane-width: 25vw;
-// @right-pane-height: 50vh;
 @right-pane-bg: #f7f7f7; // #67a9cf; // #E2EBF4;
 
 /******************************************************************************
- *                                  LEFT SIDE PANE                            *
+ *                                 RIGHT SIDE PANE                            *
  ******************************************************************************/
 @right-side-pane-width: 30vw;
-// @right-side-pane-height: calc(~'100% - @{topbar-height}');
 
 
 // Customized bootstrap list group
