@@ -18,6 +18,8 @@ interface SerializedExperiment {
     microscope_type: string;
     plate_acquisition_mode: string;
     status: string;
+    stage: string;
+    step: string;
     channels: SerializedChannel[];
     mapobject_types: SerializedMapobjectType[];
     plates: SerializedPlate[];

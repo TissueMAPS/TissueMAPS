@@ -22,6 +22,8 @@ class Experiment implements Model {
     channels: Channel[] = [];
     workflowDescription: any;
     status: string;
+    stage: string;
+    step: string;
 
     /**
      * Construct a new Experiment.
@@ -41,6 +43,8 @@ class Experiment implements Model {
         this.name = args.name;
         this.description = args.description;
         this.status = args.status;
+        this.stage = args.stage;
+        this.step = args.step;
         this.plateFormat = args.plate_format;
         this.microscopeType = args.microscope_type;
         this.plateAcquisitionMode = args.plate_acquisition_mode;
