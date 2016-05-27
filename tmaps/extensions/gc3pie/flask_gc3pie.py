@@ -49,89 +49,89 @@ class GC3Pie(object):
         self.engine = engine
 
 
-class GC3PieEngine(object):
-    """
-    A flask extension to perform the core GC3Pie operations on tasks
-    in the given `session`.
+# class GC3PieEngine(object):
+#     """
+#     A flask extension to perform the core GC3Pie operations on tasks
+#     in the given `session`.
 
-    """
-    def __init__(self, *args, **kwargs):
-        if len(args) > 0 or len(kwargs) > 0:
-            self.init_app(*args, **kwargs)
-        gc3libs.log = logging.getLogger('gc3lib')
-        gc3libs.log.level = logging.CRITICAL
-        apscheduler_logger = logging.getLogger('apscheduler')
-        apscheduler_logger.level = logging.CRITICAL
+#     """
+#     def __init__(self, *args, **kwargs):
+#         if len(args) > 0 or len(kwargs) > 0:
+#             self.init_app(*args, **kwargs)
+#         gc3libs_loggger = logging.getLogger('gc3lib')
+#         gc3libs_logger.level = logging.CRITICAL
+#         apscheduler_logger = logging.getLogger('apscheduler')
+#         apscheduler_logger.level = logging.CRITICAL
 
-    def init_app(self, app):
-        """Construct an `GC3PieEngine` Flask extension object."""
+#     def init_app(self, app):
+#         """Construct an `GC3PieEngine` Flask extension object."""
 
-        # if 'GC3PIE_SESSION_DIR' not in app.config or \
-        #         'SQLALCHEMY_DATABASE_URI' not in app.config:
-        #     raise ValueError(
-        #         'GC3Pie extension needs values for GC3PIE_SESSION_DIR '
-        #         'and SQLALCHEMY_DATABASE_URI'
-        #     )
+#         # if 'GC3PIE_SESSION_DIR' not in app.config or \
+#         #         'SQLALCHEMY_DATABASE_URI' not in app.config:
+#         #     raise ValueError(
+#         #         'GC3Pie extension needs values for GC3PIE_SESSION_DIR '
+#         #         'and SQLALCHEMY_DATABASE_URI'
+#         #     )
 
-        engine = self._create_bg_engine()
-        # Save the session and engine objects globally on this flask application
-        app.extensions['gc3pie'] = {
-            'engine': engine,
-            'sessions' : {}
-        }
+#         engine = self._create_bg_engine()
+#         # Save the session and engine objects globally on this flask application
+#         app.extensions['gc3pie'] = {
+#             'engine': engine,
+#             'sessions' : {}
+#         }
 
-        # Add existing tasks
-        # NOTE: we should have a separate session for each worklow, i.e.
-        # a separate session for each experiment
-        # for task in session:
-            # engine.add(task)
+#         # Add existing tasks
+#         # NOTE: we should have a separate session for each worklow, i.e.
+#         # a separate session for each experiment
+#         # for task in session:
+#             # engine.add(task)
 
-        # TODO: Add interval back to config
+#         # TODO: Add interval back to config
 
-    def _create_bg_engine(self):
-        """Create and return a `tmlib.BgEngine`:class: instance."""
-        engine = gc3libs.create_engine()
-        engine.retrieve_overwrites = True
-        bg_engine = tmlib_engine.BgEngine('threading', engine)
-        bg_engine.start(interval=5)
-        return bg_engine
+#     def _create_bg_engine(self):
+#         """Create and return a `tmlib.BgEngine`:class: instance."""
+#         engine = gc3libs.create_engine()
+#         engine.retrieve_overwrites = True
+#         bg_engine = tmlib_engine.BgEngine('threading', engine)
+#         bg_engine.start(interval=5)
+#         return bg_engine
 
-    def _create_session(self, gc3pie_store_uri, gc3pie_session_dir):
-        """Create a sql-backed gc3pie session."""
-        # Gc3pie expects URIs pointing to postgres databases
-        # to start with postgres:// instead of postgresql://.
-        gc3pie_store_uri = \
-            current_app.config['SQLALCHEMY_DATABASE_URI'].\
-            replace('postgresql', 'postgres')
-        session = gc3libs.session.Session(
-            gc3pie_session_dir,
-            store_url=gc3pie_store_uri,
-            table_name='tasks'
-        )
-        return session
+#     def _create_session(self, gc3pie_store_uri, gc3pie_session_dir):
+#         """Create a sql-backed gc3pie session."""
+#         # Gc3pie expects URIs pointing to postgres databases
+#         # to start with postgres:// instead of postgresql://.
+#         gc3pie_store_uri = \
+#             current_app.config['SQLALCHEMY_DATABASE_URI'].\
+#             replace('postgresql', 'postgres')
+#         session = gc3libs.session.Session(
+#             gc3pie_session_dir,
+#             store_url=gc3pie_store_uri,
+#             table_name='tasks'
+#         )
+#         return session
 
-    def add_task(self, session, task):
-        self.engine.add(task)
+#     def add_task(self, session, task):
+#         self.engine.add(task)
 
-    def get_session(self, id, session_dir):
-        if not id in current_app.extensions['gc3pie']['sessions']:
-            session = self._create_session(id, session_dir)
-            current_app.extensions['gc3pie']['sessions'][id] = session
-        return current_app.extensions['gc3pie']['sessions'][id].session
-        # ctx = stack.top
-        # if ctx is not None:
-        #     if not hasattr(ctx, 'gc3pie_session'):
-        #         ctx.gc3pie_session = self._create_session()
-        #     return ctx.gc3pie_session
+#     def get_session(self, id, session_dir):
+#         if not id in current_app.extensions['gc3pie']['sessions']:
+#             session = self._create_session(id, session_dir)
+#             current_app.extensions['gc3pie']['sessions'][id] = session
+#         return current_app.extensions['gc3pie']['sessions'][id].session
+#         # ctx = stack.top
+#         # if ctx is not None:
+#         #     if not hasattr(ctx, 'gc3pie_session'):
+#         #         ctx.gc3pie_session = self._create_session()
+#         #     return ctx.gc3pie_session
 
-    @property
-    def engine(self):
-        return current_app.extensions['gc3pie']['engine']
-        # ctx = stack.top
-        # if ctx is not None:
-        #     if not hasattr(ctx, 'gc3pie_engine'):
-        #         ctx.gc3pie_engine = self._create_bg_engine()
-        #     return ctx.gc3pie_engine
+#     @property
+#     def engine(self):
+#         return current_app.extensions['gc3pie']['engine']
+#         # ctx = stack.top
+#         # if ctx is not None:
+#         #     if not hasattr(ctx, 'gc3pie_engine'):
+#         #         ctx.gc3pie_engine = self._create_bg_engine()
+#         #     return ctx.gc3pie_engine
 
     # def get_status_data(self):
     #     return {

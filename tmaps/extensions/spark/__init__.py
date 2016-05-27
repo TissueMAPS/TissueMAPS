@@ -1,32 +1,30 @@
 import os
 import sys
+import logging
 from flask import current_app
 
+logger = logging.getLogger(__name__)
 
-# TODO: How relevant are these notes?
-# BEGIN
-# Download the PostgreSQL JDBC Driver from
-# https://jdbc.postgresql.org/download.html. Export the environment
-# variable 'SPARK_CLASSPATH' when working in the pyspark shell or use
-# '--driver-class-path' flag when submitting the script via the command
-# line with spark-submit
-# END
 class Spark(object):
     def __init__(self, app=None):
-        """A extension that creates a spark context that can be used to submit
-        computational tasks with Apache Spark.
-        This extension should be initialized via its `init_app` method, e.g.:
-
-        spark = Spark()
-        app.init_app(app)
-        spark.sc.parallelize(['spark', 'test']).count()
+        """An extension that creates a spark context to submit computational
+        tasks to an Apache Spark cluster.
 
         Parameters
         ----------
-        app : flask.Flask, optional
-            A flask application object. The preferred way to intialize
-            the application via the `init_app` method.
+        app: flask.Flask, optional
+            flask application (default: ``None``)
 
+        Note
+        ----
+        The preferred way of initializing the extension is via the
+        `init_app()` method.
+
+        Examples
+        --------
+        spark = Spark()
+        spark.init_app(app)
+        spark.sc.parallelize(['spark', 'test']).count()
         """
         if app is not None:
             self.init_app(app)
@@ -48,8 +46,8 @@ class Spark(object):
 
         Parameters
         ----------
-        app : flask.Flask
-            A flask application object.
+        app: flask.Flask
+            flask application
 
         Note
         ----
@@ -58,6 +56,7 @@ class Spark(object):
         /usr/share/java.
         """
 
+        logger.info('initialize Spark extension')
         use_spark = app.config.get('USE_SPARK')
         app.config.setdefault('SPARK_MASTER', 'local')
         app.config.setdefault(
@@ -116,13 +115,10 @@ class Spark(object):
             from pyspark import SparkContext
             conf = SparkConf()
             conf.setAppName('tmaps')
-            # conf.set(
-            #     'spark.serializer',
-            #     'org.apache.spark.serializer.KryoSerializer'
-            # )
             return SparkContext(conf=conf)
 
         if use_spark:
+            logger.info('create Spark context')
             spark_home = app.config.get('SPARK_HOME')
             spark_master = app.config.get('SPARK_MASTER')
             sc = create_spark_context(spark_home, spark_master)

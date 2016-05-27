@@ -9,11 +9,17 @@ import logging
 from natsort import natsorted
 from flask import send_file, jsonify, request, Blueprint, current_app
 from flask.ext.jwt import jwt_required
-import gc3libs
 
 from tmaps.extensions import websocket
+from tmaps.util import extract_model_from_path
+from tmaps.extensions import gc3pie
+from tmaps.extensions import db
+
 import tmlib.models as tm
+from tmlib.models import Experiment
 from tmlib.workflow.registry import get_step_args
+from tmlib.workflow.jobs import RunJob
+from tmlib.workflow.jobs import RunJobCollection
 import tmlib.workflow.utils as cluster_utils
 from tmlib.workflow.jterator.api import ImageAnalysisPipeline
 from tmlib.logging_utils import configure_logging
@@ -24,23 +30,7 @@ from tmlib.workflow.jterator.project import AvailableModules
 
 jtui = Blueprint('jtui', __name__)
 
-# configure loggers
-configure_logging(logging.INFO)
 logger = logging.getLogger(__name__)
-
-tmlib_logger = logging.getLogger('tmlib')
-tmlib_logger.setLevel(logging.INFO)
-gc3libs_logger = logging.getLogger('gc3.gc3libs')
-gc3libs_logger.setLevel(logging.CRITICAL)
-apscheduler_logger = logging.getLogger('apscheduler')
-apscheduler_logger.setLevel(logging.CRITICAL)
-
-
-# Create GC3Pie engine for job submission
-# e = gc3libs.create_engine()
-# e.retrieve_overwrites = True
-# engine = BgEngine('gevent', e)
-# engine.start(1)
 
 # Create websocket for job status update
 # websocket = GeventWebSocket(app)
@@ -48,8 +38,29 @@ apscheduler_logger.setLevel(logging.CRITICAL)
 
 # socket = None  # for potential re-connection
 
-# tasks = dict()
 
+def list_module_names(pipeline):
+    '''Lists all names of active module in the pipeline.
+
+    Parameters
+    ----------
+    pipeline: dict
+        pipeline description
+
+    Returns
+    -------
+    List[str]
+        module names
+    '''
+    modules_names = [
+        os.path.splitext(
+            os.path.splitext(
+                os.path.basename(m['handles'])
+            )[0]
+        )[0]
+        for m in pipeline if m['active']
+    ]
+    return modules_names
 
 
 def get_projects(location):
@@ -82,15 +93,16 @@ def get_projects(location):
 
 @jtui.route('/get_available_jtprojects/<path:experiment_id>')
 @jwt_required()
-def get_available_jtprojects(experiment_id):
+@extract_model_from_path(Experiment, check_ownership=True)
+def get_available_jtprojects(experiment):
     '''Lists all Jterator projects available in the data location.
     A project consists of a pipeline description ("pipe") and
     several module descriptions ("handles").
 
     Parameters
     ----------
-    experiment_id: int
-        ID of the processed experiment
+    experiment: tmlib.models.Experiment
+        processed experiment
 
     Returns
     -------
@@ -103,7 +115,7 @@ def get_available_jtprojects(experiment_id):
     `get_jtproject`
     '''
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=logging.INFO,
         pipeline=pipeline
     )
@@ -111,9 +123,11 @@ def get_available_jtprojects(experiment_id):
     serialized_projects = [yaml.safe_dump(dict(proj)) for proj in projects]
     return jsonify(jtprojects=serialized_projects)
 
-@jtui.route('/get_jtproject/<path:experiment_id>/<path:pipeline>')
-# @jwt_required()
-def get_jtproject(experiment_id, pipeline):
+
+@jtui.route('/get_jtproject/<path:experiment_id>/<path:project_name>')
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def get_jtproject(experiment, project_name):
     '''Returns a single Jterator project for a given experiment.
     A project consists of a pipeline description ("pipe") and
     several module descriptions ("handles"), represented on disk by `.pipe`
@@ -121,9 +135,9 @@ def get_jtproject(experiment_id, pipeline):
 
     Parameters
     ----------
-    experiment_id: int
-        ID of the processed experiment
-    pipeline: str
+    experiment: tmlib.models.Experiment
+        processed experiment
+    project_name: str
         name of the pipeline
 
     Returns
@@ -169,16 +183,16 @@ def get_jtproject(experiment_id, pipeline):
 
     '''
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=logging.INFO,
-        pipeline=pipeline,
+        pipeline=project_name,
     )
     serialized_project = yaml.safe_dump(jt.project.as_dict())
     return jsonify(jtproject=serialized_project)
 
 
 @jtui.route('/get_available_jtmodules')
-# @jwt_required()
+@jwt_required()
 def get_available_jtmodules():
     '''Lists all available Jterator modules in the
     `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
@@ -231,7 +245,7 @@ def get_available_jtmodules():
 
 
 @jtui.route('/get_available_jtpipelines')
-# @jwt_required()
+@jwt_required()
 def get_available_jtpipelines():
     '''Lists all available Jterator pipelines in the
     `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
@@ -251,14 +265,15 @@ def get_available_jtpipelines():
 
 
 @jtui.route('/get_available_channels/<path:experiment_id>')
-# @jwt_required()
-def get_available_channels(experiment_id):
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def get_available_channels(experiment):
     '''Lists all channels for a given experiment.
 
     Parameters
     ----------
-    experiment_id: int
-        ID of the processed experiment
+    experiment: tmlib.models.Experiment
+        processed experiment
 
     Returns
     -------
@@ -267,21 +282,19 @@ def get_available_channels(experiment_id):
        layer names that are available for the given experiment
     '''
     with tm.utils.Session() as session:
-        channels = session.query(tm.Channel).\
-            filter_by(experiment_id=experiment_id).\
-            all()
+        channels = experiment.channels
         return jsonify(channels=[c.name for c in channels])
 
 
-@jtui.route('/get_module_source_code/<path:module_name>')
-# @jwt_required()
-def get_module_source_code(module_name):
+@jtui.route('/get_module_source_code/<path:module_filename>')
+@jwt_required()
+def get_module_source_code(module_filename):
     '''Gets the source code for a given module.
 
     Parameters
     ----------
-    module_name: str
-        name of the module
+    module_filename: str
+        name of the module source code file
 
     Returns
     -------
@@ -291,20 +304,23 @@ def get_module_source_code(module_name):
     modules = AvailableModules(current_app.config.get('JTUI_REPO_DIR_LOCATION'))
     files = [
         f for i, f in enumerate(modules.module_files)
-        if modules.module_names[i] == module_name
+        if os.path.basename(f) == module_filename
     ]
-    if len(files) == 1:
-        return send_file(files[0])
+    return send_file(files[0])
 
-@jtui.route('/get_module_figure/<path:experiment_id>/<path:pipeline_name>/<path:module_name>/<path:job_id>')
-# @jwt_required()
-def get_module_figure(experiment_id, pipeline_name, module_name, job_id):
+
+@jtui.route('/get_module_figure/<path:experiment_id>/<path:project_name>/<path:module_name>/<path:job_id>')
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def get_module_figure(experiment, project_name, module_name, job_id):
     '''Gets the figure for a given module.
 
     Parameters
     ----------
-    experiment_id: int
+    experiment: tmlib.models.Experiment
         ID of the processed experiment
+    project_name: str
+        name of the project (pipeline)
     module_name: str
         name of the module
     job_id: int
@@ -316,30 +332,22 @@ def get_module_figure(experiment_id, pipeline_name, module_name, job_id):
         html figure representation
     '''
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=logging.INFO,
-        pipeline=pipeline_name,
+        pipeline=project_name,
     )
     fig_file = [
         m.build_figure_filename(jt.figures_location, int(job_id))
         for m in jt.pipeline if m.name == module_name
     ][0]
-    # if os.path.exists(fig_file):
-    #     figure = build_html_figure_string(fig_file)
-    # else:
-    #     figure = \
-    #         '''
-    #         <html>
-    #             <body>
-    #             </body>
-    #         </html>
-    #         '''
-    return send_file(fig_file)
+    if os.path.exists(fig_file):
+        return send_file(fig_file)
 
 
-@jtui.route('/create_joblist', methods=['POST'])
-# @jwt_required()
-def create_joblist():
+@jtui.route('/create_joblist/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def create_joblist(experiment):
     '''Creates joblist for the current project and return it.
 
     Returns
@@ -381,17 +389,17 @@ def create_joblist():
         return jsonify({'joblist': None, 'error': error})
 
 
-@jtui.route('/save_jtproject', methods=['POST'])
-# @jwt_required()
-def save_jtproject():
+@jtui.route('/save_jtproject/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def save_jtproject(experiment):
     '''Saves modifications of the pipeline and module descriptions to the
     corresponding `.pipe` and `.handles` files.
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
-    experiment_id = data['experiment_id']
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=1,
         pipeline=data['name'],
         pipe=data['pipe'],
@@ -406,16 +414,16 @@ def save_jtproject():
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/check_jtproject', methods=['POST'])
-# @jwt_required()
-def check_jtproject():
+@jtui.route('/check_jtproject/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def check_jtproject(experiment):
     '''Checks pipeline and module descriptions.
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
-    experiment_id = data['experiment_id']
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=1,
         pipeline=data['name'],
         pipe=data['pipe'],
@@ -430,9 +438,10 @@ def check_jtproject():
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/remove_jtproject', methods=['POST'])
-# @jwt_required()
-def remove_jtproject():
+@jtui.route('/remove_jtproject/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def remove_jtproject(experiment):
     '''Removes `.pipe` and `.handles` files from a given Jterator project.
 
     Returns
@@ -442,9 +451,8 @@ def remove_jtproject():
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
-    experiment_id = data['experiment_id']
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=1,
         pipeline=data['name'],
         pipe=data['pipe'],
@@ -459,9 +467,10 @@ def remove_jtproject():
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/create_jtproject', methods=['POST'])
-# @jwt_required()
-def create_jtproject():
+@jtui.route('/create_jtproject/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def create_jtproject(experiment):
     '''Creates a new jterator project in an existing experiment folder, i.e.
     create a `.pipe` file with an *empty* pipeline description
     and a "handles" subfolder that doesn't yet contain any `.handles` files.
@@ -492,9 +501,8 @@ def create_jtproject():
     '''
     # experiment_dir = os.path.join(cfg.EXPDATA_DIR_LOCATION, experiment_id)
     data = json.loads(request.data)
-    experiment_id = data['experiment_id']
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=1,
         pipeline=data['name'],
         pipe=data['pipe'],
@@ -513,8 +521,8 @@ def create_jtproject():
     return jsonify(jtproject=serialized_jtproject)
 
 
-@jtui.route('/kill', methods=['POST'])
-# @jwt_required()
+@jtui.route('/kill_jobs', methods=['POST'])
+@jwt_required()
 def kill_jobs():
     '''Kills submitted jobs.
 
@@ -525,6 +533,7 @@ def kill_jobs():
     '''
     data = json.loads(request.data)
     persistent_id = data['taskId']
+    # TODO
     if persistent_id:
         try:
             task = tasks[persistent_id]
@@ -541,12 +550,14 @@ def kill_jobs():
 
 
 def _get_output(jobs, log_dir, figures_dir, module_names):
+    # TODO: don't redo this every time for each module, but only for those
+    # modules whose output hasn't yet been returned
     output = list()
     for task in jobs.iter_workflow():
-        if not isinstance(task, gc3libs.workflow.ParallelTaskCollection):
+        if not isinstance(task, RunJobCollection):
             continue
         for subtask in task.iter_tasks():
-            if not isinstance(subtask, gc3libs.Application):
+            if not isinstance(subtask, RunJob):
                 continue
             j = int(re.search(r'_(\d+)$', subtask.jobname).group(1))
             stdout_file = os.path.join(subtask.output_dir, subtask.stdout)
@@ -654,10 +665,37 @@ def _get_output(jobs, log_dir, figures_dir, module_names):
     return output
 
 
-@jtui.route('/get_output', methods=['POST'])
-# @jwt_required()
-def get_output():
+@jtui.route('/get_job_status/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def get_job_status(experiment):
+    '''Gets the status of submitted jobs.
+
+    Parameters
+    ----------
+    experiment: tmlib.models.Experiment
+        processed experiment
+    '''
+    data = json.loads(request.data)
+    data = yaml.load(data['jtproject'])
+    jobs = gc3pie.retrieve_jobs(experiment, 'jtui')
+    if jobs is None:
+        status_result = None
+    else:
+        status_result = gc3pie.get_status_of_submitted_jobs(jobs)
+    return jsonify(status=status_result)
+
+
+@jtui.route('/get_job_output/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def get_job_output(experiment):
     '''Gets output generated by a previous submission.
+
+    Parameters
+    ----------
+    experiment: tmlib.models.Experiment
+        processed experiment
 
     Returns
     -------
@@ -678,58 +716,58 @@ def get_output():
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
-    experiment_id = data['experiment_id']
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=1,
         pipeline=data['name'],
         pipe=data['pipe'],
         handles=data['handles'],
     )
     module_names = list_module_names(data['pipe']['description']['pipeline'])
-    session = jt.create_gc3pie_session()
-    submission_ids = natsorted(session.list_ids())
     try:
-        task = session.load(submission_ids[-1])
+        jobs = gc3pie.retrieve_jobs(experiment, 'jtui')
         output = _get_output(
-            task, jt.module_log_location, jt.figures_location, module_names
+            jobs, jt.module_log_location, jt.figures_location, module_names
         )
         return jsonify(output=output)
     except IndexError:
-        return jsonify({'output': None})
+        return jsonify(output=None)
     except Exception as e:
         error = str(e)
         print 'Error upon output retrieval:', error
-        return jsonify({'output': None, 'error': error})
+        return jsonify(output=None, error=error)
 
 
-def run_ui_job(data):
+# TODO: add jobs to engine again in case the server is restarted
+
+@jtui.route('/run_jobs/<path:experiment_id>', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment, check_ownership=True)
+def run_jobs(experiment):
     '''Runs one or more jobs of the current project with pipeline and module
     descriptions provided by the UI.
 
-    The jobs are submitted via GC3Pie, which will call the Jterator `run`
-    method via the command line. This requires the pipeline and module
-    descriptions to be saved to the *pipe* and *handles* files, respectively,
-    and the batches written to the *jobs* file.
-
-    The submitted jobs will be monitored while they are processed on the
-    cluster and the results will be read from disk and returned to the client
-    once all jobs are terminated.
-
+    This requires the pipeline and module descriptions to be saved to *pipe*
+    and *handles* files, respectively.
     Parameters
+
     ----------
-    data: dict
-        "job" id and "jtproject" description
+    experiment: tmlib.models.Experiment
+        processed experiment
+
+    Returns
+    -------
+    int
+        submission ID
     '''
-    # TODO: return status to the client: new, submitted, running, terminated
+    data = json.loads(request.data)
     job_ids = map(int, data['jobIds'])
     data = yaml.load(data['jtproject'])
     # TODO: sometimes the check fails, although the description seems fine,
     # could it be related to the "hashkey" stuff that javascript adds to the
     # JSON object?
-    experiment_id = data['experiment_id']
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=1,
         pipeline=data['name'],
         pipe=data['pipe'],
@@ -737,81 +775,78 @@ def run_ui_job(data):
     )
     # Remove figure and module log files of previous run
     # to prevent accumulation of data
-    jt.delete_previous_job_output()
+    # jt.delete_previous_job_output()
 
     # 1. Save the project to disk,
     # i.e. write pipeline and module descriptions to the corresponding files
     jt.project.save()
+
+    # 2. Build jobs
+    logger.info('build jobs')
     batch_args_cls, submit_args_cls, _ = get_step_args('jterator')
-    # 3. Build jobs
     batch_args = batch_args_cls()
-    submit_args = submit_args_cls()
-    if job_ids:
-        batch_args.plot = True
-        # In "run" mode only a few selected jobs will be submitted
-        job_descriptions = jt.create_batches(batch_args, job_ids)
-    else:
-        # In "submit" mode all jobs will be submitted
-        batch_args.plot = False
-        job_descriptions = jt.create_batches(batch_args)
+    batch_args.plot = True
+    # In "run" mode only a few selected jobs will be submitted
+    job_descriptions = jt.create_batches(batch_args, job_ids)
+
     jt.write_batch_files(job_descriptions)
-    step = jt.create_step()
-    jobs = jt.create_jobs(
-        step=step,
-        batches=job_descriptions,
+    submission = tm.Submission(experiment_id=experiment.id, program='jtui')
+    db.session.add(submission)
+    db.session.commit()
+
+    submit_args = submit_args_cls()
+    jobs = jt.create_run_jobs(
+        submission.id, job_ids,
         duration=submit_args.duration,
-        memory=submit_args.memory,
-        cores=submit_args.cores
+        memory=submit_args.memory, cores=submit_args.cores
     )
 
-    # 4. Add jobs to session to make them persistent on disk
+    # 3. Store jobs in session
+    gc3pie.store_jobs(experiment, jobs)
     # session.remove(data['previousSubmissionId'])
-    session = jt.create_gc3pie_session()
-    persistent_id = session.add(jobs)
-    session.save(persistent_id)
+    logger.info('submit jobs')
+    gc3pie.submit_jobs(jobs)
+    return jsonify({'submission_id': jobs.submission_id})
 
-    # 5. Submit jobs
-    logger.info('add jobs to engine')
-    task = session.load(persistent_id)
-    logger.info('submitted GC3Pie task: %s', persistent_id)
-    engine.add(task)
 
-    tasks[persistent_id] = task
 
-    # 6. Monitor job status
-    module_names = list_module_names(data['pipe']['description']['pipeline'])
-    break_next = False
-    while True:
 
-        time.sleep(5)
 
-        if break_next:
-            break
 
-        task_data = cluster_utils.get_task_data_from_engine(task)
-        cluster_utils.print_task_status(task_data, monitoring_depth=2)
+    # # 6. Monitor job status
+    # module_names = list_module_names(data['pipe']['description']['pipeline'])
+    # break_next = False
+    # while True:
 
-        # break out of the loop when all jobs are done
-        if task_data['is_done']:
-            break_next = True
+    #     time.sleep(5)
 
-        # send status report to client
-        socket.send(
-            json.dumps({
-                'event': 'status',
-                'data': task_data
-            })
-        )
-        # send output (log and figures) to client
-        socket.send(
-            json.dumps({
-                'event': 'output',
-                'data': _get_output(
-                    task, jt.module_log_location, jt.figures_location,
-                    module_names
-                )
-            })
-        )
+    #     if break_next:
+    #         break
+
+    #     task_data = cluster_utils.get_task_data_from_engine(task)
+    #     cluster_utils.print_task_status(task_data, monitoring_depth=2)
+
+    #     # break out of the loop when all jobs are done
+    #     if task_data['is_done']:
+    #         break_next = True
+
+    #     # send status report to client
+    #     socket.send(
+    #         json.dumps({
+    #             'event': 'status',
+    #             'data': task_data
+    #         })
+    #     )
+    #     # send output (log and figures) to client
+    #     socket.send(
+    #         json.dumps({
+    #             'event': 'output',
+    #             'data': _get_output(
+    #                 task, jt.module_log_location, jt.figures_location,
+    #                 module_names
+    #             )
+    #         })
+    #     )
 
 
 # @websocket.route('/socket')
@@ -841,16 +876,4 @@ def run_ui_job(data):
 #             else:
 #                 print 'Unknown event: ' + event
 
-
-# # @jtui.route('/help/<path:module_filename>')
-# # def module_help(module_filename):
-# #     try:
-# #         return send_from_directory(lcfg.REPO_LOCATION, 'modules',
-# #                                    module_filename)
-# #     except Exception as e:
-# #         return jsonify({'error': str(e)})
-
-# # TODO: module help should link to Read the Docs
-#  # error and figure for each module and send it
-#         #   to the client
 
