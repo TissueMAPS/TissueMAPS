@@ -236,7 +236,7 @@ angular.module('jtui.project')
                 } else {
                     $scope.submission.indicator = 'success';
                 }
-                if (result.is_done) {
+                if (result.status.is_done) {
                     console.log('---STOP MONITORING SUBMISSION STATUS---')
                     $scope.stopMonitoring();
                     getOutput();
