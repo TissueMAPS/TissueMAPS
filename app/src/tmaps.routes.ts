@@ -281,7 +281,7 @@ angular.module('tmaps.ui')
         },
         views: {
             'project': {
-                templateUrl: 'components/project/project.html',
+                templateUrl: 'src/jtui/components/project/project.html',
                 controller: 'ProjectCtrl'
             }
         }
@@ -290,11 +290,11 @@ angular.module('tmaps.ui')
         url: '/:moduleName',
         views: {
             'handles': {
-                templateUrl: 'components/handles/handles.html',
+                templateUrl: 'src/jtui/components/handles/handles.html',
                 controller: 'HandlesCtrl'
             },
             'runner': {
-                templateUrl: 'components/runner/runner.html',
+                templateUrl: 'src/jtui/components/runner/runner.html',
                 controller: 'RunnerCtrl'
             }
         }
