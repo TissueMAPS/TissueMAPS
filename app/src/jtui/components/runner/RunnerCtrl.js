@@ -1,6 +1,6 @@
 angular.module('jtui.runner')
 .controller('RunnerCtrl', ['$scope', '$state', '$stateParams', '$uibModal', '$window', '$sce', 'hotkeys',
-            function ($scope, $state, $stateParams, $uibModal, $window, $sce, hotkeys) {
+        function ($scope, $state, $stateParams, $uibModal, $window, $sce, hotkeys) {
 
     var currentModuleName = $stateParams.moduleName;
     // Get the current module
@@ -19,6 +19,7 @@ angular.module('jtui.runner')
           } else if (extension == 'jl') {
             currentModule.language = 'julia';
           }
+          currentModule.filename = filename;
         }
     }
     $scope.module = currentModule;
@@ -61,7 +62,7 @@ angular.module('jtui.runner')
             return e.id;
         }).indexOf($scope.jobs.currentId);
         var modalInst = $uibModal.open({
-            templateUrl: 'components/runner/modals/output.html',
+            templateUrl: 'src/jtui/components/runner/modals/output.html',
             size: 'lg',
             // windowClass: 'modal-window',
             resolve: {
@@ -92,7 +93,7 @@ angular.module('jtui.runner')
             return e.id;
         }).indexOf($scope.jobs.currentId);
         var modalInst = $uibModal.open({
-            templateUrl: 'components/runner/modals/log.html',
+            templateUrl: 'src/jtui/components/runner/modals/log.html',
             size: 'lg',
             // windowClass: 'modal-window',
             resolve: {
@@ -116,11 +117,11 @@ angular.module('jtui.runner')
     $scope.showSourceCode = function () {
         if (codeIsOpen) return;
         var modalInst = $uibModal.open({
-            templateUrl: 'components/runner/modals/code.html',
+            templateUrl: 'src/jtui/components/runner/modals/code.html',
             size: 'lg',
             resolve: {
                 code: ['projectService', function(projectService){
-                            return projectService.getModuleSourceCode($scope.module.name);
+                            return projectService.getModuleSourceCode($scope.module.filename);
                         }],
                 language: function () {
                     return $scope.module.language;
@@ -165,26 +166,6 @@ angular.module('jtui.runner')
         }
     };
 
-    // $scope.getFigure = function () {
-    //     if ($scope.jobs.currentId) {
-    //         console.log('get figure')
-
-    //         var jobIndex = $scope.jobs.output.map(function (e) {
-    //             return e.id;
-    //         }).indexOf($scope.jobs.currentId);
-    //         for (i in $scope.jobs.output) {
-    //             if (i == jobIndex) {
-    //                 for (j in $scope.jobs.output[jobIndex].modules) {
-    //                     if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
-    //                         html = $sce.trustAsHtml($scope.jobs.output[jobIndex].modules[j].figure);
-    //                         return html;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }   
-    // };
-
     var figureIsOpen = false;
     $scope.showFigure = function () {
 
@@ -192,14 +173,11 @@ angular.module('jtui.runner')
 
         var modalInst = $uibModal.open({
             size: 'lg',
-            templateUrl: 'components/runner/modals/figure.html',
+            templateUrl: 'src/jtui/components/runner/modals/figure.html',
             resolve: {
-                // figure: function () {
-                //     return $scope.getFigure()
-                // },
                 figure: ['projectService', function(projectService){
                             return projectService.getModuleFigure(
-                                    $stateParams.experimentID,
+                                    $stateParams.experimentid,
                                     $stateParams.projectName,
                                     $scope.module.name,
                                     1

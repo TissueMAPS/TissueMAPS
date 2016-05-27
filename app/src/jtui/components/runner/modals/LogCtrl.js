@@ -1,6 +1,6 @@
 angular.module('jtui.runner')
-.controller('LogCtrl', ['$scope', 'log', '$modalInstance',
-    function($scope, log, $modalInstance) {
+.controller('LogCtrl', ['$scope', 'log', '$uibModalInstance',
+    function($scope, log, $uibModalInstance) {
 
     $scope.log = log;
 

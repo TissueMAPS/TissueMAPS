@@ -1,6 +1,6 @@
 angular.module('jtui.runner')
-.controller('FigureCtrl', ['$scope', '$sce', 'figure', 'name',
-    function($scope, $sce, figure, name) {
+.controller('FigureCtrl', ['$scope', '$sce', 'figure', 'name', '$uibModalInstance',
+    function($scope, $sce, figure, name, $uibModalInstance) {
 
     console.log('figure: ', figure)
     $scope.figure = figure;

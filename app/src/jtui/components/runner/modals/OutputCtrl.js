@@ -1,6 +1,6 @@
 angular.module('jtui.runner')
-.controller('OutputCtrl', ['$scope', '$sce', 'output', '$modalInstance',
-    function ($scope, $sce, output, $modalInstance) {
+.controller('OutputCtrl', ['$scope', '$sce', 'output', '$uibModalInstance',
+    function ($scope, $sce, output, $uibModalInstance) {
 
     $scope.output = output;
 

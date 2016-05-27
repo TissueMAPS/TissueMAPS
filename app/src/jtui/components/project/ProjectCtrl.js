@@ -1,6 +1,6 @@
 angular.module('jtui.project')
-.controller('ProjectCtrl', ['$scope', '$state', '$stateParams', 'project', 'channels', 'projectService', 'runnerService', '$uibModal', 'hotkeys',
-            function ($scope, $state, $stateParams, project, channels, projectService, runnerService, $uibModal, hotkeys) {
+.controller('ProjectCtrl', ['$scope', '$state', '$stateParams', '$interval', 'project', 'channels', 'projectService', 'runnerService', '$uibModal', 'hotkeys',
+            function ($scope, $state, $stateParams, $interval, project, channels, projectService, runnerService, $uibModal, hotkeys) {
 
     console.log('project: ', project)
     $scope.project = project;
@@ -17,12 +17,14 @@ angular.module('jtui.project')
         }
     };
 
+    $scope.processing = false;
+
     var checkIsOpen = false;
     $scope.checkProject = function() {
         if (checkIsOpen) return;
         console.log('check project:', $scope.project)
         var modalInst = $uibModal.open({
-            templateUrl: 'components/project/modals/check.html',
+            templateUrl: 'src/jtui/components/project/modals/check.html',
             size: 'sm',
             resolve: {
                 checked: ['projectService', function(projectService){
@@ -46,7 +48,7 @@ angular.module('jtui.project')
         if (saveIsOpen) return;
         console.log('save project:', $scope.project)
         var modalInst = $uibModal.open({
-            templateUrl: 'components/project/modals/save.html',
+            templateUrl: 'src/jtui/components/project/modals/save.html',
             size: 'sm',
             resolve: {
                 saved: ['projectService', function(projectService){
@@ -68,9 +70,9 @@ angular.module('jtui.project')
     var runIsOpen = false;
     $scope.run = function(project) {
         if (runIsOpen) return;
-        console.log('run project:', $scope.project)
+        console.log('run project:', $scope.project);
         var modalInst = $uibModal.open({
-            templateUrl: 'components/project/modals/run.html',
+            templateUrl: 'src/jtui/components/project/modals/run.html',
             controller: 'RunCtrl'
         });
 
@@ -80,23 +82,25 @@ angular.module('jtui.project')
 
             console.log('job ids:', $scope.subJobId.map(Number))
             if ($scope.subJobId.length > 10) {
-                console.log('too many jobs')
+                console.log('too many jobs');
                 return
             }
             if ($scope.subJobId != null) {
                 var check = false;
                 // First check the pipeline and return potential errors
                 projectService.checkProject($scope.project).then(function (check) {
-                    console.log('check: ', check)
+                    console.log('check: ', check);
                     if (!check.success) {
-                        console.log('pipeline check failed')
+                        console.log('pipeline check failed');
                         // Show the error
                         $scope.checkProject();
                     } else {
-                        console.log('pipeline check successful')
+                        console.log('pipeline check successful');
                         // Submit pipeline for processing
-                        console.log('submit pipeline')
+                        console.log('submit pipeline');
                         runnerService.run($scope.subJobId, $scope.project);
+                        console.log('---START MONITORING SUBMISSION STATUS---')
+                        $scope.startMonitoring();
                 }
                 });
             }
@@ -106,44 +110,16 @@ angular.module('jtui.project')
         });
     }
 
-    var submitIsOpen = false;
-    $scope.submit = function() {
-        if (submitIsOpen) return;
-        console.log('submit project:', $scope.project)
-        var modalInst = $uibModal.open({
-            templateUrl: 'components/project/modals/submit.html',
-            controller: 'RunCtrl'
-        });
-
-        submitIsOpen = true;
-
-        modalInst.result.then(function () {
-            var check = projectService.checkProject($scope.project);
-                if (check.error) {
-                    console.log('pipeline check failed')
-                    $scope.checkProject();
-                } else {
-                    console.log('pipeline check successful')
-                    // Submit pipeline for processing
-                    console.log('submit pipeline')
-                    runnerService.run([], $scope.project);
-                }
-            submitIsOpen = false;
-        }, function () {
-            submitIsOpen = false;
-        });
-    }
-
     var killIsOpen = false;
     $scope.kill = function() {
         if (killIsOpen) return;
         console.log('kill jobs: ', $scope.taskId)
         var modalInst = $uibModal.open({
-            templateUrl: 'components/project/modals/kill.html',
+            templateUrl: 'src/jtui/components/project/modals/kill.html',
             size: 'sm',
             resolve: {
                 killed: ['runnerService', function(runnerService){
-                            return runnerService.kill($scope.project, $scope.taskId);
+                    return runnerService.kill($scope.project, $scope.taskId);
                 }]
             },
             controller: 'KillCtrl'
@@ -162,14 +138,14 @@ angular.module('jtui.project')
     $scope.listJobs = function() {
         if (listIsOpen) return;
         var modalInst = $uibModal.open({
-            templateUrl: 'components/project/modals/joblist.html',
+            templateUrl: 'src/jtui/components/project/modals/joblist.html',
             size: 'lg',
             resolve: {
                 joblist: ['projectService', function(projectService){
-                            return projectService.createJoblist($scope.project).then(function (data) {
-                                console.log(data.joblist)
-                                return data.joblist;
-                            });
+                    return projectService.createJoblist($scope.project).then(function (data) {
+                        console.log(data.joblist)
+                        return data.joblist;
+                    });
                 }]
             },
             controller: 'JoblistCtrl'
@@ -246,73 +222,122 @@ angular.module('jtui.project')
         }
     };
 
-    // One needs to provide default values to keep the bar at zero
-    $scope.progress = 0;
-    $scope.state = "";
-    $scope.type = '';
-    $scope.taskId = null;
-    runnerService.socket.$on('status', function (data) {
-        console.log('status received from server: ', data);
-        if ($state.is('project')) {
-            $state.go('project.module', {
-            moduleName: $scope.project.handles[0].name
-        });
-        }
-        $scope.taskId = data.id;
-        $scope.state = data.state;
-        $scope.isDone = data.subtasks[0].is_done;
-        $scope.progress = data.subtasks[0].percent_done;
-
-        if (data.subtasks[0].failed) {
-            $scope.type = 'danger';
-        }
-        else {
-            $scope.type = 'success';
-        }
-        $scope.$apply();
-    });
-
-    $scope.jobs = {};
-    $scope.jobs.output = [];
-    $scope.jobs.currentId = null;
-    $scope.outputAvailable = false;
-    runnerService.getOutput($scope.project).then(function (result) {
-        console.log('results: ', result)
-        if (result.output) {
-            result.output.forEach(function(r) {
-                $scope.jobs.output.push(r);
-            });
-            $scope.jobs.currentId = result.output[0].id;
-            $scope.state = 'TERMINATED';
-            $scope.progress = 100;
-            $scope.outputAvailable = true;
-            var unkown = $scope.jobs.output.every(function (element, index, array) {
-                return element.failed === null;
-            });
-            var failed = $scope.jobs.output.some(function (element, index, array) {
-                return element.failed;
-            });
-            if (unkown) {
-                $scope.type = '';
-            } else if (failed) {
-                $scope.type = 'danger';
+    function getStatus() {
+        runnerService.getStatus($scope.project).then(function (result) {
+            console.log('status: ', result.status)
+            if (result.status == null) {
+                $scope.outputAvailable = false;
             } else {
-                $scope.type = 'success';
+                $scope.outputAvailable = true;
+                $scope.submission.state = result.status.state;
+                $scope.submission.progress = result.status.percent_done;
+                if (result.failed) {
+                    $scope.submission.indicator = 'danger';
+                } else {
+                    $scope.submission.indicator = 'success';
+                }
+                if (result.is_done) {
+                    console.log('---STOP MONITORING SUBMISSION STATUS---')
+                    $scope.stopMonitoring();
+                    getOutput();
+                }
             }
-        }
-    });
-    
-    runnerService.socket.$on('output', function (data) {
+        });
+    };
 
-        console.log('output received from server: ', data);
-        $scope.jobs.output = data;
+    function getOutput() {
+        runnerService.getOutput($scope.project).then(function (result) {
+            console.log('output: ', result.output)
+            if (result.output) {
+                result.output.forEach(function(r) {
+                    $scope.jobs.output.push(r);
+                });
+                $scope.jobs.currentId = result.output[0].id;
+                $scope.outputAvailable = true;
+                var unkown = $scope.jobs.output.every(function (element, index, array) {
+                    return element.failed === null;
+                });
+                var failed = $scope.jobs.output.some(function (element, index, array) {
+                    return element.failed;
+                });
+                if (unkown) {
+                    $scope.type = '';
+                } else if (failed) {
+                    $scope.submission.indicator = 'danger';
+                } else {
+                    $scope.submission.indicator = 'success';
+                }
+            }
+        });
+    };
 
-        if ($scope.subJobId) {
-            $scope.jobs.currentId = parseInt($scope.subJobId[0]);
-        }
-        $scope.$apply();
-        $scope.outputAvailable = true;
+    // One needs to provide default values to keep the progressbar at zero
+    $scope.submission = {
+        progress: 0,
+        state: "",
+        indicator: 'success'
+    };
+    $scope.type = "";
+
+    // starts the interval
+    var promise;
+    $scope.startMonitoring = function() {
+        // stops any running interval to avoid two intervals running at the same time
+        $scope.stopMonitoring();
+        promise = $interval(getStatus, 5000);
+    };
+
+    $scope.stopMonitoring = function() {
+        $interval.cancel(promise);
+    };
+
+    $scope.$on('$destroy', function() {
+        $scope.stopMonitoring();
     });
+
+    // runnerService.socket.$on('status', function (data) {
+    //     console.log('status received from server: ', data);
+    //     if ($state.is('project')) {
+    //         $state.go('project.module', {
+    //         moduleName: $scope.project.handles[0].name
+    //     });
+    //     }
+    //     $scope.taskId = data.id;
+    //     $scope.state = data.state;
+    //     $scope.isDone = data.subtasks[0].is_done;
+    //     $scope.progress = data.subtasks[0].percent_done;
+
+    //     if (data.subtasks[0].failed) {
+    //         $scope.type = 'danger';
+    //     }
+    //     else {
+    //         $scope.type = 'success';
+    //     }
+    //     $scope.$apply();
+    // });
+
+    $scope.jobs = {
+        output: [],
+        currentId: null
+    };
+    $scope.outputAvailable = false;
+    // Start monitoring in case the website got disconnected.
+    // This should automatically stop, once the jobs are TERMINATED
+    $scope.startMonitoring();
+    // Get the output of all jobs
+    getOutput();
+
+    // runnerService.socket.$on('output', function (data) {
+
+    //     console.log('output received from server: ', data);
+    //     $scope.jobs.output = data;
+
+    //     if ($scope.subJobId) {
+    //         $scope.jobs.currentId = parseInt($scope.subJobId[0]);
+    //     }
+    //     $scope.$apply();
+    //     $scope.outputAvailable = true;
+    // });
 
     $scope.activateModule = function(index, $event) {
         if ($event.shiftKey) {
@@ -498,14 +523,13 @@ angular.module('jtui.project')
         console.log('get help for pipeline')
 
         var modalInst = $uibModal.open({
-            templateUrl: 'components/project/modals/pipeHelp.html',
+            templateUrl: 'src/jtui/components/project/modals/pipeHelp.html',
             controller: 'PipeHelpCtrl'
         });
 
         modalInst.result.then(function() {});
 
     }
-
 
 }]);
 

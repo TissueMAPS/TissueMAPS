@@ -1,8 +1,10 @@
 (function() {
     angular.module('jtui.util', []);
-    angular.module('jtui.main', []);
+    angular.module('jtui.main', [
+        'ngAnimate', 'ui.bootstrap'
+    ]);
     angular.module('jtui.topbar', [
-        'ngAnimate', 'angular-loading-bar', 'jtui.project', 
+        'ngAnimate', 'angular-loading-bar', 'jtui.project',
         'ui.router', 'cfp.hotkeys', 'ui.bootstrap'
     ]);
     angular.module('jtui.handles', [
@@ -69,9 +71,6 @@
 
     jtui.run(['$rootScope', '$state', '$stateParams',
              function($rootScope, $state, $stateParams){
-
-        // It's very handy to add references to $state and $stateParams to the $rootScope
-        // so that you can access them from any scope within your applications.
         $rootScope.$state = $state;
         $rootScope.$stateParams = $stateParams;
     }]);

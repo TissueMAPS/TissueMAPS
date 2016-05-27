@@ -3,10 +3,9 @@ angular.module('jtui.module')
             function ($scope, moduleService) {
 
 	moduleService.modules.then(function (modules) {
-		console.log(modules)
 		$scope.modules = modules;
         for (i in $scope.modules) {
-            var filename = $scope.modules[i].pipeline.module;
+            var filename = $scope.modules[i].pipeline.source;
             $scope.modules[i].language = filename.split('.').pop();
         }
 	});

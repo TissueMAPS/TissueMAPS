@@ -1,6 +1,6 @@
 angular.module('jtui.project')
-.controller('CheckCtrl', ['$scope', 'checked',
-    function($scope, checked) {
+.controller('CheckCtrl', ['$scope', 'checked', '$uibModalInstance',
+    function($scope, checked, $uibModalInstance) {
 
     $scope.checked = checked.success;
     $scope.error = checked.error;

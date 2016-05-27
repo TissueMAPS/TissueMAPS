@@ -57,8 +57,8 @@ angular.module('jtui.project')
 
     function getProject(experimentID, pipeName) {
 
+        console.log('get project ', pipeName);
         var projectDef = $q.defer();
-        // Get all available projects
         var url = '/jtui/get_jtproject' +
                   '/' + experimentID +
                   '/' + pipeName;
@@ -102,6 +102,7 @@ angular.module('jtui.project')
                   '/' + pipelineName +
                   '/' + moduleName +
                   '/' + jobID;
+        console.log(url);
         $http.get(url).success(function (data) {
             figureDef.resolve(data)
         });
@@ -111,6 +112,7 @@ angular.module('jtui.project')
 
     function getModuleSourceCode(moduleName) {
 
+        // TODO: name of the source rather than name of the handle file
         var sourceDef = $q.defer();
         var url = '/jtui/get_module_source_code' +
                   '/' + moduleName;
@@ -127,7 +129,7 @@ angular.module('jtui.project')
 
         var request = $http({
             method: 'post',
-            url: '/jtui/save_jtproject',
+            url: '/jtui/save_jtproject' + '/' + project.experiment_id,
             data: {
                 jtproject: jsyaml.safeDump(values2yaml(project))
             }
@@ -142,7 +144,7 @@ angular.module('jtui.project')
 
         var request = $http({
             method: 'post',
-            url: '/jtui/check_jtproject',
+            url: '/jtui/check_jtproject' + '/' + project.experiment_id,
             data: {
                 jtproject: jsyaml.safeDump(values2yaml(project))
             }
@@ -161,7 +163,7 @@ angular.module('jtui.project')
 
         var request = $http({
             method: 'post',
-            url: '/jtui/create_joblist',
+            url: '/jtui/create_joblist' + '/' + project.experiment_id,
             data: {
                 jtproject: jsyaml.safeDump(values2yaml(project))
             }
@@ -194,9 +196,8 @@ angular.module('jtui.project')
 
         var request = $http({
             method: 'post',
-            url: '/jtui/create_jtproject',
+            url: '/jtui/create_jtproject' + '/' + newProject.experiment_id,
             data: {
-                experiment: newProject.experimentID,
                 project: newProject.projectName,
                 skeleton: newProject.skelName
             }
@@ -211,7 +212,7 @@ angular.module('jtui.project')
 
         var request = $http({
             method: 'post',
-            url: '/jtui/remove_jtproject',
+            url: '/jtui/remove_jtproject' + '/' + project.experiment_id,
             data: {
                 jtproject: jsyaml.safeDump(values2yaml(project))
             }
@@ -232,7 +233,7 @@ angular.module('jtui.project')
 
         var request = $http({
             method: 'post',
-            url: '/jtui/create_joblist',
+            url: '/jtui/create_joblist' + '/' + project.experiment_id,
             data: {
                 jtproject: jsyaml.safeDump(values2yaml(project))
             }

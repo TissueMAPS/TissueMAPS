@@ -1,6 +1,6 @@
 angular.module('jtui.project')
-.controller('SaveCtrl', ['$scope', 'saved',
-    function($scope, saved) {
+.controller('SaveCtrl', ['$scope', 'saved', '$uibModalInstance',
+    function($scope, saved, $uibModalInstance) {
 
     $scope.saved = saved.success;
     $scope.error = saved.error;
