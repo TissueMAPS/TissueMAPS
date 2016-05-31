@@ -1,8 +1,116 @@
-import gc3libs
+import logging
 import numpy as np
 from prettytable import PrettyTable
 
+import gc3libs
+from gc3libs.quantity import Memory
+from gc3libs.session import Session
+from gc3libs.url import Url
+from gc3libs.persistence.sql import make_sqlstore
+
 import tmlib.models as tm
+from tmlib.models.utils import DATABASE_URI
+
+logger = logging.getLogger(__name__)
+
+
+def create_gc3pie_sql_store():
+    '''Create a `Store` instance for job persistence in the PostgreSQL table
+    :py:class:`tmlib.models.Tasks`.
+
+    Returns
+    -------
+    gc3libs.persistence.sql.SqlStore
+        `GC3Pie` store
+
+    Warning
+    -------
+    The "tasks" table must already exist.
+    '''
+    def get_time(task, time_attr):
+        def get_recursive(_task, duration):
+            if hasattr(_task, 'tasks'):
+                d = np.sum([
+                    get_recursive(t, duration) for t in _task.tasks
+                ])
+                if d == 0.0:
+                    return None
+                else:
+                    return d
+            else:
+                return getattr(_task.execution, time_attr).to_timedelta()
+        return get_recursive(task, datetime.timedelta(seconds=0))
+
+    logger.info('create GC3Pie store using "tasks" SQL table')
+    store_url = Url(DATABASE_URI)
+    table_columns = tm.Task.__table__.columns
+    return make_sqlstore(
+        url=store_url,
+        table_name='tasks',
+        extra_fields={
+            table_columns['name']:
+                lambda task: task.jobname,
+            table_columns['exitcode']:
+                lambda task: task.execution.exitcode,
+            table_columns['time']:
+                lambda task: get_time(task, 'duration'),
+            table_columns['memory']:
+                lambda task: task.execution.max_used_memory.amount(Memory.MB),
+            table_columns['cpu_time']:
+                lambda task: get_time(task, 'used_cpu_time'),
+            table_columns['submission_id']:
+                lambda task: task.submission_id,
+            table_columns['type']:
+                lambda task: type(task).__name__
+        }
+    )
+
+
+def create_gc3pie_session(location, store):
+    '''Creates a `Session` instance for job persistence in the PostgresSQL table
+
+    Parameters
+    ----------
+    location: str
+        path to a directory on disk for the file system representation of the
+        store
+    store: gc3libs.persistence.store.Store
+        store instance
+
+    Returns
+    -------
+    gc3libs.persistence.session.Session
+        `GC3Pie` session
+    '''
+    logger.info('create GC3Pie session')
+    # NOTE: Unfortunately, we cannot parse the store instance to the constructor
+    # of Session.
+    return Session(location, store=store)
+
+
+def create_gc3pie_engine(store):
+    '''Creates an `Engine` instance for submitting jobs for parallel
+    processing.
+
+    Parameters
+    ----------
+    store: gc3libs.persistence.store.Store
+
+    Returns
+    -------
+    gc3libs.core.Engine
+        engine
+    '''
+    logger.info('create GC3Pie engine')
+    n = 1000  # NOTE: match with number of db connections!!!
+    logger.debug('set maximum number of submitted jobs to %d', n)
+    engine = gc3libs.create_engine(
+        store=store, max_in_flight=n, max_submitted=n
+    )
+    # Put all output files in the same directory
+    logger.debug('store stdout/stderr in common output directory')
+    engine.retrieve_overwrites = True
+    return engine
 
 
 def format_stats_data(stats):
@@ -86,9 +194,13 @@ def get_task_data_from_engine(task):
             gc3libs.Run.State.STOPPED
         }
         is_done = task_.execution.state == gc3libs.Run.State.TERMINATED
-        failed = task_.execution.exitcode != 0
+        failed = (
+            task_.execution.exitcode != 0 and
+            task_.execution.exitcode is not None
+        )
         data = {
             'id': str(task_),
+            'submission_id': task_.submission_id,
             'name': task_.jobname,
             'state': task_.execution.state,
             'is_live': task_.execution.state in is_live_states,
@@ -176,10 +288,12 @@ def get_task_data_from_engine(task):
     return get_info(task, 0)
 
 
-def get_task_data_from_db(task):
+def get_task_data_from_sql_store(task):
     '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
 
+        * ``"id"`` (*int*): id of task
+        * ``"submission_id"`` (*int*): id of submission
         * ``"name"`` (*str*): name of task
         * ``"state"`` (*g3clibs.Run.State*): state of the task
         * ``"is_live"`` (*bool*): whether the task is currently processed
@@ -212,14 +326,16 @@ def get_task_data_from_db(task):
         data = dict()
         with tm.utils.Session() as session:
             task_info = session.query(tm.Task).get(task_.persistent_id)
+            failed = task_info.exitcode != 0 and task_info.exitcode is not None
             data['is_done'] = task_info.state == gc3libs.Run.State.TERMINATED
-            data['failed'] = task_info.exitcode != 0
+            data['failed'] = failed
             data['name'] = task_info.name
             data['state'] = task_info.state
             data['memory'] = task_info.memory
             data['type'] = task_info.type
             data['exitcode'] = task_info.exitcode
             data['id'] = task_info.id
+            data['submission_id'] = task_.submission_id
             data['time'] = task_info.time
             # Convert timedeltas to string to make it JSON serializable
             if data['time'] is not None:

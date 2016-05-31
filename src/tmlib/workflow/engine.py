@@ -128,6 +128,10 @@ class BgEngine(object):
     the wrapped `Engine` instance.  In practice, this means that all
     invocations of `Engine` operations on a `BgEngine` always succeed:
     errors will only be visible in the background thread of execution.
+
+    Users can define a custom callback function that gets invokes after each
+    `Engine.progress()` call and applied to each task managed by the engine.
+    To this end, set the attribute `progress_callback`.
     """
     def __init__(self, lib, *args, **kwargs):
         """
@@ -146,6 +150,7 @@ class BgEngine(object):
         """
         sched_factory, lock_factory = _get_scheduler_and_lock_factory(lib)
         self._scheduler = sched_factory()
+        self.progress_callback = None
 
         self._engine_locked = lock_factory()
 
@@ -249,6 +254,14 @@ class BgEngine(object):
             self, self._engine)
         try:
             self._engine.progress()
+            try:
+                if self.progress_callback is not None:
+                    for task in self.iter_tasks:
+                        self.progress_callback(task)
+            except Exception, err:
+                gc3libs.log.error(
+                    "Got %s invoking callback after `Engine.progress()`: %s",
+                    err.__class__.__name__, err, exc_info=__debug__)
             self._progress_last_run = time.time()
         except Exception, err:
             gc3libs.log.error(

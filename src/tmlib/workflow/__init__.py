@@ -27,6 +27,7 @@ from workflow import Workflow
 from workflow import WorkflowStep
 from workflow import ParallelWorkflowStage
 from workflow import SequentialWorkflowStage
+from engine import BgEngine
 
 
 def get_steps():

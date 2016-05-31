@@ -264,13 +264,18 @@ class WorkflowStage(State):
         logger.info(
             'allocated cores: %d', step_description.submission_args.cores
         )
-        return api_instance.create_jobs(
-            batches=batches,
-            step=step,
+        step.run_jobs = api_instance.create_run_jobs(
+            self.submission_id,
+            job_ids,
             duration=step_description.submission_args.duration,
             memory=step_description.submission_args.memory,
             cores=step_description.submission_args.cores
         )
+        if 'collect' in batches:
+            step.collect_job = api_instance.create_collect_job(
+                self.submission_id
+            )
+        return step
 
 
 class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):

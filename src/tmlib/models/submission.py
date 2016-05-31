@@ -28,10 +28,17 @@ class Submission(Model, DateMixIn):
     __tablename__ = 'submissions'
 
     # Table columns
+    program = Column(String, index=True)
     experiment_id = Column(
         Integer,
-        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
+    top_task_id = Column(
+        Integer,
+        index=True
+    )
+    # TODO: make top_task_id a foreign key and create a relationship
 
     # Relationships to other tables
     experiment = relationship(
@@ -39,19 +46,23 @@ class Submission(Model, DateMixIn):
         backref=backref('submissions', cascade='all, delete-orphan')
     )
 
-    def __init__(self, experiment_id):
+
+    def __init__(self, experiment_id, program):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the parent experiment
+        program: str
+            name of the program that submits the tasks
         '''
         self.experiment_id = experiment_id
+        self.program = program
 
     def __repr__(self):
         return (
-            '<Submission(id=%r, task=%r, experiment=%r)>'
-            % (self.id, self.task.name, self.experiment.name)
+            '<Submission(id=%r, task=%r, experiment=%r, program=%r)>'
+            % (self.id, self.task.name, self.experiment.name, self.program)
         )
 
 
@@ -158,7 +169,8 @@ class Task(Model):
     data = Column(LargeBinary)
     submission_id = Column(
         Integer,
-        ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables

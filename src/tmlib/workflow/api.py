@@ -12,22 +12,19 @@ from abc import abstractproperty
 import gc3libs
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
-from gc3libs.session import Session as GC3PieSession
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib import utils
-from tmlib.workflow.utils import get_task_data_from_db
-from tmlib.workflow.utils import print_task_status
-from tmlib.workflow.utils import log_task_failure
 from tmlib.readers import JsonReader
+from tmlib.workflow import BgEngine
 from tmlib.writers import JsonWriter
 from tmlib.errors import JobDescriptionError
 from tmlib.errors import WorkflowError
+from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow.workflow import WorkflowStep
-from tmlib.models.utils import DATABASE_URI
 
 logger = logging.getLogger(__name__)
 
@@ -58,153 +55,10 @@ class BasicClusterRoutines(object):
         '''
         return utils.create_timestamp()
 
-    @abstractproperty
-    def session_location(self):
-        '''str: location for a
-        `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
-        '''
-        pass
-
-    def create_gc3pie_session(self):
-        '''Creates a
-        `GC3Pie session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
-        for job persistence.
-
-        Returns
-        -------
-        gc3libs.session.Session
-            SQL-based session 
-        '''
-        def get_time(task, time_attr):
-            def get_recursive(_task, duration):
-                if hasattr(_task, 'tasks'):
-                    d = np.sum([
-                        get_recursive(t, duration) for t in _task.tasks
-                    ])
-                    if d == 0.0:
-                        return None
-                    else:
-                        return d
-                else:
-                    return getattr(_task.execution, time_attr).to_timedelta()
-            return get_recursive(task, datetime.timedelta(seconds=0))
-
-        logger.info('create session')
-        gc3pie_session_uri = DATABASE_URI.replace('postgresql', 'postgres')
-        table_columns = tmlib.models.Task.__table__.columns
-        return GC3PieSession(
-            self.session_location,
-            store_url=gc3pie_session_uri,
-            table_name='tasks',
-            extra_fields={
-                table_columns['name']:
-                    lambda task: task.jobname,
-                table_columns['exitcode']:
-                    lambda task: task.execution.exitcode,
-                table_columns['time']:
-                    lambda task: get_time(task, 'duration'),
-                table_columns['memory']:
-                    lambda task: task.execution.max_used_memory.amount(Memory.MB),
-                table_columns['cpu_time']:
-                    lambda task: get_time(task, 'used_cpu_time'),
-                table_columns['submission_id']:
-                    lambda task: task.submission_id,
-                table_columns['type']:
-                    lambda task: type(task).__name__
-            }
-        )
-
-    def create_gc3pie_engine(self):
-        '''Creates an `Engine` instance for submitting jobs for parallel
-        processing.
-
-        Returns
-        -------
-        gc3libs.core.Engine
-            engine
-        '''
-        logger.debug('create engine')
-        engine = gc3libs.create_engine()
-        # Put all output files in the same directory
-        logger.debug('store stdout/stderr in common output directory')
-        engine.retrieve_overwrites = True
-        return engine
-
-    def submit_jobs(self, jobs, engine, start_index=0, monitoring_depth=1, n_submit=2000):
-        '''Submits jobs to a cluster and continuously monitors their progress.
-
-        Parameters
-        ----------
-        jobs: tmlib.tmaps.workflow.WorkflowStep
-            jobs that should be submitted
-        engine: gc3libs.core.Engine
-            engine that should submit the jobs
-        start_index: int, optional
-            index of the job at which the collection should be (re)submitted
-        monitoring_depth: int, optional
-            recursion depth for job monitoring, i.e. in which detail subtasks
-            in the task tree should be monitored (default: ``1``)
-        n_submit: int, optional
-            number of jobs that will be submitted at once (default: ``2000``)
-
-        Returns
-        -------
-        dict
-            information about each job
-
-        Warning
-        -------
-        This method is intended for interactive use via the command line only.
-        '''
-        logger.debug('monitoring depth: %d' % monitoring_depth)
-        if monitoring_depth < 0:
-            monitoring_depth = 0
-
-        # Limit the total number of jobs that can be submitted simultaneously
-        logger.debug('set maximum number of submitted jobs to %d', n_submit)
-        engine.max_submitted = n_submit
-        engine.max_in_flight = n_submit
-
-        logger.debug('add jobs %s to engine', jobs)
-        engine.add(jobs)
-        engine.redo(jobs, start_index)
-
-        # periodically check the status of submitted jobs
-        t_submitted = datetime.datetime.now()
-
-        break_next = False
-        while True:
-
-            time.sleep(3)
-            logger.debug('wait for 3 sechnds')
-
-            t_elapsed = datetime.datetime.now() - t_submitted
-            logger.info('elapsed time: %s', str(t_elapsed))
-
-            logger.info('progress...')
-            engine.progress()
-
-            # status_data = get_task_data_from_engine(jobs)
-            status_data = get_task_data_from_db(jobs)
-            print_task_status(status_data, monitoring_depth)
-
-            if break_next:
-                break
-
-            if (jobs.execution.state == gc3libs.Run.State.TERMINATED or
-                    jobs.execution.state == gc3libs.Run.State.STOPPED):
-                break_next = True
-                engine.progress()  # one more iteration to update status_data
-
-        status_data = get_task_data_from_db(jobs)
-        log_task_failure(status_data, logger)
-
-        return status_data
-
 
 class ClusterRoutines(BasicClusterRoutines):
 
-    '''Abstract base class for API classes, which provide methods for 
+    '''Abstract base class for API classes, which provide methods for
     for large scale image processing on a batch cluster.
 
     Each workflow step must implement this class and decorate it with
@@ -236,8 +90,8 @@ class ClusterRoutines(BasicClusterRoutines):
         super(ClusterRoutines, self).__init__()
         self.experiment_id = experiment_id
         self.verbosity = verbosity
-        with tmlib.models.utils.Session() as session:
-            experiment = session.query(tmlib.models.Experiment).\
+        with tm.utils.Session() as session:
+            experiment = session.query(tm.Experiment).\
                 get(self.experiment_id)
             self.workflow_location = experiment.workflow_location
 
@@ -261,13 +115,6 @@ class ClusterRoutines(BasicClusterRoutines):
     def log_location(self):
         '''str: location where log files are stored'''
         return os.path.join(self.step_location, 'log')
-
-    @property
-    def session_location(self):
-        '''str: location for the
-        `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
-        '''
-        return os.path.join(self.step_location, 'cli_session')
 
     @utils.autocreate_directory_property
     def batches_location(self):
@@ -650,11 +497,11 @@ class ClusterRoutines(BasicClusterRoutines):
             with JsonWriter(batch_file) as f:
                 f.write(batch)
 
-    def _build_run_command(self, batch):
+    def _build_run_command(self, job_id):
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment_id)
-        command.extend(['run', '--job', str(batch['id'])])
+        command.extend(['run', '--job', str(job_id)])
         return command
 
     def _build_collect_command(self):
@@ -763,45 +610,33 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         print yaml.safe_dump(batches, default_flow_style=False)
 
-    def create_step(self, submission_id=None):
+    def create_step(self, submission_id):
         '''Creates the workflow step.
 
         Parameters
         ----------
-        submission_id: int, optional
-            ID of the parent submission in case the jobs are created within
-            a larger workflow (default: ``None``)
+        submission_id: int
+            ID of the corresponding submission
 
         Returns
         -------
         tmlib.workflow.WorkflowStep
         '''
-        logger.info('create step')
-        if submission_id is None:
-            with tmlib.models.utils.Session() as session:
-                experiment = session.query(tmlib.models.Experiment).\
-                    get(self.experiment_id)
-                submission = tmlib.models.Submission(
-                    experiment_id=experiment.id
-                )
-                session.add(submission)
-                session.flush()
-                submission_id = submission.id
+        logger.debug('create workflow step for submission %d', submission_id)
         return WorkflowStep(
             name=self.step_name,
             submission_id=submission_id
         )
 
-    def create_jobs(self, step, batches,
-                    duration=None, memory=None, cores=None):
-        '''Creates individual jobs and adds them to `step`.
+    def create_run_jobs(self, submission_id, job_ids, duration, memory, cores):
+        '''Creates jobs for the parallel "run" phase of the step.
 
         Parameters
         ----------
-        step: tmlib.workflow.WorkflowStep
-            the step to which jobs should be added
-        batches: Dict[List[dict]]
-            description of inputs and outputs of individual computational jobs
+        submission_id: int
+            ID of the corresponding submission
+        job_ids: int
+            IDs of jobs that should be created
         duration: str, optional
             computational time that should be allocated for a single job;
             in HH:MM:SS format (default: ``None``)
@@ -814,58 +649,75 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Returns
         -------
-        tmlib.workflow.WorkflowStep
+        tmlib.workflow.jobs.SingleRunJobCollection
+            run jobs
         '''
-        if 'run' in batches.keys():
-            logger.info('create jobs for "run" phase')
-            step.run_jobs = SingleRunJobCollection(
+        logger.info('create run jobs for submission %d', submission_id)
+        logger.debug('allocated time for run jobs: %s', duration)
+        logger.debug('allocated memory for run jobs: %d MB', memory)
+        logger.debug('allocated cores for run jobs: %d', cores)
+
+        run_jobs = SingleRunJobCollection(
+            step_name=self.step_name,
+            submission_id=submission_id
+        )
+        for j in job_ids:
+            job = RunJob(
                 step_name=self.step_name,
-                submission_id=step.submission_id
-            )
-            for i, batch in enumerate(batches['run']):
-                # Add "submission_id" to object so that it can be injected
-                # into the corresponding database table
-                job = RunJob(
-                    step_name=self.step_name,
-                    arguments=self._build_run_command(batch),
-                    output_dir=self.log_location,
-                    job_id=batch['id'],
-                    submission_id=step.submission_id
-                )
-                if duration:
-                    job.requested_walltime = Duration(duration)
-                if memory:
-                    job.requested_memory = Memory(memory, Memory.MB)
-                if cores:
-                    if not isinstance(cores, int):
-                        raise TypeError(
-                            'Argument "cores" must have type int.'
-                        )
-                    if not cores > 0:
-                        raise ValueError(
-                            'The value of "cores" must be positive.'
-                        )
-                    job.requested_cores = cores
-
-                step.run_jobs.add(job)
-
-        else:
-            step.run_jobs = None
-
-        if 'collect' in batches.keys():
-            logger.info('create job for "collect" phase')
-            batch = batches['collect']
-
-            step.collect_job = CollectJob(
-                step_name=self.step_name,
-                arguments=self._build_collect_command(),
+                arguments=self._build_run_command(job_id=j),
                 output_dir=self.log_location,
-                submission_id=step.submission_id
+                job_id=j,
+                submission_id=submission_id
             )
-            step.collect_job.requested_walltime = Duration('02:00:00')
-            step.collect_job.requested_memory = Memory(3800, Memory.MB)
+            if duration:
+                job.requested_walltime = Duration(duration)
+            if memory:
+                job.requested_memory = Memory(memory, Memory.MB)
+            if cores:
+                if not isinstance(cores, int):
+                    raise TypeError(
+                        'Argument "cores" must have type int.'
+                    )
+                if not cores > 0:
+                    raise ValueError(
+                        'The value of "cores" must be positive.'
+                    )
+                job.requested_cores = cores
+            run_jobs.add(job)
+        return run_jobs
 
-        else:
-            step.collect_job = None
+    def create_collect_job(self, submission_id):
+        '''Creates job for the "collect" phase of the step.
 
-        return step
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding submission
+
+        Returns
+        -------
+        tmlib.workflow.jobs.CollectJob
+            collect job
+
+        Note
+        ----
+        Duration defaults to 2 hours and memory to 3800 megabytes.
+        '''
+        logger.info('create collect job for submission %d', submission_id)
+        duration = Duration('02:00:00')
+        memory = Memory(3800, Memory.MB)
+        cores = 1
+        logger.debug('allocated time for collect job: %s', duration)
+        logger.debug('allocated memory for collect job: %d MB', memory)
+        logger.debug('allocated cores for collect job: %d', cores)
+        collect_job = CollectJob(
+            step_name=self.step_name,
+            arguments=self._build_collect_command(),
+            output_dir=self.log_location,
+            submission_id=submission_id
+        )
+        collect_job.requested_walltime = duration
+        collect_job.requested_memory = memory
+        collect_job.requested_cores = cores
+        return collect_job
+

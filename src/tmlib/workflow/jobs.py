@@ -206,7 +206,14 @@ class RunJob(Job):
         )
 
 
-class RunJobCollection(object):
+class JobCollection(object):
+
+    '''Abstract base class for job collections.'''
+
+    __metaclass__ = ABCMeta
+
+
+class RunJobCollection(JobCollection):
 
     '''Abstract base class for run job collections.'''
 
