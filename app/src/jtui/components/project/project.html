@@ -10,30 +10,7 @@
 
             <div class="panel panel-default">
 
-                <div class="panel-heading" style="font-size: 16px;">
-                    Status
-                </div>
-
-                <div class="panel-body">
-
-                    <i class="fa fa-cog fa-fw"
-                       ng-hide="submission.state == 'RUNNING'">
-                    </i>
-                    <i class="fa fa-cog fa-spin fa-fw"
-                       ng-show="submission.state == 'RUNNING'">
-                    </i>
-                    <i>{{ submission.state }}</i>
-
-                    <uib-progressbar max="100" value="submission.progress" type="{{ submission.indicator }}">
-                    </uib-progressbar>
-
-                </div>
-
-            </div>
-
-            <div class="panel panel-default">
-
-                <div class="panel-heading" style="font-size: 16px;">
+                <div class="panel-heading">
                     Input
                 </div>
 
@@ -92,7 +69,7 @@
 
             <div class="panel panel-default">
 
-                <div class="panel-heading" style="font-size: 16px;">
+                <div class="panel-heading">
                     Pipeline
                 </div>
 

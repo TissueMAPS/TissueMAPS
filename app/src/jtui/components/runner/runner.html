@@ -1,7 +1,7 @@
 <div class="right-side-pane">
 
     <div class="pane-header">
-        Module Output
+        Results
     </div>
 
     <div class="pane-content">
@@ -10,18 +10,24 @@
 
             <div class="panel panel-default">
 
-                <div class="panel-heading" style="font-size: 16px;">
-                    Output
+                <div class="panel-heading">
+                    Job Status
                 </div>
 
                 <div class="panel-body">
 
+                    <i class="fa fa-cog fa-fw"
+                       ng-hide="submission.state == 'RUNNING'">
+                    </i>
+                    <i class="fa fa-cog fa-spin fa-fw"
+                       ng-show="submission.state == 'RUNNING'">
+                    </i>
+                    <i>{{ submission.state }}</i>
+
+                    <uib-progressbar max="100" value="submission.progress" type="{{ submission.indicator }}">
+                    </uib-progressbar>
+
                     <div ng-show="outputAvailable">
-
-                        <div>
-                            job {{ jobs.currentId }}
-                        </div>
-
                         <div btn-group>
 
                             <button type="button"
@@ -43,6 +49,26 @@
                             </button>
 
                         </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="panel panel-default">
+
+                <div class="panel-heading">
+                    Module Output
+                </div>
+
+                <div class="panel-body">
+
+                    <div ng-show="outputAvailable">
+
+                        <h3>
+                            Job #{{ jobs.currentId }}
+                        </h3>
 
                     </div>
 
@@ -84,8 +110,8 @@
 
                     <div ng-show="outputAvailable">
 
-                        <div ng-bind-html="showThumbnail()">
-                        </div>
+                        <img data-ng-src="data:image/png;base64,{{showThumbnail()}}">
+                        </img>
 
                     </div>
 

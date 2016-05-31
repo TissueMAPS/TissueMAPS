@@ -147,7 +147,6 @@ angular.module('jtui.runner')
             return e.id;
         }).indexOf($scope.jobs.currentId);
         var nextJobIndex = jobIndex + 1;
-        console.log('next job index: ', nextJobIndex)
         if (nextJobIndex >= 0 && $scope.jobs.output.length > nextJobIndex) {
             console.log('go to next job: ', $scope.jobs.output[nextJobIndex].id)
             $scope.jobs.currentId = $scope.jobs.output[nextJobIndex].id;
@@ -247,7 +246,8 @@ angular.module('jtui.runner')
                 if (i == jobIndex) {
                     for (j in $scope.jobs.output[jobIndex].modules) {
                         if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
-                            return $sce.trustAsHtml($scope.jobs.output[jobIndex].modules[j].thumbnail);
+                            var thumbnail = $scope.jobs.output[jobIndex].modules[j].thumbnail;
+                            return thumbnail;
                         }
                     }
                 }
