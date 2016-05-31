@@ -690,6 +690,7 @@ class Measurement(OutputHandle):
     '''
 
     _NAME_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
+
     @assert_type(
         objects_ref='basestring', channel_ref=['basestring', 'types.NoneType']
     )
@@ -739,7 +740,7 @@ class Measurement(OutputHandle):
             )
         for v in value:
             for name in v.columns:
-                if self._NAME_PATTERN.search(name):
+                if not self._NAME_PATTERN.search(name):
                     raise ValueError(
                         'Feature name "%s" must only contain '
                         'alphanumerical characters including underscores '

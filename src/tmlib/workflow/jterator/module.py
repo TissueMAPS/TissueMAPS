@@ -21,14 +21,17 @@ logger = logging.getLogger(__name__)
 
 
 class CaptureOutput(dict):
-    '''
-    Class for capturing standard output and error of function calls
+    '''Class for capturing standard output and error of function calls
     and redirecting the STDOUT and STDERR strings to a dictionary.
 
     Examples
     --------
     with CaptureOutput() as output:
         foo()
+
+    Warning
+    -------
+    Using this approach screws up debugger break points.
     '''
     def __enter__(self):
         self._stdout = sys.stdout
@@ -87,7 +90,7 @@ class ImageAnalysisModule(object):
 
         Returns
         -------
-        Dict[str, str]
+        Tuple[str]
             absolute path to files for standard output and error
         '''
         out_file = os.path.join(
@@ -96,7 +99,7 @@ class ImageAnalysisModule(object):
         err_file = os.path.join(
             log_location, '%s_%.5d.err' % (self.name, job_id)
         )
-        return {'stdout': out_file, 'stderr': err_file}
+        return (out_file, err_file)
 
     def build_figure_filename(self, figures_dir, job_id):
         '''Builds name of figure file into which module will write figure

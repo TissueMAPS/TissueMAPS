@@ -288,8 +288,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             for module in self.pipeline
                         ],
                         'log_files': flatten([
-                            module.build_log_filenames(
-                                self.module_log_location, job_id).values()
+                            list(
+                                module.build_log_filenames(
+                                    self.module_log_location, job_id
+                                )
+                            )
                             for module in self.pipeline
                         ])
                     },
@@ -328,13 +331,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     filter(tm.MapobjectType.id.in_(mapobject_type_ids)).\
                     delete()
 
-    def _build_run_command(self, batch):
+    def _build_run_command(self, job_id):
         # Overwrite method to include "--pipeline" argument
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.extend(['--pipeline', self.pipe_name])
         command.append(self.experiment_id)
-        command.extend(['run', '--job', str(batch['id'])])
+        command.extend(['run', '--job', str(job_id)])
         return command
 
     def _build_collect_command(self):
@@ -486,13 +489,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
             module.update_handles(store, batch['plot'])
             output = module.run(self.engines[module.language])
 
-            log_files = module.build_log_filenames(
+            stdout_file, stderr_file = module.build_log_filenames(
                 self.module_log_location, job_id
             )
             logger.debug('write standard output and error to log files')
-            with TextWriter(log_files['stdout']) as f:
+            with TextWriter(stdout_file) as f:
                 f.write(output['stdout'])
-            with TextWriter(log_files['stderr']) as f:
+            with TextWriter(stderr_file) as f:
                 f.write(output['stderr'])
 
             if not output['success']:

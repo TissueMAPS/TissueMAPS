@@ -120,18 +120,20 @@ class PipelineChecker(object):
                                 'file must be a string.' % key)
 
         # Ensure that handles filenames are unique
-        n = Counter([splitext(basename(m['handles']))[0]
-                    for m in self.pipe_description['pipeline']])
+        n = Counter([
+            splitext(basename(m['handles']))[0]
+            for m in self.pipe_description['pipeline']
+        ])
         repeated = [x for x in n.values() if x > 1]
         if repeated:
             raise PipelineDescriptionError(
-                                'Handles identifier must be unique.')
+                'Handles identifier must be unique.'
+            )
 
         logger.info('pipeline description check successful')
 
     def check_handles(self):
-        '''
-        Check handles structure.
+        '''Check handles structure.
         '''
         lib_path = self.pipe_description.get('lib', None)
         if lib_path:
