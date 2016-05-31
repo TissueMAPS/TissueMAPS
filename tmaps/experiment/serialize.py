@@ -18,6 +18,8 @@ def encode_experiment(obj, encoder):
         'microscope_type': obj.microscope_type,
         'plate_acquisition_mode': obj.plate_acquisition_mode,
         'status': obj.status,
+        'stage': obj.stage,
+        'step': obj.step,
         'channels': map(encoder.default, obj.channels),
         'mapobject_types': map(encoder.default, obj.mapobject_types),
         'plates': [p.id for p in obj.plates],

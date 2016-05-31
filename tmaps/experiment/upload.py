@@ -139,10 +139,12 @@ def upload_file(acquisition):
     if acquisition.status == FileUploadStatus.FAILED:
         raise InternalServerError(
             'One or more files in this upload failed. This upload has to be '
-            'registered again before any upload attempt can be made again.')
+            'registered again before any upload attempt can be made again.'
+        )
     elif acquisition.status == FileUploadStatus.COMPLETE:
         raise MalformedRequestError(
-            'No upload was registered for this acquisition.')
+            'No upload was registered for this acquisition.'
+        )
 
     # Get the file form the form
     f = request.files.get('file')
