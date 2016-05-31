@@ -5,6 +5,8 @@ import re
 import glob
 import yaml
 import logging
+import base64
+import subprocess
 
 from natsort import natsorted
 from flask import send_file, jsonify, request, Blueprint, current_app
@@ -549,9 +551,63 @@ def kill_jobs():
         return jsonify({'success': False, 'error': 'No jobs were specified.'})
 
 
-def _get_output(jobs, log_dir, figures_dir, module_names):
+def _make_thumbnail(figure_file):
+    '''Makes a PNG thumbnail of a plotly figure by screen capture.
+
+    Parameters
+    ----------
+    figure_file: str
+        absolute path to the figure file (``".json"`` extension)
+
+    Returns
+    -------
+    str
+        aboslute path to the thumbnail file
+    Note
+    ----
+    Requires the phantomjs library and the "rasterize.js" script.
+    Needs the environment variable "RASTERIZE", which specifies the absolute
+    path to the "rasterize.js" file.
+    '''
+    # TODO: do this already in Jterator in a parallelized way (if plot true)
+    import plotly
+    logger.info('read figure file: %s', figure_file)
+    with open(figure_file, 'r') as f:
+        figure = json.loads(f.read())
+    logger.info('create figure')
+    html = plotly.offline.plot(figure, show_link=False, output_type='div')
+    html = ''.join([
+        '<html>',
+        '<head><meta charset="utf-8" /></head>',
+        '<body>',
+        html,
+        '</body>',
+        '</html>'
+    ])
+    # from xhtml2pdf import pisa
+    html_file = figure_file.replace('.json', '.html')
+    logger.info('write html file: %s', html_file)
+    with open(html_file, 'w+b') as f:
+        # pisa.CreatePDF(html, f)
+        f.write(html)
+    # Produce thumbnails for html figures by screen capture.
+    png_file = figure_file.replace('.json', '.png')
+    logger.info('generate png file: %s', png_file)
+    rasterize_file = os.path.expandvars('$RASTERIZE')
+    subprocess.call([
+        'phantomjs', rasterize_file, html_file, png_file
+    ])
+    return png_file
+
+
+def _get_output(jobs, modules, log_location, fig_location):
     # TODO: don't redo this every time for each module, but only for those
     # modules whose output hasn't yet been returned
+    if 'RASTERIZE' not in os.environ:
+        logger.warn('"RASTERIZE" environment variable not set')
+    rasterize_file = os.path.expandvars('$RASTERIZE')
+    if not os.path.exists(rasterize_file):
+        logger.warn('"phantomjs" is not properly installed')
     output = list()
     for task in jobs.iter_workflow():
         if not isinstance(task, RunJobCollection):
@@ -562,93 +618,40 @@ def _get_output(jobs, log_dir, figures_dir, module_names):
             j = int(re.search(r'_(\d+)$', subtask.jobname).group(1))
             stdout_file = os.path.join(subtask.output_dir, subtask.stdout)
             if os.path.exists(stdout_file):
-                stdout = open(stdout_file).read()
+                with open(stdout_file) as f:
+                    stdout = f.read()
             else:
                 stdout = ''
             stderr_file = os.path.join(subtask.output_dir, subtask.stderr)
             if os.path.exists(stderr_file):
-                stderr = open(stderr_file).read()
+                with open(stderr_file) as f:
+                    stderr = f.read()
             else:
                 stderr = ''
             if not stdout and not stderr:
                 log = '-- Job is still running --'
             else:
                 log = stdout + '\n' + stderr
-            # Obtain the output of the individual modules in the pipeline
-            # of the current jobs (stdout, stderr, and figure)
-            stdout_files = glob.glob(
-                os.path.join(log_dir, '*_%.5d.out' % j)
-            )
-            stderr_files = glob.glob(
-                os.path.join(log_dir, '*_%.5d.err' % j)
-            )
-            fig_files = glob.glob(
-                os.path.join(figures_dir, '*_%.5d.json' % j)
-            )
-            # Produce thumbnails for html figures by screen capture.
-            # Depends on the phantomjs library and the "rasterize.js" script.
-            # Needs the environment variable "RASTERIZEDIR", e.g. for homebrew
-            # installation on OSX:
-            # export RASTIZEDIR=/usr/local/Cellar/phantomjs/2.1.1/share/phantomjs/examples
-            # if 'RASTERIZEDIR' not in os.environ:
-            #     logger.warn('"RASTERIZEDIR" environment variable not set')
-            # rasterize_dir = os.path.expandvars('$RASTERIZEDIR')
-            # if not os.path.exists(rasterize_dir):
-            #     logger.warn('"phantomjs" is not properly installed')
-            # else:
-            #     rasterize_file = os.path.join(rasterize_dir, 'rasterize.js')
-            #     for html_file in fig_files:
-            #         png_file = re.sub(r'(.*)\.html$', r'\1.png', html_file)
-            #         if not os.path.exists(png_file):
-            #             subprocess.call([
-            #                 'phantomjs', rasterize_file, html_file, png_file
-            #             ])
-            # thumbnail_files = glob.glob(
-            #     os.path.join(figures_dir, '*_%.5d.png' % j)
-            # )
-            r = re.compile('(.*)_\d+\.')
-            # We need to loop over the names from the output files,
-            # because some module names may not be present in case of error
-            module_file = [
-                re.match(r, os.path.basename(f)).group(1)
-                for f in stdout_files
-            ]
-            module_stdout = dict(zip(
-                module_file, [open(f).read() for f in stdout_files])
-            )
-            module_stderr = dict(zip(
-                module_file, [open(f).read() for f in stderr_files])
-            )
-            fig_names = [
-                re.match(r, os.path.basename(f)).group(1)
-                for f in fig_files
-            ]
-            # thumbnail_names = [
-            #     re.match(r, os.path.basename(f)).group(1)
-            #     for f in thumbnail_files
-            # ]
-            # figures = dict(zip(fig_names, fig_files))
-            # thumbnails = dict(zip(thumbnail_names, thumbnail_files))
             module_output = list()
-            for i, m in enumerate(module_names):
-                module_output.append(dict())
-                module_output[i]['name'] = m
-                module_output[i]['stdout'] = module_stdout.get(m, None)
-                module_output[i]['stderr'] = module_stderr.get(m, None)
-                # TODO: only send figures if requested, i.e. when user clicks
-                # if m in thumbnails.keys():
-                #     module_output[i]['thumbnail'] = build_html_figure_string(
-                #                                     thumbnails.get(m, None)
-                #     )
-                # else:
-                #     # TODO: PNG as base64
-                #     module_output[i]['thumbnail'] = \
-                #         '''
-                #         <html>
-                #             <body>
-                #             </body>
-                #         </html>
-                #         '''
+            for m in modules:
+                stdout_file, stderr_file = m.build_log_filenames(log_location, j)
+                fig_file = m.build_figure_filename(fig_location, j)
+                out = dict()
+                out['name'] = m.name
+                if os.path.exists(stdout_file):
+                    with open(stdout_file, 'r') as f:
+                        out['stdout'] = f.read()
+                    with open(stderr_file, 'r') as f:
+                        out['stderr'] = f.read()
+                    thumbnail_file = _make_thumbnail(fig_file)
+                    with open(thumbnail_file, 'r') as f:
+                        out['thumbnail'] = base64.b64encode(f.read())
+                else:
+                    out['stdout'] = None
+                    out['stderr'] = None
+                    out['thumbnail'] = None
+                module_output.append(out)
+
             with tm.utils.Session() as session:
                 task_info = session.query(tm.Task).get(subtask.persistent_id)
                 exitcode = task_info.exitcode
@@ -656,7 +659,7 @@ def _get_output(jobs, log_dir, figures_dir, module_names):
             failed = exitcode != 0
             output.append({
                 'id': j,
-                'submissionId': submission_id,
+                'submission_id': submission_id,
                 'name': subtask.jobname,
                 'log': log,
                 'modules': module_output,
@@ -723,11 +726,10 @@ def get_job_output(experiment):
         pipe=data['pipe'],
         handles=data['handles'],
     )
-    module_names = list_module_names(data['pipe']['description']['pipeline'])
     try:
         jobs = gc3pie.retrieve_jobs(experiment, 'jtui')
         output = _get_output(
-            jobs, jt.module_log_location, jt.figures_location, module_names
+            jobs, jt.pipeline, jt.module_log_location, jt.figures_location
         )
         return jsonify(output=output)
     except IndexError:
