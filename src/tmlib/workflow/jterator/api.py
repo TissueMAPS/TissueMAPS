@@ -132,7 +132,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         libpath = self.project.pipe['description'].get('lib', None)
         if not libpath:
             if 'JTLIB' in os.environ:
-                libpath = os.expandvars(os.expanduser(os.environ['JTLIB']))
+                libpath = os.path.expandvars(
+                    os.path.expanduser(os.environ['JTLIB'])
+                )
             else:
                 raise OSError('JTLIB environment variable not set.')
         libpath = complete_path(libpath, self.step_location)
