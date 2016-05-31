@@ -10,7 +10,6 @@ from tmaps import defaultconfig
 from tmaps.extensions import db
 from tmaps.extensions import jwt
 from tmaps.extensions import redis_store
-from tmaps.extensions import gc3pie_engine
 from tmaps.serialize import TmJSONEncoder
 
 
@@ -111,16 +110,17 @@ def create_app(config_overrides={}):
         from tmaps.extensions import spark
         spark.init_app(app)
 
+    from tmaps.extensions import gc3pie
+    gc3pie.init_app(app)
+
     ## Import and register blueprints
     from api import api
     app.register_blueprint(api, url_prefix='/api')
 
-    use_jtui = app.config.get('USE_JTUI', False)
-    if use_jtui:
-        from jtui.api import jtui
-        from tmaps.extensions import websocket
-        websocket.init_app(app)
-        app.register_blueprint(jtui, url_prefix='/jtui')
+    from jtui.api import jtui
+    # from tmaps.extensions import websocket
+    # websocket.init_app(app)
+    app.register_blueprint(jtui, url_prefix='/jtui')
 
     # @app.after_request
     # def after_request(response):
