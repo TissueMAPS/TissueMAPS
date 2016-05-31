@@ -20,6 +20,7 @@ from werkzeug.contrib.profiler import ProfilerMiddleware
 import flask
 from tmaps.appfactory import create_app
 from tmaps import log
+from tmlib.logging_utils import configure_logging
 
 logo = """
   _____ _                    __  __    _    ____  ____
@@ -32,6 +33,7 @@ logo = """
 
 print logo
 
+configure_logging(1)
 app = create_app()
 
 if __name__ == '__main__':
