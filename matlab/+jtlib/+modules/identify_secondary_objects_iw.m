@@ -71,6 +71,8 @@ function [output_label_image, fig] = identify_secondary_objects_iw(input_label_i
     % Matlab labels images differently, which causes problems in some cases.
     % Therefore, we relabel primary objects for the identification of
     % secondary objects and create a mapping from new to original labels.
+    % NOTE: Matlab uses 8-neighbourhood by default, make sure that
+    % "input_label_image" was labeled the same way!
     relabeled_image = bwlabel(input_label_image > 0);
     obj_ids = unique(input_label_image(input_label_image > 0));
     mapping = zeros(length(obj_ids), 1);
