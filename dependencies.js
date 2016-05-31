@@ -15,11 +15,13 @@
         /* Angular */
         'bower_components/angular/angular.js',
         'bower_components/angular-ui-router/release/angular-ui-router.js', 
-        'bower_components/angular-sanitize/angular-sanitize.js', 
+        'bower_components/angular-sanitize/angular-sanitize.js',
         /* Angular UI */
         'bower_components/angular-ui-sortable/sortable.min.js',
         'bower_components/angular-ui-slider/src/slider.js',
-        'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+        'bower_components/angular-animate/angular-animate.min.js',
+        'bower_components/angular-boostrap/ui-bootstrap.min.js',
+        'bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js',
         // 'bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js',
         /* Other plugins */
         'unmanaged/ng-color-picker/color-picker.js',
@@ -41,7 +43,7 @@
         'bower_components/angular-loading-bar/build/loading-bar.min.js',
         'bower_components/angular-hotkeys/build/hotkeys.min.js',
         'bower_components/highlightjs/highlight.pack.min.js',
-        'bower_components/angular-highlightjs/build/angular-highlightjs.min.js',
+        'bower_components/angular-highlightjs/angular-highlightjs.min.js',
         'bower_components/marked/lib/marked.js',
         'bower_components/angular-marked/dist/angular-marked.min.js',
         'bower_components/checklist-model/checklist-model.js',
@@ -50,8 +52,6 @@
         'bower_components/angular-smart-table/dist/smart-table.min.js',
         'bower_components/angular-plotly/src/angular-plotly.js',
         'bower_components/EaselJS/lib/easeljs-0.8.2.combined.js',
-        'bower_components/angular-animate/angular-animate.min.js',
-        'bower_components/angular-boostrap/ui-bootstrap.min.js',
         'bower_components/ngDraggable/ngDraggable.js'
     ].map(function(path) {
         return 'app/assets/libs/' + path;
@@ -69,7 +69,9 @@
          * JtUI
          */
         'bower_components/angular-loading-bar/build/loading-bar.min.css',
-        'bower_components/angular-hotkeys/build/hotkeys.min.css'
+        'bower_components/angular-hotkeys/build/hotkeys.min.css',
+        // highlightjs css???
+        'bower_components/highlightjs/styles/solarized-dark.css'
     ].map(function(path) {
         return 'app/assets/' + path;
     })
