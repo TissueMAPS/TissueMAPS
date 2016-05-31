@@ -345,6 +345,10 @@ class PipelineChecker(object):
                             % (j, input_handle.name, handles_path,
                                input_handle.key)
                         )
+                else:
+                    raise PipelineDescriptionError(
+                        'You provided no input for the pipeline.'
+                    )
 
             # Store all upstream output items
             for output_item in handles['output']:
