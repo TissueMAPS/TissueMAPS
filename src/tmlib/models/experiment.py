@@ -41,8 +41,10 @@ class Experiment(Model, DateMixIn):
         should be created in
     description: str
         description of the experimental setup
-    status: str
-        processing status
+    stage: str
+        currently processed workflow stage
+    step: str
+        currently processed workflow step
     microscope_type: str
         microscope that was used to acquire the images
     plate_format: int
@@ -91,11 +93,13 @@ class Experiment(Model, DateMixIn):
     description = Column(Text)
     root_directory = Column(String)
     status = Column(String)
+    stage = Column(String)
+    step = Column(String)
     zoom_factor = Column(Integer)
     vertical_site_displacement = Column(Integer)
     horizontal_site_displacement = Column(Integer)
     well_spacer_size = Column(Integer)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer, ForeignKey('users.id'), index=True)
 
     # Relationships to other tables
     user = relationship('User', backref='experiments')
@@ -166,7 +170,9 @@ class Experiment(Model, DateMixIn):
         self.plate_acquisition_mode = plate_acquisition_mode
 
         self.root_directory = root_directory
-        self.status = 'WAITING'
+        self.status = 'PENDING'  # TODO: get from task table
+        self.stage = None
+        self.step = None
         self.zoom_factor = zoom_factor
         self.well_spacer_size = well_spacer_size
         # TODO: we may be able to calculate this automatically from OMEXML
@@ -207,6 +213,11 @@ class Experiment(Model, DateMixIn):
     def workflow_location(self):
         '''str: location where workflow data are stored'''
         return os.path.join(self.location, 'workflow')
+
+    @property
+    def session_location(self):
+        '''str: location where submission data are stored'''
+        return os.path.join(self.workflow_location, 'session')
 
     @cached_property
     def plate_spacer_size(self):
@@ -311,6 +322,8 @@ class Experiment(Model, DateMixIn):
             'microscope_type': self.microscope_type,
             'plate_acquisition_mode': self.plate_acquisition_mode,
             'status': self.status,
+            'stage': self.stage,
+            'step': self.step,
             'channels': [ch.as_dict() for ch in self.channels],
             'mapobject_info': mapobject_info,
             'plates': [pl.as_dict() for pl in self.plates]
