@@ -324,7 +324,7 @@ class PipelineChecker(object):
 
             for j, input_item in enumerate(handles['input']):
                 input_handle = create_handle(**input_item)
-                if not isinstance(handles, PipeHandle):
+                if not isinstance(input_handle, PipeHandle):
                     # We only check piped arguments
                     continue
                 channels = self.pipe_description['input']['channels']
