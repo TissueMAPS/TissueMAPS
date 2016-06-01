@@ -87,21 +87,32 @@ angular.module('jtui.project')
             }
             if ($scope.subJobId != null) {
                 var check = false;
-                // First check the pipeline and return potential errors
-                projectService.checkProject($scope.project).then(function (check) {
-                    console.log('check: ', check);
-                    if (!check.success) {
-                        console.log('pipeline check failed');
+                // First save the pipeline and return potential errors
+                projectService.saveProject($scope.project).then(function (result) {
+                    console.log('save result: ', result);
+                    if (!result.success) {
+                        console.log('pipeline could not be saved');
                         // Show the error
-                        $scope.checkProject();
+                        $scope.saveProject();
                     } else {
-                        console.log('pipeline check successful');
-                        // Submit pipeline for processing
-                        console.log('submit pipeline');
-                        runnerService.run($scope.subJobId, $scope.project);
-                        console.log('---START MONITORING SUBMISSION STATUS---')
-                        $scope.startMonitoring();
-                }
+                        // Then check the pipeline and return potential errors
+                        projectService.checkProject($scope.project).then(function (result) {
+                            console.log('check result: ', result);
+                            if (!result.success) {
+                                console.log('pipeline check failed');
+                                // Show the error
+                                $scope.checkProject();
+                            } else {
+                                console.log('pipeline check successful');
+                                // Submit pipeline for processing
+                                console.log('submit pipeline');
+                                runnerService.run($scope.subJobId, $scope.project);
+                                console.log('---START MONITORING SUBMISSION STATUS---')
+                                $scope.startMonitoring();
+                        }
+                        });
+
+                    }
                 });
             }
             runIsOpen = false;
