@@ -8,7 +8,7 @@ input:
 
     - name: correction_factor
       type: Scalar
-      value:
+      value: 1
       help: >
         Threshold correction factor that is multiplied with the calculated
         threshold level for manual fine-tuning.
