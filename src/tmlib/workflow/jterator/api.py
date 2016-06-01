@@ -154,8 +154,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 name=name, source_file=source_path, description=description
             )
             pipeline.append(module)
-        if not pipeline:
-            raise PipelineDescriptionError('No pipeline description available')
+        # if not pipeline:
+        #     raise PipelineDescriptionError('No pipeline description available')
         return pipeline
 
     def start_engines(self, plot):
