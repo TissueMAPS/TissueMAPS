@@ -32,7 +32,6 @@ input:
     - name: plot
       type: Plot
       value:
-      options: [true, false]
       help: Should a figure be created?
 
 output:
@@ -44,4 +43,4 @@ output:
 
     - name: figure
       type: Figure
-      help: Comparison of <i>label_image</i> and <i>filtered_image</i>.
+      help: Comparison of "label_image" and "filtered_image".

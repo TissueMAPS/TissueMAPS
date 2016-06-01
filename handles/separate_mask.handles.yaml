@@ -98,7 +98,6 @@ input:
   - name: plot
     type: Plot
     value:
-    options: [true, false]
     help: Should a figure be created?
 
 output:
