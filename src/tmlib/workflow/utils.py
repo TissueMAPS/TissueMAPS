@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_gc3pie_sql_store():
-    '''Create a `Store` instance for job persistence in the PostgreSQL table
+    '''Creates a `Store` instance for job persistence in the PostgreSQL table
     :py:class:`tmlib.models.Tasks`.
 
     Returns

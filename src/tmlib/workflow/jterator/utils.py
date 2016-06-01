@@ -2,8 +2,7 @@ import os
 
 
 def get_module_directories(repo_dir):
-    '''
-    Get the directories were module source code files are located.
+    '''Gets the directories were module source code files are located.
 
     Parameters
     ----------
@@ -25,8 +24,7 @@ def get_module_directories(repo_dir):
 
 
 def complete_path(input_path, step_location):
-    '''
-    Complete relative path variables.
+    '''Completes a relative path.
 
     Parameters
     ----------
@@ -51,8 +49,8 @@ def complete_path(input_path, step_location):
 
 
 def get_module_path(module_file, repo_dir):
-    '''
-    Get absolute path to module file.
+    '''Gets the absolute path to a module file.
+
     Parameters
     ----------
     module_file: str

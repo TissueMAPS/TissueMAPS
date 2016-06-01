@@ -7,6 +7,9 @@ from tmlib.utils import same_docstring_as
 from tmlib.workflow.tmaps import logo
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.logging_utils import configure_logging
+from tmlib.workflow.utils import create_gc3pie_engine
+from tmlib.workflow.utils import create_gc3pie_sql_store
+from tmlib.workflow.cli import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.errors import NotSupportedError
 from tmlib.errors import WorkflowDescriptionError
@@ -15,7 +18,7 @@ from tmlib.workflow import cli
 logger = logging.getLogger(__name__)
 
 
-class Tmaps(object):
+class Tmaps(SubmissionManager):
 
     '''Command line interface for building, submitting, and monitoring
     `TissueMAPS` workflows.
@@ -50,17 +53,15 @@ class Tmaps(object):
         self._print_logo()
         logger.info('submit workflow')
         api = self.api_instance
-        workflow = api.create_workflow()
-        session = api.create_gc3pie_session()
-        logger.debug('add jobs to session "%s"', session.name)
-        session.add(workflow)
-        session.save_all()
-        logger.debug('add session to engine store')
-        engine = api.create_gc3pie_engine()
-        engine._store = session.store
+        submission_id, user_name = self.register_submission()
+        workflow = api.create_workflow(submission_id, user_name)
+        store = create_gc3pie_sql_store()
+        store.save(workflow)
+        self.update_submission(workflow)
+        engine = create_gc3pie_engine(store)
         logger.info('submit and monitor jobs')
         try:
-            api.submit_jobs(
+            self.submit_jobs(
                 workflow, engine, monitoring_depth=monitoring_depth
             )
         except KeyboardInterrupt:
@@ -87,10 +88,7 @@ class Tmaps(object):
         '''
         self._print_logo()
         api = self.api_instance
-        session = api.create_gc3pie_session()
-        logger.debug('load jobs from session "%s"', session.name)
-        job_ids = session.list_ids()
-        workflow = session.load(int(job_ids[-1]))
+        workflow = self.load_jobs()
         stage_names = [s.name for s in api.description.stages]
         try:
             start_index = stage_names.index(stage)
@@ -98,12 +96,11 @@ class Tmaps(object):
         except IndexError:
             raise WorkflowDescriptionError('Unknown stage "%s".' % stage)
         logger.info('resubmit workflow at stage #%d "%s"', start_index, stage)
-        logger.debug('add session to engine store')
-        engine = api.create_gc3pie_engine()
-        engine._store = session.store
+        store = create_gc3pie_sql_store()
+        engine = create_gc3pie_engine(store)
         logger.info('resubmit and monitor jobs')
         try:
-            api.submit_jobs(
+            self.submit_jobs(
                 workflow, engine, start_index=start_index,
                 monitoring_depth=monitoring_depth
             )
@@ -227,8 +224,6 @@ class Tmaps(object):
         # Silence some chatty loggers
         gc3libs_logger = logging.getLogger('gc3.gc3libs')
         gc3libs_logger.setLevel(logging.CRITICAL)
-        apscheduler_logger = logging.getLogger('apscheduler')
-        apscheduler_logger.setLevel(logging.CRITICAL)
 
         api_instance = WorkflowManager(args.experiment_id, args.verbosity)
         cli_instance = cls(api_instance)

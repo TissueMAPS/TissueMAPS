@@ -122,8 +122,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return os.path.join(self.step_location, 'batches')
 
     def get_batches_from_files(self):
-        '''Gets batches from files and combine them into
-        the format required by the `create_jobs()` method.
+        '''Gets batches from files.
 
         Returns
         -------
@@ -610,13 +609,15 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         print yaml.safe_dump(batches, default_flow_style=False)
 
-    def create_step(self, submission_id):
+    def create_step(self, submission_id, user_name):
         '''Creates the workflow step.
 
         Parameters
         ----------
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
 
         Returns
         -------
@@ -625,16 +626,19 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('create workflow step for submission %d', submission_id)
         return WorkflowStep(
             name=self.step_name,
-            submission_id=submission_id
+            submission_id=submission_id,
+            user_name=user_name
         )
 
-    def create_run_jobs(self, submission_id, job_ids, duration, memory, cores):
+    def create_run_jobs(self, submission_id, user_name, job_ids, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
 
         Parameters
         ----------
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         job_ids: int
             IDs of jobs that should be created
         duration: str, optional
@@ -667,7 +671,8 @@ class ClusterRoutines(BasicClusterRoutines):
                 arguments=self._build_run_command(job_id=j),
                 output_dir=self.log_location,
                 job_id=j,
-                submission_id=submission_id
+                submission_id=submission_id,
+                user_name=user_name
             )
             if duration:
                 job.requested_walltime = Duration(duration)
@@ -686,13 +691,15 @@ class ClusterRoutines(BasicClusterRoutines):
             run_jobs.add(job)
         return run_jobs
 
-    def create_collect_job(self, submission_id):
+    def create_collect_job(self, submission_id, user_name):
         '''Creates job for the "collect" phase of the step.
 
         Parameters
         ----------
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
 
         Returns
         -------
@@ -714,7 +721,8 @@ class ClusterRoutines(BasicClusterRoutines):
             step_name=self.step_name,
             arguments=self._build_collect_command(),
             output_dir=self.log_location,
-            submission_id=submission_id
+            submission_id=submission_id,
+            user_name=user_name
         )
         collect_job.requested_walltime = duration
         collect_job.requested_memory = memory

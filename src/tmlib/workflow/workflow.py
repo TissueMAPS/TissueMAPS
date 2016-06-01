@@ -60,7 +60,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
     The number of jobs and the arguments for each job are known upon submission.
     '''
 
-    def __init__(self, name, submission_id, run_jobs=None, collect_job=None):
+    def __init__(self, name, submission_id, user_name, run_jobs=None, collect_job=None):
         '''
         Parameters
         ----------
@@ -68,6 +68,8 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             name of the step
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         run_jobs: tmlib.jobs.RunJobCollection, optional
             jobs for the *run* phase that should be processed in parallel
             (default: ``None``)
@@ -78,6 +80,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         super(WorkflowStep, self).__init__(tasks=list(), jobname=name)
         self.name = name
         self.submission_id = submission_id
+        self.user_name = user_name
         self.run_jobs = run_jobs
         self.collect_job = collect_job
         self._current_task = 0
@@ -148,7 +151,7 @@ class WorkflowStage(State):
     composed of one or more *workflow steps* that together comprise a logical
     computational unit.'''
 
-    def __init__(self, name, experiment_id, verbosity, submission_id,
+    def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
                  description):
         '''
         Parameters
@@ -161,6 +164,8 @@ class WorkflowStage(State):
             logging verbosity index
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         description: tmlib.tmaps.description.WorkflowStageDescription
             description of the stage
 
@@ -174,6 +179,7 @@ class WorkflowStage(State):
         self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.submission_id = submission_id
+        self.user_name = user_name
         if not isinstance(description, WorkflowStageDescription):
             raise TypeError(
                 'Argument "description" must have type '
@@ -199,7 +205,11 @@ class WorkflowStage(State):
         workflow_steps = list()
         for step in self.description.steps:
             workflow_steps.append(
-                WorkflowStep(name=step.name, submission_id=self.submission_id)
+                WorkflowStep(
+                    name=step.name,
+                    submission_id=self.submission_id,
+                    user_name=self.user_name
+                )
             )
         return workflow_steps
 
@@ -264,8 +274,10 @@ class WorkflowStage(State):
         logger.info(
             'allocated cores: %d', step_description.submission_args.cores
         )
+        job_ids = range(1, len(batches['run']) + 1)
         step.run_jobs = api_instance.create_run_jobs(
             self.submission_id,
+            self.user_name,
             job_ids,
             duration=step_description.submission_args.duration,
             memory=step_description.submission_args.memory,
@@ -273,7 +285,8 @@ class WorkflowStage(State):
         )
         if 'collect' in batches:
             step.collect_job = api_instance.create_collect_job(
-                self.submission_id
+                self.submission_id,
+                self.user_name
             )
         return step
 
@@ -288,7 +301,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
     '''
 
     def __init__(self, name, experiment_id, verbosity,
-                 submission_id, description=None, waiting_time=0):
+                 submission_id, user_name, description=None, waiting_time=0):
         '''
         Parameters
         ----------
@@ -300,6 +313,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             logging verbosity index
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
         waiting_time: int, optional
@@ -312,7 +327,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
         )
         WorkflowStage.__init__(
             self, name=name, experiment_id=experiment_id, verbosity=verbosity,
-            submission_id=submission_id, description=description
+            submission_id=submission_id, description=description,
+            user_name=user_name
         )
         self.waiting_time = waiting_time
 
@@ -404,7 +420,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
     in parallel. The number of jobs must thus be known for each step in advance.
     '''
 
-    def __init__(self, name, experiment_id, verbosity, submission_id,
+    def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
                  description=None):
         '''
         Parameters
@@ -417,6 +433,8 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
             logging verbosity index
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
         '''
@@ -425,7 +443,8 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
         )
         WorkflowStage.__init__(
             self, name=name, experiment_id=experiment_id, verbosity=verbosity,
-            submission_id=submission_id, description=description
+            submission_id=submission_id, user_name=user_name,
+            description=description
         )
 
     def add(self, step):
@@ -461,7 +480,7 @@ class Workflow(SequentialTaskCollection, State):
     *workflow stage* after another on a cluster.
     '''
 
-    def __init__(self, experiment_id, verbosity, submission_id,
+    def __init__(self, experiment_id, verbosity, submission_id, user_name,
                  description=None, waiting_time=0):
         '''
         Parameters
@@ -472,6 +491,8 @@ class Workflow(SequentialTaskCollection, State):
             logging verbosity index
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         description: tmlib.tmaps.description.WorkflowDescription, optional
             description of the workflow (default: ``None``)
         waiting_time: int, optional
@@ -498,6 +519,7 @@ class Workflow(SequentialTaskCollection, State):
         self.verbosity = verbosity
         self.waiting_time = waiting_time
         self.submission_id = submission_id
+        self.user_name = user_name
         with tmlib.models.utils.Session() as session:
             experiment = session.query(tmlib.models.Experiment).\
                 get(self.experiment_id)
@@ -532,6 +554,7 @@ class Workflow(SequentialTaskCollection, State):
                         experiment_id=self.experiment_id,
                         verbosity=self.verbosity,
                         submission_id=self.submission_id,
+                        user_name=self.user_name,
                         description=stage,
                         waiting_time=self.waiting_time
                     )
@@ -544,6 +567,7 @@ class Workflow(SequentialTaskCollection, State):
                         experiment_id=self.experiment_id,
                         verbosity=self.verbosity,
                         submission_id=self.submission_id,
+                        user_name=self.user_name,
                         description=stage
                     )
                 )

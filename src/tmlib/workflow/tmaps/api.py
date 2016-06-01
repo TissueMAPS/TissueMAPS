@@ -34,18 +34,16 @@ class WorkflowManager(BasicClusterRoutines):
                 get(self.experiment_id)
             self.workflow_location = experiment.workflow_location
 
-    @property
-    def session_location(self):
-        '''str: location for the
-        `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
-        '''
-        return os.path.join(self.workflow_location, 'session')
-
-    def create_workflow(self, workflow_description=None, waiting_time=0):
+    def create_workflow(self, submission_id, user_name,
+            workflow_description=None, waiting_time=0):
         '''Creates a `TissueMAPS` workflow.
 
         Parameters
         ----------
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         workflow_description: tmlib.cfg.WorkflowDescription, optional
             description of a `TissueMAPS` workflow (default: ``None``)
         waiting_time: int, optional
@@ -58,15 +56,6 @@ class WorkflowManager(BasicClusterRoutines):
         tmlib.workflow.Workflow
         '''
         logger.info('creating workflow')
-        with tmlib.models.utils.Session() as session:
-            experiment = session.query(tmlib.models.Experiment).\
-                get(self.experiment_id)
-            submission = tmlib.models.Submission(
-                experiment_id=experiment.id
-            )
-            session.add(submission)
-            session.flush()
-            submission_id = submission.id
 
         if workflow_description is None:
             workflow_description = self.description
@@ -74,9 +63,10 @@ class WorkflowManager(BasicClusterRoutines):
         return Workflow(
             experiment_id=self.experiment_id,
             verbosity=self.verbosity,
+            submission_id=submission_id,
+            user_name=user_name,
             description=workflow_description,
             waiting_time=waiting_time,
-            submission_id=submission_id
         )
 
     @property

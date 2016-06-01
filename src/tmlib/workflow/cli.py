@@ -143,8 +143,158 @@ class CliMeta(ABCMeta):
         setattr(cls, '_api_class', api)
         setattr(cls, '_parser', parser)
 
+    def load_jobs(self):
+        '''Loads previously submitted jobs from the database.
 
-class CommandLineInterface(object):
+        Returns
+        -------
+        tmlib.workflow.job or tmlib.workflow.job.JobCollection
+            loaded jobs
+        '''
+        with tm.utis.Session() as session:
+            last_submission_id = session.query(func.max(tm.Submission.id)).\
+                filter(
+                    tm.Submission.experiment_id == self.api_instance.experiment_id,
+                    tm.Submission.program == self.name
+                ).\
+                group_by(tm.Submission.experiment_id).\
+                one()[0]
+            last_submission = session.query(tm.Submission).\
+                get(last_submission_id)
+            job_id = last_submission.top_task_id
+        store = create_gc3pie_sql_store()
+        return store.load(job_id)
+
+
+class SubmissionManager(object):
+
+    '''Mixin class for submission and monitoring of computational tasks.'''
+
+    def register_submission(self):
+        '''Generates a unique submission ID.
+
+        Creates a database entry in the "submissions" table.
+
+        Returns
+        -------
+        Tuple[int, str]
+            ID of the submission and the name of the submitting user
+
+        Warning
+        -------
+        Ensure that the "submissions" table get updated once the jobs
+        were submitted, i.e. added to a running `GC3Pie` engine.
+        To this end, use the :py:method:`tmlib.workflow.api.update_submission`
+        method.
+
+        See also
+        --------
+        :py:class:`tmlib.models.Submission`
+        '''
+        with tm.utils.Session() as session:
+            submission = tm.Submission(
+                experiment_id=self.api_instance.experiment_id,
+                program=self.name
+            )
+            session.add(submission)
+            session.flush()
+            return (submission.id, submission.experiment.user.name)
+
+    def update_submission(self, jobs):
+        '''Updates the submission with the submitted tasks.
+
+        Sets the value for "top_task" column in the "submissions" table.
+
+        Paramters
+        ---------
+        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
+            submitted tasks
+
+        See also
+        --------
+        :py:class:`tmlib.models.Submission`
+
+        Raises
+        ------
+        AttributeError
+            when `jobs` doesn't have a "persistent_id" attribute, which
+            indicates that the task has not yet been inserted into the
+            database table
+        '''
+        with tm.utils.Session() as session:
+            submission = session.query(tm.Submission).get(jobs.submission_id)
+            if not hasattr(jobs, 'persistent_id'):
+                raise AttributeError(
+                    'Task was not yet inserted into the database table.'
+                )
+            submission.top_task_id = jobs.persistent_id
+
+    def submit_jobs(self, jobs, engine, start_index=0, monitoring_depth=1):
+        '''Submits jobs to a cluster and continuously monitors their progress.
+
+        Parameters
+        ----------
+        jobs: tmlib.tmaps.workflow.WorkflowStep
+            jobs that should be submitted
+        engine: gc3libs.core.Engine
+            engine that should submit the jobs
+        start_index: int, optional
+            index of the job at which the collection should be (re)submitted
+        monitoring_depth: int, optional
+            recursion depth for job monitoring, i.e. in which detail subtasks
+            in the task tree should be monitored (default: ``1``)
+
+        Returns
+        -------
+        dict
+            information about each job
+
+        Warning
+        -------
+        This method is intended for interactive use via the command line only.
+        '''
+        logger.debug('monitoring depth: %d' % monitoring_depth)
+        if monitoring_depth < 0:
+            monitoring_depth = 0
+
+        logger.debug('add jobs %s to engine', jobs)
+        engine.add(jobs)
+        engine.redo(jobs, start_index)
+
+        # periodically check the status of submitted jobs
+        t_submitted = datetime.datetime.now()
+
+        break_next = False
+        while True:
+
+            time.sleep(3)
+            logger.debug('wait for 3 sechnds')
+
+            t_elapsed = datetime.datetime.now() - t_submitted
+            logger.info('elapsed time: %s', str(t_elapsed))
+
+            logger.info('progress...')
+            engine.progress()
+
+            # status_data = get_task_data_from_engine(jobs)
+            status_data = get_task_data_from_sql_store(jobs)
+            print_task_status(status_data, monitoring_depth)
+
+            if break_next:
+                break
+
+            if (jobs.execution.state == gc3libs.Run.State.TERMINATED or
+                    jobs.execution.state == gc3libs.Run.State.STOPPED):
+                break_next = True
+                engine.progress()  # one more iteration to update status_data
+
+        status_data = get_task_data_from_sql_store(jobs)
+        log_task_failure(status_data, logger)
+
+        return status_data
+
+
+class CommandLineInterface(SubmissionManager):
 
     '''Abstract base class for command line interfaces.
 
@@ -413,77 +563,16 @@ class CommandLineInterface(object):
         logger.debug('get required inputs from batches')
         return self.api_instance.list_input_files(self.batches)
 
-    @property
-    def session_location(self):
-        '''str: location for the
-        `GC3Pie Session <http://gc3pie.readthedocs.org/en/latest/programmers/api/gc3libs/session.html>`_
-        '''
-        return os.path.join(self.api_instance.step_location, 'cli_session')
-
-    def register_submission(self):
-        '''Generates a unique submission ID.
-
-        Creates a database entry in the "submissions" table.
-
-        Returns
-        -------
-        int
-            submission ID
-
-        Warning
-        -------
-        Ensure that the "submissions" table get updated once the jobs
-        were submitted, i.e. added to a running `GC3Pie` engine.
-        To this end, use the :py:method:`tmlib.workflow.api.update_submission`
-        method.
-
-        See also
-        --------
-        :py:class:`tmlib.models.Submission`
-        '''
-        with tm.utils.Session() as session:
-            submission = tm.Submission(
-                experiment_id=self.api_instance.experiment_id,
-                program=self.name
-            )
-            session.add(submission)
-            session.flush()
-            return submission.id
-
-    def update_submission(self, jobs):
-        '''Updates the submission with the submitted tasks.
-
-        Sets the value for "top_task" column in the "submissions" table.
-
-        Paramters
-        ---------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            submitted tasks
-
-        See also
-        --------
-        :py:class:`tmlib.models.Submission`
-
-        Raises
-        ------
-        AttributeError
-            when `jobs` doesn't have a "persistent_id" attribute, which
-            indicates that the task has not yet been inserted into the
-            database table
-        '''
-        with tm.utils.Session() as session:
-            submission = session.query(tm.Submission).get(jobs.submission_id)
-            if not hasattr(jobs, 'persistent_id'):
-                raise AttributeError(
-                    'Task was not yet inserted into the database table.'
-                )
-            submission.top_task_id = jobs.persistent_id
-
-    def create_jobs(self, duration, memory, cores, phase=None, job_id=None):
+    def create_jobs(self, submission_id, user_name, duration, memory, cores,
+            phase=None, job_id=None):
         '''Creates *jobs* based on previously created batch descrptions.
 
         Parameters
         ----------
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         duration: str
             time allocated for a job in the format "HH:MM:SS"
         memory: int
@@ -506,7 +595,6 @@ class CommandLineInterface(object):
         --------
         :py:mod:`tmlib.jobs`
         '''
-        submission_id = self.register_submission()
 
         api = self.api_instance
         if phase == 'run':
@@ -516,7 +604,7 @@ class CommandLineInterface(object):
             else:
                 job_ids = [batch['id'] for batch in self.batches['run']]
             return api.create_run_jobs(
-                submission_id, job_ids,
+                submission_id, user_name, job_ids,
                 duration=duration, memory=memory, cores=cores
             )
         elif phase == 'collect':
@@ -526,83 +614,21 @@ class CommandLineInterface(object):
                     'Step "%s" doesn\'t have a "collect" phase.'
                     % self.name
                 )
-            return api.create_collect_job(submission_id)
+            return api.create_collect_job(submission_id, user_name)
         else:
             logger.info('create all jobs')
             batches = self.batches
-            step = api.create_step(submission_id)
+            step = api.create_step(submission_id, user_name)
             job_ids = [batch['id'] for batch in self.batches['run']]
             step.run_jobs = api.create_run_jobs(
-                submission_id, job_ids,
+                submission_id, user_name, job_ids,
                 duration=duration, memory=memory, cores=cores
             )
             if 'collect' in self.batches.keys():
-                step.collect_job = api.create_collect_job(submission_id)
+                step.collect_job = api.create_collect_job(
+                    submission_id, user_name
+                )
             return step
-
-    def submit_jobs(self, jobs, engine, start_index=0, monitoring_depth=1):
-        '''Submits jobs to a cluster and continuously monitors their progress.
-
-        Parameters
-        ----------
-        jobs: tmlib.tmaps.workflow.WorkflowStep
-            jobs that should be submitted
-        engine: gc3libs.core.Engine
-            engine that should submit the jobs
-        start_index: int, optional
-            index of the job at which the collection should be (re)submitted
-        monitoring_depth: int, optional
-            recursion depth for job monitoring, i.e. in which detail subtasks
-            in the task tree should be monitored (default: ``1``)
-
-        Returns
-        -------
-        dict
-            information about each job
-
-        Warning
-        -------
-        This method is intended for interactive use via the command line only.
-        '''
-        logger.debug('monitoring depth: %d' % monitoring_depth)
-        if monitoring_depth < 0:
-            monitoring_depth = 0
-
-        logger.debug('add jobs %s to engine', jobs)
-        engine.add(jobs)
-        engine.redo(jobs, start_index)
-
-        # periodically check the status of submitted jobs
-        t_submitted = datetime.datetime.now()
-
-        break_next = False
-        while True:
-
-            time.sleep(3)
-            logger.debug('wait for 3 sechnds')
-
-            t_elapsed = datetime.datetime.now() - t_submitted
-            logger.info('elapsed time: %s', str(t_elapsed))
-
-            logger.info('progress...')
-            engine.progress()
-
-            # status_data = get_task_data_from_engine(jobs)
-            status_data = get_task_data_from_sql_store(jobs)
-            print_task_status(status_data, monitoring_depth)
-
-            if break_next:
-                break
-
-            if (jobs.execution.state == gc3libs.Run.State.TERMINATED or
-                    jobs.execution.state == gc3libs.Run.State.STOPPED):
-                break_next = True
-                engine.progress()  # one more iteration to update status_data
-
-        status_data = get_task_data_from_sql_store(jobs)
-        log_task_failure(status_data, logger)
-
-        return status_data
 
     @climethod(
         help='''creates batch jobs, submits them to the cluster and
@@ -627,7 +653,9 @@ class CommandLineInterface(object):
             raise AttributeError(
                 'Argument "job_id" is required when "phase" is set to "run".'
             )
+        submission_id, user_name = self.register_submission()
         jobs = self.create_jobs(
+            submission_id=submission_id, user_name=user_name,
             duration=self._submission_args.duration,
             memory=self._submission_args.memory,
             cores=self._submission_args.cores,
@@ -650,28 +678,6 @@ class CommandLineInterface(object):
                     break
         except Exception:
             raise
-
-    def load_jobs(self):
-        '''Loads previously submitted jobs from the database.
-
-        Returns
-        -------
-        tmlib.workflow.job or tmlib.workflow.job.JobCollection
-            loaded jobs
-        '''
-        with tm.utis.Session() as session:
-            last_submission_id = session.query(func.max(tm.Submission.id)).\
-                filter(
-                    tm.Submission.experiment_id == self.api_instance.experiment_id,
-                    tm.Submission.program == self.name
-                ).\
-                group_by(tm.Submission.experiment_id).\
-                one()[0]
-            last_submission = session.query(tm.Submission).\
-                get(last_submission_id)
-            job_id = last_submission.top_task_id
-        store = create_gc3pie_sql_store()
-        return store.load(job_id)
 
     @climethod(
         help='''resubmits previously created jobs to the cluster and

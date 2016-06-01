@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Job(gc3libs.Application):
 
-    '''
-    Abstract base class for a `TissueMAPS` job.
+    '''Abstract base class for a `TissueMAPS` job.
 
     Note
     ----
@@ -39,7 +38,7 @@ class Job(gc3libs.Application):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, step_name, arguments, output_dir, submission_id):
+    def __init__(self, step_name, arguments, output_dir, submission_id, user_name):
         '''
         Initialize an instance of class Job.
 
@@ -54,6 +53,8 @@ class Job(gc3libs.Application):
             be stored
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
 
         See also
         --------
@@ -69,22 +70,18 @@ class Job(gc3libs.Application):
             inputs=[],
             outputs=[],
             stdout='%s_%s.out' % (self.name, t),
-            stderr='%s_%s.err' % (self.name, t)
+            stderr='%s_%s.err' % (self.name, t),
+            environment={'TM_ACCOUNT': user_name}
         )
 
     @abstractproperty
     def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the job
+        '''str: name of the job
         '''
         pass
 
     def retry(self):
-        '''
-        Decide whether the job should be retried.
+        '''Decides whether the job should be retried.
 
         Returns
         -------
@@ -96,51 +93,31 @@ class Job(gc3libs.Application):
 
     @property
     def is_terminated(self):
-        '''
-        Returns
-        -------
-        bool
-            whether the job is in state TERMINATED
+        '''bool: whether the job is in state TERMINATED
         '''
         return self.execution.state == gc3libs.Run.State.TERMINATED
 
     @property
     def is_running(self):
-        '''
-        Returns
-        -------
-        bool
-            whether the job is in state RUNNING
+        '''bool: whether the job is in state RUNNING
         '''
         return self.execution.state == gc3libs.Run.State.RUNNING
 
     @property
     def is_stopped(self):
-        '''
-        Returns
-        -------
-        bool
-            whether the job is in state STOPPED
+        '''bool: whether the job is in state STOPPED
         '''
         return self.execution.state == gc3libs.Run.State.STOPPED
 
     @property
     def is_submitted(self):
-        '''
-        Returns
-        -------
-        bool
-            whether the job is in state SUBMITTED
+        '''bool: whether the job is in state SUBMITTED
         '''
         return self.execution.state == gc3libs.Run.State.SUBMITTED
 
     @property
     def is_new(self):
-        '''
-        Returns
-        -------
-        bool
-            whether the job is state NEW
+        '''bool: whether the job is in state NEW
         '''
         return self.execution.state == gc3libs.Run.State.NEW
 
@@ -152,7 +129,7 @@ class RunJob(Job):
     '''
 
     def __init__(self, step_name, arguments, output_dir, job_id,
-                 submission_id, index=None):
+                 submission_id, user_name, index=None):
         '''
         Initialize an instance of class RunJob.
 
@@ -181,16 +158,13 @@ class RunJob(Job):
             step_name=step_name,
             arguments=arguments,
             output_dir=output_dir,
-            submission_id=submission_id
+            submission_id=submission_id,
+            user_name=user_name
         )
 
     @property
     def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the job
+        '''str: name of the job
         '''
         if self.index is None:
             return '%s_run_%.6d' % (self.step_name, self.job_id)
@@ -340,7 +314,7 @@ class CollectJob(Job):
     parallel jobs are successfully completed.
     '''
 
-    def __init__(self, step_name, arguments, output_dir, submission_id):
+    def __init__(self, step_name, arguments, output_dir, submission_id, user_name):
         '''
         Parameters
         ----------
@@ -353,12 +327,15 @@ class CollectJob(Job):
             be stored
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the submitting user
         '''
         super(CollectJob, self).__init__(
             step_name=step_name,
             arguments=arguments,
             output_dir=output_dir,
-            submission_id=submission_id
+            submission_id=submission_id,
+            user_name=user_name
         )
 
     @property
