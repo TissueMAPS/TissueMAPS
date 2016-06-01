@@ -229,9 +229,7 @@ class Project(object):
             '%s%s' % (self.pipe_name, PIPE_SUFFIX)
         )
         pipe_skeleton = {
-            'project': {
-                'description': str()
-            },
+            'description': str(),
             'input': {
                 'channels': [
                     {'name': str(), 'correct': True}
@@ -240,7 +238,7 @@ class Project(object):
             'pipeline': list()
         }
         with YamlWriter(pipe_file) as f:
-            f.write(pipe_skeleton, use_ruamel=True)
+            f.write(pipe_skeleton)
 
     def _create_handles_folder(self):
         handles_dir = os.path.join(self.step_location, 'handles')
@@ -376,10 +374,11 @@ class Project(object):
             skel_dir = os.path.expandvars(skel_dir)
             skel_dir = os.path.expanduser(skel_dir)
             skel_dir = os.path.abspath(skel_dir)
-        if os.path.exists(self.step_location):
-            raise PipelineOSError(
-                    'Project already exists. Remove existing project first.')
-        os.mkdir(self.step_location)
+        # if os.path.exists(self.step_location):
+        #     raise PipelineOSError(
+        #         'Project already exists. Remove existing project first.'
+        #     )
+        # os.mkdir(self.step_location)
         # TODO: handle creation of project based on provided pipe
         if skel_dir:
             self._create_project_from_skeleton(skel_dir, repo_dir)
