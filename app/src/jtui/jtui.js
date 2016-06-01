@@ -22,14 +22,14 @@
     ]);
     angular.module('jtui.runner', [
         'ngAnimate', 'angular-loading-bar', 'ui.router', 'ngWebsocket',
-        'perfect_scrollbar', 'cfp.hotkeys', 'plotly', 'hljs', 'hc.marked'
+        'perfect_scrollbar', 'cfp.hotkeys', 'plotly', 'hc.marked' // 'hljs',
     ]);
 
     var jtui = angular.module('jtui', [
         'ui.router',
         'ngWebsocket',
-        'angular-loading-bar',
         'ngAnimate',
+        'angular-loading-bar',
         'ui.sortable',
         'ui.bootstrap',
         'smart-table',
@@ -46,7 +46,7 @@
         'jtui.handles',
         'jtui.runner',
         'perfect_scrollbar',
-        'hljs',
+        // 'hljs',
         'hc.marked',
         'plotly'
     ]);

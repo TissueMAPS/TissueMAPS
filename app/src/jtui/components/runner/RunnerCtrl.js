@@ -180,8 +180,7 @@ angular.module('jtui.runner')
                                     $stateParams.experimentid,
                                     $stateParams.projectName,
                                     $scope.module.name,
-                                    1
-                                    // $scope.jobs.currentID
+                                    $scope.jobs.currentId
                                 );
                         }],
                 name: function () {

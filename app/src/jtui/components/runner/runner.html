@@ -11,7 +11,7 @@
             <div class="panel panel-default">
 
                 <div class="panel-heading">
-                    Job Status
+                    Job Submission Status
                 </div>
 
                 <div class="panel-body">
@@ -60,17 +60,13 @@
 
                 <div class="panel-heading">
                     Module Output
+
+                    <span ng-show="outputAvailable">
+                      (Job  {{ jobs.currentId }})
+                    </span>
                 </div>
 
                 <div class="panel-body">
-
-                    <div ng-show="outputAvailable">
-
-                        <h3>
-                            Job #{{ jobs.currentId }}
-                        </h3>
-
-                    </div>
 
                     <div btn-group>
 

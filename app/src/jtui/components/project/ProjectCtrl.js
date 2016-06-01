@@ -264,6 +264,7 @@ angular.module('jtui.project')
                     $scope.jobs.output.push(r);
                 });
                 $scope.jobs.currentId = result.output[0].id;
+                $scope.$watch('jobs.currentId');
                 $scope.outputAvailable = true;
                 var unkown = $scope.jobs.output.every(function (element, index, array) {
                     return element.failed === null;
