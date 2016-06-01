@@ -683,7 +683,17 @@ def get_job_status(experiment):
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
-    jobs = gc3pie.retrieve_jobs(experiment, 'jtui')
+    jt = ImageAnalysisPipeline(
+        experiment_id=experiment.id,
+        verbosity=1,
+        pipeline=data['name'],
+        pipe=data['pipe'],
+        handles=data['handles'],
+    )
+    jobs = gc3pie.retrieve_jobs(
+        experiment=experiment,
+        submitting_program='jtui-{project}'.format(project=jt.pipe_name)
+    )
     if jobs is None:
         status_result = {}
     else:
@@ -729,7 +739,10 @@ def get_job_output(experiment):
         handles=data['handles'],
     )
     try:
-        jobs = gc3pie.retrieve_jobs(experiment, 'jtui')
+        jobs = gc3pie.retrieve_jobs(
+            experiment=experiment,
+            submitting_program='jtui-{project}'.format(project=jt.pipe_name)
+        )
         output = _get_output(
             jobs, jt.pipeline, jt.module_log_location, jt.figures_location
         )
@@ -794,7 +807,10 @@ def run_jobs(experiment):
     job_descriptions = jt.create_batches(batch_args, job_ids)
 
     jt.write_batch_files(job_descriptions)
-    submission = tm.Submission(experiment_id=experiment.id, program='jtui')
+    submission = tm.Submission(
+        experiment_id=experiment.id,
+        program='jtui-{project}'.format(project=jt.pipe_name)
+    )
     db.session.add(submission)
     db.session.commit()
 
