@@ -6,6 +6,7 @@ angular.module('jtui.runner')
     // Get the current module
     for (i in $scope.project.handles) {
         if ($scope.project.handles[i].name == currentModuleName) {
+          console.log($scope.project)
           var currentModule = $scope.project.handles[i];
           var currentModuleIndex = i;
           var filename = $scope.project.pipe.description.pipeline[i].source;
