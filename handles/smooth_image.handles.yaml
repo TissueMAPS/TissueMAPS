@@ -47,9 +47,8 @@ input:
         only relevant for "bilateral" filter
 
     - name: plot
-      type: Scalar
+      type: Plot
       value:
-      options: [true, false]
       help: Should a figure be created?
 
 output:
