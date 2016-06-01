@@ -231,7 +231,7 @@ angular.module('jtui.project')
                 $scope.outputAvailable = true;
                 $scope.submission.state = result.status.state;
                 $scope.submission.progress = result.status.percent_done;
-                if (result.failed) {
+                if (result.status.failed) {
                     $scope.submission.indicator = 'danger';
                 } else {
                     $scope.submission.indicator = 'success';
@@ -509,7 +509,7 @@ angular.module('jtui.project')
             var newDescription = {
                         name: newName,
                         handles: newHandlesFilename,
-                        module: addedModule.pipeline.module,
+                        source: addedModule.pipeline.source,
                         active: addedModule.pipeline.active
             };
             console.log('pipeline description of added module:', newDescription)
