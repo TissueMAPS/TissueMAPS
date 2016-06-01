@@ -609,6 +609,8 @@ def _get_output(jobs, modules, log_location, fig_location):
     if not os.path.exists(rasterize_file):
         logger.warn('"phantomjs" is not properly installed')
     output = list()
+    if jobs is None:
+        return output
     for task in jobs.iter_workflow():
         if not isinstance(task, RunJobCollection):
             continue
@@ -683,7 +685,7 @@ def get_job_status(experiment):
     data = yaml.load(data['jtproject'])
     jobs = gc3pie.retrieve_jobs(experiment, 'jtui')
     if jobs is None:
-        status_result = None
+        status_result = {}
     else:
         status_result = gc3pie.get_status_of_submitted_jobs(jobs)
     return jsonify(status=status_result)
@@ -798,7 +800,9 @@ def run_jobs(experiment):
 
     submit_args = submit_args_cls()
     jobs = jt.create_run_jobs(
-        submission.id, job_ids,
+        submission_id=submission.id,
+        user_name=submission.experiment.user.name,
+        job_ids=job_ids,
         duration=submit_args.duration,
         memory=submit_args.memory, cores=submit_args.cores
     )
