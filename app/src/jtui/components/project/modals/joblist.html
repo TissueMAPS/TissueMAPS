@@ -15,53 +15,31 @@
     <thead>
       <tr>
         <th>job id</th>
-        <th>layer name</th>
         <th>plate</th>
         <th>well</th>
         <th>well position</th>
         <th>time point</th>
-        <th>channel</th>
         <th>z plane</th>
       </tr>
     </thead>
 
     <tbody>
       <tr ng-repeat="(job_id, metadata) in joblist">
-        <td>{{job_id}}</td>
+        <td>{{ job_id }}</td>
         <td>
-          <p ng-repeat="md in metadata">
-            {{md.name}}
-          </p>
+            {{ metadata.plate }}
         </td>
         <td>
-          <p ng-repeat="md in metadata">
-            {{md.plate}}
-          </p>
+            {{ metadata.well }}
         </td>
         <td>
-          <p ng-repeat="md in metadata">
-            {{md.well_name}}
-          </p>
+            ({{ metadata.well_position[0] }}, {{ metadata.well_position[1] }})
         </td>
         <td>
-          <p ng-repeat="md in metadata">
-            ({{md.well_position_y}}, {{md.well_position_x}})
-          </p>
+            {{ metadata.tpoint }}
         </td>
         <td>
-          <p ng-repeat="md in metadata">
-            {{md.tpoint}}
-          </p>
-        </td>
-        <td>
-          <p ng-repeat="md in metadata">
-            {{md.channel}}
-          </p>
-        </td>
-        <td>
-          <p ng-repeat="md in metadata">
-            {{md.zplane}}
-          </p>
+            {{ metadata.zplane }}
         </td>
       </tr>
     </tbody>

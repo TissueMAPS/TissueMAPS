@@ -172,6 +172,76 @@
 
 </div>
 
-<div ui-view="handles"></div>
-<div ui-view="runner"></div>
+<div class="right-pane">
+
+    <div class="pane-header">
+        Module Settings
+    </div>
+
+    <div class="pane-content">
+        <div ui-view="handles"></div>
+    </div>
+</div>
+
+<div class="right-side-pane">
+    <div class="pane-header">
+        Results
+    </div>
+
+    <div class="pane-content">
+        <div class="pane-subcontent" perfect-scrollbar>
+
+            <div class="panel panel-default">
+
+                <div class="panel-heading">
+                    Job Submission Status
+                </div>
+
+                <div class="panel-body">
+
+                    <i class="fa fa-cog fa-fw"
+                       ng-hide="submission.state == 'RUNNING'">
+                    </i>
+                    <i class="fa fa-cog fa-spin fa-fw"
+                       ng-show="submission.state == 'RUNNING'">
+                    </i>
+                    <i>{{ submission.state }}</i>
+
+                    <uib-progressbar max="100" value="submission.progress" type="{{ submission.indicator }}">
+                    </uib-progressbar>
+
+                    <div ng-show="outputAvailable">
+                        <div btn-group>
+
+                            <button type="button"
+                                    class="btn btn-jtui"
+                                    ng-click="goToPreviousJob()">
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-jtui"
+                                    ng-click="showJobLog()">
+                                <i class="fa fa-terminal"></i>
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-jtui"
+                                    ng-click="goToNextJob()">
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div ui-view="runner"></div>
+
+        </div>
+
+</div>
 

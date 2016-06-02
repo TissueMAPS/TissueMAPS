@@ -1,6 +1,6 @@
 angular.module('jtui.project')
-.controller('JoblistCtrl', ['$scope', 'joblist', '$modalInstance',
-    function($scope, joblist, $modalInstance) {
+.controller('JoblistCtrl', ['$scope', 'joblist', '$uibModalInstance',
+    function($scope, joblist, $uibModalInstance) {
 
     $scope.joblist = joblist;
     console.log('joblist:', joblist)

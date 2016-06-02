@@ -17,7 +17,8 @@ angular.module('jtui.project')
         }
     };
 
-    $scope.processing = false;
+    $scope.outputAvailable = false;
+    $scope.$watch('outputAvailable');
 
     var checkIsOpen = false;
     $scope.checkProject = function() {
@@ -236,10 +237,9 @@ angular.module('jtui.project')
     function getStatus() {
         runnerService.getStatus($scope.project).then(function (result) {
             console.log('status: ', result.status)
-            if (result.status == null) {
+            if (result.status == null || _.isEmpty(status)) {
                 $scope.outputAvailable = false;
             } else {
-                $scope.outputAvailable = true;
                 $scope.submission.state = result.status.state;
                 $scope.submission.progress = result.status.percent_done;
                 if (result.status.failed) {
@@ -248,9 +248,10 @@ angular.module('jtui.project')
                     $scope.submission.indicator = 'success';
                 }
                 if (result.status.is_done) {
-                    console.log('---STOP MONITORING SUBMISSION STATUS---')
-                    $scope.stopMonitoring();
                     getOutput();
+                    $scope.outputAvailable = true;
+                } else {
+                    $scope.outputAvailable = false;
                 }
             }
         });
@@ -293,7 +294,6 @@ angular.module('jtui.project')
         state: "",
         indicator: 'success'
     };
-    $scope.type = "";
 
     // starts the interval
     var promise;

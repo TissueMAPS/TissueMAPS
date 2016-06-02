@@ -1,135 +1,65 @@
-<div class="right-side-pane">
+<div class="panel panel-default">
 
-    <div class="pane-header">
-        Results
+    <div class="panel-heading">
+        Module Result
+
+        <span ng-show="outputAvailable">
+          (Job  {{ jobs.currentId }})
+        </span>
     </div>
 
-    <div class="pane-content">
+    <div class="panel-body">
 
-        <div class="pane-subcontent" perfect-scrollbar>
+        <div btn-group>
 
-            <div class="panel panel-default">
+            <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="showSourceCode()">
+                <i class="fa fa-code"></i>
+            </button>
 
-                <div class="panel-heading">
-                    Job Submission Status
-                </div>
+            <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="reportBug()">
+                <i class="fa fa-bug"></i>
+            </button>
 
-                <div class="panel-body">
+            <span ng-show="outputAvailable">
 
-                    <i class="fa fa-cog fa-fw"
-                       ng-hide="submission.state == 'RUNNING'">
-                    </i>
-                    <i class="fa fa-cog fa-spin fa-fw"
-                       ng-show="submission.state == 'RUNNING'">
-                    </i>
-                    <i>{{ submission.state }}</i>
+              <!-- TODO: type "danger" for module that failed -->
 
-                    <uib-progressbar max="100" value="submission.progress" type="{{ submission.indicator }}">
-                    </uib-progressbar>
+                <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="showOutput()">
+                    <i class="fa fa-terminal"></i>
+                </button>
 
-                    <div ng-show="outputAvailable">
-                        <div btn-group>
+                <button type="button"
+                    class="btn btn-jtui"
+                    ng-click="showFigure()">
+                    <i class="fa fa-bar-chart" aria-hidden="true"></i>
+                </button>
 
-                            <button type="button"
-                                    class="btn btn-jtui"
-                                    ng-click="goToPreviousJob()">
-                                <i class="fa fa-chevron-left"></i>
-                            </button>
+            </span>
 
-                            <button type="button"
-                                    class="btn btn-jtui"
-                                    ng-click="showJobLog()">
-                                <i class="fa fa-terminal"></i>
-                            </button>
+        </div>
 
-                            <button type="button"
-                                    class="btn btn-jtui"
-                                    ng-click="goToNextJob()">
-                                <i class="fa fa-chevron-right"></i>
-                            </button>
+        <p></p>
 
-                        </div>
+        <div ng-show="outputAvailable">
 
-                    </div>
+            <img data-ng-src="data:image/png;base64,{{showThumbnail()}}"
+                style="width: 100%; height: 100%;"
+                ng-click="showFigure()">
+            </img>
 
-                </div>
+        </div>
 
-            </div>
-
-            <div class="panel panel-default">
-
-                <div class="panel-heading">
-                    Module Output
-
-                    <span ng-show="outputAvailable">
-                      (Job  {{ jobs.currentId }})
-                    </span>
-                </div>
-
-                <div class="panel-body">
-
-                    <div btn-group>
-
-                        <button type="button"
-                                class="btn btn-jtui"
-                                ng-click="showSourceCode()">
-                            <i class="fa fa-code"></i>
-                        </button>
-
-                        <button type="button"
-                                class="btn btn-jtui"
-                                ng-click="reportBug()">
-                            <i class="fa fa-bug"></i>
-                        </button>
-
-                        <span ng-show="outputAvailable">
-
-                          <!-- TODO: type "danger" for module that failed -->
-
-                            <button type="button"
-                                class="btn btn-jtui"
-                                ng-click="showOutput()">
-                                <i class="fa fa-terminal"></i>
-                            </button>
-
-                            <button type="button"
-                                class="btn btn-jtui"
-                                ng-click="showFigure()">
-                                <i class="fa fa-bar-chart" aria-hidden="true"></i>
-                            </button>
-
-                        </span>
-
-                    </div>
-
-                    <p></p>
-
-                    <div ng-show="outputAvailable">
-
-                        <img data-ng-src="data:image/png;base64,{{showThumbnail()}}"
-                            style="width: 100%; height: 100%;"
-                            ng-click="showFigure()">
-                        </img>
-
-                    </div>
-
-                    <div class="glyphicon glyphicon-none"
-                         ng-hide="outputAvailable">
-                    </div>
-
-                </div>
-
-            </div>
-
+        <div class="glyphicon glyphicon-none"
+             ng-hide="outputAvailable">
         </div>
 
     </div>
 
 </div>
 
-<!-- <div ng-show="isFullScreen"
-     ng-bind-html="getFigure()"
-     class="figure"
-     fullscreen="isFullScreen"
-     only-watched-property>
-</div> -->

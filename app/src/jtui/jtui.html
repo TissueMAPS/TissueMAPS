@@ -1,7 +1,8 @@
 <div class="jtui" ng-controller="MainCtrl as main">
   <!-- use ui-layout: https://github.com/angular-ui/ui-layout -->
-  <div class="main-pane" ng-controller="ModuleCtrl">
-      <ng-include src="'/src/jtui/components/module/module.html'"></ng-include>
-      <div ui-view="project"></div>
-  </div>
+    <div class="main-pane" ng-controller="ModuleCtrl">
+        <ng-include src="'/src/jtui/components/module/module.html'"></ng-include>
+
+        <div ui-view="project"></div>
+
 </div>
