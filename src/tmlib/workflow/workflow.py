@@ -274,11 +274,10 @@ class WorkflowStage(State):
         logger.info(
             'allocated cores: %d', step_description.submission_args.cores
         )
-        job_ids = range(1, len(batches['run']) + 1)
         step.run_jobs = api_instance.create_run_jobs(
             self.submission_id,
             self.user_name,
-            job_ids,
+            batches['run'],
             duration=step_description.submission_args.duration,
             memory=step_description.submission_args.memory,
             cores=step_description.submission_args.cores

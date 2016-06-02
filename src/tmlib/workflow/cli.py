@@ -473,11 +473,11 @@ class CommandLineInterface(SubmissionManager):
         if phase == 'run':
             logger.info('create run jobs')
             if job_id is not None:
-                job_ids = [job_id]
+                batches = [b for b in self.batches['run'] if b['id'] == job_id]
             else:
-                job_ids = [batch['id'] for batch in self.batches['run']]
+                batches = self.batches['run']
             return api.create_run_jobs(
-                submission_id, user_name, job_ids,
+                submission_id, user_name, batches,
                 duration=duration, memory=memory, cores=cores
             )
         elif phase == 'collect':
@@ -490,10 +490,9 @@ class CommandLineInterface(SubmissionManager):
             return api.create_collect_job(submission_id, user_name)
         else:
             logger.info('create all jobs')
-            batches = self.batches
             step = api.create_step(submission_id, user_name)
             step.run_jobs = api.create_run_jobs(
-                submission_id, user_name, batches['run'],
+                submission_id, user_name, self.batches['run'],
                 duration=duration, memory=memory, cores=cores
             )
             if 'collect' in self.batches.keys():
