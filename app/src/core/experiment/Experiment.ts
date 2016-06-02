@@ -95,7 +95,10 @@ class Experiment implements Model {
     submitWorkflow(workflowArgs) {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        return $http.post('/api/experiments/' + this.id + '/workflow', workflowArgs)
+        var data = {
+            description: workflowArgs
+        };
+        return $http.post('/api/experiments/' + this.id + '/workflow/submit', data)
         .then((resp) => {
             console.log(resp);
             return resp.data;
@@ -104,4 +107,35 @@ class Experiment implements Model {
             $q.reject(resp.data.error);
         });
     }
+
+    resubmitWorkflow(workflowArgs, index) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var data = {
+            description: workflowArgs,
+            index: index
+        };
+        return $http.post('/api/experiments/' + this.id + '/workflow/resubmit', data)
+        .then((resp) => {
+            console.log(resp);
+            return resp.data;
+        })
+        .catch((resp) => {
+            $q.reject(resp.data.error);
+        });
+    }
+
+    getWorkflowStatus() {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $http.post('/api/experiments/' + this.id + '/workflow/status', {})
+        .then((resp) => {
+            console.log(resp);
+            return resp.data;
+        })
+        .catch((resp) => {
+            $q.reject(resp.data.error);
+        });
+    }
+
 }

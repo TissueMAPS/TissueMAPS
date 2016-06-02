@@ -104,7 +104,10 @@ class SetupCtrl {
                 for (var i = 1; i <= idx;  i++) {
                     stagesToBeSubmitted.push(this.stages[i]);
                 }
-                this._submitStages(stagesToBeSubmitted);
+                // TODO: determine whether upstream stages have been completed
+                // and then "resubmit", i.e. resume an existing workflow
+                var redo = false;
+                this._submitStages(stagesToBeSubmitted, redo, idx);
             }
         }
     }
@@ -140,44 +143,57 @@ class SetupCtrl {
         }
     }
 
-    private _submitStages(stages: Stage[]) {
+    getStatus() {
+        this.experiment.getWorkflowStatus();
+    }
+
+    private _updateStageDescription(stage: Stage) {
+        // Copy the stage so that we don't modify the argument when
+        // modifying the structure of the stage.
+        // The structure of the stage objects that were originally sent to the client
+        // have a different structure than the ones that are passed back
+        // to the server.
+        stage = $.extend(true, {}, stage);
+        stage.steps.forEach((step) => {
+            var batchArgs = {};
+            step.batch_args.forEach((arg) => {
+                batchArgs[arg.name] = arg.value;
+            });
+            step.batch_args = batchArgs;
+
+            var submissionArgs = {};
+            step.submission_args.forEach((arg) => {
+                submissionArgs[arg.name] = arg.value;
+            });
+            step.submission_args = submissionArgs;
+
+            if (step.extra_args) {
+                var extraArgs = {};
+                step.extra_args.forEach((arg) => {
+                    extraArgs[arg.name] = arg.value;
+                });
+                step.extra_args = extraArgs;
+            } else {
+                step.extra_args = null;
+            }
+        });
+        return stage;
+    }
+
+    private _submitStages(stages: Stage[], redo: boolean, index: int) {
         // Copy the original workflow description object and populate it with
-        // all the values taht were filled in by the user.
+        // all the values that were filled in by the user.
         var desc = $.extend(true, {}, this.experiment.workflowDescription);
         desc.stages = [];
         stages.forEach((stage) => {
-            // Copy the stage so that we don't modify the argument when
-            // modifying the structure of the stage.
-            // The structure of the stage objects that were originally sent to the client
-            // have a different structure than the ones that are passed back
-            // to the server.
-            stage = $.extend(true, {}, stage);
-            stage.steps.forEach((step) => {
-                var batchArgs = {};
-                step.batch_args.forEach((arg) => {
-                    batchArgs[arg.name] = arg.value;
-                });
-                step.batch_args = batchArgs;
-
-                var submissionArgs = {};
-                step.submission_args.forEach((arg) => {
-                    submissionArgs[arg.name] = arg.value;
-                });
-                step.submission_args = submissionArgs;
-
-                if (step.extra_args) {
-                    var extraArgs = {};
-                    step.extra_args.forEach((arg) => {
-                        extraArgs[arg.name] = arg.value;
-                    });
-                    step.extra_args = extraArgs;
-                } else {
-                    step.extra_args = null;
-                }
-            });
+            stage = this._updateStageDescription(stage);
             desc.stages.push(stage);
         });
-        this.experiment.submitWorkflow(desc);
+        if (redo) {
+            this.experiment.resubmitWorkflow(desc, index);
+        } else {
+            this.experiment.submitWorkflow(desc);
+        }
     }
 
     get submitButtonText() {
