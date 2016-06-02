@@ -428,13 +428,19 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 index = channel_names.index(channel_name)
                 if channel_input[index]['correct']:
                     logger.info('load illumination statistics')
-                    stats_file = session.query(tm.IllumstatsFile).\
-                        join(tm.Channel).\
-                        filter(
-                            tm.Channel.name == channel_name,
-                            tm.Channel.experiment_id == self.experiment_id
-                        ).\
-                        one()
+                    try:
+                        stats_file = session.query(tm.IllumstatsFile).\
+                            join(tm.Channel).\
+                            filter(
+                                tm.Channel.name == channel_name,
+                                tm.Channel.experiment_id == self.experiment_id
+                            ).\
+                            one()
+                    except NoResultFound:
+                        raise PipelineDescriptionError(
+                            'No illumination statistics file found for '
+                            'channel "%s"' % channel_name
+                        )
                     stats = stats_file.get()
 
                 image_files = session.query(tm.ChannelImageFile).\
