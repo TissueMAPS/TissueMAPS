@@ -204,24 +204,3 @@ class ImageExtractor(ClusterRoutines):
                     for site in sites_to_omit:
                         site.omitted = True
                     session.add_all(sites_to_omit)
-
-def factory(experiment_id, verbosity, **kwargs):
-    '''Factory function for the instantiation of a `imextract`-specific
-    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
-    abstract base class.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the processed experiment
-    verbosity: int
-        logging level
-    **kwargs: dict
-        ignored keyword arguments
-
-    Returns
-    -------
-    tmlib.workflow.metaextract.api.ImageExtractor
-        API instance
-    '''
-    return ImageExtractor(experiment_id, verbosity)

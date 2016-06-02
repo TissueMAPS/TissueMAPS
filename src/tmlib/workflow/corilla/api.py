@@ -158,24 +158,3 @@ class IllumstatsCalculator(ClusterRoutines):
     def collect_job_output(self, batch):
         pass
 
-
-def factory(experiment_id, verbosity, **kwargs):
-    '''Factory function for the instantiation of a `corilla`-specific
-    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
-    abstract base class.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the processed experiment
-    verbosity: int
-        logging level
-    **kwargs: dict
-        ignored keyword arguments
-
-    Returns
-    -------
-    tmlib.workflow.metaextract.api.IllumstatsCalculator
-        API instance
-    '''
-    return IllumstatsCalculator(experiment_id, verbosity)

@@ -218,23 +218,3 @@ class ImageRegistrator(ClusterRoutines):
         pass
         # TODO: set shifts to zero for sites that were omitted
 
-def factory(experiment_id, verbosity, **kwargs):
-    '''Factory function for the instantiation of a `align`-specific
-    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
-    abstract base class.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the processed experiment
-    verbosity: int
-        logging level
-    **kwargs: dict
-        ignored keyword arguments
-
-    Returns
-    -------
-    tmlib.workflow.metaextract.api.ImageRegistrator
-        API instance
-    '''
-    return ImageRegistrator(experiment_id, verbosity)

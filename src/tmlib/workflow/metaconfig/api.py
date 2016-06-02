@@ -362,24 +362,3 @@ class MetadataConfigurator(ClusterRoutines):
 
                     c_index += 1
 
-
-def factory(experiment_id, verbosity, **kwargs):
-    '''Factory function for the instantiation of a `metaconfig`-specific
-    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
-    abstract base class.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the processed experiment
-    verbosity: int
-        logging level
-    **kwargs: dict
-        ignored keyword arguments
-
-    Returns
-    -------
-    tmlib.workflow.metaextract.api.MetadataConfigurator
-        API instance
-    '''
-    return MetadataConfigurator(experiment_id, verbosity, **kwargs)

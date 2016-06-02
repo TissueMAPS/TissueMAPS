@@ -164,6 +164,8 @@ class Project(object):
                 'name': self._get_descriptor_name(self.pipe_file),
                 'description': f.read()
             }
+        # We need to do some basic checks here, because this code gets executed
+        # before the actual checks in checker.py.
         if 'pipeline' not in pipe['description']:
             raise PipelineDescriptionError(
                 'Pipeline descriptor file "%s" must contain key "pipeline".'

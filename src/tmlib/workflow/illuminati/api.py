@@ -777,24 +777,3 @@ class PyramidBuilder(ClusterRoutines):
                 mapobject_type.min_poly_zoom = min_zoom
                 mapobject_type.max_poly_zoom = max_zoom
 
-
-def factory(experiment_id, verbosity, **kwargs):
-    '''Factory function for the instantiation of a `illuminati`-specific
-    implementation of the :py:class:`tmlib.workflow.api.ClusterRoutines`
-    abstract base class.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the processed experiment
-    verbosity: int
-        logging level
-    **kwargs: dict
-        ignored keyword arguments
-
-    Returns
-    -------
-    tmlib.workflow.metaextract.api.PyramidBuilder
-        API instance
-    '''
-    return PyramidBuilder(experiment_id, verbosity)
