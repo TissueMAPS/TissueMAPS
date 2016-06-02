@@ -571,11 +571,15 @@ def _make_thumbnail(figure_file):
     '''
     # TODO: do this already in Jterator in a parallelized way (if plot true)
     import plotly
-    logger.info('read figure file: %s', figure_file)
-    with open(figure_file, 'r') as f:
-        figure = json.loads(f.read())
-    logger.info('create figure')
-    html = plotly.offline.plot(figure, show_link=False, output_type='div')
+    if not os.path.exists(figure_file):
+        logger.warn('figure file does not exist: %s', figure_file)
+        html = '' 
+    else:
+        logger.info('read figure file: %s', figure_file)
+        with open(figure_file, 'r') as f:
+            figure = json.loads(f.read())
+        logger.info('create figure')
+        html = plotly.offline.plot(figure, show_link=False, output_type='div')
     html = ''.join([
         '<html>',
         '<head><meta charset="utf-8" /></head>',
@@ -796,7 +800,7 @@ def run_jobs(experiment):
 
     # 1. Save the project to disk,
     # i.e. write pipeline and module descriptions to the corresponding files
-    jt.project.save()
+    # jt.project.save()
 
     # 2. Build jobs
     logger.info('build jobs')
