@@ -58,8 +58,8 @@ class Reader(object):
         self._stream.close()
         if except_value:
             sys.stdout.write(
-                'The following error occurred while reading from file:\n%s'
-                % str(except_value)
+                'The following error occurred while reading from file "%s":\n%s'
+                % (self.filename, str(except_value))
             )
             for tb in traceback.format_tb(except_trace):
                 sys.stdout.write(tb)
