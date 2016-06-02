@@ -9,7 +9,7 @@ from tmlib.logging_utils import map_logging_verbosity
 from tmlib.logging_utils import configure_logging
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.utils import create_gc3pie_sql_store
-from tmlib.workflow.cli import SubmissionManager
+from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.errors import NotSupportedError
 from tmlib.errors import WorkflowDescriptionError
@@ -32,6 +32,7 @@ class Tmaps(SubmissionManager):
             instance of API class to which processing is delegated
         '''
         self.api_instance = api_instance
+        super(Tmaps, self).__init__(self.api_instance.experiment_id, self.name)
 
     @staticmethod
     def _print_logo():
@@ -88,7 +89,9 @@ class Tmaps(SubmissionManager):
         '''
         self._print_logo()
         api = self.api_instance
-        workflow = self.load_jobs()
+        store = create_gc3pie_sql_store()
+        task_id = self.get_task_id_of_last_submission()
+        workflow = store.load(task_id)
         stage_names = [s.name for s in api.description.stages]
         try:
             start_index = stage_names.index(stage)
@@ -96,7 +99,6 @@ class Tmaps(SubmissionManager):
         except IndexError:
             raise WorkflowDescriptionError('Unknown stage "%s".' % stage)
         logger.info('resubmit workflow at stage #%d "%s"', start_index, stage)
-        store = create_gc3pie_sql_store()
         engine = create_gc3pie_engine(store)
         logger.info('resubmit and monitor jobs')
         try:

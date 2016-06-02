@@ -16,7 +16,6 @@ from gc3libs.quantity import Memory
 import tmlib.models as tm
 from tmlib import utils
 from tmlib.readers import JsonReader
-from tmlib.workflow import BgEngine
 from tmlib.writers import JsonWriter
 from tmlib.errors import JobDescriptionError
 from tmlib.errors import WorkflowError
@@ -630,7 +629,8 @@ class ClusterRoutines(BasicClusterRoutines):
             user_name=user_name
         )
 
-    def create_run_jobs(self, submission_id, user_name, job_ids, duration, memory, cores):
+    def create_run_jobs(self, submission_id, user_name, batches,
+            duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
 
         Parameters
@@ -639,17 +639,15 @@ class ClusterRoutines(BasicClusterRoutines):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
-        job_ids: int
-            IDs of jobs that should be created
-        duration: str, optional
+        batches: List[dict]
+            job descriptions
+        duration: str
             computational time that should be allocated for a single job;
-            in HH:MM:SS format (default: ``None``)
-        memory: int, optional
+            in HH:MM:SS format
+        memory: int
             amount of memory in Megabyte that should be allocated for a single
-            job (default: ``None``)
-        cores: int, optional
+        cores: int
             number of CPU cores that should be allocated for a single job
-            (default: ``None``)
 
         Returns
         -------
@@ -665,12 +663,12 @@ class ClusterRoutines(BasicClusterRoutines):
             step_name=self.step_name,
             submission_id=submission_id
         )
-        for j in job_ids:
+        for b in batches:
             job = RunJob(
                 step_name=self.step_name,
-                arguments=self._build_run_command(job_id=j),
+                arguments=self._build_run_command(job_id=b['id']),
                 output_dir=self.log_location,
-                job_id=j,
+                job_id=b['id'],
                 submission_id=submission_id,
                 user_name=user_name
             )

@@ -346,7 +346,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             # transition to the next step, but this not be sufficient.
             if not all([os.path.exists(f) for f in self.expected_outputs]):
                 raise WorkflowTransitionError(
-                    'outputs of previous step do not exist'
+                    'outputs of previous step do not exist (submission: %d)'
+                    % self.submission_id
                 )
         logger.debug('create job descriptions for next step')
         self.tasks[index] = self.create_jobs_for_next_step(

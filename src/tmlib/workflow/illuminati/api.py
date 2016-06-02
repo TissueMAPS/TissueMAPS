@@ -331,42 +331,49 @@ class PyramidBuilder(ClusterRoutines):
                     filter(tm.ChannelLayer.channel_id.in_(channel_ids)).\
                     delete()
 
-    def create_jobs(self, step, batches,
-                    duration=None, memory=None, cores=None):
-        '''Creates jobs that can be submitted for processing.
+    def create_run_jobs(self, submission_id, user_name, batches,
+            duration, memory, cores):
+        '''Creates jobs for the parallel "run" phase of the step.
+        The `illuminati` step is special in the sense that it implements
+        a sequence of mutliple runs with the "run" phase.
 
         Parameters
         ----------
-        step: tmlib.workflow.WorkflowStep
-            the step to which jobs should be added
-        batches: Dict[List[dict]]
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
+        batches: List[dict]
             job descriptions
-        duration: str, optional
+        duration: str
             computational time that should be allocated for a single job;
-            in HH:MM:SS format (default: ``None``)
-        memory: int, optional
+            in HH:MM:SS format
+        memory: int
             amount of memory in Megabyte that should be allocated for a single
-            job (default: ``None``)
-        cores: int, optional
+        cores: int
             number of CPU cores that should be allocated for a single job
-            (default: ``None``)
 
         Returns
         -------
-        tmlib.tmaps.workflow.WorkflowStep
-            collection of jobs
+        tmlib.workflow.jobs.MultipleRunJobCollection
+            run jobs
         '''
-        logger.info('create jobs for "run" phase')
+        logger.info('create run jobs for submission %d', submission_id)
+        logger.debug('allocated time for run jobs: %s', duration)
+        logger.debug('allocated memory for run jobs: %d MB', memory)
+        logger.debug('allocated cores for run jobs: %d', cores)
+
         multi_run_jobs = collections.defaultdict(list)
-        for i, batch in enumerate(batches['run']):
+        for b in batches:
 
             job = RunJob(
                 step_name=self.step_name,
-                arguments=self._build_run_command(batch),
+                arguments=self._build_run_command(b['id']),
                 output_dir=self.log_location,
-                job_id=batch['id'],
-                index=batch['index'],
-                submission_id=step.submission_id
+                job_id=b['id'],
+                index=b['index'],
+                submission_id=submission_id,
+                user_name=user_name
             )
             if duration:
                 job.requested_walltime = Duration(duration)
@@ -383,35 +390,23 @@ class PyramidBuilder(ClusterRoutines):
                     )
                 job.requested_cores = cores
 
-            multi_run_jobs[batch['index']].append(job)
+            multi_run_jobs[b['index']].append(job)
 
-        step.run_jobs = MultiRunJobCollection(
+        run_jobs = MultiRunJobCollection(
             step_name=self.step_name,
-            submission_id=step.submission_id
+            submission_id=submission_id
         )
         for index, jobs in multi_run_jobs.iteritems():
-            step.run_jobs.add(
+            run_jobs.add(
                 SingleRunJobCollection(
                     step_name=self.step_name,
                     jobs=jobs,
                     index=index,
-                    submission_id=step.submission_id
+                    submission_id=submission_id
                 )
             )
 
-        logger.info('create job for "collect" phase')
-        batch = batches['collect']
-
-        step.collect_job = CollectJob(
-            step_name=self.step_name,
-            arguments=self._build_collect_command(),
-            output_dir=self.log_location,
-            submission_id=step.submission_id
-        )
-        step.collect_job.requested_walltime = Duration('02:00:00')
-        step.collect_job.requested_memory = Memory(3800, Memory.MB)
-
-        return step
+        return run_jobs
 
     def _create_nonempty_maxzoom_level_tiles(self, batch):
         with tm.utils.Session() as session:
