@@ -551,67 +551,7 @@ def kill_jobs():
         return jsonify({'success': False, 'error': 'No jobs were specified.'})
 
 
-def _make_thumbnail(figure_file):
-    '''Makes a PNG thumbnail of a plotly figure by screen capture.
-
-    Parameters
-    ----------
-    figure_file: str
-        absolute path to the figure file (``".json"`` extension)
-
-    Returns
-    -------
-    str
-        aboslute path to the thumbnail file
-    Note
-    ----
-    Requires the phantomjs library and the "rasterize.js" script.
-    Needs the environment variable "RASTERIZE", which specifies the absolute
-    path to the "rasterize.js" file.
-    '''
-    # TODO: do this already in Jterator in a parallelized way (if plot true)
-    import plotly
-    if not os.path.exists(figure_file):
-        logger.warn('figure file does not exist: %s', figure_file)
-        html = '' 
-    else:
-        logger.info('read figure file: %s', figure_file)
-        with open(figure_file, 'r') as f:
-            figure = json.loads(f.read())
-        logger.info('create figure')
-        html = plotly.offline.plot(figure, show_link=False, output_type='div')
-    html = ''.join([
-        '<html>',
-        '<head><meta charset="utf-8" /></head>',
-        '<body>',
-        html,
-        '</body>',
-        '</html>'
-    ])
-    # from xhtml2pdf import pisa
-    html_file = figure_file.replace('.json', '.html')
-    logger.info('write html file: %s', html_file)
-    with open(html_file, 'w+b') as f:
-        # pisa.CreatePDF(html, f)
-        f.write(html)
-    # Produce thumbnails for html figures by screen capture.
-    png_file = figure_file.replace('.json', '.png')
-    logger.info('generate png file: %s', png_file)
-    rasterize_file = os.path.expandvars('$RASTERIZE')
-    subprocess.call([
-        'phantomjs', rasterize_file, html_file, png_file
-    ])
-    return png_file
-
-
 def _get_output(jobs, modules, log_location, fig_location):
-    # TODO: don't redo this every time for each module, but only for those
-    # modules whose output hasn't yet been returned
-    if 'RASTERIZE' not in os.environ:
-        logger.warn('"RASTERIZE" environment variable not set')
-    rasterize_file = os.path.expandvars('$RASTERIZE')
-    if not os.path.exists(rasterize_file):
-        logger.warn('"phantomjs" is not properly installed')
     output = list()
     if jobs is None:
         return output
@@ -642,6 +582,7 @@ def _get_output(jobs, modules, log_location, fig_location):
             for m in modules:
                 stdout_file, stderr_file = m.build_log_filenames(log_location, j)
                 fig_file = m.build_figure_filename(fig_location, j)
+                thumbnail_file = fig_file.replace('.json', '.png')
                 out = dict()
                 out['name'] = m.name
                 if os.path.exists(stdout_file):
@@ -649,12 +590,13 @@ def _get_output(jobs, modules, log_location, fig_location):
                         out['stdout'] = f.read()
                     with open(stderr_file, 'r') as f:
                         out['stderr'] = f.read()
-                    thumbnail_file = _make_thumbnail(fig_file)
-                    with open(thumbnail_file, 'r') as f:
-                        out['thumbnail'] = base64.b64encode(f.read())
                 else:
                     out['stdout'] = None
                     out['stderr'] = None
+                if os.path.exists(thumbnail_file):
+                    with open(thumbnail_file, 'r') as f:
+                        out['thumbnail'] = base64.b64encode(f.read())
+                else:
                     out['thumbnail'] = None
                 module_output.append(out)
 
