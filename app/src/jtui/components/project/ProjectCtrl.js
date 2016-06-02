@@ -263,7 +263,11 @@ angular.module('jtui.project')
                 result.output.forEach(function(r) {
                     $scope.jobs.output.push(r);
                 });
-                $scope.jobs.currentId = result.output[0].id;
+                if (result.output.length > 0) {
+                    $scope.jobs.currentId = result.output[0].id;
+                } else {
+                    $scope.jobs.currentId = null;
+                }
                 $scope.$watch('jobs.currentId');
                 $scope.outputAvailable = true;
                 var unkown = $scope.jobs.output.every(function (element, index, array) {

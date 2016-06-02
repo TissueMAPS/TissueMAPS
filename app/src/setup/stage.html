@@ -21,6 +21,18 @@
             <h4>Extra arguments</h4>
             <tm-argument-input arg="arg" ng-repeat="arg in step.extra_args"
                 arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
+
+            <div ng-show="stage.name == 'image_analysis'">
+                <button class="btn btn-default"
+                    ng-click="stageCtrl.editPipeline(step)">
+                  Edit pipeline
+                </button>
+                <button class="btn btn-default"
+                    ng-click="stageCtrl.createPipeline(step)">
+                  Create new pipeline
+                </button>
+            </div>
+
         </div>
       </div>
     </div>

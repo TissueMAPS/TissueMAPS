@@ -40,12 +40,6 @@ class UserpanelWindowCtrl {
         });
     }
 
-    editPipelines(e: Experiment) {
-        this._$state.go('jtui', {
-            experimentid: e.id
-        });
-    }
-
     deleteExperiment(e: Experiment) {
         this._dialogService.warning('Are you sure you want to delete this experiment?')
         .then((answer) => {
