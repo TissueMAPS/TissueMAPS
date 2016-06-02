@@ -1,3 +1,10 @@
+interface Step {
+    namn: string;
+    extra_args: any[];
+    batch_args: any[];
+    submit_args: any[];
+}
+
 class StageCtrl {
 
     static $inject = ['stage', '$state', '$scope'];
@@ -11,7 +18,7 @@ class StageCtrl {
     editPipeline(s: Step) {
         var experiment = this._$scope.$parent.setupCtrl.experiment;
         var project = '';
-        for (arg in s.extra_args) {
+        for (var arg in s.extra_args) {
             if (s.extra_args[arg].name == 'pipeline') {
                 project = s.extra_args[arg].value;
             }
@@ -25,7 +32,7 @@ class StageCtrl {
     createPipeline(s: Step) {
         var experiment = this._$scope.$parent.setupCtrl.experiment;
         var project = '';
-        for (arg in s.extra_args) {
+        for (var arg in s.extra_args) {
             if (s.extra_args[arg].name == 'pipeline') {
                 project = s.extra_args[arg].value;
             }
