@@ -698,8 +698,6 @@ def get_job_output(experiment):
         return jsonify(output=None, error=error)
 
 
-# TODO: add jobs to engine again in case the server is restarted
-
 @jtui.route('/run_jobs/<path:experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
@@ -761,7 +759,7 @@ def run_jobs(experiment):
     jobs = jt.create_run_jobs(
         submission_id=submission.id,
         user_name=submission.experiment.user.name,
-        job_ids=job_ids,
+        batches=job_descriptions,
         duration=submit_args.duration,
         memory=submit_args.memory, cores=submit_args.cores
     )
@@ -772,73 +770,3 @@ def run_jobs(experiment):
     logger.info('submit jobs')
     gc3pie.submit_jobs(jobs)
     return jsonify({'submission_id': jobs.submission_id})
-
-
-
-
-
-
-    # # 6. Monitor job status
-    # module_names = list_module_names(data['pipe']['description']['pipeline'])
-    # break_next = False
-    # while True:
-
-    #     time.sleep(5)
-
-    #     if break_next:
-    #         break
-
-    #     task_data = cluster_utils.get_task_data_from_engine(task)
-    #     cluster_utils.print_task_status(task_data, monitoring_depth=2)
-
-    #     # break out of the loop when all jobs are done
-    #     if task_data['is_done']:
-    #         break_next = True
-
-    #     # send status report to client
-    #     socket.send(
-    #         json.dumps({
-    #             'event': 'status',
-    #             'data': task_data
-    #         })
-    #     )
-    #     # send output (log and figures) to client
-    #     socket.send(
-    #         json.dumps({
-    #             'event': 'output',
-    #             'data': _get_output(
-    #                 task, jt.module_log_location, jt.figures_location,
-    #                 module_names
-    #             )
-    #         })
-    #     )
-
-
-# @websocket.route('/socket')
-# def listen(ws):
-#     while True:
-#         msg_str = ws.receive()
-#         if msg_str:
-#             msg = json.loads(msg_str)
-
-#             event = msg['event']
-
-#             data = msg['data']
-
-#             if event == 'register':
-#                 print '\n--- REGISTER TOOL INSTANCE FOR WEBSOCKET ---\n'
-#                 global socket
-#                 socket = ws
-#                 # TODO: multiple sockets, one per user
-#                 # How do we limit the user to go crazy? For example, in case
-#                 # user would have several taps, browser windows open and clicks
-#                 # around like hell.
-#                 # then we just create one engine per user (during the login)
-#                 # and we fetch the engine during job monitoring (while loop)
-#             elif event == 'run':
-#                 print '\n--- RUN JOB ---\n'
-#                 run_ui_job(data)
-#             else:
-#                 print 'Unknown event: ' + event
-
-
