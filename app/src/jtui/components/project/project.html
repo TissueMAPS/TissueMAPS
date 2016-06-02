@@ -79,14 +79,13 @@
                       Define the <b>modules</b> and the order in which they should be processed:
                     </p>
 
-                    <div  class="list-group"
+                    <div class="list-group"
                         ui-sortable
                         ng-model="project.pipe.description.pipeline"
                         ng-drop="true"
                         ng-drop-success="onDropCompleteAdd($data, $event)">
 
                         <li ng-repeat="m in project.pipe.description.pipeline | filter:searchModules"
-"
                             ui-sref="project.module({moduleName:m.name})"
                             class="list-group-item"
                             ng-class="{active: $stateParams.moduleName == m.name}">
@@ -189,6 +188,7 @@
     </div>
 
     <div class="pane-content">
+
         <div class="pane-subcontent" perfect-scrollbar>
 
             <div class="panel panel-default">

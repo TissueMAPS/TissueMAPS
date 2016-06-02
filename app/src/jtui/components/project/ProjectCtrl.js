@@ -237,7 +237,7 @@ angular.module('jtui.project')
     function getStatus() {
         runnerService.getStatus($scope.project).then(function (result) {
             console.log('status: ', result.status)
-            if (result.status == null || _.isEmpty(status)) {
+            if (result.status == null || _.isEmpty(result.status)) {
                 $scope.outputAvailable = false;
             } else {
                 $scope.submission.state = result.status.state;
@@ -395,33 +395,39 @@ angular.module('jtui.project')
 
     $scope.removeModule = function(module, $parent, $event) {
         if ($event.shiftKey) {
-            console.log('click ignored')
+            console.log('click ignored');
         } else {
             var mod = module.name;
-            console.log(mod)
+            console.log(mod);
             var ixHandles = $scope.project.handles.map(function(e) { 
                     return e.name;
                 }).indexOf(mod);
             var ixPipe = $scope.project.pipe.description.pipeline.map(function(e) { 
                     return e.name;
                 }).indexOf(mod);
-            var ixAdded = $scope.addedModuleNames.indexOf(mod)
+            var ixAdded = $scope.addedModuleNames.indexOf(mod);
             if (ixHandles > -1) {
-                var currentProject = $scope.project
+                var currentProject = $scope.project;
                 console.log('remove module \"' + mod + '\"');
                 currentProject.handles.splice(ixHandles, 1);
-                currentProject.pipe.description.pipeline.splice(ixPipe, 1)
+                currentProject.pipe.description.pipeline.splice(ixPipe, 1);
                 // Also remove from the list of selected modules
+                // (those are the ones selected via shift click)
                 ixSelected = $scope.selectedModules.indexOf(mod.name);
                 $scope.selectedModules.splice(ixSelected, 1);
-                $scope.addedModuleNames.splice(ixAdded, 1)
-                console.log('update project:', currentProject)
+                $scope.addedModuleNames.splice(ixAdded, 1);
+                console.log('update project:', currentProject);
                 $scope.project = currentProject;
-                // TODO: if currently displayed module is removed, go pack to
-                // parent state (i.e. change url and view) 
-                if ($parent.selected == module) {
+
+                if ($stateParams.moduleName == mod) {
+                    // TODO: why is "moduleName" not in $stateParams?
+                    console.log('switch module');
+                    $state.go('project.module', {
+                        moduleName: $scope.project.handles[ixHandles - 1].name
+                    });
+                } else if ($scope.project.pipe.description.pipeline.length == 0){
                     console.log('go back to parent state')
-                    $state.go('^');
+                    $state.go('project');
                 }
             } else {
                 console.log('removal of module \"' + mod + '\" failed');
