@@ -737,9 +737,9 @@ def run_jobs(experiment):
     # to prevent accumulation of data
     # jt.delete_previous_job_output()
 
-    # 1. Save the project to disk,
-    # i.e. write pipeline and module descriptions to the corresponding files
-    # jt.project.save()
+    # 1. Delete figures and logs from previous submission
+    #    since they are not tracked per submission.
+    jt.remove_previous_pipeline_output()
 
     # 2. Build jobs
     logger.info('build jobs')
