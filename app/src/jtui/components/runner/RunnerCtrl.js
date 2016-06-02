@@ -144,6 +144,7 @@ angular.module('jtui.runner')
     };
 
     $scope.goToNextJob = function () {
+        console.log('jobs: ', $scope.jobs)
         var jobIndex = $scope.jobs.output.map(function (e) {
             return e.id;
         }).indexOf($scope.jobs.currentId);

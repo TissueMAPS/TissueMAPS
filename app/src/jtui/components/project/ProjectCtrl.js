@@ -248,8 +248,10 @@ angular.module('jtui.project')
                     $scope.submission.indicator = 'success';
                 }
                 if (result.status.is_done) {
-                    getOutput();
-                    $scope.outputAvailable = true;
+                    if (! $scope.outputAvailable) {
+                        getOutput();
+                        $scope.outputAvailable = true;
+                    }
                 } else {
                     $scope.outputAvailable = false;
                 }
@@ -409,6 +411,7 @@ angular.module('jtui.project')
             if (ixHandles > -1) {
                 var currentProject = $scope.project;
                 console.log('remove module \"' + mod + '\"');
+                // Remove the module from the pipeline
                 currentProject.handles.splice(ixHandles, 1);
                 currentProject.pipe.description.pipeline.splice(ixPipe, 1);
                 // Also remove from the list of selected modules
@@ -419,15 +422,16 @@ angular.module('jtui.project')
                 console.log('update project:', currentProject);
                 $scope.project = currentProject;
 
-                if ($stateParams.moduleName == mod) {
+                // Change the view in case the module is currently active
+                if ($scope.project.pipe.description.pipeline.length == 0) {
+                    console.log('go back to parent state')
+                    $state.go('project');
+                } else if ($stateParams.moduleName == mod) {
                     // TODO: why is "moduleName" not in $stateParams?
                     console.log('switch module');
                     $state.go('project.module', {
                         moduleName: $scope.project.handles[ixHandles - 1].name
                     });
-                } else if ($scope.project.pipe.description.pipeline.length == 0){
-                    console.log('go back to parent state')
-                    $state.go('project');
                 }
             } else {
                 console.log('removal of module \"' + mod + '\" failed');
