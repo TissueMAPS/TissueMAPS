@@ -19,6 +19,7 @@ from tmaps.extensions import db
 
 import tmlib.models as tm
 from tmlib.models import Experiment
+from tmlib.utils import flatten
 from tmlib.workflow.registry import get_step_args
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
@@ -111,10 +112,6 @@ def get_available_jtprojects(experiment):
     str
         JSON string with "jtprojects" key. The corresponding value is a list
         of Jterator project descriptions in YAML format.
-
-    See also
-    --------
-    `get_jtproject`
     '''
     jt = ImageAnalysisPipeline(
         experiment_id=experiment.id,
@@ -350,7 +347,8 @@ def get_module_figure(experiment, project_name, module_name, job_id):
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def create_joblist(experiment):
-    '''Creates joblist for the current project and return it.
+    '''Creates a list of jobs for the current project to give the user a
+    possiblity to select a site of interest.
 
     Returns
     -------
@@ -359,31 +357,30 @@ def create_joblist(experiment):
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
-    experiment_id = data['experiment_id']
     jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
+        experiment_id=experiment.id,
         verbosity=logging.INFO,
-        pipeline=pipeline,
+        pipeline=data['name']
     )
-    batch_args = get_step_args('jterator')[0]
+    batch_args_cls, submit_args_cls, _ = get_step_args('jterator')
+    batch_args = batch_args_cls()
     batches = jt.create_batches(batch_args)
     metadata = list()
     try:
         with tm.utils.Session() as session:
             metadata = dict()
-            for batch in batches:
-                file_ids = flatten(batch['image_file_ids'].values())
-                channel_files = session.query(tm.ChannelImage).\
-                    filter(tm.ChannelImage.id.in_(channel_ids)).\
-                    all()
-                for f in channel_files:
-                    metadata[batch['id']] = {
-                        'tpoint': f.tpoint,
-                        'zplane': f.zplane,
-                        'channel': f.channel.index,
-                        'well': f.site.well.name,
-                        'plate': f.site.well.plate.name
-                    }
+            for batch in batches['run']:
+                f = session.query(tm.ChannelImageFile).\
+                    filter_by(site_id=batch['site_id']).\
+                    first()
+                metadata[batch['id']] = {
+                    'tpoint': f.tpoint,
+                    'zplane': f.zplane,
+                    'channel_name': f.channel.name,
+                    'well': f.site.well.name,
+                    'well_position': [f.site.y, f.site.x],
+                    'plate': f.site.well.plate.name
+                }
             return jsonify({'joblist': metadata})
     except Exception, e:
         error = str(e)
