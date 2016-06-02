@@ -6,9 +6,9 @@ from sqlalchemy import func
 from flask import current_app
 
 from tmaps.extensions import db
+from tmaps.extensions.gc3pie.engine import BgEngine
 
 import tmlib.models as tm
-from tmlib.workflow import BgEngine
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session
 from tmlib.workflow.utils import create_gc3pie_engine
@@ -33,6 +33,10 @@ class GC3Pie(object):
         The preferred way of initializing the extension is via the
         `init_app()` method.
 
+        Note
+        ----
+        Uses the "gevent" loop engine. Make sure to configure uWSGI accordingly.
+
         Examples
         --------
         gc3pie = GC3Pie()
@@ -41,9 +45,9 @@ class GC3Pie(object):
         """
         self.interval = 1
         gc3libs_logger = logging.getLogger('gc3.gc3libs')
-        gc3libs_logger.setLevel(logging.DEBUG)
+        gc3libs_logger.setLevel(logging.CRITICAL)
         apscheduler_logger = logging.getLogger('apscheduler')
-        apscheduler_logger.setLevel(logging.DEBUG)
+        apscheduler_logger.setLevel(logging.CRITICAL)
         if app is not None:
             self.init_app(app)
 
@@ -61,8 +65,12 @@ class GC3Pie(object):
         logger.info('create GC3Pie engine')
         store = create_gc3pie_sql_store()
         engine = create_gc3pie_engine(store)
-        bgengine = BgEngine('threading', engine)
-        logger.info('start GC3Pie engine in the background')
+        scheduler = 'threading'
+        bgengine = BgEngine(scheduler, engine)
+        logger.info(
+            'start GC3Pie engine in the background using "%s" scheduler',
+            scheduler
+        )
         bgengine.start(self.interval)
         app.extensions['gc3pie'] = {
             'engine': bgengine,
@@ -82,11 +90,8 @@ class GC3Pie(object):
         """
         return current_app.extensions.get('gc3pie', {}).get('store')
 
-    def _get_session(self, experiment):
-        return create_gc3pie_session(experiment.session_location, self._store)
-
     def store_jobs(self, experiment, jobs):
-        """Stores jobs to in `GC3Pie` session to make them persistent.
+        """Stores jobs in the database.
 
         Parameters
         ----------
@@ -100,10 +105,10 @@ class GC3Pie(object):
         gc3libs.session.Session
             session
 
-        Note
-        ----
-        When the session already exists it is simply returned, otherwise
-        a new session is created.
+        See also
+        --------
+        :py:class:`tmlib.models.Submission`
+        :py:class:`tmlib.models.Task`
         """
         logger.debug('insert jobs into tasks table')
         self._store.save(jobs)
@@ -115,21 +120,28 @@ class GC3Pie(object):
         db.session.commit()
 
     def retrieve_jobs(self, experiment, submitting_program):
-        """Retrieves jobs of the most recent submission for the given
-        `experiment` from the store.
+        """Retrieves stored jobs of the most recent submission for the given
+        `experiment` and `submitting_program` from the database.
 
         Parameters
         ----------
         experiment: tmlib.models.Experiment
             processed experiment
         submitting_program: str
-            program that submitted the jobs, e.g. ``"jtui"``
+            name of the program that submitted the jobs, e.g. ``"jtui"``
 
         Returns
         -------
         gc3libs.Task or gc3libs.workflow.TaskCollection
             jobs
+
+        See also
+        --------
+        :py:class:`tmlib.models.Submission`
+        :py:class:`tmlib.models.Task`
         """
+        # submission_manager = SubmissionManager(experiment.id, 'workflow')
+        # task_id = submission_manager.get_task_id_for_last_submission()
         last_submission_id = db.session.query(func.max(tm.Submission.id)).\
             filter(
                 tm.Submission.experiment_id == experiment.id,
@@ -146,21 +158,32 @@ class GC3Pie(object):
         else:
             return None
 
-    def submit_jobs(self, jobs):
+    def submit_jobs(self, jobs, index=0):
         """Submits jobs to the cluster.
 
         Parameters
         ----------
         jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
             individual computational task or collection of tasks
-
-        Returns
-        -------
-        int
-            submission ID
         """
         logger.info('add jobs to engine')
         self._engine.add(jobs)
+
+    def resubmit_jobs(self, jobs, index=0):
+        """Resubmits jobs to the cluster.
+
+        Parameters
+        ----------
+        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
+            individual computational task or collection of tasks
+        index: int, optional
+            index of an individual task within a sequential collection of tasks
+            from where all subsequent tasks should be resubmitted
+        """
+        logger.info('add jobs to engine')
+        self._engine.add(jobs)
+        logger.info('redo jobs')
+        self._engine.redo(jobs, index)
 
     def get_status_of_submitted_jobs(self, jobs):
         '''Gets the status of submitted jobs.
