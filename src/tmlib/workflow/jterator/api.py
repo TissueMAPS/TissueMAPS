@@ -114,10 +114,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         return os.path.join(self.step_location, 'log_modules')
 
-    def remove_previous_output(self):
+    def remove_previous_pipeline_output(self):
         '''Removes all figure and module log files.'''
         shutil.rmtree(self.module_log_location)
-        shutil.rmtree(self.figures_dir)
+        shutil.rmtree(self.figures_location)
+        os.mkdir(self.module_log_location)
+        os.mkdir(self.figures_location)
 
     @cached_property
     def pipeline(self):
