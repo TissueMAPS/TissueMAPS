@@ -180,7 +180,7 @@ class SetupCtrl {
         return stage;
     }
 
-    private _submitStages(stages: Stage[], redo: boolean, index: int) {
+    private _submitStages(stages: Stage[], redo: boolean, index: number) {
         // Copy the original workflow description object and populate it with
         // all the values that were filled in by the user.
         var desc = $.extend(true, {}, this.experiment.workflowDescription);
