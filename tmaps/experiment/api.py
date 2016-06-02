@@ -1,5 +1,6 @@
 import json
 import os.path as p
+import logging
 
 import numpy as np
 from flask import jsonify, send_file, current_app, request
@@ -8,6 +9,7 @@ from flask.ext.jwt import current_identity
 
 import tmlib.workflow.registry
 from tmlib.workflow.canonical import CanonicalWorkflowDescription
+from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.models import (
     Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile
@@ -18,6 +20,7 @@ from tmaps.util import (
 )
 from tmaps.model import decode_pk
 from tmaps.extensions import db
+from tmaps.extensions import gc3pie
 from tmaps.api import api
 from tmaps.error import (
     MalformedRequestError,
@@ -26,6 +29,8 @@ from tmaps.error import (
     ResourceNotFoundError,
     NotAuthorizedError
 )
+
+logger = logging.getLogger(__name__)
 
 
 @api.route('/channel_layers/<channel_layer_id>/tiles', methods=['GET'])
@@ -126,22 +131,59 @@ def get_experiment(experiment):
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow', methods=['POST'])
+@api.route('/experiments/<experiment_id>/workflow/submit', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment)
 def submit_workflow(experiment):
+    logger.info('submit workflow')
     data = json.loads(request.data)
+    data = data['description']
     WorkflowType = tmlib.workflow.registry.get_workflow_description(data['type'])
-    wfd = WorkflowType(stages=data['stages'])
-    manager = WorkflowManager(experiment.id, 1)
-    wf = manager.create_workflow(wfd)
-    manager.submit_jobs()
+    workflow_description = WorkflowType(stages=data['stages'])
+    workflow_manager = WorkflowManager(experiment.id, 1)
+    submission_manager = SubmissionManager(experiment.id, 'workflow')
+    submission_id, user_name = submission_manager.register_submission()
+    workflow = workflow_manager.create_workflow(
+        submission_id, user_name, workflow_description
+    )
+    gc3pie.store_jobs(experiment, workflow)
+    gc3pie.submit_jobs(workflow)
 
-    # TODO: submit
     return jsonify({
-        'message': 'ok'
+        'message': 'ok',
+        'submission_id': workflow.submission_id
     })
 
+
+@api.route('/experiments/<experiment_id>/workflow/resubmit', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment)
+def resubmit_workflow(experiment):
+    logger.info('resubmit workflow')
+    data = json.loads(request.data)
+    index = data.get('index', 0)
+    data = data['description']
+    workflow = gc3pie.retrieve_jobs(experiment, 'workflow')
+    # TODO: update stage with modified description
+    workflow.update_stage(index)
+    gc3pie.resubmit_jobs(workflow, index)
+
+    return jsonify({
+        'message': 'ok',
+        'submission_id': workflow.submission_id
+    })
+
+
+@api.route('/experiments/<experiment_id>/workflow/status', methods=['POST']) 
+@jwt_required()
+@extract_model_from_path(Experiment)
+def get_workflow_status(experiment):
+    logger.info('get workflow status')
+    workflow = gc3pie.retrieve_jobs(experiment, 'workflow')
+    status = gc3pie.get_status_of_submitted_jobs(workflow)
+    return jsonify({
+        'data': status
+    })
 
 @api.route('/experiments', methods=['POST'])
 @jwt_required()
