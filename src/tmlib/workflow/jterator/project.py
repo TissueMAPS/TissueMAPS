@@ -5,6 +5,7 @@ import ruamel.yaml
 import yaml
 import logging
 import shutil
+from cached_property import cached_property
 from natsort import natsorted
 
 from tmlib.workflow.jterator.utils import get_module_directories
@@ -61,8 +62,8 @@ class Project(object):
         '''
         self.step_location = step_location
         self.pipe_name = pipe_name
-        self.pipe = pipe
-        self.handles = handles
+        self._pipe = pipe
+        self._handles = handles
 
     @property
     def pipe(self):
@@ -158,22 +159,21 @@ class Project(object):
         return old
 
     def _create_pipe(self):
-        pipe_file = self._get_pipe_file()
-        with YamlReader(pipe_file) as f:
+        with YamlReader(self.pipe_file) as f:
             pipe = {
-                'name': self._get_descriptor_name(pipe_file),
+                'name': self._get_descriptor_name(self.pipe_file),
                 'description': f.read()
             }
         if 'pipeline' not in pipe['description']:
             raise PipelineDescriptionError(
                 'Pipeline descriptor file "%s" must contain key "pipeline".'
-                % pipe_file
+                % self.pipe_file
             )
         if pipe['description']['pipeline']:
             if not isinstance(pipe['description']['pipeline'], list):
                 raise PipelineDescriptionError(
                     'Pipeline description in "%s" must be an array.'
-                    % pipe_file
+                    % self.pipe_file
                 )
             # Add module 'name' to pipeline for display in the interface
             for i, module in enumerate(pipe['description']['pipeline']):
@@ -181,14 +181,16 @@ class Project(object):
                     raise PipelineDescriptionError(
                         'Element #%d of "pipeline" array in pipeline '
                         'descriptor file "%s" must contain key "handles".'
-                        % (i, pipe_file)
+                        % (i, self.pipe_file)
                     )
                 pipe['description']['pipeline'][i]['name'] = \
                     self._get_descriptor_name(
                         pipe['description']['pipeline'][i]['handles']
                     )
         else:
-            logger.warn('no pipeline description provided in "%s"', pipe_file)
+            logger.warn(
+                'no pipeline description provided in "%s"', self.pipe_file
+            )
         return pipe
 
     @property
@@ -223,12 +225,26 @@ class Project(object):
 
         return sorted_handles
 
-    def _create_pipe_file(self, repo_dir):
+    @cached_property
+    def pipe_file(self):
+        '''str: absolute path to the pipeline descriptor file
+
+        Note
+        ----
+        Creates the file with an empty pipeline description in case it doesn't
+        exist.
+        '''
         pipe_file = os.path.join(
             self.step_location,
             '%s%s' % (self.pipe_name, PIPE_SUFFIX)
         )
-        pipe_skeleton = {
+        if not os.path.exists(pipe_file):
+            self._create_pipe_file(pipe_file)
+        return pipe_file
+
+    def _create_pipe_file(self, filename):
+        logger.info('create pipeline descriptor file: %s', filename)
+        pipe = {
             'description': str(),
             'input': {
                 'channels': [
@@ -237,11 +253,13 @@ class Project(object):
             },
             'pipeline': list()
         }
-        with YamlWriter(pipe_file) as f:
-            f.write(pipe_skeleton)
+        with YamlWriter(filename) as f:
+            f.write(pipe)
+        return pipe
 
     def _create_handles_folder(self):
         handles_dir = os.path.join(self.step_location, 'handles')
+        logger.info('create handles directory: %s', handles_dir)
         if not os.path.exists(handles_dir):
             os.mkdir(handles_dir)
 
