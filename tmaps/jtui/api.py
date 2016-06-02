@@ -759,7 +759,7 @@ def run_jobs(experiment):
     jobs = jt.create_run_jobs(
         submission_id=submission.id,
         user_name=submission.experiment.user.name,
-        batches=job_descriptions,
+        batches=job_descriptions['run'],
         duration=submit_args.duration,
         memory=submit_args.memory, cores=submit_args.cores
     )
