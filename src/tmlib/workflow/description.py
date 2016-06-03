@@ -149,19 +149,19 @@ class WorkflowStepDescription(object):
 
     '''Description of a workflow step.'''
 
-    def __init__(self, name, batch_args=dict(), submission_args=dict(),
-            extra_args=dict()):
+    def __init__(self, name, batch_args=None, submission_args=None,
+            extra_args=None):
         '''
         Parameters
         ----------
         name: str
             name of the step
-        batch_args: dict, optional
-            names and values of batch arguments
-        submission_args: dict, optional
-            names and values of submission arguments 
-        extra_args: dict, optional
-            names and values of additional arguments
+        batch_args: tmlib.workflow.args.BatchArguments, optional
+            batch arguments
+        submission_args: tmlib.workflow.args.SubmissionArguments, optional
+            submission arguments
+        extra_args: tmlib.workflow.args.ExtraArguments, optional
+            extra arguments (only some steps have such arguments)
 
         Raises
         ------
@@ -169,12 +169,28 @@ class WorkflowStepDescription(object):
             when a provided argument is not a valid argument for the given step
         '''
         self.name = str(name)
-        batch_args_cls, submission_args_cls, extra_args_cls = get_step_args(name)
-        self.batch_args = batch_args_cls(**batch_args)
-        self.submission_args = submission_args_cls(**submission_args)
-        self._extra_args = None
-        if extra_args_cls is not None:
-            self.extra_args = extra_args_cls(**extra_args)
+        BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(name)
+        if batch_args is None:
+            self.batch_args = BatchArgs()
+        else:
+            self.batch_args = batch_args
+        if submission_args is None:
+            self.submission_args = SubmissionArgs()
+        else:
+            self.submission_args = submission_args
+        if extra_args is None:
+            if ExtraArgs is not None:
+                self.extra_args = ExtraArgs()
+            else:
+                self._extra_args = None
+        else:
+            self.extra_args = extra_args
+        # BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(name)
+        # self.batch_args = BatchArgs(**batch_args)
+        # self.submission_args = SubmissionArgs(**submission_args)
+        # self._extra_args = None
+        # if extra_args_cls is not None:
+        #     self.extra_args = ExtraArgs(**extra_args)
 
     @property
     def extra_args(self):

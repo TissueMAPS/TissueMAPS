@@ -21,6 +21,7 @@ from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow.registry import workflow
+from tmlib.workflow.registry import get_step_args
 
 logger = logging.getLogger(__name__)
 
@@ -188,11 +189,24 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
         super(CanonicalWorkflowStageDescription, self).__init__(name, mode)
         if steps is not None:
             for step in steps:
-                self.add_step(CanonicalWorkflowStepDescription(**step))
+                name = step['name']
+                BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(name)
+                batch_args = BatchArgs(**step['batch_args'])
+                submission_args = SubmissionArgs(**step['submission_args'])
+                if ExtraArgs is not None:
+                    extra_args = ExtraArgs(**step['extra_args'])
+                else:
+                    extra_args = None
+                self.add_step(
+                    CanonicalWorkflowStepDescription(
+                        name, batch_args, submission_args, extra_args
+                    )
+                )
         else:
             for name in STEPS_PER_STAGE[self.name]:
-                step = {'name': name}
-                self.add_step(CanonicalWorkflowStepDescription(**step))
+                self.add_step(
+                    CanonicalWorkflowStepDescription(name)
+                )
 
     def add_step(self, step_description):
         '''Adds an additional step to the stage.
@@ -242,8 +256,8 @@ class CanonicalWorkflowStepDescription(WorkflowStepDescription):
     '''Description of a step of a canonical `TissueMAPS` workflow.'''
 
     @same_docstring_as(WorkflowStepDescription.__init__)
-    def __init__(self, name, batch_args=dict(), submission_args=dict(),
-            extra_args=dict()):
+    def __init__(self, name, batch_args=None, submission_args=None,
+            extra_args=None):
         super(CanonicalWorkflowStepDescription, self).__init__(
             name, batch_args, submission_args, extra_args
         )
