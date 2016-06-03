@@ -5,6 +5,7 @@ from abc import abstractmethod
 from tmaps.serialize import json_encoder
 from tmaps.model import Model
 from tmaps.extensions import spark
+from tmaps.extensions import db
 
 
 class Tool(Model):
