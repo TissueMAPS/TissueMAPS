@@ -49,7 +49,7 @@ class Heatmap(ToolRequestHandler):
                 experiment.id, mapobject_type_name, selected_feature
             )
             lower_bound = np.min(feature_values.value)
-            upper_bound = np.max(feature_value.value)
+            upper_bound = np.max(feature_values.value)
 
         extra_attributes = {
             'feature_id': feature_id,
