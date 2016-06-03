@@ -1,9 +1,11 @@
-import pyspark.sql.functions as sp
+import logging
 
 from tmlib.models import Feature, FeatureValue, MapobjectType
 from tmaps.extensions import db
 from tmaps.tool import HeatmapLabelLayer, Result
 from tmaps.tool import ToolRequestHandler
+
+logger = logging.getLogger(__name__)
 
 
 class Heatmap(ToolRequestHandler):
@@ -15,7 +17,6 @@ class Heatmap(ToolRequestHandler):
         }
 
         """
-        # Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         mapobject_type = experiment.get_mapobject_type(mapobject_type_name)
 
@@ -30,15 +31,17 @@ class Heatmap(ToolRequestHandler):
             ).\
             one()[0]
 
+        logger.info('calculate min/max for rescaling of intensities')
         if use_spark:
+            import pyspark.sql.functions as sp
             feature_values = self.get_feature_values_spark(
                 experiment.id, mapobject_type_name, selected_feature
             )
             stats = feature_values.\
                 select(sp.min('value'), sp.max('value')).\
                 collect()
-            lower_bound = stats[0]['min(value)']
-            upper_bound = stats[0]['max(value)']
+            lower_bound = stats[0][0]
+            upper_bound = stats[0][1]
         else:
             feature_values = self.get_feature_values_sklearn(
                 experiment.id, mapobject_type_name, selected_feature
@@ -51,13 +54,12 @@ class Heatmap(ToolRequestHandler):
             'min': lower_bound,
             'max': upper_bound
         }
-        # TODO: The Heatmap tool could simply query the feature_values table
-        # directly. This would speed up things dramatically!
-        result = Result(
+
+        logger.info('return tool result')
+        return Result(
             tool_session=session,
             layer=HeatmapLabelLayer(
                  mapobject_type_id=mapobject_type.id,
                  extra_attributes=extra_attributes
             )
         )
-        return result
