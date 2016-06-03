@@ -338,9 +338,14 @@ def get_module_figure(experiment, project_name, module_name, job_id):
     fig_file = [
         m.build_figure_filename(jt.figures_location, int(job_id))
         for m in jt.pipeline if m.name == module_name
-    ][0]
+    ]
+    if len(fig_file) == 0:
+        return None
+    fig_file = fig_file[0]
     if os.path.exists(fig_file):
         return send_file(fig_file)
+    else:
+        return None
 
 
 @jtui.route('/create_joblist/<path:experiment_id>', methods=['POST'])

@@ -174,7 +174,7 @@ def resubmit_workflow(experiment):
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow/status', methods=['POST']) 
+@api.route('/experiments/<experiment_id>/workflow/status', methods=['GET']) 
 @jwt_required()
 @extract_model_from_path(Experiment)
 def get_workflow_status(experiment):
