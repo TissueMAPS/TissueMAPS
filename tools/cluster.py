@@ -1,6 +1,5 @@
 import logging
 from scipy.cluster.vq import kmeans, vq
-from pyspark.ml.clustering import KMeans as KMeansClassifier
 
 from tools.classifier import UnsupervisedClassifier
 
@@ -20,6 +19,7 @@ class KMeans(UnsupervisedClassifier):
         return zip(feature_data.index.tolist(), predictions.tolist())
 
     def classify_spark(self, feature_data, k):
+        from pyspark.ml.clustering import KMeans as KMeansClassifier
         logger.info('perform clustering via Spark on cluster')
         kmeans = KMeansClassifier(k=k, seed=1)
         model = kmeans.fit(feature_data)
