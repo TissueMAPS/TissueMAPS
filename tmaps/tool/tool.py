@@ -109,7 +109,7 @@ class ToolRequestHandler(object):
         feature_values = db.session.query(
                 FeatureValue.mapobject_id, FeatureValue.value
             ).\
-            join(FeatureValue).\
+            join(Feature).\
             filter(
                 (Feature.name.in_(feature_names)) &
                 (Feature.mapobject_type_id == mapobject_type.id)).\
