@@ -65,7 +65,7 @@ class GC3Pie(object):
         logger.info('create GC3Pie engine')
         store = create_gc3pie_sql_store()
         engine = create_gc3pie_engine(store)
-        scheduler = 'threading'
+        scheduler = 'gevent'
         bgengine = BgEngine(scheduler, engine)
         logger.info(
             'start GC3Pie engine in the background using "%s" scheduler',
