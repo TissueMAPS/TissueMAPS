@@ -87,7 +87,7 @@ class ToolRequestHandler(object):
             experiment_id, mapobject_type_name, feature_name
         )
         return spark.read_table(query)
-    
+
     def get_feature_values_sklearn(self, experiment_id, mapobject_type_name, feature_name):
         """Selects all values from table "feature_values" for mapobjects of
         a given `mapboject_type` and for the feature with the given name.
@@ -111,8 +111,9 @@ class ToolRequestHandler(object):
             ).\
             join(Feature).\
             filter(
-                (Feature.name.in_(feature_names)) &
-                (Feature.mapobject_type_id == mapobject_type.id)).\
+                Feature.name == feature_name,
+                Feature.mapobject_type_id == mapobject_type.idi
+            ).\
             all()
         return pd.DataFrame(feature_values, columns=['mapobject_id', 'value'])
 
