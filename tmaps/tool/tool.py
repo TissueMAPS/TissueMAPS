@@ -1,3 +1,4 @@
+import pandas as pd
 from sqlalchemy import Column, String, Text
 from abc import ABCMeta
 from abc import abstractmethod
