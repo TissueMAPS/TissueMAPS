@@ -110,9 +110,10 @@ class ToolRequestHandler(object):
                 FeatureValue.mapobject_id, FeatureValue.value
             ).\
             join(Feature).\
+            join(MapobjectType).\
             filter(
                 Feature.name == feature_name,
-                Feature.mapobject_type_id == mapobject_type.idi
+                MapobjectType.name == mapobject_type_name
             ).\
             all()
         return pd.DataFrame(feature_values, columns=['mapobject_id', 'value'])
