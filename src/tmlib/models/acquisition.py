@@ -137,11 +137,7 @@ class Acquisition(Model, DateMixIn):
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'status': self.status,
-            'microscope_image_files':
-                [im.name for im in self.microscope_image_files],
-            'microscope_metadata_files':
-                [md.name for md in self.microscope_metadata_files]
+            'status': self.status
         }
 
     def belongs_to(self, user):
