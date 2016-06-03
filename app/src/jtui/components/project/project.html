@@ -207,7 +207,8 @@
                     </i>
                     <i>{{ submission.state }}</i>
 
-                    <uib-progressbar max="100" value="submission.progress" type="{{ submission.indicator }}">
+                    <uib-progressbar max="100" style="height: 15px;" value="submission.percent_done"
+                        type="{{submission.failed ? 'danger' : 'success' }}">
                     </uib-progressbar>
 
                     <div ng-show="outputAvailable">

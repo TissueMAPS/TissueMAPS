@@ -63,19 +63,3 @@ class AcquisitionDetailCtrl {
 
 angular.module('tmaps.ui')
 .controller('AcquisitionDetailCtrl', AcquisitionDetailCtrl);
-
-// angular.module('ilui')
-// .controller('AcquisitionDetailCtrl',
-//     ['acquisition', 'uploadService', '$scope', 'FILE_UPLOAD_STATUS',
-//     function(acquisition, uploadService, $scope, FILE_UPLOAD_STATUS) {
-
-//     $scope.newFiles = [];
-
-//     $scope.clearFiles = function() {
-//         $scope.newFiles.splice(0, $scope.newFiles.length);
-//     };
-
-// }]);
-
-// angular.module('ilui')
-// .controller('AcquisitionDetailCtrl',

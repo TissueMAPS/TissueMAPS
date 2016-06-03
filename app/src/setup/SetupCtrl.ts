@@ -6,9 +6,12 @@ interface Stage {
 class SetupCtrl {
 
     currentStage: Stage;
+    currentStageSubmission: any;
     stages: Stage[];
+    submission: any;
+    _monitoringPromise: ng.IPromise<void> = null;
 
-    static $inject = ['experiment', 'plates', '$state'];
+    static $inject = ['experiment', 'plates', '$state', '$interval', '$scope'];
 
     isInStage(stage: Stage) {
         return this.currentStage.name === stage.name;
@@ -143,10 +146,6 @@ class SetupCtrl {
         }
     }
 
-    getStatus() {
-        this.experiment.getWorkflowStatus();
-    }
-
     private _updateStageDescription(stage: Stage) {
         // Copy the stage so that we don't modify the argument when
         // modifying the structure of the stage.
@@ -180,9 +179,60 @@ class SetupCtrl {
         return stage;
     }
 
+    getStatus() {
+        console.log('get workflow status')
+        this.experiment.getWorkflowStatus();
+        this.submission = this.experiment.workflowStatus;
+        if (this.submission == null) {
+            this.submission = {
+                is_done: false,
+                failed: false,
+                percent_done: 0,
+                state: ''
+            };
+            this.currentStageSubmission = {
+                is_done: false,
+                failed: false,
+                percent_done: 0,
+                state: ''
+            }
+        } else {
+            var idx = this.stages.indexOf(this.currentStage) - 1;
+            if (idx >= this.submission.subtasks.length) {
+                this.currentStageSubmission = {
+                    is_done: false,
+                    failed: false,
+                    percent_done: 0,
+                    state: ''
+                };
+            } else {
+                this.currentStageSubmission = this.submission.subtasks[idx];
+            }
+        }
+        console.log(this.submission)
+        console.log(this.currentStageSubmission)
+    }
+
+    // starts the interval
+    private _startMonitoring() {
+        // stops any running interval to avoid two intervals running at the same time
+        this._stopMonitoring();
+        this.getStatus();
+        this._monitoringPromise = this._$interval(() => {
+                this.getStatus()
+            }, 5000
+        );
+    };
+
+    private _stopMonitoring() {
+        this._$interval.cancel(this._monitoringPromise);
+        this._monitoringPromise = null;
+    };
+
     private _submitStages(stages: Stage[], redo: boolean, index: number) {
         // Copy the original workflow description object and populate it with
         // all the values that were filled in by the user.
+        // var desc = this.experiment.workflowDescription;
         var desc = $.extend(true, {}, this.experiment.workflowDescription);
         desc.stages = [];
         stages.forEach((stage) => {
@@ -206,13 +256,21 @@ class SetupCtrl {
 
     constructor(public experiment: Experiment,
                 public plates: Plate[],
-                private _$state) {
+                private _$state,
+                private _$interval,
+                private _$scope) {
         var uploadStage = {
             name: 'uploadfiles',
-            steps: null
+            steps: null,
         };
         this.currentStage = uploadStage;
         this.stages = [uploadStage].concat(this.experiment.workflowDescription.stages);
+
+        // TODO: stop monitoring when switching view
+        this._$scope.$on('$destroy', function() {
+            this._stopMonitoring();
+        });
+        this._startMonitoring();
         // console.log(experiment);
         // switch(experiment.status) {
         //     case 'WAITING':
@@ -225,27 +283,6 @@ class SetupCtrl {
         //         );
         // }
     }
-
-    // switch(experiment.status) {
-    //     $state.go('uploadfiles');
-    //     case 'WAITING_FOR_UPLOAD':
-    //     case 'UPLOADING':
-    //     case 'DONE':
-    //         break;
-    //     case 'WAITING_FOR_IMAGE_CONVERSION':
-    //     case 'CONVERTING_IMAGES':
-    //         $state.go('imageconversion');
-    //         break;
-    //     case 'WAITING_FOR_PYRAMID_CREATION':
-    //     case 'CREATING_PYRAMIDS':
-    //         $state.go('pyramidcreation');
-    //         break;
-    //         $state.go('uploadfiles');
-    //     default:
-    //         throw new Error(
-    //             'Unknown stage: ' + experiment.creationStage
-    //         );
-    // }
 }
 
 angular.module('tmaps.ui').controller('SetupCtrl', SetupCtrl);

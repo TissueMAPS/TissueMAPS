@@ -3,7 +3,7 @@
     <span ng-hide="{{ arg.required }}">(optional)</span>
     <input ng-if="widgetType == 'textInput'" type="text" ng-model="arg.value">
     <input ng-if="widgetType == 'numberInput'" type="number" ng-model="arg.value">
-    <input ng-if="widgetType == 'checkbox'" type="checkbox">
+    <input ng-if="widgetType == 'checkbox'" type="checkbox" ng-model="arg.value">
     <div ng-if="widgetType == 'dropdown'">
         <select ng-model="arg.value">
             <option ng-repeat="choice in arg.choices" ng-value="choice">{{choice}}</option>

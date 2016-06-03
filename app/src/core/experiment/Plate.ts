@@ -9,6 +9,7 @@ class Plate {
     id: string;
     name: string;
     description: string;
+    status: any;
     acquisitions: Acquisition[];
 
     /**

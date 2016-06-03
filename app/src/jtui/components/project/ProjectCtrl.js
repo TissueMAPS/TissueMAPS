@@ -239,14 +239,14 @@ angular.module('jtui.project')
             console.log('status: ', result.status)
             if (result.status == null || _.isEmpty(result.status)) {
                 $scope.outputAvailable = false;
-            } else {
-                $scope.submission.state = result.status.state;
-                $scope.submission.progress = result.status.percent_done;
-                if (result.status.failed) {
-                    $scope.submission.indicator = 'danger';
-                } else {
-                    $scope.submission.indicator = 'success';
+                $scope.submission = {
+                    is_done: false,
+                    state: '',
+                    percent_done: 0,
+                    failed: false
                 }
+            } else {
+                $scope.submission = result.status;
                 if (result.status.is_done) {
                     if (! $scope.outputAvailable) {
                         getOutput();
@@ -273,28 +273,8 @@ angular.module('jtui.project')
                 }
                 $scope.$watch('jobs.currentId');
                 $scope.outputAvailable = true;
-                var unkown = $scope.jobs.output.every(function (element, index, array) {
-                    return element.failed === null;
-                });
-                var failed = $scope.jobs.output.some(function (element, index, array) {
-                    return element.failed;
-                });
-                if (unkown) {
-                    $scope.type = '';
-                } else if (failed) {
-                    $scope.submission.indicator = 'danger';
-                } else {
-                    $scope.submission.indicator = 'success';
-                }
             }
         });
-    };
-
-    // One needs to provide default values to keep the progressbar at zero
-    $scope.submission = {
-        progress: 0,
-        state: "",
-        indicator: 'success'
     };
 
     // starts the interval

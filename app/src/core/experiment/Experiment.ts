@@ -24,6 +24,8 @@ class Experiment implements Model {
     status: string;
     stage: string;
     step: string;
+    workflowStatus: any;
+    // workflowStatus: TaskStatus;
 
     /**
      * Construct a new Experiment.
@@ -128,13 +130,12 @@ class Experiment implements Model {
     getWorkflowStatus() {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        return $http.post('/api/experiments/' + this.id + '/workflow/status', {})
-        .then((resp) => {
-            console.log(resp);
-            return resp.data;
-        })
-        .catch((resp) => {
-            $q.reject(resp.data.error);
+        return $q.all({
+            taskStatus: $http.get('/api/experiments/' + this.id + '/workflow/status')
+        }).then((responses: any) => {
+           // console.log(responses.taskStatus.data.data)
+            this.workflowStatus = responses.taskStatus.data.data;
+           return this.workflowStatus;
         });
     }
 

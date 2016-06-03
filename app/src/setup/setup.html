@@ -2,20 +2,53 @@
   <div class="col-md-12 setup-window-content">
 
     <div class="row header">
-      <div class="col-md-12">
-        <h3>{{ setupCtrl.experiment.name }} ({{setupCtrl.experiment.status}})</h3>
+
+      <div class="col-md-6">
+          <h3>{{setupCtrl.submission.name}}</h3>
       </div>
+
+      <div class="col-md-6">
+        <i class="fa fa-cog fa-fw"
+           ng-hide="setupCtrl.submission.state == 'RUNNING'">
+        </i>
+        <i class="fa fa-cog fa-spin fa-fw"
+           ng-show="setupCtrl.submission.state == 'RUNNING'">
+        </i>
+        <i>{{setupCtrl.submission.state}}</i>
+        <!-- <h4>{{setupCtrl.experiment.name}} ({{setupCtrl.experiment.workflowStatus.state}})</h4> -->
+        {{submission.indicator}}
+        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.submission.percent_done"
+           type="{{setupCtrl.submission.failed ? 'failed' : 'success'}}">
+        </uib-progressbar>
+      </div>
+
     </div>
 
     <div class="row stage-indicator-container">
-      <div class="col-md-12">
+
+      <div class="col-md-6">
         <ul class="stage-indicators">
           <li class="stage-indicator" ng-repeat="stage in setupCtrl.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
             ng-click="setupCtrl.goToStage(stage)">
-            {{::stage.name.replace('_', ' ')}}
+              {{stage.name}}
+            <!-- {{::stage.name.replace('_', ' ')}} -->
           </li>
         </ul>
       </div>
+
+      <div class="col-md-6">
+        <i class="fa fa-cog fa-fw"
+           ng-hide="setupCtrl.currentStageSubmission.state == 'RUNNING'">
+        </i>
+        <i class="fa fa-cog fa-spin fa-fw"
+           ng-show="setupCtrl.currentStageSubmission.state == 'RUNNING'">
+        </i>
+        <i>{{setupCtrl.currentStageSubmission.state}}</i>
+        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.currentStageSubmission.percent_done"
+           type="{{setupCtrl.currentStageSubmission.failed ? 'failed' : 'success'}}">
+        </uib-progressbar>
+      </div>
+
     </div>
 
     <div class="row stage-view-container">

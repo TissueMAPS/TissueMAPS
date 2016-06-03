@@ -163,7 +163,7 @@ angular.module('tmaps.ui')
             }
         },
         resolve: {
-            'stage': ['experiment', '$stateParams', (experiment, $stateParams) => {
+            stage: ['experiment', '$stateParams', (experiment, $stateParams) => {
                 var stage = _.find(experiment.workflowDescription.stages, (st: any) => {
                     return st.name === $stateParams.stageName;
                 });
@@ -248,7 +248,7 @@ angular.module('tmaps.ui')
         breadcrumb: {
             class: 'highlight',
             text: 'upload',
-            stateName: 'acquisition.detai'
+            stateName: 'acquisition.detail'
         }
     })
     .state('jtui', {
