@@ -2,11 +2,6 @@ import numpy as np
 import pandas as pd
 from abc import ABCMeta
 from abc import abstractmethod
-from pyspark.sql import DataFrameReader
-from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer
-from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
-from pyspark.ml.classification import RandomForestClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 from tmlib.models import FeatureValue, Feature, MapobjectType
 from tmaps.extensions import db
@@ -226,6 +221,11 @@ class SupervisedClassifier(Classifier):
             color_map[cls['name']] = cls['color']
 
         if use_spark:
+            from pyspark.sql import DataFrameReader
+            from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer
+            from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+            from pyspark.ml.classification import RandomForestClassifier
+            from pyspark.ml.evaluation import MulticlassClassificationEvaluator
             unlabeled_feature_data = self.format_feature_data_spark(
                 experiment.id, mapobject_type_name, feature_names
             )

@@ -2,9 +2,6 @@ import numpy as np
 import time
 from sklearn.grid_search import GridSearchCV
 from sklearn import svm, cross_validation
-from pyspark.ml.feature import StringIndexer
-from pyspark.mllib.regression import LabeledPoint
-from pyspark.mllib.classification import SVMWithSGD
 
 from tmaps.extensions import spark
 from tools.classifier import SupervisedClassifier
@@ -37,6 +34,9 @@ class SVM(SupervisedClassifier):
         return zip(unlabeled_feature_data.index.tolist(), predictions.tolist())
 
     def classify_spark(self, unlabeled_feature_data, labeled_feature_data):
+        from pyspark.ml.feature import StringIndexer
+        from pyspark.mllib.regression import LabeledPoint
+        from pyspark.mllib.classification import SVMWithSGD
         # NOTE: SVM is only available in MLLIB package, which works with RDDs
         # rather than DataFrames
         label_indexer = StringIndexer(
