@@ -24,7 +24,7 @@ class RandomForest(SupervisedClassifier):
         gs.fit(X, y)
 
         predictions = gs.predict(unlabeled_feature_data)
-        return zip(labeled_feature_data.index.tolist(), predictions.tolist())
+        return zip(unlabeled_feature_data.index.tolist(), predictions.tolist())
 
     def classify_spark(self, unlabeled_feature_data, labeled_feature_data):
         from pyspark.ml import Pipeline
