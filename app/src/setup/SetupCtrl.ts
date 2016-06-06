@@ -218,16 +218,22 @@ class SetupCtrl {
         // stops any running interval to avoid two intervals running at the same time
         this._stopMonitoring();
         this.getStatus();
+        console.log('start monitoring status')
+        console.log('promise: ', this._monitoringPromise)
         this._monitoringPromise = this._$interval(() => {
                 this.getStatus()
             }, 5000
         );
-    };
+    }
 
     private _stopMonitoring() {
+        console.log('stop monitoring status')
+        console.log('promise: ', this._monitoringPromise)
         this._$interval.cancel(this._monitoringPromise);
+        console.log('promise: ', this._monitoringPromise)
         this._monitoringPromise = null;
-    };
+        console.log('promise: ', this._monitoringPromise)
+    }
 
     private _submitStages(stages: Stage[], redo: boolean, index: number) {
         // Copy the original workflow description object and populate it with
@@ -266,10 +272,12 @@ class SetupCtrl {
         this.currentStage = uploadStage;
         this.stages = [uploadStage].concat(this.experiment.workflowDescription.stages);
 
-        // TODO: stop monitoring when switching view
-        this._$scope.$on('$destroy', function() {
+        this._$scope.$on('$destroy', () => {
+            // stop monitoring when user leaves the "setup" view
             this._stopMonitoring();
         });
+
+        // start monitoring as soon as the user enters the "setup" view
         this._startMonitoring();
         // console.log(experiment);
         // switch(experiment.status) {
