@@ -366,7 +366,10 @@ def get_task_data_from_sql_store(task):
 
         return data
 
-    return get_info(task, 0)
+    if task is None:
+        return None
+    else:
+        return get_info(task, 0)
 
 
 def print_task_status(task_data, monitoring_depth):
