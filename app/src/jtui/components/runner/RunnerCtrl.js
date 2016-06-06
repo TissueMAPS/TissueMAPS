@@ -73,7 +73,11 @@ angular.module('jtui.runner')
                             return $scope.jobs.output[jobIndex].modules[j]
                         }
                     }
-                }
+               },
+               name: function () {
+                    return $scope.module.name;
+               },
+               jobId: $scope.jobs.currentId
             },
             controller: 'OutputCtrl'
         });
@@ -99,8 +103,9 @@ angular.module('jtui.runner')
             // windowClass: 'modal-window',
             resolve: {
                 log: function () {
-                    return $scope.jobs.output[jobIndex]
-                }
+                    return $scope.jobs.output[jobIndex].log;
+                },
+                jobId: $scope.jobs.currentId
             },
             controller: 'LogCtrl'
         });
@@ -186,7 +191,8 @@ angular.module('jtui.runner')
                         }],
                 name: function () {
                     return $scope.module.name;
-                }
+                },
+                jobId: $scope.jobs.currentId
             },
             controller: 'FigureCtrl'
         });

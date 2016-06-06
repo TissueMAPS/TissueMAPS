@@ -262,6 +262,7 @@ angular.module('jtui.project')
     function getOutput() {
         runnerService.getOutput($scope.project).then(function (result) {
             console.log('output: ', result.output)
+            $scope.jobs.output = [];
             if (result.output) {
                 result.output.forEach(function(r) {
                     $scope.jobs.output.push(r);
