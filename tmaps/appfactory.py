@@ -104,7 +104,6 @@ def create_app(config_overrides={}):
     jwt.init_app(app)
     db.init_app(app)
     redis_store.init_app(app)
-    # gc3pie_engine.init_app(app)
 
     if app.config.get('USE_SPARK', False):
         from tmaps.extensions import spark
