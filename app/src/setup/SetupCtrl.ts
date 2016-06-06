@@ -115,6 +115,10 @@ class SetupCtrl {
         }
     }
 
+    kill() {
+        this.experiment.killWorkflow();
+    }
+
     canSubmit(): boolean {
         if (this.currentStage.name === 'uploadfiles') {
             // Submit button should not be pressable from upload files stage
@@ -144,39 +148,6 @@ class SetupCtrl {
                 'Cannot proceed to next stage from unknown stage ' + this.currentStage
             );
         }
-    }
-
-    private _updateStageDescription(stage: Stage) {
-        // Copy the stage so that we don't modify the argument when
-        // modifying the structure of the stage.
-        // The structure of the stage objects that were originally sent to the client
-        // have a different structure than the ones that are passed back
-        // to the server.
-        stage = $.extend(true, {}, stage);
-        stage.steps.forEach((step) => {
-            var batchArgs = {};
-            step.batch_args.forEach((arg) => {
-                batchArgs[arg.name] = arg.value;
-            });
-            step.batch_args = batchArgs;
-
-            var submissionArgs = {};
-            step.submission_args.forEach((arg) => {
-                submissionArgs[arg.name] = arg.value;
-            });
-            step.submission_args = submissionArgs;
-
-            if (step.extra_args) {
-                var extraArgs = {};
-                step.extra_args.forEach((arg) => {
-                    extraArgs[arg.name] = arg.value;
-                });
-                step.extra_args = extraArgs;
-            } else {
-                step.extra_args = null;
-            }
-        });
-        return stage;
     }
 
     getStatus() {
@@ -209,8 +180,6 @@ class SetupCtrl {
                 this.currentStageSubmission = this.submission.subtasks[idx];
             }
         }
-        console.log(this.submission)
-        console.log(this.currentStageSubmission)
     }
 
     // starts the interval
@@ -219,7 +188,6 @@ class SetupCtrl {
         this._stopMonitoring();
         this.getStatus();
         console.log('start monitoring status')
-        console.log('promise: ', this._monitoringPromise)
         this._monitoringPromise = this._$interval(() => {
                 this.getStatus()
             }, 5000
@@ -228,21 +196,15 @@ class SetupCtrl {
 
     private _stopMonitoring() {
         console.log('stop monitoring status')
-        console.log('promise: ', this._monitoringPromise)
         this._$interval.cancel(this._monitoringPromise);
-        console.log('promise: ', this._monitoringPromise)
         this._monitoringPromise = null;
-        console.log('promise: ', this._monitoringPromise)
     }
 
     private _submitStages(stages: Stage[], redo: boolean, index: number) {
-        // Copy the original workflow description object and populate it with
-        // all the values that were filled in by the user.
-        // var desc = this.experiment.workflowDescription;
+        // Only send the description up to the stage that the user submitted
         var desc = $.extend(true, {}, this.experiment.workflowDescription);
         desc.stages = [];
         stages.forEach((stage) => {
-            stage = this._updateStageDescription(stage);
             desc.stages.push(stage);
         });
         if (redo) {

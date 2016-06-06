@@ -68,7 +68,9 @@ angular.module('tmaps.ui').directive('tmArgumentInput', function() {
                 widgetType = 'textInput';
             }
 
-            $scope.arg.value = $scope.arg.default;
+            if ($scope.arg.value == null) {
+                $scope.arg.value = $scope.arg.default;
+            }
             $scope.arg.required = $scope.arg.required || $scope.arg.default !== null;
             $scope.widgetType = widgetType;
 

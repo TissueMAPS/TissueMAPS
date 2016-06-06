@@ -40,9 +40,10 @@
         Submit
     </button>
 
-    <button ng-click="setupCtrl.getStatus()"
+    <button ng-click="setupCtrl.kill()"
+        ng-disabled="setupCtrl.submission.state != 'RUNNING'"
         class="btn btn-default">
-        Status
+        Kill
     </button>
 
   </div>
