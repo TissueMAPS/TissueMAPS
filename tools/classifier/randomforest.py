@@ -11,12 +11,11 @@ class RandomForest(SupervisedClassifier):
         n_samples = labeled_feature_data.shape[0]
         n_folds = min(n_samples / 2, 10)
 
-        X = labeled_feature_data.drop('label')
+        X = labeled_feature_data.drop('label', axis=1)
         y = labeled_feature_data.label
         folds = cross_validation.StratifiedKFold(y, n_folds=n_folds)
         grid = {
             'max_depth': [3, 5, 7],
-            'max_features': [1, 3, 10],
             'min_samples_split': [1, 3, 10],
             'min_samples_leaf': [1, 3, 10]
         }
