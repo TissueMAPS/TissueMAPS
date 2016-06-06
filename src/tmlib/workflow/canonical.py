@@ -191,10 +191,17 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
             for step in steps:
                 name = step['name']
                 BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(name)
-                batch_args = BatchArgs(**step['batch_args'])
-                submission_args = SubmissionArgs(**step['submission_args'])
+                batch_args = BatchArgs(
+                    **step.get('batch_args', {})
+                )
+                submission_args = SubmissionArgs(
+                    **step.get('submission_args', {})
+                )
+                # NOTE: not every step has extra arguments
                 if ExtraArgs is not None:
-                    extra_args = ExtraArgs(**step['extra_args'])
+                    extra_args = ExtraArgs(
+                        **step.get('extra_args', {})
+                    )
                 else:
                     extra_args = None
                 self.add_step(

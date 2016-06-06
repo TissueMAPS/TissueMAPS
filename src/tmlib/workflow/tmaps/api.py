@@ -90,9 +90,9 @@ class WorkflowManager(BasicClusterRoutines):
             raise TypeError('Description must be a mapping.')
         if 'type' not in description:
             raise KeyError('Description must have key "type".')
-        workflow_description_class = get_workflow_description(
+        WorkflowDescription = get_workflow_description(
             description['type']
         )
-        return workflow_description_class(description['stages'])
+        return WorkflowDescription(description['stages'])
 
 
