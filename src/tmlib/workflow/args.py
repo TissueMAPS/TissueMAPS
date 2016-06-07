@@ -50,6 +50,7 @@ class Argument(object):
         self.help = help
         self.required = required
         self.default = default
+        self.value = None
         if self.default is not None:
             if self.type == str:
                 if not isinstance(self.default, basestring):
@@ -63,6 +64,7 @@ class Argument(object):
                         % self.type.__name__
                     )
             self.required = False
+            self.value = self.default
         self.choices = choices
         if self.choices is not None:
             self.choices = set(choices)
@@ -179,6 +181,7 @@ class Argument(object):
 
 def __str__(self):
     return '<Argument(name=%r, type=%r)>' % (self.name, self.type)
+
 
 class ArgumentMeta(ABCMeta):
 
@@ -299,7 +302,7 @@ class ArgumentCollection(object):
         '''Adds each argument to an argument parser for use in a command line
         interface.
 
-        Parameters
+        Parametere
         ----------
         parser: argparse.ArgumentParser
             argument parser
@@ -333,8 +336,14 @@ class ArgumentCollection(object):
                 'help': re.sub(r'\s+', ' ', arg.help).strip(),
                 'default': arg.default,
                 'type': arg.type.__name__,
-                'required': arg.required
+                'required': arg.required,
             }
+            try:
+                argument['value'] = getattr(self, arg.name)
+            except AttributeError:
+                # Even if the attribute is required, we want to seriablize
+                # the argument collection
+                argument['value'] = None
             if arg.choices is not None:
                argument['choices'] = list(arg.choices)
             else:
@@ -441,147 +450,3 @@ class CliMethodArguments(ArgumentCollection):
     :py:function:`tmlib.workflow.registry.climethod` decorator.
     '''
 
-
-# class argument_property(object):
-
-#     '''Custom implementation of `property` that allows setting additional
-#     attributes on the object. It can be used to represent a command line
-#     argument and to add it to an instance of :py:class:`argparse.ArgumentParser`.
-#     '''
-
-#     def __init__(self, getter, setter):
-#         '''
-#         Parameters
-#         ----------
-#         getter: function
-#             getter function for returning the value
-#         setter: function
-#             setter function that accepts the value as an argument
-#         '''
-#         self.getter = getter
-#         self.setter = setter
-
-#     def __get__(self, instance, owner):
-#         return self.getter(instance)
-
-#     def __set__(self, instance, value):
-#         self.setter(instance, value)
-
-
-# class add_argument(object):
-
-#     '''Decorator class that acts like a property.
-#     The value represents an argument that can be parsed via the command line.
-
-#     The setter of the property checks whether the value has the specified
-#     `type` and whether it is in the set of valid `choices` (if provided).
-#     The getter return the `default` value if provided and if it has not been
-#     overwritten, i.e. a different value has been set.
-    
-#     Raises
-#     ------
-#     TypeError
-#         when type of the property value doesn't have the specified `type`
-#     ValueError
-#         when the property value is not one the specified `choices`
-    
-#     Note
-#     ----
-#     Values of type ``basestring`` (e.g. ``unicode``) are converted to ``str``
-#     before `type` is checked, so use ``type=str`` for all strings.
-
-#     Examples
-#     --------
-#     from tmlib.utils import argument_parserargument_property
-    
-#     class Foo(object):
-
-#         @add_argument(
-#             type=int, help='help for bar', default=1, choices={1, 2}
-#         )
-#         def bar(self:
-#             return self._bar
-
-#     >>>foo = Foo()
-#     >>>foo.bar
-#     1
-#     >>>foo.bar = 2
-#     >>>foo.bar
-#     2
-#     >>>foo.bar = 3
-#     ValueError: Argument "bar" can be one of the following: 1, 2
-#     >>>foo.bar = 1.0
-#     TypeError: Argument "bar" must have type int.
-#     '''
-
-#     @assert_type(
-#         type='type', help='basestring', choices=['set', 'types.NoneType'],
-#         flag=['basestring', 'types.NoneType']
-#     )
-#     def __init__(self, type, help, default=None, choices=None, flag=None):
-#         '''
-#         Parameters
-#         ----------
-#         type: type
-#             type of the argument
-#         help: str
-#             help message that describes the argument 
-#         default: , optional
-#             default value
-#         choices: set, optional
-#             set of choices for value
-#         flag: str, optional
-#             short name for a command line (will be prepended with a hyphen)
-#         '''
-#         self.type = type
-#         self.help = help
-#         if default is not None:
-#             if not isinstance(default, self.type):
-#                 raise TypeError(
-#                     'Argument "default" must have type %s' % self.type.__name__
-#                 )
-#         self.default = default
-#         self.choices = choices
-#         self.flag = flag
-
-#     def __call__(self, obj):
-#         attr_name = '_%s' % obj.__name__
-
-#         def getter(cls):
-#             if not hasattr(cls, attr_name):
-#                 if self.default is None:
-#                     raise ValueError(
-#                         'Argument "%s" is required.' % obj.__name__
-#                     )
-#                 setattr(cls, attr_name, self.default)
-#             return obj(cls)
-#         getter.__name__ = obj.__name__
-#         # NOTE: The docstring for the getter is automatically build using the
-#         # provided type and help attributes.
-#         getter.__doc__ = '{type}: {description}'.format(
-#             type=self.type.__name__, description=self.help
-#         )
-
-#         def setter(cls, value):
-#             if isinstance(value, basestring):
-#                 value = str(value)
-#             if not isinstance(value, self.type):
-#                 raise TypeError(
-#                     'Argument "%s" must have type %s.'
-#                     % (obj.__name__, self.type.__name__)
-#                 )
-#             if self.choices is not None:
-#                 if value not in self.choices:
-#                     raise ValueError(
-#                         'Argument "%s" must be one of the following: %s'
-#                         % (obj.__name__,
-#                            ', '.join(['%r' % c for c in self.choices]))
-#                     )
-#             setattr(cls, attr_name, value)
-
-#         property_obj = argument_property(getter, setter)
-#         property_obj.type = self.type
-#         property_obj.help = self.help
-#         property_obj.choices = self.choices
-#         property_obj.flag = self.flag
-#         return property_obj

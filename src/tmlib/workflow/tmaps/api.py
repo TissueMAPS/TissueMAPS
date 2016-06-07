@@ -1,9 +1,8 @@
 import os
 import logging
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib.readers import YamlReader
-from tmlib.workflow.registry import get_workflow_description
 from tmlib.workflow.workflow import Workflow
 from tmlib.workflow.api import BasicClusterRoutines
 
@@ -29,10 +28,10 @@ class WorkflowManager(BasicClusterRoutines):
         super(WorkflowManager, self).__init__()
         self.experiment_id = experiment_id
         self.verbosity = verbosity
-        with tmlib.models.utils.Session() as session:
-            experiment = session.query(tmlib.models.Experiment).\
+        with tm.utils.Session() as session:
+            experiment = session.query(tm.Experiment).\
                 get(self.experiment_id)
-            self.workflow_location = experiment.workflow_location
+            self.workflow_description = experiment.workflow_description
 
     def create_workflow(self, submission_id, user_name,
             workflow_description=None, waiting_time=0):
@@ -58,7 +57,7 @@ class WorkflowManager(BasicClusterRoutines):
         logger.info('creating workflow')
 
         if workflow_description is None:
-            workflow_description = self.description
+            workflow_description = self.workflow_description
 
         return Workflow(
             experiment_id=self.experiment_id,
@@ -69,30 +68,5 @@ class WorkflowManager(BasicClusterRoutines):
             waiting_time=waiting_time,
         )
 
-    @property
-    def description(self):
-        '''tmlib.workflow.tmaps.description.WorkflowDescription: description
-        of the workflow
-
-        Raises
-        ------
-        TypeError
-            when description obtained from file is not a mapping
-        KeyError
-            when description obtained from file doesn't have key "type"
-        '''
-        filename = os.path.join(
-            self.workflow_location, 'workflow_description.yaml'
-        )
-        with YamlReader(filename) as f:
-            description = f.read()
-        if not isinstance(description, dict):
-            raise TypeError('Description must be a mapping.')
-        if 'type' not in description:
-            raise KeyError('Description must have key "type".')
-        WorkflowDescription = get_workflow_description(
-            description['type']
-        )
-        return WorkflowDescription(description['stages'])
 
 

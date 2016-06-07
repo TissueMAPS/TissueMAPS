@@ -2,6 +2,7 @@ import time
 import os
 import logging
 import importlib
+import copy
 import sys
 import traceback
 import gc3libs
@@ -10,6 +11,7 @@ from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import AbortOnError
 
 import tmlib.models
+from tmlib.utils import assert_type
 from tmlib.workflow.registry import get_step_api
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
@@ -481,7 +483,7 @@ class Workflow(SequentialTaskCollection, State):
     '''
 
     def __init__(self, experiment_id, verbosity, submission_id, user_name,
-                 description=None, waiting_time=0):
+                 description, waiting_time=0):
         '''
         Parameters
         ----------
@@ -493,8 +495,8 @@ class Workflow(SequentialTaskCollection, State):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
-        description: tmlib.tmaps.description.WorkflowDescription, optional
-            description of the workflow (default: ``None``)
+        description: tmlib.tmaps.description.WorkflowDescription
+            description of the workflow
         waiting_time: int, optional
             time in seconds that should be waited upon transition from one
             stage to the other to avoid issues related to network file systems
@@ -502,14 +504,7 @@ class Workflow(SequentialTaskCollection, State):
 
         Note
         ----
-        If `description` is not provided, there will be an attempt to obtain
-        it from :py:attr:`tmlib.workflow.Workflow.description_file`.
-
-        Raises
-        ------
-        TypeError
-            when `description` doesn't have type
-            :py:class:`tmlib.tmaps.description.WorkflowDescription`
+        *Inactive* workflow stages/steps will not be ignored.
 
         See also
         --------
@@ -520,21 +515,47 @@ class Workflow(SequentialTaskCollection, State):
         self.waiting_time = waiting_time
         self.submission_id = submission_id
         self.user_name = user_name
+        self.update_description(description)
         with tmlib.models.utils.Session() as session:
             experiment = session.query(tmlib.models.Experiment).\
                 get(self.experiment_id)
             super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
-            self.workflow_location = experiment.workflow_location
-        if not isinstance(description, WorkflowDescription):
-             raise TypeError(
-                 'Argument "description" must have type '
-                 'tmlib.tmaps.description.WorkflowDescription'
-             )
-        self.description = description
         self._current_task = 0
         self.tasks = self._create_stages()
         # Update the first stage and its first step to start the workflow
         self.update_stage(0)
+
+    @assert_type(description='tmlib.workflow.description.WorkflowDescription')
+    def update_description(self, description):
+        '''Updates the workflow description, which will be used to dynamically
+        build `stages` upon processing.
+
+        Parameters
+        ----------
+        description: tmlib.tmaps.description.WorkflowDescription
+            description of the workflow
+
+        Raises
+        ------
+        TypeError
+            when `description` doesn't have type
+            :py:class:`tmlib.tmaps.description.WorkflowDescription`
+
+        '''
+        self.description = copy.deepcopy(description)
+        self.description.stages = list()
+        for stage in description.stages:
+            if stage.active:
+                steps_to_process = list()
+                for step in stage.steps: 
+                    if step.active:
+                        steps_to_process.append(step)
+                    else:
+                        logger.debug('ignore inactive step "%s"', step.name)
+                stage.steps = steps_to_process
+                self.description.stages.append(stage)
+            else:
+                logger.debug('ignore inactive stage "%s"', stage.name)
 
     def _create_stages(self):
         '''Creates all stages for this workflow.
@@ -575,7 +596,7 @@ class Workflow(SequentialTaskCollection, State):
 
     @property
     def n_stages(self):
-        '''int: total number of stages'''
+        '''int: total number of active stages'''
         return len(self.description.stages)
 
     def update_stage(self, index):

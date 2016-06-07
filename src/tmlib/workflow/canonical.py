@@ -101,7 +101,7 @@ class CanonicalWorkflowDescription(WorkflowDescription):
         else:
             for name in STAGES:
                 mode = STAGE_MODES[name]
-                stage = {'name': name, 'mode': mode}
+                stage = {'name': name, 'mode': mode, 'active': True}
                 self.add_stage(CanonicalWorkflowStageDescription(**stage))
 
     def add_stage(self, stage_description):
@@ -173,7 +173,7 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
 
     '''Description of a stage of the canonical `TissueMAPS` workflow.'''
 
-    def __init__(self, name, mode, steps=None):
+    def __init__(self, name, mode, steps=None, active=True):
         '''
         Parameters
         ----------
@@ -183,30 +183,33 @@ class CanonicalWorkflowStageDescription(WorkflowStageDescription):
             mode of workflow stage submission
         steps: list, optional
             description of individual steps as a mapping of key-value pairs
-        **kwargs: dict, optional
-            description of a workflow stage in form of key-value pairs
+        active: bool, optional
+            whether the stage should be processed (default: ``True``)
         '''
-        super(CanonicalWorkflowStageDescription, self).__init__(name, mode)
+        super(CanonicalWorkflowStageDescription, self).__init__(name, mode, active)
         if steps is not None:
             for step in steps:
-                name = step['name']
-                BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(name)
-                batch_args = BatchArgs(
-                    **step.get('batch_args', {})
-                )
-                submission_args = SubmissionArgs(
-                    **step.get('submission_args', {})
-                )
+                BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(step['name'])
+                batch_arg_values = {
+                    a['name']: a['value'] for a in step['batch_args']
+                }
+                batch_args = BatchArgs(**batch_arg_values)
+                submission_arg_values = {
+                    a['name']: a['value'] for a in step['submission_args']
+                }
+                submission_args = SubmissionArgs(**submission_arg_values)
                 # NOTE: not every step has extra arguments
                 if ExtraArgs is not None:
-                    extra_args = ExtraArgs(
-                        **step.get('extra_args', {})
-                    )
+                    extra_arg_values = {
+                        a['name']: a['value'] for a in step['extra_args']
+                    }
+                    extra_args = ExtraArgs(**extra_arg_values)
                 else:
                     extra_args = None
                 self.add_step(
                     CanonicalWorkflowStepDescription(
-                        name, batch_args, submission_args, extra_args
+                        step['name'], step['active'],
+                        batch_args, submission_args, extra_args
                     )
                 )
         else:
@@ -262,9 +265,25 @@ class CanonicalWorkflowStepDescription(WorkflowStepDescription):
 
     '''Description of a step of a canonical `TissueMAPS` workflow.'''
 
-    @same_docstring_as(WorkflowStepDescription.__init__)
-    def __init__(self, name, batch_args=None, submission_args=None,
+    def __init__(self, name, active=True, batch_args=None, submission_args=None,
             extra_args=None):
+        '''
+        Parameters
+        ----------
+        name: str
+            name of the stage
+        mode: str
+            mode of workflow stage submission, i.e. whether steps are submitted
+            simultaneously or one after another
+            (options: ``{"sequential", "parallel"}``)
+        active: bool, optional
+            whether the stage should be processed (default: ``True``)
+
+        Raises
+        ------
+        TypeError
+            when `name` or `steps` have the wrong type
+        '''
         super(CanonicalWorkflowStepDescription, self).__init__(
-            name, batch_args, submission_args, extra_args
+            name, active, batch_args, submission_args, extra_args
         )
