@@ -241,7 +241,7 @@ class Experiment(Model, DateMixIn):
         if not os.path.exists(self._workflow_descriptor_file):
             logger.warn('no persistent workflow description found')
             logger.info('default to "canonical" workflow')
-            return CanonicalWorkflowDescription().as_dict()
+            return CanonicalWorkflowDescription()
         with YamlReader(self._workflow_descriptor_file) as f:
             description = f.read()
         if not isinstance(description, dict):
