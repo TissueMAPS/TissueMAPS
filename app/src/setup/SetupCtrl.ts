@@ -1,6 +1,8 @@
 interface Stage {
     name: string;
     steps: any[];
+    active: boolean;
+    mode: string;
 }
 
 class SetupCtrl {
@@ -11,7 +13,7 @@ class SetupCtrl {
     submission: any;
     _monitoringPromise: ng.IPromise<void> = null;
 
-    static $inject = ['experiment', 'plates', '$state', '$interval', '$scope'];
+    static $inject = ['experiment', 'plates', '$state', '$interval', '$scope', '$uibModal'];
 
     isInStage(stage: Stage) {
         return this.currentStage.name === stage.name;
@@ -26,6 +28,22 @@ class SetupCtrl {
                 stageName: stage.name
             });
         }
+    }
+
+    private _updateWorkflowDescription(index: number) {
+        var desc = $.extend(true, {}, this.experiment.workflowDescription);
+        desc.stages = [];
+        for (var i = 1; i < this.stages.length;  i++) {
+            // The 1. stage "uploadfiles" is not a stages that can
+            // be submitted. It will be removed from the description.
+            if (index < i && i < this.stages.length) {
+                // These stages should not be submitted. They will
+                // be included in the description, but set inactive.
+                this.stages[i].active = false;
+            }
+            desc.stages.push(this.stages[i]);
+        }
+        return desc;
     }
 
     private _checkArgsForWorkflowStage(stage: Stage): boolean {
@@ -70,16 +88,24 @@ class SetupCtrl {
         return isUploadStageOk;
     }
 
-    private _areWorkflowStagesOk() {
-        var areWorkflowStagesOk =
-            _.all(this.experiment.workflowDescription.stages.map((st) => {
-            return this._checkArgsForWorkflowStage(st);
+    private _areWorkflowStagesOk(index: number) {
+        return _.all(this.stages.map((st, idx) => {
+            if (idx == 0) {
+                // first stage "uploadfiles" is not checked here
+                return true;
+            } else if (idx <= index) {
+                return this._checkArgsForWorkflowStage(st);
+            } else {
+                // subsequent step which don't get submitted
+                // are not checked here
+                return true;
+            }
         }));
-        return areWorkflowStagesOk;
     }
 
     private _areAllStagesOk(): boolean {
-        return this._isUploadStageOk() && this._areWorkflowStagesOk();
+        var index = this.experiment.workflowDescription.stages.length - 1;
+        return this._isUploadStageOk() && this._areWorkflowStagesOk(index);
     }
 
     private _isLastStage(stage): boolean {
@@ -97,36 +123,184 @@ class SetupCtrl {
         }
     }
 
-    submit() {
+    resume() {
         var idx = this.stages.indexOf(this.currentStage);
         var notInUploadFiles = idx > 0;
         if (notInUploadFiles) {
-            var isStageOk = this._checkArgsForWorkflowStage(this.currentStage);
-            if (isStageOk) {
-                var stagesToBeSubmitted = [];
-                for (var i = 1; i <= idx;  i++) {
-                    stagesToBeSubmitted.push(this.stages[i]);
-                }
-                // TODO: determine whether upstream stages have been completed
-                // and then "resubmit", i.e. resume an existing workflow
-                var redo = false;
-                this._submitStages(stagesToBeSubmitted, redo, idx);
+            var areStagesOk = this._areWorkflowStagesOk(idx);
+            var result;
+            if (areStagesOk) {
+                var desc = this._updateWorkflowDescription(idx);
+                result = this.experiment.resubmitWorkflow(desc, idx + 1)
+                .then(function(res) {
+                    return {
+                        success: res.status == 200,
+                        message: res.statusText
+                    }
+                });
+                this._displayResult('Resume', result);
+            } else {
+                result = {
+                    sucess: false,
+                    message: 'Values for required arguments are missing'
+                };
+                this._displayResult('Resume', result);
             }
         }
     }
 
+    submit() {
+        var idx = this.stages.indexOf(this.currentStage);
+        var notInUploadFiles = idx > 0;
+        if (notInUploadFiles) {
+            var areStagesOk = this._areWorkflowStagesOk(idx);
+            var result;
+            if (areStagesOk) {
+                var desc = this._updateWorkflowDescription(idx);
+                result = this.experiment.submitWorkflow(desc)
+                .then(function(res) {
+                    return {
+                        success: res.status == 200,
+                        message: res.statusText
+                    }
+                });
+                this._displayResult('Submit', result);
+            } else {
+                result = {
+                    sucess: false,
+                    message: 'Values for required arguments are missing'
+                };
+                this._displayResult('Submit', result);
+            }
+        }
+    }
+
+    resubmit() {
+        var idx = this.stages.indexOf(this.currentStage);
+        var notInUploadFiles = idx > 0;
+        if (notInUploadFiles) {
+            var areStagesOk = this._areWorkflowStagesOk(idx);
+            var result;
+            if (areStagesOk) {
+                var desc = this._updateWorkflowDescription(idx);
+                var stageNames = this.experiment.workflowDescription.stages.map((st) => {
+                    return st.name
+                });
+                this._getInput(
+                    'Resubmit',
+                    'Stage from which workflow should be resubmitted',
+                    stageNames
+                )
+                .then((stageName) => {
+                    console.log('resubmit starting at stage: ', stageName)
+                    var result;
+                    if (stageName !== undefined) {
+                        var index = 0;
+                        for (var i = 0; i < this.experiment.workflowDescription.stages.length; i++) {
+                            if (this.experiment.workflowDescription.stages[i].name == stageName) {
+                                index = i;
+                            }
+                        }
+                        result = this.experiment.resubmitWorkflow(desc, index)
+                        .then(function(res) {
+                            return {
+                                success: res.status == 200,
+                                message: res.statusText
+                            }
+                        });
+                        this._displayResult('Resubmit', result);
+                    } else {
+                        result = {
+                            success: false,
+                            message: 'No stage selected'
+                        };
+                        this._displayResult('Resubmit', result);
+                    }
+                });
+            } else {
+                result = {
+                    sucess: false,
+                    message: 'Values for required arguments are missing'
+                };
+                this._displayResult('Resubmit', result);
+            }
+        }
+
+    }
+
     kill() {
-        this.experiment.killWorkflow();
+        var result = {
+            success: false,
+            message: 'Not yet implemented'
+        };
+        // var result = this.experiment.killWorkflow()
+        // .then(function(res) {
+        //     return {
+        //         success: res.status == 200,
+        //         message: res.statusText
+        //     }
+        // });
+        this._displayResult('Kill', result);
+    }
+
+    private _getInput(task: string, description: string, choices: any) {
+        var options: ng.ui.bootstrap.IModalSettings = {
+            templateUrl: 'src/setup/modals/input.html',
+            controller: SetupInputCtrl,
+            controllerAs: 'setupInputCtrl',
+            resolve: {
+                task: () => task,
+                description: () => description,
+                choices: () => choices
+            }
+        };
+        return this._$uibModal.open(options).result;
+    }
+
+    private _displayResult(task: string, response: any) {
+        var options: ng.ui.bootstrap.IModalSettings = {
+            templateUrl: 'src/setup/modals/result.html',
+            controller: SetupResultCtrl,
+            controllerAs: 'setupResultCtrl',
+            resolve: {
+                response: () => response,
+                task: () => task
+            }
+        };
+        return this._$uibModal.open(options).result;
     }
 
     canSubmit(): boolean {
+        var blockedStates = [
+            'RUNNING', 'NEW', 'TERMINATING', 'STOPPING', 'UNKNOWN'
+        ];
         if (this.currentStage.name === 'uploadfiles') {
             // Submit button should not be pressable from upload files stage
+            return false;
+        } else if (blockedStates.indexOf(this.submission.state) != -1) {
+            // Submission should be prevented when the workflow is already
+            // running or in any other state that would cause problems
             return false;
         } else if (this._isLastStage(this.currentStage)) {
             return this._areAllStagesOk();
         } else {
-            return this._checkArgsForWorkflowStage(this.currentStage);
+            var index = this.stages.indexOf(this.currentStage);
+            return this._areWorkflowStagesOk(index);
+        }
+    }
+
+    canResubmit(): boolean {
+        var resubmittableStates = [
+            'TERMINATED', 'STOPPED'
+        ];
+        return this.canSubmit() && resubmittableStates.indexOf(this.submission.state) != -1;
+    }
+
+    isRunning(): boolean {
+        if (this.submission.state == 'RUNNING') {
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -226,10 +400,13 @@ class SetupCtrl {
                 public plates: Plate[],
                 private _$state,
                 private _$interval,
-                private _$scope) {
+                private _$scope,
+                private _$uibModal: ng.ui.bootstrap.IModalService) {
         var uploadStage = {
             name: 'uploadfiles',
             steps: null,
+            active: true,
+            mode: 'sequential'
         };
         this.currentStage = uploadStage;
         this.stages = [uploadStage].concat(this.experiment.workflowDescription.stages);

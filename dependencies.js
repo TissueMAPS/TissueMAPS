@@ -43,7 +43,7 @@
         'bower_components/angular-loading-bar/build/loading-bar.min.js',
         'bower_components/angular-hotkeys/build/hotkeys.min.js',
         'bower_components/highlightjs/highlight.pack.min.js',
-        'bower_components/angular-highlightjs/angular-highlightjs.min.js',
+        // 'bower_components/angular-highlightjs/angular-highlightjs.min.js',
         'bower_components/marked/lib/marked.js',
         'bower_components/angular-marked/dist/angular-marked.min.js',
         'bower_components/checklist-model/checklist-model.js',
@@ -70,8 +70,7 @@
          */
         'bower_components/angular-loading-bar/build/loading-bar.min.css',
         'bower_components/angular-hotkeys/build/hotkeys.min.css',
-        // highlightjs css???
-        'bower_components/highlightjs/styles/solarized-dark.css'
+        // 'bower_components/highlightjs/styles/solarized-dark.css'
     ].map(function(path) {
         return 'app/assets/' + path;
     })

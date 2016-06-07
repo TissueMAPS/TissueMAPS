@@ -103,10 +103,12 @@ class Experiment implements Model {
         return $http.post('/api/experiments/' + this.id + '/workflow/submit', data)
         .then((resp) => {
             console.log(resp);
-            return resp.data;
+            return resp;
         })
         .catch((resp) => {
-            $q.reject(resp.data.error);
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
         });
     }
 
@@ -119,12 +121,30 @@ class Experiment implements Model {
         };
         return $http.post('/api/experiments/' + this.id + '/workflow/resubmit', data)
         .then((resp) => {
-            console.log(resp);
+            console.log(resp)
+            return resp;
+        })
+        .catch((resp) => {
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
+        });
+    }
+
+    killWorkflow() {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $http.post('/api/experiments/' + this.id + '/workflow/kill', {})
+        .then((resp) => {
+            console.log(resp)
             return resp.data;
         })
         .catch((resp) => {
-            $q.reject(resp.data.error);
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
         });
+
     }
 
     getWorkflowStatus() {

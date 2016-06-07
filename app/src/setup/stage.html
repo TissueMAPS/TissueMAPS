@@ -1,5 +1,5 @@
 <form ng-init="stage = stageCtrl.stage">
-  <div class="col-md-6">
+  <div class="col-md-9">
     <div ng-repeat="step in stage.steps">
       <div class="panel panel-default">
         <div class="panel-heading">
@@ -40,10 +40,22 @@
         Submit
     </button>
 
+    <button ng-click="setupCtrl.resume()"
+        ng-disabled="!setupCtrl.canResubmit()"
+        class="btn btn-primary">
+        Resume
+    </button>
+
+    <button ng-click="setupCtrl.resubmit()"
+        ng-disabled="!setupCtrl.canResubmit()"
+        class="btn btn-primary">
+        Resubmit
+    </button>
+
     <button ng-click="setupCtrl.kill()"
-        ng-disabled="setupCtrl.submission.state != 'RUNNING'"
+        ng-disabled="!setupCtrl.isRunning()"
         class="btn btn-default">
-        Kill
+        <i class="fa fa-stop"></i>
     </button>
 
   </div>

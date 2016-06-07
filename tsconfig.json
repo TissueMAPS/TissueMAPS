@@ -18,6 +18,7 @@
         "app/typedefs/DefinitelyTyped/bluebird/bluebird.d.ts",
         "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
         "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
+        "app/typedefs/DefinitelyTyped/angular-ui-bootstrap/angular-ui-bootstrap.d.ts",
 
         "app/src/tmaps.module.ts",
         "app/src/tmaps.routes.ts",
@@ -163,6 +164,8 @@
 
         "app/src/setup/SetupCtrl.ts",
         "app/src/setup/StageCtrl.ts",
+        "app/src/setup/modals/SetupResultCtrl.ts",
+        "app/src/setup/modals/SetupInputCtrl.ts",
 
         "app/src/setup/uploadfiles/PlateListCtrl.ts",
         "app/src/setup/uploadfiles/PlateCreateCtrl.ts",

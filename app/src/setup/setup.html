@@ -3,16 +3,16 @@
 
     <div class="row header">
 
-      <div class="col-md-6">
+      <div class="col-md-9">
           <h3>{{setupCtrl.submission.name}}</h3>
       </div>
 
-      <div class="col-md-6">
+      <div class="col-md-3">
         <i class="fa fa-cog fa-fw"
-           ng-hide="setupCtrl.submission.state == 'RUNNING'">
+           ng-hide="setupCtrl.isRunning()">
         </i>
         <i class="fa fa-cog fa-spin fa-fw"
-           ng-show="setupCtrl.submission.state == 'RUNNING'">
+           ng-show="setupCtrl.isRunning()">
         </i>
         <i>{{setupCtrl.submission.state}}</i>
         <!-- <h4>{{setupCtrl.experiment.name}} ({{setupCtrl.experiment.workflowStatus.state}})</h4> -->
@@ -26,7 +26,7 @@
 
     <div class="row stage-indicator-container">
 
-      <div class="col-md-6">
+      <div class="col-md-9">
         <ul class="stage-indicators">
           <li class="stage-indicator" ng-repeat="stage in setupCtrl.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
             ng-click="setupCtrl.goToStage(stage)">
@@ -36,9 +36,10 @@
         </ul>
       </div>
 
-      <div class="col-md-6">
+      <div class="col-md-3">
         <i class="fa fa-cog fa-fw"
-           ng-hide="setupCtrl.currentStageSubmission.state == 'RUNNING'">
+           ng-hide="setupCtrl.currentStageSubmission.state == 'RUNNING'"
+           ng-hide="setupCtrl.currentStageSubmission.stage == ''">
         </i>
         <i class="fa fa-cog fa-spin fa-fw"
            ng-show="setupCtrl.currentStageSubmission.state == 'RUNNING'">
