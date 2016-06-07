@@ -8,9 +8,12 @@ from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
+from tmlib.readers import YamlReader
+from tmlib.writers import YamlWriter
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
+from tmlib.workflow.registry import get_workflow_description
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from tmlib.utils import autocreate_directory_property
 
@@ -213,6 +216,54 @@ class Experiment(Model, DateMixIn):
     def workflow_location(self):
         '''str: location where workflow data are stored'''
         return os.path.join(self.location, 'workflow')
+
+    @property
+    def _workflow_descriptor_file(self):
+        return os.path.join(
+            self.workflow_location, 'workflow_description.yaml'
+        )
+
+    @property
+    def workflow_description(self):
+        '''tmlib.workflow.tmaps.description.WorkflowDescription: description
+        of the workflow
+
+        Raises
+        ------
+        OSError
+            when there is no workflow desriptor file available on disk
+        TypeError
+            when description obtained from file is not a mapping
+        KeyError
+            when description obtained from file doesn't have key "type"
+        '''
+        if not os.path.exists(self._workflow_descriptor_file):
+            logger.warn('no persistent workflow description found')
+            logger.info('default to "canonical" workflow')
+            return CanonicalWorkflowDescription().as_dict()
+        with YamlReader(self._workflow_descriptor_file) as f:
+            description = f.read()
+        if not isinstance(description, dict):
+            raise TypeError('Description must be a mapping.')
+        if 'type' not in description:
+            raise KeyError('Description must have key "type".')
+        if 'stages' not in description:
+            raise KeyError('Workflow description must have key "stages".')
+        WorkflowDescription = get_workflow_description(
+            description['type']
+        )
+        return WorkflowDescription(description['stages'])
+
+    def persist_workflow_description(self, description):
+        '''Persists the workflow description.
+
+        Parameters
+        ----------
+        description: tmlib.workflow.tmaps.description.WorkflowDescription
+            description of the workflow
+        '''
+        with YamlWriter(self._workflow_descriptor_file) as f:
+            f.write(description.as_dict())
 
     @property
     def session_location(self):
