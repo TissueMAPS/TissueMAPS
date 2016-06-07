@@ -15,6 +15,7 @@ from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
 from tmlib.workflow.registry import get_workflow_description
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
+from tmlib.workflow.description import CanonicalWorkflowDescription
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
