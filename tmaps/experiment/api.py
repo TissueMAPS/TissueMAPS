@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 @api.route('/channel_layers/<channel_layer_id>/tiles', methods=['GET'])
 @extract_model_from_path(ChannelLayer)
 def get_image_tile(channel_layer):
-    """Send a tile image for a specific layer.
+    """Sends a tile image for a specific layer.
     This route is accessed by openlayers."""
     x = request.args.get('x')
     y = request.args.get('y')
@@ -57,8 +57,7 @@ def get_image_tile(channel_layer):
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def get_features(experiment):
-    """
-    Send a list of feature objects.
+    """Sends a list of feature objects.
 
     Request
     -------
@@ -97,8 +96,7 @@ def get_features(experiment):
 @api.route('/experiments', methods=['GET'])
 @jwt_required()
 def get_experiments():
-    """
-    Get all experiments for the current user.
+    """Gets all experiments for the current user.
 
     Response
     --------
@@ -116,8 +114,7 @@ def get_experiments():
 @jwt_required()
 @extract_model_from_path(Experiment)
 def get_experiment(experiment):
-    """
-    Get an experiment by id.
+    """Gets an experiment by id.
 
     Response
     --------
@@ -137,9 +134,11 @@ def get_experiment(experiment):
 def submit_workflow(experiment):
     logger.info('submit workflow')
     data = json.loads(request.data)
-    data = data['description']
-    WorkflowType = tmlib.workflow.registry.get_workflow_description(data['type'])
-    workflow_description = WorkflowType(stages=data['stages'])
+    description = data['description']
+    wtype = description['type']
+    WorkflowType = tmlib.workflow.registry.get_workflow_description(wtype)
+    workflow_description = WorkflowType(stages=description['stages'])
+    experiment.persist_workflow_description(workflow_description)
     workflow_manager = WorkflowManager(experiment.id, 1)
     submission_manager = SubmissionManager(experiment.id, 'workflow')
     submission_id, user_name = submission_manager.register_submission()
@@ -162,9 +161,12 @@ def resubmit_workflow(experiment):
     logger.info('resubmit workflow')
     data = json.loads(request.data)
     index = data.get('index', 0)
-    data = data['description']
+    description = data['description']
+    wtype = description['type']
+    WorkflowType = tmlib.workflow.registry.get_workflow_description(wtype)
+    workflow_description = WorkflowType(stages=description['stages'])
     workflow = gc3pie.retrieve_jobs(experiment, 'workflow')
-    # TODO: update stage with modified description
+    workflow.update_description(workflow_description)
     workflow.update_stage(index)
     gc3pie.resubmit_jobs(workflow, index)
 
@@ -184,6 +186,19 @@ def get_workflow_status(experiment):
     return jsonify({
         'data': status
     })
+
+
+@api.route('/experiments/<experiment_id>/workflow/kill', methods=['POST']) 
+@jwt_required()
+@extract_model_from_path(Experiment)
+def kill_workflow(experiment):
+    logger.info('kill workflow')
+    workflow = gc3pie.retrieve_jobs(experiment, 'workflow')
+    gc3pie.kill_jobs(workflow)
+    return jsonify({
+        'message': 'ok'
+    })
+
 
 @api.route('/experiments', methods=['POST'])
 @jwt_required()

@@ -33,10 +33,6 @@ class GC3Pie(object):
         The preferred way of initializing the extension is via the
         `init_app()` method.
 
-        Note
-        ----
-        Uses the "gevent" loop engine. Make sure to configure uWSGI accordingly.
-
         Examples
         --------
         gc3pie = GC3Pie()
@@ -65,7 +61,7 @@ class GC3Pie(object):
         logger.info('create GC3Pie engine')
         store = create_gc3pie_sql_store()
         engine = create_gc3pie_engine(store)
-        scheduler = 'gevent'
+        scheduler = 'threading'
         bgengine = BgEngine(scheduler, engine)
         logger.info(
             'start GC3Pie engine in the background using "%s" scheduler',
@@ -158,7 +154,7 @@ class GC3Pie(object):
         else:
             return None
 
-    def submit_jobs(self, jobs, index=0):
+    def submit_jobs(self, jobs):
         """Submits jobs to the cluster.
 
         Parameters
@@ -168,6 +164,18 @@ class GC3Pie(object):
         """
         logger.info('add jobs to engine')
         self._engine.add(jobs)
+
+    def kill_jobs(self, jobs):
+        """Kills jobs running on the cluster.
+
+        Parameters
+        ----------
+        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
+            individual computational task or collection of tasks
+        """
+        logger.info('kill jobs')
+        self._engine.kill(jobs)
+        self._engine.progress()
 
     def resubmit_jobs(self, jobs, index=0):
         """Resubmits jobs to the cluster.

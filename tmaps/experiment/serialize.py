@@ -23,8 +23,7 @@ def encode_experiment(obj, encoder):
         'channels': map(encoder.default, obj.channels),
         'mapobject_types': map(encoder.default, obj.mapobject_types),
         'plates': [p.id for p in obj.plates],
-        # TODO: Load the previous one if it exists
-        'workflow_description': CanonicalWorkflowDescription().as_dict()
+        'workflow_description': obj.workflow_description.as_dict()
     }
 
 
