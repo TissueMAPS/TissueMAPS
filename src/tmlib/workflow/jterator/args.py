@@ -37,11 +37,14 @@ def get_names_of_existing_pipelines(experiment):
     '''
     import os
     from tmlib.workflow.jterator.project import list_projects
-    return [
-        os.path.basename(project)
-        for project
-        in list_projects(os.path.join(experiment.workflow_location, 'jterator'))
-    ]
+    directory = os.path.join(experiment.workflow_location, 'jterator')
+    if not os.path.exists(directory):
+        return []
+    else:
+        return [
+            os.path.basename(project)
+            for project in list_projects(directory)
+        ]
 
 
 @extra_args('jterator')
