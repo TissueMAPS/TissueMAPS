@@ -37,7 +37,7 @@ def api(step_name):
 
 def workflow(workflow_type):
     '''Class decorator to register a derived class of
-    :py:class:`tmlib.workflow.description.WorkflowDescription` for use in
+    :py:class:`tmlib.workflow.description.WorkflowDependencies` for use in
     command line interface and workflow.
 
     Parameters
@@ -47,7 +47,7 @@ def workflow(workflow_type):
 
     Returns
     -------
-    tmlib.workflow.description.WorkflowDescription
+    tmlib.workflow.description.WorkflowDependencies
     '''
     def decorator(cls):
         cls.type = workflow_type
@@ -221,8 +221,8 @@ def get_step_api(name):
     return _step_register[name]['api']
 
 
-def get_workflow_description(name):
-    '''Gets an implementation of a workflow description.
+def get_workflow_dependencies(name):
+    '''Gets an implementation of a workflow dependency declaration.
 
     Parameters
     ----------
@@ -231,7 +231,7 @@ def get_workflow_description(name):
 
     Returns
     -------
-    tmlib.workflow.description.WorkflowDescription
+    tmlib.workflow.description.WorkflowDependencies
     '''
     pkg_name = '.'.join(__name__.split('.')[:-1])
     module_name = '%s.%s' % (pkg_name, name)

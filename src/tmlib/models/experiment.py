@@ -13,9 +13,8 @@ from tmlib.writers import YamlWriter
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
-from tmlib.workflow.registry import get_workflow_description
+from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
-from tmlib.workflow.canonical import CanonicalWorkflowDescription
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -231,7 +230,7 @@ class Experiment(Model, DateMixIn):
         if not os.path.exists(self._workflow_descriptor_file):
             logger.warn('no persistent workflow description found')
             logger.info('default to "canonical" workflow')
-            return CanonicalWorkflowDescription()
+            return WorkflowDescription('canonical')
         with YamlReader(self._workflow_descriptor_file) as f:
             description = f.read()
         if not isinstance(description, dict):
@@ -240,10 +239,7 @@ class Experiment(Model, DateMixIn):
             raise KeyError('Description must have key "type".')
         if 'stages' not in description:
             raise KeyError('Workflow description must have key "stages".')
-        WorkflowDescription = get_workflow_description(
-            description['type']
-        )
-        return WorkflowDescription(description['stages'])
+        return WorkflowDescription(**description)
 
     def persist_workflow_description(self, description):
         '''Persists the workflow description.
