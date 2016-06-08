@@ -133,7 +133,7 @@ class SetupCtrl {
                 var desc = this._updateWorkflowDescription(idx);
                 this._getFeedback(
                     'Resume',
-                    'Do you really want to resume the workflow?',
+                    'Do you really want to resume the workflow?'
                 )
                 .then((resumeForReal) => {
                     if (resumeForReal) {
@@ -167,7 +167,7 @@ class SetupCtrl {
                 var desc = this._updateWorkflowDescription(idx);
                 this._getFeedback(
                     'Submit',
-                    'Do you really want to submit the workflow?',
+                    'Do you really want to submit the workflow?'
                 )
                 .then((submitForReal) => {
                     if (submitForReal) {
