@@ -20,14 +20,14 @@
               arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
 
           <div ng-show="stage.name == 'image_analysis'"
-               ng-disabled="setupCtrl.currentStageSubmission.state == 'RUNNING'">
+               ng-disabled="!setupCtrl.canModifyPipeline()">
               <button class="btn btn-default"
                   ng-click="stageCtrl.editPipeline(step)">
                 Edit pipeline
               </button>
               <button class="btn btn-default"
                   ng-click="stageCtrl.createPipeline(step)"
-                  ng-disabled="setupCtrl.currentStageSubmission.state == 'RUNNING'">
+                  ng-disabled="!setupCtrl.canModifyPipeline()">
                 Create new pipeline
               </button>
           </div>

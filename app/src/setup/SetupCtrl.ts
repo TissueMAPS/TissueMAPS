@@ -36,10 +36,15 @@ class SetupCtrl {
         for (var i = 1; i < this.stages.length;  i++) {
             // The 1. stage "uploadfiles" is not a stages that can
             // be submitted. It will be removed from the description.
-            if (index < i && i < this.stages.length) {
+            if (index < i) {
+            // if (index < i && i < this.stages.length) {
                 // These stages should not be submitted. They will
                 // be included in the description, but set inactive.
                 this.stages[i].active = false;
+            } else {
+                // in case they have been inactivated previously for whatever
+                // reason
+                this.stages[i].active = true;
             }
             desc.stages.push(this.stages[i]);
         }
@@ -137,7 +142,7 @@ class SetupCtrl {
                 )
                 .then((resumeForReal) => {
                     if (resumeForReal) {
-                        result = this.experiment.resubmitWorkflow(desc, idx)
+                        result = this.experiment.resubmitWorkflow(desc, idx - 1)
                         .then(function(res) {
                             return {
                                 success: res.status == 200,
@@ -299,6 +304,12 @@ class SetupCtrl {
             }
         };
         return this._$uibModal.open(options).result;
+    }
+
+    canModifyPipeline(): boolean {
+        if (this.currentStageSubmission.state == 'RUNNING') {
+            return false;
+        }
     }
 
     canSubmit(): boolean {
