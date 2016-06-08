@@ -63,6 +63,10 @@ class MetadataExtractor(ClusterRoutines):
                     join(tmlib.models.Experiment).\
                     filter(tmlib.models.Experiment.id == self.experiment_id):
 
+                if not acq.microscope_image_files:
+                    raise ValueError(
+                        'Experiment doesn\'t have any microscope image files'
+                    )
                 batches = self._create_batches(
                     acq.microscope_image_files, args.batch_size
                 )
