@@ -28,6 +28,9 @@ class UserpanelWindowCtrl {
     }
 
     hasLayers(e: Experiment) {
+        if (e.channels.length == 0) {
+            return false;
+        }
         return e.channels.every(function(element, index, array) {
             return element.layers.length > 0;
         });

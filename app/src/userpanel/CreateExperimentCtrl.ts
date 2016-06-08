@@ -5,9 +5,9 @@ class CreateExperimentCtrl {
     opt = {
         name: undefined,
         description: '',
-        plateFormat: '1',
-        microscopeType: 'visiview',
-        plateAcquisitionMode: 'multiplexing'
+        plateFormat: '384',
+        microscopeType: 'cellvoyager',
+        plateAcquisitionMode: 'basic'
     };
 
     static $inject = ['$scope', '$state'];

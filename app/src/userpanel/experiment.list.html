@@ -13,22 +13,18 @@
       <li class="list-group-item" ng-repeat="e in userpanelCtrl.experiments | filter:experimentQuery">
         {{ e.name }}
 
-
-        <button ng-show="userpanelCtrl.hasLayers(e)" class="btn btn-success"
-            ng-click="userpanelCtrl.viewExperiment(e)">
-          View
-        </button>
         <button class="btn btn-primary"
             ng-click="userpanelCtrl.modifyExperiment(e)">
           Modify
         </button>
-        <button class="btn btn-default"
-            ng-click="userpanelCtrl.showStatus(e)">
-          Show status
+        <button ng-disabled="!userpanelCtrl.hasLayers(e)" class="btn btn-success"
+            ng-click="userpanelCtrl.viewExperiment(e)">
+          View
         </button>
         <button class="btn btn-danger" ng-click="userpanelCtrl.deleteExperiment(e)">
           Delete
         </button>
+        
       </li>
     </ul>
   </div>
