@@ -131,7 +131,7 @@ class SetupCtrl {
             var result;
             if (areStagesOk) {
                 var desc = this._updateWorkflowDescription(idx);
-                result = this.experiment.resubmitWorkflow(desc, idx + 1)
+                result = this.experiment.resubmitWorkflow(desc, idx)
                 .then(function(res) {
                     return {
                         success: res.status == 200,
@@ -157,14 +157,24 @@ class SetupCtrl {
             var result;
             if (areStagesOk) {
                 var desc = this._updateWorkflowDescription(idx);
-                result = this.experiment.submitWorkflow(desc)
-                .then(function(res) {
-                    return {
-                        success: res.status == 200,
-                        message: res.statusText
+                this._getInput(
+                    'Submit',
+                    'Do you really want to submit the workflow?',
+                    null,
+                    null
+                )
+                .then((submitForReal) => {
+                    if (submitForReal) {
+                        result = this.experiment.submitWorkflow(desc)
+                        .then(function(res) {
+                            return {
+                                success: res.status == 200,
+                                message: res.statusText
+                            }
+                        });
+                        this._displayResult('Submit', result);
                     }
                 });
-                this._displayResult('Submit', result);
             } else {
                 result = {
                     sucess: false,
@@ -188,7 +198,8 @@ class SetupCtrl {
                 });
                 this._getInput(
                     'Resubmit',
-                    'Stage from which workflow should be resubmitted',
+                    'Stage from which workflow should be resubmitted:',
+                    'dropdown',
                     stageNames
                 )
                 .then((stageName) => {
@@ -243,7 +254,7 @@ class SetupCtrl {
         this._displayResult('Kill', result);
     }
 
-    private _getInput(task: string, description: string, choices: any) {
+    private _getInput(task: string, description: string, widgetType: string, choices: any) {
         var options: ng.ui.bootstrap.IModalSettings = {
             templateUrl: 'src/setup/modals/input.html',
             controller: SetupInputCtrl,
@@ -251,6 +262,7 @@ class SetupCtrl {
             resolve: {
                 task: () => task,
                 description: () => description,
+                widgetType: () => widgetType,
                 choices: () => choices
             }
         };

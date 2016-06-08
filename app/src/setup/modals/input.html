@@ -10,10 +10,11 @@
 
 <div class="modal-body">
 
-    {{setupInputCtrl.description}}:
+    {{setupInputCtrl.description}}
 
-    <input ng-if="setupInputCtrl.choices == null" type="text" ng-model="setupInputCtrl.input">
-    <div ng-if="setupInputCtrl.choices != null">
+    <input ng-if="setupInputCtrl.widgetType == 'text'" type="text" ng-model="setupInputCtrl.input">
+    <input ng-if="setupInputCtrl.widgetType == 'checkbox'" type="checkbox" ng-model="setupInputCtrl.input">
+    <div ng-if="setupInputCtrl.widgetType == 'dropdown'">
         <select ng-model="setupInputCtrl.input">
             <option ng-repeat="choice in setupInputCtrl.choices" ng-value="choice">{{choice}}</option>
         </select>
@@ -22,6 +23,10 @@
 </div>
 
 <div class="modal-footer">
+
+  <button type="submit" ng-click="setupInputCtrl.cancel()" class="btn btn-default" data-dismiss="modal">
+     Cancel
+  </button>
 
   <button type="submit" ng-click="setupInputCtrl.ok()" class="btn btn-primary" data-dismiss="modal">
      <i class="fa fa-check"></i>
