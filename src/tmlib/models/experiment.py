@@ -229,8 +229,12 @@ class Experiment(Model, DateMixIn):
         '''
         if not os.path.exists(self._workflow_descriptor_file):
             logger.warn('no persistent workflow description found')
-            logger.info('default to "canonical" workflow')
-            return WorkflowDescription('canonical')
+            if self.plate_acquisition_mode == 'multiplexing':
+                workflow_type = 'multiplexing'
+            else:
+                workflow_type = 'canonical'
+            logger.info('default to "%s" workflow type', workflow_type)
+            return WorkflowDescription(workflow_type)
         with YamlReader(self._workflow_descriptor_file) as f:
             description = f.read()
         if not isinstance(description, dict):
