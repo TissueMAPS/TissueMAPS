@@ -30,3 +30,4 @@ def configure_logging(name):
 
 
 log = configure_logging(__name__)
+configure_logging('tmlib')
