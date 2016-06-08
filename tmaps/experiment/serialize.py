@@ -4,7 +4,7 @@ from tmlib.models import (
 )
 from tmaps.serialize import json_encoder
 from tmaps.model import encode_pk
-from tmlib.workflow.canonical import CanonicalWorkflowDescription
+from tmlib.workflow.description import WorkflowDescription
 
 
 @json_encoder(Experiment)

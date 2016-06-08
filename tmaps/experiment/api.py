@@ -8,7 +8,7 @@ from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
 import tmlib.workflow.registry
-from tmlib.workflow.canonical import CanonicalWorkflowDescription
+from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.models import (
@@ -134,10 +134,7 @@ def get_experiment(experiment):
 def submit_workflow(experiment):
     logger.info('submit workflow')
     data = json.loads(request.data)
-    description = data['description']
-    wtype = description['type']
-    WorkflowType = tmlib.workflow.registry.get_workflow_description(wtype)
-    workflow_description = WorkflowType(stages=description['stages'])
+    workflow_description = WorkflowDescription(**data['description'])
     experiment.persist_workflow_description(workflow_description)
     workflow_manager = WorkflowManager(experiment.id, 1)
     submission_manager = SubmissionManager(experiment.id, 'workflow')
@@ -161,10 +158,7 @@ def resubmit_workflow(experiment):
     logger.info('resubmit workflow')
     data = json.loads(request.data)
     index = data.get('index', 0)
-    description = data['description']
-    wtype = description['type']
-    WorkflowType = tmlib.workflow.registry.get_workflow_description(wtype)
-    workflow_description = WorkflowType(stages=description['stages'])
+    workflow_description = WorkflowDescription(**data['description'])
     workflow = gc3pie.retrieve_jobs(experiment, 'workflow')
     workflow.update_description(workflow_description)
     workflow.update_stage(index)
