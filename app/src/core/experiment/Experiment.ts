@@ -21,9 +21,6 @@ class Experiment implements Model {
     plateAcquisitionMode: string;
     channels: Channel[] = [];
     workflowDescription: any;
-    status: string;
-    stage: string;
-    step: string;
     workflowStatus: any;
     // workflowStatus: TaskStatus;
 
@@ -44,9 +41,6 @@ class Experiment implements Model {
         this.id = args.id;
         this.name = args.name;
         this.description = args.description;
-        this.status = args.status;
-        this.stage = args.stage;
-        this.step = args.step;
         this.plateFormat = args.plate_format;
         this.microscopeType = args.microscope_type;
         this.plateAcquisitionMode = args.plate_acquisition_mode;
