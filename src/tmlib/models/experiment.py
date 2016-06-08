@@ -220,12 +220,16 @@ class Experiment(Model, DateMixIn):
 
         Raises
         ------
-        OSError
-            when there is no workflow desriptor file available on disk
         TypeError
             when description obtained from file is not a mapping
         KeyError
             when description obtained from file doesn't have key "type"
+
+        Note
+        ----
+        When no description is available from file, a default description is
+        provided. The type of the workflow will be determined based on the
+        :py:attribute:`tmlib.Experiment.plate_acquisition_mode`.
         '''
         if not os.path.exists(self._workflow_descriptor_file):
             logger.warn('no persistent workflow description found')
@@ -234,7 +238,8 @@ class Experiment(Model, DateMixIn):
             else:
                 workflow_type = 'canonical'
             logger.info('default to "%s" workflow type', workflow_type)
-            return WorkflowDescription(workflow_type)
+            workflow_description = WorkflowDescription(workflow_type)
+            self.persist_workflow_description(workflow_description)
         with YamlReader(self._workflow_descriptor_file) as f:
             description = f.read()
         if not isinstance(description, dict):
@@ -243,7 +248,19 @@ class Experiment(Model, DateMixIn):
             raise KeyError('Description must have key "type".')
         if 'stages' not in description:
             raise KeyError('Workflow description must have key "stages".')
-        return WorkflowDescription(**description)
+        workflow_description = WorkflowDescription(**description)
+        def update_choices(arguments):
+            for arg in arguments.iterargs():
+                if getattr(arg, 'get_choices', None):
+                    arg.choices = arg.get_choices(self)
+
+        for stage in workflow_description.stages:
+            for step in stage.steps:
+                update_choices(step.batch_args)
+                update_choices(step.submission_args)
+                if step.extra_args is not None:
+                    update_choices(step.extra_args)
+        return workflow_description
 
     def persist_workflow_description(self, description):
         '''Persists the workflow description.
