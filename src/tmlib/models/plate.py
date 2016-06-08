@@ -21,7 +21,7 @@ SUPPORTED_PLATE_FORMATS = {1, 96, 384}
 #: as part of a time series experiment.
 #: Mode "multiplexing" implies that a different marker was used in each
 #: acquisition as part of a multiplexing experiment.
-SUPPORTED_PLATE_AQUISITION_MODES = {'time_series', 'multiplexing'}
+SUPPORTED_PLATE_AQUISITION_MODES = {'basic', 'multiplexing'}
 
 #: Format string for plate locations
 PLATE_LOCATION_FORMAT = 'plate_{id}'
