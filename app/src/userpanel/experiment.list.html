@@ -15,13 +15,16 @@
 
         <button class="btn btn-primary"
             ng-click="userpanelCtrl.modifyExperiment(e)">
+          <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
           Modify
         </button>
         <button ng-disabled="!userpanelCtrl.hasLayers(e)" class="btn btn-success"
             ng-click="userpanelCtrl.viewExperiment(e)">
+          <i class="fa fa-eye" aria-hidden="true"></i>
           View
         </button>
         <button class="btn btn-danger" ng-click="userpanelCtrl.deleteExperiment(e)">
+          <i class="fa fa-trash-o" aria-hidden="true"></i>
           Delete
         </button>
         
