@@ -59,10 +59,16 @@ class Job(gc3libs.Application):
         See also
         --------
         :py:class:`tmlib.models.Submission`
+
+        Note
+        ----
+        When submitting with `SLURM` backend, there must be an existing account
+        for `user_name`.
         '''
         t = create_datetimestamp()
         self.step_name = step_name
         self.submission_id = submission_id
+        self.user_name = user_name
         super(Job, self).__init__(
             jobname=self.name,
             arguments=arguments,
@@ -71,8 +77,19 @@ class Job(gc3libs.Application):
             outputs=[],
             stdout='%s_%s.out' % (self.name, t),
             stderr='%s_%s.err' % (self.name, t),
-            environment={'TM_ACCOUNT': user_name}
         )
+
+    def sbatch(self, resource, **kwargs):
+        '''Overwrites the original `sbatch` method to implement fair job
+        scheduling via `SLURM` accounts.
+
+        See also
+        --------
+        :py:method:`gc3libs.Application.sbatch`
+        '''
+        sbatch, cmdline = super(Job, self).sbatch(resource, **kwargs)
+        sbatch = sbatch[:1] + ['--account', self.user_name] + sbatch[1:]
+        return (sbatch, cmdline)
 
     @abstractproperty
     def name(self):
