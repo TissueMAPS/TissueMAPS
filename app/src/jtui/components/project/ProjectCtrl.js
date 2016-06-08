@@ -26,7 +26,6 @@ angular.module('jtui.project')
         console.log('check project:', $scope.project)
         var modalInst = $uibModal.open({
             templateUrl: 'src/jtui/components/project/modals/check.html',
-            size: 'sm',
             resolve: {
                 checked: ['projectService', function(projectService){
                             return projectService.checkProject($scope.project);
@@ -50,7 +49,6 @@ angular.module('jtui.project')
         console.log('save project:', $scope.project)
         var modalInst = $uibModal.open({
             templateUrl: 'src/jtui/components/project/modals/save.html',
-            size: 'sm',
             resolve: {
                 saved: ['projectService', function(projectService){
                             return projectService.saveProject($scope.project);
@@ -128,7 +126,6 @@ angular.module('jtui.project')
         console.log('kill jobs: ', $scope.taskId)
         var modalInst = $uibModal.open({
             templateUrl: 'src/jtui/components/project/modals/kill.html',
-            size: 'sm',
             resolve: {
                 killed: ['runnerService', function(runnerService){
                     return runnerService.kill($scope.project, $scope.taskId);
