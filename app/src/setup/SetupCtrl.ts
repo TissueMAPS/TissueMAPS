@@ -131,14 +131,22 @@ class SetupCtrl {
             var result;
             if (areStagesOk) {
                 var desc = this._updateWorkflowDescription(idx);
-                result = this.experiment.resubmitWorkflow(desc, idx)
-                .then(function(res) {
-                    return {
-                        success: res.status == 200,
-                        message: res.statusText
+                this._getFeedback(
+                    'Resume',
+                    'Do you really want to resume the workflow?',
+                )
+                .then((resumeForReal) => {
+                    if (resumeForReal) {
+                        result = this.experiment.resubmitWorkflow(desc, idx)
+                        .then(function(res) {
+                            return {
+                                success: res.status == 200,
+                                message: res.statusText
+                            }
+                        });
+                        this._displayResult('Resume', result);
                     }
                 });
-                this._displayResult('Resume', result);
             } else {
                 result = {
                     sucess: false,
@@ -157,11 +165,9 @@ class SetupCtrl {
             var result;
             if (areStagesOk) {
                 var desc = this._updateWorkflowDescription(idx);
-                this._getInput(
+                this._getFeedback(
                     'Submit',
                     'Do you really want to submit the workflow?',
-                    null,
-                    null
                 )
                 .then((submitForReal) => {
                     if (submitForReal) {
@@ -258,12 +264,25 @@ class SetupCtrl {
         var options: ng.ui.bootstrap.IModalSettings = {
             templateUrl: 'src/setup/modals/input.html',
             controller: SetupInputCtrl,
-            controllerAs: 'setupInputCtrl',
+            controllerAs: 'input',
             resolve: {
-                task: () => task,
-                description: () => description,
+                title: () => task,
+                message: () => description,
                 widgetType: () => widgetType,
                 choices: () => choices
+            }
+        };
+        return this._$uibModal.open(options).result;
+    }
+
+    private _getFeedback(task: string, description: string) {
+        var options: ng.ui.bootstrap.IModalSettings = {
+            templateUrl: 'src/dialog/dialog.html',
+            controller: DialogCtrl,
+            controllerAs: 'dialog',
+            resolve: {
+                title: () => task,
+                message: () => description,
             }
         };
         return this._$uibModal.open(options).result;
@@ -273,10 +292,10 @@ class SetupCtrl {
         var options: ng.ui.bootstrap.IModalSettings = {
             templateUrl: 'src/setup/modals/result.html',
             controller: SetupResultCtrl,
-            controllerAs: 'setupResultCtrl',
+            controllerAs: 'result',
             resolve: {
-                response: () => response,
-                task: () => task
+                title: () => task,
+                response: () => response
             }
         };
         return this._$uibModal.open(options).result;
@@ -293,11 +312,8 @@ class SetupCtrl {
             // Submission should be prevented when the workflow is already
             // running or in any other state that would cause problems
             return false;
-        } else if (this._isLastStage(this.currentStage)) {
-            return this._areAllStagesOk();
         } else {
-            var index = this.stages.indexOf(this.currentStage);
-            return this._areWorkflowStagesOk(index);
+            return true;
         }
     }
 
@@ -430,17 +446,6 @@ class SetupCtrl {
 
         // start monitoring as soon as the user enters the "setup" view
         this._startMonitoring();
-        // console.log(experiment);
-        // switch(experiment.status) {
-        //     case 'WAITING':
-        //         this._$state.go('plate');
-        //         this.currentStage.name = 'uploadfiles';
-        //         break;
-        //     default:
-        //         throw new Error(
-        //             'Unknown experiment status: ' + experiment.status
-        //         );
-        // }
     }
 }
 

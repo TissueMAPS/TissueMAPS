@@ -1,11 +1,11 @@
 class SetupResultCtrl {
-    static $inject = ['response', 'task', '$uibModalInstance'];
+    static $inject = ['title', 'response', '$uibModalInstance'];
 
-    constructor(private response: boolean,
-                private task: string,
+    constructor(private title: string,
+                private response: boolean,
                 private _$uibModalInstance: any) {
         this.response = response;
-        this.task = task;
+        this.title = title;
     }
 
     cancel() {

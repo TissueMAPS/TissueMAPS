@@ -1,19 +1,19 @@
 class DialogCtrl {
-    static $inject = ['title', 'message', '$modalInstance'];
+    static $inject = ['title', 'message', '$uibModalInstance'];
 
     constructor(public title: string,
                 public message: string,
-                private _$modalInstance: any) {
+                private _$uibModelInstance: any) {
     }
 
     ok() {
         // Resolves the result promise
-        this._$modalInstance.close(true);
+        this._$uibModelInstance.close(true);
     }
 
     cancel() {
         // Rejects the result promise
-        this._$modalInstance.dismiss('cancel');
+        this._$uibModelInstance.dismiss('cancel');
     }
 
 }
