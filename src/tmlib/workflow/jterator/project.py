@@ -109,6 +109,9 @@ class Project(object):
             directory = os.path.join(self.step_location, 'handles')
         else:
             directory = os.path.join(directory, 'handles')
+        if not os.path.exists(directory):
+            logger.debug('create handles directory')
+            os.mkdir(directory)
         handles_files = glob.glob(
             os.path.join(directory, '*%s' % HANDLES_SUFFIX)
         )
