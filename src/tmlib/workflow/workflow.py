@@ -566,33 +566,44 @@ class Workflow(SequentialTaskCollection, State):
             workflow stages
         '''
         workflow_stages = list()
-        for stage in self.description.stages:
-            if stage.mode == 'sequential':
-                logger.debug('build sequential workflow stage')
-                workflow_stages.append(
-                    SequentialWorkflowStage(
-                        name=stage.name,
-                        experiment_id=self.experiment_id,
-                        verbosity=self.verbosity,
-                        submission_id=self.submission_id,
-                        user_name=self.user_name,
-                        description=stage,
-                        waiting_time=self.waiting_time
-                    )
-                )
-            elif stage.mode == 'parallel':
-                logger.debug('build parallel workflow stage')
-                workflow_stages.append(
-                    ParallelWorkflowStage(
-                        name=stage.name,
-                        experiment_id=self.experiment_id,
-                        verbosity=self.verbosity,
-                        submission_id=self.submission_id,
-                        user_name=self.user_name,
-                        description=stage
-                    )
-                )
+        for stage_desc in self.description.stages:
+            stage = self._add_stage(stage_desc)
+            workflow_stages.append(stage)
         return workflow_stages
+
+    def _add_stage(self, description):
+        '''Adds a new stage to the tasks list.
+
+        Parameters
+        ----------
+        description: tmlib.workflow.description.WorkflowStageDescription
+            description of the stage
+
+        Returns
+        -------
+        tmlib.workflow.WorkflowStage
+        '''
+        if description.mode == 'sequential':
+            logger.debug('build sequential workflow stage')
+            return SequentialWorkflowStage(
+                name=description.name,
+                experiment_id=self.experiment_id,
+                verbosity=self.verbosity,
+                submission_id=self.submission_id,
+                user_name=self.user_name,
+                description=description,
+                waiting_time=self.waiting_time
+            )
+        elif description.mode == 'parallel':
+            logger.debug('build parallel workflow stage')
+            return ParallelWorkflowStage(
+                name=description.name,
+                experiment_id=self.experiment_id,
+                verbosity=self.verbosity,
+                submission_id=self.submission_id,
+                user_name=self.user_name,
+                description=description
+            )
 
     @property
     def n_stages(self):
@@ -608,8 +619,11 @@ class Workflow(SequentialTaskCollection, State):
         index: int
             index for the list of `tasks` (stages)
         '''
-        stage = self.description.stages[index]
-        if stage.mode == 'sequential':
+        stage_desc = self.description.stages[index]
+        if index > len(self.tasks) - 1:
+            stage = self._add_stage(stage_desc)
+            self.tasks.append(stage)
+        if stage_desc.mode == 'sequential':
             self.tasks[index].update_step(0)
         else:
             self.tasks[index]._update_all_steps()
