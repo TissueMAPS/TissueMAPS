@@ -182,6 +182,29 @@ def get_workflow_status(experiment):
     })
 
 
+@api.route('/experiments/<experiment_id>/workflow/load', methods=['GET']) 
+@jwt_required()
+@extract_model_from_path(Experiment)
+def get_workflow_description(experiment):
+    logger.info('get workflow description')
+    description = experiment.workflow_description
+    return jsonify({
+        'data': description.as_dict()
+    })
+
+
+@api.route('/experiments/<experiment_id>/workflow/save', methods=['POST'])
+@jwt_required()
+@extract_model_from_path(Experiment)
+def save_workflow_description(experiment):
+    data = json.loads(request.data)
+    workflow_description = WorkflowDescription(**data['description'])
+    experiment.persist_workflow_description(workflow_description)
+    return jsonify({
+        'message': 'ok'
+    })
+
+
 @api.route('/experiments/<experiment_id>/workflow/kill', methods=['POST']) 
 @jwt_required()
 @extract_model_from_path(Experiment)

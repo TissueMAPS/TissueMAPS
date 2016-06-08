@@ -40,6 +40,54 @@ logger = logging.getLogger(__name__)
 # websocket.timeout = 3600
 
 # socket = None  # for potential re-connection
+def _make_thumbnail(figure_file):
+    '''Makes a PNG thumbnail of a plotly figure by screen capture.
+
+    Parameters
+    ----------
+    figure_file: str
+        absolute path to the figure file (``".json"`` extension)
+
+    Note
+    ----
+    Requires the phantomjs library and the "rasterize.js" script.
+    The phantomjs executable must be on the `PATH` and the environment
+    variable "RASTERIZE" must be set and point to the location of the
+    "rasterize.js" file.
+    '''
+    import plotly
+    if not os.path.exists(figure_file):
+        logger.warn('figure file does not exist: %s', figure_file)
+        html = ''
+    else:
+        logger.debug('read figure file: %s', figure_file)
+        with TextReader(figure_file) as f:
+            figure = json.loads(f.read())
+        logger.debug('create HTML figure')
+        html = plotly.offline.plot(figure, show_link=False, output_type='div')
+    html = ''.join([
+        '<html>',
+        '<head><meta charset="utf-8" /></head>',
+        '<body>',
+        html,
+        '</body>',
+        '</html>'
+    ])
+    # from xhtml2pdf import pisa
+    html_file = figure_file.replace('.json', '.html')
+    logger.debug('write html file: %s', html_file)
+    with TextWriter(html_file) as f:
+        # pisa.CreatePDF(html, f)
+        f.write(html)
+    # Produce thumbnails for html figures by screen capture.
+    png_file = figure_file.replace('.json', '.png')
+    logger.debug('generate PNG thumbnail file: %s', png_file)
+    rasterize_file = os.path.expandvars('$RASTERIZE')
+    subprocess.call([
+        'phantomjs', rasterize_file, html_file, png_file
+    ])
+    logger.debug('remove HTML file: %s', html_file)
+    os.remove(html_file)
 
 
 def list_module_names(pipeline):
@@ -454,13 +502,11 @@ def remove_jtproject(experiment):
         JSON object with keys "success" and "error"
     '''
     data = json.loads(request.data)
-    data = yaml.load(data['jtproject'])
+    pipeline = yaml.load(data['pipeline'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment.id,
         verbosity=1,
-        pipeline=data['name'],
-        pipe=data['pipe'],
-        handles=data['handles'],
+        pipeline=pipeline
     )
     try:
         jt.project.remove()
@@ -493,8 +539,7 @@ def create_jtproject(experiment):
                 pipe:
                     name: <pipeline>
                     description:
-                        project:
-                            lib: ''
+                        description: ''
                         input:
                             channels: []
                         pipeline: []
@@ -508,15 +553,13 @@ def create_jtproject(experiment):
     jt = ImageAnalysisPipeline(
         experiment_id=experiment.id,
         verbosity=1,
-        pipeline=data['name'],
-        pipe=data['pipe'],
-        handles=data['handles'],
+        pipeline=data['pipeline'],
     )
     # Create the project, i.e. create a folder that contains a .pipe file and
     # handles subfolder with .handles files
-    if data.get('skeleton', None):
+    if data.get('template', None):
         skel_dir = os.path.join(
-            current_app.config.get('JTLIB_HOME'), 'pipes', data['skeleton']
+            current_app.config.get('JTLIB_HOME'), 'pipes', data['template']
         )
     else:
         skel_dir = None
@@ -584,7 +627,7 @@ def _get_output(jobs, modules, log_location, fig_location):
             for m in modules:
                 stdout_file, stderr_file = m.build_log_filenames(log_location, j)
                 fig_file = m.build_figure_filename(fig_location, j)
-                thumbnail_file = fig_file.replace('.json', '.png')
+                # thumbnail_file = fig_file.replace('.json', '.png')
                 out = dict()
                 out['name'] = m.name
                 if os.path.exists(stdout_file):
@@ -595,11 +638,11 @@ def _get_output(jobs, modules, log_location, fig_location):
                 else:
                     out['stdout'] = None
                     out['stderr'] = None
-                if os.path.exists(thumbnail_file):
-                    with open(thumbnail_file, 'r') as f:
-                        out['thumbnail'] = base64.b64encode(f.read())
-                else:
-                    out['thumbnail'] = None
+                # if os.path.exists(thumbnail_file):
+                #     with open(thumbnail_file, 'r') as f:
+                #         out['thumbnail'] = base64.b64encode(f.read())
+                # else:
+                #     out['thumbnail'] = None
                 module_output.append(out)
 
             with tm.utils.Session() as session:
