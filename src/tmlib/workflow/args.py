@@ -18,7 +18,7 @@ class Argument(object):
         flag=['basestring', 'types.NoneType']
     )
     def __init__(self, type, help, default=None, choices=None, flag=None,
-            required=False):
+            required=False, disabled=False):
         '''
         Parameters
         ----------
@@ -35,6 +35,9 @@ class Argument(object):
             (default: ``None``)
         required: bool, optional
             whether the argument is required (default: ``False``)
+        disabled: bool, optional
+            whether the argument should be disabled in the UI
+            (default: ``False``)
 
         Note
         ----
@@ -49,6 +52,7 @@ class Argument(object):
         self.type = type
         self.help = help
         self.required = required
+        self.disabled = disabled
         self.default = default
         self.value = None
         if self.default is not None:
@@ -337,6 +341,7 @@ class ArgumentCollection(object):
                 'default': arg.default,
                 'type': arg.type.__name__,
                 'required': arg.required,
+                'disabled': arg.disabled
             }
             try:
                 argument['value'] = getattr(self, arg.name)

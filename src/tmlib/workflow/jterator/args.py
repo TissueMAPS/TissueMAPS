@@ -11,7 +11,7 @@ from tmlib.workflow.registry import extra_args
 class JteratorBatchArguments(BatchArguments):
 
     plot = Argument(
-        type=bool, default=False, flag='p',
+        type=bool, default=False, flag='p', disabled=True,
         help='whether plotting should be activated'
     )
 
