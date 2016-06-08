@@ -311,7 +311,7 @@ class MetadataConfigurator(ClusterRoutines):
                     join(tm.Experiment).\
                     filter(tm.Experiment.id == self.experiment_id):
                 is_time_series_experiment = \
-                    acq.plate.experiment.plate_acquisition_mode == 'series'
+                    acq.plate.experiment.plate_acquisition_mode == 'basic'
                 is_multiplexing_experiment = \
                     acq.plate.experiment.plate_acquisition_mode == 'multiplexing'
                 df = pd.DataFrame(
@@ -335,6 +335,8 @@ class MetadataConfigurator(ClusterRoutines):
                     for w in wavelengths:
                         if is_multiplexing_experiment:
                             name = 'cycle-%d_wavelength-%s' % (c_index, w)
+                        else:
+                            name = 'wavelength-%s' % w
                         channel = session.get_or_create(
                             tm.Channel,
                             name=name, index=w_index, wavelength=w,
