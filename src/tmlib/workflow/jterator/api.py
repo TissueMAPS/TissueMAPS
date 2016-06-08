@@ -526,17 +526,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             store = module.update_store(store)
 
-            if batch['plot']:
-                logger.info('write figure to file')
-                figure_file = module.build_figure_filename(
-                    self.figures_location, job_id
-                )
-                with TextWriter(figure_file) as f:
-                    f.write(store['current_figure'])
-                if can_create_thumbnail:
-                    logger.debug('create PNG thumbnail')
-                    self._make_thumbnail(figure_file)
-
         # Write output
         # ------------
 
@@ -736,55 +725,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             )
             logger.info('insert feature values into table')
             session.bulk_insert_mappings(tm.FeatureValue, feature_values)
-
-    def _make_thumbnail(self, figure_file):
-        '''Makes a PNG thumbnail of a plotly figure by screen capture.
-
-        Parameters
-        ----------
-        figure_file: str
-            absolute path to the figure file (``".json"`` extension)
-
-        Note
-        ----
-        Requires the phantomjs library and the "rasterize.js" script.
-        The phantomjs executable must be on the `PATH` and the environment
-        variable "RASTERIZE" must be set and point to the location of the
-        "rasterize.js" file.
-        '''
-        import plotly
-        if not os.path.exists(figure_file):
-            logger.warn('figure file does not exist: %s', figure_file)
-            html = '' 
-        else:
-            logger.debug('read figure file: %s', figure_file)
-            with TextReader(figure_file) as f:
-                figure = json.loads(f.read())
-            logger.debug('create HTML figure')
-            html = plotly.offline.plot(figure, show_link=False, output_type='div')
-        html = ''.join([
-            '<html>',
-            '<head><meta charset="utf-8" /></head>',
-            '<body>',
-            html,
-            '</body>',
-            '</html>'
-        ])
-        # from xhtml2pdf import pisa
-        html_file = figure_file.replace('.json', '.html')
-        logger.debug('write html file: %s', html_file)
-        with TextWriter(html_file) as f:
-            # pisa.CreatePDF(html, f)
-            f.write(html)
-        # Produce thumbnails for html figures by screen capture.
-        png_file = figure_file.replace('.json', '.png')
-        logger.debug('generate PNG thumbnail file: %s', png_file)
-        rasterize_file = os.path.expandvars('$RASTERIZE')
-        subprocess.call([
-            'phantomjs', rasterize_file, html_file, png_file
-        ])
-        logger.debug('remove HTML file: %s', html_file)
-        os.remove(html_file)
 
     def collect_job_output(self, batch):
         '''Performs the following calculations after the pipeline has been
